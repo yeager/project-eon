@@ -264,6 +264,23 @@ does not read the runtime sources, infer the `$7b77e` or `$7ba12` effects, or
 execute either call. This preserves a real caller-side staging protocol while
 retaining the helper's unrecovered executable boundary.
 
+The setup target `$7b77e` is now separately fingerprinted at its linear
+raw-media correspondence, disk offset `0x29b7e`. Its first 32 original bytes
+are `04006e00c200044a00c240007a00c200105200c201005200c200014a00c20800`,
+with SHA-256
+`a695fd5ead90e07075256b1347220afde1a4439dd804cf1a9d445da4411cb52a`.
+As with `$7ba12`, this fingerprint is chain-of-custody evidence, *not* an
+executable decode: the preceding loader transform prevents the raw bytes from
+proving the runtime routine's instruction boundary or semantics.
+
+For callers that already own their six runtime values, the verified six
+`(A4)+` to `(A5)+` transfers are available as the pure in-memory
+`stage_millennium_amiga_resident_helper_pre_setup` operation. It returns the
+three staged words and three staged bytes exactly as they stand immediately
+before `JSR $7b77e`; it does not pretend that this is state before `$7ba12`,
+because `$7b77e` may change any of those fields. No game-media read, unpack,
+or write is involved.
+
 ### Deuteros Atari ST protected-media boot chain
 
 The supplied Atari ST collection consists of protected/cracked raw `.st`

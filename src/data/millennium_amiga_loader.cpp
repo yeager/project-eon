@@ -255,6 +255,38 @@ parse_millennium_amiga_resident_helper_raw_boundary(
     return result;
 }
 
+MillenniumAmigaResidentSetupHelperRawBoundary
+parse_millennium_amiga_resident_setup_helper_raw_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t helper_address = 0x7b77e;
+    if (helper_address < plan.resident_stage.destination) {
+        throw std::runtime_error("Millennium Amiga setup helper precedes resident raw range");
+    }
+    const auto relative = helper_address - plan.resident_stage.destination;
+    constexpr std::array<std::uint8_t, 32> expected_prefix{{
+        0x04, 0x00, 0x6e, 0x00, 0xc2, 0x00, 0x04, 0x4a,
+        0x00, 0xc2, 0x40, 0x00, 0x7a, 0x00, 0xc2, 0x00,
+        0x10, 0x52, 0x00, 0xc2, 0x01, 0x00, 0x52, 0x00,
+        0xc2, 0x00, 0x01, 0x4a, 0x00, 0xc2, 0x08, 0x00,
+    }};
+    if (relative > plan.resident_stage.length
+        || expected_prefix.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga setup helper is outside resident raw range");
+    }
+    const auto raw_disk_offset = plan.resident_stage.disk_offset + relative;
+    const auto source = disk.bytes(raw_disk_offset, expected_prefix.size());
+    if (!std::equal(expected_prefix.begin(), expected_prefix.end(), source.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga setup helper raw boundary");
+    }
+    MillenniumAmigaResidentSetupHelperRawBoundary result;
+    result.helper_address = helper_address;
+    result.raw_disk_offset = raw_disk_offset;
+    std::copy(source.begin(), source.end(), result.raw_prefix.begin());
+    result.raw_prefix_sha256 = to_hex(sha256(source));
+    return result;
+}
+
 std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>
 parse_millennium_amiga_resident_helper_staging_callsites(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
@@ -318,6 +350,15 @@ parse_millennium_amiga_resident_helper_staging_callsites(
             setup_helper, clear_byte, splitter.helper_address};
     }
     return callsites;
+}
+
+MillenniumAmigaResidentHelperStagingPreSetupState
+stage_millennium_amiga_resident_helper_pre_setup(
+    const std::array<std::uint16_t, 3>& source_words,
+    const std::array<std::uint8_t, 3>& source_sign_bytes) {
+    // Each verified callsite contains three MOVE.W (A4)+,(A5)+ followed by
+    // three MOVE.B (A4)+,(A5)+.  No later call edge is included here.
+    return {source_words, source_sign_bytes};
 }
 
 } // namespace eon

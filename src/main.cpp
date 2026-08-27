@@ -394,6 +394,8 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto splitter = eon::parse_millennium_amiga_resident_word_splitter(disk, plan);
     const auto helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
         disk, plan, splitter);
+    const auto setup_helper_boundary =
+        eon::parse_millennium_amiga_resident_setup_helper_raw_boundary(disk, plan);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -419,6 +421,11 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << "          helper raw boundary: target 0x" << std::hex << helper_boundary.helper_address
         << " maps to disk 0x" << helper_boundary.raw_disk_offset << std::dec
         << "; 32-byte SHA-256 " << helper_boundary.raw_prefix_sha256
+        << " (not treated as an executable helper)\n"
+        << "          setup helper raw boundary: target 0x" << std::hex
+        << setup_helper_boundary.helper_address << " maps to disk 0x"
+        << setup_helper_boundary.raw_disk_offset << std::dec << "; 32-byte SHA-256 "
+        << setup_helper_boundary.raw_prefix_sha256
         << " (not treated as an executable helper)\n";
 }
 
