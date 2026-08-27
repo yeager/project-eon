@@ -97,6 +97,13 @@ Or select a game directly from the CLI:
   --presentation modern
 ```
 
+Verify genuine release archives by SHA-256 without opening SDL:
+
+```sh
+./build/project-eon --data "$HOME/Hämtningar" --verify-data millennium
+./build/project-eon --data "$HOME/Hämtningar" --verify-data deuteros
+```
+
 The current SDL application is deliberately a data-verification shell, not a
 mock game. It lists detected real releases and proves the Original/Modern
 presentation boundary while reverse engineering proceeds. It never substitutes
@@ -112,9 +119,11 @@ extracted game assets and are never used inside Original mode.
 ## Current status and research workflow
 
 Project Eon is in the reverse-engineering and foundation phase. It is not yet a
-complete playable replacement. Current tooling performs a safe, read-only
-inventory of nested release archives and recognises DOS executables and floppy
-images plus Amiga ADF and Atari ST disk formats.
+complete playable replacement. The native runtime now verifies the six supplied
+release archives by SHA-256, recursively reads nested ZIPs, validates Deflate
+streams and CRCs, and fingerprints all 67 contained assets. The verified corpus
+contains 17 Amiga ADF images, 18 Atari ST images and both English and Spanish
+DOS data for Millennium 2.2.
 
 The repository does not contain the commercial games. Point the inventory tool
 at a directory containing the original archives:

@@ -28,6 +28,12 @@ Deuteros for Amiga and Atari ST. A Spanish DOS floppy image of Millennium is
 also present. Outer archives contain several alternate/cracked disk versions,
 so a filename alone is not a stable identity; SHA-256 fingerprints are used.
 
+Native corpus verification covers all six supplied outer archives and all 67
+leaf assets inside their nested ZIP structure. Identity is determined from
+content hashes, never archive filenames. Extraction rejects out-of-bounds
+metadata, oversized entries, unsupported compression, incomplete Deflate
+streams and CRC mismatches before an asset reaches a decoder.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are

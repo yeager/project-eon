@@ -13,6 +13,7 @@ enum class Presentation { original, modern };
 struct LaunchRequest {
     std::filesystem::path data_directory;
     std::optional<Game> game;
+    std::optional<Game> verify_game;
     std::optional<Platform> platform;
     Presentation presentation = Presentation::original;
 };
@@ -31,4 +32,3 @@ struct ParseResult {
     std::optional<Platform> platform);
 
 } // namespace eon
-

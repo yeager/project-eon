@@ -12,6 +12,8 @@ enum class Platform { dos, amiga, atari_st };
 struct ReleaseArchive {
     Game game;
     Platform platform;
+    std::string language;
+    std::string sha256;
     std::filesystem::path path;
 };
 
@@ -21,4 +23,3 @@ struct ReleaseArchive {
 [[nodiscard]] std::string name(Platform platform);
 
 } // namespace eon
-
