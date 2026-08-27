@@ -975,6 +975,11 @@ direct control edge in that tail is literal `JE +$14` at `$02b2` to `$02c8`.
 This remains a raw static address/byte fact only, with no interpretation of
 the intervening interrupt bytes, condition, result, or DOS behavior.
 
+The `$02b2` JE target has the exact seven-byte prefix `B4 4C CD 21 32 C0 CF`
+at `$02c8..$02ce`. `$02ce` is the first terminal control-transfer opcode
+boundary; the parser stops there and does not infer an interrupt or transfer
+effect from any of these bytes.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
