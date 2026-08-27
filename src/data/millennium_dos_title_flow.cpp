@@ -118,6 +118,12 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 12> launcher_pre_title_callee_jc_target_prefix{
         0x0e, 0x1f, 0x8b, 0x16, 0xd5, 0x05, 0xb4, 0x09,
         0xcd, 0x21, 0xeb, 0x87};
+    constexpr std::array<std::uint8_t, 16> launcher_pre_title_callee_join_prefix{
+        0x50, 0xc5, 0x16, 0xe7, 0x05, 0xb8, 0x91, 0x25,
+        0xcd, 0x21, 0x2e, 0xc5, 0x16, 0xeb, 0x05, 0xb8};
+    constexpr std::array<std::uint8_t, 10> launcher_pre_title_callee_join_branch{
+        0xb8, 0x08, 0x25, 0xcd, 0x21, 0x58, 0x22, 0xc0,
+        0x74, 0x14};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
@@ -165,6 +171,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
                    launcher_pre_title_callee_jc_target_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS launcher JC-target prefix");
     }
+    constexpr std::size_t pre_title_callee_join = 0x269;
+    if (!has_bytes(mill_launcher, pre_title_callee_join - mill_load_bias,
+                   launcher_pre_title_callee_join_prefix)
+        || !has_bytes(mill_launcher, 0x2aa - mill_load_bias,
+                      launcher_pre_title_callee_join_branch)) {
+        throw std::runtime_error("Unsupported Millennium DOS launcher join branch");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -201,6 +214,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_pre_title_callee_jnc_target_branch_target = 0x2d6,
         .launcher_pre_title_callee_jc_target_jump_address = 0x2e0,
         .launcher_pre_title_callee_jc_target_jump_target = 0x269,
+        .launcher_pre_title_callee_join_branch_address = 0x2b2,
+        .launcher_pre_title_callee_join_branch_target = 0x2c8,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",

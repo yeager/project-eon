@@ -969,6 +969,12 @@ The `$02ed` JC target at `$02d6` has its own 12-byte anchor:
 same literal `JMP -$79` at `$02e0` to `$0269`; this is an observed byte-level
 join, not evidence about either condition, interrupt, callee result, or DOS.
 
+At the joined `$0269` path, the parser anchors the opening 16 bytes and the
+later `B8 08 25 CD 21 58 22 C0 74 14` branch-tail at `$02aa`. The first next
+direct control edge in that tail is literal `JE +$14` at `$02b2` to `$02c8`.
+This remains a raw static address/byte fact only, with no interpretation of
+the intervening interrupt bytes, condition, result, or DOS behavior.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
