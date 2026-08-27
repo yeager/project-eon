@@ -104,10 +104,12 @@ Verify genuine release archives by SHA-256 without opening SDL:
 ./build/project-eon --data "$HOME/Hämtningar" --verify-data deuteros
 ```
 
-The current SDL application is deliberately a data-verification shell, not a
-mock game. It lists detected real releases and proves the Original/Modern
-presentation boundary while reverse engineering proceeds. It never substitutes
-placeholder art or invented game behaviour for undecoded original data.
+The current SDL application is deliberately an incremental reimplementation,
+not a mock game. It lists detected real releases and proves the Original/Modern
+presentation boundary while reverse engineering proceeds. Selecting Deuteros
+now displays an authentic bitmap decoded at runtime from the verified Amiga ADF
+with its original RGB4 palette; it never substitutes placeholder art or
+invented game behaviour for undecoded original data.
 
 The launcher follows the same broad structure as OpenCaptive: a native SDL3
 start menu, separate game cards, direct CLI game selection, a platform-neutral
@@ -138,6 +140,9 @@ Deuteros' clean Amiga system and data disks are also opened natively as ADF.
 Geometry, boot identifiers, carry-around checksums and arbitrary sectors are
 validated against the real images. The 68000 bootloader's decoded-track request is
 documented in [the generated disassembly](docs/generated/deuteros-amiga-boot.md).
+Both discovered four-bitplane RLE layouts are implemented, covering all 216
+bitmap records in the first two resource bundles. The SDL launch view exercises
+the same importer and renders the genuine opening-animation resource.
 
 The repository does not contain the commercial games. Point the inventory tool
 at a directory containing the original archives:
