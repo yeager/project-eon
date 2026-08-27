@@ -172,6 +172,23 @@ struct MillenniumAtariConfigSecondJsr {
     std::uint32_t following_jsr_target = 0;
 };
 
+// The shared JSR target reached from the second config routine. The fields
+// retain only the exact original words and absolute slots directly encoded in
+// its small body. The Line-A word is intentionally not interpreted: doing so
+// would require platform state and an OS/firmware implementation.
+struct MillenniumAtariConfigJoinJsr {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t target_address = 0;
+    std::uint32_t target_file_offset = 0;
+    std::uint16_t initial_opcode = 0;
+    std::uint16_t d0_word_store_opcode = 0;
+    std::uint32_t d0_word_store_address = 0;
+    std::uint16_t line_a_opcode = 0;
+    std::uint32_t first_longword_store_address = 0;
+    std::uint32_t second_longword_store_address = 0;
+    std::uint16_t return_opcode = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -235,5 +252,10 @@ struct MillenniumAtariConfigSecondJsr {
 // conditional branch, or models platform state.
 [[nodiscard]] MillenniumAtariConfigSecondJsr parse_millennium_atari_config_second_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
+
+// Validates the small common target of the second config routine. It neither
+// executes the Line-A instruction nor models the RAM slots it references.
+[[nodiscard]] MillenniumAtariConfigJoinJsr parse_millennium_atari_config_join_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigSecondJsr& second);
 
 } // namespace eon

@@ -452,6 +452,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_second_jsr = eon::parse_millennium_atari_config_second_jsr(
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
+    const auto config_join_jsr = eon::parse_millennium_atari_config_join_jsr(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_second_jsr);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -524,6 +526,16 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_second_jsr.join_jsr_address << " -> 0x" << config_second_jsr.join_jsr_target
         << ", following JSR -> 0x" << config_second_jsr.following_jsr_target << std::dec
         << " (validated only; no branch evaluation or calls)\n";
+    std::cout << "          MILL22A.inf joined JSR target: 0x" << std::hex
+        << config_join_jsr.target_address << " is file +0x" << config_join_jsr.target_file_offset
+        << "; opcodes 0x" << config_join_jsr.initial_opcode << " 0x"
+        << config_join_jsr.d0_word_store_opcode << " -> 0x"
+        << config_join_jsr.d0_word_store_address << ", opaque Line-A 0x"
+        << config_join_jsr.line_a_opcode << ", stores 0x"
+        << config_join_jsr.first_longword_store_address << " and 0x"
+        << config_join_jsr.second_longword_store_address << ", RTS 0x"
+        << config_join_jsr.return_opcode << std::dec
+        << " (validated only; no Line-A/OS emulation or RAM-state synthesis)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.

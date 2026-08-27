@@ -176,6 +176,14 @@ validates every byte through the following call, but does not invent D0,
 evaluate the branch, execute either call, or assign a platform effect to the
 intervening instructions.
 
+The shared call target `0x2a51c` is now independently bounded at file
+`+0x3e`. Its complete 32-byte local body begins `0x548f`, stores the literal
+`D0` word through opcode `0x33c0` to `0x2a512`, contains original Line-A word
+`0xa000`, stores longwords to `0x2a514` and `0x2a518`, then returns with
+`0x4e75`. The Line-A instruction is deliberately opaque: Project Eon does not
+choose a firmware implementation, invent register or RAM contents, execute
+the helper, or treat those slots as a host-side configuration model.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
