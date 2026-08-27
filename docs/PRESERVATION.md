@@ -61,6 +61,16 @@ dumps are preferred as semantic baselines.
 - Deuteros identifiers are `DOS\0` (system) and `DEU\0` (custom data). Logical
   block 880 is game code/data rather than a normal AmigaDOS root directory.
 
+### Millennium Atari ST relocation evidence
+
+The verified Equinox `MILENIUM.TOS` PRG has 227 compact GEMDOS relocation
+sites. Project Eon retains each site and the original unrelocated big-endian
+longword, without choosing a load base or producing a relocated copy. The
+first site is offset `0x6`, value `0x0000115e`; the last is `0x1150`, value
+`0x000139c8`. These values are read straight from the TEXT+DATA bytes in the
+SHA-identified disk file and are native test anchors for future execution
+research.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

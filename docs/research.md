@@ -69,7 +69,11 @@ header declares 4,446 text bytes, 44,564 data bytes and 81,382 BSS bytes; it
 has no symbol table, is relocatable (`absflag = 0`), and its original compact
 relocation stream has 227 entries from offset `0x6` through `0x1150`. The
 parser validates every relocation increment and terminator directly from the
-disk file. It does not select an invented load address or apply relocations.
+disk file and retains the original big-endian longword at every site. The
+verified anchors are `[0x6] = 0x0000115e` and `[0x1150] = 0x000139c8`.
+This is the exact input needed for a later GEMDOS-compatible loader to add its
+chosen base in memory. Project Eon does not select an invented load address,
+apply relocations, write an image, or unpack the disk at runtime.
 
 ### Deuteros Amiga custom loader
 

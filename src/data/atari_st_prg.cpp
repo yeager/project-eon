@@ -67,6 +67,8 @@ AtariStPrg parse_atari_st_prg(std::span<const std::uint8_t> bytes) {
     result.first_relocation_offset = relocation;
     result.last_relocation_offset = relocation;
     result.relocation_count = 1;
+    const auto loadable_offset = header_bytes;
+    result.relocations.push_back({relocation, read_be32(bytes, loadable_offset + relocation)});
     while (cursor < bytes.size()) {
         const auto delta = bytes[cursor++];
         if (delta == 0U) {
@@ -83,6 +85,7 @@ AtariStPrg parse_atari_st_prg(std::span<const std::uint8_t> bytes) {
         }
         result.last_relocation_offset = relocation;
         ++result.relocation_count;
+        result.relocations.push_back({relocation, read_be32(bytes, loadable_offset + relocation)});
     }
     throw std::runtime_error("Unterminated Atari ST PRG relocation table");
 }

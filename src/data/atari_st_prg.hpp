@@ -3,8 +3,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <vector>
 
 namespace eon {
+
+// A longword in the combined TEXT+DATA image which GEMDOS asks the loader to
+// adjust by its actual load base. The parser retains the value present on the
+// original disk; it deliberately does not choose or apply a load address.
+struct AtariStRelocation {
+    std::uint32_t offset = 0;
+    std::uint32_t original_value = 0;
+};
 
 // Layout recovered from an Atari ST GEMDOS executable (the 0x601a PRG
 // header).  Values are retained as source-media facts; no load address or
@@ -19,6 +28,7 @@ struct AtariStPrg {
     std::size_t relocation_count = 0;
     std::uint32_t first_relocation_offset = 0;
     std::uint32_t last_relocation_offset = 0;
+    std::vector<AtariStRelocation> relocations;
 };
 
 // Strictly parses a genuine Atari ST PRG image, including its compact
