@@ -6,6 +6,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_lib.hpp"
+#include "data/millennium_dos_title_flow.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
@@ -101,6 +102,19 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << ", indices 0.." << static_cast<unsigned>(bitmap.max_palette_index)
         << ", RGB6 DAC entries 256, logical translation "
         << palette.logical_to_dac.size() << "\n";
+    constexpr auto titles_sha256 =
+        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+    constexpr auto launcher_sha256 =
+        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+    const auto titles = eon::extract_asset_by_sha256(release.path, titles_sha256);
+    const auto launcher = eon::extract_asset_by_sha256(release.path, launcher_sha256);
+    if (!titles || !launcher) throw std::runtime_error("Verified Millennium title flow assets missing");
+    const auto flow = eon::parse_millennium_dos_title_flow(*titles, *launcher);
+    std::cout << "          TITLES.EXE: resource " << flow.title_resource_index
+        << ", " << flow.intro_transition_steps << " transition steps, key poll INT 0x"
+        << std::hex << static_cast<unsigned>(flow.input_interrupt) << std::dec
+        << "; launcher hand-off " << flow.launcher_title_program << " -> "
+        << flow.launcher_game_program << '\n';
 }
 
 std::optional<PreviewAnimation> load_millennium_preview(
