@@ -31,6 +31,7 @@ endif()
 add_executable(project-eon
     src/main.cpp
     src/launcher.cpp
+    src/data/amiga_adf.cpp
     src/data/fat12.cpp
     src/data/sha256.cpp
     src/data/zip_archive.cpp
@@ -64,6 +65,7 @@ if(BUILD_TESTING)
     add_executable(eon-native-tests
         tests/native_tests.cpp
         src/launcher.cpp
+        src/data/amiga_adf.cpp
         src/data/fat12.cpp
         src/data/sha256.cpp
         src/data/zip_archive.cpp

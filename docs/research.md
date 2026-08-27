@@ -52,6 +52,21 @@ verified 819,200-byte Equinox image contains 13 live root entries. Its
 This proves a native outer ZIP → inner ZIP → ST disk → file path without using
 filenames as release identity.
 
+### Deuteros Amiga custom loader
+
+The clean Amiga disks are standard 80-cylinder, double-sided, 11-sector ADF
+images, and both boot blocks pass the Amiga carry-around checksum. Disk 1 uses
+the `DOS\0` identifier while data disk 2 deliberately uses `DEU\0`; neither
+exposes the game through a normal root directory.
+
+Disassembly of the genuine disk 1 boot code shows a `trackdisk.device` raw-read
+request (`io_Command = 0x8002`). It requests `0x1600` bytes from raw-track
+offset `2 * 0x1600 = 0x2c00` into address `0x12800`, then returns execution
+address `0x12a4e`. Logical block 880 on disk 1 starts with `JMP $00040426`;
+the equivalent disk 2 block begins `00 04 bb 1a` and is custom indexed data,
+not an AmigaDOS root block. `tools/analyze_m68k.py` regenerates the boot
+disassembly directly from an extracted verified ADF.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are
