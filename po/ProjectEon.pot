@@ -1,0 +1,94 @@
+# Project Eon user-interface catalog.
+# This file is deliberately independent of original game data: original in-game
+# text is rendered only from the verified media, never replaced by a translation.
+msgid ""
+msgstr ""
+"Project-Id-Version: Project Eon\n"
+"Report-Msgid-Bugs-To: https://github.com/yeager/project-eon/issues\n"
+"POT-Creation-Date: 2026-08-27 00:00+0000\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/main.cpp
+msgid "PROJECT EON"
+msgstr ""
+
+#: src/main.cpp
+msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
+msgstr ""
+
+#: src/main.cpp
+msgid "VERIFIED ORIGINAL DATA"
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL DATA NOT FOUND"
+msgstr ""
+
+#: src/main.cpp
+msgid "SCANNING ORIGINAL DATA..."
+msgstr ""
+
+#: src/main.cpp
+msgid "ENTER / CLICK: START"
+msgstr ""
+
+#: src/main.cpp
+msgid "PLATFORM: "
+msgstr ""
+
+#: src/main.cpp
+msgid "AUTO"
+msgstr ""
+
+#: src/main.cpp
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr ""
+
+#: src/main.cpp
+msgid "Files scanned: "
+msgstr ""
+
+#: src/main.cpp
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr ""
+
+#: src/main.cpp
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr ""
+
+#: src/main.cpp
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr ""
+
+#: src/main.cpp
+msgid "Game: "
+msgstr ""
+
+#: src/main.cpp
+msgid "Platform: "
+msgstr ""
+
+#: src/main.cpp
+msgid "Presentation: Modern"
+msgstr ""
+
+#: src/main.cpp
+msgid "Presentation: Original"
+msgstr ""
+
+#: src/main.cpp
+msgid "Original data is present and selected."
+msgstr ""
+
+#: src/main.cpp
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr ""
+
+#: src/main.cpp
+msgid "ESC: QUIT"
+msgstr ""
+
+#: src/main.cpp
+msgid "ESC: BACK TO MENU"
+msgstr ""

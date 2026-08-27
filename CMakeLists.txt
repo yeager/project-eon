@@ -38,6 +38,7 @@ endif()
 
 add_executable(project-eon
     src/main.cpp
+    src/i18n.cpp
     src/launcher.cpp
     src/engine/deuteros_amiga_opening.cpp
     src/engine/deuteros_amiga_paula.cpp
@@ -72,7 +73,9 @@ add_executable(project-eon
     src/platform/game_data.cpp
 )
 target_include_directories(project-eon PRIVATE src)
-target_compile_definitions(project-eon PRIVATE EON_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
+target_compile_definitions(project-eon PRIVATE
+    EON_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
 target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
 
 # Mirror OpenCaptive's development/package layout: launcher artwork is kept
@@ -98,6 +101,7 @@ include(CTest)
 if(BUILD_TESTING)
     add_executable(eon-native-tests
         tests/native_tests.cpp
+        src/i18n.cpp
         src/launcher.cpp
         src/engine/deuteros_amiga_opening.cpp
         src/engine/deuteros_amiga_paula.cpp
@@ -134,6 +138,7 @@ if(BUILD_TESTING)
     target_include_directories(eon-native-tests PRIVATE src)
     target_link_libraries(eon-native-tests PRIVATE ZLIB::ZLIB)
     target_compile_definitions(eon-native-tests PRIVATE
+        EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po"
         EON_REAL_DATA_DIR="${EON_REAL_DATA_DIR}"
     )
     add_test(NAME native-data-detection COMMAND eon-native-tests)
@@ -169,6 +174,7 @@ if(UNIX AND NOT APPLE)
         DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
 install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")
 install(FILES README.md LICENSE DESTINATION "${CMAKE_INSTALL_DOCDIR}")
 
 set(CPACK_PACKAGE_NAME "project-eon")

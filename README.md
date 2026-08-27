@@ -93,6 +93,17 @@ game's hash-verified original platforms. The selected platform is carried into
 the launch request: the menu never substitutes a different platform's media.
 Enter, Space, or a card click starts the selected original release.
 
+### Language
+
+The launcher UI is translated through the portable gettext-style catalogs in
+[`po/`](po/README.md). It currently ships Arabic, German, Greek, British
+English, Spanish, Finnish, French, Hindi, Italian, Japanese, Korean, Dutch,
+Norwegian, Polish, Brazilian Portuguese, Russian, Swedish, Turkish, Ukrainian,
+and Simplified Chinese. Select a launcher language with `--language sv` (or
+`-l sv`); without it, Project Eon follows `LC_ALL`, `LC_MESSAGES`, then `LANG`.
+Only Project Eon's own UI is translated—original game text remains sourced from
+the selected original media.
+
 By default, Project Eon reads user-supplied media from `~/.projecteon` on
 Linux/macOS and `<install directory>\data` on Windows. `--data` selects a
 different directory or one original archive, for example a preservation
@@ -100,6 +111,11 @@ collection in `Hämtningar`.
 Archives and disk images are read in place: Project Eon never creates the data
 directory, unpacks, copies,
 installs, modifies, or redistributes original game data.
+
+The verified Spanish Millennium DOS floppy is supported directly from its
+FAT12 image: its original `TITLE.LIB` P00 title and palette are rendered in
+place. Its executable hand-off is deliberately kept separate from the
+recovered English DOS path until that Spanish ABI has evidence.
 
 Or select a game directly from the CLI:
 

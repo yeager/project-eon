@@ -1,4 +1,5 @@
 #include "launcher.hpp"
+#include "i18n.hpp"
 
 #include <cstdlib>
 #include <string_view>
@@ -43,6 +44,7 @@ std::string usage() {
         "  project-eon [--data <directory-or-archive>] --game millennium|deuteros\n"
         "               [--platform dos|amiga|atari-st]\n"
         "               [--presentation original|modern]\n\n"
+        "               [--language <language>]\n\n"
         "  project-eon [--data <directory-or-archive>] --verify-data millennium|deuteros\n\n"
         "  project-eon [--data <directory-or-archive>] --inspect\n\n"
         "Without --data, game data is read from ~/.projecteon on Linux/macOS\n"
@@ -53,6 +55,7 @@ std::string usage() {
 ParseResult parse_command_line(int argc, char** argv) {
     LaunchRequest request;
     request.data_directory = default_data_directory(argc > 0 ? argv[0] : "project-eon");
+    request.language = language_from_environment();
     for (int index = 1; index < argc; ++index) {
         const std::string_view argument = argv[index];
         if (argument == "--help" || argument == "-h") return {{}, {}, true};
@@ -78,6 +81,9 @@ ParseResult parse_command_line(int argc, char** argv) {
             if (value == "original") request.presentation = Presentation::original;
             else if (value == "modern") request.presentation = Presentation::modern;
             else return {{}, "Unknown presentation: " + std::string(value), false};
+        } else if (argument == "--language" || argument == "-l") {
+            request.language = normalize_language(value);
+            if (request.language.empty()) return {{}, "Unknown language: " + std::string(value), false};
         } else {
             return {{}, "Unknown option: " + std::string(argument), false};
         }
