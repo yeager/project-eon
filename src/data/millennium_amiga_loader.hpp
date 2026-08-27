@@ -62,6 +62,19 @@ struct MillenniumAmigaResidentWordSplitterPreHelperState {
     std::array<std::uint8_t, 3> sign_bytes{};
 };
 
+// Chain-of-custody evidence for the location named by the splitter's JSR.
+// The raw ADF is mapped directly at `resident_stage.destination` for the
+// purpose of locating its source bytes, but those bytes have not established
+// a complete executable helper boundary. This record intentionally exposes
+// only the literal mapping and a small immutable fingerprint; it must not be
+// used as an implementation of the helper.
+struct MillenniumAmigaResidentHelperRawBoundary {
+    std::uint32_t helper_address = 0;
+    std::uint32_t raw_disk_offset = 0;
+    std::array<std::uint8_t, 32> raw_prefix{};
+    std::string raw_prefix_sha256;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -87,5 +100,14 @@ struct MillenniumAmigaResidentWordSplitterPreHelperState {
 [[nodiscard]] MillenniumAmigaResidentWordSplitterPreHelperState
 split_millennium_amiga_resident_words_pre_helper(
     const std::array<std::uint16_t, 3>& source_words);
+
+// Locates and fingerprints the raw media bytes corresponding to the
+// splitter's `$7ba12` target. It fails closed unless the source image has the
+// verified shared prefix. It neither executes, transforms, nor assigns a
+// routine boundary to those bytes.
+[[nodiscard]] MillenniumAmigaResidentHelperRawBoundary
+parse_millennium_amiga_resident_helper_raw_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentWordSplitter& splitter);
 
 } // namespace eon

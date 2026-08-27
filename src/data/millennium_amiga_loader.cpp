@@ -223,4 +223,36 @@ split_millennium_amiga_resident_words_pre_helper(
     return state;
 }
 
+MillenniumAmigaResidentHelperRawBoundary
+parse_millennium_amiga_resident_helper_raw_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentWordSplitter& splitter) {
+    validate_range(plan.resident_stage);
+    if (splitter.helper_address < plan.resident_stage.destination) {
+        throw std::runtime_error("Millennium Amiga helper precedes resident raw range");
+    }
+    const auto relative = splitter.helper_address - plan.resident_stage.destination;
+    constexpr std::array<std::uint8_t, 32> expected_prefix{{
+        0x00, 0x01, 0x20, 0x00, 0x80, 0xac, 0x00, 0x00,
+        0x01, 0x00, 0x08, 0x80, 0x42, 0x00, 0x00, 0x01,
+        0x01, 0x00, 0x80, 0xac, 0x00, 0x00, 0x01, 0x00,
+        0x20, 0x80, 0x42, 0x00, 0x00, 0x01, 0x00, 0x10,
+    }};
+    if (relative > plan.resident_stage.length
+        || expected_prefix.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga helper is outside resident raw range");
+    }
+    const auto raw_disk_offset = plan.resident_stage.disk_offset + relative;
+    const auto source = disk.bytes(raw_disk_offset, expected_prefix.size());
+    if (!std::equal(expected_prefix.begin(), expected_prefix.end(), source.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga helper raw boundary");
+    }
+    MillenniumAmigaResidentHelperRawBoundary result;
+    result.helper_address = splitter.helper_address;
+    result.raw_disk_offset = raw_disk_offset;
+    std::copy(source.begin(), source.end(), result.raw_prefix.begin());
+    result.raw_prefix_sha256 = to_hex(sha256(source));
+    return result;
+}
+
 } // namespace eon
