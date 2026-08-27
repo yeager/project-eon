@@ -729,15 +729,22 @@ supplies state, or writes the original executable, archive, or save media.
 The sixth table record (raw F6 / `$40`) is `1e 24 09 1b 35 05 15 74`, with
 handler entry `$7415`. It first returns when runtime word `$a19e` is nonzero.
 On the admitted path it clears `AX`, calls `$d0c9`, then calls `$4d2c` with
-`AX=$0022` and `$c980`. The handler snapshots bytes `$75a8` and `$75ae` into
-its own `$7412` and `$740f` scratch cells and snapshots word `$75ac` into
-`$7410`; it then writes literal `$0c` to `$75a8`, `$00` to `$75ae`, and
-`$3207` to `$75a6` before calling `$09fa`. The immediately following
-`SHR BL,1`/carry branch can repeat that poll. These are only verified native
-control-flow and literal address facts. Project Eon exposes the F6 gate and
-temporary values as immutable evidence, but does not supply the guard/carry,
-invoke native code, dereference callback `$3207`, apply the writes, or alter
-original executable, archive, or save media.
+`AX=$0022` and `$c980`. Only after those native calls return, the handler
+snapshots bytes `$75a8` and `$75ae` into its own `$7412` and `$740f` scratch
+cells and snapshots word `$75ac` into `$7410`; it then writes literal `$0c`
+to `$75a8`, `$00` to `$75ae`, and `$3207` to `$75a6` before calling `$09fa`.
+The immediately following `SHR BL,1`/carry branch can repeat that poll.
+
+The immediately adjacent but separately entered `$7455` routine proves the
+paired cleanup sequence: it copies `$740f` back to `$75ae`, `$7410` back to
+`$75ac`, and `$7412` back to `$75a8`, then makes its first native call to
+`$0b0c`. The actual dispatcher/callback edge that reaches `$7455` is not yet
+proved; in particular `$3207` is recorded only as a literal word written at
+`$75a6`, not dereferenced as a host callback. Therefore neither the temporary
+stores nor the cleanup are a safe private-overlay effect. Project Eon exposes
+this byte-validated, strict no-overlay boundary and never supplies the
+guard/carry, invokes native code, applies the writes, or alters original
+executable, archive, or save media.
 
 The seventh table record (raw F7 / `$41`) is `24 2a 09 1b 36 06 21 75`, with
 handler entry `$7521`. It returns when runtime word `$a19e` is nonzero. On its

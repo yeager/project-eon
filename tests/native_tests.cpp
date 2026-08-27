@@ -356,6 +356,14 @@ int main() {
     assert(game_flow.sixth_function_key.callback_word_value == 0x3207);
     assert(game_flow.sixth_function_key.callback_word_address == 0x75a6);
     assert(game_flow.sixth_function_key.wait_call_address == 0x09fa);
+    assert(game_flow.sixth_function_key.restoration_handler_address == 0x7455);
+    assert(game_flow.sixth_function_key.restoration_first_source_address == 0x740f);
+    assert(game_flow.sixth_function_key.restoration_first_destination_address == 0x75ae);
+    assert(game_flow.sixth_function_key.restoration_word_source_address == 0x7410);
+    assert(game_flow.sixth_function_key.restoration_word_destination_address == 0x75ac);
+    assert(game_flow.sixth_function_key.restoration_second_source_address == 0x7412);
+    assert(game_flow.sixth_function_key.restoration_second_destination_address == 0x75a8);
+    assert(game_flow.sixth_function_key.restoration_first_call_address == 0x0b0c);
     auto altered_f2_gate = *game_executable;
     altered_f2_gate[0x71ca - 0x100] ^= 0x01;
     bool rejected_altered_f2_gate = false;
@@ -419,6 +427,15 @@ int main() {
         rejected_altered_f6_handler = true;
     }
     assert(rejected_altered_f6_handler);
+    auto altered_f6_restoration = *game_executable;
+    altered_f6_restoration[0x7455 - 0x100] ^= 0x01;
+    bool rejected_altered_f6_restoration = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f6_restoration));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f6_restoration = true;
+    }
+    assert(rejected_altered_f6_restoration);
     auto altered_f7_handler = *game_executable;
     altered_f7_handler[0x7521 - 0x100] ^= 0x01;
     bool rejected_altered_f7_handler = false;
@@ -489,6 +506,12 @@ int main() {
     assert(game_session.observe_action(0x40) == std::optional<std::size_t>{5});
     assert(game_session.last_sixth_function_key_trace());
     assert(game_session.last_sixth_function_key_trace()->callback_word_value == 0x3207);
+    // All F6 stores follow two native calls and the observed restoration path
+    // itself ends at a native call. Unlike F8, no private runtime overlay is
+    // justified from this trace.
+    assert(!game_session.last_runtime_byte_effect());
+    assert(!game_session.reconstructed_runtime_byte(0x75a8));
+    assert(!game_session.reconstructed_runtime_byte(0x75ae));
     assert(!game_session.last_fifth_function_key_trace());
     assert(game_session.observe_action(0x41) == std::optional<std::size_t>{6});
     assert(game_session.last_seventh_function_key_trace());
