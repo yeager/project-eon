@@ -114,6 +114,22 @@ struct DeuterosAmigaTitleStageProfile {
     bool post_transition_dispatch_negative_service_preserves_a0_a1 = false;
     bool post_transition_dispatch_negative_restores_d5_then_d0 = false;
     std::uint32_t post_transition_dispatch_negative_return_address = 0;
+    // Three independently reachable title-stage tails retain the bootstrap
+    // controller in A1, select profile 2, 4, or 3 respectively, and JMP to
+    // the bootstrap reset entry. The bootstrap table resolves all three to
+    // profile zero, which is the existing raw main-stage load. These are
+    // verified handoff facts, not labels for title choices or gameplay modes.
+    std::uint32_t title_exit_first_address = 0;
+    std::uint16_t title_exit_first_profile = 0;
+    std::uint32_t title_exit_second_address = 0;
+    std::uint16_t title_exit_second_profile = 0;
+    std::uint32_t title_exit_third_address = 0;
+    std::uint16_t title_exit_third_profile = 0;
+    std::uint32_t title_exit_controller_address = 0;
+    std::uint32_t title_exit_profile_slot_address = 0;
+    std::uint32_t title_exit_profile_table_address = 0;
+    std::uint16_t title_exit_resolved_profile = 0;
+    std::uint32_t title_exit_main_stage_entry_address = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
