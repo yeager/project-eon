@@ -264,6 +264,16 @@ struct MillenniumDosTenthFunctionKeyTrace {
 // eight-byte table entries and the routines they reach have not been inferred.
 struct MillenniumDosGameFlow {
     std::uint16_t entry_address = 0;
+    // Static startup facts immediately after the flat COM entry's segment
+    // setup. They do not claim that any called native routine returns.
+    std::uint16_t startup_address = 0;
+    std::uint16_t startup_stack_pointer = 0;
+    std::uint32_t startup_first_call_address = 0;
+    std::uint16_t startup_mode_byte_address = 0;
+    std::uint8_t startup_mode_equal_value = 0;
+    std::uint32_t startup_equal_call_address = 0;
+    std::uint32_t startup_other_call_address = 0;
+    std::uint32_t startup_nonzero_dx_branch_address = 0;
     std::uint16_t main_loop_address = 0;
     std::uint32_t action_poll_address = 0;
     std::uint8_t special_action_0 = 0;

@@ -592,6 +592,14 @@ int main() {
     assert(game_executable && game_executable->size() == 54'391);
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game_executable);
     assert(game_flow.entry_address == 0xd2b0);
+    assert(game_flow.startup_address == 0xd2b4);
+    assert(game_flow.startup_stack_pointer == 0xda00);
+    assert(game_flow.startup_first_call_address == 0x10124);
+    assert(game_flow.startup_mode_byte_address == 0xda05);
+    assert(game_flow.startup_mode_equal_value == 1);
+    assert(game_flow.startup_equal_call_address == 0xd1a1);
+    assert(game_flow.startup_other_call_address == 0xd1b5);
+    assert(game_flow.startup_nonzero_dx_branch_address == 0xd44b);
     assert(game_flow.main_loop_address == 0xd3d2);
     assert(game_flow.action_poll_address == 0x10f05);
     assert(game_flow.special_action_0 == 0x0b && game_flow.special_action_1 == 0x0c);
@@ -686,6 +694,15 @@ int main() {
     assert(game_flow.sixth_function_key.restoration_second_source_address == 0x7412);
     assert(game_flow.sixth_function_key.restoration_second_destination_address == 0x75a8);
     assert(game_flow.sixth_function_key.restoration_first_call_address == 0x0b0c);
+    auto altered_startup_profile = *game_executable;
+    altered_startup_profile[0xd2b4 - 0x100] ^= 0x01;
+    bool rejected_altered_startup_profile = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_startup_profile));
+    } catch (const std::runtime_error&) {
+        rejected_altered_startup_profile = true;
+    }
+    assert(rejected_altered_startup_profile);
     auto altered_f2_gate = *game_executable;
     altered_f2_gate[0x71ca - 0x100] ^= 0x01;
     bool rejected_altered_f2_gate = false;
