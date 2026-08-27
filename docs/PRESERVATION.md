@@ -1110,6 +1110,15 @@ This is a strict SDL-adapter boundary for requested video mode and a masked
 driver-local option; Project Eon executes neither the driver, BIOS call, nor
 any path-dependent initial presentation.
 
+The caller sites that request private functions `$02` and `$04` leave the
+pointed `ES:BX` records inside the original executable image, but the supplied
+bytes do not yet establish those records' complete layout, ownership, or the
+functions' return contract. In particular, the observed AX=`$04` input-mask
+operation is not evidence that the caller's adjacent record is a host video
+configuration. Project Eon preserves the addresses as control-flow evidence
+and deliberately does not build an SDL adapter or mutable substitute for
+either call until a real caller-to-driver ABI has been recovered.
+
 The old-vector preservation chain is also raw-byte-validated. `$0167` loads
 `AX=$3591`, makes its external call, then stores `BX` and `ES` at adjacent
 cells `$05e7/$05e9`. On the terminal cleanup path `$0269`, `LDS DX,[$05e7]`
