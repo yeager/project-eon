@@ -1041,4 +1041,67 @@ parse_millennium_amiga_resident_separate_byte_gate_target_boundary(
         plan.resident_stage.disk_offset + convergence_relative, next_hash};
 }
 
+MillenniumAmigaResidentSeparateByteGateConvergenceBoundary
+parse_millennium_amiga_resident_separate_byte_gate_convergence_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparateByteGateTargetBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68ef4;
+    constexpr std::uint32_t target = 0x68f2a;
+    constexpr std::uint32_t fallthrough = 0x68f06;
+    constexpr std::array<std::uint8_t, 34> expected{{
+        0x1e, 0x39, 0x00, 0x07, 0xc2, 0x4f, 0x13, 0xc1, 0x00, 0x07,
+        0xc2, 0x4f, 0xbe, 0x01, 0x67, 0x00, 0x00, 0x26, 0x13, 0xfc,
+        0x00, 0x02, 0x00, 0x07, 0xc2, 0x50, 0x13, 0xfc, 0x00, 0x00,
+        0x00, 0x07, 0xc2, 0x52,
+    }};
+    constexpr std::array<std::uint8_t, 32> target_prefix{{
+        0x06, 0x39, 0x00, 0x60, 0x00, 0x07, 0xc2, 0x52,
+        0x64, 0x00, 0x00, 0x14, 0x0c, 0x39, 0x00, 0x10,
+        0x00, 0x07, 0xc2, 0x50, 0x64, 0x00, 0x00, 0x08,
+        0x54, 0x39, 0x00, 0x07, 0xc2, 0x50, 0x4e, 0xb9,
+    }};
+    constexpr std::array<std::uint8_t, 32> fallthrough_prefix{{
+        0x13, 0xfc, 0x00, 0x02, 0x00, 0x07, 0xc2, 0x50,
+        0x13, 0xfc, 0x00, 0x00, 0x00, 0x07, 0xc2, 0x52,
+        0xbe, 0x3c, 0x00, 0x00, 0x67, 0x00, 0x00, 0x2c,
+        0x13, 0xfc, 0x00, 0x00, 0x00, 0x07, 0xc2, 0x4f,
+    }};
+    constexpr std::string_view expected_hash =
+        "d63b2de78fbc18f2a4213206d1f05947a604dafc5b23fea56f87b624cb7549ab";
+    constexpr std::string_view target_hash =
+        "ba2a0127999eb628ef05008867728fd31952c6d4b268bdb38f35130bab9973ae";
+    constexpr std::string_view fallthrough_hash =
+        "5b3ae299a769dcca25b96b3b588ab65b1c44843abf0ef1288a1a74741dec9993";
+    if (boundary.convergence_address != entry || entry < plan.resident_stage.destination
+        || target < plan.resident_stage.destination || fallthrough < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga byte gate convergence placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    const auto target_relative = target - plan.resident_stage.destination;
+    const auto fallthrough_relative = fallthrough - plan.resident_stage.destination;
+    if (expected.size() > plan.resident_stage.length - relative
+        || target_prefix.size() > plan.resident_stage.length - target_relative
+        || fallthrough_prefix.size() > plan.resident_stage.length - fallthrough_relative) {
+        throw std::runtime_error("Millennium Amiga byte gate convergence is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto target_bytes = disk.bytes(plan.resident_stage.disk_offset + target_relative,
+        target_prefix.size());
+    const auto fallthrough_bytes = disk.bytes(plan.resident_stage.disk_offset + fallthrough_relative,
+        fallthrough_prefix.size());
+    const auto hash = to_hex(sha256(bytes));
+    const auto target_digest = to_hex(sha256(target_bytes));
+    const auto fallthrough_digest = to_hex(sha256(fallthrough_bytes));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || !std::equal(target_prefix.begin(), target_prefix.end(), target_bytes.begin())
+        || !std::equal(fallthrough_prefix.begin(), fallthrough_prefix.end(), fallthrough_bytes.begin())
+        || hash != expected_hash || target_digest != target_hash || fallthrough_digest != fallthrough_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga byte gate convergence");
+    }
+    // BEQ.W's displacement base is the extension word at $68f04.
+    return {entry, plan.resident_stage.disk_offset + relative, hash, 0x68f02, target,
+        plan.resident_stage.disk_offset + target_relative, target_digest,
+        plan.resident_stage.disk_offset + fallthrough_relative, fallthrough_digest};
+}
+
 } // namespace eon
