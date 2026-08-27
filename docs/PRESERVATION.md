@@ -439,6 +439,9 @@ interval. The `$1f1a` vector returns raw-loader arguments: destination
 `$b000`, byte count `$5e400`, linear sector `$4c` after an observed GEMDOS
 call. These returned values flow to `$70030` through the proven dispatcher,
 but state selection is still not emulated and no sector is read by this parser.
+Slot 2's `$1f50` is a literal branch to `$1f1a`; slots 3 and 4 point directly
+to `$1f1a`. Thus all three aliases share only the already-proven state-0 raw
+arguments, without a new state interpretation.
 
 The sixth vector (`$1f52`) makes two further static calls to `$70030`: first
 with raw arguments destination `$b000`, byte count `$b400`, and computed

@@ -87,6 +87,8 @@ struct DeuterosAtariSecondStageProfile {
 // arguments only; their game semantics and state-selection source are unknown.
 struct DeuterosAtariDispatchProfile {
     std::array<std::uint32_t, 6> vector_addresses{};
+    // Table slots 2, 3 and 4 statically resolve to the state-0 vector.
+    std::array<std::uint32_t, 3> state0_alias_addresses{};
     std::uint32_t state0_destination = 0;
     std::uint32_t state0_byte_count = 0;
     std::uint32_t state0_linear_sector = 0;

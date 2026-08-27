@@ -170,6 +170,10 @@ DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
         0x20, 0x3c, 0x00, 0x05, 0xe4, 0x00,
         0x24, 0x3c, 0x00, 0x00, 0x00, 0x4c, 0x4e, 0x75}};
     require_bytes(bytes, 0x12e, state1, "Unexpected Deuteros Atari ST dispatch state 1");
+    // Slot 2 enters a local BRA at $1f50; slots 3/4 already point at $1f1a.
+    // All three resolve statically to the same state-0 raw argument routine.
+    constexpr std::array<std::uint8_t, 2> state2_alias{{0x60, 0xc8}};
+    require_bytes(bytes, 0x150, state2_alias, "Unexpected Deuteros Atari ST dispatch state 2 alias");
     // Vector 5 ($1f52) is the next wholly static loader branch. It invokes
     // $70030 twice around a literal byte copy; these are raw arguments, not
     // inferred file names, sectors, or game-state meanings.
@@ -192,6 +196,8 @@ DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     for (std::size_t index = 0; index < result.vector_addresses.size(); ++index) {
         result.vector_addresses[index] = be32(bytes, 0xac + index * 4U);
     }
+    result.state0_alias_addresses = {result.vector_addresses[2], result.vector_addresses[3],
+        result.vector_addresses[4]};
     result.state0_destination = be32(bytes, 0x11c);
     result.state0_byte_count = be32(bytes, 0x122);
     result.state0_linear_sector = be32(bytes, 0x128);

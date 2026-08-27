@@ -780,6 +780,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << "; state 0 raw args (RAM 0x" << dispatch.state0_destination << ", 0x"
             << dispatch.state0_byte_count << " bytes, sector 0x"
             << dispatch.state0_linear_sector << ")" << std::dec << '\n';
+        std::cout << "          Static aliases: table slots 2/3/4 -> state-0 routine 0x"
+            << std::hex << dispatch.vector_addresses[0] << std::dec << '\n';
         std::cout << "          Static vector 5: raw args (RAM 0x" << std::hex
             << dispatch.state5_first_destination << ", 0x" << dispatch.state5_first_byte_count
             << " bytes, reader 0x" << dispatch.state5_first_reader_argument
