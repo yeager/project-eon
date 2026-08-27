@@ -2008,8 +2008,7 @@ int main(int argc, char** argv) {
                     draw_text(renderer, 64, title_stage ? 328 : 284, tr("ORIGINAL $20580 STREAM: +0x")
                         + [&] { std::ostringstream stream; stream << std::hex << trace->stream_offset;
                             return stream.str(); }()
-                        + " - " + std::to_string(trace->glyph_codes.size())
-                        + " VERIFIED GLYPH WRITES (GLOBAL VIDEO SETUP PENDING)");
+                        + " - " + std::to_string(trace->glyph_codes.size()));
                 }
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);

@@ -1200,7 +1200,10 @@ It bounds the `$20128`-relative `$20510` calculation used by the observed
 `$20580` stream without materializing the unknown runtime value of `$20128`.
 For the verified selectors one/zero, the exact original masks at `$20490` and
 `$20488` are required. Altering the raw video-link bytes fails closed before
-any host-frame pixel is written.
+any host-frame pixel is written. The accepted `$20580` glyph writes update the
+same persistent four-plane compositor surface as the other original Amiga
+channels; a later channel pass retains those pixels. This is restricted to the
+one hash-locked stream and does not infer the unresolved external init ABI.
 
 The same first accepted input channel has a bounded post-renderer tail in the
 real bundle: immediately after `$0f,$00000b38` are `$05,$0008,$0044,$00`.

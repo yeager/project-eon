@@ -2783,6 +2783,22 @@ int main() {
     const auto p_row = alternate_frame.color_indices.begin()
         + static_cast<std::size_t>(194) * eon::DeuterosAmigaFrame::width + 120;
     assert(std::equal(expected_p_row.begin(), expected_p_row.end(), p_row));
+    // $20580 writes the global display planes.  The renderer-only recovery
+    // must preserve those original-backed pixels through a subsequent empty
+    // channel pass, rather than retaining them only in a transient preview.
+    {
+        eon::DeuterosAmigaCompositor compositor;
+        std::vector<eon::DeuterosAmigaChannelState> no_channels;
+        static_cast<void>(compositor.compose(system_disk, first_bundle,
+            first_indexed_blob, no_channels));
+        eon::apply_deuteros_amiga_alternate_renderer(
+            compositor.global_video_frame(), system_disk, load_plan, *alternate_trace);
+        static_cast<void>(compositor.compose(system_disk, first_bundle,
+            first_indexed_blob, no_channels));
+        const auto persisted_p_row = compositor.global_video_frame().color_indices.begin()
+            + static_cast<std::size_t>(194) * eon::DeuterosAmigaFrame::width + 120;
+        assert(std::equal(expected_p_row.begin(), expected_p_row.end(), persisted_p_row));
+    }
     eon::DeuterosAmigaRandom opening_random(system_disk, first_bundle, 0, 0x240);
     assert(opening_random.next() == 0x11);
     assert(opening_random.seed() == 0x11);

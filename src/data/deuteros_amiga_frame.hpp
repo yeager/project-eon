@@ -29,6 +29,11 @@ public:
         const DeuterosAmigaIndexedBlob& blob,
         std::vector<DeuterosAmigaChannelState>& channels);
 
+    // $20580 writes through global original video pointers.  Its bounded,
+    // validated renderer route must therefore update this persistent display,
+    // rather than a disposable host preview frame.
+    [[nodiscard]] DeuterosAmigaFrame& global_video_frame() { return frame_; }
+
     [[nodiscard]] bool has_saved_scanlines() const { return saved_scanlines_.has_value(); }
 
 private:

@@ -44,16 +44,17 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // input-triggered title handoff.
     random_.advance_vblank();
     frame_composed_on_last_tick_ = false;
-    last_frame_ = compositor_.compose(disk_, bundle_, blob_, vm_.compositor_channels());
+    static_cast<void>(compositor_.compose(disk_, bundle_, blob_, vm_.compositor_channels()));
     for (const auto& channel : vm_.channels()) {
         if (channel.active && channel.bitmap_selector == load_plan_.main_stage_entry.alternate_renderer_selector) {
             alternate_renderer_trace_ = trace_deuteros_amiga_alternate_renderer(
                 transferred_bundle_, load_plan_.main_stage_entry, channel.mode_data);
-            apply_deuteros_amiga_alternate_renderer(*last_frame_, disk_, load_plan_,
+            apply_deuteros_amiga_alternate_renderer(compositor_.global_video_frame(), disk_, load_plan_,
                 *alternate_renderer_trace_);
             break;
         }
     }
+    last_frame_ = compositor_.global_video_frame();
     frame_composed_on_last_tick_ = true;
     return events;
 }
