@@ -33,6 +33,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstdio>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -905,6 +906,15 @@ int main() {
     assert(atari_config_entry.final_pea_address == 0x2ab0a);
     assert(atari_config_entry.final_trap_selector == 0x26);
     assert(atari_config_entry.return_offset == 0x628);
+    const auto atari_first_jsr = eon::parse_millennium_atari_config_first_jsr(
+        atari_config_payload, atari_config_entry);
+    assert(atari_first_jsr.proven_load_base == 0x2a4de);
+    assert(atari_first_jsr.target_address == 0x2b55a);
+    assert(atari_first_jsr.target_file_offset == 0x107c);
+    assert(atari_first_jsr.leading_opcode == 0x035a);
+    assert(atari_first_jsr.movem_opcode == 0x4cdf);
+    assert(atari_first_jsr.movem_register_mask == 0x7fff);
+    assert(atari_first_jsr.return_opcode == 0x4e75);
     auto invalid_atari_config_payload = atari_config_payload;
     invalid_atari_config_payload[0x5b9] ^= 0x01;
     bool invalid_atari_config_rejected = false;
@@ -914,6 +924,16 @@ int main() {
         invalid_atari_config_rejected = true;
     }
     assert(invalid_atari_config_rejected);
+    auto invalid_atari_first_jsr_payload = atari_config_payload;
+    invalid_atari_first_jsr_payload[0x107e] ^= 0x01;
+    bool invalid_atari_first_jsr_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_config_first_jsr(
+            invalid_atari_first_jsr_payload, atari_config_entry));
+    } catch (const std::runtime_error&) {
+        invalid_atari_first_jsr_rejected = true;
+    }
+    assert(invalid_atari_first_jsr_rejected);
     std::size_t millennium_st_images = 0;
     std::size_t millennium_fat12_images = 0;
     std::size_t millennium_config_files = 0;
@@ -1501,6 +1521,30 @@ int main() {
     assert(input_vm.channels()[3].stream_offset == 0x0a98);
     static_cast<void>(input_vm.tick(post_input_audio_inputs));
     assert(!input_vm.channels()[3].active);
+
+    // The remaining bundle-zero channels continue to execute independently
+    // after the first input channel has ended.  Keep walking their genuine
+    // streams to establish whether the original transition opcode is
+    // reachable from the opening state itself.
+    eon::DeuterosAmigaChannelVm transition_vm(system_disk, first_bundle);
+    eon::DeuterosAmigaRandom transition_random(system_disk, first_bundle);
+    eon::DeuterosAmigaVmInputs transition_inputs;
+    transition_inputs.random_word = [&transition_random] { return transition_random.next(); };
+    bool saw_original_transition = false;
+    for (std::size_t tick = 0; tick < 10'000; ++tick) {
+        const auto transition_events = transition_vm.tick(transition_inputs);
+        transition_random.advance_vblank();
+        if (transition_events.transition_requested) {
+            std::fprintf(stderr, "transition tick=%zu streams=%x,%x,%x,%x active=%d,%d,%d,%d\\n", tick,
+                transition_vm.channels()[0].stream_offset, transition_vm.channels()[1].stream_offset,
+                transition_vm.channels()[2].stream_offset, transition_vm.channels()[3].stream_offset,
+                transition_vm.channels()[0].active, transition_vm.channels()[1].active,
+                transition_vm.channels()[2].active, transition_vm.channels()[3].active);
+            saw_original_transition = true;
+            break;
+        }
+    }
+    assert(saw_original_transition);
     // The SDL session uses the same input contract, rather than a separately
     // scripted preview path. Holding the recovered input signal reaches the
     // same verified handoff tick and raw resource pointer.

@@ -436,6 +436,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
     const auto config_entry = eon::parse_millennium_atari_config_entry(
         disk.read(*disk.find(equinox_config.requested_filename)));
+    const auto config_first_jsr = eon::parse_millennium_atari_config_first_jsr(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -493,6 +495,12 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     std::cout << "; PEA 0x" << config_entry.final_pea_address << ", TRAP #14 selector 0x"
         << config_entry.final_trap_selector << ", RTS +0x" << config_entry.return_offset
         << std::dec << " (validated only; no TOS/XBIOS calls or config execution)\n";
+    std::cout << "          MILL22A.inf first JSR target: 0x" << std::hex
+        << config_first_jsr.target_address << " is file +0x" << config_first_jsr.target_file_offset
+        << "; leading opcode 0x" << config_first_jsr.leading_opcode << ", then MOVEM.L opcode 0x"
+        << config_first_jsr.movem_opcode << " mask 0x" << config_first_jsr.movem_register_mask
+        << ", RTS 0x" << config_first_jsr.return_opcode << std::dec
+        << " (validated only; no JSR execution or caller-state inference)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.

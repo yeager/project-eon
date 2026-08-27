@@ -139,6 +139,21 @@ struct MillenniumAtariConfigEntry {
     std::uint32_t return_offset = 0;
 };
 
+// The first direct JSR destination in the verified MILL22A.inf entry block.
+// This is deliberately a control/data boundary rather than an emulated call:
+// it retains the original target's exact leading machine words and the
+// directly-decodable MOVEM/RTS suffix, but makes no claim about the preceding
+// bit-operation's register state or the routine's wider calling convention.
+struct MillenniumAtariConfigFirstJsr {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t target_address = 0;
+    std::uint32_t target_file_offset = 0;
+    std::uint16_t leading_opcode = 0;
+    std::uint16_t movem_opcode = 0;
+    std::uint16_t movem_register_mask = 0;
+    std::uint16_t return_opcode = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -190,5 +205,11 @@ struct MillenniumAtariConfigEntry {
 // service is emulated, no file is unpacked and no supplied media is changed.
 [[nodiscard]] MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
     std::span<const std::uint8_t> payload);
+
+// Validates the exact first JSR destination referenced by the verified entry
+// block. It does not invoke it, infer the dynamic-bit instruction's inputs,
+// or emulate TOS/XBIOS/GEMDOS state.
+[[nodiscard]] MillenniumAtariConfigFirstJsr parse_millennium_atari_config_first_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
 } // namespace eon

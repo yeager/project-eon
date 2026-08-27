@@ -347,4 +347,28 @@ MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
     return result;
 }
 
+MillenniumAtariConfigFirstJsr parse_millennium_atari_config_first_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
+    // $2b55a is the first literal JSR target at the established $2a4de base.
+    // Its leading dynamic-bit opcode is retained without attributing a result
+    // to it: that result depends on caller state. The following MOVEM.L
+    // (A7)+,D0-D7/A0-A6 and RTS are complete, local machine-code facts.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t target_address = 0x2b55a;
+    constexpr std::size_t target_offset = target_address - load_base;
+    constexpr std::array<std::uint8_t, 8> target_bytes{
+        0x03, 0x5a, 0x4c, 0xdf, 0x7f, 0xff, 0x4e, 0x75,
+    };
+    if (entry.proven_load_base != load_base || entry.jsr_targets.empty()
+        || entry.jsr_targets.front() != target_address
+        || payload.size() < target_offset + target_bytes.size()
+        || !std::equal(target_bytes.begin(), target_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST first MILL22A.inf JSR target");
+    }
+    return {load_base, target_address, static_cast<std::uint32_t>(target_offset),
+        read_be16(payload, target_offset), read_be16(payload, target_offset + 2U),
+        read_be16(payload, target_offset + 4U), read_be16(payload, target_offset + 6U)};
+}
+
 } // namespace eon
