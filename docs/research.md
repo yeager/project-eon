@@ -14,6 +14,13 @@
    transitions against observed original execution.
 7. Put original and modern renderers over that same state model.
 
+## Evidence rule
+
+Real supplied game data is the sole authority for assets, rules, numeric tables,
+timing and behaviour. Project Eon does not fill undecoded areas with synthetic
+assets or guessed mechanics. Unknowns remain explicitly unsupported until code,
+data cross-references, or captured original execution provide evidence.
+
 ## Supplied releases
 
 The initial corpus contains Millennium 2.2 for DOS, Amiga and Atari ST, and

@@ -4,6 +4,10 @@ Project Eon is an open-source, cross-platform reimplementation of Ian Bird's
 science-fiction strategy games **Millennium 2.2: Return to Earth** (1989) and
 **Deuteros: The Next Millennium** (1991).
 
+| Millennium 2.2 | Deuteros |
+| :---: | :---: |
+| [![Project Eon Millennium 2.2 card](assets/cards/millennium.png)](assets/cards/millennium.png) | [![Project Eon Deuteros card](assets/cards/deuteros.png)](assets/cards/deuteros.png) |
+
 The goal is to make both games fully playable from legally obtained original
 game data while preserving their rules and atmosphere. One deterministic game
 simulation powers two interchangeable presentation modes:
@@ -61,6 +65,49 @@ DOS / Amiga / Atari ST data
        ┌────┴────┐
  original UI   modern UI
 ```
+
+The native runtime uses **C++20 and SDL3**. SDL supplies windows, rendering,
+audio, keyboard/mouse/gamepad input and OS integration; decoded resources and
+the deterministic simulation remain independent of SDL.
+
+## Native build
+
+SDL3 and CMake are required. SDL3_image 3.4.4 is fetched automatically when a
+system package is unavailable.
+
+```sh
+cmake -S . -B build -G Ninja \
+  -DEON_REAL_DATA_DIR="$HOME/Hämtningar"
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Start the graphical card menu:
+
+```sh
+./build/project-eon --data "$HOME/Hämtningar"
+```
+
+Or select a game directly from the CLI:
+
+```sh
+./build/project-eon --data "$HOME/Hämtningar" --game millennium \
+  --platform amiga --presentation original
+./build/project-eon --data "$HOME/Hämtningar" --game deuteros \
+  --presentation modern
+```
+
+The current SDL application is deliberately a data-verification shell, not a
+mock game. It lists detected real releases and proves the Original/Modern
+presentation boundary while reverse engineering proceeds. It never substitutes
+placeholder art or invented game behaviour for undecoded original data.
+
+The launcher follows the same broad structure as OpenCaptive: a native SDL3
+start menu, separate game cards, direct CLI game selection, a platform-neutral
+data layer and distinct engine/render/audio modules as those systems mature.
+The two menu cards are newly generated Project Eon artwork inspired by the
+games' broad lunar-recovery and orbital-expansion themes. They contain no
+extracted game assets and are never used inside Original mode.
 
 ## Current status and research workflow
 
