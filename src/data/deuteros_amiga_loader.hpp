@@ -92,6 +92,23 @@ struct DeuterosAmigaMainStageEntry {
     std::uint32_t second_exit_service_address = 0;
     std::uint32_t second_exit_service_match_value = 0;
     std::uint32_t second_exit_matched_return_address = 0;
+    // The raw resource loader at $21932 takes a D0 table index, scales it by
+    // four, and obtains a disk offset from $21708. It first transfers four
+    // bytes at that offset to resource_probe_address. If the recovered
+    // big-endian longword is nonzero, it uses that literal as the next
+    // transfer length and transfers from the same offset to
+    // resource_payload_address. These are transfer facts only; neither the
+    // resource format nor the destination-memory meaning is inferred.
+    std::uint32_t resource_loader_address = 0;
+    std::uint32_t resource_table_address = 0;
+    std::uint8_t resource_index_scale_shift = 0;
+    std::uint32_t resource_probe_address = 0;
+    std::uint32_t resource_payload_address = 0;
+    std::uint32_t resource_transfer_address = 0;
+    std::uint32_t resource_transfer_chunk_length = 0;
+    std::uint32_t resource_retry_probe_address = 0;
+    std::uint8_t resource_retry_probe_bit = 0;
+    std::uint32_t resource_retry_address = 0;
 };
 
 struct DeuterosAmigaLoadPlan {

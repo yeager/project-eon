@@ -266,17 +266,68 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         throw std::runtime_error("Unexpected Deuteros input-service second exit match value");
     }
     require_word(second_exit, 0x16, 0x6746); // beq.b $21a56
+    // The resource path is a real data-flow boundary after re-entering the
+    // main stage. It uses D0 as a four-byte table index, makes a 4-byte probe
+    // at the selected original disk offset, then uses that recovered
+    // longword as the exact body-transfer length. Keep the raw destination
+    // cells and retry gate rather than giving a format or UI meaning to them.
+    constexpr std::uint32_t resource_loader_address = 0x21932;
+    constexpr std::uint32_t resource_table_address = 0x21708;
+    constexpr std::uint32_t resource_probe_address = 0x2ad24;
+    constexpr std::uint32_t resource_payload_address = 0x32a24;
+    constexpr std::uint32_t resource_transfer_address = 0x20a90;
+    constexpr std::uint32_t resource_retry_address = 0x2196e;
+    const auto resource_loader = stage_bytes.subspan(main_offset(resource_loader_address));
+    require_word(resource_loader, 0x00, 0x41f9); // lea $21708,a0
+    require_long(resource_loader, 0x02, resource_table_address);
+    require_word(resource_loader, 0x06, 0xe548); // lsl.w #2,d0
+    require_word(resource_loader, 0x08, 0x2e30); // move.l 0(a0,d0.w),d7
+    if (big16(resource_loader, 0x0a) != 0) {
+        throw std::runtime_error("Unexpected Deuteros resource-table index displacement");
+    }
+    require_word(resource_loader, 0x0c, 0x2f07); // move.l d7,-(sp)
+    require_word(resource_loader, 0x0e, 0x23fc); // move.l #0,$2ad24
+    if (big32(resource_loader, 0x10) != 0 || big32(resource_loader, 0x14) != resource_probe_address) {
+        throw std::runtime_error("Unexpected Deuteros resource probe clear");
+    }
+    require_word(resource_loader, 0x18, 0x223c); // move.l #$2ad24,d1
+    require_long(resource_loader, 0x1a, resource_probe_address);
+    require_word(resource_loader, 0x1e, 0x7004); // moveq #4,d0
+    require_word(resource_loader, 0x20, 0x4eb9); // jsr $20a90
+    require_long(resource_loader, 0x22, resource_transfer_address);
+    require_word(resource_loader, 0x26, 0x2e1f); // move.l (sp)+,d7
+    require_word(resource_loader, 0x28, 0x2039); // move.l $2ad24,d0
+    require_long(resource_loader, 0x2a, resource_probe_address);
+    require_word(resource_loader, 0x2e, 0x670c); // beq.b $2196e
+    require_word(resource_loader, 0x30, 0x223c); // move.l #$32a24,d1
+    require_long(resource_loader, 0x32, resource_payload_address);
+    require_word(resource_loader, 0x36, 0x4eb9); // jsr $20a90
+    require_long(resource_loader, 0x38, resource_transfer_address);
+    require_word(resource_loader, 0x3c, 0x0839); // btst #10,$dff016
+    if (big16(resource_loader, 0x3e) != 10 || big32(resource_loader, 0x40) != 0xdff016) {
+        throw std::runtime_error("Unexpected Deuteros resource retry probe");
+    }
+    require_word(resource_loader, 0x44, 0x67f6); // beq.b $2196e
+    require_word(resource_loader, 0x46, 0x4e75); // rts
+    const auto transfer = stage_bytes.subspan(main_offset(resource_transfer_address));
+    require_word(transfer, 0x00, 0x2407); // move.l d7,d2
+    require_word(transfer, 0x02, 0xb0bc); // cmp.l #$1600,d0
+    if (big32(transfer, 0x04) != 0x1600) {
+        throw std::runtime_error("Unexpected Deuteros resource transfer chunk length");
+    }
     const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
         0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
         0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, 0x210f8, 0x21248, 0x18,
         0x10, 0x06, 0x08, {3, 5, 6, 0x14}, 0xdff01f, 5, 0x21698, input_dispatch_address,
         0x21704, 2, 1, 0x218cc, 0x2181c, 0x21704, 2, 0x21a4c, 3, 0x219f8,
-        0x219f4, 1, 0x12ff8, 0x12ffc, 0x219f4, 5, 0x20b42, 0x4452f018, 0x21a56};
+        0x219f4, 1, 0x12ff8, 0x12ffc, 0x219f4, 5, 0x20b42, 0x4452f018, 0x21a56,
+        resource_loader_address, resource_table_address, 2, resource_probe_address,
+        resource_payload_address, resource_transfer_address, 0x1600, 0xdff016, 10,
+        resource_retry_address};
 
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table
     // back to its ADF position instead of duplicating its contents.
-    constexpr std::uint32_t resource_table_address = 0x21708;
     if (resource_table_address < main_stage.destination
         || resource_table_address - main_stage.destination + 20 > main_stage.length) {
         throw std::runtime_error("Deuteros resource table outside main stage");

@@ -522,6 +522,18 @@ polling loop. Values above two bypass `$218cc` entirely and resume `$2181c`
 reports these original branch facts only; it does not synthesize a main screen,
 interpret the sentinel, or mutate supplied media.
 
+The re-entered stage's raw resource loader at `$21932` is independently
+validated. It shifts its incoming D0 index by two, reads the selected longword
+from `$21708`, and uses that as a physical ADF offset. It clears `$2ad24`,
+transfers exactly four bytes from that offset there, restores the original
+offset, and uses the resulting big-endian longword as a second transfer length
+to `$32a24` from that same offset. The shared transfer routine chunks requests
+at `$1600`; after the transfer it tests bit 10 at `$dff016` and retries from
+`$2196e` while clear. This is a verified original resource-to-memory effect,
+not a claim about the resource's format, any destination cell's role, or a
+request to unpack/copy media. Project Eon exposes the fixed data-flow facts,
+but does not execute the loader against host storage or synthesize its output.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an

@@ -14,8 +14,12 @@
 
 The main-stage loader at memory `$21932` indexes five big-endian disk offsets
 from the table at `$21708`: `0x1b800`, `0x4ba00`, `0x37000`, `0x59600`, and
-`0x6e000`. It reads a four-byte resource length, then loads that many decoded
-bytes from the same disk offset.
+`0x6e000`. It clears raw cell `$2ad24`, transfers four bytes from the selected
+disk offset into that cell, restores the same source offset, and transfers the
+resulting big-endian longword's worth of bytes into `$32a24`. Transfer helper
+`$20a90` chunks the original request at `$1600`; the loader retries from
+`$2196e` while bit 10 of `$dff016` remains clear. These are verified machine
+data-flow facts, not a decoded resource format or a host-side unpack step.
 
 The first two entries are verified resource bundles. Their 60-byte headers
 contain a total length, a 16-bit object count, seven relative channel pointers,

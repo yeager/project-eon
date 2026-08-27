@@ -862,6 +862,16 @@ int main() {
     assert(main_entry.input_dispatch_state_address == 0x21704);
     assert(main_entry.input_dispatch_compare_value == 2);
     assert(main_entry.input_dispatch_clamped_value == 1);
+    assert(main_entry.resource_loader_address == 0x21932);
+    assert(main_entry.resource_table_address == 0x21708);
+    assert(main_entry.resource_index_scale_shift == 2);
+    assert(main_entry.resource_probe_address == 0x2ad24);
+    assert(main_entry.resource_payload_address == 0x32a24);
+    assert(main_entry.resource_transfer_address == 0x20a90);
+    assert(main_entry.resource_transfer_chunk_length == 0x1600);
+    assert(main_entry.resource_retry_probe_address == 0xdff016);
+    assert(main_entry.resource_retry_probe_bit == 10);
+    assert(main_entry.resource_retry_address == 0x2196e);
     assert(main_entry.input_dispatch_service_address == 0x218cc);
     assert(main_entry.input_dispatch_continue_address == 0x2181c);
     assert(main_entry.dispatch_service_state_address == 0x21704);
