@@ -399,6 +399,19 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     std::cout << "          2200AD4.BIN static text: " << text_catalog.pointers.size()
         << " original pointers to " << text_catalog.records.size()
         << " raw records (read-only)\n";
+    constexpr auto game_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    const auto game = eon::extract_asset_by_sha256(release.path, game_sha256);
+    if (!game) throw std::runtime_error("Verified Millennium DOS executable missing");
+    const auto game_flow = eon::parse_millennium_dos_game_flow(*game);
+    std::cout << "          2200AD.EXE startup: entry 0x" << std::hex
+        << game_flow.entry_address << ", SS=CS, SP=0x" << game_flow.startup_stack_pointer
+        << ", first CALL 0x" << game_flow.startup_first_call_address
+        << "; AL==$" << static_cast<unsigned>(game_flow.startup_mode_equal_value)
+        << " -> 0x" << game_flow.startup_equal_call_address << ", otherwise 0x"
+        << game_flow.startup_other_call_address << "; DX!=0 -> 0x"
+        << game_flow.startup_nonzero_dx_branch_address << std::dec
+        << " (validated boundary only; no native calls executed)\n";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto initial_save = eon::extract_asset_by_sha256(release.path, initial_save_sha256);
