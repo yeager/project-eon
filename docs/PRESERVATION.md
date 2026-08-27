@@ -505,6 +505,18 @@ All three spans are checked across the six supplied Amiga images. This proves
 only byte order, local control-flow encodings, and raw offsets—not flags,
 registers, memory-cell purpose, selected path, or game behavior.
 
+The taken `$68f2a` prefix is 36 bytes at ADF `+0x1732a`, SHA-256
+`a7f4be625a6a39615f0ace12a1a8e013b781575625858b4f0c257d171b0947f3`.
+Its local `BCC.W` encodings at `$68f32` (extension `$68f34 + $0014`) and
+`$68f3e` (`$68f40 + $0008`), plus straight-line fallthrough, all converge at
+`$68f48`. That address begins absolute-long `JSR $7caa6`; the 18-byte raw
+call/following prefix at ADF `+0x17348` hashes to
+`dde319f5e57db52df300956d4e3e59dc6dc7967f0ff582674d502109fcfa2f69`.
+The JSR is an explicit preservation boundary: neither it nor the following
+call is executed, and no call effect, return, flags, cell semantics, or game
+behavior is inferred. Every listed span is checked across all six supplied
+Amiga variants.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch

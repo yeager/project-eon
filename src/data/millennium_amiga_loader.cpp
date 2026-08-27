@@ -1104,4 +1104,55 @@ parse_millennium_amiga_resident_separate_byte_gate_convergence_boundary(
         plan.resident_stage.disk_offset + fallthrough_relative, fallthrough_digest};
 }
 
+MillenniumAmigaResidentSeparateByteGateTakenBranchBoundary
+parse_millennium_amiga_resident_separate_byte_gate_taken_branch_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparateByteGateConvergenceBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68f2a;
+    constexpr std::uint32_t convergence = 0x68f48;
+    constexpr std::uint32_t external_call_target = 0x7caa6;
+    constexpr std::array<std::uint8_t, 36> expected{{
+        0x06, 0x39, 0x00, 0x60, 0x00, 0x07, 0xc2, 0x52,
+        0x64, 0x00, 0x00, 0x14, 0x0c, 0x39, 0x00, 0x10,
+        0x00, 0x07, 0xc2, 0x50, 0x64, 0x00, 0x00, 0x08,
+        0x54, 0x39, 0x00, 0x07, 0xc2, 0x50, 0x4e, 0xb9,
+        0x00, 0x07, 0xca, 0xa6,
+    }};
+    constexpr std::array<std::uint8_t, 18> external_prefix{{
+        0x4e, 0xb9, 0x00, 0x07, 0xca, 0xa6, 0x4e, 0xb9,
+        0x00, 0x07, 0xd6, 0xd2, 0x28, 0x7c, 0x00, 0x07,
+        0xc2, 0x1b,
+    }};
+    constexpr std::string_view expected_hash =
+        "a7f4be625a6a39615f0ace12a1a8e013b781575625858b4f0c257d171b0947f3";
+    constexpr std::string_view external_prefix_hash =
+        "dde319f5e57db52df300956d4e3e59dc6dc7967f0ff582674d502109fcfa2f69";
+    if (boundary.conditional_branch_target != entry || entry < plan.resident_stage.destination
+        || convergence < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga taken branch placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    const auto convergence_relative = convergence - plan.resident_stage.destination;
+    if (expected.size() > plan.resident_stage.length - relative
+        || external_prefix.size() > plan.resident_stage.length - convergence_relative) {
+        throw std::runtime_error("Millennium Amiga taken branch is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto call_prefix = disk.bytes(plan.resident_stage.disk_offset + convergence_relative,
+        external_prefix.size());
+    const auto hash = to_hex(sha256(bytes));
+    const auto call_prefix_hash = to_hex(sha256(call_prefix));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || !std::equal(external_prefix.begin(), external_prefix.end(), call_prefix.begin())
+        || hash != expected_hash || call_prefix_hash != external_prefix_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga taken branch");
+    }
+    // Each BCC.W displacement is relative to its extension word; the final
+    // JSR is recorded as a raw external boundary and is not invoked.
+    return {entry, plan.resident_stage.disk_offset + relative, hash,
+        {0x68f32, 0x68f3e}, {convergence, convergence}, convergence,
+        convergence, external_call_target, plan.resident_stage.disk_offset + convergence_relative,
+        call_prefix_hash};
+}
+
 } // namespace eon
