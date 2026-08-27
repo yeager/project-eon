@@ -20,6 +20,10 @@ if(NOT SDL3_image_FOUND)
     set(SDLIMAGE_TIF OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_WEBP OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_XCF OFF CACHE BOOL "" FORCE)
+    # Project Eon loads its launcher cards through SDL_image at run time.  Be
+    # explicit about producing its shared library so desktop packagers can
+    # stage the DLL/dylib beside the executable.
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
     # CI supplies zlib as an installed dependency. The release tarball does
     # not include SDL_image's vendored third-party source tree, so never ask
     # CMake to use it as a fallback.
@@ -130,6 +134,19 @@ endif()
 # and disk images in place through the verified scanners.
 include(GNUInstallDirs)
 install(TARGETS project-eon RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+# Linux CI builds SDL3 and SDL_image from source, outside the distribution's
+# package database.  Ship those two runtime libraries with the executable so
+# DEB/RPM artifacts remain launchable without proprietary media or a
+# workstation-local /usr/local SDL install.
+if(UNIX AND NOT APPLE)
+    set_target_properties(project-eon PROPERTIES INSTALL_RPATH "$ORIGIN")
+    install(FILES
+        "$<TARGET_FILE:SDL3::SDL3>"
+        "$<TARGET_SONAME_FILE:SDL3::SDL3>"
+        "$<TARGET_FILE:SDL3_image::SDL3_image>"
+        "$<TARGET_SONAME_FILE:SDL3_image::SDL3_image>"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
 install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
 install(FILES README.md LICENSE DESTINATION "${CMAKE_INSTALL_DOCDIR}")
 
@@ -140,9 +157,9 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "SDL3 reimplementation project for Millennium 2.2 and Deuteros")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_DEBIAN_PACKAGE_SECTION "games")
-# SDL3 is intentionally built from upstream source in CI. Do not ask
-# dpkg-shlibdeps to infer a Debian package name from that local build: package
-# generation must stay deterministic across the supported CI architectures.
+# SDL3 is intentionally built from upstream source in CI.  The package ships
+# its two private SDL libraries, but dpkg-shlibdeps cannot map those private
+# SONAMEs to distro packages, so keep dependency generation deterministic.
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
