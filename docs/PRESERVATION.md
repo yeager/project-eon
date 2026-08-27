@@ -918,6 +918,8 @@ direct near-call there targets `$1725`. Its first 13 original bytes end in
 literal `JLE +$01` at `$172f` to `$1732`; the sequential byte is `RET` at
 `$1731`. This is a caller/callee byte boundary only: the comparison condition,
 callee return, and any resource effect remain unmodelled.
+The `$1732` JLE target's first direct near-call is at `$173d` to `$1390`,
+anchored by its first 16 raw bytes; no call or data effect is inferred.
 transition routine at `$1941` starts with `CX=$25` and `DX=$0170`, so the
 verified title transition contains 37 steps with that original stride.
 
