@@ -85,7 +85,7 @@ struct MillenniumAtariMaterializedTarget {
 
 // The first GEMDOS boundary reached by the verified BSS materialization.
 // These are literal stack arguments and control-flow facts from the original
-// bytes.  `fclose_result_negative_branch_target_offset` is deliberately an
+// bytes.  `fopen_result_negative_branch_target_offset` is deliberately an
 // offset, not a host behaviour: GEMDOS owns the return value in D0 and Project
 // Eon neither invokes the trap nor decides whether the retry loop terminates.
 struct MillenniumAtariTrapEntry {
