@@ -486,4 +486,24 @@ parse_millennium_amiga_resident_separate_byte_gate_boundary(
     const AmigaAdf&, const MillenniumAmigaLoadPlan&,
     const MillenniumAmigaResidentSeparateComparisonBoundary&);
 
+// The taken BEQ.W target is a complete local static prefix.  Its two BCC.W
+// encodings and the straight-line instruction converge at the same next raw
+// address; runtime flags, cells, and path meaning deliberately remain outside
+// this parser.
+struct MillenniumAmigaResidentSeparateByteGateTargetBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::string sha256;
+    std::array<std::uint32_t, 2> conditional_branch_addresses{};
+    std::array<std::uint32_t, 2> conditional_branch_targets{};
+    std::uint32_t convergence_address = 0;
+    std::size_t convergence_raw_disk_offset = 0;
+    std::string convergence_prefix_sha256;
+};
+
+[[nodiscard]] MillenniumAmigaResidentSeparateByteGateTargetBoundary
+parse_millennium_amiga_resident_separate_byte_gate_target_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&,
+    const MillenniumAmigaResidentSeparateByteGateBoundary&);
+
 } // namespace eon

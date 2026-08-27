@@ -993,4 +993,52 @@ parse_millennium_amiga_resident_separate_byte_gate_boundary(
         plan.resident_stage.disk_offset + fallthrough_relative, fallthrough_digest};
 }
 
+MillenniumAmigaResidentSeparateByteGateTargetBoundary
+parse_millennium_amiga_resident_separate_byte_gate_target_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparateByteGateBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68ed6;
+    constexpr std::uint32_t convergence = 0x68ef4;
+    constexpr std::array<std::uint8_t, 30> expected{{
+        0x06, 0x39, 0x00, 0x80, 0x00, 0x07, 0xc2, 0x53, 0x64, 0x00,
+        0x00, 0x14, 0x0c, 0x39, 0x00, 0x18, 0x00, 0x07, 0xc2, 0x51,
+        0x64, 0x00, 0x00, 0x08, 0x58, 0x39, 0x00, 0x07, 0xc2, 0x51,
+    }};
+    constexpr std::array<std::uint8_t, 32> convergence_prefix{{
+        0x1e, 0x39, 0x00, 0x07, 0xc2, 0x4f, 0x13, 0xc1,
+        0x00, 0x07, 0xc2, 0x4f, 0xbe, 0x01, 0x67, 0x00,
+        0x00, 0x26, 0x13, 0xfc, 0x00, 0x02, 0x00, 0x07,
+        0xc2, 0x50, 0x13, 0xfc, 0x00, 0x00, 0x00, 0x07,
+    }};
+    constexpr std::string_view expected_hash =
+        "b2d2c6cadc50725eb8b4f0b680c325586ed457b29232481b503f3e337d589341";
+    constexpr std::string_view convergence_hash =
+        "93b0d20954d235c624406450161a359968e4f1baefcbaeb47ede08fda0cd1e71";
+    if (boundary.conditional_branch_target != entry || entry < plan.resident_stage.destination
+        || convergence < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga byte gate target placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    const auto convergence_relative = convergence - plan.resident_stage.destination;
+    if (expected.size() > plan.resident_stage.length - relative
+        || convergence_prefix.size() > plan.resident_stage.length - convergence_relative) {
+        throw std::runtime_error("Millennium Amiga byte gate target is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto next = disk.bytes(plan.resident_stage.disk_offset + convergence_relative,
+        convergence_prefix.size());
+    const auto hash = to_hex(sha256(bytes));
+    const auto next_hash = to_hex(sha256(next));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || !std::equal(convergence_prefix.begin(), convergence_prefix.end(), next.begin())
+        || hash != expected_hash || next_hash != convergence_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga byte gate target");
+    }
+    // Both BCC.W displacements are based at their extension words ($68ee0
+    // and $68eec); the ADDQ.B falls straight through to the same address.
+    return {entry, plan.resident_stage.disk_offset + relative, hash,
+        {0x68ede, 0x68eea}, {convergence, convergence}, convergence,
+        plan.resident_stage.disk_offset + convergence_relative, next_hash};
+}
+
 } // namespace eon
