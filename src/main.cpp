@@ -980,6 +980,16 @@ int main(int argc, char** argv) {
                                << trace->terminal_call_address;
                             draw_text(renderer, 610, 390, f7.str());
                         }
+                        if (const auto trace = millennium_game_session->last_eighth_function_key_trace()) {
+                            std::ostringstream f8;
+                            f8 << "F8 ORIGINAL TRACE: HANDLER $" << std::hex << trace->handler_address
+                               << " -> [$" << trace->reset_runtime_byte_address << "]=$"
+                               << static_cast<unsigned>(trace->reset_runtime_byte_value)
+                               << " -> PREFLIGHT $" << trace->local_preflight_address
+                               << " -> REPEAT CALL $" << trace->repeated_call_address
+                               << " (SHR BL,1 CARRY)";
+                            draw_text(renderer, 610, 390, f8.str());
+                        }
                     }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;

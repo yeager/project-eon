@@ -402,6 +402,15 @@ int main() {
         rejected_altered_f7_handler = true;
     }
     assert(rejected_altered_f7_handler);
+    auto altered_f8_handler = *game_executable;
+    altered_f8_handler[0x7306 - 0x100] ^= 0x01;
+    bool rejected_altered_f8_handler = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f8_handler));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f8_handler = true;
+    }
+    assert(rejected_altered_f8_handler);
     eon::MillenniumDosGameSession game_session(game_flow);
     assert(!game_session.observe_action(0));
     assert(!game_session.last_function_key_index());
@@ -437,6 +446,22 @@ int main() {
     assert(game_session.last_seventh_function_key_trace()->sixth_runtime_word_address == 0xda37);
     assert(game_session.last_seventh_function_key_trace()->terminal_call_address == 0x4bf7);
     assert(!game_session.last_sixth_function_key_trace());
+    assert(game_flow.eighth_function_key.handler_address == 0x7306);
+    assert(game_flow.eighth_function_key.reset_runtime_byte_address == 0xda30);
+    assert(game_flow.eighth_function_key.reset_runtime_byte_value == 0);
+    assert(game_flow.eighth_function_key.initial_al_value == 2);
+    assert(game_flow.eighth_function_key.local_preflight_address == 0x731a);
+    assert(game_flow.eighth_function_key.preflight_runtime_byte_address == 0xda39);
+    assert(game_flow.eighth_function_key.preflight_enabled_call_address == 0x7b47);
+    assert(game_flow.eighth_function_key.decrement_runtime_byte_address == 0xda0a);
+    assert(game_flow.eighth_function_key.depleted_jump_address == 0x7948);
+    assert(game_flow.eighth_function_key.repeated_call_address == 0xcafa);
+    assert(game_flow.eighth_function_key.repeat_shift_register == 3);
+    assert(game_session.observe_action(0x42) == std::optional<std::size_t>{7});
+    assert(game_session.last_eighth_function_key_trace());
+    assert(game_session.last_eighth_function_key_trace()->handler_address == 0x7306);
+    assert(game_session.last_eighth_function_key_trace()->repeated_call_address == 0xcafa);
+    assert(!game_session.last_seventh_function_key_trace());
     assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
     assert(!game_session.last_first_function_key_trace());
     assert(!game_session.observe_action(0x45));

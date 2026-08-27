@@ -649,6 +649,17 @@ semantics. Project Eon surfaces the immutable F7 gate in its SDL evidence
 panel; it never supplies the guard/runtime words, executes the helpers, or
 writes original game media or saves.
 
+The eighth table record (raw F8 / `$42`) is `2a 30 09 1b 37 07 06 73`, with
+handler entry `$7306`. It clears native runtime byte `$da30`, loads `AL=$02`,
+and calls local preflight `$731a`. That preflight reads `$da39`: its nonzero
+path calls `$7b47`; its other path reads `$da0a`, returns if it is zero, or
+decrements it, applies `XLAT` through `BX=$db4b`, and jumps to `$7948`. Back
+in the handler, `$cafa` is called and the following `SHR BL,1` carry branch
+can repeat that call. These are exact
+code operands/control-flow facts only. Project Eon shows the immutable F8
+trace but never supplies `$da39`, `$da0a`, or `BL`, performs native calls or
+writes original game media or saves.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
