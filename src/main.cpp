@@ -1541,7 +1541,7 @@ int main(int argc, char** argv) {
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
 
         if (screen == Screen::menu) {
-            draw_text(renderer, 64, 56, "PROJECT EON");
+            draw_text(renderer, 64, 56, tr("PROJECT EON"));
             draw_text(renderer, 64, 82, tr(
                 "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"));
             for (std::size_t index = 0; index < cards.size(); ++index) {
@@ -1568,7 +1568,7 @@ int main(int argc, char** argv) {
             if (active_platform) {
                 platform_text += eon::name(*active_platform);
             } else {
-                platform_text += "AUTO";
+                platform_text += tr("AUTO");
             }
             if (!menu_platforms.empty()) {
                 platform_text += "  (";
@@ -1595,7 +1595,7 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 56, tr("LAUNCH REQUEST ACCEPTED"));
             draw_text(renderer, 64, 92, tr("Game: ") + eon::name(selected));
             draw_text(renderer, 64, 116, tr("Platform: ")
-                + (active_platform ? eon::name(*active_platform) : std::string("Auto")));
+                + (active_platform ? eon::name(*active_platform) : tr("AUTO")));
             draw_text(renderer, 64, 136, modern ? tr("Presentation: Modern") : tr("Presentation: Original"));
             draw_text(renderer, 64, 156, tr("Original data is present and selected."));
             draw_text(renderer, 64, 180, tr("The simulation is incomplete; no synthetic substitute will run."));
