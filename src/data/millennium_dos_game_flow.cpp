@@ -48,6 +48,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f8_preflight_offset = 0x731a - load_bias;
     constexpr std::size_t f9_table_offset = 0x2fff - load_bias;
     constexpr std::size_t f9_handler_offset = 0x7339 - load_bias;
+    constexpr std::size_t f10_table_offset = 0x3007 - load_bias;
+    constexpr std::size_t f10_handler_offset = 0x7384 - load_bias;
     constexpr std::size_t record_pointer_offset = 0x27c4 - load_bias;
     constexpr std::size_t initial_record_offset = 0x12cc - load_bias;
     constexpr std::size_t initial_record_flag_offset = 0x12f0 - load_bias;
@@ -212,6 +214,29 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x2f, 0x6e, 0x00, 0xa0, 0x09, 0xda, 0x22, 0xc0,
         0x75, 0x03, 0xe8, 0x1f, 0x07, 0xe8, 0xa3, 0xcd,
         0xe9, 0x48, 0x00});
+    // Record nine (raw F10 / $44) enters $7384. It has the established
+    // $a19e admission gate, clears $da30/$dad7, and sets code-local $6e2f to
+    // one. If $da39 is nonzero it calls $7b47. It repeatedly calls F8's
+    // $731a while $da06 is below two, resets $6e2f, conditionally calls
+    // $7a9d from $da09, then reaches the observed call sequence. The final
+    // wait/repetition depends on $da41 and BL/carry; no native state is
+    // invented or mutated by this parser.
+    constexpr auto f10_table = std::to_array<std::uint8_t>({
+        0x36, 0x3c, 0x09, 0x1b, 0x39, 0x09, 0x84, 0x73});
+    constexpr auto f10_handler = std::to_array<std::uint8_t>({
+        0xa1, 0x9e, 0xa1, 0x23, 0xc0, 0x74, 0x01, 0xc3,
+        0x33, 0xc0, 0xe8, 0x38, 0x5d, 0xc6, 0x06, 0x30,
+        0xda, 0x00, 0xb0, 0x02, 0xc6, 0x06, 0xd7, 0xda,
+        0x00, 0x2e, 0xc6, 0x06, 0x2f, 0x6e, 0x01, 0xa0,
+        0x39, 0xda, 0x22, 0xc0, 0x74, 0x03, 0xe8, 0x9a,
+        0x07, 0xa0, 0x06, 0xda, 0x3c, 0x02, 0x72, 0x05,
+        0xe8, 0x63, 0xff, 0xeb, 0xf4, 0x2e, 0xc6, 0x06,
+        0x2f, 0x6e, 0x00, 0xa0, 0x09, 0xda, 0x22, 0xc0,
+        0x75, 0x03, 0xe8, 0xd4, 0x06, 0xe8, 0x74, 0xcd,
+        0xe8, 0xfc, 0x07, 0xe8, 0xce, 0x2e, 0x2e, 0xa0,
+        0x41, 0xda, 0x22, 0xc0, 0x75, 0x0d, 0xe8, 0x1d,
+        0x96, 0x74, 0xed, 0xd0, 0xeb, 0x72, 0xe9, 0xe8,
+        0x2b, 0xcd, 0xc3});
     if (!has_bytes(game_executable, entry_offset, entry)
         || !has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
@@ -237,6 +262,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f8_preflight_offset, f8_preflight)
         || !has_bytes(game_executable, f9_table_offset, f9_table)
         || !has_bytes(game_executable, f9_handler_offset, f9_handler)
+        || !has_bytes(game_executable, f10_table_offset, f10_table)
+        || !has_bytes(game_executable, f10_handler_offset, f10_handler)
         || !has_bytes(game_executable, record_pointer_offset, record_pointer_table)
         || !has_bytes(game_executable, initial_record_offset, initial_record)
         || !has_bytes(game_executable, initial_record_flag_offset, initial_record_flag)) {
@@ -381,6 +408,33 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .limit_value = 9,
             .local_preflight_address = 0x731a,
             .terminal_call_address = 0x14124,
+        },
+        .tenth_function_key = {
+            .handler_address = 0x7384,
+            .initialization_guard_address = 0xa19e,
+            .display_selector_call_address = 0xd0c9,
+            .first_reset_runtime_byte_address = 0xda30,
+            .first_reset_runtime_byte_value = 0,
+            .initial_al_value = 2,
+            .second_reset_runtime_byte_address = 0xdad7,
+            .second_reset_runtime_byte_value = 0,
+            .local_mode_address = 0x6e2f,
+            .local_mode_value = 1,
+            .enabled_runtime_byte_address = 0xda39,
+            .enabled_call_address = 0x7b47,
+            .limit_runtime_byte_address = 0xda06,
+            .limit_value = 2,
+            .local_preflight_address = 0x731a,
+            .local_mode_reset_value = 0,
+            .conditional_runtime_byte_address = 0xda09,
+            .conditional_call_address = 0x7a9d,
+            .first_terminal_call_address = 0x4140,
+            .second_terminal_call_address = 0x7bcb,
+            .third_terminal_call_address = 0xa2a0,
+            .wait_runtime_byte_address = 0xda41,
+            .wait_call_address = 0x09fa,
+            .repeat_shift_register = 3,
+            .final_call_address = 0x4111,
         },
     };
 }

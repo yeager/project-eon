@@ -188,6 +188,40 @@ struct MillenniumDosNinthFunctionKeyTrace {
     std::uint32_t terminal_call_address = 0;
 };
 
+// Exact, non-semantic trace of table record nine (raw F10 / $44). Its native
+// handler is admitted only when the same runtime word used by F3/F4/F6/F7/F9
+// is zero. The admitted path clears native bytes, uses a code-local mode byte,
+// and repeats an original poll according to native flags. Project Eon exposes
+// these verified operands and control-flow targets only; it never supplies the
+// runtime values, executes the calls, or applies the native writes.
+struct MillenniumDosTenthFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t initialization_guard_address = 0;
+    std::uint16_t display_selector_call_address = 0;
+    std::uint16_t first_reset_runtime_byte_address = 0;
+    std::uint8_t first_reset_runtime_byte_value = 0;
+    std::uint8_t initial_al_value = 0;
+    std::uint16_t second_reset_runtime_byte_address = 0;
+    std::uint8_t second_reset_runtime_byte_value = 0;
+    std::uint16_t local_mode_address = 0;
+    std::uint8_t local_mode_value = 0;
+    std::uint16_t enabled_runtime_byte_address = 0;
+    std::uint16_t enabled_call_address = 0;
+    std::uint16_t limit_runtime_byte_address = 0;
+    std::uint8_t limit_value = 0;
+    std::uint16_t local_preflight_address = 0;
+    std::uint8_t local_mode_reset_value = 0;
+    std::uint16_t conditional_runtime_byte_address = 0;
+    std::uint16_t conditional_call_address = 0;
+    std::uint32_t first_terminal_call_address = 0;
+    std::uint16_t second_terminal_call_address = 0;
+    std::uint32_t third_terminal_call_address = 0;
+    std::uint16_t wait_runtime_byte_address = 0;
+    std::uint16_t wait_call_address = 0;
+    std::uint16_t repeat_shift_register = 0;
+    std::uint32_t final_call_address = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -211,6 +245,7 @@ struct MillenniumDosGameFlow {
     MillenniumDosSeventhFunctionKeyTrace seventh_function_key;
     MillenniumDosEighthFunctionKeyTrace eighth_function_key;
     MillenniumDosNinthFunctionKeyTrace ninth_function_key;
+    MillenniumDosTenthFunctionKeyTrace tenth_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(

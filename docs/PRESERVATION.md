@@ -702,6 +702,19 @@ code operands/control-flow facts only. Project Eon shows the immutable F8
 trace but never supplies `$da39`, `$da0a`, or `BL`, performs native calls or
 writes original game media or saves.
 
+The tenth table record (raw F10 / `$44`) is `36 3c 09 1b 39 09 84 73`, with
+handler entry `$7384`. It returns when native runtime word `$a19e` is nonzero.
+Its admitted path clears AX and calls `$d0c9`, clears `$da30`, loads `AL=$02`,
+clears `$dad7`, and sets code-local byte `$6e2f` to `$01`. If `$da39` is
+nonzero it calls `$7b47`. It loops through the verified F8 preflight `$731a`
+while `$da06` is below `$02`; it then clears `$6e2f`, conditionally calls
+`$7a9d` when `$da09` is zero, and reaches direct calls `$4140`, `$7bcb`, and
+`$a2a0`. A final poll at `$09fa` depends on `$da41` and can repeat according
+to `SHR BL,1`/carry before call `$4111`. These are exact code operands and
+control-flow targets only. Project Eon presents this immutable F10 trace; it
+does not provide native guard bytes, execute calls, run the polling loop, or
+write original archives, saves, or executable media.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
