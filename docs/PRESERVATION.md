@@ -354,7 +354,8 @@ The SDL Deuteros launch view performs the complete verified chain at runtime:
 outer archive SHA-256 → nested clean system ADF SHA-256 → boot/load plan →
 bundle 0 → channel VM / original VBL source → indexed bitmap → palette → RGBA
 texture. The session advances on a 20 ms scheduler cadence and supplies only a
-recovered input edge to the VM; the VM controls whether that edge is accepted.
+recovered held input signal to the VM; the VM controls whether that signal is
+accepted.
 Thus the displayed pixels remain derived from user-supplied original data and
 are not packaged in the executable or repository. Archives and ADFs are read
 in place: no game file is unpacked, copied, installed, or written by runtime.

@@ -421,6 +421,21 @@ int main() {
         }
     }
     assert(first_input_alternate == 0x0b38);
+    // The SDL session uses the same input contract, rather than a separately
+    // scripted preview path. Holding the recovered input signal reaches the
+    // same verified handoff tick and raw resource pointer.
+    eon::DeuterosAmigaOpening live_input_opening(*amiga_disk1);
+    std::optional<std::uint32_t> live_input_alternate;
+    for (std::size_t tick = 1; tick <= 96; ++tick) {
+        const auto events = live_input_opening.tick(true);
+        if (!events.alternate_resources.empty()) {
+            assert(events.alternate_resources.size() == 1);
+            live_input_alternate = events.alternate_resources.front();
+            assert(tick == 82);
+            break;
+        }
+    }
+    assert(live_input_alternate == 0x0b38);
     eon::DeuterosAmigaRandom opening_random(system_disk, first_bundle, 0, 0x240);
     assert(opening_random.next() == 0x11);
     assert(opening_random.seed() == 0x11);

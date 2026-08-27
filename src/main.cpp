@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     int focused = 0;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
-    bool deuteros_input_pending = false;
+    bool deuteros_input_pressed = false;
     bool show_scanner = false;
     bool running = true;
     while (running) {
@@ -289,12 +289,14 @@ int main(int argc, char** argv) {
                 request.presentation = request.presentation == eon::Presentation::original
                     ? eon::Presentation::modern : eon::Presentation::original;
             }
-            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+            if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
                 && screen == Screen::launching && selected == eon::Game::deuteros
-                && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1) {
-                // The recovered title stream only distinguishes an input edge.
-                // Preserve that contract; the VM decides whether its delay has elapsed.
-                deuteros_input_pending = true;
+                && (event.key.key == SDLK_SPACE || event.key.key == SDLK_RETURN)) {
+                // $14 consumes the input word last polled by the original loop.
+                // Feed the physical held state, leaving acceptance to the VM's
+                // recovered timing and input-gate logic.
+                if (event.type == SDL_EVENT_KEY_DOWN) deuteros_input_pressed = true;
+                if (event.type == SDL_EVENT_KEY_UP) deuteros_input_pressed = false;
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) {
@@ -353,8 +355,7 @@ int main(int argc, char** argv) {
             std::size_t tick_count = 0;
             while (now - deuteros_last_tick >= scheduler_period_ms
                 && tick_count < maximum_catch_up_ticks) {
-                static_cast<void>(deuteros_opening->tick(deuteros_input_pending));
-                deuteros_input_pending = false;
+                static_cast<void>(deuteros_opening->tick(deuteros_input_pressed));
                 deuteros_last_tick += scheduler_period_ms;
                 ++tick_count;
             }
@@ -422,10 +423,11 @@ int main(int argc, char** argv) {
                 if (frame) SDL_UpdateTexture(preview_texture, nullptr, frame->data(),
                     eon::DeuterosAmigaFrame::width * 4);
                 draw_text(renderer, 64, 220, "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE");
+                draw_text(renderer, 64, 238, "HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL");
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 const float scale = 2.0F;
-                SDL_FRect preview_bounds{64, 250,
+                SDL_FRect preview_bounds{64, 258,
                     static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
