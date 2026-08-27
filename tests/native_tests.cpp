@@ -26,6 +26,16 @@ int main() {
         std::cout << "SKIP: configure -DEON_REAL_DATA_DIR=<original archive directory>\n";
         return 0;
     }
+    eon::ReleaseScanner incremental_scanner(data_directory);
+    assert(incremental_scanner.candidate_count() >= 6);
+    assert(!incremental_scanner.done());
+    const auto scanned_before = incremental_scanner.scanned_count();
+    static_cast<void>(incremental_scanner.advance(1));
+    assert(incremental_scanner.scanned_count() == scanned_before + 1);
+    while (!incremental_scanner.advance(2)) {
+    }
+    assert(incremental_scanner.done());
+    assert(incremental_scanner.releases().size() == 6);
     const auto releases = eon::find_release_archives(data_directory);
     // Six genuine outer archives: five platform/game pairs plus Spanish DOS.
     assert(releases.size() == 6);
