@@ -432,6 +432,14 @@ Project Eon does not assign a title/game meaning, load a guessed sector, or
 manufacture state. Its local raw-reader routine at `+$60` caps each XBIOS
 request at nine sectors and maps linear tracks from `$50` onward to side 1.
 
+The first six static table slots are `$1f1a`, `$1f2e`, `$1f50`, `$1f1a`,
+`$1f1a`, and `$1f52`; they are all code addresses within the copied track-2
+interval. The `$1f1a` vector returns raw-loader arguments: destination
+`$13200`, byte count `$4800`, linear sector `$4`. `$1f2e` returns destination
+`$b000`, byte count `$5e400`, linear sector `$4c` after an observed GEMDOS
+call. These returned values flow to `$70030` through the proven dispatcher,
+but state selection is still not emulated and no sector is read by this parser.
+
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its

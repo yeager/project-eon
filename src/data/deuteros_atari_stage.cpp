@@ -148,4 +148,39 @@ DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
         .side_switch_track = 0x50};
 }
 
+DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
+    std::span<const std::uint8_t> bytes) {
+    if (bytes.size() != 0x1200U) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST dispatch-stage length");
+    }
+    constexpr std::array<std::uint8_t, 24> vectors{{
+        0x00, 0x00, 0x1f, 0x1a, 0x00, 0x00, 0x1f, 0x2e,
+        0x00, 0x00, 0x1f, 0x50, 0x00, 0x00, 0x1f, 0x1a,
+        0x00, 0x00, 0x1f, 0x1a, 0x00, 0x00, 0x1f, 0x52}};
+    require_bytes(bytes, 0xac, vectors, "Unexpected Deuteros Atari ST dispatch vectors");
+    constexpr std::array<std::uint8_t, 20> state0{{
+        0x22, 0x3c, 0x00, 0x01, 0x32, 0x00,
+        0x20, 0x3c, 0x00, 0x00, 0x48, 0x00,
+        0x24, 0x3c, 0x00, 0x00, 0x00, 0x04, 0x4e, 0x75}};
+    require_bytes(bytes, 0x11a, state0, "Unexpected Deuteros Atari ST dispatch state 0");
+    constexpr std::array<std::uint8_t, 34> state1{{
+        0x2f, 0x3c, 0x00, 0x00, 0x26, 0x30, 0x3f, 0x3c, 0x00, 0x26,
+        0x4e, 0x4e, 0x5c, 0x8f,
+        0x22, 0x3c, 0x00, 0x00, 0xb0, 0x00,
+        0x20, 0x3c, 0x00, 0x05, 0xe4, 0x00,
+        0x24, 0x3c, 0x00, 0x00, 0x00, 0x4c, 0x4e, 0x75}};
+    require_bytes(bytes, 0x12e, state1, "Unexpected Deuteros Atari ST dispatch state 1");
+    DeuterosAtariDispatchProfile result;
+    for (std::size_t index = 0; index < result.vector_addresses.size(); ++index) {
+        result.vector_addresses[index] = be32(bytes, 0xac + index * 4U);
+    }
+    result.state0_destination = be32(bytes, 0x11c);
+    result.state0_byte_count = be32(bytes, 0x122);
+    result.state0_linear_sector = be32(bytes, 0x128);
+    result.state1_destination = be32(bytes, 0x13e);
+    result.state1_byte_count = be32(bytes, 0x144);
+    result.state1_linear_sector = be32(bytes, 0x14a);
+    return result;
+}
+
 } // namespace eon
