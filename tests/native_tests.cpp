@@ -458,6 +458,20 @@ int main() {
             "de1fdcc69a46a7f661c191fa69cd64a693053f4026708400ca4bc6defe224c79",
             "cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f909f",
         }}));
+    const auto defjam_separate_post_call_tail_branch =
+        eon::parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
+            defjam_loader_disk, defjam_plan, defjam_separate_post_call_tail);
+    assert(defjam_separate_post_call_tail_branch.entry_address == 0x68dc0);
+    assert(defjam_separate_post_call_tail_branch.raw_disk_offset == 0x171c0);
+    assert(defjam_separate_post_call_tail_branch.sha256
+        == "ef2fe6161118a1b0ac6cee838be9a4dc2b0483ba274a213d3ac653ea6f334e3b");
+    assert(defjam_separate_post_call_tail_branch.compared_byte_address == 0x7c255);
+    assert(defjam_separate_post_call_tail_branch.compare_immediate == 0x0c);
+    assert(defjam_separate_post_call_tail_branch.conditional_branch_address == 0x68dca);
+    assert(defjam_separate_post_call_tail_branch.conditional_branch_target == 0x68dec);
+    assert(defjam_separate_post_call_tail_branch.target_raw_disk_offset == 0x171ec);
+    assert(defjam_separate_post_call_tail_branch.target_prefix_sha256
+        == "13ed782f5463fd93bbd4376777a1c01d8fd636018de8aef52f5710eb0da11a2b");
     // Every supplied Millennium Amiga image shares the verified resident raw
     // range. One image is shorter than a standard ADF, so check the common
     // raw bytes directly rather than incorrectly forcing it through the ADF
@@ -470,6 +484,10 @@ int main() {
         assert(bytes.size() >= 0x2bfc8);
         assert(eon::to_hex(eon::sha256(bytes.subspan(0x1719c, 36)))
             == defjam_separate_post_call_tail.sha256);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(0x171c0, 14)))
+            == defjam_separate_post_call_tail_branch.sha256);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(0x171ec, 32)))
+            == defjam_separate_post_call_tail_branch.target_prefix_sha256);
         for (std::size_t index = 0;
              index < defjam_separate_post_call_tail.target_raw_disk_offsets.size(); ++index) {
             assert(eon::to_hex(eon::sha256(bytes.subspan(

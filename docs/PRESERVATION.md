@@ -441,6 +441,19 @@ evidence and are not treated as interchangeable executable provenance. One
 shorter supplied dump is checked by direct bounded raw spans, not forced into
 the standard-ADF reader it does not satisfy.
 
+The next local static control-flow prefix begins at `$68dc0` / ADF `+0x171c0`.
+Its 14 bytes, SHA-256
+`ef2fe6161118a1b0ac6cee838be9a4dc2b0483ba274a213d3ac653ea6f334e3b`, load
+the byte at `$7c255`, compare it with `$0c`, then encode `BCS.W`. The
+68000 word-branch displacement is based at its extension word `$68dcc`, so
+the literal `$0020` resolves exactly to `$68dec` (not `$68dee`). That target
+maps to ADF `+0x171ec`; its first 32 raw bytes have SHA-256
+`13ed782f5463fd93bbd4376777a1c01d8fd636018de8aef52f5710eb0da11a2b` and
+start by setting `A5` from `$7c25c`, testing `A5+$d`, and carrying further
+static branch/call encodings. This records only raw control-flow provenance:
+none of the prior calls are assumed to return, and no live RAM value, target
+semantics, or later call is executed.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch

@@ -871,4 +871,48 @@ parse_millennium_amiga_resident_separate_post_call_tail_boundary(
     return result;
 }
 
+MillenniumAmigaResidentSeparatePostCallTailBranchBoundary
+parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparatePostCallTailBoundary& tail) {
+    constexpr std::uint32_t entry = 0x68dc0, target = 0x68dec;
+    constexpr std::array<std::uint8_t, 14> expected{{
+        0x10, 0x39, 0x00, 0x07, 0xc2, 0x55, 0xb0, 0x3c, 0x00, 0x0c,
+        0x65, 0x00, 0x00, 0x20,
+    }};
+    constexpr std::array<std::uint8_t, 32> target_prefix{{
+        0x2a, 0x7c, 0x00, 0x07, 0xc2, 0x5c, 0x54, 0x8d,
+        0x30, 0x3c, 0x00, 0x02, 0x4a, 0x2d, 0x00, 0x0d,
+        0x66, 0x00, 0x00, 0x08, 0x4e, 0xf9, 0x00, 0x07,
+        0xc4, 0x68, 0x4e, 0xb9, 0x00, 0x07, 0xd3, 0xe0,
+    }};
+    constexpr std::string_view expected_hash =
+        "ef2fe6161118a1b0ac6cee838be9a4dc2b0483ba274a213d3ac653ea6f334e3b";
+    constexpr std::string_view target_hash =
+        "13ed782f5463fd93bbd4376777a1c01d8fd636018de8aef52f5710eb0da11a2b";
+    if (tail.entry_address != 0x68d9c || tail.byte_count != 36
+        || entry < plan.resident_stage.destination || target < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga separate post-call tail branch placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    const auto target_relative = target - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative
+        || target_relative > plan.resident_stage.length
+        || target_prefix.size() > plan.resident_stage.length - target_relative) {
+        throw std::runtime_error("Millennium Amiga separate post-call tail branch is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto prefix = disk.bytes(plan.resident_stage.disk_offset + target_relative, target_prefix.size());
+    const auto hash = to_hex(sha256(bytes));
+    const auto prefix_hash = to_hex(sha256(prefix));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || !std::equal(target_prefix.begin(), target_prefix.end(), prefix.begin())
+        || hash != expected_hash || prefix_hash != target_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga separate post-call tail branch");
+    }
+    // BCS.W has its displacement base at the extension word: $68dcc + $20.
+    return {entry, plan.resident_stage.disk_offset + relative, hash, 0x7c255, 0x0c,
+        entry + 10, target, plan.resident_stage.disk_offset + target_relative, prefix_hash};
+}
+
 } // namespace eon

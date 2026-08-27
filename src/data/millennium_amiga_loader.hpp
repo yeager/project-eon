@@ -279,6 +279,21 @@ struct MillenniumAmigaResidentSeparatePostCallTailBoundary {
     std::array<std::string, 6> target_prefix_sha256{};
 };
 
+// The first local control-flow prefix after the static six-call tail. Its
+// branch target and target prefix remain raw evidence: the preceding calls
+// may not return and no live RAM value or callee behavior is inferred.
+struct MillenniumAmigaResidentSeparatePostCallTailBranchBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::string sha256;
+    std::uint32_t compared_byte_address = 0;
+    std::uint8_t compare_immediate = 0;
+    std::uint32_t conditional_branch_address = 0;
+    std::uint32_t conditional_branch_target = 0;
+    std::size_t target_raw_disk_offset = 0;
+    std::string target_prefix_sha256;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -427,5 +442,9 @@ parse_millennium_amiga_resident_separate_entry_gate(
 parse_millennium_amiga_resident_separate_post_call_tail_boundary(
     const AmigaAdf&, const MillenniumAmigaLoadPlan&,
     const MillenniumAmigaResidentSeparatePostCallBoundary&);
+[[nodiscard]] MillenniumAmigaResidentSeparatePostCallTailBranchBoundary
+parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&,
+    const MillenniumAmigaResidentSeparatePostCallTailBoundary&);
 
 } // namespace eon
