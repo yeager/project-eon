@@ -406,4 +406,31 @@ MillenniumAtariConfigSecondJsr parse_millennium_atari_config_second_jsr(
         join_jsr_address, join_jsr_target, following_jsr_target};
 }
 
+MillenniumAtariConfigJoinJsr parse_millennium_atari_config_join_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigSecondJsr& second) {
+    // The common $2a51c target ends locally at RTS. Its intervening $a000 is
+    // preserved as an opaque Line-A opcode: the original platform owns its
+    // effect, and no host implementation is selected here.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t target_address = 0x2a51c;
+    constexpr std::size_t target_offset = target_address - load_base;
+    constexpr std::array<std::uint8_t, 32> target_bytes{
+        0x54, 0x8f, 0x33, 0xc0, 0x00, 0x02, 0xa5, 0x12, 0xa0, 0x00,
+        0x26, 0x68, 0x00, 0x08, 0x28, 0x68, 0x00, 0x0c, 0x23, 0xcb,
+        0x00, 0x02, 0xa5, 0x14, 0x23, 0xcc, 0x00, 0x02, 0xa5, 0x18,
+        0x4e, 0x75,
+    };
+    if (second.proven_load_base != load_base || second.join_jsr_target != target_address
+        || payload.size() < target_offset + target_bytes.size()
+        || !std::equal(target_bytes.begin(), target_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST common MILL22A.inf JSR target");
+    }
+    return {load_base, target_address, static_cast<std::uint32_t>(target_offset),
+        read_be16(payload, target_offset), read_be16(payload, target_offset + 2U),
+        read_be32(payload, target_offset + 4U), read_be16(payload, target_offset + 8U),
+        read_be32(payload, target_offset + 20U), read_be32(payload, target_offset + 26U),
+        read_be16(payload, target_offset + 30U)};
+}
+
 } // namespace eon
