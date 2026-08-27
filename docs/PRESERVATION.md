@@ -768,7 +768,16 @@ The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
 the passed mode word at `$4040e`, and comparing its low byte with five. The
 meaning of those mode values and the later gameplay dispatch remain unknown.
 For mode five it copies the byte to `$3717e` and writes `$0101` to `$38092`;
-every other path writes byte one to `$19d52`. After shared setup, the recovered
+every other path writes byte one to `$19d52`. The shared prefix is now
+opcode-validated through `$40574`: it installs stack `$40b62`, loads Exec base
+from `$4`, calls vectors `-$96` and `-$9c` with literal `D0=$7fff0`, calls the
+original internal setup sequence, copies `$1f168` to `$1f974` and `$410d8`,
+and prepares custom base `$dff000` with words `$7fff/$7fff/$c000/$87ff` at
+offsets `$40/$42/$9a/$96`. It then distinguishes a mode-five call to `$36a8c`
+from the normal call to `$1fb9a`. `DeuterosAmigaTitleStageProfile` records all
+of these as initialization requirements only: Project Eon does not call Exec,
+write the custom chip, allocate memory, or infer the calls' higher-level
+effects. After that shared setup, the recovered
 recurring loop starts at `$40574`, calls `$222c0` then `$23e4e`; a mode/input
 change clears `$40410`, and the loop compares it with `$0000ea60` before the
 original `$4069a` dispatch, subject to another original-state check. The strict

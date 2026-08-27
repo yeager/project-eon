@@ -79,6 +79,100 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_word(code, 36, 0x0001);
     require_long(code, 38, 0x00019d52);
 
+    // Both mode branches join at $40450. This startup prefix enters an
+    // original stack, calls two Exec vectors, applies literal internal setup,
+    // and programs four custom-chip words before reaching the recurring loop.
+    // It is captured as a requirement profile; no external vector or hardware
+    // effect is emulated here.
+    constexpr std::size_t initialization = 0x2a; // $40450 - $40426
+    require_word(code, initialization, 0x2e7c); // movea.l #$40b62,a7
+    require_long(code, initialization + 2, 0x00040b62);
+    require_word(code, initialization + 6, 0x2c78); // movea.l $4.w,a6
+    require_word(code, initialization + 8, 0x0004);
+    require_word(code, initialization + 10, 0x4eae); // jsr -$96(a6)
+    require_word(code, initialization + 12, 0xff6a);
+    require_word(code, initialization + 14, 0x203c); // move.l #$7fff0,d0
+    require_long(code, initialization + 16, 0x0007fff0);
+    require_word(code, initialization + 20, 0x2c78); // movea.l $4.w,a6
+    require_word(code, initialization + 22, 0x0004);
+    require_word(code, initialization + 24, 0x4eae); // jsr -$9c(a6)
+    require_word(code, initialization + 26, 0xff64);
+    const auto require_call = [&](const std::size_t offset, const std::uint32_t target) {
+        require_word(code, offset, 0x4eb9);
+        require_long(code, offset + 2, target);
+    };
+    require_call(initialization + 28, 0x1ed80);
+    require_call(initialization + 34, 0x1f172);
+    require_word(code, initialization + 40, 0x23f9); // $1f168 -> $1f974
+    require_long(code, initialization + 42, 0x0001f168);
+    require_long(code, initialization + 46, 0x0001f974);
+    require_call(initialization + 50, 0x1f182);
+    require_word(code, initialization + 56, 0x23f9); // $1f168 -> $410d8
+    require_long(code, initialization + 58, 0x0001f168);
+    require_long(code, initialization + 62, 0x000410d8);
+    require_word(code, initialization + 66, 0x207c); // movea.l #$dff000,a0
+    require_long(code, initialization + 68, 0x00dff000);
+    constexpr std::array<std::uint16_t, 4> custom_offsets{{0x40, 0x42, 0x9a, 0x96}};
+    constexpr std::array<std::uint16_t, 4> custom_values{{0x7fff, 0x7fff, 0xc000, 0x87ff}};
+    for (std::size_t index = 0; index < custom_offsets.size(); ++index) {
+        const auto offset = initialization + 72 + index * 6U;
+        require_word(code, offset, 0x317c);
+        require_word(code, offset + 2, custom_values[index]);
+        require_word(code, offset + 4, custom_offsets[index]);
+    }
+    require_call(initialization + 96, 0x1ef74);
+    require_call(initialization + 102, 0x206d4);
+    require_call(initialization + 108, 0x206be);
+    require_word(code, initialization + 114, 0x223c); // move.l #$13000,d1
+    require_long(code, initialization + 116, 0x00013000);
+    require_call(initialization + 120, 0x403e6);
+    require_call(initialization + 126, 0x403f4);
+    require_word(code, initialization + 132, 0x41f9); // lea $12ff4,a0
+    require_long(code, initialization + 134, 0x00012ff4);
+    require_word(code, initialization + 138, 0x2018);
+    require_word(code, initialization + 140, 0x23c0);
+    require_long(code, initialization + 142, 0x00037ef2);
+    require_word(code, initialization + 146, 0x2018);
+    require_word(code, initialization + 148, 0x23c0);
+    require_long(code, initialization + 150, 0x00037ef6);
+    require_call(initialization + 154, 0x204c8);
+    require_call(initialization + 160, 0x389e2);
+    require_word(code, initialization + 166, 0x7001);
+    require_call(initialization + 168, 0x1fb9a);
+    require_call(initialization + 174, 0x38912);
+    require_call(initialization + 180, 0x2022a);
+    require_word(code, initialization + 186, 0x303c);
+    require_word(code, initialization + 188, 0x004d);
+    require_call(initialization + 190, 0x41bb4);
+    require_word(code, initialization + 196, 0x303c);
+    require_word(code, initialization + 198, 0x004e);
+    require_call(initialization + 200, 0x41bb4);
+    require_word(code, initialization + 206, 0x23fc); // $2151a -> $222ae
+    require_long(code, initialization + 208, 0x0002151a);
+    require_long(code, initialization + 212, 0x000222ae);
+    require_word(code, initialization + 216, 0x7000);
+    require_call(initialization + 218, 0x20e18);
+    require_call(initialization + 224, 0x20ba8);
+    require_word(code, initialization + 230, 0x41f9);
+    require_long(code, initialization + 232, 0x00020cfe);
+    require_word(code, initialization + 236, 0x4e90); // jsr (a0)
+    require_word(code, initialization + 238, 0x2039);
+    require_long(code, initialization + 240, 0x00012fe4);
+    require_word(code, initialization + 244, 0xe688);
+    require_word(code, initialization + 246, 0x33c0);
+    require_long(code, initialization + 248, 0x0001f42a);
+    require_call(initialization + 252, 0x37180);
+    require_word(code, initialization + 258, 0x23f9);
+    require_long(code, initialization + 260, 0x0001378e);
+    require_long(code, initialization + 264, 0x0001c26c);
+    require_word(code, initialization + 268, 0x7005);
+    require_word(code, initialization + 270, 0xb079);
+    require_long(code, initialization + 272, 0x0004040e);
+    require_word(code, initialization + 276, 0x6608);
+    require_call(initialization + 278, 0x36a8c);
+    require_word(code, initialization + 284, 0x6006);
+    require_call(initialization + 286, 0x1fb9a);
+
     // The recurring service pair starts at $40574 after common startup. The
     // counter is reset on input mode change and runs to $ea60 before dispatch.
     constexpr std::size_t loop = 0x14e; // $40574 - $40426
@@ -421,7 +515,7 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_word(profile_five_helper, 30, 0x4eae); // jsr -$1c8(a6)
     require_word(profile_five_helper, 32, 0xfe38);
 
-    return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
+    DeuterosAmigaTitleStageProfile result{stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
         0x22d34, 0x11, 0x40410,
         0x202c6, 0x202b8, 0x1ed24, 0x40678, 16, 0x0eee, 0x12fec,
@@ -442,6 +536,20 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         {0x12b1c, 0x12b30, 0x12b44, 0x12b1c, 0x12b1c, 0x12b46},
         0x12b46, 0x12932,
         0x12822, 0x24, 1, 0x1c, 9, 0x1e, 0, 4, static_cast<std::int16_t>(-0x1c8)};
+    result.initialization_stack_address = 0x40b62;
+    result.initialization_exec_base_address = 4;
+    result.initialization_exec_vectors = {static_cast<std::int16_t>(-0x96), static_cast<std::int16_t>(-0x9c)};
+    result.initialization_exec_allocation_size = 0x7fff0;
+    result.initialization_internal_calls = {0x1ed80, 0x1f172, 0x1f182, 0x1ef74,
+        0x206d4, 0x206be, 0x403e6, 0x403f4, 0x204c8, 0x389e2, 0x37180};
+    result.initialization_copy_source_address = 0x1f168;
+    result.initialization_copy_destinations = {0x1f974, 0x410d8};
+    result.initialization_custom_base_address = 0xdff000;
+    result.initialization_custom_offsets = custom_offsets;
+    result.initialization_custom_values = custom_values;
+    result.initialization_mode_five_call_address = 0x36a8c;
+    result.initialization_normal_call_address = 0x1fb9a;
+    return result;
 }
 
 } // namespace eon

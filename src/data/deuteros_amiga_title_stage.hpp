@@ -143,6 +143,21 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint8_t bootstrap_profile_five_helper_byte_value = 0;
     std::uint32_t bootstrap_profile_five_helper_library_base = 0;
     std::int16_t bootstrap_profile_five_helper_library_vector = 0;
+    // The common title-entry prefix through the first recurring loop. These
+    // are opcode-validated startup requirements only: Project Eon does not
+    // call Exec, write custom-chip registers, or assume their effects.
+    std::uint32_t initialization_stack_address = 0;
+    std::uint32_t initialization_exec_base_address = 0;
+    std::array<std::int16_t, 2> initialization_exec_vectors{};
+    std::uint32_t initialization_exec_allocation_size = 0;
+    std::array<std::uint32_t, 11> initialization_internal_calls{};
+    std::uint32_t initialization_copy_source_address = 0;
+    std::array<std::uint32_t, 2> initialization_copy_destinations{};
+    std::uint32_t initialization_custom_base_address = 0;
+    std::array<std::uint16_t, 4> initialization_custom_offsets{};
+    std::array<std::uint16_t, 4> initialization_custom_values{};
+    std::uint32_t initialization_mode_five_call_address = 0;
+    std::uint32_t initialization_normal_call_address = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
