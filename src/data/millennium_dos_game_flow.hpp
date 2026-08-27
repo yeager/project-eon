@@ -144,6 +144,26 @@ struct MillenniumDosSeventhFunctionKeyTrace {
     std::uint16_t terminal_call_address = 0;
 };
 
+// Exact, non-semantic trace of table record seven (raw F8 / $42). The native
+// handler resets a byte in its own runtime image, enters a local preflight
+// routine, then repeatedly calls an in-image routine according to the carry
+// flag produced by SHR BL,1. Project Eon does not provide BL or execute any
+// of these native routines.
+struct MillenniumDosEighthFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t reset_runtime_byte_address = 0;
+    std::uint8_t reset_runtime_byte_value = 0;
+    std::uint8_t initial_al_value = 0;
+    std::uint16_t local_preflight_address = 0;
+    std::uint16_t preflight_runtime_byte_address = 0;
+    std::uint16_t preflight_enabled_call_address = 0;
+    std::uint16_t decrement_runtime_byte_address = 0;
+    std::uint16_t depleted_jump_address = 0;
+    std::uint16_t repeated_call_address = 0;
+    // Intel's ModR/M register code for BL in the verified SHR BL,1 opcode.
+    std::uint16_t repeat_shift_register = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -165,6 +185,7 @@ struct MillenniumDosGameFlow {
     MillenniumDosFifthFunctionKeyTrace fifth_function_key;
     MillenniumDosSixthFunctionKeyTrace sixth_function_key;
     MillenniumDosSeventhFunctionKeyTrace seventh_function_key;
+    MillenniumDosEighthFunctionKeyTrace eighth_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
