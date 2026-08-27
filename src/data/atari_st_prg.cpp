@@ -293,4 +293,58 @@ MillenniumAtariConfigEvidence probe_millennium_atari_config(const Fat12Disk& dis
     return result;
 }
 
+MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
+    std::span<const std::uint8_t> payload) {
+    // The original file starts JMP $2aa88.  Its absolute references at the
+    // beginning of the payload establish the observed $2a4de load base, so
+    // the jump resolves to file +$5aa.  From there the sequence is:
+    // CLR.L -(A7); MOVE.W #$15,-(A7); TRAP #14; ADDQ.L #6,A7;
+    // MOVE.L #$2a612,-(A7); MOVE.W #6,-(A7); TRAP #14; ADDQ.L #6,A7;
+    // then six JSRs interleaved with literal register setup; PEA $2ab0a;
+    // MOVE.W #$26,-(A7); TRAP #14; ADDQ.L #6,A7; RTS.
+    // All service selectors remain interface facts: their TOS/XBIOS effects
+    // and every called routine remain outside this parser.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t entry_address = 0x2aa88;
+    constexpr std::size_t entry_offset = entry_address - load_base;
+    constexpr auto entry_bytes = std::to_array<std::uint8_t>({
+        0x42, 0xa7, 0x3f, 0x3c, 0x00, 0x15, 0x4e, 0x4e, 0x5c, 0x8f,
+        0x2f, 0x3c, 0x00, 0x02, 0xa6, 0x12, 0x3f, 0x3c, 0x00, 0x06,
+        0x4e, 0x4e, 0x5c, 0x8f, 0x4e, 0xb9, 0x00, 0x02, 0xb5, 0x5a,
+        0x4e, 0xb9, 0x00, 0x02, 0xaa, 0x68, 0x2e, 0x3c, 0x00, 0x02,
+        0xa6, 0x40, 0x4e, 0xb9, 0x00, 0x02, 0xaa, 0x0c, 0x28, 0x7c,
+        0x00, 0x02, 0xc2, 0x4a, 0x54, 0x8c, 0x3c, 0x1c, 0x3e, 0x1c,
+        0x2a, 0x79, 0x00, 0x02, 0xa5, 0x0e, 0x4e, 0xb9, 0x00, 0x02,
+        0xb2, 0xbe, 0x26, 0x7c, 0x00, 0x02, 0xa6, 0x4c, 0x28, 0x7c,
+        0x00, 0x02, 0xa6, 0x6c, 0x4e, 0xb9, 0x00, 0x02, 0xb4, 0x48,
+        0x2e, 0x3c, 0x00, 0x02, 0xa6, 0x34, 0x4e, 0xb9, 0x00, 0x02,
+        0xaa, 0x0c, 0x26, 0x7c, 0x00, 0x02, 0xa6, 0x4c, 0x28, 0x7c,
+        0x00, 0x02, 0xa6, 0x6c, 0x48, 0x7a, 0x00, 0x0c, 0x3f, 0x3c,
+        0x00, 0x26, 0x4e, 0x4e, 0x5c, 0x8f, 0x4e, 0x75,
+    });
+    constexpr std::array<std::uint32_t, 6> jsr_targets{
+        0x2b55a, 0x2aa68, 0x2aa0c, 0x2b2be, 0x2b448, 0x2aa0c,
+    };
+    if (payload.size() < 6 || read_be16(payload, 0) != 0x4ef9U
+        || read_be32(payload, 2) != entry_address
+        || payload.size() < entry_offset + entry_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(entry_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST MILL22A.inf entry path");
+    }
+    MillenniumAtariConfigEntry result;
+    result.proven_load_base = load_base;
+    result.entry_address = entry_address;
+    result.entry_file_offset = static_cast<std::uint32_t>(entry_offset);
+    result.initial_trap_selector = 0x15;
+    result.initial_trap_longword_argument = 0;
+    result.palette_trap_selector = 0x06;
+    result.palette_trap_longword_argument = 0x2a612;
+    result.jsr_targets.assign(jsr_targets.begin(), jsr_targets.end());
+    result.final_pea_address = load_base + 0x62c;
+    result.final_trap_selector = 0x26;
+    result.return_offset = static_cast<std::uint32_t>(entry_offset + entry_bytes.size() - 2U);
+    return result;
+}
+
 } // namespace eon

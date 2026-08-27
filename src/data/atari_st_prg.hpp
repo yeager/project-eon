@@ -120,6 +120,25 @@ struct MillenniumAtariConfigEvidence {
     std::uint32_t first_longword_operand = 0;
 };
 
+// The initial, directly-addressed control block in the genuine Equinox
+// MILL22A.inf payload.  The file is not a host configuration format: its
+// leading JMP and all reported addresses are original 68000 facts.  This
+// parser never calls the traps, follows the JSRs, or projects any of its
+// mutable words into a replacement game state.
+struct MillenniumAtariConfigEntry {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t entry_file_offset = 0;
+    std::uint16_t initial_trap_selector = 0;
+    std::uint32_t initial_trap_longword_argument = 0;
+    std::uint16_t palette_trap_selector = 0;
+    std::uint32_t palette_trap_longword_argument = 0;
+    std::vector<std::uint32_t> jsr_targets;
+    std::uint32_t final_pea_address = 0;
+    std::uint16_t final_trap_selector = 0;
+    std::uint32_t return_offset = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -164,5 +183,12 @@ struct MillenniumAtariConfigEvidence {
 // words; it never treats absence as permission to generate a configuration.
 [[nodiscard]] MillenniumAtariConfigEvidence probe_millennium_atari_config(
     const Fat12Disk& disk);
+
+// Validates the exact initial control path reached by MILL22A.inf's leading
+// JMP on the verified Equinox disk.  It reports literal XBIOS selectors,
+// arguments, JSR destinations and PEA target only.  No TOS/XBIOS/GEMDOS
+// service is emulated, no file is unpacked and no supplied media is changed.
+[[nodiscard]] MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
+    std::span<const std::uint8_t> payload);
 
 } // namespace eon
