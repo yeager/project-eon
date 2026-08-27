@@ -425,6 +425,17 @@ int main() {
     assert(defjam_separate_branch.long_branch_target == 0x68d78);
     assert(defjam_separate_branch.unknown_call_address == 0x68d7c);
     assert(defjam_separate_branch.unknown_call_target == 0x778f0);
+    const auto defjam_separate_post_call = eon::parse_millennium_amiga_resident_separate_post_call_boundary(defjam_loader_disk, defjam_plan, defjam_separate_branch);
+    assert(defjam_separate_post_call.entry_address == 0x68d82);
+    assert(defjam_separate_post_call.raw_disk_offset == 0x17182);
+    assert(defjam_separate_post_call.sha256 == "e49e750f78946956c22d4cd80206139d38808d4ecb3b1579906aeaede0db7b77");
+    assert(defjam_separate_post_call.d0_immediate == 0x2208);
+    assert(defjam_separate_post_call.a5_source_address == 0x6934e);
+    assert(defjam_separate_post_call.stored_d0_address == 0x7c256);
+    assert(defjam_separate_post_call.following_call_address == 0x68d96);
+    assert(defjam_separate_post_call.following_call_target == 0x7b342);
+    assert(defjam_separate_post_call.following_target_raw_disk_offset == 0x29742);
+    assert(defjam_separate_post_call.following_target_prefix_sha256 == "731d016983d29dcb23abad28f3f0f225bd3708073e8c0c8481a97a50b460cdcf");
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words

@@ -409,6 +409,17 @@ At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
 $68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control
 flow only; no register, path, target, or continuation meaning is inferred.
 
+If that unknown JSR returns, the next 26 original bytes at `$68d82` / ADF
+`+0x17182` have SHA-256
+`e49e750f78946956c22d4cd80206139d38808d4ecb3b1579906aeaede0db7b77`.
+They load immediate `$2208`, fetch a longword through absolute `$6934e`, add
+`D0.W` to `D5`, store the fetched `D0` to `$7c256`, and reach `JSR $7b342`.
+The linear raw correspondence for that target begins at ADF `+0x29742`; its
+first 32 bytes have SHA-256
+`731d016983d29dcb23abad28f3f0f225bd3708073e8c0c8481a97a50b460cdcf`.
+This records a static post-return boundary, not a claim that `$778f0` returns,
+that absolute RAM is populated, or that `$7b342` is executed or understood.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch

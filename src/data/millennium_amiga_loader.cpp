@@ -789,4 +789,18 @@ parse_millennium_amiga_resident_separate_branch_boundary(
     return {entry, entry + 12, entry + 16 + 6, entry + 26, 0x778f0};
 }
 
+MillenniumAmigaResidentSeparatePostCallBoundary parse_millennium_amiga_resident_separate_post_call_boundary(const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan, const MillenniumAmigaResidentSeparateBranchBoundary& branch) {
+    constexpr std::uint32_t entry = 0x68d82, next_target = 0x7b342;
+    constexpr std::array<std::uint8_t, 26> expected{{0x30,0x3c,0x22,0x08,0x2a,0x79,0x00,0x06,0x93,0x4e,0xda,0xc0,0x20,0x15,0x23,0xc0,0x00,0x07,0xc2,0x56,0x4e,0xb9,0x00,0x07,0xb3,0x42}};
+    constexpr std::string_view expected_hash = "e49e750f78946956c22d4cd80206139d38808d4ecb3b1579906aeaede0db7b77";
+    constexpr std::string_view target_hash = "731d016983d29dcb23abad28f3f0f225bd3708073e8c0c8481a97a50b460cdcf";
+    if (branch.unknown_call_address != 0x68d7c || branch.unknown_call_target != 0x778f0 || entry < plan.resident_stage.destination || next_target < plan.resident_stage.destination) throw std::runtime_error("Unexpected Millennium Amiga separate post-call placement");
+    const auto relative = entry - plan.resident_stage.destination, target_relative = next_target - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative || target_relative > plan.resident_stage.length || 32U > plan.resident_stage.length - target_relative) throw std::runtime_error("Millennium Amiga separate post-call is outside raw range");
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size()), target = disk.bytes(plan.resident_stage.disk_offset + target_relative, 32);
+    const auto hash = to_hex(sha256(bytes)), target_prefix_hash = to_hex(sha256(target));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash || target_prefix_hash != target_hash) throw std::runtime_error("Unexpected Millennium Amiga separate post-call boundary");
+    return {entry, plan.resident_stage.disk_offset + relative, hash, 0x2208, 0x6934e, 0x7c256, entry + 20, next_target, plan.resident_stage.disk_offset + target_relative, target_prefix_hash};
+}
+
 } // namespace eon
