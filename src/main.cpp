@@ -1061,7 +1061,10 @@ int main(int argc, char** argv) {
         std::cerr << "Requested original release is not present.\n";
         return 4;
     }
-    auto millennium_assets = load_millennium_launch_assets(releases, request.platform);
+    // A CLI platform request is fixed.  The start menu can otherwise choose
+    // among the hash-verified platform releases it has actually discovered.
+    std::optional<eon::Platform> active_platform = request.platform;
+    auto millennium_assets = load_millennium_launch_assets(releases, active_platform);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -1115,6 +1118,13 @@ int main(int argc, char** argv) {
     };
     SDL_Texture* millennium_preview_texture = nullptr;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
+    const auto discard_millennium_assets = [&] {
+        if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
+        if (millennium_gx_canvas_texture) SDL_DestroyTexture(millennium_gx_canvas_texture);
+        millennium_preview_texture = nullptr;
+        millennium_gx_canvas_texture = nullptr;
+        millennium_assets.reset();
+    };
     const auto create_millennium_textures = [&] {
         if (!millennium_assets || millennium_preview_texture || millennium_gx_canvas_texture) return;
         millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -1138,7 +1148,7 @@ int main(int argc, char** argv) {
     // only when the scanner has actually found the selected original media.
     const auto load_millennium_assets_if_available = [&] {
         if (millennium_assets) return;
-        millennium_assets = load_millennium_launch_assets(releases, request.platform);
+        millennium_assets = load_millennium_launch_assets(releases, active_platform);
         create_millennium_textures();
     };
 
@@ -1151,6 +1161,13 @@ int main(int argc, char** argv) {
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
+    const auto menu_platforms_for = [&](const eon::Game game) {
+        std::vector<eon::Platform> platforms;
+        for (const auto platform : {eon::Platform::dos, eon::Platform::amiga, eon::Platform::atari_st}) {
+            if (eon::release_available(releases, game, platform)) platforms.push_back(platform);
+        }
+        return platforms;
+    };
     const auto start_millennium_title = [&] {
         load_millennium_assets_if_available();
         if (millennium_assets) {
@@ -1226,14 +1243,31 @@ int main(int argc, char** argv) {
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) focused = 1 - focused;
+                if (!request.platform
+                    && (event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
+                    const auto game = cards[static_cast<std::size_t>(focused)].game;
+                    const auto platforms = menu_platforms_for(game);
+                    if (!platforms.empty()) {
+                        const auto current = std::find(platforms.begin(), platforms.end(), active_platform);
+                        const auto index = current == platforms.end()
+                            ? 0U : static_cast<unsigned>(std::distance(platforms.begin(), current));
+                        const auto next = event.key.key == SDLK_UP
+                            ? (index + platforms.size() - 1U) % platforms.size()
+                            : (index + 1U) % platforms.size();
+                        if (!active_platform || *active_platform != platforms[next]) {
+                            active_platform = platforms[next];
+                            discard_millennium_assets();
+                        }
+                    }
+                }
                 if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
                     const auto game = cards[static_cast<std::size_t>(focused)].game;
-                    if (eon::release_available(releases, game, std::nullopt)) {
+                    if (eon::release_available(releases, game, active_platform)) {
                         selected = game;
                         screen = Screen::launching;
                         if (selected == eon::Game::millennium) start_millennium_title();
                         if (selected == eon::Game::deuteros) {
-                            deuteros_opening = load_deuteros_opening(releases, request.platform);
+                            deuteros_opening = load_deuteros_opening(releases, active_platform);
                             create_deuteros_opening_texture();
                             start_deuteros_audio();
                             deuteros_last_tick = SDL_GetTicks();
@@ -1248,12 +1282,12 @@ int main(int argc, char** argv) {
                 for (std::size_t index = 0; index < cards.size(); ++index) {
                     if (inside(cards[index].bounds, x, y)) {
                         focused = static_cast<int>(index);
-                        if (eon::release_available(releases, cards[index].game, std::nullopt)) {
+                        if (eon::release_available(releases, cards[index].game, active_platform)) {
                             selected = cards[index].game;
                             screen = Screen::launching;
                             if (selected == eon::Game::millennium) start_millennium_title();
                             if (selected == eon::Game::deuteros) {
-                                deuteros_opening = load_deuteros_opening(releases, request.platform);
+                                deuteros_opening = load_deuteros_opening(releases, active_platform);
                                 create_deuteros_opening_texture();
                                 start_deuteros_audio();
                                 deuteros_last_tick = SDL_GetTicks();
@@ -1270,8 +1304,8 @@ int main(int argc, char** argv) {
             releases = scanner.releases();
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && !deuteros_opening && eon::deuteros_amiga_opening_supported(request.platform)) {
-            deuteros_opening = load_deuteros_opening(releases, request.platform);
+            && !deuteros_opening && eon::deuteros_amiga_opening_supported(active_platform)) {
+            deuteros_opening = load_deuteros_opening(releases, active_platform);
             create_deuteros_opening_texture();
             start_deuteros_audio();
             deuteros_last_tick = SDL_GetTicks();
@@ -1338,7 +1372,8 @@ int main(int argc, char** argv) {
 
         if (screen == Screen::menu) {
             draw_text(renderer, 64, 56, "PROJECT EON");
-            draw_text(renderer, 64, 82, "SELECT GAME   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT");
+            draw_text(renderer, 64, 82,
+                "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT");
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 auto& card = cards[index];
                 if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
@@ -1356,22 +1391,41 @@ int main(int argc, char** argv) {
                     available ? "VERIFIED ORIGINAL DATA" : scanner.done() ? "ORIGINAL DATA NOT FOUND" : "SCANNING ORIGINAL DATA...");
             }
             draw_text(renderer, 64, 530, "ENTER / CLICK: START");
+            const auto focused_game = cards[static_cast<std::size_t>(focused)].game;
+            const auto menu_platforms = menu_platforms_for(focused_game);
+            std::string platform_text = "PLATFORM: ";
+            if (active_platform) {
+                platform_text += eon::name(*active_platform);
+            } else {
+                platform_text += "AUTO";
+            }
+            if (!menu_platforms.empty()) {
+                platform_text += "  (";
+                for (std::size_t index = 0; index < menu_platforms.size(); ++index) {
+                    if (index != 0) platform_text += ", ";
+                    platform_text += eon::name(menu_platforms[index]);
+                }
+                platform_text += ')';
+            }
+            draw_text(renderer, 64, 552, platform_text);
             if (show_scanner) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
-                SDL_FRect overlay{64, 572, 1152, 104};
+                SDL_FRect overlay{64, 574, 1152, 104};
                 SDL_RenderFillRect(renderer, &overlay);
-                draw_text(renderer, 86, 594, "DATA SCANNER (content hashes, read-only)");
-                draw_text(renderer, 86, 618, "Files scanned: " + std::to_string(scanner.scanned_count())
+                draw_text(renderer, 86, 596, "DATA SCANNER (content hashes, read-only)");
+                draw_text(renderer, 86, 620, "Files scanned: " + std::to_string(scanner.scanned_count())
                     + " / " + std::to_string(scanner.candidate_count()));
-                draw_text(renderer, 86, 642, scanner.done()
+                draw_text(renderer, 86, 644, scanner.done()
                     ? "Complete. Only hash-verified original releases are selectable."
                     : "Scanning in progress. Press D to hide this progress panel.");
             }
         } else {
             draw_text(renderer, 64, 56, "LAUNCH REQUEST ACCEPTED");
             draw_text(renderer, 64, 92, "Game: " + eon::name(selected));
-            draw_text(renderer, 64, 116, modern ? "Presentation: Modern" : "Presentation: Original");
+            draw_text(renderer, 64, 116, "Platform: "
+                + (active_platform ? eon::name(*active_platform) : std::string("Auto")));
+            draw_text(renderer, 64, 136, modern ? "Presentation: Modern" : "Presentation: Original");
             draw_text(renderer, 64, 156, "Original data is present and selected.");
             draw_text(renderer, 64, 180, "The simulation is incomplete; no synthetic substitute will run.");
             if (selected == eon::Game::millennium && millennium_preview_texture && millennium_assets) {
@@ -1564,8 +1618,8 @@ int main(int argc, char** argv) {
                     draw_text(renderer, 610, 496, pager.str());
                 }
                 draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
-            } else if (selected == eon::Game::millennium && request.platform
-                && *request.platform != eon::Platform::dos) {
+            } else if (selected == eon::Game::millennium && active_platform
+                && *active_platform != eon::Platform::dos) {
                 draw_text(renderer, 64, 220,
                     "VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION");
                 draw_text(renderer, 64, 244,
@@ -1573,8 +1627,8 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 64, 268,
                     "NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM.");
                 draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
-            } else if (selected == eon::Game::deuteros && request.platform
-                && *request.platform == eon::Platform::atari_st) {
+            } else if (selected == eon::Game::deuteros && active_platform
+                && *active_platform == eon::Platform::atari_st) {
                 draw_text(renderer, 64, 220,
                     "VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY");
                 draw_text(renderer, 64, 244,
