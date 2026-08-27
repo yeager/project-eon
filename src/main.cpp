@@ -863,7 +863,9 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
 }
 
 std::unique_ptr<eon::DeuterosAmigaOpening> load_deuteros_opening(
-    const std::vector<eon::ReleaseArchive>& releases) {
+    const std::vector<eon::ReleaseArchive>& releases,
+    std::optional<eon::Platform> requested_platform) {
+    if (!eon::deuteros_amiga_opening_supported(requested_platform)) return {};
     constexpr auto clean_system_adf =
         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
     const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
@@ -1111,7 +1113,7 @@ int main(int argc, char** argv) {
                         screen = Screen::launching;
                         if (selected == eon::Game::millennium) start_millennium_title();
                         if (selected == eon::Game::deuteros) {
-                            deuteros_opening = load_deuteros_opening(releases);
+                            deuteros_opening = load_deuteros_opening(releases, request.platform);
                             create_deuteros_opening_texture();
                             start_deuteros_audio();
                             deuteros_last_tick = SDL_GetTicks();
@@ -1131,7 +1133,7 @@ int main(int argc, char** argv) {
                             screen = Screen::launching;
                             if (selected == eon::Game::millennium) start_millennium_title();
                             if (selected == eon::Game::deuteros) {
-                                deuteros_opening = load_deuteros_opening(releases);
+                                deuteros_opening = load_deuteros_opening(releases, request.platform);
                                 create_deuteros_opening_texture();
                                 start_deuteros_audio();
                                 deuteros_last_tick = SDL_GetTicks();
@@ -1148,8 +1150,8 @@ int main(int argc, char** argv) {
             releases = scanner.releases();
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && !deuteros_opening) {
-            deuteros_opening = load_deuteros_opening(releases);
+            && !deuteros_opening && eon::deuteros_amiga_opening_supported(request.platform)) {
+            deuteros_opening = load_deuteros_opening(releases, request.platform);
             create_deuteros_opening_texture();
             start_deuteros_audio();
             deuteros_last_tick = SDL_GetTicks();
@@ -1448,6 +1450,15 @@ int main(int argc, char** argv) {
                     "INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED.");
                 draw_text(renderer, 64, 268,
                     "NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM.");
+                draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+            } else if (selected == eon::Game::deuteros && request.platform
+                && *request.platform == eon::Platform::atari_st) {
+                draw_text(renderer, 64, 220,
+                    "VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY");
+                draw_text(renderer, 64, 244,
+                    "INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED.");
+                draw_text(renderer, 64, 268,
+                    "NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM.");
                 draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
             } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
                 const auto frame = deuteros_opening->rgba_frame();

@@ -33,4 +33,9 @@ struct ParseResult {
     Game game,
     std::optional<Platform> platform);
 
+// The recovered Deuteros SDL opening is backed only by the clean Amiga ADF.
+// An omitted platform may select that verified preview from the menu, while
+// an explicit Atari ST selection remains at the protected-boot boundary.
+[[nodiscard]] bool deuteros_amiga_opening_supported(std::optional<Platform> platform);
+
 } // namespace eon

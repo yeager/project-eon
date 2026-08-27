@@ -130,6 +130,11 @@ verified ADF, with its original RGB4 palette, VBL random source and recovered
 held input signal. It never substitutes placeholder art or invented game behaviour
 for undecoded original data.
 
+`--game deuteros --platform amiga` selects that verified Amiga opening. An
+explicit `--platform atari-st` instead remains at the verified protected-media
+boot boundary: it never falls back to Amiga artwork, audio, or a synthetic ST
+session while Atari presentation/runtime parity remains unrecovered.
+
 The launcher follows the same broad structure as OpenCaptive: a native SDL3
 start menu, separate game cards, direct CLI game selection, a platform-neutral
 data layer and distinct engine/render/audio modules as those systems mature.

@@ -100,4 +100,8 @@ bool release_available(
     return false;
 }
 
+bool deuteros_amiga_opening_supported(std::optional<Platform> platform) {
+    return !platform || *platform == Platform::amiga;
+}
+
 } // namespace eon

@@ -1435,5 +1435,11 @@ accepted.
 Thus the displayed pixels remain derived from user-supplied original data and
 are not packaged in the executable or repository. Archives and ADFs are read
 in place: no game file is unpacked, copied, installed, or written by runtime.
+
+An explicit CLI platform is never a request to substitute another release's
+runtime. Therefore `--game deuteros --platform amiga` may run this ADF-backed
+opening, while `--platform atari-st` remains a verified protected-media boot
+report boundary. The latter has no recovered presentation/runtime chain, so the
+SDL view deliberately does not load Amiga art, audio, or generated Atari state.
 The runtime also does not create its default data directory; it reports a
 missing path until the user supplies original media there or passes `--data`.
