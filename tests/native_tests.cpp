@@ -399,6 +399,19 @@ int main() {
     const auto deuteros_first_stage = deuteros_disk1.read_sectors(70, 0, 1, 9);
     assert(eon::to_hex(eon::sha256(deuteros_first_stage))
         == "dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168");
+    const auto deuteros_first_stage_profile = eon::parse_deuteros_atari_first_stage(deuteros_first_stage);
+    assert(deuteros_first_stage_profile.entry_offset == 0x9c4);
+    assert(deuteros_first_stage_profile.checksum_start_offset == 6);
+    assert(deuteros_first_stage_profile.checksum_byte_count == 0x43c);
+    assert(deuteros_first_stage_profile.checksum_seed == 0x22225555);
+    assert(deuteros_first_stage_profile.checksum_expected == 0x7ae26af7);
+    assert(deuteros_first_stage_profile.next_track == 2);
+    assert(deuteros_first_stage_profile.next_side == 0);
+    assert(deuteros_first_stage_profile.next_sector == 1);
+    assert(deuteros_first_stage_profile.next_sector_count == 9);
+    assert(deuteros_first_stage_profile.next_destination == 0x70000);
+    assert(deuteros_first_stage_profile.copy_destination == 0x1e00);
+    assert(deuteros_first_stage_profile.copy_byte_count == 0x1200);
     assert(deuteros_disk2.boot_profile().boot_checksum == 0x1234);
     assert(deuteros_disk2.boot_profile().boot_branch_target == 0x22);
     assert(deuteros_disk2.boot_profile().killer_boot_signature);

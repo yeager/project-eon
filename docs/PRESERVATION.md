@@ -117,6 +117,13 @@ branches to `$1e`; its literal XBIOS `Floprd` argument setup at boot offset
 of that direct sector interval is
 `dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168`.
 This is a raw first stage, not a resource archive and is only read in memory.
+Its word branch enters at stage offset `$9c4`; there it validates bytes
+`$0006..$0441` using seed `$22225555`, add-byte / rotate-left-eight and
+expected value `$7ae26af7`.  Only on that validation path does the recovered
+code request the next raw interval: track 2, side 0, sectors 1 through 9 to
+RAM `$70000`.  It then retains the prior 4,608-byte buffer for a byte copy to
+`$1e00`.  These are control-flow facts, not claims that the next interval is a
+title screen; the latter remains unclassified.
 
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)

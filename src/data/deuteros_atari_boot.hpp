@@ -32,6 +32,27 @@ struct DeuterosAtariBootProfile {
     std::size_t first_stage_length = 0;
 };
 
+// This is the control-flow boundary within the verified Disk 1 raw stage.
+// Field names describe instructions and physical media only; it is not yet a
+// claim about the original game's title or simulation.
+struct DeuterosAtariFirstStageProfile {
+    std::size_t entry_offset = 0;
+    std::size_t checksum_start_offset = 0;
+    std::size_t checksum_byte_count = 0;
+    std::uint32_t checksum_seed = 0;
+    std::uint32_t checksum_expected = 0;
+    std::uint16_t next_track = 0;
+    std::uint8_t next_side = 0;
+    std::uint8_t next_sector = 0;
+    std::uint16_t next_sector_count = 0;
+    std::uint32_t next_destination = 0;
+    std::uint32_t copy_destination = 0;
+    std::size_t copy_byte_count = 0;
+};
+
+[[nodiscard]] DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
+    std::span<const std::uint8_t> bytes);
+
 class DeuterosAtariDisk {
 public:
     static constexpr std::size_t standard_size = 737'280;
