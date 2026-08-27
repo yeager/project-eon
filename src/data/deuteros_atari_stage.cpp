@@ -1,4 +1,5 @@
 #include "data/deuteros_atari_boot.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -263,6 +264,22 @@ DeuterosAtariRawLoadPlan build_deuteros_atari_state0_raw_load_plan(
         };
     }
     return result;
+}
+
+DeuterosAtariState0DuplicateStagePrefix
+parse_deuteros_atari_state0_duplicate_stage_prefix(const std::span<const std::uint8_t> state0_bytes,
+    const std::span<const std::uint8_t> second_stage_bytes) {
+    constexpr std::size_t stage_size = 0x1200;
+    if (state0_bytes.size() < stage_size || second_stage_bytes.size() != stage_size
+        || !std::equal(second_stage_bytes.begin(), second_stage_bytes.end(), state0_bytes.begin())) {
+        throw std::runtime_error("Deuteros Atari ST state-0 prefix is not the verified second stage");
+    }
+    // Reuse the independently bounded profiles so identity is not mistaken
+    // for generic code-like bytes. The result still says nothing about a
+    // return path that would execute the duplicate at its new load address.
+    const auto stage = parse_deuteros_atari_second_stage(second_stage_bytes);
+    static_cast<void>(parse_deuteros_atari_dispatch(second_stage_bytes));
+    return {stage_size, to_hex(sha256(second_stage_bytes)), 0, stage.direct_entry_source_offset};
 }
 
 } // namespace eon

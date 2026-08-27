@@ -1750,6 +1750,25 @@ int main() {
     assert(deuteros_state0_bytes.size() == deuteros_state0_plan.byte_count);
     assert(eon::to_hex(eon::sha256(deuteros_state0_bytes))
         == "88afae4bd5182d916183b01bf688ab524d739749e84a092eda1435e386b57b58");
+    const auto state0_duplicate = eon::parse_deuteros_atari_state0_duplicate_stage_prefix(
+        deuteros_state0_bytes, deuteros_second_stage);
+    assert(state0_duplicate.byte_count == 0x1200);
+    assert(state0_duplicate.sha256
+        == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
+    assert(state0_duplicate.direct_entry_offset == 0);
+    assert(state0_duplicate.dispatcher_offset == 0xc4);
+    {
+        auto altered_state0 = deuteros_state0_bytes;
+        altered_state0[0x11ff] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_state0_duplicate_stage_prefix(
+                altered_state0, deuteros_second_stage));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(deuteros_dispatch.state1_destination == 0xb000);
     assert(deuteros_dispatch.state1_byte_count == 0x5e400);
     assert(deuteros_dispatch.state1_linear_sector == 0x4c);
