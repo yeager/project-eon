@@ -19,6 +19,7 @@
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
+#include "engine/millennium_dos_title_session.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -241,6 +242,13 @@ int main() {
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");
     assert(title_flow.launcher_game_program == "2200ad.exe");
+    eon::MillenniumDosTitleSession title_session(title_flow);
+    assert(!title_session.handed_off());
+    assert(!title_session.poll_console(false));
+    assert(!title_session.handed_off());
+    assert(title_session.poll_console(true));
+    assert(title_session.handed_off());
+    assert(!title_session.poll_console(true));
     const auto static_data = eon::extract_asset_by_sha256(english_dos->path,
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d");
     assert(static_data && static_data->size() == 12'494);

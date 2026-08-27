@@ -350,6 +350,10 @@ post-stream index table selects entries from the `IMG00` DAC. Project Eon
 decodes this pair in memory and retains the remaining resource-table bytes as
 opaque rather than inventing UI or state meaning. Exact offsets, sizes and
 pixel hashes are in [the GX canvas evidence](generated/millennium-dos-gx-canvas.md).
+The SDL runtime reaches this resource only after the independently verified
+`TITLES.EXE` non-blocking console-poll boundary has handed control back to
+`MILL.COM`, which selects `2200ad.exe`. It preserves the resource as a canvas
+and does not assign synthetic gameplay or interface meaning to its pixels.
 
 `TITLE.LIB` entry `P00` is the first genuine title image: extent `$000006` to
 `$002941`, 10,555 bytes. Its codec-2 record declares 320×200 indexed pixels,

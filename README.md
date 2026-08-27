@@ -147,6 +147,11 @@ gameplay resources directly from the hash-identified original archive.
 image and its original 256-entry VGA RGB6 DAC table plus 36-entry logical
 index translation. The SDL launch view shows this user-supplied original title:
 nearest-neighbour in Original mode and linear scaling only in Modern mode.
+When its recovered DOS console poll observes a key, the same launch view follows
+the verified `TITLES.EXE` → `MILL.COM` → `2200ad.exe` boundary and displays the
+in-place `GX.LIB` `IMG00`/`IMG01` canvas. This is intentionally labelled as a
+canvas: Project Eon has not yet inferred the original game's full UI or mutable
+state semantics from those resources.
 
 The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
 Millennium disk. Nested extraction locates the disk by SHA-256 independently of
