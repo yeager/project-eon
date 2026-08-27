@@ -21,6 +21,7 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn("github.com/madler/zlib.git", workflow)
         self.assertIn("github.com/pnggroup/libpng.git", workflow)
         self.assertIn("-DZLIB_ROOT=\"$IOS_PREFIX\"", workflow)
+        self.assertIn("-DSDL3_DIR=\"$IOS_PREFIX/lib/cmake/SDL3\"", workflow)
 
     def test_creates_payload_with_relative_output(self):
         with tempfile.TemporaryDirectory() as temporary:
