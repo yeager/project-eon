@@ -161,8 +161,28 @@ The opening's second scheduler tick proves live use of entries 1 and 2:
 and length `0x40bc` words (`0x8178` bytes; SHA-256
 `f23fcd05f543be31726271b08ebfe7d907acfe31d1780aaf286fd2db701ae5d5`), while
 their original periods are respectively `0x01c0` and `0x01c2`. SDL playback is
-not enabled by this parser: a future mixer must schedule these authentic DMA
-parameters, rather than substitute generated audio.
+now enabled for the recoverable first DMA pass. The native Paula mixer takes
+only an emitted `$0b` event with a nonzero bundle-table index, applies its low
+four mask bits to AUD0..AUD3 exactly as the four `lsr.b` tests at `$22ad6`
+through `$22b62`, and replaces each selected channel's DMA state. It uses the
+original signed 8-bit sample bytes, original `AUDxPER`, and original
+`AUDxVOL`; nothing is unpacked, filtered, looped, clipped, or replaced with a
+generated waveform. The PAL sample clock is `3,546,895 / AUDxPER` Hz, carried
+through the host's 48 kHz renderer as an integer phase accumulator so host
+rounding cannot change the sample boundaries. Amiga's physical output routing
+places AUD0/AUD3 on left and AUD1/AUD2 on right.
+
+This is intentionally narrower than a guessed general sound driver. `$22bea`
+first copies the descriptor to the four AUD register blocks, then executes the
+raw words at offsets 10 and 12 through the modulation/loop branches at
+`$22c08..$2301a`; their service cadence relative to the title scheduler has
+not yet been proved. Project Eon therefore plays the authentic initial DMA
+span and stops at its original `AUDxLEN × 2` byte boundary. Sound index zero
+is also rejected for playback because `$22abc` selects the private `$22aaa`
+descriptor rather than source PCM from the bundle. SDL receives at most one
+20 ms host queue of this verified output, so it cannot be padded with made-up
+silence. The unresolved control-word service timing remains a preservation
+research item, rather than a reason to invent looping or modulation.
 
 ### Deuteros channel programs
 
