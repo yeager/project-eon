@@ -75,8 +75,16 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(code, 0x17a, 0x00040410);
     require_word(code, 0x17e, 0xb0bc); // cmp.l #$ea60,d0
     require_long(code, 0x180, 0x0000ea60);
+    require_word(code, 0x186, 0x0c79); // cmpi.w #$11,$22d34
+    require_word(code, 0x188, 0x0011);
+    require_long(code, 0x18a, 0x00022d34);
     require_word(code, 0x190, 0x4eb9); // jsr $4069a
     require_long(code, 0x192, 0x0004069a);
+    // The only direct post-return action in this caller clears the elapsed
+    // timer before returning to the recurring service loop.
+    require_word(code, 0x196, 0x23fc); // move.l #0,$40410
+    require_long(code, 0x198, 0);
+    require_long(code, 0x19c, 0x00040410);
 
     // $4069a is the target of the elapsed-timer dispatch.  It first marks a
     // transition active, copies sixteen RGB4 words from $1ed24 into a private
@@ -147,6 +155,7 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
 
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
+        0x22d34, 0x11, 0x40410,
         0x202c6, 0x202b8, 0x1ed24, 0x40678, 16, 0x0eee, 0x12fec,
         static_cast<std::int16_t>(-0xc0), static_cast<std::int16_t>(-0x1a4),
         0x12e12, 0x1ffda, 0x1ffe6, 0x2008e, 0x1ffc8, 0x1ffce, 0x1ffd4,
