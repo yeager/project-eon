@@ -54,23 +54,34 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     require_word(boot, 0x88, 0x7000); // moveq #0,d0
     constexpr std::uint32_t profile_table_address = 0x12a36;
     const auto table_offset = loader.disk_offset + profile_table_address - loader.destination;
-    const auto table = disk.bytes(table_offset, 4);
-    const auto profile_address = big32(table, 0);
-    const auto profile_offset = loader.disk_offset + profile_address - loader.destination;
-    const auto profile = disk.bytes(profile_offset, 24);
-    // move.l #destination,d1; move.l #length,d0; move.l #track,d2; rts
-    require_word(profile, 0, 0x223c);
-    require_word(profile, 6, 0x203c);
-    require_word(profile, 12, 0x243c);
-    require_word(profile, 18, 0x4e75);
-    const auto destination = big32(profile, 2);
-    const auto length = big32(profile, 8);
-    const auto track = big32(profile, 14);
-    const auto disk_offset = track * track_size;
-    const auto stage_bytes = disk.bytes(disk_offset, length);
+    const auto table = disk.bytes(table_offset, 8);
+    const auto parse_profile = [&](std::size_t index) {
+        const auto profile_address = big32(table, index * 4);
+        if (profile_address < loader.destination
+            || profile_address - loader.destination + 20 > loader.length) {
+            throw std::runtime_error("Deuteros bootstrap profile outside loader track");
+        }
+        const auto profile_offset = loader.disk_offset + profile_address - loader.destination;
+        const auto profile = disk.bytes(profile_offset, 20);
+        // move.l #destination,d1; move.l #length,d0; move.l #track,d2; rts
+        require_word(profile, 0, 0x223c);
+        require_word(profile, 6, 0x203c);
+        require_word(profile, 12, 0x243c);
+        require_word(profile, 18, 0x4e75);
+        const auto destination = big32(profile, 2);
+        const auto length = big32(profile, 8);
+        const auto track = big32(profile, 14);
+        const auto disk_offset = track * track_size;
+        static_cast<void>(disk.bytes(disk_offset, length));
+        return DeuterosAmigaBootstrapProfile{disk_offset, length, destination};
+    };
+    const auto profile_zero = parse_profile(0);
+    const auto title_handoff_profile = parse_profile(1);
+    const auto stage_bytes = disk.bytes(profile_zero.disk_offset, profile_zero.length);
     require_word(stage_bytes, 0, 0x4ef9); // jmp absolute long
     const auto entry = big32(stage_bytes, 2);
-    const AmigaLoadStage main_stage{disk_offset, length, destination, entry};
+    const AmigaLoadStage main_stage{profile_zero.disk_offset, profile_zero.length,
+        profile_zero.destination, entry};
 
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table
@@ -87,7 +98,7 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         resource_offsets[index] = big32(resource_table, index * 4);
         static_cast<void>(disk.bytes(resource_offsets[index], 1));
     }
-    return {loader, main_stage, resource_offsets};
+    return {loader, main_stage, resource_offsets, title_handoff_profile};
 }
 
 } // namespace eon

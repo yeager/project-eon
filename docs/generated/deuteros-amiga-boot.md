@@ -238,3 +238,19 @@ mode 6 at `(8,181)` with timer 38 on tick 4.
 00021926  move.w     d0, $21704.l
 0002192c  move.w     d0, $21706.l
 ```
+
+## Verified opening input handoff
+
+The scheduler's `$2140c` branch resumes a `$14` channel only when `$2171e`
+and `$21720` are nonzero. The latter is written after the scheduler from the
+active-low CIA-A port-A bit 6 at `$bfe001`; it is consequently the prior poll
+on the next scheduler pass. Bundle 0 channel 3 encodes `$03,$0050`,
+`$14,$0001`, then `$0f,$00000b38`. With asserted input it reaches that `$0f`
+on tick 82. The command stores the raw bundle-relative pointer and selector
+`$fe`; its content is deliberately not labelled here.
+
+For the first accepted opening input, main-loop branch `$21982` changes index
+zero to one and enters `$218cc`. Its next confirmed branch reaches `$21a4c`,
+which places profile one in `$12ffc` for the bootstrap. Table entry one at
+`$12a3a` is routine `$12b30`, returning destination `$13000`, length `$6ca00`,
+and track `$50` (disk offset `$6e000`).

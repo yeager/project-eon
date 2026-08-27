@@ -40,6 +40,10 @@ struct DeuterosAmigaVmInputs {
 struct DeuterosAmigaVmEvents {
     std::optional<std::uint16_t> palette;
     std::vector<DeuterosAmigaSoundEvent> sounds;
+    // Command $0f installs this bundle-relative pointer in the channel state.
+    // Expose the exact stored value to the session layer; it is not a decoded
+    // gameplay label or a request to fabricate a replacement resource.
+    std::vector<std::uint32_t> alternate_resources;
     bool transition_requested = false;
 };
 

@@ -173,6 +173,29 @@ coordinate `x=8`, pixel coordinate `y=183`; its blank-backed 320×200 frame has
 SHA-256 `d841fd0e6e01c09f7dc8ce6cd2bda1828a0eb62c5f198750403aa996cd7d48d4`.
 Tick 4 enters stepped mode 6, moves to `y=181`, and leaves timer 38.
 
+### Deuteros Amiga title input and bootstrap handoff
+
+This is a control-flow fact, not a reconstructed game-menu interpretation.
+Channel 3 of bundle 0 begins with `$03,$0050` and then `$14,$0001`. The
+scheduler at `$2140c` resumes `$14` only after both the global gate at
+`$2171e` is set and the previously-polled input word at `$21720` is nonzero.
+The opening's `$13` sets that gate on tick 2. With continuously asserted prior
+input, the real channel reaches `$0f,$00000b38` on scheduler tick 82; `$0f`
+stores that bundle-relative address at state offset `$0c` and replaces the
+selector with `$fe`. The VM reports this exact pointer as an alternate-resource
+event, without giving it an invented gameplay name.
+
+Separately, the main loop polls active-low CIA-A port-A bit 6 at `$bfe001`
+after `$21380`. Once the gate and recorded input are both set, the first-buffer
+path branches to `$21982`. For the opening's initial index zero, `$21982`
+writes one to `$21704` and calls `$218cc`; its confirmed post-display path
+increments that value to two and branches to `$21a4c`. That routine writes one
+to `$219f4`, copies it to bootstrap return slot `$12ffc`, and returns.
+Bootstrap table entry one at `$12a3a` is routine `$12b30`: it requests raw
+decoded track data from disk offset `0x6e000`, length `0x6ca00`, into memory
+`0x13000`. Project Eon retains these load constants as `title_handoff_profile`;
+it does not claim to emulate the later stage yet.
+
 The compositor draws channels in ascending order. X is measured in 16-pixel
 words and Y in scanlines. Bit 15 selects masked drawing where palette index 0
 is transparent; an unflagged selector overwrites the complete rectangle.
