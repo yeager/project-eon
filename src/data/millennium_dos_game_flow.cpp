@@ -401,8 +401,13 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .startup_other_path_next_call_address = 0x0466,
         .startup_other_followup_table_address = 0x0456,
         .startup_other_followup_table_size = 16,
+        .startup_other_followup_table_values = {
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+            0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f},
         .startup_other_followup_interrupt_site = 0x0476,
         .startup_other_followup_interrupt_number = 0x10,
+        .startup_other_followup_video_function = 0x10,
+        .startup_other_followup_video_subfunction = 0x00,
         .startup_nonzero_dx_branch_address = 0xd44b,
         .main_loop_address = 0xd3d2,
         .action_poll_address = 0x10f05,
@@ -592,6 +597,27 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .final_call_address = 0x4111,
         },
     };
+}
+
+std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
+millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
+    constexpr std::uint8_t bios_video_interrupt = 0x10;
+    constexpr std::uint8_t set_palette_register = 0x10;
+    constexpr std::uint8_t single_palette_register = 0x00;
+    if (flow.startup_other_followup_table_size != flow.startup_other_followup_table_values.size()
+        || flow.startup_other_followup_interrupt_number != bios_video_interrupt
+        || flow.startup_other_followup_video_function != set_palette_register
+        || flow.startup_other_followup_video_subfunction != single_palette_register) {
+        throw std::runtime_error("Unsupported Millennium DOS startup video profile");
+    }
+    std::array<MillenniumDosEgaPaletteRegisterWrite, 16> result{};
+    for (std::size_t index = 0; index < result.size(); ++index) {
+        result[index] = {
+            .register_index = static_cast<std::uint8_t>(index),
+            .color_value = flow.startup_other_followup_table_values[index],
+        };
+    }
+    return result;
 }
 
 } // namespace eon
