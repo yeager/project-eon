@@ -76,4 +76,64 @@ std::array<RgbColor, 16> decode_deuteros_amiga_palette(
     return colors;
 }
 
+std::vector<DeuterosAmigaChannel> parse_deuteros_amiga_channels(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle) {
+    constexpr std::uint32_t header_size = 10;
+    std::vector<DeuterosAmigaChannel> channels;
+    channels.reserve(bundle.object_count);
+    for (std::size_t index = 0; index < bundle.object_count; ++index) {
+        if (index >= bundle.channel_offsets.size()) {
+            throw std::runtime_error("Deuteros channel count exceeds catalogue");
+        }
+        const auto relative = bundle.channel_offsets[index];
+        if (relative == 0 || relative > bundle.length || header_size > bundle.length - relative) {
+            throw std::runtime_error("Deuteros channel header outside bundle");
+        }
+        const auto header = disk.bytes(bundle.disk_offset + relative, header_size);
+        channels.push_back({relative, big32(header, 0), big32(header, 4),
+            big16(header, 8), relative + header_size});
+    }
+    return channels;
+}
+
+DeuterosAmigaChannelCommand decode_deuteros_amiga_channel_command(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
+    std::uint32_t stream_relative_offset) {
+    if (stream_relative_offset > bundle.length || 2 > bundle.length - stream_relative_offset) {
+        throw std::runtime_error("Deuteros channel opcode outside bundle");
+    }
+    const auto opcode_bytes = disk.bytes(bundle.disk_offset + stream_relative_offset, 2);
+    DeuterosAmigaChannelCommand command;
+    command.opcode = big16(opcode_bytes, 0);
+
+    // Each entry is the number and width of operands consumed after the opcode.
+    // Opcodes $0-$14 are the complete range checked by the original routine.
+    struct Shape { std::uint8_t count; std::array<std::uint8_t, 2> widths; };
+    constexpr std::array<Shape, 0x15> shapes{{
+        {0, {0, 0}}, {1, {2, 0}}, {1, {4, 0}}, {1, {2, 0}},
+        {1, {2, 0}}, {1, {4, 0}}, {2, {4, 4}}, {1, {2, 0}},
+        {1, {2, 0}}, {1, {4, 0}}, {1, {2, 0}}, {2, {2, 2}},
+        {1, {4, 0}}, {0, {0, 0}}, {1, {2, 0}}, {1, {4, 0}},
+        {0, {0, 0}}, {2, {2, 2}}, {0, {0, 0}}, {0, {0, 0}},
+        {1, {2, 0}},
+    }};
+    if (command.opcode >= shapes.size()) throw std::runtime_error("Unknown Deuteros channel opcode");
+    const auto shape = shapes[command.opcode];
+    command.operand_count = shape.count;
+    std::size_t encoded_size = 2;
+    for (std::size_t index = 0; index < shape.count; ++index) encoded_size += shape.widths[index];
+    if (encoded_size > bundle.length - stream_relative_offset) {
+        throw std::runtime_error("Deuteros channel command outside bundle");
+    }
+    const auto encoded = disk.bytes(bundle.disk_offset + stream_relative_offset, encoded_size);
+    std::size_t cursor = 2;
+    for (std::size_t index = 0; index < shape.count; ++index) {
+        command.operands[index] = shape.widths[index] == 2
+            ? big16(encoded, cursor) : big32(encoded, cursor);
+        cursor += shape.widths[index];
+    }
+    command.encoded_size = static_cast<std::uint8_t>(encoded_size);
+    return command;
+}
+
 } // namespace eon

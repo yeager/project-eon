@@ -93,6 +93,21 @@ display list. The words are standard 12-bit Amiga RGB4. Bundle 0, palette 1 is
 anchored by `000 886 664 442 220 a60 840 620 080 ff0 004 008 02f 0cf fff e40`;
 the native decoder expands every nibble exactly to 8-bit (`n × 17`).
 
+### Deuteros channel programs
+
+Each non-null channel pointer begins with ten bytes copied verbatim into the
+interpreter's 24-byte runtime state: two longwords and one word. The command
+stream follows immediately and is word-opcoded. Routine `$214aa` recognizes
+the complete range `$00`–`$14`; Project Eon now decodes the exact operand
+shapes (zero, one, or two big-endian words/longwords) and rejects unknown or
+truncated instructions without assigning guessed higher-level meaning.
+
+Bundle 0 has four channels, all headed `00ff0000 00000003 0001`; their first
+opcodes are `$13`, `$04`, `$03`, and `$03`. Bundle 1 has six channels headed
+`00ff0009 00c60003 0001`; the first starts with command `$04`, operand `$0010`,
+while the remaining five start with `$05`. These values are asserted directly
+against the clean system ADF.
+
 ### Millennium DOS execution model
 
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
