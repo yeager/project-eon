@@ -983,7 +983,8 @@ int main(int argc, char** argv) {
                                << trace->handler_address << " -> COMMON $"
                                << trace->common_routine_address << " -> [$"
                                << trace->first_runtime_byte_address << "]=$"
-                               << static_cast<unsigned>(trace->first_runtime_byte_value);
+                               << static_cast<unsigned>(trace->first_runtime_byte_value)
+                               << " (GUARD CLEAR SITE $" << trace->initialization_guard_clear_address << ')';
                             draw_text(renderer, 610, 374, f4.str());
                         }
                         if (const auto trace = millennium_game_session->last_fifth_function_key_trace()) {
