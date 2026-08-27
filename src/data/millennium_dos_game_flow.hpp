@@ -92,6 +92,31 @@ struct MillenniumDosFifthFunctionKeyTrace {
     std::uint32_t fourth_call_address = 0;
 };
 
+// Exact, non-semantic trace of table record five (raw F6 / $40).  Its native
+// handler is guarded by the same runtime word as F3/F4.  On admission it
+// temporarily changes three runtime cells, enters the original $09fa polling
+// loop, and returns.  Project Eon records the observed addresses/literals but
+// never manufactures the guard, executes the calls, or applies the writes.
+struct MillenniumDosSixthFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t initialization_guard_address = 0;
+    std::uint16_t display_selector_call_address = 0;
+    std::uint16_t command_value = 0;
+    std::uint16_t first_call_address = 0;
+    std::uint16_t second_call_address = 0;
+    std::uint16_t saved_first_byte_address = 0;
+    std::uint16_t first_byte_address = 0;
+    std::uint16_t saved_second_byte_address = 0;
+    std::uint16_t second_byte_address = 0;
+    std::uint16_t saved_word_address = 0;
+    std::uint16_t word_address = 0;
+    std::uint8_t first_byte_value = 0;
+    std::uint8_t second_byte_value = 0;
+    std::uint16_t callback_word_value = 0;
+    std::uint16_t callback_word_address = 0;
+    std::uint16_t wait_call_address = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -111,6 +136,7 @@ struct MillenniumDosGameFlow {
     MillenniumDosThirdFunctionKeyTrace third_function_key;
     MillenniumDosFourthFunctionKeyTrace fourth_function_key;
     MillenniumDosFifthFunctionKeyTrace fifth_function_key;
+    MillenniumDosSixthFunctionKeyTrace sixth_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
