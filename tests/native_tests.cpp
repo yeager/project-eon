@@ -1498,7 +1498,7 @@ int main() {
     assert(atari_fourth_post_outer_tail.d0_nonzero_branch_target_address == 0x2b494);
     assert(atari_fourth_post_outer_tail.d7_backedge_opcode == 0x51cf);
     assert(atari_fourth_post_outer_tail.d7_backedge_displacement == -78);
-    assert(atari_fourth_post_outer_tail.d7_backedge_target_address == 0x2b44e);
+    assert(atari_fourth_post_outer_tail.d7_backedge_target_address == 0x2b44c);
     assert(atari_fourth_post_outer_tail.selector_push_opcode == 0x3f3c);
     assert(atari_fourth_post_outer_tail.selector == 0x0006);
     assert(atari_fourth_post_outer_tail.trap_opcode == 0x4e4e);
