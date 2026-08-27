@@ -279,6 +279,19 @@ struct MillenniumAtariConfigFourthOuterSetup {
     std::uint32_t continuation_address = 0;
 };
 
+// The original fall-through reached only when the outer DBF does not take its
+// backedge. This reports the literal stack arguments at its first TRAP #14
+// boundary and never invokes that trap.
+struct MillenniumAtariConfigFourthPostOuterBoundary {
+    std::uint32_t boundary_address = 0;
+    std::uint32_t boundary_file_offset = 0;
+    std::uint16_t longword_push_opcode = 0;
+    std::uint32_t longword_argument = 0;
+    std::uint16_t selector_push_opcode = 0;
+    std::uint16_t trap_selector = 0;
+    std::uint16_t trap_opcode = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -379,6 +392,11 @@ struct MillenniumAtariConfigFourthOuterSetup {
 // through to the previously proven inner-loop body. It never iterates either
 // loop or accesses data.
 [[nodiscard]] MillenniumAtariConfigFourthOuterSetup parse_millennium_atari_config_fourth_outer_setup(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostLoop& post_loop);
+
+// Validates the first strict post-outer-loop TRAP #14 boundary. It does not
+// emulate, invoke, or infer any service effect beyond the literal arguments.
+[[nodiscard]] MillenniumAtariConfigFourthPostOuterBoundary parse_millennium_atari_config_fourth_post_outer_boundary(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostLoop& post_loop);
 
 } // namespace eon

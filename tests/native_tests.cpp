@@ -1038,6 +1038,15 @@ int main() {
     assert(atari_fourth_outer_setup.d4_setup_opcode == 0x383c);
     assert(atari_fourth_outer_setup.d4_initial_value == 0x0100);
     assert(atari_fourth_outer_setup.continuation_address == 0x2b464);
+    const auto atari_fourth_post_outer = eon::parse_millennium_atari_config_fourth_post_outer_boundary(
+        atari_config_payload, atari_fourth_post_loop);
+    assert(atari_fourth_post_outer.boundary_address == 0x2b480);
+    assert(atari_fourth_post_outer.boundary_file_offset == 0xfa2);
+    assert(atari_fourth_post_outer.longword_push_opcode == 0x2f3c);
+    assert(atari_fourth_post_outer.longword_argument == 0x2b428);
+    assert(atari_fourth_post_outer.selector_push_opcode == 0x3f3c);
+    assert(atari_fourth_post_outer.trap_selector == 0x0006);
+    assert(atari_fourth_post_outer.trap_opcode == 0x4e4e);
     auto invalid_atari_config_payload = atari_config_payload;
     invalid_atari_config_payload[0x5b9] ^= 0x01;
     bool invalid_atari_config_rejected = false;
@@ -1137,6 +1146,16 @@ int main() {
         invalid_atari_fourth_outer_setup_rejected = true;
     }
     assert(invalid_atari_fourth_outer_setup_rejected);
+    auto invalid_atari_fourth_post_outer_payload = atari_config_payload;
+    invalid_atari_fourth_post_outer_payload[0xfac] ^= 0x01;
+    bool invalid_atari_fourth_post_outer_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_config_fourth_post_outer_boundary(
+            invalid_atari_fourth_post_outer_payload, atari_fourth_post_loop));
+    } catch (const std::runtime_error&) {
+        invalid_atari_fourth_post_outer_rejected = true;
+    }
+    assert(invalid_atari_fourth_post_outer_rejected);
     std::size_t millennium_st_images = 0;
     std::size_t millennium_fat12_images = 0;
     std::size_t millennium_config_files = 0;

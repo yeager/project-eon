@@ -229,6 +229,13 @@ The target's full local prefix is now also linked: `0x2b45c` contains exactly
 control/dataflow continuation, not an execution model: Project Eon does not
 run an outer or inner iteration, read the referenced data, or derive state.
 
+The only strict fall-through fact after the outer `DBF` is now documented up
+to its first native-service boundary. At `0x2b480` (file `+0xfa2`) the
+original pushes longword `0x2b428`, pushes selector `0x0006`, and reaches
+`TRAP #14` (`0x4e4e`). Project Eon validates the exact 12 bytes and stops at
+that opcode: it does not invoke or emulate the trap, infer its service, read
+the argument's data, or manufacture a return value.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
