@@ -34,6 +34,9 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f3_table_offset = 0x2fcf - load_bias;
     constexpr std::size_t f3_handler_offset = 0x6faa - load_bias;
     constexpr std::size_t f3_setup_offset = 0x6fc6 - load_bias;
+    constexpr std::size_t f4_table_offset = 0x2fd7 - load_bias;
+    constexpr std::size_t f4_handler_offset = 0x72f9 - load_bias;
+    constexpr std::size_t f4_common_offset = 0xba5e - load_bias;
     constexpr std::size_t record_pointer_offset = 0x27c4 - load_bias;
     constexpr std::size_t initial_record_offset = 0x12cc - load_bias;
     constexpr std::size_t initial_record_flag_offset = 0x12f0 - load_bias;
@@ -103,6 +106,19 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x00, 0x00, 0xba, 0x00, 0x00, 0x8b, 0x0e, 0x27,
         0xda, 0x88, 0x0e, 0x95, 0x6e, 0xbb, 0x99, 0x6e,
         0xc5, 0x36, 0x12, 0x01});
+    // Record three (raw F4 / $3e) only admits when $a19e is zero.  It loads
+    // AL=$02 and transfers to $ba5e. That routine calls $4d2c, writes $07 to
+    // $da13, calls $9dd5, writes $09 to $da1e and clears $75a9. The call
+    // effects and all three cells are native runtime facts, not host state.
+    constexpr auto f4_table = std::to_array<std::uint8_t>({
+        0x12, 0x18, 0x09, 0x1b, 0x33, 0x03, 0xf9, 0x72});
+    constexpr auto f4_handler = std::to_array<std::uint8_t>({
+        0xa1, 0x9e, 0xa1, 0x23, 0xc0, 0x74, 0x01, 0xc3,
+        0xb0, 0x02, 0xe9, 0x58, 0x47});
+    constexpr auto f4_common = std::to_array<std::uint8_t>({
+        0xb8, 0x05, 0x00, 0xe8, 0xc8, 0x92, 0xc6, 0x06,
+        0x13, 0xda, 0x07, 0xe8, 0x69, 0xe3, 0xc6, 0x06,
+        0x1e, 0xda, 0x09, 0xc6, 0x06, 0xa9, 0x75, 0x00, 0xc3});
     if (!has_bytes(game_executable, entry_offset, entry)
         || !has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
@@ -114,6 +130,9 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f3_table_offset, f3_table)
         || !has_bytes(game_executable, f3_handler_offset, f3_handler)
         || !has_bytes(game_executable, f3_setup_offset, f3_setup)
+        || !has_bytes(game_executable, f4_table_offset, f4_table)
+        || !has_bytes(game_executable, f4_handler_offset, f4_handler)
+        || !has_bytes(game_executable, f4_common_offset, f4_common)
         || !has_bytes(game_executable, record_pointer_offset, record_pointer_table)
         || !has_bytes(game_executable, initial_record_offset, initial_record)
         || !has_bytes(game_executable, initial_record_flag_offset, initial_record_flag)) {
@@ -165,6 +184,20 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .list_mode_value = 0,
             .source_far_pointer_address = 0x0112,
             .list_address = 0x6e99,
+        },
+        .fourth_function_key = {
+            .handler_address = 0x72f9,
+            .initialization_guard_address = 0xa19e,
+            .transfer_al_value = 2,
+            .common_routine_address = 0xba5e,
+            .first_call_address = 0x4d2c,
+            .first_runtime_byte_address = 0xda13,
+            .first_runtime_byte_value = 7,
+            .second_call_address = 0x9dd5,
+            .second_runtime_byte_address = 0xda1e,
+            .second_runtime_byte_value = 9,
+            .third_runtime_byte_address = 0x75a9,
+            .third_runtime_byte_value = 0,
         },
     };
 }

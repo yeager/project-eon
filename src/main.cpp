@@ -905,6 +905,16 @@ int main(int argc, char** argv) {
                                << trace->callback_address;
                             draw_text(renderer, 610, 358, f3.str());
                         }
+                        if (const auto trace = millennium_game_session->last_fourth_function_key_trace()) {
+                            std::ostringstream f4;
+                            f4 << "F4 ORIGINAL GATE: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                               << trace->handler_address << " -> COMMON $"
+                               << trace->common_routine_address << " -> [$"
+                               << trace->first_runtime_byte_address << "]=$"
+                               << static_cast<unsigned>(trace->first_runtime_byte_value);
+                            draw_text(renderer, 610, 374, f4.str());
+                        }
                     }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;
