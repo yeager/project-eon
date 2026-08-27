@@ -165,6 +165,17 @@ local sequence is `MOVEM.L (A7)+,D0-D7/A0-A6` (`0x4cdf`, mask `0x7fff`) and
 `RTS` (`0x4e75`). This does not execute the JSR, model the caller's registers,
 or claim a routine-level meaning beyond the directly verified bytes.
 
+The entry's second literal JSR target, `0x2aa68` (file `+0x58a`), is bounded
+separately. It begins `0x0880 0x000d 0x6714`: an immediate-bit instruction and
+its original conditional short branch. The branch target is `0x2aa82`; it
+skips the 20-byte middle path and joins it at `0x2aa82`, a literal JSR to
+`0x2a51c`. After that call returns, control falls through to the entry block
+at `0x2aa88`, whose first original JSR at `0x2aaa0` targets `0x2b55a`.
+Project Eon reports this converging control shape and
+validates every byte through the following call, but does not invent D0,
+evaluate the branch, execute either call, or assign a platform effect to the
+intervening instructions.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

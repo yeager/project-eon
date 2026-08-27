@@ -154,6 +154,24 @@ struct MillenniumAtariConfigFirstJsr {
     std::uint16_t return_opcode = 0;
 };
 
+// The second direct JSR destination in the same verified entry block. This
+// preserves its immediate-bit opcode, conditional branch and the two literal
+// successor call destinations. It intentionally does not attach an effect to
+// the intermediate hardware-facing instruction bytes or pick a branch from
+// an invented D0 value.
+struct MillenniumAtariConfigSecondJsr {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t target_address = 0;
+    std::uint32_t target_file_offset = 0;
+    std::uint16_t initial_opcode = 0;
+    std::uint16_t immediate_bit_number = 0;
+    std::uint16_t conditional_branch_opcode = 0;
+    std::uint32_t conditional_branch_target_address = 0;
+    std::uint32_t join_jsr_address = 0;
+    std::uint32_t join_jsr_target = 0;
+    std::uint32_t following_jsr_target = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -210,6 +228,12 @@ struct MillenniumAtariConfigFirstJsr {
 // block. It does not invoke it, infer the dynamic-bit instruction's inputs,
 // or emulate TOS/XBIOS/GEMDOS state.
 [[nodiscard]] MillenniumAtariConfigFirstJsr parse_millennium_atari_config_first_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
+
+// Validates the second direct JSR destination referenced by the verified
+// entry block. It never executes either successor call, evaluates the
+// conditional branch, or models platform state.
+[[nodiscard]] MillenniumAtariConfigSecondJsr parse_millennium_atari_config_second_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
 } // namespace eon

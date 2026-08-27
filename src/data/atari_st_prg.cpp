@@ -371,4 +371,39 @@ MillenniumAtariConfigFirstJsr parse_millennium_atari_config_first_jsr(
         read_be16(payload, target_offset + 4U), read_be16(payload, target_offset + 6U)};
 }
 
+MillenniumAtariConfigSecondJsr parse_millennium_atari_config_second_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
+    // $2aa68 is the second literal JSR target. It begins with an immediate
+    // bit-operation on D0 and an EQ short branch. The branch skips the exact
+    // 20-byte middle path to the JSR at $2aa82. Both paths join at its
+    // literal target $2a51c, then fall through to the entry block at $2aa88
+    // whose first JSR is at $2aaa0. All targets remain control facts only.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t target_address = 0x2aa68;
+    constexpr std::size_t target_offset = target_address - load_base;
+    constexpr std::array<std::uint8_t, 32> target_bytes{
+        0x08, 0x80, 0x00, 0x0d, 0x67, 0x14, 0x41, 0xf8, 0x88, 0x00,
+        0x30, 0x3c, 0x07, 0xff, 0x01, 0x88, 0x00, 0x00, 0x10, 0xbc,
+        0x00, 0x0e, 0x46, 0xfc, 0x03, 0x00, 0x4e, 0xb9, 0x00, 0x02,
+        0xa5, 0x1c,
+    };
+    constexpr std::uint32_t join_jsr_address = 0x2aa82;
+    constexpr std::uint32_t join_jsr_target = 0x2a51c;
+    constexpr std::uint32_t following_jsr_target = 0x2b55a;
+    if (entry.proven_load_base != load_base || entry.jsr_targets.size() < 2U
+        || entry.jsr_targets[1] != target_address
+        || payload.size() < target_offset + 62U
+        || !std::equal(target_bytes.begin(), target_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset))
+        || read_be32(payload, target_offset + 28U) != join_jsr_target
+        || read_be16(payload, target_offset + 56U) != 0x4eb9U
+        || read_be32(payload, target_offset + 58U) != following_jsr_target) {
+        throw std::runtime_error("Unexpected Millennium Atari ST second MILL22A.inf JSR target");
+    }
+    return {load_base, target_address, static_cast<std::uint32_t>(target_offset),
+        read_be16(payload, target_offset), read_be16(payload, target_offset + 2U),
+        read_be16(payload, target_offset + 4U), target_address + 6U + 0x14U,
+        join_jsr_address, join_jsr_target, following_jsr_target};
+}
+
 } // namespace eon
