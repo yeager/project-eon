@@ -87,6 +87,12 @@ channel pointers, six relative auxiliary pointers, and a mode word. The native
 importer rejects an out-of-range bundle or non-null pointer. See the
 [annotated disassembly](generated/deuteros-amiga-boot.md).
 
+The first auxiliary pointer is a palette bank. The interpreter's command 4
+multiplies its operand by 32 and copies 16 words from this bank to each active
+display list. The words are standard 12-bit Amiga RGB4. Bundle 0, palette 1 is
+anchored by `000 886 664 442 220 a60 840 620 080 ff0 004 008 02f 0cf fff e40`;
+the native decoder expands every nibble exactly to 8-bit (`n × 17`).
+
 ### Millennium DOS execution model
 
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
@@ -145,7 +151,7 @@ evidence instead of rewriting earlier uncertainty away.
 ## Current boundary
 
 Release recognition, archive traversal, selected FAT12 content, Deuteros ADF
-geometry/checksums, its first two load stages, and two resource headers are
-implemented and tested. Graphics encoding, audio mapping, full resource
-semantics, simulation, AI, saves, and timing remain incomplete. The SDL app
+geometry/checksums, its first two load stages, two resource headers, and the
+first verified palette bank are implemented and tested. Bitmap encoding, audio
+mapping, full resource semantics, simulation, AI, saves, and timing remain incomplete. The SDL app
 must report those areas honestly rather than presenting fabricated gameplay.

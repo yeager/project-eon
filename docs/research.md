@@ -84,6 +84,11 @@ non-null relative pointers are checked against the declared bundle length. See
 [PRESERVATION.md](PRESERVATION.md) for the evidence ledger and reproduction
 requirements.
 
+The bundle's first auxiliary pointer addresses a 16-colour RGB4 palette bank.
+Interpreter command 4 selects `base + index * 32` and copies the resulting 16
+words into both active display structures. The native decoder preserves the
+stored order and expands each four-bit component to eight bits.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are
