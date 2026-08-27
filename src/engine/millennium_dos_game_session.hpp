@@ -8,6 +8,16 @@
 
 namespace eon {
 
+// A single, byte-exact runtime write reconstructed from the F8 handler.  It
+// is intentionally not a claim about the byte's game meaning.  `previous`
+// remains empty until this minimal overlay itself has observed a write, so no
+// initial runtime value is invented from the save file or host state.
+struct MillenniumDosRuntimeByteEffect {
+    std::uint16_t address = 0;
+    std::optional<std::uint8_t> previous;
+    std::uint8_t value = 0;
+};
+
 // Host-side observation of the original loop's *already polled* AL byte.  It
 // deliberately does not invoke native handlers or mutate the original save.
 class MillenniumDosGameSession {
@@ -49,6 +59,15 @@ public:
     last_ninth_function_key_trace() const { return last_ninth_function_key_trace_; }
     [[nodiscard]] std::optional<MillenniumDosTenthFunctionKeyTrace>
     last_tenth_function_key_trace() const { return last_tenth_function_key_trace_; }
+    // F8 is the only reconstructed handler path with a write that is both
+    // unconditional and fully encoded in the verified bytes before a call:
+    // `mov byte ptr [$da30], 0`. This reports that narrow in-memory effect.
+    [[nodiscard]] std::optional<MillenniumDosRuntimeByteEffect>
+    last_runtime_byte_effect() const { return last_runtime_byte_effect_; }
+    // Only addresses reached by a reconstructed unconditional write can be
+    // queried. Unknown means that no value was supplied by original code yet.
+    [[nodiscard]] std::optional<std::uint8_t> reconstructed_runtime_byte(
+        std::uint16_t address) const;
     [[nodiscard]] const MillenniumDosGameFlow& flow() const { return flow_; }
 
 private:
@@ -65,6 +84,8 @@ private:
     std::optional<MillenniumDosEighthFunctionKeyTrace> last_eighth_function_key_trace_;
     std::optional<MillenniumDosNinthFunctionKeyTrace> last_ninth_function_key_trace_;
     std::optional<MillenniumDosTenthFunctionKeyTrace> last_tenth_function_key_trace_;
+    std::optional<MillenniumDosRuntimeByteEffect> last_runtime_byte_effect_;
+    std::optional<std::uint8_t> reconstructed_da30_;
 };
 
 } // namespace eon

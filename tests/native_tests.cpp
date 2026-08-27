@@ -479,6 +479,19 @@ int main() {
     assert(game_session.last_eighth_function_key_trace());
     assert(game_session.last_eighth_function_key_trace()->handler_address == 0x7306);
     assert(game_session.last_eighth_function_key_trace()->repeated_call_address == 0xcafa);
+    // The F8 prefix has no runtime admission branch: it deterministically
+    // clears $da30 before its unsupported calls. The unknown initial byte is
+    // not manufactured; only the post-write value is reconstructed.
+    assert(game_session.last_runtime_byte_effect());
+    assert(game_session.last_runtime_byte_effect()->address == 0xda30);
+    assert(!game_session.last_runtime_byte_effect()->previous);
+    assert(game_session.last_runtime_byte_effect()->value == 0);
+    assert(game_session.reconstructed_runtime_byte(0xda30) == std::optional<std::uint8_t>{0});
+    assert(!game_session.reconstructed_runtime_byte(0xda31));
+    assert(game_session.observe_action(0x42) == std::optional<std::size_t>{7});
+    assert(game_session.last_runtime_byte_effect());
+    assert(game_session.last_runtime_byte_effect()->previous == std::optional<std::uint8_t>{0});
+    assert(game_session.last_runtime_byte_effect()->value == 0);
     assert(!game_session.last_seventh_function_key_trace());
     assert(game_flow.ninth_function_key.handler_address == 0x7339);
     assert(game_flow.ninth_function_key.initialization_guard_address == 0xa19e);
@@ -526,6 +539,8 @@ int main() {
     assert(game_session.last_ninth_function_key_trace()->handler_address == 0x7339);
     assert(game_session.last_ninth_function_key_trace()->limit_value == 9);
     assert(!game_session.last_eighth_function_key_trace());
+    assert(!game_session.last_runtime_byte_effect());
+    assert(game_session.reconstructed_runtime_byte(0xda30) == std::optional<std::uint8_t>{0});
     assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
     assert(game_session.last_tenth_function_key_trace());
     assert(game_session.last_tenth_function_key_trace()->handler_address == 0x7384);
