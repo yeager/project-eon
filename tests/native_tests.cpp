@@ -10,6 +10,7 @@
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
+#include "data/deuteros_amiga_title_stage.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
@@ -249,6 +250,26 @@ int main() {
     assert(game_data.celestial_labels[4].text == "Earth ");
     assert(game_data.celestial_labels.back().source_offset == 0x513);
     assert(game_data.celestial_labels.back().text == "Asteroids ");
+    const auto initial_save = eon::extract_asset_by_sha256(english_dos->path,
+        "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7");
+    assert(initial_save && initial_save->size() == eon::MillenniumDosSaveLayout::serialized_size);
+    const auto save_layout = eon::parse_millennium_dos_save_layout(*initial_save);
+    assert(save_layout.version == eon::MillenniumDosSaveLayout::expected_version);
+    assert(save_layout.state_table.size() == 38);
+    assert(save_layout.state_table.front().runtime_offset_0 == 0x8100);
+    assert(save_layout.state_table.front().runtime_offset_4 == 0);
+    assert(save_layout.state_table.front().runtime_offset_6 == 0);
+    assert(save_layout.state_table.front().runtime_offset_8 == 0x2292);
+    assert(save_layout.state_table.back().runtime_offset_0 == 0x8600);
+    auto truncated_save = *initial_save;
+    truncated_save.pop_back();
+    bool rejected_truncated_save = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_save_layout(truncated_save));
+    } catch (const std::runtime_error&) {
+        rejected_truncated_save = true;
+    }
+    assert(rejected_truncated_save);
     assert(gx_lib.directory_offset() == 0x4bd3c);
     assert(gx_lib.entries().size() == 180);
     assert(gx_lib.entries().front().name == "IMG00");
@@ -353,6 +374,21 @@ int main() {
     assert(load_plan.title_stage.length == 0x6ca00);
     assert(load_plan.title_stage.destination == 0x13000);
     assert(load_plan.title_stage.entry_address == 0x40426);
+    const auto title_stage = eon::parse_deuteros_amiga_title_stage(system_disk, load_plan);
+    assert(title_stage.entry_address == 0x40426);
+    assert(title_stage.incoming_mode_address == 0x4040e);
+    assert(title_stage.special_mode == 5);
+    assert(title_stage.special_mode_byte_address == 0x3717e);
+    assert(title_stage.special_mode_configuration_address == 0x38092);
+    assert(title_stage.special_mode_configuration_value == 0x101);
+    assert(title_stage.normal_mode_byte_address == 0x19d52);
+    assert(title_stage.normal_mode_byte_value == 1);
+    assert(title_stage.main_loop_address == 0x40574);
+    assert(title_stage.loop_service_address == 0x222c0);
+    assert(title_stage.loop_input_service_address == 0x23e4e);
+    assert(title_stage.timer_counter_address == 0x40410);
+    assert(title_stage.timer_threshold == 0xea60);
+    assert(title_stage.timer_dispatch_address == 0x4069a);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 

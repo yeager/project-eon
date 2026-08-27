@@ -8,6 +8,15 @@ namespace {
 
 constexpr std::size_t celestial_label_count = 41;
 
+[[nodiscard]] std::uint16_t read_u16(std::span<const std::uint8_t> bytes,
+    const std::size_t offset) {
+    if (offset > bytes.size() || bytes.size() - offset < 2) {
+        throw std::runtime_error("Truncated Millennium DOS save field");
+    }
+    return static_cast<std::uint16_t>(bytes[offset])
+        | (static_cast<std::uint16_t>(bytes[offset + 1]) << 8U);
+}
+
 } // namespace
 
 MillenniumDosGameData parse_millennium_dos_game_data(
@@ -39,6 +48,47 @@ MillenniumDosGameData parse_millennium_dos_game_data(
         const std::string value(reinterpret_cast<const char*>(static_data.data() + offset), length);
         result.celestial_labels.push_back({.source_offset = offset, .text = value});
         offset += length + 1;
+    }
+    return result;
+}
+
+MillenniumDosSaveLayout parse_millennium_dos_save_layout(
+    const std::span<const std::uint8_t> save_data) {
+    // `2200AD.EXE` reads this file in fixed chunks.  Its `$c7fe` load path
+    // first reads and compares the two-byte version against its `$2fb0`
+    // constant ($0056), then reads exactly 0x2542 bytes.  Accept neither a
+    // shorter prefix nor trailing bytes: this parser is a preservation reader,
+    // not a permissive replacement format.
+    if (save_data.size() != MillenniumDosSaveLayout::serialized_size) {
+        throw std::runtime_error("Unsupported Millennium DOS save size");
+    }
+
+    MillenniumDosSaveLayout result;
+    result.version = read_u16(save_data, MillenniumDosSaveLayout::version_offset);
+    if (result.version != MillenniumDosSaveLayout::expected_version) {
+        throw std::runtime_error("Unsupported Millennium DOS save version");
+    }
+
+    // At `$c87c`, the original loop executes 38 `lodsw`, writing each word to
+    // `runtime_base + index * 0x1c + 6`.  The source buffer is 0x80 bytes;
+    // its remaining 52 bytes belong to other native tables and are not
+    // reinterpreted here.
+    for (std::size_t index = 0; index < MillenniumDosSaveLayout::state_table_count;
+         ++index) {
+        const auto offset = MillenniumDosSaveLayout::state_table_offset_6_column + index * 2;
+        result.state_table[index].runtime_offset_6 = read_u16(save_data, offset);
+    }
+
+    // At `$c8f9`, 38 source pairs are restored to offsets +0 and +4 in the
+    // same 0x1c-stride table.  `$c913` then restores 38 words to offset +8.
+    for (std::size_t index = 0; index < MillenniumDosSaveLayout::state_table_count;
+         ++index) {
+        const auto pair_offset = MillenniumDosSaveLayout::state_table_offset_0_and_4_columns
+            + index * 4;
+        result.state_table[index].runtime_offset_0 = read_u16(save_data, pair_offset);
+        result.state_table[index].runtime_offset_4 = read_u16(save_data, pair_offset + 2);
+        result.state_table[index].runtime_offset_8 = read_u16(save_data,
+            MillenniumDosSaveLayout::state_table_offset_8_column + index * 2);
     }
     return result;
 }
