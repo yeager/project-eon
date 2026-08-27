@@ -12,6 +12,13 @@ on:
 permissions:
   contents: read
 
+# Main receives frequent small, self-contained preservation updates.  Superseded
+# platform matrices add no signal and can otherwise keep the current revision
+# waiting behind obsolete runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gitleaks:
     name: Gitleaks
