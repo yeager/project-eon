@@ -393,7 +393,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_private_interrupt_loader_call_target << ", setup 0x"
         << flow.launcher_private_interrupt_install_address << " offset 0x"
         << flow.launcher_private_interrupt_handler_offset << std::dec
-        << " (segment unmodelled; raw save 0x" << std::hex
+        << " (loader reads " << flow.launcher_private_interrupt_handler_first_program
+        << "/" << flow.launcher_private_interrupt_handler_other_program << " to DS:0x"
+        << std::hex << flow.launcher_private_interrupt_handler_destination_offset
+        << "; numeric segment unmodelled; raw save 0x"
         << flow.launcher_private_interrupt_saved_offset_cell << "/0x"
         << flow.launcher_private_interrupt_saved_segment_cell << ", restore 0x"
         << flow.launcher_private_interrupt_restore_address << std::dec << "))\n";

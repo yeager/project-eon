@@ -1080,13 +1080,21 @@ at `$02c8..$02ce`. `$02ce` is the first terminal control-transfer opcode
 boundary; the parser stops there and does not infer an interrupt or transfer
 effect from any of these bytes.
 
-MILL.COM's first private `INT 91h` boundary is likewise constrained without
-inventing DOS behavior. At `$0204` it makes the direct near call to `$02cf`;
-the exact caller-side bytes after that call clear `DX`, load `AX=$2591`, and
-execute `INT 21h` at `$0209`. Thus the raw vector request has handler offset
-zero and interrupt number `$91`. The segment derives from the preceding
-runtime loader/DOS results, so it is deliberately not named, read, or treated
-as a handler address; the parser stops at that external boundary.
+MILL.COM's first private `INT 91h` boundary now has a proven source ABI without
+inventing a DOS segment. Before its `$0204` call to `$02cf`, selector `$01`
+keeps `DX=$0617` (`ega640.bin`) and selector `$02` selects `DX=$03ae`
+(`mcga.bin`). `$02cf` opens that original file, seeks to the end, rounds its
+length to paragraphs, allocates a DOS segment, rewinds, and reads the original
+file length to `DS:$0000`, then closes it. There is no embedded blob, copy
+loop, or decompression stage in this loader. Its result segment remains
+unknown: the only byte-proven relation is `MOV DS,AX` after the allocation and
+before the read.
+
+After that loader returns, `$0207` clears `DX`, loads `AX=$2591`, and executes
+`INT 21h` at `$0209`. Thus the raw vector request has interrupt number `$91`
+and the exact source ABI `DS:$0000`, whose code bytes originate in the selected
+original external file. Project Eon does not assign a numeric DOS segment,
+assume any DOS call succeeds, or infer handler execution/return behavior.
 
 The old-vector preservation chain is also raw-byte-validated. `$0167` loads
 `AX=$3591`, makes its external call, then stores `BX` and `ES` at adjacent

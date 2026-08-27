@@ -71,6 +71,26 @@ struct MillenniumDosTitleFlow {
     std::uint16_t launcher_private_interrupt_saved_offset_cell = 0;
     std::uint16_t launcher_private_interrupt_saved_segment_cell = 0;
     std::uint16_t launcher_private_interrupt_restore_address = 0;
+    // The first $0124-loader call opens one of these in-archive video code
+    // files, computes its paragraph count from the file length, allocates a
+    // DOS segment, rewinds, and reads it to offset zero in that segment. The
+    // numeric segment and every DOS result remain unmodelled. The following
+    // AX=$2591 call therefore has a static ABI of DS:0000, not a guessed
+    // pointer value or handler return contract.
+    std::uint16_t launcher_private_interrupt_handler_loader_entry = 0;
+    std::uint16_t launcher_private_interrupt_handler_destination_offset = 0;
+    std::uint8_t launcher_private_interrupt_handler_open_service = 0;
+    std::uint8_t launcher_private_interrupt_handler_seek_end_service = 0;
+    std::uint8_t launcher_private_interrupt_handler_allocate_service = 0;
+    std::uint8_t launcher_private_interrupt_handler_rewind_service = 0;
+    std::uint8_t launcher_private_interrupt_handler_read_service = 0;
+    std::uint8_t launcher_private_interrupt_handler_close_service = 0;
+    std::uint8_t launcher_private_interrupt_handler_first_selector = 0;
+    std::uint16_t launcher_private_interrupt_handler_first_program_address = 0;
+    std::uint8_t launcher_private_interrupt_handler_other_selector = 0;
+    std::uint16_t launcher_private_interrupt_handler_other_program_address = 0;
+    std::string launcher_private_interrupt_handler_first_program;
+    std::string launcher_private_interrupt_handler_other_program;
     std::size_t launcher_title_offset = 0;
     std::size_t launcher_game_offset = 0;
     std::string launcher_title_program;
