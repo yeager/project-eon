@@ -769,6 +769,11 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << second_profile.direct_entry << std::dec << "; raw reader +0x"
             << std::hex << second_profile.raw_read_routine_offset << std::dec
             << " caps at " << second_profile.raw_read_max_sector_count << " sectors\n";
+        std::cout << "          Copied handoff provenance: RAM 0x" << std::hex
+            << profile.copy_source << " + 0x" << second_profile.direct_entry_source_offset
+            << " -> 0x" << second_profile.direct_entry << "; state 0x"
+            << second_profile.dispatch_state_address << " indexes table 0x"
+            << second_profile.dispatch_table_address << std::dec << '\n';
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")

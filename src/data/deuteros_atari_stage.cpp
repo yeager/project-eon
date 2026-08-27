@@ -84,6 +84,9 @@ DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
         .next_sector = 1,
         .next_sector_count = be16(bytes, 0xa9e),
         .next_destination = be32(bytes, 0xa70),
+        // +$a74 pushes A6 ($70000) before the callback chain; +$ac8 pops
+        // that exact word into A0 and the following loop copies it to $1e00.
+        .copy_source = be32(bytes, 0xa70),
         .copy_destination = be16(bytes, 0xacc),
         .copy_byte_count = static_cast<std::size_t>(be32(bytes, 0xad2)) + 1U};
 }
@@ -118,9 +121,28 @@ DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
         0x00, 0x00, 0x00, 0x14, 0x31, 0xc0, 0x1e, 0x28,
         0x4e, 0x75}};
     require_bytes(bytes, 0x60, raw_reader, "Unexpected Deuteros Atari ST raw-reader routine");
+    // The copied entry at $1ec4 maps to track-2 offset $c4. It obtains a
+    // runtime state word, indexes the vector table at $1eac, then forwards
+    // the handler's D1/D2 result to the local raw reader at $70030.
+    constexpr std::array<std::uint8_t, 86> copied_dispatch{{
+        0x20, 0x38, 0x25, 0xfc, 0x31, 0xc0, 0x1e, 0xaa,
+        0x4f, 0xf9, 0x00, 0x00, 0x24, 0x78,
+        0x2f, 0x3c, 0x00, 0x00, 0x1f, 0xa6, 0x3f, 0x3c, 0x00, 0x26, 0x4e, 0x4e,
+        0x20, 0x38, 0x25, 0xf4, 0xb0, 0xbc, 0x00, 0x07, 0x11, 0x00,
+        0x67, 0x08, 0x61, 0x00, 0x07, 0x14, 0x61, 0x00, 0x10, 0x32,
+        0x4f, 0xf9, 0x00, 0x00, 0x24, 0x78,
+        0x43, 0xf8, 0x1e, 0xac, 0x30, 0x38, 0x1e, 0xaa,
+        0xe5, 0x48, 0x22, 0x71, 0x00, 0x00, 0x4e, 0x91,
+        0x2f, 0x01, 0xc4, 0xfc, 0x12, 0x00, 0x2e, 0x02,
+        0x61, 0x00, 0xff, 0x1e, 0x30, 0x38, 0x1e, 0xaa, 0x4e, 0x75}};
+    require_bytes(bytes, 0xc4, copied_dispatch, "Unexpected Deuteros Atari ST copied dispatcher");
     return {.supervisor_stack = be32(bytes, 0xa),
         .application_stack = be32(bytes, 0x10),
         .direct_entry = be32(bytes, 0x20),
+        .direct_entry_source_offset = 0xc4,
+        .dispatch_state_address = be16(bytes, 0xca),
+        .dispatch_table_address = be16(bytes, 0xfa),
+        .dispatch_raw_reader_address = 0x70030,
         .raw_read_routine_offset = 0x60,
         .raw_read_max_sector_count = 9,
         .side_switch_track = 0x50};

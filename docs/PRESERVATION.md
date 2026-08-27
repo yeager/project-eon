@@ -414,22 +414,23 @@ Its word branch enters at stage offset `$9c4`; there it validates bytes
 `$0006..$0441` using seed `$22225555`, add-byte / rotate-left-eight and
 expected value `$7ae26af7`.  Only on that validation path does the recovered
 code request the next raw interval: track 2, side 0, sectors 1 through 9 to
-RAM `$70000`.  It then retains the prior 4,608-byte buffer for a byte copy to
-`$1e00`.  These are control-flow facts, not claims that the next interval is a
-title screen; the latter remains unclassified.
+RAM `$70000`.  Its callback chain pushes `$70000` at `+$a74`, then after the
+read pops that preserved value at `+$ac8` and copies 4,608 bytes to `$1e00`.
+These are control-flow facts, not claims that the next interval is a title
+screen; the latter remains unclassified.
 
 That track-2 interval has SHA-256
 `2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
 At its loaded address `$70000`, it is executable code rather than a resource:
 it configures supervisor stack `$7b000`, application stack `$2478`, then jumps
-directly to `$1ec4`.  Its local raw-reader routine at `+$60` caps each XBIOS
+directly to `$1ec4`.  Because the preceding copy has now been proven to source
+`$70000`, this target maps exactly to track-2 byte offset `+$c4`. That copied
+entry stores a runtime word at `$1eaa`, indexes a vector table at `$1eac`,
+calls the selected address, then forwards returned `D1`/`D2` values to raw
+reader `$70030`.  The state word and selected handler are runtime-dependent:
+Project Eon does not assign a title/game meaning, load a guessed sector, or
+manufacture state. Its local raw-reader routine at `+$60` caps each XBIOS
 request at nine sectors and maps linear tracks from `$50` onward to side 1.
-The `$1ec4` target belongs to the preceding protected load chain; no title or
-game-stage meaning has been asserted for it. Specifically, the preceding
-routine copies `0x1200` bytes from a runtime-supplied `A0` to `$1e00` before
-that handoff; no static source address for `A0` is established by the raw
-track bytes. Project Eon therefore refuses to reinterpret disk byte `+0xc4`
-as executable code merely because it shares the numeric offset.
 
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
