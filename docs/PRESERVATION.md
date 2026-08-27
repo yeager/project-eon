@@ -406,6 +406,17 @@ but it does not assign names such as “selection”, “menu”, or “start ga
 the control word, helpers, or literal response values before the original
 subroutines are independently recovered.
 
+The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
+raw title image masks `D0` to `$0000ffff`, performs original unsigned divides
+by `$0064` and `$000a` (with the two intervening original subroutine calls),
+adds `$0030`, clears byte `$1fe54`, and then executes an absolute `JMP
+$1fbe6`. Both `$1fe7a` and `$1fbe6` are range-checked against the same
+title-stage load interval (`$13000` plus the profile's original length). This
+proves the direct recovered route after the transition remains in title-stage
+code; it is explicitly not evidence of a handoff to the separately loaded
+main/game stage. Project Eon preserves the arithmetic, write, and destination
+without inventing menu or gameplay labels.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
