@@ -1033,6 +1033,20 @@ int main() {
     assert(transferred_bundle0->payload == std::vector<std::uint8_t>(
         system_disk.bytes(0x1b800, 0x2f3f4).begin(),
         system_disk.bytes(0x1b800, 0x2f3f4).end()));
+    // $2016a reads the transfer as an even byte-indexed word source, not as
+    // an extracted resource. Zero state observes the genuine high length word.
+    const auto resource_sample0 = eon::sample_deuteros_amiga_main_resource_consumer(
+        *transferred_bundle0, main_entry, 0, 0);
+    assert(resource_sample0.table_offset == 0);
+    assert(resource_sample0.sampled_word == 0x0002);
+    assert(resource_sample0.addend_result == 0x0010);
+    assert(resource_sample0.seed_after == 0x0010);
+    const auto resource_sample1 = eon::sample_deuteros_amiga_main_resource_consumer(
+        *transferred_bundle0, main_entry, resource_sample0.seed_after, 4);
+    assert(resource_sample1.table_offset == 0x0014);
+    assert(resource_sample1.sampled_word == 0x0a78);
+    assert(resource_sample1.addend_result == 0x0a86);
+    assert(resource_sample1.seed_after == 0x0a96);
     const auto transferred_bundle1 = eon::read_deuteros_amiga_main_resource(
         system_disk, load_plan, 1);
     assert(transferred_bundle1);
@@ -1041,6 +1055,10 @@ int main() {
     assert(transferred_bundle1->payload == std::vector<std::uint8_t>(
         system_disk.bytes(0x4ba00, 0x215f0).begin(),
         system_disk.bytes(0x4ba00, 0x215f0).end()));
+    const auto resource_sample_bundle1 = eon::sample_deuteros_amiga_main_resource_consumer(
+        *transferred_bundle1, main_entry, 0, 0);
+    assert(resource_sample_bundle1.sampled_word == 0x0002);
+    assert(resource_sample_bundle1.seed_after == 0x0010);
 
     const auto first_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[0]);

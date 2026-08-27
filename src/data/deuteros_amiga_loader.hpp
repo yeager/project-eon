@@ -157,6 +157,19 @@ struct DeuterosAmigaMainResourceTransfer {
     std::vector<std::uint8_t> payload;
 };
 
+// One strictly read-only execution of the word lookup in $2016a against a
+// completed $21932 transfer. `table_offset` is a byte offset from the exact
+// payload destination ($32a24), not a host-side record number. The original
+// mask $3ffe limits it to the first 16 KiB and makes every access aligned.
+struct DeuterosAmigaResourceConsumerSample {
+    std::uint16_t seed_before = 0;
+    std::uint32_t counter = 0;
+    std::uint16_t table_offset = 0;
+    std::uint16_t sampled_word = 0;
+    std::uint16_t addend_result = 0;
+    std::uint16_t seed_after = 0;
+};
+
 // Decode load constants from the genuine 68000 instructions. Every expected
 // opcode is checked before its immediate value is accepted.
 [[nodiscard]] DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk);
@@ -168,5 +181,14 @@ struct DeuterosAmigaMainResourceTransfer {
 [[nodiscard]] std::optional<DeuterosAmigaMainResourceTransfer>
 read_deuteros_amiga_main_resource(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index);
+
+// Reproduce $2016a's bounded arithmetic using only a transfer already read
+// from original media. It validates ownership, the leading length word, and
+// the exact two-byte source range. It never writes source media or saves.
+[[nodiscard]] DeuterosAmigaResourceConsumerSample
+sample_deuteros_amiga_main_resource_consumer(
+    const DeuterosAmigaMainResourceTransfer& transfer,
+    const DeuterosAmigaMainStageEntry& entry,
+    std::uint16_t seed, std::uint32_t counter);
 
 } // namespace eon

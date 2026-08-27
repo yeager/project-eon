@@ -549,6 +549,20 @@ separate validated compare/call arms: command words `$000a` at `$2159c` and
 loader without naming the resource, treating it as an extracted file, or
 assigning gameplay semantics to the state cells.
 
+The consumer's layout and index behavior are now directly observable too. It
+is not a separate table after the loader's four-byte probe: the second transfer
+begins at the same ADF offset, so `$32a24+0` remains the resource's big-endian
+length longword. `$2016a` forms `(seed + low_word(counter)) & $3ffe`; this is
+an even byte offset in the first 16 KiB of the exact raw transfer, from which
+it reads one big-endian word. It adds `$000e` modulo 16 bits and adds that
+result to the seed. For genuine bundle 0 with zero seed/counter, the observed
+word at `$0000` is `$0002`, the intermediate result is `$0010`, and the
+resulting seed is `$0010`; with that seed and counter `$00000004`, it reads
+`$0a78` at `$0014` and produces `$0a96`. Bundle 1 has the same first observed
+`$0002` word. Project Eon exposes this only in verification output and an
+in-memory model that rejects malformed length, destination, or range facts.
+It neither labels these values nor changes source media or save state.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
