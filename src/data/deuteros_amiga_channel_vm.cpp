@@ -128,8 +128,11 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
     state.stream_offset += command.encoded_size;
     switch (command.opcode) {
     case 0:
+        // $214ae writes D0 (the decoded zero opcode) to state +6 and RTS.
+        // It deliberately does not clear state +16 in this pass. On the next
+        // scheduler visit selector zero reaches $2142a and clears that
+        // program pointer. Keep the original one-VBL intermediate state.
         state.wait_mode = 0;
-        state.active = false;
         return true;
     case 1: state.bitmap_selector = static_cast<std::uint16_t>(command.operands[0]); break;
     case 2:
@@ -193,8 +196,10 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
     case 0x10:
         transition_requested_ = true;
         events.transition_requested = true;
+        // $2162a sets the global request then reaches $2167a. With D0 still
+        // equal to $10 it ultimately reaches $214ae, clearing selector +6;
+        // the next scheduler pass clears the program pointer at +16.
         state.wait_mode = 0;
-        state.active = false;
         return true;
     case 0x11: {
         auto choice = static_cast<std::uint8_t>(random_word(inputs) & 0x0fU);
