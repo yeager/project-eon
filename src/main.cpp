@@ -161,6 +161,14 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.post_transition_second_compare_value << "/0x"
         << title_stage.post_transition_third_compare_value << ", rts 0x"
         << title_stage.post_transition_return_address << std::dec << '\n';
+    std::cout << "          Title-stage selector: 0x" << std::hex
+        << title_stage.post_transition_selector_address << " masks D0 with 0x"
+        << title_stage.post_transition_selector_input_mask << ", divides by 0x"
+        << title_stage.post_transition_selector_first_divisor << "/0x"
+        << title_stage.post_transition_selector_second_divisor << ", adds 0x"
+        << title_stage.post_transition_selector_addend << ", clears 0x"
+        << title_stage.post_transition_selector_flag_address << ", then jumps within title stage to 0x"
+        << title_stage.post_transition_selector_dispatch_address << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {

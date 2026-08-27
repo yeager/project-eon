@@ -39,6 +39,13 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         throw std::runtime_error("Deuteros title stage entry outside its loaded range");
     }
     const auto entry_offset = stage.disk_offset + stage.entry_address - stage.destination;
+    const auto stage_code = [&](std::uint32_t address, std::size_t length) {
+        if (address < stage.destination || address - stage.destination > stage.length
+            || length > stage.length - (address - stage.destination)) {
+            throw std::runtime_error("Deuteros title-stage helper outside its loaded range");
+        }
+        return disk.bytes(stage.disk_offset + address - stage.destination, length);
+    };
     // This includes the loop's timer branch at $405b6, but deliberately does
     // not turn the remaining 68000 program into guessed gameplay semantics.
     // Covers the main-loop branch and the complete known timer-dispatch
@@ -199,6 +206,35 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(code, post_transition + 96, 0x000407e6);
     require_word(code, post_transition + 102, 0x4e75); // rts
 
+    // The third helper reached above is a real control-flow boundary after
+    // the post-transition loop. Its arithmetic and byte write are raw facts.
+    // Its terminal absolute JMP stays in this title-stage image, so this path
+    // has not reached the separately loaded main stage.
+    constexpr std::uint32_t selector_address = 0x1fe7a;
+    const auto selector = stage_code(selector_address, 46);
+    require_word(selector, 0, 0x0280); // andi.l #$ffff,d0
+    require_long(selector, 2, 0x0000ffff);
+    require_word(selector, 6, 0x80fc); // divu.w #$64,d0
+    require_word(selector, 8, 0x0064);
+    require_word(selector, 10, 0x6100); // bsr.w $1feaa
+    require_word(selector, 12, 0x0022);
+    require_word(selector, 14, 0x0280); // andi.l #$ffff,d0
+    require_long(selector, 16, 0x0000ffff);
+    require_word(selector, 20, 0x80fc); // divu.w #$a,d0
+    require_word(selector, 22, 0x000a);
+    require_word(selector, 24, 0x6100); // bsr.w $1feaa
+    require_word(selector, 26, 0x0014);
+    require_word(selector, 28, 0x0640); // addi.w #$30,d0
+    require_word(selector, 30, 0x0030);
+    require_word(selector, 32, 0x13fc); // move.b #0,$1fe54
+    require_word(selector, 34, 0x0000);
+    require_long(selector, 36, 0x0001fe54);
+    require_word(selector, 40, 0x4ef9); // jmp $1fbe6
+    require_long(selector, 42, 0x0001fbe6);
+    const auto dispatch = stage_code(0x1fbe6, 6);
+    require_word(dispatch, 0, 0x4a39); // tst.b $1f98c
+    require_long(dispatch, 2, 0x0001f98c);
+
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
         0x22d34, 0x11, 0x40410,
@@ -207,7 +243,9 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x12e12, 0x1ffda, 0x1ffe6, 0x2008e, 0x1ffc8, 0x1ffce, 0x1ffd4,
         0x4077c,
         0x407e6, 0, 0x3f7a8, 0x1f9a4, 0x1fe7a, 0x1f238,
-        0x1b, 0x20, 0x2e, 0x2c, 0x407e4};
+        0x1b, 0x20, 0x2e, 0x2c, 0x407e4,
+        selector_address, 0x0000ffff, 0x0064, 0x000a, 0x0030,
+        0x1fe54, 0x1fbe6};
 }
 
 } // namespace eon

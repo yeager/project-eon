@@ -69,6 +69,17 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint16_t post_transition_second_compare_value = 0;
     std::uint16_t post_transition_third_compare_value = 0;
     std::uint32_t post_transition_return_address = 0;
+    // The third helper does not return directly: it normalizes D0, updates a
+    // title-stage byte, then jumps to this address. Both addresses are proven
+    // to lie in the same title-stage load interval. This boundary proves that
+    // the recovered direct route has not handed control to the main stage.
+    std::uint32_t post_transition_selector_address = 0;
+    std::uint32_t post_transition_selector_input_mask = 0;
+    std::uint16_t post_transition_selector_first_divisor = 0;
+    std::uint16_t post_transition_selector_second_divisor = 0;
+    std::uint16_t post_transition_selector_addend = 0;
+    std::uint32_t post_transition_selector_flag_address = 0;
+    std::uint32_t post_transition_selector_dispatch_address = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
