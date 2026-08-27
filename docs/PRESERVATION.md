@@ -491,6 +491,20 @@ against all six supplied Amiga variants. This remains static provenance only:
 condition flags, memory-cell meaning, branch decisions, and gameplay effects
 are not recovered or modeled.
 
+The `$68ef4` convergence has a separate 34-byte static prefix at ADF
+`+0x172f4`, SHA-256
+`d63b2de78fbc18f2a4213206d1f05947a604dafc5b23fea56f87b624cb7549ab`.
+It reads/stores a byte, then encodes `BEQ.W` at `$68f02`; its extension base
+`$68f04` plus literal `$0026` resolves to `$68f2a` / ADF `+0x1732a`, whose
+32-byte prefix hashes to
+`ba2a0127999eb628ef05008867728fd31952c6d4b268bdb38f35130bab9973ae`.
+The untaken static fallthrough is `$68f06` / ADF `+0x17306`, with 32-byte
+prefix SHA-256
+`5b3ae299a769dcca25b96b3b588ab65b1c44843abf0ef1288a1a74741dec9993`.
+All three spans are checked across the six supplied Amiga images. This proves
+only byte order, local control-flow encodings, and raw offsets—not flags,
+registers, memory-cell purpose, selected path, or game behavior.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch
