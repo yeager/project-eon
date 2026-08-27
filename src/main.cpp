@@ -1,5 +1,6 @@
 #include "launcher.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/millennium_dos_title_session.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
@@ -52,6 +53,17 @@ struct PreviewAnimation {
     int width = 0;
     int height = 0;
     std::vector<std::vector<std::uint8_t>> rgba_frames;
+};
+
+// These three data products are deliberately kept together: the title image,
+// title executable hand-off, and GX canvas all come from the same verified
+// English DOS archive.  The canvas becomes visible only after the executable's
+// recovered console-poll hand-off; this is a presentation boundary, not a
+// claim that IMG01 names or implements the full game UI.
+struct MillenniumDosLaunchAssets {
+    PreviewAnimation title;
+    PreviewAnimation gx_canvas;
+    eon::MillenniumDosTitleFlow title_flow;
 };
 
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
@@ -196,10 +208,16 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << std::dec << ")\n";
 }
 
-std::optional<PreviewAnimation> load_millennium_preview(
+std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
     const std::vector<eon::ReleaseArchive>& releases) {
     constexpr auto title_lib_sha256 =
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+    constexpr auto gx_lib_sha256 =
+        "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
+    constexpr auto titles_sha256 =
+        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+    constexpr auto launcher_sha256 =
+        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
     const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
         return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
             && candidate.language == "en";
@@ -214,10 +232,19 @@ std::optional<PreviewAnimation> load_millennium_preview(
         const auto resource = title_lib.read(*p00);
         const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
         const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
-        return PreviewAnimation{bitmap.width, bitmap.height,
-            {eon::colorize_millennium_dos_bitmap(bitmap, palette)}};
+        const auto gx_bytes = eon::extract_asset_by_sha256(release->path, gx_lib_sha256);
+        const auto titles = eon::extract_asset_by_sha256(release->path, titles_sha256);
+        const auto launcher = eon::extract_asset_by_sha256(release->path, launcher_sha256);
+        if (!gx_bytes || !titles || !launcher) return std::nullopt;
+        const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
+        return MillenniumDosLaunchAssets{
+            .title = {bitmap.width, bitmap.height,
+                {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
+            .gx_canvas = {gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
+            .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
+        };
     } catch (const std::exception& error) {
-        std::cerr << "Unable to decode Millennium title preview: " << error.what() << '\n';
+        std::cerr << "Unable to load Millennium DOS launch assets: " << error.what() << '\n';
         return std::nullopt;
     }
 }
@@ -314,7 +341,7 @@ int main(int argc, char** argv) {
         std::cerr << "Requested original release is not present.\n";
         return 4;
     }
-    const auto millennium_preview = load_millennium_preview(releases);
+    const auto millennium_assets = load_millennium_launch_assets(releases);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -344,12 +371,21 @@ int main(int argc, char** argv) {
             eon::DeuterosAmigaFrame::height);
     };
     SDL_Texture* millennium_preview_texture = nullptr;
-    if (millennium_preview) {
+    SDL_Texture* millennium_gx_canvas_texture = nullptr;
+    if (millennium_assets) {
         millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-            SDL_TEXTUREACCESS_STATIC, millennium_preview->width, millennium_preview->height);
+            SDL_TEXTUREACCESS_STATIC, millennium_assets->title.width, millennium_assets->title.height);
         if (millennium_preview_texture) {
             SDL_UpdateTexture(millennium_preview_texture, nullptr,
-                millennium_preview->rgba_frames.front().data(), millennium_preview->width * 4);
+                millennium_assets->title.rgba_frames.front().data(), millennium_assets->title.width * 4);
+        }
+        millennium_gx_canvas_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+            SDL_TEXTUREACCESS_STATIC, millennium_assets->gx_canvas.width,
+            millennium_assets->gx_canvas.height);
+        if (millennium_gx_canvas_texture) {
+            SDL_UpdateTexture(millennium_gx_canvas_texture, nullptr,
+                millennium_assets->gx_canvas.rgba_frames.front().data(),
+                millennium_assets->gx_canvas.width * 4);
         }
     }
 
@@ -359,6 +395,16 @@ int main(int argc, char** argv) {
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
     std::optional<std::uint32_t> deuteros_title_resource;
+    std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
+    const auto start_millennium_title = [&] {
+        if (millennium_assets) {
+            millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
+                millennium_assets->title_flow);
+        }
+    };
+    if (screen == Screen::launching && selected == eon::Game::millennium) {
+        start_millennium_title();
+    }
     bool show_scanner = false;
     bool running = true;
     while (running) {
@@ -372,6 +418,16 @@ int main(int argc, char** argv) {
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
                 request.presentation = request.presentation == eon::Presentation::original
                     ? eon::Presentation::modern : eon::Presentation::original;
+            }
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+                && screen == Screen::launching && selected == eon::Game::millennium
+                && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1
+                && millennium_title_session) {
+                // TITLES.EXE uses DOS' non-blocking character availability
+                // poll, rather than a game-specific action key.  SDL's key
+                // event supplies that availability signal; the recovered
+                // session alone decides the one-way launcher hand-off.
+                static_cast<void>(millennium_title_session->poll_console(true));
             }
             if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
                 && screen == Screen::launching && selected == eon::Game::deuteros
@@ -393,6 +449,7 @@ int main(int argc, char** argv) {
                     if (eon::release_available(releases, game, std::nullopt)) {
                         selected = game;
                         screen = Screen::launching;
+                        if (selected == eon::Game::millennium) start_millennium_title();
                         if (selected == eon::Game::deuteros) {
                             deuteros_opening = load_deuteros_opening(releases);
                             create_deuteros_opening_texture();
@@ -411,6 +468,7 @@ int main(int argc, char** argv) {
                         if (eon::release_available(releases, cards[index].game, std::nullopt)) {
                             selected = cards[index].game;
                             screen = Screen::launching;
+                            if (selected == eon::Game::millennium) start_millennium_title();
                             if (selected == eon::Game::deuteros) {
                                 deuteros_opening = load_deuteros_opening(releases);
                                 create_deuteros_opening_texture();
@@ -500,15 +558,31 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 116, modern ? "Presentation: Modern" : "Presentation: Original");
             draw_text(renderer, 64, 156, "Original data is present and selected.");
             draw_text(renderer, 64, 180, "The simulation is incomplete; no synthetic substitute will run.");
-            if (selected == eon::Game::millennium && millennium_preview_texture && millennium_preview) {
-                draw_text(renderer, 64, 220, "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC");
-                SDL_SetTextureScaleMode(millennium_preview_texture,
+            if (selected == eon::Game::millennium && millennium_preview_texture && millennium_assets) {
+                const bool millennium_handed_off = millennium_title_session
+                    && millennium_title_session->handed_off()
+                    && millennium_gx_canvas_texture;
+                SDL_Texture* texture = millennium_handed_off ? millennium_gx_canvas_texture
+                                                              : millennium_preview_texture;
+                const auto& image = millennium_handed_off ? millennium_assets->gx_canvas
+                                                            : millennium_assets->title;
+                if (millennium_handed_off) {
+                    draw_text(renderer, 64, 220,
+                        "AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01");
+                    draw_text(renderer, 64, 238,
+                        "ORIGINAL GX CANVAS ONLY - UI/STATE SEMANTICS NOT YET INFERRED");
+                } else {
+                    draw_text(renderer, 64, 220, "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC");
+                    draw_text(renderer, 64, 238,
+                        "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF");
+                }
+                SDL_SetTextureScaleMode(texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 const float scale = 2.0F;
                 SDL_FRect preview_bounds{64, 250,
-                    static_cast<float>(millennium_preview->width) * scale,
-                    static_cast<float>(millennium_preview->height) * scale};
-                SDL_RenderTexture(renderer, millennium_preview_texture, nullptr, &preview_bounds);
+                    static_cast<float>(image.width) * scale,
+                    static_cast<float>(image.height) * scale};
+                SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
             } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
                 const auto frame = deuteros_opening->rgba_frame();
@@ -540,6 +614,7 @@ int main(int argc, char** argv) {
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
     SDL_DestroyTexture(millennium_preview_texture);
+    SDL_DestroyTexture(millennium_gx_canvas_texture);
     SDL_DestroyTexture(preview_texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
