@@ -142,9 +142,19 @@ random source; absence fails closed instead of inventing a sequence.
 
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
-emits sound `(1,1)` then `(2,2)`. After ticks 3 and 4, channel 0 selects bitmap
-1 at word coordinate `x=8`, pixel coordinate `y=183`, with wait mode 3 and
-timer 1. Integration tests assert this ordering directly from bundle 0.
+emits sound `(1,1)` then `(2,2)` and immediately consumes the newly yielded
+timer once, as the original scheduler does. Tick 3 selects bitmap 1 at word
+coordinate `x=8`, pixel coordinate `y=183`; its blank-backed 320×200 frame has
+SHA-256 `d841fd0e6e01c09f7dc8ce6cd2bda1828a0eb62c5f198750403aa996cd7d48d4`.
+Tick 4 enters stepped mode 6, moves to `y=181`, and leaves timer 38.
+
+The compositor draws channels in ascending order. X is measured in 16-pixel
+words and Y in scanlines. Bit 15 selects masked drawing where palette index 0
+is transparent; an unflagged selector overwrites the complete rectangle.
+Original code clips vertically but trusts horizontal coordinates, so native
+code validates the horizontal range instead of silently changing it. Bit 13
+and combined bits 15+14 invoke stateful whole-scanline restore/save paths;
+stateless composition rejects those until the saved-frame buffer is present.
 
 ### Millennium DOS execution model
 

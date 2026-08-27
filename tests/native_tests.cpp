@@ -4,6 +4,7 @@
 #include "data/amiga_adf.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
+#include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/fat12.hpp"
 #include "data/sha256.hpp"
@@ -200,13 +201,27 @@ int main() {
     assert(tick2.sounds[0].sound == 1 && tick2.sounds[0].channels == 1);
     assert(tick2.sounds[1].sound == 2 && tick2.sounds[1].channels == 2);
     assert(opening_vm.input_gate());
-    static_cast<void>(opening_vm.tick());
-    static_cast<void>(opening_vm.tick());
+    const auto tick3 = opening_vm.tick();
+    assert(!tick3.palette && tick3.sounds.empty());
     assert(opening_vm.channels()[0].bitmap_selector == 1);
     assert(opening_vm.channels()[0].x == 8);
     assert(opening_vm.channels()[0].y == 183);
     assert(opening_vm.channels()[0].wait_mode == 3);
-    assert(opening_vm.channels()[0].timer == 1);
+    assert(opening_vm.channels()[0].timer == 0);
+    const auto tick3_frame = eon::compose_deuteros_amiga_frame(
+        system_disk, first_bundle, first_indexed_blob, opening_vm.channels());
+    assert(tick3_frame.color_indices.size() == 320 * 200);
+    assert(std::count_if(tick3_frame.color_indices.begin(), tick3_frame.color_indices.end(),
+        [](auto color) { return color != 0; }) == 311);
+    assert(eon::to_hex(eon::sha256(tick3_frame.color_indices))
+        == "d841fd0e6e01c09f7dc8ce6cd2bda1828a0eb62c5f198750403aa996cd7d48d4");
+    const auto tick3_rgba = eon::colorize_deuteros_amiga_frame(
+        tick3_frame, eon::decode_deuteros_amiga_palette(system_disk, first_bundle, 1));
+    assert(tick3_rgba.size() == 320 * 200 * 4);
+    static_cast<void>(opening_vm.tick());
+    assert(opening_vm.channels()[0].y == 181);
+    assert(opening_vm.channels()[0].wait_mode == 6);
+    assert(opening_vm.channels()[0].timer == 38);
     for (std::size_t index = 0; index + 1 < first_indexed_blob.record_offsets.size(); ++index) {
         const auto bitmap = eon::decode_deuteros_amiga_bitmap(
             system_disk, first_bundle, first_indexed_blob, index);

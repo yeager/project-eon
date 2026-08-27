@@ -1,6 +1,5 @@
 #include "data/deuteros_amiga_channel_vm.hpp"
 
-#include <limits>
 #include <stdexcept>
 
 namespace eon {
@@ -38,46 +37,53 @@ DeuterosAmigaVmEvents DeuterosAmigaChannelVm::tick(const DeuterosAmigaVmInputs& 
     DeuterosAmigaVmEvents events;
     for (auto& state : channels_) {
         if (!state.active) continue;
-        if (state.wait_mode == 3) {
-            if (state.timer != 0) {
-                --state.timer;
-                continue;
-            }
-        } else if (state.wait_mode == 5) {
-            if (static_cast<std::uint16_t>(inputs.audio_position - 1) != state.timer
-                || state.parameter >= inputs.audio_limit) continue;
-        } else if (state.wait_mode == 6) {
-            auto low = static_cast<std::uint16_t>(state.mode_data);
-            if ((low & 0xffU) != 0) {
-                --low;
-                state.mode_data = (state.mode_data & 0xffff0000U) | low;
-                continue;
-            }
-            low = static_cast<std::uint16_t>(state.mode_data >> 16U);
-            state.mode_data = (state.mode_data & 0xffff0000U) | low;
-            state.y = static_cast<std::int16_t>(state.y + signed_word(state.parameter));
-            if (state.timer != 0) {
-                --state.timer;
-                continue;
-            }
-        } else if (state.wait_mode == 0) {
-            state.active = false;
-            continue;
-        } else if (state.wait_mode == 0x14) {
-            if (!input_gate_ || !inputs.input_pressed) continue;
-        } else {
-            --state.wait_mode;
-            if (state.wait_mode != 0) continue;
-        }
-
         constexpr std::size_t maximum_commands_per_tick = 4096;
-        bool yielded = false;
-        for (std::size_t command = 0; command < maximum_commands_per_tick && !yielded; ++command) {
-            yielded = execute(state, events, inputs);
-            if (!state.active) break;
-            if (command + 1 == maximum_commands_per_tick) {
-                throw std::runtime_error("Deuteros channel command limit exceeded");
+        std::size_t commands = 0;
+        while (state.active) {
+            if (state.wait_mode == 3) {
+                if (state.timer != 0) {
+                    --state.timer;
+                    break;
+                }
+            } else if (state.wait_mode == 5) {
+                if (static_cast<std::uint16_t>(inputs.audio_position - 1) != state.timer
+                    || state.parameter >= inputs.audio_limit) break;
+            } else if (state.wait_mode == 6) {
+                auto low = static_cast<std::uint16_t>(state.mode_data);
+                if ((low & 0xffU) != 0) {
+                    --low;
+                    state.mode_data = (state.mode_data & 0xffff0000U) | low;
+                    break;
+                }
+                low = static_cast<std::uint16_t>(state.mode_data >> 16U);
+                state.mode_data = (state.mode_data & 0xffff0000U) | low;
+                state.y = static_cast<std::int16_t>(state.y + signed_word(state.parameter));
+                if (state.timer != 0) {
+                    --state.timer;
+                    break;
+                }
+            } else if (state.wait_mode == 0) {
+                state.active = false;
+                break;
+            } else if (state.wait_mode == 0x14) {
+                // input_pressed represents the prior polled frame, matching
+                // $2141a before the new poll at $21442.
+                if (!input_gate_ || !inputs.input_pressed) break;
+            } else {
+                // $2140c falls through to $2142a for every unrecognised mode.
+                state.active = false;
+                break;
             }
+
+            bool yielded = false;
+            while (state.active && !yielded) {
+                if (++commands > maximum_commands_per_tick) {
+                    throw std::runtime_error("Deuteros channel command limit exceeded");
+                }
+                yielded = execute(state, events, inputs);
+            }
+            // The original RTS returns to $213ac/$213dc/$21422 and branches
+            // straight back to this same scheduler in the current tick.
         }
     }
     return events;
@@ -143,7 +149,7 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
         state.stream_offset = *state.return_offset;
         break;
     case 0x0e:
-        // Original writes the low byte to $207ea; retain it as the bundle mode.
+        mode_byte_ = static_cast<std::uint8_t>(command.operands[0]);
         break;
     case 0x0f:
         if (command.operands[0] >= bundle_.length) throw std::runtime_error("Deuteros alternate resource outside bundle");
@@ -157,15 +163,17 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
         state.active = false;
         return true;
     case 0x11: {
-        auto choice = static_cast<std::uint16_t>(random_word(inputs) & 0x0fU);
-        const auto threshold = static_cast<std::uint16_t>(command.operands[0]);
-        if (choice >= threshold) choice = static_cast<std::uint16_t>(choice - threshold);
-        const auto advance = static_cast<std::uint64_t>(choice) * command.operands[1];
-        if (advance > std::numeric_limits<std::uint32_t>::max() - state.stream_offset
-            || state.stream_offset + advance >= bundle_.length) {
+        auto choice = static_cast<std::uint8_t>(random_word(inputs) & 0x0fU);
+        const auto threshold = static_cast<std::uint8_t>(command.operands[0]);
+        if (choice >= threshold) choice = static_cast<std::uint8_t>(choice - threshold);
+        const auto product = static_cast<std::uint16_t>(
+            static_cast<std::uint16_t>(choice) * static_cast<std::uint16_t>(command.operands[1]));
+        const auto advance = static_cast<std::int16_t>(product);
+        const auto target = static_cast<std::int64_t>(state.stream_offset) + advance;
+        if (target < 0 || target >= bundle_.length) {
             throw std::runtime_error("Deuteros random branch outside bundle");
         }
-        state.stream_offset += static_cast<std::uint32_t>(advance);
+        state.stream_offset = static_cast<std::uint32_t>(target);
         break;
     }
     case 0x12: input_gate_ = false; break;

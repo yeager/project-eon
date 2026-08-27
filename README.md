@@ -142,7 +142,9 @@ validated against the real images. The 68000 bootloader's decoded-track request 
 documented in [the generated disassembly](docs/generated/deuteros-amiga-boot.md).
 Both discovered four-bitplane RLE layouts are implemented, covering all 216
 bitmap records in the first two resource bundles. The SDL launch view exercises
-the same importer and renders the genuine opening-animation resource.
+the same importer, channel VM, compositor, original palettes, and 50 Hz PAL tick
+sequence. It freezes at the first still-unimplemented timing/random or stateful
+save/restore boundary rather than fabricating later animation frames.
 
 The repository does not contain the commercial games. Point the inventory tool
 at a directory containing the original archives:

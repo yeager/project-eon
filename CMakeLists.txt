@@ -34,6 +34,7 @@ add_executable(project-eon
     src/data/amiga_adf.cpp
     src/data/deuteros_amiga_bundle.cpp
     src/data/deuteros_amiga_channel_vm.cpp
+    src/data/deuteros_amiga_frame.cpp
     src/data/deuteros_amiga_loader.cpp
     src/data/fat12.cpp
     src/data/sha256.cpp
@@ -71,6 +72,7 @@ if(BUILD_TESTING)
         src/data/amiga_adf.cpp
         src/data/deuteros_amiga_bundle.cpp
         src/data/deuteros_amiga_channel_vm.cpp
+        src/data/deuteros_amiga_frame.cpp
         src/data/deuteros_amiga_loader.cpp
         src/data/fat12.cpp
         src/data/sha256.cpp

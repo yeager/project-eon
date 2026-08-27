@@ -1,6 +1,8 @@
 #include "launcher.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_channel_vm.hpp"
+#include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
@@ -14,7 +16,9 @@
 #include <filesystem>
 #include <iostream>
 #include <optional>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -30,10 +34,10 @@ struct Card {
     SDL_Texture* texture = nullptr;
 };
 
-struct PreviewImage {
+struct PreviewAnimation {
     int width = 0;
     int height = 0;
-    std::vector<std::uint8_t> rgba;
+    std::vector<std::vector<std::uint8_t>> rgba_frames;
 };
 
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
@@ -78,7 +82,7 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     }
 }
 
-std::optional<PreviewImage> load_deuteros_preview(
+std::optional<PreviewAnimation> load_deuteros_preview(
     const std::vector<eon::ReleaseArchive>& releases) {
     constexpr auto clean_system_adf =
         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
@@ -93,16 +97,29 @@ std::optional<PreviewImage> load_deuteros_preview(
         const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
         const auto bundle = eon::parse_deuteros_amiga_bundle(disk, plan.resource_disk_offsets[0]);
         const auto blob = eon::parse_deuteros_amiga_indexed_blob(disk, bundle);
-        // Channel 1 selects palette 1 before the opening animation. Record 0
-        // is its authentic 112x77 plane-sequential graphic.
-        const auto bitmap = eon::decode_deuteros_amiga_bitmap(disk, bundle, blob, 0);
-        const auto palette = eon::decode_deuteros_amiga_palette(disk, bundle, 1);
-        PreviewImage preview{bitmap.width, bitmap.height, {}};
-        preview.rgba.reserve(bitmap.color_indices.size() * 4);
-        for (const auto index : bitmap.color_indices) {
-            const auto color = palette[index];
-            preview.rgba.insert(preview.rgba.end(), {color.red, color.green, color.blue, 0xff});
+        eon::DeuterosAmigaChannelVm vm(disk, bundle);
+        PreviewAnimation preview{eon::DeuterosAmigaFrame::width,
+            eon::DeuterosAmigaFrame::height, {}};
+        constexpr std::size_t maximum_verified_ticks = 512;
+        for (std::size_t tick = 0; tick < maximum_verified_ticks; ++tick) {
+            try {
+                static_cast<void>(vm.tick());
+            } catch (const std::runtime_error& error) {
+                if (std::string_view(error.what()).find("random source") != std::string_view::npos) break;
+                throw;
+            }
+            eon::DeuterosAmigaFrame frame;
+            try {
+                frame = eon::compose_deuteros_amiga_frame(disk, bundle, blob, vm.channels());
+            } catch (const std::runtime_error& error) {
+                if (std::string_view(error.what()).find("save/restore") != std::string_view::npos) break;
+                throw;
+            }
+            const auto palette = eon::decode_deuteros_amiga_palette(
+                disk, bundle, vm.palette_index());
+            preview.rgba_frames.push_back(eon::colorize_deuteros_amiga_frame(frame, palette));
         }
+        if (preview.rgba_frames.empty()) return std::nullopt;
         return preview;
     } catch (const std::exception& error) {
         std::cerr << "Unable to decode Deuteros preview: " << error.what() << '\n';
@@ -176,9 +193,9 @@ int main(int argc, char** argv) {
     SDL_Texture* preview_texture = nullptr;
     if (deuteros_preview) {
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-            SDL_TEXTUREACCESS_STATIC, deuteros_preview->width, deuteros_preview->height);
+            SDL_TEXTUREACCESS_STREAMING, deuteros_preview->width, deuteros_preview->height);
         if (preview_texture) {
-            SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview->rgba.data(),
+            SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview->rgba_frames.front().data(),
                 deuteros_preview->width * 4);
         }
     }
@@ -186,6 +203,8 @@ int main(int argc, char** argv) {
     Screen screen = request.game ? Screen::launching : Screen::menu;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     int focused = 0;
+    std::uint64_t animation_start = SDL_GetTicks();
+    std::size_t displayed_preview_frame = 0;
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -204,6 +223,7 @@ int main(int argc, char** argv) {
                 if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
                     selected = cards[static_cast<std::size_t>(focused)].game;
                     screen = Screen::launching;
+                    animation_start = SDL_GetTicks();
                 }
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
@@ -214,6 +234,7 @@ int main(int argc, char** argv) {
                         focused = static_cast<int>(index);
                         selected = cards[index].game;
                         screen = Screen::launching;
+                        animation_start = SDL_GetTicks();
                     }
                 }
             }
@@ -248,10 +269,18 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 156, "Original data is present and selected.");
             draw_text(renderer, 64, 180, "The simulation is incomplete; no synthetic substitute will run.");
             if (selected == eon::Game::deuteros && preview_texture && deuteros_preview) {
-                draw_text(renderer, 64, 220, "AUTHENTIC AMIGA RESOURCE - ADF BITPLANES + ORIGINAL PALETTE");
+                const auto elapsed_ticks = static_cast<std::size_t>((SDL_GetTicks() - animation_start) / 20U);
+                const auto frame_index = std::min(elapsed_ticks,
+                    deuteros_preview->rgba_frames.size() - 1);
+                if (frame_index != displayed_preview_frame) {
+                    SDL_UpdateTexture(preview_texture, nullptr,
+                        deuteros_preview->rgba_frames[frame_index].data(), deuteros_preview->width * 4);
+                    displayed_preview_frame = frame_index;
+                }
+                draw_text(renderer, 64, 220, "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE");
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
-                const float scale = 4.0F;
+                const float scale = 2.0F;
                 SDL_FRect preview_bounds{64, 250,
                     static_cast<float>(deuteros_preview->width) * scale,
                     static_cast<float>(deuteros_preview->height) * scale};
