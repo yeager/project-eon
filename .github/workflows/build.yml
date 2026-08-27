@@ -110,3 +110,139 @@ jobs:
           ctest --test-dir build -C Release -j4 --output-on-failure
       - name: Test preservation tooling
         run: python -m unittest discover -s tests -v
+
+  package-linux:
+    name: Linux packages
+    needs: build-linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build rpm zlib1g-dev libpng-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev \
+            libdecor-0-dev libegl-dev libgles-dev libgl-dev libdrm-dev libgbm-dev \
+            libpulse-dev libasound2-dev
+      - name: Build SDL3
+        run: |
+          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          cmake -S SDL3-src -B SDL3-build -DCMAKE_INSTALL_PREFIX=/usr/local -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+          ninja -C SDL3-build
+          sudo ninja -C SDL3-build install
+          sudo ldconfig
+      - name: Build distributable packages without game media
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          ninja -C build
+          cpack --config build/CPackConfig.cmake -G DEB -B package/deb
+          cpack --config build/CPackConfig.cmake -G RPM -B package/rpm
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-packages-x86_64
+          path: |
+            package/deb/*.deb
+            package/rpm/*.rpm
+
+  package-macos:
+    name: macOS app (${{ matrix.arch }})
+    needs: build-macos
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+          - arch: x86_64
+            runner: macos-13
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: brew install cmake ninja sdl3 zlib libpng
+      - name: Build native application bundle
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          ninja -C build
+          APP=ProjectEon.app
+          mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/Resources"
+          mkdir -p "$APP/Contents/Frameworks"
+          cp build/project-eon "$APP/Contents/MacOS/ProjectEon"
+          cp assets/cards/*.png "$APP/Contents/MacOS/assets/cards/"
+          cp README.md LICENSE "$APP/Contents/Resources/"
+          bundle_dylib() {
+            local binary="$1"
+            otool -L "$binary" | awk 'NR>1{print $1}' | while read -r ref; do
+              case "$ref" in
+                /usr/lib/*|/System/*|@executable_path/*|@rpath/*|@loader_path/*) continue ;;
+              esac
+              local name=$(basename "$ref")
+              local dest="$APP/Contents/Frameworks/$name"
+              if [ ! -f "$dest" ]; then
+                cp "$ref" "$dest"
+                chmod 644 "$dest"
+                install_name_tool -id "@executable_path/../Frameworks/$name" "$dest"
+                bundle_dylib "$dest"
+              fi
+              install_name_tool -change "$ref" "@executable_path/../Frameworks/$name" "$binary"
+            done
+          }
+          bundle_dylib "$APP/Contents/MacOS/ProjectEon"
+          for framework in "$APP/Contents/Frameworks/"*.dylib; do
+            test -e "$framework" && bundle_dylib "$framework"
+          done
+          codesign --force --deep -s - "$APP"
+          cat > "$APP/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleVersion</key><string>0.1.0</string></dict></plist>
+          PLIST
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "project-eon-macos-${{ matrix.arch }}.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos-${{ matrix.arch }}-app
+          path: project-eon-macos-${{ matrix.arch }}.zip
+
+  package-windows:
+    name: Windows Inno Setup
+    needs: build-windows
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+      - name: Build zlib and SDL3
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/madler/zlib.git zlib-src
+          cmake -S zlib-src -B zlib-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/zlib-install"
+          cmake --build zlib-build --config Release --parallel 2
+          cmake --install zlib-build --config Release
+          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          cmake -S SDL3-src -B SDL3-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/SDL3-install" -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+          cmake --build SDL3-build --config Release --parallel 2
+          cmake --install SDL3-build --config Release
+      - name: Build and stage Project Eon only
+        shell: pwsh
+        run: |
+          cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install;${{ github.workspace }}/zlib-install"
+          cmake --build build --config Release --parallel 2
+          New-Item -ItemType Directory -Force dist/assets/cards | Out-Null
+          Copy-Item build/Release/project-eon.exe dist/project-eon.exe
+          Copy-Item "${{ github.workspace }}/SDL3-install/bin/SDL3.dll" dist/SDL3.dll
+          Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" -ErrorAction SilentlyContinue | Copy-Item -Destination dist
+          Copy-Item assets/cards/*.png dist/assets/cards/
+          Copy-Item README.md,LICENSE dist/
+      - name: Create Inno Setup installer
+        shell: pwsh
+        run: iscc "/DMyAppVersion=0.1.0-ci.${{ github.run_number }}" packaging/windows/project-eon.iss
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-x64-installer
+          path: installer/Project-Eon-*-windows-x64.exe

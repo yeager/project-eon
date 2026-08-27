@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace {
@@ -186,6 +187,12 @@ int main(int argc, char** argv) {
         return 2;
     }
     auto request = *parsed.request;
+    if (!std::filesystem::is_directory(request.data_directory)) {
+        if (request.data_directory_is_default) {
+            std::error_code error;
+            std::filesystem::create_directories(request.data_directory, error);
+        }
+    }
     if (!std::filesystem::is_directory(request.data_directory)) {
         std::cerr << "Data directory does not exist: " << request.data_directory << '\n';
         return 2;

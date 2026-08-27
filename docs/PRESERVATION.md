@@ -183,6 +183,16 @@ stateless composition rejects those until the saved-frame buffer is present.
 
 ### Millennium DOS execution model
 
+The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
+File: its verified SHA-256 is
+`5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
+Its original type-1 PCM block has time constant `$9c`, unsigned 8-bit mono
+rate 10,000 Hz, and 738 samples whose SHA-256 is
+`811de4108fe6551e09da1865f3ff2e18a8313aad30a6916210c4d5d49b1e1c06`.
+The native decoder accepts the original uncompressed sound and continuation
+blocks, preserves the source PCM bytes, and rejects encodings not yet proven
+by game media rather than replacing effects.
+
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
 their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 92h, and 95h. `2200AD.EXE` jumps from file offset `0x0004` to `0xd1b0`, then
