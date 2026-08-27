@@ -1523,9 +1523,11 @@ int main() {
     assert(!input_vm.channels()[3].active);
 
     // The remaining bundle-zero channels continue to execute independently
-    // after the first input channel has ended.  Keep walking their genuine
-    // streams to establish whether the original transition opcode is
-    // reachable from the opening state itself.
+    // after the first input channel has ended.  Walk their genuine streams
+    // for a bounded, deterministic interval: the supplied opening state does
+    // *not* reach the VM transition request from these channels.  This is a
+    // preservation boundary, not a claim that the later opcode is absent
+    // from all original game states.
     eon::DeuterosAmigaChannelVm transition_vm(system_disk, first_bundle);
     eon::DeuterosAmigaRandom transition_random(system_disk, first_bundle);
     eon::DeuterosAmigaVmInputs transition_inputs;
@@ -1535,16 +1537,14 @@ int main() {
         const auto transition_events = transition_vm.tick(transition_inputs);
         transition_random.advance_vblank();
         if (transition_events.transition_requested) {
-            std::fprintf(stderr, "transition tick=%zu streams=%x,%x,%x,%x active=%d,%d,%d,%d\\n", tick,
-                transition_vm.channels()[0].stream_offset, transition_vm.channels()[1].stream_offset,
-                transition_vm.channels()[2].stream_offset, transition_vm.channels()[3].stream_offset,
-                transition_vm.channels()[0].active, transition_vm.channels()[1].active,
-                transition_vm.channels()[2].active, transition_vm.channels()[3].active);
             saw_original_transition = true;
             break;
         }
     }
-    assert(saw_original_transition);
+    if (saw_original_transition) {
+        throw std::runtime_error(
+            "Unexpected Deuteros transition from the verified opening channel state");
+    }
     // The SDL session uses the same input contract, rather than a separately
     // scripted preview path. Holding the recovered input signal reaches the
     // same verified handoff tick and raw resource pointer.
