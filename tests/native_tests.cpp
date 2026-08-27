@@ -328,6 +328,10 @@ int main() {
     assert(defjam_independent_branch_target.entry_address == 0x6857a);
     assert(defjam_independent_branch_target.conditional_branch_address == 0x68580);
     assert(defjam_independent_branch_target.conditional_branch_target == 0x68586);
+    const auto defjam_independent_branch_preparation = eon::parse_millennium_amiga_resident_independent_branch_preparation_boundary(defjam_loader_disk, defjam_plan, defjam_independent_branch_target);
+    assert(defjam_independent_branch_preparation.entry_address == 0x68586);
+    assert(defjam_independent_branch_preparation.unknown_call_address == 0x68590);
+    assert(defjam_independent_branch_preparation.unknown_call_target == 0x7b26a);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
