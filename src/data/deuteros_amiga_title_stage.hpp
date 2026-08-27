@@ -24,10 +24,23 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t timer_counter_address = 0;
     std::uint32_t timer_threshold = 0;
     std::uint32_t timer_dispatch_address = 0;
+    // The dispatch begins a bounded, opcode-validated palette/display
+    // transition before control returns to the caller.  These are machine
+    // state facts, not inferred menu/gameplay meanings.
+    std::uint32_t transition_active_flag_address = 0;
+    std::uint32_t transition_saved_display_word_address = 0;
+    std::uint32_t transition_source_palette_address = 0;
+    std::uint32_t transition_work_palette_address = 0;
+    std::uint16_t transition_palette_word_count = 0;
+    std::uint16_t transition_palette_mask = 0;
+    std::uint32_t transition_graphics_library_base_address = 0;
+    std::int16_t transition_first_library_vector = 0;
+    std::int16_t transition_second_library_vector = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
-// the known mode branch and the recurring main-loop cadence.
+// the known mode branch, recurring main-loop cadence, and the timed display
+// transition dispatch.
 [[nodiscard]] DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 

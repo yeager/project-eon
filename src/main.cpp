@@ -2,6 +2,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/millennium_dos_title_session.hpp"
+#include "engine/millennium_dos_save_session.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
@@ -121,6 +122,11 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << std::hex << title_stage.special_mode_byte_address << ", config 0x"
         << title_stage.special_mode_configuration_value << std::dec << "; loop 0x"
         << std::hex << title_stage.main_loop_address << std::dec << '\n';
+    std::cout << "          Timed title transition: 0x" << std::hex
+        << title_stage.transition_source_palette_address << " -> 0x"
+        << title_stage.transition_work_palette_address << ", " << std::dec
+        << title_stage.transition_palette_word_count << " RGB4 words, mask 0x"
+        << std::hex << title_stage.transition_palette_mask << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {
@@ -170,10 +176,20 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto initial_save = eon::extract_asset_by_sha256(release.path, initial_save_sha256);
     if (!initial_save) throw std::runtime_error("Verified Millennium initial save missing");
-    const auto save_layout = eon::parse_millennium_dos_save_layout(*initial_save);
-    std::cout << "          2200SAVE.I: version 0x" << std::hex << save_layout.version
-        << std::dec << ", " << save_layout.state_table.size()
+    const eon::MillenniumDosSaveSession save_session(*initial_save);
+    std::cout << "          2200SAVE.I: SHA-256 " << save_session.sha256()
+        << ", version 0x" << std::hex << save_session.layout().version << std::dec
+        << ", " << save_session.layout().state_table.size()
         << " recovered state-table records\n";
+    // These are the literal positional words restored by the verified load
+    // path.  Their gameplay meanings remain deliberately unnamed.
+    for (std::size_t index = 0; index < save_session.layout().state_table.size(); ++index) {
+        const auto& record = save_session.state_record(index);
+        std::cout << "            [" << index << "] +00=0x" << std::hex
+            << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
+            << " +06=0x" << record.runtime_offset_6 << " +08=0x"
+            << record.runtime_offset_8 << std::dec << '\n';
+    }
 }
 
 void report_millennium_amiga(const eon::ReleaseArchive& release) {

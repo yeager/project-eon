@@ -21,6 +21,7 @@
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "engine/millennium_dos_title_session.hpp"
+#include "engine/millennium_dos_save_session.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -274,6 +275,28 @@ int main() {
     assert(save_layout.state_table.front().runtime_offset_6 == 0);
     assert(save_layout.state_table.front().runtime_offset_8 == 0x2292);
     assert(save_layout.state_table.back().runtime_offset_0 == 0x8600);
+    const eon::MillenniumDosSaveSession save_session(*initial_save);
+    assert(save_session.serialized_bytes().size() == initial_save->size());
+    assert(save_session.sha256() == "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7");
+    assert(save_session.state_record(0).runtime_offset_0 == 0x8100);
+    assert(save_session.state_record(37).runtime_offset_0 == 0x8600);
+    const auto first_opaque_range = save_session.opaque_bytes(0x0002, 4);
+    assert(first_opaque_range.size() == 4);
+    assert(first_opaque_range[0] == (*initial_save)[0x0002]);
+    bool rejected_bad_save_record = false;
+    try {
+        static_cast<void>(save_session.state_record(38));
+    } catch (const std::out_of_range&) {
+        rejected_bad_save_record = true;
+    }
+    assert(rejected_bad_save_record);
+    bool rejected_bad_save_range = false;
+    try {
+        static_cast<void>(save_session.opaque_bytes(initial_save->size(), 1));
+    } catch (const std::out_of_range&) {
+        rejected_bad_save_range = true;
+    }
+    assert(rejected_bad_save_range);
     auto truncated_save = *initial_save;
     truncated_save.pop_back();
     bool rejected_truncated_save = false;
@@ -409,6 +432,15 @@ int main() {
     assert(title_stage.timer_counter_address == 0x40410);
     assert(title_stage.timer_threshold == 0xea60);
     assert(title_stage.timer_dispatch_address == 0x4069a);
+    assert(title_stage.transition_active_flag_address == 0x202c6);
+    assert(title_stage.transition_saved_display_word_address == 0x202b8);
+    assert(title_stage.transition_source_palette_address == 0x1ed24);
+    assert(title_stage.transition_work_palette_address == 0x40678);
+    assert(title_stage.transition_palette_word_count == 16);
+    assert(title_stage.transition_palette_mask == 0x0eee);
+    assert(title_stage.transition_graphics_library_base_address == 0x12fec);
+    assert(title_stage.transition_first_library_vector == -0xc0);
+    assert(title_stage.transition_second_library_vector == -0x1a4);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 

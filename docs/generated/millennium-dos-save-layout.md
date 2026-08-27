@@ -51,3 +51,14 @@ compatible with the body labels in `2200AD4.BIN`, but these code fragments do
 not by themselves prove a one-to-one label mapping. The parser therefore calls
 this a state table and does not attach speculative body or simulation-field
 names.
+
+## Read-only session boundary
+
+`MillenniumDosSaveSession` retains a byte-for-byte in-memory view of a
+successfully parsed original save. It exposes the checked version, the 38
+positional four-word records, a SHA-256 identity, and bounded read-only spans
+for opaque ranges. It intentionally has no setters, serialization/export
+method, inferred simulation meanings, or save-file creation path. The CLI
+verification report prints each recovered record as `+00`, `+04`, `+06`, and
+`+08`, matching the executable's recovered runtime offsets rather than naming
+them as game concepts.

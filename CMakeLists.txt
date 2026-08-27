@@ -38,6 +38,7 @@ add_executable(project-eon
     src/engine/deuteros_amiga_opening.cpp
     src/engine/deuteros_amiga_paula.cpp
     src/engine/millennium_dos_title_session.cpp
+    src/engine/millennium_dos_save_session.cpp
     src/data/amiga_adf.cpp
     src/data/amiga_ofs.cpp
     src/data/atari_st_prg.cpp
@@ -90,6 +91,7 @@ if(BUILD_TESTING)
         src/engine/deuteros_amiga_opening.cpp
         src/engine/deuteros_amiga_paula.cpp
         src/engine/millennium_dos_title_session.cpp
+        src/engine/millennium_dos_save_session.cpp
         src/data/amiga_adf.cpp
         src/data/amiga_ofs.cpp
         src/data/atari_st_prg.cpp
