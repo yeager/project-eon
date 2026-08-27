@@ -18,6 +18,7 @@
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
+#include "data/millennium_dos_last_screen.hpp"
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -357,6 +358,18 @@ int main() {
     assert(gx_imgb3 && gx_imgb3->offset == 0x4bb83 && gx_imgb3->size == 441);
     assert(eon::to_hex(eon::sha256(gx_lib.read(*gx_imgb3)))
         == "333c18a883b85c9cefe1072cd44b0a6bc51375ec5f63b87f42106e25dfb6f907");
+    const auto last_bytes = eon::extract_asset_by_sha256(english_dos->path,
+        "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510");
+    assert(last_bytes && last_bytes->size() == 18'117);
+    const auto last_screen = eon::parse_millennium_dos_last_screen(*last_bytes);
+    assert(last_screen.bitmap.width == 318 && last_screen.bitmap.height == 197);
+    assert(last_screen.bitmap.max_palette_index == 15);
+    assert(last_screen.palette.logical_to_dac.size() == 16);
+    assert(last_screen.rgba.size() == 318U * 197U * 4U);
+    assert(eon::to_hex(eon::sha256(last_screen.bitmap.pixels))
+        == "b13d52cab4ee715be28bca56997157fa102eaf86f53b0771c6b072dc0b701136");
+    assert(eon::to_hex(eon::sha256(last_screen.rgba))
+        == "1e3183b45e50f2c186ab7cf6a7f820f0481c8103150777973d107375b50b0e99");
 
     const auto spanish = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium
@@ -560,6 +573,9 @@ int main() {
     assert(title_stage.timer_counter_address == 0x40410);
     assert(title_stage.timer_threshold == 0xea60);
     assert(title_stage.timer_dispatch_address == 0x4069a);
+    assert(title_stage.timer_dispatch_inhibit_address == 0x22d34);
+    assert(title_stage.timer_dispatch_inhibit_value == 0x11);
+    assert(title_stage.timer_counter_reset_address == 0x40410);
     assert(title_stage.transition_active_flag_address == 0x202c6);
     assert(title_stage.transition_saved_display_word_address == 0x202b8);
     assert(title_stage.transition_source_palette_address == 0x1ed24);
