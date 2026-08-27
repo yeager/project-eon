@@ -40,6 +40,13 @@ struct DeuterosAmigaChannelCommand {
     std::uint8_t encoded_size = 0;
 };
 
+struct DeuterosAmigaIndexedBlob {
+    std::uint32_t table_relative_offset = 0;
+    std::uint32_t data_relative_offset = 0;
+    std::uint32_t data_size = 0;
+    std::vector<std::uint32_t> record_offsets;
+};
+
 // Parse the in-memory pointer catalogue used by the original 68000 program.
 // Offsets remain relative to the bundle, just as they are stored on disk.
 [[nodiscard]] DeuterosAmigaBundle parse_deuteros_amiga_bundle(
@@ -58,5 +65,10 @@ struct DeuterosAmigaChannelCommand {
 [[nodiscard]] DeuterosAmigaChannelCommand decode_deuteros_amiga_channel_command(
     const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
     std::uint32_t stream_relative_offset);
+
+// Auxiliary slots 4 and 5 delimit a big-endian offset table and its indexed
+// payload. Its content semantics are deliberately left unnamed until proven.
+[[nodiscard]] DeuterosAmigaIndexedBlob parse_deuteros_amiga_indexed_blob(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle);
 
 } // namespace eon

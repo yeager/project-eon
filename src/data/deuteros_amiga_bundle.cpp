@@ -136,4 +136,38 @@ DeuterosAmigaChannelCommand decode_deuteros_amiga_channel_command(
     return command;
 }
 
+DeuterosAmigaIndexedBlob parse_deuteros_amiga_indexed_blob(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle) {
+    const auto table_offset = bundle.auxiliary_offsets[4];
+    const auto data_offset = bundle.auxiliary_offsets[5];
+    if (table_offset == 0 || data_offset <= table_offset || data_offset >= bundle.length
+        || (data_offset - table_offset) % 4 != 0) {
+        throw std::runtime_error("Invalid Deuteros indexed blob layout");
+    }
+    const auto slot_count = (data_offset - table_offset) / 4;
+    const auto encoded = disk.bytes(bundle.disk_offset + table_offset,
+        static_cast<std::size_t>(slot_count) * 4);
+    DeuterosAmigaIndexedBlob result{table_offset, data_offset,
+        bundle.length - data_offset, {}};
+    result.record_offsets.reserve(slot_count);
+    bool reached_unused_slots = false;
+    for (std::size_t slot = 0; slot < slot_count; ++slot) {
+        const auto offset = big32(encoded, slot * 4);
+        // Offset zero is the genuine first record. A later zero begins the
+        // unused tail, which must remain zero-filled.
+        if (slot != 0 && offset == 0) reached_unused_slots = true;
+        if (reached_unused_slots) {
+            if (offset != 0) throw std::runtime_error("Sparse Deuteros indexed blob table");
+            continue;
+        }
+        if (offset >= result.data_size) throw std::runtime_error("Deuteros indexed record outside blob");
+        if (!result.record_offsets.empty() && offset <= result.record_offsets.back()) {
+            throw std::runtime_error("Unordered Deuteros indexed blob table");
+        }
+        result.record_offsets.push_back(offset);
+    }
+    if (result.record_offsets.empty()) throw std::runtime_error("Empty Deuteros indexed blob table");
+    return result;
+}
+
 } // namespace eon

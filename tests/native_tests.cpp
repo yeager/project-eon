@@ -164,6 +164,14 @@ int main() {
     assert(palette_command.operand_count == 1);
     assert(palette_command.operands[0] == 1);
     assert(palette_command.encoded_size == 4);
+    const auto first_indexed_blob = eon::parse_deuteros_amiga_indexed_blob(system_disk, first_bundle);
+    assert(first_indexed_blob.table_relative_offset == 0x122de);
+    assert(first_indexed_blob.data_relative_offset == 0x1255e);
+    assert(first_indexed_blob.data_size == 0x1ce96);
+    assert(first_indexed_blob.record_offsets.size() == 143);
+    assert(first_indexed_blob.record_offsets.front() == 0);
+    assert(first_indexed_blob.record_offsets[1] == 0x994);
+    assert(first_indexed_blob.record_offsets.back() == 0x1ce8e);
 
     const auto second_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[1]);
@@ -185,5 +193,13 @@ int main() {
         system_disk, second_bundle, second_channels[0].stream_relative_offset);
     assert(second_command.opcode == 4);
     assert(second_command.operands[0] == 0x10);
+    const auto second_indexed_blob = eon::parse_deuteros_amiga_indexed_blob(system_disk, second_bundle);
+    assert(second_indexed_blob.table_relative_offset == 0x15a92);
+    assert(second_indexed_blob.data_relative_offset == 0x15c92);
+    assert(second_indexed_blob.data_size == 0xb95e);
+    assert(second_indexed_blob.record_offsets.size() == 75);
+    assert(second_indexed_blob.record_offsets.front() == 0);
+    assert(second_indexed_blob.record_offsets[1] == 0xf2e);
+    assert(second_indexed_blob.record_offsets.back() == 0xb956);
     return 0;
 }
