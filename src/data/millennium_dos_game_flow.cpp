@@ -24,6 +24,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     // zero-based eight-byte dispatch-table index passed to 0x76f0.
     constexpr std::size_t load_bias = 0x100;
     constexpr std::size_t entry_offset = 0xd2b0 - load_bias;
+    constexpr std::size_t startup_offset = 0xd2b4 - load_bias;
     constexpr std::size_t loop_offset = 0xd3d2 - load_bias;
     constexpr std::size_t f1_table_offset = 0x2fbf - load_bias;
     constexpr std::size_t f1_handler_offset = 0x6f9a - load_bias;
@@ -58,6 +59,20 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::array<std::uint8_t, 15> entry{
         0x0e, 0x1f, 0x0e, 0x07, 0x8c, 0xc8, 0x8e, 0xd0,
         0xb8, 0x00, 0xda, 0x89, 0xc4, 0xb8, 0x1f};
+    // The post-entry block establishes SS=CS and SP=$da00, invokes the
+    // original $10124 routine, then routes an AL==1 result to $d1a1 and all
+    // other results to $d1b5.  A later DX test has a static nonzero edge to
+    // $d44b.  This records raw reachability boundaries only: every call
+    // between these instructions remains native and unexecuted.
+    constexpr auto startup = std::to_array<std::uint8_t>({
+        0x8c, 0xc8, 0x8e, 0xd0, 0xb8, 0x00, 0xda, 0x89, 0xc4,
+        0xb8, 0x1f, 0x00, 0x0e, 0x07, 0xbb, 0x9e, 0xd1, 0xe8,
+        0x5c, 0x2e, 0x2e, 0xa3, 0x28, 0xd1, 0x88, 0xe0, 0x2e, 0xa2,
+        0x68, 0x43, 0xa2, 0x05, 0xda, 0x89, 0x26, 0x2c, 0xd1,
+        0x3c, 0x01, 0x75, 0x05, 0xe8, 0xc1, 0xfe, 0xeb, 0x03,
+        0xe8, 0xd0, 0xfe, 0x52, 0x0e, 0x1f, 0xe8, 0x0f, 0xff,
+        0xa3, 0x28, 0xd1, 0x23, 0xd2, 0x74, 0x03, 0xe9, 0x56,
+        0x01});
     constexpr auto loop = std::to_array<std::uint8_t>({
         0xe8, 0xe6, 0x3a, 0xe8, 0x29, 0xa2, 0xe8, 0xf0, 0xa7,
         0xe8, 0x27, 0x3b, 0x22, 0xc0, 0x74, 0xf0, 0x32, 0xe4,
@@ -270,8 +285,13 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x41, 0xda, 0x22, 0xc0, 0x75, 0x0d, 0xe8, 0x1d,
         0x96, 0x74, 0xed, 0xd0, 0xeb, 0x72, 0xe9, 0xe8,
         0x2b, 0xcd, 0xc3});
-    if (!has_bytes(game_executable, entry_offset, entry)
-        || !has_bytes(game_executable, loop_offset, loop)
+    if (!has_bytes(game_executable, entry_offset, entry)) {
+        throw std::runtime_error("Unsupported Millennium DOS COM entry");
+    }
+    if (!has_bytes(game_executable, startup_offset, startup)) {
+        throw std::runtime_error("Unsupported Millennium DOS startup profile");
+    }
+    if (!has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
         || !has_bytes(game_executable, f1_handler_offset, f1_handler)
         || !has_bytes(game_executable, f1_setup_offset, f1_setup)
@@ -310,6 +330,14 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     }
     return {
         .entry_address = 0xd2b0,
+        .startup_address = 0xd2b4,
+        .startup_stack_pointer = 0xda00,
+        .startup_first_call_address = 0x10124,
+        .startup_mode_byte_address = 0xda05,
+        .startup_mode_equal_value = 1,
+        .startup_equal_call_address = 0xd1a1,
+        .startup_other_call_address = 0xd1b5,
+        .startup_nonzero_dx_branch_address = 0xd44b,
         .main_loop_address = 0xd3d2,
         .action_poll_address = 0x10f05,
         .special_action_0 = 0x0b,
