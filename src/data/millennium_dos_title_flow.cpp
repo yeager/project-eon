@@ -112,6 +112,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0xb8, 0x00, 0x3d, 0xcd, 0x21, 0x73, 0x0c, 0x0e,
         0x1f, 0x8b, 0x16, 0xd5, 0x05, 0xb4, 0x09, 0xcd,
         0x21, 0xeb, 0x87};
+    constexpr std::array<std::uint8_t, 14> launcher_pre_title_callee_jnc_target_prefix{
+        0x50, 0x93, 0x33, 0xd2, 0x33, 0xc9, 0xb8, 0x02,
+        0x42, 0xcd, 0x21, 0x72, 0xe7, 0x50};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
@@ -149,6 +152,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
                    launcher_pre_title_callee_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS launcher pre-title callee prefix");
     }
+    constexpr std::size_t pre_title_callee_jnc_target = 0x2e2;
+    if (!has_bytes(mill_launcher, pre_title_callee_jnc_target - mill_load_bias,
+                   launcher_pre_title_callee_jnc_target_prefix)) {
+        throw std::runtime_error("Unsupported Millennium DOS launcher JNC-target prefix");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -181,6 +189,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_pre_title_callee_branch_target = 0x2e2,
         .launcher_pre_title_callee_fallthrough_jump_address = 0x2e0,
         .launcher_pre_title_callee_fallthrough_jump_target = 0x269,
+        .launcher_pre_title_callee_jnc_target_branch_address = 0x2ed,
+        .launcher_pre_title_callee_jnc_target_branch_target = 0x2d6,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",
