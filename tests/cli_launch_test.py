@@ -98,6 +98,17 @@ def main() -> int:
             if f" / {label} / " in line), None)
         if platform is None:
             raise SystemExit(f"Could not parse inspected platform for {archive}:\n{line}")
+        if game == "deuteros" and platform == "atari-st":
+            expected_state1 = (
+                "Static state-1 raw-load plan: Disk 1 +0x55800 +0x5e400 "
+                "-> RAM 0xb000 in 84 original reads; SHA-256 "
+                "0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47"
+            )
+            if expected_state1 not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Atari ST state-1 raw-load plan did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         archive_starts.append((
             f"archive/{game}/{platform}/{archive.name}",
             (str(executable), "--data", str(archive), "--game", game,

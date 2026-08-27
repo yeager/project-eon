@@ -534,8 +534,10 @@ the track-2 bytes to `$1e00` and enters `$1ec4`; no loader-return continuation
 selecting the duplicate has been recovered. The remaining state-0 chunks stay
 unclassified raw data.
 
-The statically calculable state-1 reader span (`$4c * $1200 = $55800` bytes
-from Disk 1) has SHA-256
+`build_deuteros_atari_state1_raw_load_plan` records the second vector's
+equally static read as 84 original requests: 83 complete nine-sector side
+spans followed by one seven-sector span. It starts at Disk 1 `+$55800`, loads
+`$5e400` bytes to `$b000`, and has SHA-256
 `0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47`.
 It has no unique GEM, DEGAS, or other image-resource header paired with a
 proved consumer, dimensions, and palette. Header-like words inside this raw

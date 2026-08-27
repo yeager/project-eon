@@ -83,11 +83,16 @@ Translator Translator::from_po_file(const std::filesystem::path& path) {
         } else if (line.starts_with("#, fuzzy")) {
             fuzzy = true;
         } else if (line.starts_with("msgid ")) {
-            store_entry(translator.messages_, id, translation, fuzzy);
+            // A fuzzy marker precedes the msgid it applies to. Only clear a
+            // completed prior entry here; clearing unconditionally would
+            // silently accept the following fuzzy translation.
+            if (!id.empty()) {
+                store_entry(translator.messages_, id, translation, fuzzy);
+                fuzzy = false;
+            }
             id = unquote_po(line);
             translation.clear();
             field = Field::id;
-            fuzzy = false;
         } else if (line.starts_with("msgstr ")) {
             translation = unquote_po(line);
             field = Field::translation;
