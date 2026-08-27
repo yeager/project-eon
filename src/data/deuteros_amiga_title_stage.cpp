@@ -16,8 +16,11 @@ std::uint32_t big32(std::span<const std::uint8_t> bytes, std::size_t offset) {
 }
 
 void require_word(std::span<const std::uint8_t> bytes, std::size_t offset, std::uint16_t expected) {
-    if (big16(bytes, offset) != expected) {
-        throw std::runtime_error("Unexpected Deuteros title-stage opcode at offset " + std::to_string(offset));
+    const auto actual = big16(bytes, offset);
+    if (actual != expected) {
+        throw std::runtime_error("Unexpected Deuteros title-stage opcode at offset "
+            + std::to_string(offset) + " (expected " + std::to_string(expected)
+            + ", got " + std::to_string(actual) + ')');
     }
 }
 
@@ -153,13 +156,58 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(code, transition + 222, 0x000202b8);
     require_word(code, transition + 226, 0x4e75); // rts
 
+    // The stage continues immediately after the transition's return. Keep
+    // this as literal control-flow evidence rather than assigning title-menu
+    // or gameplay semantics to the control word or its response values.
+    constexpr std::size_t post_transition = 0x358; // $4077e - $40426
+    require_word(code, post_transition, 0x33fc); // move.w #0,$407e6
+    require_word(code, post_transition + 2, 0x0000);
+    require_long(code, post_transition + 4, 0x000407e6);
+    require_word(code, post_transition + 8, 0x4eb9); // jsr $3f7a8
+    require_long(code, post_transition + 10, 0x0003f7a8);
+    require_word(code, post_transition + 14, 0x3039); // move.w $407e6,d0
+    require_long(code, post_transition + 16, 0x000407e6);
+    require_word(code, post_transition + 20, 0x3f00); // move.w d0,-(a7)
+    require_word(code, post_transition + 22, 0x4eb9); // jsr $1f9a4
+    require_long(code, post_transition + 24, 0x0001f9a4);
+    // Preserve the opaque two-word instruction at +34 exactly; its inputs
+    // have not yet been recovered, so it is not given a guessed meaning.
+    require_word(code, post_transition + 34, 0x0000);
+    require_word(code, post_transition + 36, 0x3017);
+    require_word(code, post_transition + 38, 0x4eb9); // jsr $1fe7a
+    require_long(code, post_transition + 40, 0x0001fe7a);
+    require_word(code, post_transition + 44, 0x301f); // move.w (a7)+,d0
+    require_word(code, post_transition + 46, 0x7202); // moveq #2,d1
+    require_word(code, post_transition + 48, 0x4eb9); // jsr $3fbf8
+    require_long(code, post_transition + 50, 0x0003fbf8);
+    require_word(code, post_transition + 54, 0x4eb9); // jsr $1f238
+    require_long(code, post_transition + 56, 0x0001f238);
+    require_word(code, post_transition + 60, 0xb03c); // cmp.w #$1b,d0
+    require_word(code, post_transition + 62, 0x001b);
+    require_word(code, post_transition + 64, 0x6724); // beq.b $407e2
+    require_word(code, post_transition + 66, 0x3239); // move.w $407e6,d1
+    require_long(code, post_transition + 68, 0x000407e6);
+    require_word(code, post_transition + 72, 0xb03c); // cmp.w #$20,d0
+    require_word(code, post_transition + 74, 0x0020);
+    require_word(code, post_transition + 78, 0xb03c); // cmp.w #$2e,d0
+    require_word(code, post_transition + 80, 0x002e);
+    require_word(code, post_transition + 84, 0x0c00); // cmpi.b #$2c,d0
+    require_word(code, post_transition + 86, 0x002c);
+    require_word(code, post_transition + 90, 0x5501); // subq.b #2,d1
+    require_word(code, post_transition + 92, 0x5201); // addq.b #1,d1
+    require_word(code, post_transition + 94, 0x33c1); // move.w d1,$407e6
+    require_long(code, post_transition + 96, 0x000407e6);
+    require_word(code, post_transition + 102, 0x4e75); // rts
+
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
         0x22d34, 0x11, 0x40410,
         0x202c6, 0x202b8, 0x1ed24, 0x40678, 16, 0x0eee, 0x12fec,
         static_cast<std::int16_t>(-0xc0), static_cast<std::int16_t>(-0x1a4),
         0x12e12, 0x1ffda, 0x1ffe6, 0x2008e, 0x1ffc8, 0x1ffce, 0x1ffd4,
-        0x40776};
+        0x4077c,
+        0x407e6, 0, 0x3f7a8, 0x1f9a4, 0x1fe7a, 0x1f238,
+        0x1b, 0x20, 0x2e, 0x2c, 0x407e4};
 }
 
 } // namespace eon
