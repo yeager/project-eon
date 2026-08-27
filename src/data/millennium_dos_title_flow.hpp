@@ -19,6 +19,14 @@ struct MillenniumDosTitleFlow {
     std::uint8_t input_service = 0;
     std::uint8_t input_parameter = 0;
     std::uint8_t exit_code = 0;
+    // Loaded addresses in the flat MILL.COM image.  These identify only the
+    // observed register loads and near-call edges; they do not model EXEC or
+    // any return value from the callee.
+    std::uint16_t launcher_title_program_address = 0;
+    std::uint16_t launcher_game_program_address = 0;
+    std::uint16_t launcher_title_call_address = 0;
+    std::uint16_t launcher_game_call_address = 0;
+    std::uint16_t launcher_common_call_target = 0;
     std::size_t launcher_title_offset = 0;
     std::size_t launcher_game_offset = 0;
     std::string launcher_title_program;
