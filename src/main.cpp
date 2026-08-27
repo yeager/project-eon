@@ -16,6 +16,7 @@
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
+#include "data/millennium_dos_last_screen.hpp"
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -132,6 +133,11 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.transition_work_palette_address << ", " << std::dec
         << title_stage.transition_palette_word_count << " RGB4 words, mask 0x"
         << std::hex << title_stage.transition_palette_mask << std::dec << '\n';
+    std::cout << "          Transition gate: counter 0x" << std::hex
+        << title_stage.timer_counter_address << " >= 0x" << title_stage.timer_threshold
+        << ", skip when word 0x" << title_stage.timer_dispatch_inhibit_address
+        << " == 0x" << title_stage.timer_dispatch_inhibit_value
+        << "; return clears 0x" << title_stage.timer_counter_reset_address << std::dec << '\n';
     std::cout << "          Transition return: compares 0x" << std::hex
         << title_stage.transition_first_compare_address << ", 0x"
         << title_stage.transition_second_compare_address << ", 0x"
@@ -195,6 +201,13 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
     std::cout << "          GX.LIB IMG00 -> IMG01: " << gx_canvas.canvas.width << 'x'
         << gx_canvas.canvas.height << " original indexed canvas\n";
+    constexpr auto last_lib_sha256 =
+        "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510";
+    const auto last_bytes = eon::extract_asset_by_sha256(release.path, last_lib_sha256);
+    if (!last_bytes) throw std::runtime_error("Verified Millennium LAST.LIB missing");
+    const auto last_screen = eon::parse_millennium_dos_last_screen(*last_bytes);
+    std::cout << "          LAST.LIB last: " << last_screen.bitmap.width << 'x'
+        << last_screen.bitmap.height << " original indexed screen, RGB6 DAC entries 256\n";
     constexpr auto titles_sha256 =
         "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
     constexpr auto launcher_sha256 =

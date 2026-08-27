@@ -63,6 +63,22 @@ dumps are preferred as semantic baselines.
 
 ### Millennium Atari ST relocation evidence
 
+### Millennium DOS `LAST.LIB` screen evidence
+
+The English DOS release contains `LAST.LIB` (18,117 bytes) with one literal
+directory entry, `last`, at offset `0x6`.  The entry is a complete codec-2
+indexed bitmap: flags `0x07`, 318 × 197 pixels, palette indices 0–15, and a
+native 256-entry VGA RGB6 DAC plus its 16-entry logical-to-DAC translation.
+Project Eon decodes that resource directly from the supplied archive in memory
+and retains its original indexed pixels and palette before presenting RGBA.
+The indexed-pixel SHA-256 is
+`b13d52cab4ee715be28bca56997157fa102eaf86f53b0771c6b072dc0b701136`; the
+derived RGBA SHA-256 is
+`1e3183b45e50f2c186ab7cf6a7f820f0481c8103150777973d107375b50b0e99`.
+The name `LAST.LIB` alone is not treated as proof of a narrative or gameplay
+transition; no selection point is inferred until executable control-flow or
+an original observation supports one.
+
 The verified Equinox `MILENIUM.TOS` PRG has 227 compact GEMDOS relocation
 sites. Project Eon retains each site and the original unrelocated big-endian
 longword, without choosing a load base or producing a relocated copy. The
@@ -359,6 +375,13 @@ uses the original graphics-library base from `$12fec` for vectors `-$c0` and
 `-$1a4`; both vector calls and all operands are opcode-validated. Project Eon
 records this as a timed title display transition, not as a guessed description
 of a menu or gameplay screen.
+
+The caller's immediate control-flow conditions are also retained. It enters
+`$4069a` only when `$40410 >= $0000ea60` and word `$22d34` is not `$0011`.
+Immediately after the routine returns, it writes long zero to `$40410` before
+resuming the normal loop. This is a verified reset/gate relationship only:
+Project Eon does not assign gameplay meaning to `$22d34` or synthesize either
+state value at run time.
 
 The same `$4069a` routine has a bounded, verified return phase. It reads and
 compares words at `$1ffc8`, `$1ffce`, and `$1ffd4`; on its original branch it
