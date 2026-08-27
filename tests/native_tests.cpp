@@ -393,6 +393,15 @@ int main() {
         rejected_altered_f6_handler = true;
     }
     assert(rejected_altered_f6_handler);
+    auto altered_f7_handler = *game_executable;
+    altered_f7_handler[0x7521 - 0x100] ^= 0x01;
+    bool rejected_altered_f7_handler = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f7_handler));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f7_handler = true;
+    }
+    assert(rejected_altered_f7_handler);
     eon::MillenniumDosGameSession game_session(game_flow);
     assert(!game_session.observe_action(0));
     assert(!game_session.last_function_key_index());
@@ -421,6 +430,13 @@ int main() {
     assert(game_session.last_sixth_function_key_trace());
     assert(game_session.last_sixth_function_key_trace()->callback_word_value == 0x3207);
     assert(!game_session.last_fifth_function_key_trace());
+    assert(game_session.observe_action(0x41) == std::optional<std::size_t>{6});
+    assert(game_session.last_seventh_function_key_trace());
+    assert(game_session.last_seventh_function_key_trace()->handler_address == 0x7521);
+    assert(game_session.last_seventh_function_key_trace()->second_command_call_address == 0x0666);
+    assert(game_session.last_seventh_function_key_trace()->sixth_runtime_word_address == 0xda37);
+    assert(game_session.last_seventh_function_key_trace()->terminal_call_address == 0x4bf7);
+    assert(!game_session.last_sixth_function_key_trace());
     assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
     assert(!game_session.last_first_function_key_trace());
     assert(!game_session.observe_action(0x45));

@@ -629,6 +629,18 @@ temporary values as immutable evidence, but does not supply the guard/carry,
 invoke native code, dereference callback `$3207`, apply the writes, or alter
 original executable, archive, or save media.
 
+The seventh table record (raw F7 / `$41`) is `24 2a 09 1b 36 06 21 75`, with
+handler entry `$7521`. It returns when runtime word `$a19e` is nonzero. On its
+admitted path it loads `AL=$1d`, calls `$4d2c`, calls `$073c` with
+`AX=$0612`, then calls `$0666` with `AX=$012a`. The recovered bytes read native
+runtime words `$da17`, `$da18`, `$da27`, `$da26`, `$da35`, and `$da37`, route
+them through repeated helpers `$06dc` and `$05ce`, use helper `$077e` with
+literal `AL=$2e` and later `AL=$25`, and end with calls `$0b9d` and `$4bf7`.
+These are code-verified operands and control-flow targets, not assigned game
+semantics. Project Eon surfaces the immutable F7 gate in its SDL evidence
+panel; it never supplies the guard/runtime words, executes the helpers, or
+writes original game media or saves.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image

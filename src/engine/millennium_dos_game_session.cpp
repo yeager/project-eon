@@ -21,6 +21,7 @@ std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::u
     last_fourth_function_key_trace_.reset();
     last_fifth_function_key_trace_.reset();
     last_sixth_function_key_trace_.reset();
+    last_seventh_function_key_trace_.reset();
     if (action == flow_.special_action_0 || action == flow_.special_action_1) {
         last_special_action_ = action;
         return std::nullopt;
@@ -42,6 +43,8 @@ std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::u
         last_fifth_function_key_trace_ = flow_.fifth_function_key;
     } else if (normalized == 5) {
         last_sixth_function_key_trace_ = flow_.sixth_function_key;
+    } else if (normalized == 6) {
+        last_seventh_function_key_trace_ = flow_.seventh_function_key;
     }
     return last_function_key_index_;
 }
