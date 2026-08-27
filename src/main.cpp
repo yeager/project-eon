@@ -247,6 +247,9 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto first_stage = disk1.read_sectors(stage.first_stage_track, stage.first_stage_side,
             stage.first_stage_sector, stage.first_stage_sector_count);
         const auto profile = eon::parse_deuteros_atari_first_stage(first_stage);
+        const auto second_stage = disk1.read_sectors(profile.next_track, profile.next_side,
+            profile.next_sector, profile.next_sector_count);
+        const auto second_profile = eon::parse_deuteros_atari_second_stage(second_stage);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -260,6 +263,12 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << static_cast<unsigned>(profile.next_side) << ", sectors "
             << static_cast<unsigned>(profile.next_sector) << ".." << profile.next_sector_count
             << " -> RAM 0x" << std::hex << profile.next_destination << std::dec << '\n';
+        std::cout << "          Track-2 loader: supervisor stack 0x" << std::hex
+            << second_profile.supervisor_stack << ", application stack 0x"
+            << second_profile.application_stack << ", direct entry 0x"
+            << second_profile.direct_entry << std::dec << "; raw reader +0x"
+            << std::hex << second_profile.raw_read_routine_offset << std::dec
+            << " caps at " << second_profile.raw_read_max_sector_count << " sectors\n";
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")

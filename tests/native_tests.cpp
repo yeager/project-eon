@@ -412,6 +412,17 @@ int main() {
     assert(deuteros_first_stage_profile.next_destination == 0x70000);
     assert(deuteros_first_stage_profile.copy_destination == 0x1e00);
     assert(deuteros_first_stage_profile.copy_byte_count == 0x1200);
+    const auto deuteros_second_stage = deuteros_disk1.read_sectors(2, 0, 1, 9);
+    assert(eon::to_hex(eon::sha256(deuteros_second_stage))
+        == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
+    const auto deuteros_second_stage_profile = eon::parse_deuteros_atari_second_stage(
+        deuteros_second_stage);
+    assert(deuteros_second_stage_profile.supervisor_stack == 0x7b000);
+    assert(deuteros_second_stage_profile.application_stack == 0x2478);
+    assert(deuteros_second_stage_profile.direct_entry == 0x1ec4);
+    assert(deuteros_second_stage_profile.raw_read_routine_offset == 0x60);
+    assert(deuteros_second_stage_profile.raw_read_max_sector_count == 9);
+    assert(deuteros_second_stage_profile.side_switch_track == 0x50);
     assert(deuteros_disk2.boot_profile().boot_checksum == 0x1234);
     assert(deuteros_disk2.boot_profile().boot_branch_target == 0x22);
     assert(deuteros_disk2.boot_profile().killer_boot_signature);
