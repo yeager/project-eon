@@ -293,6 +293,14 @@ int main() {
     }}));
     assert(defjam_predicate_zero_path.unknown_call_raw_prefix_sha256
         == "bdb907adb3114dbaa58eb3bbe516ab91ffc4e1bf70e536bd47f497f49c8d5042");
+    const auto defjam_predicate_not_equal_path =
+        eon::parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
+            defjam_loader_disk, defjam_plan, defjam_predicate_zero_path);
+    assert(defjam_predicate_not_equal_path.entry_address == 0x680ca);
+    assert(defjam_predicate_not_equal_path.pushed_first_register == 0);
+    assert(defjam_predicate_not_equal_path.pushed_second_register == 2);
+    assert(defjam_predicate_not_equal_path.unknown_call_address == 0x680ce);
+    assert(defjam_predicate_not_equal_path.unknown_call_target == 0x7b90a);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words

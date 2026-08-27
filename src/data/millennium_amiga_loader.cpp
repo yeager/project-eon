@@ -611,4 +611,29 @@ parse_millennium_amiga_resident_predicate_zero_path_boundary(
     return result;
 }
 
+MillenniumAmigaResidentPredicateNotEqualPathBoundary
+parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentPredicateZeroPathBoundary& zero_path) {
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t entry = 0x680ca;
+    constexpr std::array<std::uint8_t, 10> expected{{
+        0x2f, 0x00,                         // move.l d0,-(sp)
+        0x2f, 0x02,                         // move.l d2,-(sp)
+        0x4e, 0xb9, 0x00, 0x07, 0xb9, 0x0a, // jsr $7b90a
+    }};
+    if (zero_path.selector_not_equal_target != entry || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga predicate not-equal path placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga predicate not-equal path is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga predicate not-equal path");
+    }
+    return {entry, 0, 2, entry + 4, 0x7b90a};
+}
+
 } // namespace eon
