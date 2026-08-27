@@ -20,6 +20,10 @@ if(NOT SDL3_image_FOUND)
     set(SDLIMAGE_TIF OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_WEBP OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_XCF OFF CACHE BOOL "" FORCE)
+    # CI supplies zlib as an installed dependency. The release tarball does
+    # not include SDL_image's vendored third-party source tree, so never ask
+    # CMake to use it as a fallback.
+    set(SDLIMAGE_VENDORED OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(SDL3_image
         URL https://github.com/libsdl-org/SDL_image/releases/download/release-3.4.4/SDL3_image-3.4.4.tar.gz
         URL_HASH SHA256=29751304a13d25ac513f24305fa25b06a6edd9607718c90129b8350d35fc5573
