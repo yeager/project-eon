@@ -144,6 +144,18 @@ no FAT12 pathname namespace to substitute. Project Eon reads a present entry
 only through its original cluster chain in memory, and never creates, changes,
 or falls back to a synthetic `.inf` file.
 
+The Equinox payload's first JMP is now traced through its first proven control
+block. Its absolute references establish an observed load base of `0x2a4de`,
+which resolves the target `0x2aa88` to file offset `0x5aa`. At that offset the
+original sequence first invokes `TRAP #14` with selector `0x15` and a zero
+longword argument, then `TRAP #14` with selector `0x06` and longword
+`0x2a612`. It contains literal JSR destinations `0x2b55a`, `0x2aa68`,
+`0x2aa0c`, `0x2b2be`, `0x2b448`, and `0x2aa0c`, before `PEA 0x2ab0a`, a final
+`TRAP #14` selector `0x26`, and `RTS`. Project Eon verifies this exact byte
+sequence in the original FAT chain and reports the control facts. It does not
+name or emulate trap effects, execute the JSRs, synthesize a configuration,
+or write any disk data.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

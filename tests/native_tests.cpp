@@ -879,6 +879,29 @@ int main() {
     assert(atari_config.first_word == 0x4ef9);
     assert(atari_config.first_longword_operand == 0x2aa88);
     assert(atari_config.sha256 == "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6");
+    const auto atari_config_payload = atari_disk.read(*atari_disk.find("MILL22A.inf"));
+    const auto atari_config_entry = eon::parse_millennium_atari_config_entry(atari_config_payload);
+    assert(atari_config_entry.proven_load_base == 0x2a4de);
+    assert(atari_config_entry.entry_address == 0x2aa88);
+    assert(atari_config_entry.entry_file_offset == 0x5aa);
+    assert(atari_config_entry.initial_trap_selector == 0x15);
+    assert(atari_config_entry.initial_trap_longword_argument == 0);
+    assert(atari_config_entry.palette_trap_selector == 0x06);
+    assert(atari_config_entry.palette_trap_longword_argument == 0x2a612);
+    assert((atari_config_entry.jsr_targets == std::vector<std::uint32_t>{
+        0x2b55a, 0x2aa68, 0x2aa0c, 0x2b2be, 0x2b448, 0x2aa0c}));
+    assert(atari_config_entry.final_pea_address == 0x2ab0a);
+    assert(atari_config_entry.final_trap_selector == 0x26);
+    assert(atari_config_entry.return_offset == 0x628);
+    auto invalid_atari_config_payload = atari_config_payload;
+    invalid_atari_config_payload[0x5b9] ^= 0x01;
+    bool invalid_atari_config_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_config_entry(invalid_atari_config_payload));
+    } catch (const std::runtime_error&) {
+        invalid_atari_config_rejected = true;
+    }
+    assert(invalid_atari_config_rejected);
     std::size_t millennium_st_images = 0;
     std::size_t millennium_fat12_images = 0;
     std::size_t millennium_config_files = 0;

@@ -427,6 +427,9 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
     const auto trap_entry = eon::parse_millennium_atari_trap_entry(bss_source, target);
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
+    if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
+    const auto config_entry = eon::parse_millennium_atari_config_entry(
+        disk.read(*disk.find(equinox_config.requested_filename)));
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -473,6 +476,17 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
             << equinox_config.first_longword_operand << std::dec;
     }
     std::cout << " (metadata only; never generated or written)\n";
+    std::cout << "          MILL22A.inf entry: JMP 0x" << std::hex << config_entry.entry_address
+        << " resolves from proven load base 0x" << config_entry.proven_load_base
+        << " to file +0x" << config_entry.entry_file_offset << "; TRAP #14 selectors 0x"
+        << config_entry.initial_trap_selector << " (longword 0x"
+        << config_entry.initial_trap_longword_argument << ") and 0x"
+        << config_entry.palette_trap_selector << " (longword 0x"
+        << config_entry.palette_trap_longword_argument << "); JSRs";
+    for (const auto address : config_entry.jsr_targets) std::cout << " 0x" << address;
+    std::cout << "; PEA 0x" << config_entry.final_pea_address << ", TRAP #14 selector 0x"
+        << config_entry.final_trap_selector << ", RTS +0x" << config_entry.return_offset
+        << std::dec << " (validated only; no TOS/XBIOS calls or config execution)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.
