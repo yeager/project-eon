@@ -184,6 +184,14 @@ The shared call target `0x2a51c` is now independently bounded at file
 choose a firmware implementation, invent register or RAM contents, execute
 the helper, or treat those slots as a host-side configuration model.
 
+The repeated entry-block JSR target `0x2aa0c` is a separately verified
+forwarding boundary at file `+0x52e`: `JMP 0x2a5dc`. The 12-byte destination
+at file `+0xfe` begins `0x3f01`, pushes literal selector `0x0019`, executes
+`TRAP #14` (`0x4e4e`), performs original stack cleanup `0x504f`, and returns
+with `0x4e75`. These are exact original machine-code facts only. Project Eon
+does not invoke the trap, infer a selector meaning, choose a Line-A/XBIOS or
+firmware implementation, or synthesize a result or configuration state.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

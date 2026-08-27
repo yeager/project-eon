@@ -433,4 +433,36 @@ MillenniumAtariConfigJoinJsr parse_millennium_atari_config_join_jsr(
         read_be16(payload, target_offset + 30U)};
 }
 
+MillenniumAtariConfigForwardedJsr parse_millennium_atari_config_forwarded_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
+    // Both original entry-block calls to $2aa0c arrive at JMP $2a5dc. Its
+    // 12-byte destination body ends locally; selector $19 stays an interface
+    // fact because its TRAP #14 behaviour belongs to the original platform.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t entry_address = 0x2aa0c;
+    constexpr std::size_t entry_offset = entry_address - load_base;
+    constexpr std::uint32_t forwarded_address = 0x2a5dc;
+    constexpr std::size_t forwarded_offset = forwarded_address - load_base;
+    constexpr std::array<std::uint8_t, 6> entry_bytes{0x4e, 0xf9, 0x00, 0x02, 0xa5, 0xdc};
+    constexpr std::array<std::uint8_t, 12> forwarded_bytes{
+        0x3f, 0x01, 0x3f, 0x3c, 0x00, 0x19, 0x4e, 0x4e, 0x50, 0x4f, 0x4e, 0x75,
+    };
+    const auto has_target = std::find(entry.jsr_targets.begin(), entry.jsr_targets.end(), entry_address)
+        != entry.jsr_targets.end();
+    if (entry.proven_load_base != load_base || !has_target
+        || payload.size() < entry_offset + entry_bytes.size()
+        || payload.size() < forwarded_offset + forwarded_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(entry_offset))
+        || !std::equal(forwarded_bytes.begin(), forwarded_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(forwarded_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST forwarded MILL22A.inf JSR target");
+    }
+    return {load_base, entry_address, static_cast<std::uint32_t>(entry_offset),
+        read_be16(payload, entry_offset), forwarded_address, static_cast<std::uint32_t>(forwarded_offset),
+        read_be16(payload, forwarded_offset), read_be16(payload, forwarded_offset + 4U),
+        read_be16(payload, forwarded_offset + 6U), read_be16(payload, forwarded_offset + 8U),
+        read_be16(payload, forwarded_offset + 10U)};
+}
+
 } // namespace eon

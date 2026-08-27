@@ -454,6 +454,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_join_jsr = eon::parse_millennium_atari_config_join_jsr(
         disk.read(*disk.find(equinox_config.requested_filename)), config_second_jsr);
+    const auto config_forwarded_jsr = eon::parse_millennium_atari_config_forwarded_jsr(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -536,6 +538,16 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_join_jsr.second_longword_store_address << ", RTS 0x"
         << config_join_jsr.return_opcode << std::dec
         << " (validated only; no Line-A/OS emulation or RAM-state synthesis)\n";
+    std::cout << "          MILL22A.inf forwarded JSR target: 0x" << std::hex
+        << config_forwarded_jsr.entry_address << " is file +0x"
+        << config_forwarded_jsr.entry_file_offset << "; JMP 0x"
+        << config_forwarded_jsr.forwarded_address << " (file +0x"
+        << config_forwarded_jsr.forwarded_file_offset << "), opcodes 0x"
+        << config_forwarded_jsr.initial_opcode << ", TRAP #14 selector 0x"
+        << config_forwarded_jsr.trap_selector << " via 0x" << config_forwarded_jsr.trap_opcode
+        << ", cleanup 0x" << config_forwarded_jsr.stack_cleanup_opcode << ", RTS 0x"
+        << config_forwarded_jsr.return_opcode << std::dec
+        << " (validated only; no XBIOS/firmware calls or state synthesis)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.
