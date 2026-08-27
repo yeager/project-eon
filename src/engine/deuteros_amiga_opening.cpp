@@ -1,15 +1,30 @@
 #include "engine/deuteros_amiga_opening.hpp"
 
+#include <stdexcept>
+
 namespace eon {
+namespace {
+
+DeuterosAmigaMainResourceTransfer require_opening_transfer(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan) {
+    const auto transfer = read_deuteros_amiga_main_resource(disk, plan, 0);
+    if (!transfer) {
+        throw std::runtime_error("Deuteros opening resource unexpectedly requests loader retry");
+    }
+    return *transfer;
+}
+
+} // namespace
 
 DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
     : disk_(std::move(system_adf)),
       load_plan_(parse_deuteros_amiga_load_plan(disk_)),
+      transferred_bundle_(require_opening_transfer(disk_, load_plan_)),
       bundle_(parse_deuteros_amiga_bundle(disk_, load_plan_.resource_disk_offsets[0])),
       sound_bank_(parse_deuteros_amiga_sound_bank(disk_, bundle_)),
       blob_(parse_deuteros_amiga_indexed_blob(disk_, bundle_)),
       vm_(disk_, bundle_),
-      random_(disk_, bundle_) {}
+      random_(transferred_bundle_, load_plan_.main_stage_entry) {}
 
 DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     DeuterosAmigaVmInputs inputs;

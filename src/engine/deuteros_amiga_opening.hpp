@@ -32,6 +32,7 @@ public:
 private:
     AmigaAdf disk_;
     DeuterosAmigaLoadPlan load_plan_;
+    DeuterosAmigaMainResourceTransfer transferred_bundle_;
     DeuterosAmigaBundle bundle_;
     DeuterosAmigaSoundBank sound_bank_;
     DeuterosAmigaIndexedBlob blob_;

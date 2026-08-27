@@ -1,6 +1,7 @@
 #pragma once
 
 #include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_loader.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -51,7 +52,16 @@ class DeuterosAmigaRandom {
 public:
     DeuterosAmigaRandom(const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
         std::uint16_t seed = 0, std::uint32_t vblank_counter = 0)
-        : disk_(disk), bundle_(bundle), seed_(seed), vblank_counter_(vblank_counter) {}
+        : disk_(&disk), bundle_(&bundle), seed_(seed), vblank_counter_(vblank_counter) {}
+
+    // This form binds the $2016a lookup to an already completed, verified
+    // $21932 transfer.  It is deliberately a non-owning view: the caller
+    // retains the original bytes in memory and no media is extracted or
+    // rewritten for the channel interpreter.
+    DeuterosAmigaRandom(const DeuterosAmigaMainResourceTransfer& transfer,
+        const DeuterosAmigaMainStageEntry& entry, std::uint16_t seed = 0,
+        std::uint32_t vblank_counter = 0)
+        : transfer_(&transfer), entry_(&entry), seed_(seed), vblank_counter_(vblank_counter) {}
 
     [[nodiscard]] std::uint16_t next();
     void advance_vblank() { vblank_counter_ += 4; }
@@ -59,8 +69,10 @@ public:
     [[nodiscard]] std::uint32_t vblank_counter() const { return vblank_counter_; }
 
 private:
-    const AmigaAdf& disk_;
-    const DeuterosAmigaBundle& bundle_;
+    const AmigaAdf* disk_ = nullptr;
+    const DeuterosAmigaBundle* bundle_ = nullptr;
+    const DeuterosAmigaMainResourceTransfer* transfer_ = nullptr;
+    const DeuterosAmigaMainStageEntry* entry_ = nullptr;
     std::uint16_t seed_ = 0;
     std::uint32_t vblank_counter_ = 0;
 };
