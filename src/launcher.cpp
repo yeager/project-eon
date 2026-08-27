@@ -100,6 +100,15 @@ bool release_available(
     return false;
 }
 
+std::vector<Platform> available_platforms(
+    const std::vector<ReleaseArchive>& releases, const Game game) {
+    std::vector<Platform> platforms;
+    for (const auto platform : {Platform::dos, Platform::amiga, Platform::atari_st}) {
+        if (release_available(releases, game, platform)) platforms.push_back(platform);
+    }
+    return platforms;
+}
+
 bool deuteros_amiga_opening_supported(std::optional<Platform> platform) {
     return !platform || *platform == Platform::amiga;
 }

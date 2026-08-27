@@ -32,6 +32,11 @@ struct ParseResult {
     const std::vector<ReleaseArchive>& releases,
     Game game,
     std::optional<Platform> platform);
+// Ordered, hash-verified platforms that can be selected for one game. This is
+// shared by the start menu and tests so a UI choice cannot silently fall back
+// to another release.
+[[nodiscard]] std::vector<Platform> available_platforms(
+    const std::vector<ReleaseArchive>& releases, Game game);
 
 // The recovered Deuteros SDL opening is backed only by the clean Amiga ADF.
 // An omitted platform may select that verified preview from the menu, while
