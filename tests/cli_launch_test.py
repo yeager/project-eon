@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import hashlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -68,6 +69,47 @@ def main() -> int:
             completed = subprocess.run(
                 command, env=environment, check=False, capture_output=True,
                 text=True, timeout=2,
+            )
+        except subprocess.TimeoutExpired:
+            continue
+        raise SystemExit(
+            f"{name} exited before its SDL loop (status {completed.returncode}):\n"
+            f"{completed.stderr}"
+        )
+
+    # An individual original archive is a supported --data source too.  Ask
+    # the program itself for the content-addressed identity first, then launch
+    # that exact game/platform pair from the same read-only archive path.
+    platform_names = {"DOS": "dos", "Amiga": "amiga", "Atari ST": "atari-st"}
+    archive_starts: list[tuple[str, tuple[str, ...]]] = []
+    for archive in sorted(data_directory.rglob("*.zip")):
+        inspected = subprocess.run(
+            (str(executable), "--data", str(archive), "--inspect"),
+            env=environment, check=False, capture_output=True, text=True,
+        )
+        if inspected.returncode != 0:
+            continue
+        line = next((value for value in inspected.stdout.splitlines()
+            if value.startswith("VERIFIED  ")), None)
+        if not line:
+            continue
+        game = "millennium" if "Millennium 2.2" in line else "deuteros"
+        platform = next((value for label, value in platform_names.items()
+            if f" / {label} / " in line), None)
+        if platform is None:
+            raise SystemExit(f"Could not parse inspected platform for {archive}:\n{line}")
+        archive_starts.append((
+            f"archive/{game}/{platform}/{archive.name}",
+            (str(executable), "--data", str(archive), "--game", game,
+                "--platform", platform, "--presentation", "original"),
+        ))
+    if len(archive_starts) < 5:
+        raise SystemExit("Did not find every supported original archive as a direct --data input")
+    for name, command in archive_starts:
+        try:
+            completed = subprocess.run(
+                command, env=environment, check=False, capture_output=True,
+                text=True, timeout=1,
             )
         except subprocess.TimeoutExpired:
             continue
