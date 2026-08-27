@@ -273,6 +273,26 @@ int main() {
     }}));
     assert(defjam_predicate_gate.predicate_raw_prefix_sha256
         == "a16a4738b0f577643c343b344ba8b6c19d935daf97dd2291c86ddb2b29dcd96c");
+    const auto defjam_predicate_zero_path =
+        eon::parse_millennium_amiga_resident_predicate_zero_path_boundary(
+            defjam_loader_disk, defjam_plan, defjam_predicate_gate);
+    assert(defjam_predicate_zero_path.entry_address == 0x68084);
+    assert(defjam_predicate_zero_path.selector_a1_offset == 0x12);
+    assert(defjam_predicate_zero_path.selector_compare_value == 1);
+    assert(defjam_predicate_zero_path.selector_not_equal_branch_address == 0x6808e);
+    assert(defjam_predicate_zero_path.selector_not_equal_target == 0x680ca);
+    assert(defjam_predicate_zero_path.equal_path_argument_a1_offset == 0x14);
+    assert(defjam_predicate_zero_path.unknown_call_address == 0x68096);
+    assert(defjam_predicate_zero_path.unknown_call_target == 0x7b90a);
+    assert(defjam_predicate_zero_path.unknown_call_raw_disk_offset == 0x29d0a);
+    assert((defjam_predicate_zero_path.unknown_call_raw_prefix == std::array<std::uint8_t, 32>{{
+        0x42, 0x00, 0x00, 0xc2, 0x02, 0x00, 0x42, 0x00,
+        0x42, 0x04, 0x42, 0x00, 0xc2, 0x10, 0x08, 0x42,
+        0x00, 0xc2, 0x00, 0x10, 0x82, 0x4b, 0x00, 0x00,
+        0x00, 0x50, 0x00, 0x0a, 0x78, 0x1a, 0xc0, 0x00,
+    }}));
+    assert(defjam_predicate_zero_path.unknown_call_raw_prefix_sha256
+        == "bdb907adb3114dbaa58eb3bbe516ab91ffc4e1bf70e536bd47f497f49c8d5042");
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words

@@ -559,4 +559,56 @@ parse_millennium_amiga_resident_predicate_gate(
     return result;
 }
 
+MillenniumAmigaResidentPredicateZeroPathBoundary
+parse_millennium_amiga_resident_predicate_zero_path_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentPredicateGate& gate) {
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t entry = 0x68084;
+    constexpr std::uint32_t branch_address = 0x6808e;
+    constexpr std::uint32_t branch_target = 0x680ca;
+    constexpr std::uint32_t call_address = 0x68096;
+    constexpr std::uint32_t call_target = 0x7b90a;
+    constexpr std::array<std::uint8_t, 24> bytes_expected{{
+        0x2f, 0x09,                         // move.l a1,-(sp)
+        0x34, 0x29, 0x00, 0x12,             // move.w $12(a1),d2
+        0xb4, 0x3c, 0x00, 0x01,             // cmp.w #1,d2
+        0x66, 0x3a,                         // bne.s $680ca
+        0x34, 0x29, 0x00, 0x14,             // move.w $14(a1),d2
+        0x2f, 0x02,                         // move.l d2,-(sp)
+        0x4e, 0xb9, 0x00, 0x07, 0xb9, 0x0a, // jsr $7b90a
+    }};
+    if (gate.zero_continue_address != entry || entry < plan.resident_stage.destination
+        || call_target < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga predicate zero path placement");
+    }
+    const auto entry_relative = entry - plan.resident_stage.destination;
+    const auto call_relative = call_target - plan.resident_stage.destination;
+    constexpr std::size_t prefix_size = 32;
+    if (entry_relative > plan.resident_stage.length
+        || bytes_expected.size() > plan.resident_stage.length - entry_relative
+        || call_relative > plan.resident_stage.length
+        || prefix_size > plan.resident_stage.length - call_relative) {
+        throw std::runtime_error("Millennium Amiga predicate zero path is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + entry_relative, bytes_expected.size());
+    if (!std::equal(bytes_expected.begin(), bytes_expected.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga predicate zero path");
+    }
+    const auto raw_prefix = disk.bytes(plan.resident_stage.disk_offset + call_relative, prefix_size);
+    MillenniumAmigaResidentPredicateZeroPathBoundary result;
+    result.entry_address = entry;
+    result.selector_a1_offset = 0x12;
+    result.selector_compare_value = 1;
+    result.selector_not_equal_branch_address = branch_address;
+    result.selector_not_equal_target = branch_target;
+    result.equal_path_argument_a1_offset = 0x14;
+    result.unknown_call_address = call_address;
+    result.unknown_call_target = call_target;
+    result.unknown_call_raw_disk_offset = plan.resident_stage.disk_offset + call_relative;
+    std::copy(raw_prefix.begin(), raw_prefix.end(), result.unknown_call_raw_prefix.begin());
+    result.unknown_call_raw_prefix_sha256 = to_hex(sha256(raw_prefix));
+    return result;
+}
+
 } // namespace eon
