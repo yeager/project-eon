@@ -1184,3 +1184,5 @@ accepted.
 Thus the displayed pixels remain derived from user-supplied original data and
 are not packaged in the executable or repository. Archives and ADFs are read
 in place: no game file is unpacked, copied, installed, or written by runtime.
+The runtime also does not create its default data directory; it reports a
+missing path until the user supplies original media there or passes `--data`.
