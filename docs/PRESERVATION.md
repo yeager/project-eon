@@ -484,6 +484,14 @@ their gameplay/UI semantics are not claimed. The parser reads only the
 already supplied ADF in memory, rejects mismatching bytes, and neither
 unpacks nor writes game data.
 
+The next input-originated branch is also verified at `$21982`: it reads word
+`$21704`, compares it unsigned with two, and writes one back to `$21704` when
+the value is below two. Both the less-than and equal-to-two paths enter
+`$218cc`; values greater than two instead branch to `$2181c`, the scheduler
+call already present in the loop. This is retained solely as an opcode-level
+clamp and branch map. `$21704`, `$218cc`, and `$2181c` are not assigned guessed
+mode, screen, or gameplay meanings.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an

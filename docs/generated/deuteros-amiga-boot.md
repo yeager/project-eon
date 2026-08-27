@@ -239,6 +239,13 @@ mode 6 at `(8,181)` with timer 38 on tick 4.
 00021924  nop
 00021926  move.w     d0, $21704.l
 0002192c  move.w     d0, $21706.l
+00021982  move.w     $21704.l, d0
+00021988  cmp.w      #$2, d0
+0002198c  bcc.b      $2199a
+0002198e  move.w     #$1, $21704.l
+00021996  bra.w      $218cc
+0002199a  beq.w      $218cc
+0002199e  bra.w      $2181c
 ```
 
 ## Verified opening input handoff
