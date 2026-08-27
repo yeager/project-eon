@@ -442,6 +442,12 @@ are opcode-validated control-flow, call, and timing facts from the raw title
 stage; Project Eon does not name the state bytes, service, or output, and does
 not synthesize their unknown data.
 
+The non-suppressed call's ABI boundary is now bounded too: it pushes A0 and A1
+after saving D0/D5, calls `$3fbf8`, then pops A1/A0 before the delay. Both the
+suppressed and service paths converge on `move.l (a7)+,D5`, `move.l
+(a7)+,D0`, `RTS` at `$1fc20`. Thus this routine returns its incoming D0/D5;
+the service's internal output and purpose remain intentionally unknown.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an

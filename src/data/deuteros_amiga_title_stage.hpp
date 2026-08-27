@@ -107,6 +107,13 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint16_t post_transition_dispatch_negative_service_d1 = 0;
     std::uint16_t post_transition_dispatch_negative_suppress_value = 0;
     std::uint32_t post_transition_dispatch_negative_delay = 0;
+    // The non-suppressed service call additionally saves A0/A1 around the
+    // call. Both paths then restore the earlier D5/D0 saves and return from
+    // this title-stage routine; this records instruction-level preservation,
+    // not a claim about the service's output.
+    bool post_transition_dispatch_negative_service_preserves_a0_a1 = false;
+    bool post_transition_dispatch_negative_restores_d5_then_d0 = false;
+    std::uint32_t post_transition_dispatch_negative_return_address = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
