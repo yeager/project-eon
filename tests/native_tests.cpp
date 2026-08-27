@@ -822,6 +822,24 @@ int main() {
     assert(atari_bss_source.original_data_bytes == 0xbc);
     assert(atari_bss_source.bss_zero_bytes == 0x146);
     assert(atari_bss_source.bytes.size() == 0x202);
+    const auto atari_target = eon::materialize_millennium_atari_target(
+        atari_bss_source, atari_bss_entry);
+    assert(atari_target.source_address == 0x1d652);
+    assert(atari_target.target_address == 0x77000);
+    assert(atari_target.first_opcode == 0x3f3c);
+    assert(atari_target.first_immediate_word == 0x0002);
+    assert(atari_target.first_immediate_longword == 0x1d6e4);
+    assert(atari_target.bytes == atari_bss_source.bytes);
+    auto invalid_atari_target_source = atari_bss_source;
+    invalid_atari_target_source.bytes.front() ^= 0x01;
+    bool invalid_atari_target_rejected = false;
+    try {
+        static_cast<void>(eon::materialize_millennium_atari_target(
+            invalid_atari_target_source, atari_bss_entry));
+    } catch (const std::runtime_error&) {
+        invalid_atari_target_rejected = true;
+    }
+    assert(invalid_atari_target_rejected);
     const auto atari_executable_bytes = atari_disk.read(*atari_executable);
     assert(std::equal(atari_bss_source.bytes.begin(), atari_bss_source.bytes.begin() + 0xbc,
         atari_executable_bytes.begin() + 28 + 0x117a));

@@ -199,4 +199,30 @@ MillenniumAtariBssSource materialize_millennium_atari_bss_source(
     return result;
 }
 
+MillenniumAtariMaterializedTarget materialize_millennium_atari_target(
+    const MillenniumAtariBssSource& source, const MillenniumAtariBssEntry& entry) {
+    // MOVE.W #$2,-(A7); MOVE.L #$1d6e4,-(A7); MOVE.W #$3d,-(A7).
+    // The following original TRAP #1 is evidence only and is never invoked.
+    constexpr std::array<std::uint8_t, 14> target_prefix{
+        0x3f, 0x3c, 0x00, 0x02, 0x2f, 0x3c, 0x00, 0x01, 0xd6, 0xe4,
+        0x3f, 0x3c, 0x00, 0x3d,
+    };
+    const auto expected_bytes = static_cast<std::uint64_t>(entry.copied_words) * 2U;
+    if (source.source_address != entry.copy_source_address
+        || entry.copy_destination_address != entry.jump_address
+        || expected_bytes != source.bytes.size()
+        || source.bytes.size() < target_prefix.size()
+        || !std::equal(target_prefix.begin(), target_prefix.end(), source.bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Atari ST materialized target");
+    }
+    MillenniumAtariMaterializedTarget result;
+    result.source_address = source.source_address;
+    result.target_address = entry.copy_destination_address;
+    result.first_opcode = read_be16(source.bytes, 0);
+    result.first_immediate_word = read_be16(source.bytes, 2);
+    result.first_immediate_longword = read_be32(source.bytes, 6);
+    result.bytes = source.bytes;
+    return result;
+}
+
 } // namespace eon

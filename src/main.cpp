@@ -414,6 +414,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto bss_entry = eon::parse_millennium_atari_bss_entry(executable_bytes, prg, bootstrap);
     const auto bss_source = eon::materialize_millennium_atari_bss_source(
         executable_bytes, prg, bootstrap, bss_entry);
+    const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -436,7 +437,11 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << "          BSS source: PRG load base 0x" << std::hex << bss_source.load_base
         << "; " << std::dec << bss_source.original_data_bytes << " original DATA bytes at 0x"
         << std::hex << bss_source.source_data_offset << " plus " << std::dec
-        << bss_source.bss_zero_bytes << " loader-zeroed BSS bytes (in-memory only)\n";
+        << bss_source.bss_zero_bytes << " loader-zeroed BSS bytes (in-memory only)\n"
+        << "          target 0x" << std::hex << target.target_address << ": opcode 0x"
+        << target.first_opcode << " immediate word 0x" << target.first_immediate_word
+        << ", immediate longword 0x" << target.first_immediate_longword << std::dec
+        << " (validated original target; not executed)\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
