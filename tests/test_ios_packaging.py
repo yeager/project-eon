@@ -7,10 +7,19 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "packaging" / "ios" / "package-ipa.sh"
+WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 
 @unittest.skipUnless(shutil.which("bash") and shutil.which("unzip"), "requires bash and unzip")
 class IosPackagingTests(unittest.TestCase):
+    def test_ci_cross_compiles_png_dependencies_for_ios(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("package-ipados:", workflow)
+        self.assertIn("-DCMAKE_SYSTEM_NAME=iOS", workflow)
+        self.assertIn("github.com/madler/zlib.git", workflow)
+        self.assertIn("github.com/pnggroup/libpng.git", workflow)
+        self.assertIn("-DZLIB_ROOT=\"$IOS_PREFIX\"", workflow)
+
     def test_creates_payload_with_relative_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
