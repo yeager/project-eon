@@ -831,6 +831,18 @@ int main() {
     assert(atari_target.first_immediate_word == 0x0002);
     assert(atari_target.first_immediate_longword == 0x1d6e4);
     assert(atari_target.bytes == atari_bss_source.bytes);
+    const auto atari_trap = eon::parse_millennium_atari_trap_entry(atari_bss_source, atari_target);
+    assert(atari_trap.target_address == 0x77000);
+    assert(atari_trap.fopen_filename_address == 0x1d6e4);
+    assert(atari_trap.fopen_filename == "MILL22A.inf");
+    assert(atari_trap.fopen_access_mode == 2);
+    assert(atari_trap.fopen_function == 0x3d);
+    assert(atari_trap.fopen_trap_offset == 14);
+    assert(atari_trap.following_fclose_function == 0x3e);
+    assert(atari_trap.following_fclose_selector_offset == 18);
+    assert(atari_trap.fopen_result_test_offset == 22);
+    assert(atari_trap.fopen_result_negative_branch_offset == 24);
+    assert(atari_trap.fopen_result_negative_branch_target_offset == 24);
     auto invalid_atari_target_source = atari_bss_source;
     invalid_atari_target_source.bytes.front() ^= 0x01;
     bool invalid_atari_target_rejected = false;
@@ -841,6 +853,16 @@ int main() {
         invalid_atari_target_rejected = true;
     }
     assert(invalid_atari_target_rejected);
+    auto invalid_atari_trap_target = atari_target;
+    invalid_atari_trap_target.bytes[24] ^= 0x01;
+    bool invalid_atari_trap_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_trap_entry(
+            atari_bss_source, invalid_atari_trap_target));
+    } catch (const std::runtime_error&) {
+        invalid_atari_trap_rejected = true;
+    }
+    assert(invalid_atari_trap_rejected);
     const auto atari_executable_bytes = atari_disk.read(*atari_executable);
     assert(std::equal(atari_bss_source.bytes.begin(), atari_bss_source.bytes.begin() + 0xbc,
         atari_executable_bytes.begin() + 28 + 0x117a));

@@ -225,4 +225,47 @@ MillenniumAtariMaterializedTarget materialize_millennium_atari_target(
     return result;
 }
 
+MillenniumAtariTrapEntry parse_millennium_atari_trap_entry(
+    const MillenniumAtariBssSource& source, const MillenniumAtariMaterializedTarget& target) {
+    // MOVE.W #2,-(A7); MOVE.L #$1d6e4,-(A7); MOVE.W #$3d,-(A7); TRAP #1;
+    // MOVE.W D0,-(A7); MOVE.W #$3e,-(A7); TST.L D0; BMI.S -2.
+    // $3d is the invoked GEMDOS Fopen selector. $3e is only prepared here;
+    // no second TRAP occurs in this proven range. The Fopen result is
+    // OS-owned, so the final BMI is retained as a branch fact only.
+    constexpr std::uint32_t filename_address = 0x1d6e4;
+    constexpr std::uint16_t fopen_mode = 2;
+    constexpr std::uint16_t fopen_function = 0x3d;
+    constexpr std::uint16_t fclose_function = 0x3e;
+    constexpr std::array<std::uint8_t, 26> entry_bytes{
+        0x3f, 0x3c, 0x00, 0x02, 0x2f, 0x3c, 0x00, 0x01, 0xd6, 0xe4,
+        0x3f, 0x3c, 0x00, 0x3d, 0x4e, 0x41, 0x3f, 0x00, 0x3f, 0x3c,
+        0x00, 0x3e, 0x4a, 0x80, 0x6b, 0xfe,
+    };
+    if (target.target_address == 0 || source.source_address > filename_address
+        || filename_address - source.source_address >= source.bytes.size()
+        || target.bytes.size() < entry_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(), target.bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Atari ST GEMDOS entry");
+    }
+    const auto filename_offset = static_cast<std::size_t>(filename_address - source.source_address);
+    const auto terminator = std::find(source.bytes.begin() + static_cast<std::ptrdiff_t>(filename_offset),
+        source.bytes.end(), static_cast<std::uint8_t>(0));
+    if (terminator == source.bytes.end() || terminator == source.bytes.begin() + static_cast<std::ptrdiff_t>(filename_offset)) {
+        throw std::runtime_error("Unterminated Millennium Atari ST GEMDOS filename");
+    }
+    MillenniumAtariTrapEntry result;
+    result.target_address = target.target_address;
+    result.fopen_filename_address = filename_address;
+    result.fopen_filename.assign(source.bytes.begin() + static_cast<std::ptrdiff_t>(filename_offset), terminator);
+    result.fopen_access_mode = fopen_mode;
+    result.fopen_function = fopen_function;
+    result.fopen_trap_offset = 14;
+    result.following_fclose_function = fclose_function;
+    result.following_fclose_selector_offset = 18;
+    result.fopen_result_test_offset = 22;
+    result.fopen_result_negative_branch_offset = 24;
+    result.fopen_result_negative_branch_target_offset = 24;
+    return result;
+}
+
 } // namespace eon

@@ -415,6 +415,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto bss_source = eon::materialize_millennium_atari_bss_source(
         executable_bytes, prg, bootstrap, bss_entry);
     const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
+    const auto trap_entry = eon::parse_millennium_atari_trap_entry(bss_source, target);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -441,7 +442,16 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << "          target 0x" << std::hex << target.target_address << ": opcode 0x"
         << target.first_opcode << " immediate word 0x" << target.first_immediate_word
         << ", immediate longword 0x" << target.first_immediate_longword << std::dec
-        << " (validated original target; not executed)\n";
+        << " (validated original target; not executed)\n"
+        << "          GEMDOS boundary: Fopen 0x" << std::hex << trap_entry.fopen_filename_address
+        << " (\"" << trap_entry.fopen_filename << "\", mode " << std::dec
+        << trap_entry.fopen_access_mode << ", function 0x" << std::hex
+        << trap_entry.fopen_function << ") via TRAP #1 +0x" << trap_entry.fopen_trap_offset
+        << "; next Fclose selector 0x" << trap_entry.following_fclose_function
+        << " is prepared at +0x" << trap_entry.following_fclose_selector_offset << std::dec
+        << "; Fopen negative D0 loops at +0x" << std::hex
+        << trap_entry.fopen_result_negative_branch_target_offset << std::dec
+        << " (reported only; no GEMDOS emulation)\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
