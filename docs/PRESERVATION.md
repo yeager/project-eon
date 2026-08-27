@@ -964,6 +964,11 @@ The `$02d4` JNC target at `$02e2` is anchored for its first 14 bytes:
 literal `JC -$19` at `$02ed` to `$02d6`. This remains raw static control/data
 evidence only; Project Eon infers no carry, interrupt, result, or DOS effect.
 
+The `$02ed` JC target at `$02d6` has its own 12-byte anchor:
+`0E 1F 8B 16 D5 05 B4 09 CD 21 EB 87`. Its sequential control byte is the
+same literal `JMP -$79` at `$02e0` to `$0269`; this is an observed byte-level
+join, not evidence about either condition, interrupt, callee result, or DOS.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.

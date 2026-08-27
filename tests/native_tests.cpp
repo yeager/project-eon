@@ -466,6 +466,8 @@ int main() {
     assert(title_flow.launcher_pre_title_callee_fallthrough_jump_target == 0x269);
     assert(title_flow.launcher_pre_title_callee_jnc_target_branch_address == 0x2ed);
     assert(title_flow.launcher_pre_title_callee_jnc_target_branch_target == 0x2d6);
+    assert(title_flow.launcher_pre_title_callee_jc_target_jump_address == 0x2e0);
+    assert(title_flow.launcher_pre_title_callee_jc_target_jump_target == 0x269);
     assert(title_flow.launcher_title_offset == 0x58f);
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");
