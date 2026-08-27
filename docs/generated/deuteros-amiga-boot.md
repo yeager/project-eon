@@ -8,6 +8,24 @@
 - Main stage load: disk `0x5800` → memory `0x20000`, length `0x4200`
 - Main entry: `0x21734` (disk `0x6f34`)
 
+## Resource catalogue
+
+The main-stage loader at memory `$21932` indexes five big-endian disk offsets
+from the table at `$21708`: `0x1b800`, `0x4ba00`, `0x37000`, `0x59600`, and
+`0x6e000`. It reads a four-byte resource length, then loads that many decoded
+bytes from the same disk offset.
+
+The first two entries are verified resource bundles. Their 60-byte headers
+contain a total length, a 16-bit object count, seven relative channel pointers,
+six relative auxiliary pointers, and a 16-bit mode flag. Project Eon checks
+that the declared bundle and every non-null pointer remain inside the original
+ADF data before exposing them to the game layer.
+
+| Offset | Length | Objects | Mode |
+| ---: | ---: | ---: | ---: |
+| `0x1b800` | `0x2f3f4` | 4 | 0 |
+| `0x4ba00` | `0x215f0` | 6 | 1 |
+
 ## Boot block
 
 ```asm

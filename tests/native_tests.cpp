@@ -2,6 +2,7 @@
 #include "launcher.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
+#include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/fat12.hpp"
 #include "data/sha256.hpp"
@@ -126,5 +127,27 @@ int main() {
     assert(load_plan.main_stage.length == 0x4200);
     assert(load_plan.main_stage.destination == 0x20000);
     assert(load_plan.main_stage.entry_address == 0x21734);
+    assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
+        0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
+
+    const auto first_bundle = eon::parse_deuteros_amiga_bundle(
+        system_disk, load_plan.resource_disk_offsets[0]);
+    assert(first_bundle.length == 0x2f3f4);
+    assert(first_bundle.object_count == 4);
+    assert((first_bundle.channel_offsets == std::array<std::uint32_t, 7>{
+        0x382, 0x3c, 0x92c, 0xa78, 0, 0, 0}));
+    assert((first_bundle.auxiliary_offsets == std::array<std::uint32_t, 6>{
+        0xa98, 0, 0xb4b, 0x121b4, 0x122de, 0x1255e}));
+    assert(first_bundle.mode_flag == 0);
+
+    const auto second_bundle = eon::parse_deuteros_amiga_bundle(
+        system_disk, load_plan.resource_disk_offsets[1]);
+    assert(second_bundle.length == 0x215f0);
+    assert(second_bundle.object_count == 6);
+    assert((second_bundle.channel_offsets == std::array<std::uint32_t, 7>{
+        0x1efa, 0x3c, 0x6a0, 0xd78, 0x153a, 0x19e4, 0}));
+    assert((second_bundle.auxiliary_offsets == std::array<std::uint32_t, 6>{
+        0x1f4c, 0x22ac, 0, 0, 0x15a92, 0x15c92}));
+    assert(second_bundle.mode_flag == 1);
     return 0;
 }
