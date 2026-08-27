@@ -251,6 +251,7 @@ int main() {
         == std::array<std::uint32_t, 2>{{0x69624, 0x69b88}}));
     assert((defjam_staging_reachability.absolute_jsr_counts == std::array<std::uint32_t, 2>{}));
     assert((defjam_staging_reachability.absolute_jmp_counts == std::array<std::uint32_t, 2>{}));
+    assert((defjam_staging_reachability.pc_relative_bsr_word_counts == std::array<std::uint32_t, 2>{}));
     assert(defjam_staging_reachability.scanned_raw_disk_offset == 0x16400);
     assert(defjam_staging_reachability.scanned_byte_count == 0x2c000);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
@@ -314,6 +315,22 @@ int main() {
         invalid_staging_reachability_rejected = true;
     }
     assert(invalid_staging_reachability_rejected);
+    auto invalid_staging_bsr_reachability_disk_bytes = *defjam_adf;
+    const std::array<std::uint8_t, 4> injected_direct_staging_bsr{{
+        0x61, 0x00, 0x16, 0x22,
+    }};
+    std::copy(injected_direct_staging_bsr.begin(), injected_direct_staging_bsr.end(),
+        invalid_staging_bsr_reachability_disk_bytes.begin() + 0x16400);
+    bool invalid_staging_bsr_reachability_rejected = false;
+    try {
+        const eon::AmigaAdf invalid_staging_bsr_reachability_disk(
+            std::move(invalid_staging_bsr_reachability_disk_bytes));
+        static_cast<void>(eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
+            invalid_staging_bsr_reachability_disk, defjam_plan, defjam_staging_callsites));
+    } catch (const std::runtime_error&) {
+        invalid_staging_bsr_reachability_rejected = true;
+    }
+    assert(invalid_staging_bsr_reachability_rejected);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);
