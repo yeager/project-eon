@@ -922,6 +922,8 @@ The `$1732` JLE target's first direct near-call is at `$173d` to `$1390`,
 anchored by its first 16 raw bytes; no call or data effect is inferred.
 The `$1390` callee is anchored through its first direct near-call at `$13bb`
 to `$013c`; this is a static address edge only.
+The `$013c` target is anchored for 16 bytes through its terminal `RET` at
+`$014b`; no operation or return effect is inferred.
 transition routine at `$1941` starts with `CX=$25` and `DX=$0170`, so the
 verified title transition contains 37 steps with that original stride.
 

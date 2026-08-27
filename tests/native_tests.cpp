@@ -448,6 +448,7 @@ int main() {
     assert(title_flow.title_selection_callee_jle_target_call_target == 0x1390);
     assert(title_flow.title_selection_nested_callee_call_address == 0x13bb);
     assert(title_flow.title_selection_nested_callee_call_target == 0x13c);
+    assert(title_flow.title_selection_nested_callee_terminal_address == 0x14b);
     assert(title_flow.title_resource_index == 0);
     assert(title_flow.intro_transition_steps == 37);
     assert(title_flow.intro_step_stride == 0x170);
