@@ -293,6 +293,17 @@ struct MillenniumAtariConfigFourthPostOuterBoundary {
     std::uint16_t trap_opcode = 0;
 };
 
+// The original bytes immediately following that first post-outer-loop trap.
+// Their control effects still depend on the native TRAP #14 return, so this is
+// intentionally a hash-addressed preservation anchor rather than an execution
+// model or a claim that the subsequent path is dynamically reachable.
+struct MillenniumAtariConfigFourthPostOuterTail {
+    std::uint32_t tail_address = 0;
+    std::uint32_t tail_file_offset = 0;
+    std::uint32_t tail_bytes = 0;
+    std::string sha256;
+};
+
 // A byte-level inventory of absolute-JSR encodings in the original config
 // payload. These remain deliberately non-reachability facts: only the six
 // entry-block callsites have a separately proven execution context.
@@ -406,6 +417,13 @@ struct MillenniumAtariConfigAbsoluteJsrInventory {
 // emulate, invoke, or infer any service effect beyond the literal arguments.
 [[nodiscard]] MillenniumAtariConfigFourthPostOuterBoundary parse_millennium_atari_config_fourth_post_outer_boundary(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostLoop& post_loop);
+
+// Hash-validates the exact native-dependent tail after the preceding TRAP #14
+// opcode. It neither emulates the trap nor interprets, runs, or exposes any
+// post-trap state transition.
+[[nodiscard]] MillenniumAtariConfigFourthPostOuterTail parse_millennium_atari_config_fourth_post_outer_tail(
+    std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigFourthPostOuterBoundary& boundary);
 
 // Finds and validates all exact 0x4eb9 absolute-JSR encodings in the verified
 // payload. It does not claim that every byte pattern is reachable code.
