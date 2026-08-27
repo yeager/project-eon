@@ -2,6 +2,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/millennium_dos_title_session.hpp"
+#include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
@@ -845,6 +846,16 @@ int main(int argc, char** argv) {
                     draw_text(renderer, 610, 270, heading.str());
                     draw_text(renderer, 610, 290,
                         "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS");
+                    if (millennium_game_session) {
+                        std::ostringstream dispatch;
+                        dispatch << "ORIGINAL ACTION LOOP: F1-F10 -> TABLE INDEX ";
+                        if (const auto index = millennium_game_session->last_function_key_index()) {
+                            dispatch << *index << " (8-BYTE RECORD; HANDLER NOT YET EMULATED)";
+                        } else {
+                            dispatch << "--  (PRESS F1-F10 TO OBSERVE DISPATCH)";
+                        }
+                        draw_text(renderer, 610, 310, dispatch.str());
+                    }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;
                         if (record_index >= save.layout().state_table.size()) break;
@@ -854,7 +865,7 @@ int main(int argc, char** argv) {
                              << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
                              << " +06=0x" << record.runtime_offset_6 << " +08=0x"
                              << record.runtime_offset_8;
-                        draw_text(renderer, 610, 316.0F + static_cast<float>(row) * 21.0F,
+                        draw_text(renderer, 610, 336.0F + static_cast<float>(row) * 21.0F,
                             line.str());
                     }
                     std::ostringstream pager;
@@ -864,6 +875,15 @@ int main(int argc, char** argv) {
                           << "  LEFT/RIGHT: TABLE PAGE";
                     draw_text(renderer, 610, 496, pager.str());
                 }
+                draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+            } else if (selected == eon::Game::millennium && request.platform
+                && *request.platform != eon::Platform::dos) {
+                draw_text(renderer, 64, 220,
+                    "VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION");
+                draw_text(renderer, 64, 244,
+                    "INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED.");
+                draw_text(renderer, 64, 268,
+                    "NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM.");
                 draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
             } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
                 const auto frame = deuteros_opening->rgba_frame();

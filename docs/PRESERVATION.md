@@ -465,6 +465,26 @@ their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 uses DOS services and loads original libraries. See the
 [DOS analysis](generated/dos-millennium.md).
 
+#### Main-loop action dispatch
+
+The supplied English `2200AD.EXE` (54,391 bytes, SHA-256
+`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`) has
+its flat-image entry at loaded `$d2b0`. After the startup calls, the verified
+loop at `$d3d2` reaches the `$10f05` action poll at `$d3db` and tests its returned `AL`: zero repeats the
+loop; `$0b` and `$0c` branch to separate native paths; otherwise it subtracts
+`$3b`, rejects values `>= $0a`, and passes a zero-based index through an
+eight-byte table at `$2fbf` to `$76f0`. This proves an actionable ten-entry
+range `$3b..$44` (the PC F1–F10 scan-code range), but does **not** prove what
+the handlers mean or how they alter state.
+
+`MillenniumDosGameFlow` validates the exact entry and loop bytes before
+exposing those values. The SDL session maps F1–F10 to those original raw
+action bytes only after the verified title hand-off and reports the selected
+table index. It does not invoke an invented handler, mutate `2200SAVE.I`, or
+claim menu/action names. The special `$0b`/`$0c` paths remain documented but
+are not host-bound until their input production and state prerequisites are
+recovered.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
