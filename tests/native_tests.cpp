@@ -283,11 +283,23 @@ int main() {
     assert(game_flow.function_key_table_address == 0x2fbf);
     assert(game_flow.function_key_table_stride == 8);
     assert(game_flow.function_key_dispatch_address == 0x76f0);
+    assert(game_flow.first_function_key.handler_address == 0x6f9a);
+    assert(game_flow.first_function_key.selector_address == 0xda1f);
+    assert(game_flow.first_function_key.selector_value == 0);
+    assert(game_flow.first_function_key.record_pointer_table_address == 0x27c4);
+    assert(game_flow.first_function_key.selected_record_address == 0x12cc);
+    assert(game_flow.first_function_key.screen_descriptor_address == 0x300f);
+    assert(game_flow.first_function_key.screen_descriptor_mode == 7);
+    assert(game_flow.first_function_key.selected_record_byte_2 == 0x11);
+    assert(game_flow.first_function_key.selected_record_byte_36 == 0);
     eon::MillenniumDosGameSession game_session(game_flow);
     assert(!game_session.observe_action(0));
     assert(!game_session.last_function_key_index());
     assert(game_session.observe_action(0x3b) == std::optional<std::size_t>{0});
+    assert(game_session.last_first_function_key_trace());
+    assert(game_session.last_first_function_key_trace()->selected_record_address == 0x12cc);
     assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
+    assert(!game_session.last_first_function_key_trace());
     assert(!game_session.observe_action(0x45));
     assert(!game_session.observe_action(0x0b));
     assert(game_session.last_special_action() == std::optional<std::uint8_t>{0x0b});
@@ -626,6 +638,13 @@ int main() {
     assert(title_stage.post_transition_second_compare_value == 0x2e);
     assert(title_stage.post_transition_third_compare_value == 0x2c);
     assert(title_stage.post_transition_return_address == 0x407e4);
+    assert(title_stage.post_transition_selector_address == 0x1fe7a);
+    assert(title_stage.post_transition_selector_input_mask == 0x0000ffff);
+    assert(title_stage.post_transition_selector_first_divisor == 0x64);
+    assert(title_stage.post_transition_selector_second_divisor == 0x0a);
+    assert(title_stage.post_transition_selector_addend == 0x30);
+    assert(title_stage.post_transition_selector_flag_address == 0x1fe54);
+    assert(title_stage.post_transition_selector_dispatch_address == 0x1fbe6);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 

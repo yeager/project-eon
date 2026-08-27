@@ -485,6 +485,18 @@ claim menu/action names. The special `$0b`/`$0c` paths remain documented but
 are not host-bound until their input production and state prerequisites are
 recovered.
 
+The first table record (raw F1 / `$3b`) is now traced further without assigning
+it a game-menu name. Its eight original bytes are
+`00 06 09 1b 30 00 9a 6f`, so its handler entry is `$6f9a`. That handler clears
+`AX`, invokes the common display selector, and enters `$771d`. The latter
+writes runtime selector `$da1f = 0`, obtains word zero from the embedded
+pointer table at `$27c4`, and therefore selects original in-image record
+`$12cc`; the observed word is indeed `$12cc`. It also installs descriptor
+`$300f` with mode byte `$07`. The selected record begins
+`03 00 11 00 00 00 00 00` (notably byte `+02 = $11` and byte `+24 = $00`).
+Project Eon exposes that trace after F1 only as immutable evidence: it neither
+names the handler nor writes any original executable, archive, or save byte.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
