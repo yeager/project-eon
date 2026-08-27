@@ -170,6 +170,15 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
             << " bytes, " << bundle.object_count << " objects, mode "
             << bundle.mode_flag << '\n';
     }
+    for (std::uint16_t index = 0; index < 2; ++index) {
+        const auto transfer = eon::read_deuteros_amiga_main_resource(disk, plan, index);
+        if (transfer) {
+            std::cout << "          Resource transfer " << index << ": ADF 0x" << std::hex
+                << transfer->source_disk_offset << " -> RAM 0x"
+                << transfer->payload_destination_address << ", 0x"
+                << transfer->payload_length << std::dec << " original bytes (in memory only)\n";
+        }
+    }
     const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);

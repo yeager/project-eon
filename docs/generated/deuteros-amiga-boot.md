@@ -21,6 +21,13 @@ resulting big-endian longword's worth of bytes into `$32a24`. Transfer helper
 `$2196e` while bit 10 of `$dff016` remains clear. These are verified machine
 data-flow facts, not a decoded resource format or a host-side unpack step.
 
+The native reader can model a successful nonzero transfer in host memory only.
+It validates the four-byte big-endian length against the physical ADF and
+retains the original bytes beginning at the same offset as the probe, alongside
+the original source and `$2ad24`/`$32a24` addresses. A zero length returns the
+loader's retry boundary rather than manufacturing an empty resource. No source
+media is written, extracted, or unpacked.
+
 The first two entries are verified resource bundles. Their 60-byte headers
 contain a total length, a 16-bit object count, seven relative channel pointers,
 six relative auxiliary pointers, and a 16-bit mode flag. Project Eon checks

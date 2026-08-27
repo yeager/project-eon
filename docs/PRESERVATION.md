@@ -532,7 +532,11 @@ at `$1600`; after the transfer it tests bit 10 at `$dff016` and retries from
 `$2196e` while clear. This is a verified original resource-to-memory effect,
 not a claim about the resource's format, any destination cell's role, or a
 request to unpack/copy media. Project Eon exposes the fixed data-flow facts,
-but does not execute the loader against host storage or synthesize its output.
+and has a read-only in-memory model for a successful nonzero pass: it retains
+the exact source table index, source ADF offset, probe/payload destinations,
+length word, and original bytes (including that length word). It rejects a
+length outside the physical ADF and returns no payload for the original zero
+retry condition. It never writes, extracts, or unpacks game data.
 
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone

@@ -357,4 +357,29 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     return {loader, main_stage, main_stage_entry, resource_offsets, title_handoff_profile, title_stage};
 }
 
+std::optional<DeuterosAmigaMainResourceTransfer>
+read_deuteros_amiga_main_resource(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index) {
+    if (resource_index >= plan.resource_disk_offsets.size()) {
+        throw std::runtime_error("Deuteros main resource index outside original table");
+    }
+    const auto source_disk_offset = plan.resource_disk_offsets[resource_index];
+    const auto probe = disk.bytes(source_disk_offset, 4);
+    const auto payload_length = big32(probe, 0);
+    if (payload_length == 0) return std::nullopt;
+
+    // $21932 restores D7 before the second call, while $20a90 receives D0
+    // unchanged. Thus the original body begins at the same raw disk offset
+    // as the four-byte probe rather than immediately after it.
+    const auto source = disk.bytes(source_disk_offset, payload_length);
+    return DeuterosAmigaMainResourceTransfer{
+        resource_index,
+        source_disk_offset,
+        plan.main_stage_entry.resource_probe_address,
+        plan.main_stage_entry.resource_payload_address,
+        payload_length,
+        std::vector<std::uint8_t>(source.begin(), source.end()),
+    };
+}
+
 } // namespace eon
