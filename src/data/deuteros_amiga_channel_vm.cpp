@@ -114,6 +114,11 @@ DeuterosAmigaVmEvents DeuterosAmigaChannelVm::tick(const DeuterosAmigaVmInputs& 
                 }
                 yielded = execute(state, events, inputs);
             }
+            // Opcode $00 (and the verified $10 tail) returns after clearing
+            // selector +6. The original program pointer remains installed
+            // until the *next* scheduler pass observes selector zero and
+            // clears it. Do not collapse that one-VBL intermediate state.
+            if (state.wait_mode == 0) break;
             // The original RTS returns to $213ac/$213dc/$21422 and branches
             // straight back to this same scheduler in the current tick.
         }

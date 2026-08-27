@@ -143,6 +143,14 @@ if(BUILD_TESTING)
         EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po"
         EON_REAL_DATA_DIR="${EON_REAL_DATA_DIR}"
     )
+    # Native tests deliberately use assert() for their byte-exact preservation
+    # contracts. Keep those assertions enabled even when the application is
+    # built as Release, where CMake otherwise defines NDEBUG globally.
+    if(MSVC)
+        target_compile_options(eon-native-tests PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(eon-native-tests PRIVATE -UNDEBUG)
+    endif()
     add_test(NAME native-data-detection COMMAND eon-native-tests)
     # Commercial game data is never available in CI.  A developer build that
     # explicitly supplies it receives a separate black-box launch test for

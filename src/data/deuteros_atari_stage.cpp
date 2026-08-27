@@ -111,7 +111,10 @@ DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
 
     return {.entry_offset = entry_offset,
         .checksum_start_offset = 6,
-        .checksum_byte_count = static_cast<std::size_t>(be32(bytes, 0xa26)) + 1U,
+        // BRA enters DBRA first, which predecrements D0=$43b before the
+        // first body iteration. The ADD.B/ROL.L body therefore runs exactly
+        // $43b times over stage +$6 through +$440 inclusive.
+        .checksum_byte_count = static_cast<std::size_t>(be32(bytes, 0xa26)),
         .checksum_seed = be32(bytes, 0xa2c),
         .checksum_expected = be32(bytes, 0xa3c),
         .next_track = static_cast<std::uint16_t>(be16(bytes, 0xa6a) & 0x00ffU),
@@ -134,7 +137,10 @@ std::uint32_t calculate_deuteros_atari_first_stage_checksum(
     }
     auto checksum = profile.checksum_seed;
     for (const auto value : bytes.subspan(profile.checksum_start_offset, profile.checksum_byte_count)) {
-        checksum += value;
+        // The original is ADD.B (A0)+,D1, not a longword add: preserve
+        // D1's upper 24 bits and deliberately discard the low-byte carry.
+        checksum = (checksum & 0xffffff00U)
+            | static_cast<std::uint32_t>((checksum + value) & 0xffU);
         checksum = (checksum << 8U) | (checksum >> 24U);
     }
     return checksum;
