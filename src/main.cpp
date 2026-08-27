@@ -952,7 +952,7 @@ int main(int argc, char** argv) {
         std::cerr << "Requested original release is not present.\n";
         return 4;
     }
-    const auto millennium_assets = load_millennium_launch_assets(releases, request.platform);
+    auto millennium_assets = load_millennium_launch_assets(releases, request.platform);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -1006,7 +1006,8 @@ int main(int argc, char** argv) {
     };
     SDL_Texture* millennium_preview_texture = nullptr;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
-    if (millennium_assets) {
+    const auto create_millennium_textures = [&] {
+        if (!millennium_assets || millennium_preview_texture || millennium_gx_canvas_texture) return;
         millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
             SDL_TEXTUREACCESS_STATIC, millennium_assets->title.width, millennium_assets->title.height);
         if (millennium_preview_texture) {
@@ -1021,7 +1022,16 @@ int main(int argc, char** argv) {
                 millennium_assets->gx_canvas.rgba_frames.front().data(),
                 millennium_assets->gx_canvas.width * 4);
         }
-    }
+    };
+    create_millennium_textures();
+    // Menu scanning is deliberately incremental.  Do not lock Millennium's
+    // verified DOS resources to the empty pre-scan release list: load them
+    // only when the scanner has actually found the selected original media.
+    const auto load_millennium_assets_if_available = [&] {
+        if (millennium_assets) return;
+        millennium_assets = load_millennium_launch_assets(releases, request.platform);
+        create_millennium_textures();
+    };
 
     Screen screen = request.game ? Screen::launching : Screen::menu;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
@@ -1033,6 +1043,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
     const auto start_millennium_title = [&] {
+        load_millennium_assets_if_available();
         if (millennium_assets) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
                 millennium_assets->title_flow);
