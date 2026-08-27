@@ -138,4 +138,76 @@ MillenniumAmigaResidentEntry parse_millennium_amiga_resident_entry(
     return {plan.resident_entry, initializer_address, 0x7b75a, 0x0100};
 }
 
+MillenniumAmigaResidentWordSplitter parse_millennium_amiga_resident_word_splitter(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    validate_range(plan.resident_stage);
+    if (plan.resident_entry != plan.resident_stage.destination) {
+        throw std::runtime_error("Millennium Amiga resident entry is outside its loaded range");
+    }
+
+    // The preceding gate is 22 bytes. This routine deliberately has no
+    // inferred call edge from that gate: it is merely the next complete raw
+    // subroutine, profiled because all of its bytes and RAM operands are
+    // directly present in the resident disk range.
+    constexpr std::size_t routine_offset = 0x16;
+    constexpr std::array<std::uint8_t, 16> prefix{{
+        0x20, 0x49,                         // movea.l a1,a0
+        0xd0, 0xfc, 0x00, 0x36,             // adda.w #$36,a0
+        0x30, 0x18,                         // move.w (a0)+,d0
+        0x42, 0x03,                         // clr.b d3
+        0xe3, 0x48,                         // lsl.w #1,d0
+        0xe3, 0x13,                         // roxl.b #1,d3
+        0xe2, 0x48,                         // lsr.w #1,d0
+    }};
+    constexpr std::array<std::uint8_t, 10> next_word{{
+        0x30, 0x18, 0x42, 0x03, 0xe3, 0x48, 0xe3, 0x13, 0xe2, 0x48,
+    }};
+    constexpr std::array<std::uint32_t, 3> magnitude_addresses{{0x7b764, 0x7b766, 0x7b768}};
+    constexpr std::array<std::uint32_t, 3> sign_addresses{{0x7b776, 0x7b777, 0x7b778}};
+    constexpr std::array<std::uint8_t, 26> tail{{
+        0x4e, 0xb9, 0x00, 0x07, 0xba, 0x12, // jsr $7ba12
+        0x30, 0x39, 0x00, 0x07, 0xb7, 0x68, // move.w $7b768,d0
+        0x16, 0x39, 0x00, 0x07, 0xb7, 0x78, // move.b $7b778,d3
+        0x4a, 0x03, 0x67, 0x02, 0x44, 0x40, 0x4e, 0x75, // sign branch; rts
+    }};
+    constexpr std::size_t stores_size = 12;
+    constexpr std::size_t routine_length = prefix.size() + stores_size
+        + 2 * (next_word.size() + stores_size) + tail.size();
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + routine_offset, routine_length);
+    if (!std::equal(prefix.begin(), prefix.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga resident word-splitter prefix");
+    }
+
+    std::size_t offset = prefix.size();
+    for (std::size_t index = 0; index < magnitude_addresses.size(); ++index) {
+        if (index != 0) {
+            if (!std::equal(next_word.begin(), next_word.end(), bytes.begin() + offset)) {
+                throw std::runtime_error("Unexpected Millennium Amiga resident word-splitter input");
+            }
+            offset += next_word.size();
+        }
+        const std::array<std::uint8_t, 12> expected_store{{
+            0x33, 0xc0,
+            static_cast<std::uint8_t>(magnitude_addresses[index] >> 24U),
+            static_cast<std::uint8_t>(magnitude_addresses[index] >> 16U),
+            static_cast<std::uint8_t>(magnitude_addresses[index] >> 8U),
+            static_cast<std::uint8_t>(magnitude_addresses[index]),
+            0x13, 0xc3,
+            static_cast<std::uint8_t>(sign_addresses[index] >> 24U),
+            static_cast<std::uint8_t>(sign_addresses[index] >> 16U),
+            static_cast<std::uint8_t>(sign_addresses[index] >> 8U),
+            static_cast<std::uint8_t>(sign_addresses[index]),
+        }};
+        if (!std::equal(expected_store.begin(), expected_store.end(), bytes.begin() + offset)) {
+            throw std::runtime_error("Unexpected Millennium Amiga resident word-splitter store");
+        }
+        offset += expected_store.size();
+    }
+    if (!std::equal(tail.begin(), tail.end(), bytes.begin() + offset)) {
+        throw std::runtime_error("Unexpected Millennium Amiga resident word-splitter tail");
+    }
+    return {plan.resident_entry + static_cast<std::uint32_t>(routine_offset), 0x36,
+        magnitude_addresses, sign_addresses, 0x7ba12, 0x7b768, 0x7b778};
+}
+
 } // namespace eon
