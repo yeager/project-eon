@@ -189,6 +189,23 @@ struct MillenniumAtariConfigJoinJsr {
     std::uint16_t return_opcode = 0;
 };
 
+// The repeated $2aa0c JSR target is a strict original forwarding stub. Its
+// destination body exposes a trap selector and stack cleanup as byte facts;
+// neither is treated as a request to emulate XBIOS or determine its result.
+struct MillenniumAtariConfigForwardedJsr {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t entry_file_offset = 0;
+    std::uint16_t jump_opcode = 0;
+    std::uint32_t forwarded_address = 0;
+    std::uint32_t forwarded_file_offset = 0;
+    std::uint16_t initial_opcode = 0;
+    std::uint16_t trap_selector = 0;
+    std::uint16_t trap_opcode = 0;
+    std::uint16_t stack_cleanup_opcode = 0;
+    std::uint16_t return_opcode = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -257,5 +274,10 @@ struct MillenniumAtariConfigJoinJsr {
 // executes the Line-A instruction nor models the RAM slots it references.
 [[nodiscard]] MillenniumAtariConfigJoinJsr parse_millennium_atari_config_join_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigSecondJsr& second);
+
+// Validates the repeated $2aa0c forwarding target and its immediate local
+// body. It does not invoke TRAP #14 or infer any XBIOS/firmware effect.
+[[nodiscard]] MillenniumAtariConfigForwardedJsr parse_millennium_atari_config_forwarded_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
 } // namespace eon
