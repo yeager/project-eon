@@ -562,6 +562,16 @@ Eon presents these two gates and setup addresses after F3, but does not invent
 the runtime values, dereference a host-side replacement list, or assign the
 handler a game meaning.
 
+The fourth table record (raw F4 / `$3e`) is `12 18 09 1b 33 03 f9 72`, with
+handler entry `$72f9`. It first reads runtime word `$a19e`; a nonzero value
+returns immediately. Only when that word is zero does it place `$02` in `AL`
+and transfer to `$ba5e`. The recovered common bytes first load `AX=$0005` and
+call `$4d2c`, then write `$07` to `$da13`, call `$9dd5`, write `$09` to
+`$da1e`, clear `$75a9`, and return. These are code-validated addresses and
+literal writes only: the calls' effects and the runtime cells' meaning are not
+inferred. Project Eon exposes the gate and first write after F4, never supplies
+the guard, invokes native code, or mutates executable/archive/save media.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image

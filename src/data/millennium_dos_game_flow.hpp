@@ -56,6 +56,26 @@ struct MillenniumDosThirdFunctionKeyTrace {
     std::uint16_t list_address = 0;
 };
 
+// Exact, non-semantic trace of table record three (raw F4 / $3e).  The
+// handler declines to proceed while its runtime guard is nonzero; its admitted
+// path sets AL to $02 and transfers to a short common routine.  Project Eon
+// reports the code-observed writes but does not execute or emulate either
+// native call in that routine.
+struct MillenniumDosFourthFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t initialization_guard_address = 0;
+    std::uint8_t transfer_al_value = 0;
+    std::uint16_t common_routine_address = 0;
+    std::uint16_t first_call_address = 0;
+    std::uint16_t first_runtime_byte_address = 0;
+    std::uint8_t first_runtime_byte_value = 0;
+    std::uint16_t second_call_address = 0;
+    std::uint16_t second_runtime_byte_address = 0;
+    std::uint8_t second_runtime_byte_value = 0;
+    std::uint16_t third_runtime_byte_address = 0;
+    std::uint8_t third_runtime_byte_value = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -73,6 +93,7 @@ struct MillenniumDosGameFlow {
     MillenniumDosFirstFunctionKeyTrace first_function_key;
     MillenniumDosSecondFunctionKeyTrace second_function_key;
     MillenniumDosThirdFunctionKeyTrace third_function_key;
+    MillenniumDosFourthFunctionKeyTrace fourth_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(

@@ -313,6 +313,18 @@ int main() {
     assert(game_flow.third_function_key.list_mode_value == 0);
     assert(game_flow.third_function_key.source_far_pointer_address == 0x0112);
     assert(game_flow.third_function_key.list_address == 0x6e99);
+    assert(game_flow.fourth_function_key.handler_address == 0x72f9);
+    assert(game_flow.fourth_function_key.initialization_guard_address == 0xa19e);
+    assert(game_flow.fourth_function_key.transfer_al_value == 2);
+    assert(game_flow.fourth_function_key.common_routine_address == 0xba5e);
+    assert(game_flow.fourth_function_key.first_call_address == 0x4d2c);
+    assert(game_flow.fourth_function_key.first_runtime_byte_address == 0xda13);
+    assert(game_flow.fourth_function_key.first_runtime_byte_value == 7);
+    assert(game_flow.fourth_function_key.second_call_address == 0x9dd5);
+    assert(game_flow.fourth_function_key.second_runtime_byte_address == 0xda1e);
+    assert(game_flow.fourth_function_key.second_runtime_byte_value == 9);
+    assert(game_flow.fourth_function_key.third_runtime_byte_address == 0x75a9);
+    assert(game_flow.fourth_function_key.third_runtime_byte_value == 0);
     auto altered_f2_gate = *game_executable;
     altered_f2_gate[0x71ca - 0x100] ^= 0x01;
     bool rejected_altered_f2_gate = false;
@@ -331,6 +343,15 @@ int main() {
         rejected_altered_f3_gate = true;
     }
     assert(rejected_altered_f3_gate);
+    auto altered_f4_common = *game_executable;
+    altered_f4_common[0xba5e - 0x100] ^= 0x01;
+    bool rejected_altered_f4_common = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f4_common));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f4_common = true;
+    }
+    assert(rejected_altered_f4_common);
     eon::MillenniumDosGameSession game_session(game_flow);
     assert(!game_session.observe_action(0));
     assert(!game_session.last_function_key_index());
@@ -346,6 +367,11 @@ int main() {
     assert(game_session.last_third_function_key_trace());
     assert(game_session.last_third_function_key_trace()->callback_address == 0x712a);
     assert(!game_session.last_second_function_key_trace());
+    assert(game_session.observe_action(0x3e) == std::optional<std::size_t>{3});
+    assert(game_session.last_fourth_function_key_trace());
+    assert(game_session.last_fourth_function_key_trace()->common_routine_address == 0xba5e);
+    assert(game_session.last_fourth_function_key_trace()->second_runtime_byte_value == 9);
+    assert(!game_session.last_third_function_key_trace());
     assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
     assert(!game_session.last_first_function_key_trace());
     assert(!game_session.observe_action(0x45));
