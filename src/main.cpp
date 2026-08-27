@@ -67,6 +67,18 @@ int main(int argc, char** argv) {
         std::cerr << "No recognised original release archives found.\n";
         return 3;
     }
+    if (request.verify_game) {
+        bool found = false;
+        for (const auto& release : releases) {
+            if (release.game != *request.verify_game) continue;
+            found = true;
+            std::cout << "VERIFIED  " << eon::name(release.game) << " / "
+                << eon::name(release.platform) << " / " << release.language << '\n'
+                << "          " << release.sha256 << '\n'
+                << "          " << release.path << '\n';
+        }
+        return found ? 0 : 5;
+    }
     if (request.game && !eon::release_available(releases, *request.game, request.platform)) {
         std::cerr << "Requested original release is not present.\n";
         return 4;

@@ -1,0 +1,212 @@
+#include "data/zip_archive.hpp"
+
+#include "data/sha256.hpp"
+
+#include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <limits>
+#include <stdexcept>
+#include <string_view>
+#include <zlib.h>
+
+namespace eon {
+namespace {
+
+constexpr std::uint32_t local_signature = 0x04034b50;
+constexpr std::uint32_t central_signature = 0x02014b50;
+constexpr std::uint32_t end_signature = 0x06054b50;
+constexpr std::uint32_t maximum_entry_size = 256U * 1024U * 1024U;
+
+std::uint16_t little16(std::span<const std::uint8_t> bytes, std::size_t offset) {
+    if (offset > bytes.size() || bytes.size() - offset < 2) throw std::runtime_error("Truncated ZIP field");
+    return static_cast<std::uint16_t>(bytes[offset])
+        | static_cast<std::uint16_t>(static_cast<std::uint16_t>(bytes[offset + 1]) << 8U);
+}
+
+std::uint32_t little32(std::span<const std::uint8_t> bytes, std::size_t offset) {
+    if (offset > bytes.size() || bytes.size() - offset < 4) throw std::runtime_error("Truncated ZIP field");
+    return static_cast<std::uint32_t>(bytes[offset])
+        | (static_cast<std::uint32_t>(bytes[offset + 1]) << 8U)
+        | (static_cast<std::uint32_t>(bytes[offset + 2]) << 16U)
+        | (static_cast<std::uint32_t>(bytes[offset + 3]) << 24U);
+}
+
+bool ends_with_zip(std::string_view name) {
+    if (name.size() < 4) return false;
+    const auto suffix = name.substr(name.size() - 4);
+    return suffix == ".zip" || suffix == ".ZIP" || suffix == ".Zip";
+}
+
+std::string extension_of(std::string_view name) {
+    const auto separator = name.find_last_of("/\\");
+    const auto dot = name.find_last_of('.');
+    if (dot == std::string_view::npos || (separator != std::string_view::npos && dot < separator)) return {};
+    std::string extension(name.substr(dot));
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char value) {
+        return static_cast<char>(std::tolower(value));
+    });
+    return extension;
+}
+
+AssetKind classify(std::string_view path, std::span<const std::uint8_t> bytes) {
+    const auto extension = extension_of(path);
+    if (bytes.size() >= 2 && bytes[0] == 'M' && bytes[1] == 'Z') return AssetKind::dos_mz_executable;
+    if (extension == ".exe") return AssetKind::dos_flat_executable;
+    if (extension == ".com") return AssetKind::dos_com_program;
+    if (extension == ".adf") return AssetKind::amiga_adf;
+    if (extension == ".st" || extension == ".msa" || extension == ".stx") return AssetKind::atari_st_disk;
+    if (extension == ".img" && (bytes.size() == 360U * 1024U || bytes.size() == 720U * 1024U
+            || bytes.size() == 1'200U * 1024U || bytes.size() == 1'440U * 1024U)) {
+        return AssetKind::dos_floppy_image;
+    }
+    if (extension == ".voc" || extension == ".wav") return AssetKind::audio;
+    if (extension == ".bin" || extension == ".lib" || extension == ".drv") return AssetKind::game_resource;
+    return AssetKind::unknown;
+}
+
+void recurse_inventory(
+    const ZipArchive& archive,
+    const std::string& prefix,
+    unsigned depth,
+    unsigned maximum_nesting,
+    std::vector<ArchiveAsset>& output) {
+    for (const auto& entry : archive.entries()) {
+        if (entry.directory) continue;
+        auto bytes = archive.extract(entry);
+        const auto virtual_path = prefix.empty() ? entry.name : prefix + "!" + entry.name;
+        if (ends_with_zip(entry.name) && depth < maximum_nesting) {
+            recurse_inventory(ZipArchive(std::move(bytes)), virtual_path, depth + 1,
+                maximum_nesting, output);
+        } else {
+            output.push_back({virtual_path, bytes.size(), to_hex(sha256(bytes)), classify(virtual_path, bytes)});
+        }
+    }
+}
+
+} // namespace
+
+ZipArchive::ZipArchive(std::vector<std::uint8_t> bytes) : bytes_(std::move(bytes)) {
+    if (bytes_.size() < 22) throw std::runtime_error("ZIP is shorter than EOCD");
+    const auto search_start = bytes_.size() > 65'557 ? bytes_.size() - 65'557 : 0;
+    std::size_t end_offset = std::numeric_limits<std::size_t>::max();
+    for (std::size_t offset = bytes_.size() - 22;; --offset) {
+        if (little32(bytes_, offset) == end_signature) {
+            end_offset = offset;
+            break;
+        }
+        if (offset == search_start) break;
+    }
+    if (end_offset == std::numeric_limits<std::size_t>::max()) throw std::runtime_error("ZIP EOCD not found");
+    const auto entry_count = little16(bytes_, end_offset + 10);
+    const auto central_size = little32(bytes_, end_offset + 12);
+    auto offset = static_cast<std::size_t>(little32(bytes_, end_offset + 16));
+    if (offset > bytes_.size() || central_size > bytes_.size() - offset) {
+        throw std::runtime_error("ZIP central directory outside archive");
+    }
+    entries_.reserve(entry_count);
+    for (std::uint16_t index = 0; index < entry_count; ++index) {
+        if (offset > bytes_.size() || bytes_.size() - offset < 46
+            || little32(bytes_, offset) != central_signature) {
+            throw std::runtime_error("Invalid ZIP central entry");
+        }
+        const auto name_length = little16(bytes_, offset + 28);
+        const auto extra_length = little16(bytes_, offset + 30);
+        const auto comment_length = little16(bytes_, offset + 32);
+        const auto record_size = 46U + name_length + extra_length + comment_length;
+        if (record_size > bytes_.size() - offset || name_length == 0 || name_length > 4096) {
+            throw std::runtime_error("Unsafe ZIP entry metadata");
+        }
+        const auto name_begin = bytes_.begin() + static_cast<std::ptrdiff_t>(offset + 46);
+        std::string name(name_begin, name_begin + name_length);
+        ZipEntry entry{
+            std::move(name),
+            little16(bytes_, offset + 10),
+            little32(bytes_, offset + 16),
+            little32(bytes_, offset + 20),
+            little32(bytes_, offset + 24),
+            little32(bytes_, offset + 42),
+            false,
+        };
+        entry.directory = !entry.name.empty() && (entry.name.back() == '/' || entry.name.back() == '\\');
+        if (entry.compressed_size > maximum_entry_size || entry.uncompressed_size > maximum_entry_size) {
+            throw std::runtime_error("ZIP entry exceeds safety limit");
+        }
+        entries_.push_back(std::move(entry));
+        offset += record_size;
+    }
+}
+
+ZipArchive ZipArchive::open(const std::filesystem::path& path) {
+    std::ifstream stream(path, std::ios::binary | std::ios::ate);
+    if (!stream) throw std::runtime_error("Unable to open ZIP " + path.string());
+    const auto length = stream.tellg();
+    if (length < 0 || static_cast<std::uint64_t>(length) > maximum_entry_size) {
+        throw std::runtime_error("Unsafe ZIP archive size");
+    }
+    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(length));
+    stream.seekg(0);
+    if (!bytes.empty()) stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(length));
+    if (!stream && !bytes.empty()) throw std::runtime_error("Unable to read ZIP " + path.string());
+    return ZipArchive(std::move(bytes));
+}
+
+std::vector<std::uint8_t> ZipArchive::extract(const ZipEntry& entry) const {
+    const auto offset = static_cast<std::size_t>(entry.local_offset);
+    if (offset > bytes_.size() || bytes_.size() - offset < 30
+        || little32(bytes_, offset) != local_signature) {
+        throw std::runtime_error("Invalid ZIP local entry");
+    }
+    const auto name_length = little16(bytes_, offset + 26);
+    const auto extra_length = little16(bytes_, offset + 28);
+    const auto data_offset = offset + 30U + name_length + extra_length;
+    if (data_offset > bytes_.size() || entry.compressed_size > bytes_.size() - data_offset) {
+        throw std::runtime_error("ZIP payload outside archive");
+    }
+    std::vector<std::uint8_t> output(entry.uncompressed_size);
+    if (entry.method == 0) {
+        if (entry.compressed_size != entry.uncompressed_size) throw std::runtime_error("Invalid stored ZIP size");
+        std::copy_n(bytes_.begin() + static_cast<std::ptrdiff_t>(data_offset), entry.uncompressed_size, output.begin());
+    } else if (entry.method == 8) {
+        z_stream stream{};
+        std::uint8_t empty_sink = 0;
+        stream.next_in = const_cast<Bytef*>(bytes_.data() + data_offset);
+        stream.avail_in = entry.compressed_size;
+        stream.next_out = output.empty() ? &empty_sink : output.data();
+        stream.avail_out = output.empty() ? 1U : entry.uncompressed_size;
+        if (inflateInit2(&stream, -MAX_WBITS) != Z_OK) throw std::runtime_error("Unable to initialise deflate");
+        const auto result = inflate(&stream, Z_FINISH);
+        const bool valid = result == Z_STREAM_END && stream.total_out == entry.uncompressed_size;
+        inflateEnd(&stream);
+        if (!valid) throw std::runtime_error("Invalid deflate stream");
+    } else {
+        throw std::runtime_error("Unsupported ZIP compression method");
+    }
+    if (::crc32(0, output.data(), static_cast<uInt>(output.size())) != entry.crc32) {
+        throw std::runtime_error("ZIP CRC mismatch");
+    }
+    return output;
+}
+
+std::vector<ArchiveAsset> inventory_zip(const std::filesystem::path& path, unsigned maximum_nesting) {
+    std::vector<ArchiveAsset> assets;
+    recurse_inventory(ZipArchive::open(path), path.filename().string(), 0, maximum_nesting, assets);
+    return assets;
+}
+
+std::string name(AssetKind kind) {
+    switch (kind) {
+    case AssetKind::amiga_adf: return "Amiga ADF";
+    case AssetKind::atari_st_disk: return "Atari ST disk";
+    case AssetKind::dos_floppy_image: return "DOS floppy image";
+    case AssetKind::dos_flat_executable: return "DOS flat executable";
+    case AssetKind::dos_mz_executable: return "DOS MZ executable";
+    case AssetKind::dos_com_program: return "DOS COM program";
+    case AssetKind::audio: return "audio";
+    case AssetKind::game_resource: return "game resource";
+    case AssetKind::unknown: return "unknown";
+    }
+    return "unknown";
+}
+
+} // namespace eon

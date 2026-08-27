@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(SDL3 CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(SDL3_image CONFIG QUIET)
 if(NOT SDL3_image_FOUND)
     include(FetchContent)
@@ -30,11 +31,13 @@ endif()
 add_executable(project-eon
     src/main.cpp
     src/launcher.cpp
+    src/data/sha256.cpp
+    src/data/zip_archive.cpp
     src/platform/game_data.cpp
 )
 target_include_directories(project-eon PRIVATE src)
 target_compile_definitions(project-eon PRIVATE EON_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
-target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image)
+target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
 
 # Mirror OpenCaptive's development/package layout: launcher artwork is kept
 # separate from original game data and copied beside the executable.
@@ -60,9 +63,12 @@ if(BUILD_TESTING)
     add_executable(eon-native-tests
         tests/native_tests.cpp
         src/launcher.cpp
+        src/data/sha256.cpp
+        src/data/zip_archive.cpp
         src/platform/game_data.cpp
     )
     target_include_directories(eon-native-tests PRIVATE src)
+    target_link_libraries(eon-native-tests PRIVATE ZLIB::ZLIB)
     target_compile_definitions(eon-native-tests PRIVATE
         EON_REAL_DATA_DIR="${EON_REAL_DATA_DIR}"
     )

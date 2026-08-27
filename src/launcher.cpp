@@ -27,6 +27,7 @@ std::string usage() {
         "  project-eon --data <directory> --game millennium|deuteros\n"
         "               [--platform dos|amiga|atari-st]\n"
         "               [--presentation original|modern]\n\n"
+        "  project-eon --data <directory> --verify-data millennium|deuteros\n\n"
         "Without --game, the graphical start menu is shown.\n";
 }
 
@@ -42,6 +43,9 @@ ParseResult parse_command_line(int argc, char** argv) {
         } else if (argument == "--game") {
             request.game = parse_game(value);
             if (!request.game) return {{}, "Unknown game: " + std::string(value), false};
+        } else if (argument == "--verify-data") {
+            request.verify_game = parse_game(value);
+            if (!request.verify_game) return {{}, "Unknown game: " + std::string(value), false};
         } else if (argument == "--platform") {
             request.platform = parse_platform(value);
             if (!request.platform) return {{}, "Unknown platform: " + std::string(value), false};
@@ -54,6 +58,7 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
     }
     if (request.data_directory.empty()) return {{}, "--data is required", false};
+    if (request.game && request.verify_game) return {{}, "--game and --verify-data cannot be combined", false};
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
     return {request, {}, false};
 }
