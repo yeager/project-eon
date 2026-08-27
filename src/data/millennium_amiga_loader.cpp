@@ -731,4 +731,16 @@ parse_millennium_amiga_resident_independent_branch_preparation_boundary(
     return {entry, entry + 10, 0x7b26a};
 }
 
+MillenniumAmigaResidentSeparateEntryGate
+parse_millennium_amiga_resident_separate_entry_gate(const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    constexpr std::uint32_t entry = 0x68d50;
+    constexpr std::array<std::uint8_t, 12> expected{{0x10,0x39,0x00,0x07,0xc2,0x4f,0x4a,0x00,0x6a,0x00,0x00,0x06}};
+    if (entry < plan.resident_stage.destination) throw std::runtime_error("Millennium Amiga separate entry precedes raw range");
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) throw std::runtime_error("Millennium Amiga separate entry is outside raw range");
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())) throw std::runtime_error("Unexpected Millennium Amiga separate entry gate");
+    return {entry, entry + 8, entry + 12 + 6};
+}
+
 } // namespace eon

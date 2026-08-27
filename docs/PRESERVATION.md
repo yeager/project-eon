@@ -391,6 +391,10 @@ At `$68586`, a fixed local register-preparation prefix reaches unknown `JSR
 $7b26a` at `$68590`. This is a boundary only: no register values, target
 effect, or continuation is modeled.
 
+A separate resident entry at `$68d50` has its own literal load/test and
+conditional branch `$68d58 → $68d62`. This is preserved as an independent
+static gate; no cell, path, or runtime meaning is inferred.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with
