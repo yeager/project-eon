@@ -1417,6 +1417,15 @@ int main() {
     assert(deuteros_second_stage_profile.dispatch_state_address == 0x1eaa);
     assert(deuteros_second_stage_profile.dispatch_table_address == 0x1eac);
     assert(deuteros_second_stage_profile.dispatch_raw_reader_address == 0x70030);
+    const auto deuteros_dispatch = eon::parse_deuteros_atari_dispatch(deuteros_second_stage);
+    assert((deuteros_dispatch.vector_addresses
+        == std::array<std::uint32_t, 6>{{0x1f1a, 0x1f2e, 0x1f50, 0x1f1a, 0x1f1a, 0x1f52}}));
+    assert(deuteros_dispatch.state0_destination == 0x13200);
+    assert(deuteros_dispatch.state0_byte_count == 0x4800);
+    assert(deuteros_dispatch.state0_linear_sector == 4);
+    assert(deuteros_dispatch.state1_destination == 0xb000);
+    assert(deuteros_dispatch.state1_byte_count == 0x5e400);
+    assert(deuteros_dispatch.state1_linear_sector == 0x4c);
     assert(deuteros_second_stage_profile.raw_read_routine_offset == 0x60);
     assert(deuteros_second_stage_profile.raw_read_max_sector_count == 9);
     assert(deuteros_second_stage_profile.side_switch_track == 0x50);

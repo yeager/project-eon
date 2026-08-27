@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -80,6 +81,21 @@ struct DeuterosAtariSecondStageProfile {
 // Parses the raw track-2 stage loaded by the first-stage profile. It has no
 // embedded title resource: its proven direct hand-off is an absolute RAM jump.
 [[nodiscard]] DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
+    std::span<const std::uint8_t> bytes);
+
+// Static values returned by the first two table vectors. They are raw-loader
+// arguments only; their game semantics and state-selection source are unknown.
+struct DeuterosAtariDispatchProfile {
+    std::array<std::uint32_t, 6> vector_addresses{};
+    std::uint32_t state0_destination = 0;
+    std::uint32_t state0_byte_count = 0;
+    std::uint32_t state0_linear_sector = 0;
+    std::uint32_t state1_destination = 0;
+    std::uint32_t state1_byte_count = 0;
+    std::uint32_t state1_linear_sector = 0;
+};
+
+[[nodiscard]] DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     std::span<const std::uint8_t> bytes);
 
 class DeuterosAtariDisk {

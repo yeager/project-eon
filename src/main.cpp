@@ -750,6 +750,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto second_stage = disk1.read_sectors(profile.next_track, profile.next_side,
             profile.next_sector, profile.next_sector_count);
         const auto second_profile = eon::parse_deuteros_atari_second_stage(second_stage);
+        const auto dispatch = eon::parse_deuteros_atari_dispatch(second_stage);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -774,6 +775,11 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << " -> 0x" << second_profile.direct_entry << "; state 0x"
             << second_profile.dispatch_state_address << " indexes table 0x"
             << second_profile.dispatch_table_address << std::dec << '\n';
+        std::cout << "          Static dispatch vectors: 0x" << std::hex
+            << dispatch.vector_addresses[0] << ", 0x" << dispatch.vector_addresses[1]
+            << "; state 0 raw args (RAM 0x" << dispatch.state0_destination << ", 0x"
+            << dispatch.state0_byte_count << " bytes, sector 0x"
+            << dispatch.state0_linear_sector << ")" << std::dec << '\n';
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")
