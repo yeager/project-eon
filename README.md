@@ -254,9 +254,11 @@ and contribution rules live in the
 GitHub Actions builds and tests Linux, macOS, and Windows, runs the preservation
 tool tests without commercial game data, and scans the complete Git history
 with Gitleaks. CI also produces non-published test artifacts: `.deb` and
-`.rpm` packages, separate macOS arm64 and x86_64 app bundles, and a Windows
-Inno Setup installer. Packages contain Project Eon only—never original game
-media. CI has read-only repository permission and cannot release, tag, or
+`.rpm` packages, separate macOS arm64 and x86_64 app bundles, a Windows Inno
+Setup installer, and an arm64 iPadOS `.ipa`. The iPadOS artifact is unsigned
+for sideload signing with the user's own certificate and provisioning profile.
+Packages contain Project Eon only—never original game media. CI has read-only
+repository permission and cannot release, tag, or
 publish. Development pushes go directly to GitHub `main`; Project Eon does not
 create GitHub branches. Releases are made only when the maintainer explicitly
 requests one.

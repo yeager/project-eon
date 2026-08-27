@@ -266,3 +266,34 @@ jobs:
         with:
           name: windows-x64-installer
           path: installer/Project-Eon-*-windows-x64.exe
+
+  package-ipados:
+    name: iPadOS sideload IPA
+    needs: build-macos
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build arm64 SDL3 and Project Eon iPad application
+        run: |
+          brew install cmake zlib libpng
+          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          cmake -S SDL3-src -B SDL3-build -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/SDL3-install"
+          cmake --build SDL3-build --config Release --target install
+          cmake -S . -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install"
+          cmake --build build-ios --config Release --target project-eon
+      - name: Create unsigned sideload IPA without game media
+        run: |
+          APP=$(find build-ios -name 'project-eon.app' -type d -print -quit)
+          test -n "$APP"
+          bash packaging/ios/package-ipa.sh "$APP" "$GITHUB_WORKSPACE/project-eon-ipados-arm64-unsigned.ipa"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ipados-arm64-unsigned-ipa
+          path: project-eon-ipados-arm64-unsigned.ipa
