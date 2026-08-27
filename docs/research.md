@@ -95,6 +95,12 @@ operand widths for opcodes `$00` through `$14`; native parsing now rejects
 unknown and truncated commands. Higher-level names remain deliberately absent
 until their external calls and state effects have been verified.
 
+The final two auxiliary pointers bound an indexed payload: a big-endian
+longword table followed by the data it addresses. Verified bundle 0 contains
+143 used records and bundle 1 contains 75. The native parser checks the
+strictly increasing used prefix, zero-filled unused tail, and all blob ranges;
+the contents remain neutrally named pending caller-level format proof.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are

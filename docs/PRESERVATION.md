@@ -108,6 +108,14 @@ opcodes are `$13`, `$04`, `$03`, and `$03`. Bundle 1 has six channels headed
 while the remaining five start with `$05`. These values are asserted directly
 against the clean system ADF.
 
+Auxiliary pointers 4 and 5 delimit a big-endian longword index and its payload
+blob. Bundle 0 reserves 160 index slots, of which the leading 143 address
+records in a `0x1ce96`-byte blob. Bundle 1 reserves 128 slots with 75 records in
+a `0xb95e`-byte blob. In both, record 0 starts at offset zero, subsequent used
+offsets strictly increase, and the unused table tail is zero-filled. The parser
+validates these invariants but does not yet label the record contents as
+graphics until the consuming routine is fully traced.
+
 ### Millennium DOS execution model
 
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
