@@ -3,6 +3,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
+#include "data/atari_st_prg.hpp"
 #include "data/amiga_ofs.hpp"
 #include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
@@ -268,9 +269,21 @@ int main() {
     const eon::Fat12Disk atari_disk(*atari_image);
     assert(atari_disk.root_entries().size() == 13);
     const auto* atari_data = atari_disk.find("DATA12.BIN");
+    const auto* atari_executable = atari_disk.find("MILENIUM.TOS");
     assert(atari_data && atari_data->size == 932);
+    assert(atari_executable && atari_executable->size == 49'269);
     assert(eon::to_hex(eon::sha256(atari_disk.read(*atari_data)))
         == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
+    const auto atari_prg = eon::parse_atari_st_prg(atari_disk.read(*atari_executable));
+    assert(atari_prg.text_bytes == 4'446);
+    assert(atari_prg.data_bytes == 44'564);
+    assert(atari_prg.bss_bytes == 81'382);
+    assert(atari_prg.symbol_bytes == 0);
+    assert(atari_prg.flags == 0);
+    assert(atari_prg.absolute_flag == 0);
+    assert(atari_prg.relocation_count == 227);
+    assert(atari_prg.first_relocation_offset == 0x6);
+    assert(atari_prg.last_relocation_offset == 0x1150);
 
     const auto deuteros_amiga = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga;

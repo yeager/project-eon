@@ -38,6 +38,7 @@ add_executable(project-eon
     src/engine/deuteros_amiga_opening.cpp
     src/data/amiga_adf.cpp
     src/data/amiga_ofs.cpp
+    src/data/atari_st_prg.cpp
     src/data/creative_voice.cpp
     src/data/deuteros_amiga_bundle.cpp
     src/data/deuteros_amiga_channel_vm.cpp
@@ -83,6 +84,7 @@ if(BUILD_TESTING)
         src/engine/deuteros_amiga_opening.cpp
         src/data/amiga_adf.cpp
         src/data/amiga_ofs.cpp
+        src/data/atari_st_prg.cpp
         src/data/creative_voice.cpp
         src/data/deuteros_amiga_bundle.cpp
         src/data/deuteros_amiga_channel_vm.cpp

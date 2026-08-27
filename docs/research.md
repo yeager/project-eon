@@ -52,6 +52,14 @@ verified 819,200-byte Equinox image contains 13 live root entries. Its
 This proves a native outer ZIP → inner ZIP → ST disk → file path without using
 filenames as release identity.
 
+`MILENIUM.TOS` on that same SHA-identified disk is now parsed as a genuine
+GEMDOS PRG rather than treated as opaque data. Its 28-byte big-endian `0x601a`
+header declares 4,446 text bytes, 44,564 data bytes and 81,382 BSS bytes; it
+has no symbol table, is relocatable (`absflag = 0`), and its original compact
+relocation stream has 227 entries from offset `0x6` through `0x1150`. The
+parser validates every relocation increment and terminator directly from the
+disk file. It does not select an invented load address or apply relocations.
+
 ### Deuteros Amiga custom loader
 
 The clean Amiga disks are standard 80-cylinder, double-sided, 11-sector ADF

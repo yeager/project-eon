@@ -1,10 +1,12 @@
 #include "launcher.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "data/amiga_adf.hpp"
+#include "data/atari_st_prg.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
+#include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_lib.hpp"
@@ -131,6 +133,22 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
 }
 
+void report_millennium_atari_st(const eon::ReleaseArchive& release) {
+    constexpr auto equinox_disk_sha256 =
+        "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
+    const auto image = eon::extract_asset_by_sha256(release.path, equinox_disk_sha256);
+    if (!image) return;
+    const eon::Fat12Disk disk(*image);
+    const auto* executable = disk.find("MILENIUM.TOS");
+    if (!executable) throw std::runtime_error("Verified Millennium Atari ST disk has no MILENIUM.TOS");
+    const auto prg = eon::parse_atari_st_prg(disk.read(*executable));
+    std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
+        << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
+        << prg.relocation_count << " relocations (0x" << std::hex
+        << prg.first_relocation_offset << "..0x" << prg.last_relocation_offset
+        << std::dec << ")\n";
+}
+
 std::optional<PreviewAnimation> load_millennium_preview(
     const std::vector<eon::ReleaseArchive>& releases) {
     constexpr auto title_lib_sha256 =
@@ -231,6 +249,11 @@ int main(int argc, char** argv) {
                 && release.platform == eon::Platform::dos
                 && release.language == "en") {
                 report_millennium_dos(release);
+            }
+            if (release.game == eon::Game::millennium
+                && release.platform == eon::Platform::atari_st
+                && release.language == "en") {
+                report_millennium_atari_st(release);
             }
         }
         return found ? 0 : 5;
