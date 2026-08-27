@@ -631,6 +631,30 @@ MillenniumAtariConfigFourthPostOuterBoundary parse_millennium_atari_config_fourt
         read_be16(payload, boundary_offset + 10U)};
 }
 
+MillenniumAtariConfigFourthPostOuterTail parse_millennium_atari_config_fourth_post_outer_tail(
+    std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigFourthPostOuterBoundary& boundary) {
+    // This immediate 26-byte suffix is retained as an exact preservation
+    // anchor. Its first byte is reached only after a TRAP #14 returns, an
+    // effect Project Eon deliberately does not emulate or guess.
+    constexpr std::uint32_t tail_address = 0x2b48c;
+    constexpr std::size_t tail_offset = tail_address - 0x2a4de;
+    constexpr std::size_t tail_bytes = 26;
+    constexpr std::string_view expected_sha256 =
+        "34d497b9c4408944ea24d4eede21838f691c43d5a0d772db922187bed0e87fc8";
+    if (boundary.boundary_address != 0x2b480 || boundary.trap_opcode != 0x4e4e
+        || payload.size() < tail_offset + tail_bytes) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-outer-loop tail");
+    }
+    const auto bytes = payload.subspan(tail_offset, tail_bytes);
+    const auto hash = to_hex(sha256(bytes));
+    if (hash != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-outer-loop tail");
+    }
+    return {tail_address, static_cast<std::uint32_t>(tail_offset),
+        static_cast<std::uint32_t>(tail_bytes), hash};
+}
+
 MillenniumAtariConfigAbsoluteJsrInventory inventory_millennium_atari_config_absolute_jsrs(
     std::span<const std::uint8_t> payload) {
     // Preserve this whole-file byte inventory for subsequent disassembly, but

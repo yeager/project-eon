@@ -236,6 +236,14 @@ original pushes longword `0x2b428`, pushes selector `0x0006`, and reaches
 that opcode: it does not invoke or emulate the trap, infer its service, read
 the argument's data, or manufacture a return value.
 
+The 26 original bytes immediately after that opcode are separately retained as
+a hash-addressed preservation anchor: address `0x2b48c`, file `+0xfae`, SHA-256
+`34d497b9c4408944ea24d4eede21838f691c43d5a0d772db922187bed0e87fc8`.
+This does **not** establish that the suffix executes: reaching it requires a
+native `TRAP #14` return that Project Eon does not emulate. Its instruction
+semantics, loop effects, service calls, and any resulting game state remain
+unrecovered rather than inferred.
+
 For the next disassembly phase, Project Eon now keeps a fail-closed whole-file
 inventory of all 19 original `0x4eb9` absolute-JSR encodings. The first is at
 file `+0x50c` to `0x2a5aa`; the last is at `+0xdb2` to `0x2aa78`. This is
