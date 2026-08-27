@@ -271,6 +271,15 @@ struct MillenniumDosGameFlow {
     std::uint16_t startup_first_call_address = 0;
     std::uint8_t startup_first_call_interrupt = 0;
     std::uint16_t startup_first_call_return_address = 0;
+    // If the external private-interrupt wrapper returns, its caller stores
+    // AX, then AH twice, and snapshots SP before comparing AL. These are
+    // instruction-level destination facts only, not host-side state writes.
+    std::uint16_t startup_first_call_return_site = 0;
+    std::uint16_t startup_result_word_address = 0;
+    std::uint16_t startup_result_high_byte_first_address = 0;
+    std::uint16_t startup_result_high_byte_second_address = 0;
+    std::uint16_t startup_stack_snapshot_address = 0;
+    std::uint16_t startup_mode_compare_address = 0;
     std::uint16_t startup_mode_byte_address = 0;
     std::uint8_t startup_mode_equal_value = 0;
     std::uint32_t startup_equal_call_address = 0;
