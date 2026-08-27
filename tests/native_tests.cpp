@@ -189,6 +189,19 @@ int main() {
     }}));
     assert(defjam_helper_boundary.raw_prefix_sha256
         == "eb11f5c5dfda4234b0214599bffec09402deff2435c58d57db1f7ab84c07c434");
+    const auto defjam_setup_helper_boundary =
+        eon::parse_millennium_amiga_resident_setup_helper_raw_boundary(
+            defjam_loader_disk, defjam_plan);
+    assert(defjam_setup_helper_boundary.helper_address == 0x7b77e);
+    assert(defjam_setup_helper_boundary.raw_disk_offset == 0x29b7e);
+    assert((defjam_setup_helper_boundary.raw_prefix == std::array<std::uint8_t, 32>{{
+        0x04, 0x00, 0x6e, 0x00, 0xc2, 0x00, 0x04, 0x4a,
+        0x00, 0xc2, 0x40, 0x00, 0x7a, 0x00, 0xc2, 0x00,
+        0x10, 0x52, 0x00, 0xc2, 0x01, 0x00, 0x52, 0x00,
+        0xc2, 0x00, 0x01, 0x4a, 0x00, 0xc2, 0x08, 0x00,
+    }}));
+    assert(defjam_setup_helper_boundary.raw_prefix_sha256
+        == "a695fd5ead90e07075256b1347220afde1a4439dd804cf1a9d445da4411cb52a");
     const auto defjam_staging_callsites = eon::parse_millennium_amiga_resident_helper_staging_callsites(
         defjam_loader_disk, defjam_plan, defjam_splitter);
     assert(defjam_staging_callsites[0].entry_address == 0x69624);
@@ -202,6 +215,11 @@ int main() {
         assert(callsite.clear_byte_address == 0x7b14e);
         assert(callsite.helper_address == 0x7ba12);
     }
+    const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
+        {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
+    assert((staged_pre_setup.magnitude_words
+        == std::array<std::uint16_t, 3>{{0x1020, 0x3040, 0x5060}}));
+    assert((staged_pre_setup.sign_bytes == std::array<std::uint8_t, 3>{{0x01, 0x00, 0xff}}));
     // These are real, consecutive words from the supplied raw resident range.
     // They exercise the exact pre-helper LSL/ROXL/LSR data movement without
     // claiming that this disk position was an original A1 caller.

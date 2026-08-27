@@ -75,6 +75,16 @@ struct MillenniumAmigaResidentHelperRawBoundary {
     std::string raw_prefix_sha256;
 };
 
+// The staging callsites invoke a second, earlier resident target before the
+// unrecovered helper.  Like the latter target, its bytes are only a linear
+// raw-media correspondence; this record makes that distinction explicit.
+struct MillenniumAmigaResidentSetupHelperRawBoundary {
+    std::uint32_t helper_address = 0;
+    std::uint32_t raw_disk_offset = 0;
+    std::array<std::uint8_t, 32> raw_prefix{};
+    std::string raw_prefix_sha256;
+};
+
 // Two further raw-resident routines stage the helper-visible fixed RAM fields
 // before directly calling $7ba12.  Their source values remain runtime RAM and
 // the helper itself has no validated executable representation, so this is
@@ -87,6 +97,15 @@ struct MillenniumAmigaResidentHelperStagingCallsite {
     std::uint32_t setup_helper_address = 0;
     std::uint32_t clear_byte_address = 0;
     std::uint32_t helper_address = 0;
+};
+
+// The exact six source values transferred by a validated staging callsite
+// immediately before its JSR $7b77e.  This is deliberately *before* that JSR:
+// its target may alter RAM, so no state immediately before JSR $7ba12 can be
+// claimed yet.  The transform is pure in-memory copying only.
+struct MillenniumAmigaResidentHelperStagingPreSetupState {
+    std::array<std::uint16_t, 3> magnitude_words{};
+    std::array<std::uint8_t, 3> sign_bytes{};
 };
 
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
@@ -124,6 +143,12 @@ parse_millennium_amiga_resident_helper_raw_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentWordSplitter& splitter);
 
+// Locates and fingerprints the raw media bytes linearly corresponding to the
+// `$7b77e` setup target. It never treats the bytes as executable code.
+[[nodiscard]] MillenniumAmigaResidentSetupHelperRawBoundary
+parse_millennium_amiga_resident_setup_helper_raw_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
+
 // Validates the two additional literal staging callsites for $7ba12. Each
 // copies three words and three bytes from a runtime source into the same fixed
 // fields used by the splitter, calls $7b77e, clears $7b14e, then calls the
@@ -132,5 +157,12 @@ parse_millennium_amiga_resident_helper_raw_boundary(
 parse_millennium_amiga_resident_helper_staging_callsites(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentWordSplitter& splitter);
+
+// Models the six literal `(A4)+` to `(A5)+` copies at either verified staging
+// callsite. It cannot execute `$7b77e`, clear `$7b14e`, or call `$7ba12`.
+[[nodiscard]] MillenniumAmigaResidentHelperStagingPreSetupState
+stage_millennium_amiga_resident_helper_pre_setup(
+    const std::array<std::uint16_t, 3>& source_words,
+    const std::array<std::uint8_t, 3>& source_sign_bytes);
 
 } // namespace eon
