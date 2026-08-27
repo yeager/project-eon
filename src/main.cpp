@@ -464,6 +464,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_jsr);
     const auto config_fourth_post_loop = eon::parse_millennium_atari_config_fourth_post_loop(
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_loop);
+    const auto config_fourth_outer_setup = eon::parse_millennium_atari_config_fourth_outer_setup(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_loop);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -591,6 +593,13 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_fourth_post_loop.target_setup_opcode << " immediate 0x"
         << config_fourth_post_loop.target_setup_immediate << ')' << std::dec
         << " (validated control flow only; no loops, data, or native calls)\n";
+    std::cout << "          MILL22A.inf outer-loop setup: 0x" << std::hex
+        << config_fourth_outer_setup.setup_address << " file +0x"
+        << config_fourth_outer_setup.setup_file_offset << "; D5 0x"
+        << config_fourth_outer_setup.d5_initial_value << ", D4 0x"
+        << config_fourth_outer_setup.d4_initial_value << " -> 0x"
+        << config_fourth_outer_setup.continuation_address << std::dec
+        << " (validated fall-through only; no loop iterations or data access)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.
