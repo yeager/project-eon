@@ -882,6 +882,16 @@ int main(int argc, char** argv) {
                                << static_cast<unsigned>(trace->selected_record_byte_2) << ')';
                             draw_text(renderer, 610, 326, f1.str());
                         }
+                        if (const auto trace = millennium_game_session->last_second_function_key_trace()) {
+                            std::ostringstream f2;
+                            f2 << "F2 ORIGINAL GATE: [$" << std::hex
+                               << trace->availability_address << "] >= $"
+                               << static_cast<unsigned>(trace->minimum_availability)
+                               << " -> HANDLER $" << trace->handler_address
+                               << " -> LIST $" << trace->first_record_address
+                               << " +$" << trace->record_stride;
+                            draw_text(renderer, 610, 342, f2.str());
+                        }
                     }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;
@@ -892,7 +902,7 @@ int main(int argc, char** argv) {
                              << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
                              << " +06=0x" << record.runtime_offset_6 << " +08=0x"
                              << record.runtime_offset_8;
-                        draw_text(renderer, 610, 354.0F + static_cast<float>(row) * 19.0F,
+                        draw_text(renderer, 610, 366.0F + static_cast<float>(row) * 17.0F,
                             line.str());
                     }
                     std::ostringstream pager;

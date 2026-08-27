@@ -28,6 +28,11 @@ public:
     // writable replacement for the game's runtime state.
     [[nodiscard]] std::optional<MillenniumDosFirstFunctionKeyTrace>
     last_first_function_key_trace() const { return last_first_function_key_trace_; }
+    // Present only after raw action $3c has traversed the verified second
+    // table record. The runtime availability byte is deliberately not supplied
+    // or written by the host.
+    [[nodiscard]] std::optional<MillenniumDosSecondFunctionKeyTrace>
+    last_second_function_key_trace() const { return last_second_function_key_trace_; }
     [[nodiscard]] const MillenniumDosGameFlow& flow() const { return flow_; }
 
 private:
@@ -35,6 +40,7 @@ private:
     std::optional<std::size_t> last_function_key_index_;
     std::optional<std::uint8_t> last_special_action_;
     std::optional<MillenniumDosFirstFunctionKeyTrace> last_first_function_key_trace_;
+    std::optional<MillenniumDosSecondFunctionKeyTrace> last_second_function_key_trace_;
 };
 
 } // namespace eon

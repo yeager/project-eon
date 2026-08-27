@@ -22,6 +22,24 @@ struct MillenniumDosFirstFunctionKeyTrace {
     std::uint8_t selected_record_byte_36 = 0;
 };
 
+// Exact, non-semantic trace of the second record in 2200AD.EXE's F-key
+// table. Unlike F1, the handler's initial branch is conditional on a byte
+// populated at runtime, so this describes both the original gate and the
+// setup reached only when the gate admits execution.
+struct MillenniumDosSecondFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t availability_address = 0;
+    std::uint8_t minimum_availability = 0;
+    std::uint16_t wait_call_address = 0;
+    std::uint16_t callback_slot_address = 0;
+    std::uint16_t callback_address = 0;
+    std::uint16_t first_record_address = 0;
+    std::uint16_t record_stride = 0;
+    std::uint16_t record_list_address = 0;
+    std::uint16_t list_mode_address = 0;
+    std::uint8_t list_mode_value = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -37,6 +55,7 @@ struct MillenniumDosGameFlow {
     std::size_t function_key_table_stride = 0;
     std::uint32_t function_key_dispatch_address = 0;
     MillenniumDosFirstFunctionKeyTrace first_function_key;
+    MillenniumDosSecondFunctionKeyTrace second_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
