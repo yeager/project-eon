@@ -1580,19 +1580,19 @@ int main(int argc, char** argv) {
                                                             : millennium_assets->title;
                 if (millennium_handed_off) {
                     draw_text(renderer, 64, 220,
-                        "AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01");
+                        tr("AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"));
                     draw_text(renderer, 64, 238,
-                        "ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE");
+                        tr("ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE"));
                 } else {
                     if (millennium_assets->language == "es") {
                         draw_text(renderer, 64, 220,
-                            "AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC");
+                            tr("AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC"));
                         draw_text(renderer, 64, 238,
-                            "EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED");
+                            tr("EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED"));
                     } else {
-                        draw_text(renderer, 64, 220, "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC");
+                        draw_text(renderer, 64, 220, tr("AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"));
                         draw_text(renderer, 64, 238,
-                            "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF");
+                            tr("PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
                     }
                 }
                 SDL_SetTextureScaleMode(texture,
@@ -1612,7 +1612,7 @@ int main(int argc, char** argv) {
                             << "  VERSION 0x" << std::hex << save.layout().version << std::dec;
                     draw_text(renderer, 610, 270, heading.str());
                     draw_text(renderer, 610, 290,
-                        "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS");
+                        tr("RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"));
                     if (millennium_game_session) {
                         std::ostringstream dispatch;
                         dispatch << "ORIGINAL ACTION LOOP: F1-F10 -> TABLE INDEX ";
@@ -1766,36 +1766,36 @@ int main(int argc, char** argv) {
                           << "  LEFT/RIGHT: TABLE PAGE";
                     draw_text(renderer, 610, 496, pager.str());
                 }
-                draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+                draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::millennium && active_platform
                 && *active_platform != eon::Platform::dos) {
                 draw_text(renderer, 64, 220,
-                    "VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION");
+                    tr("VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION"));
                 draw_text(renderer, 64, 244,
-                    "INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED.");
+                    tr("INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED."));
                 draw_text(renderer, 64, 268,
-                    "NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM.");
-                draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+                    tr("NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."));
+                draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::deuteros && active_platform
                 && *active_platform == eon::Platform::atari_st) {
                 draw_text(renderer, 64, 220,
-                    "VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY");
+                    tr("VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY"));
                 draw_text(renderer, 64, 244,
-                    "INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED.");
+                    tr("INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED."));
                 draw_text(renderer, 64, 268,
-                    "NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM.");
-                draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+                    tr("NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM."));
+                draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
                 const auto frame = deuteros_opening->rgba_frame();
                 if (frame) SDL_UpdateTexture(preview_texture, nullptr, frame->data(),
                     eon::DeuterosAmigaFrame::width * 4);
-                draw_text(renderer, 64, 220, "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE");
-                draw_text(renderer, 64, 238, "HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL");
-                draw_text(renderer, 64, 252, "PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)");
+                draw_text(renderer, 64, 220, tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"));
+                draw_text(renderer, 64, 238, tr("HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"));
+                draw_text(renderer, 64, 252, tr("PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"));
                 if (deuteros_title_resource) {
                     std::ostringstream handoff;
                     handoff << std::hex << *deuteros_title_resource;
-                    draw_text(renderer, 64, 268, "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
+                    draw_text(renderer, 64, 268, tr("ORIGINAL TITLE HANDOFF: RESOURCE 0x")
                         + handoff.str()
                         + " -> STAGE ENTRY 0x40426 (REIMPLEMENTATION IN PROGRESS)");
                 }
@@ -1814,7 +1814,7 @@ int main(int argc, char** argv) {
                         tr("ORIGINAL TITLE STAGE SHA-256: ") + title_stage->original_sha256());
                 }
                 if (const auto& trace = deuteros_opening->alternate_renderer_trace()) {
-                    draw_text(renderer, 64, title_stage ? 328 : 284, "ORIGINAL $20580 STREAM: +0x"
+                    draw_text(renderer, 64, title_stage ? 328 : 284, tr("ORIGINAL $20580 STREAM: +0x")
                         + [&] { std::ostringstream stream; stream << std::hex << trace->stream_offset;
                             return stream.str(); }()
                         + " - " + std::to_string(trace->glyph_codes.size())
@@ -1830,9 +1830,9 @@ int main(int argc, char** argv) {
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
                 if (modern) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
-                draw_text(renderer, 64, 580, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+                draw_text(renderer, 64, 580, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else {
-                draw_text(renderer, 64, 220, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+                draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             }
         }
         SDL_RenderPresent(renderer);
