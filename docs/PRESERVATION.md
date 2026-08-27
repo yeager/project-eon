@@ -517,6 +517,17 @@ call is executed, and no call effect, return, flags, cell semantics, or game
 behavior is inferred. Every listed span is checked across all six supplied
 Amiga variants.
 
+The independent fallthrough at `$68f06` / ADF `+0x17306` has a 24-byte raw
+gate, SHA-256
+`4a50d1c5f71ada9a3571e09b00437c51037c3949ff8e57a4b153ea032828d061`.
+Its `BEQ.W` at `$68f1a` uses extension base `$68f1c + $002c` to reach the
+same external-call boundary `$68f48`. Its alternate 12-byte local prefix at
+`$68f1e` / ADF `+0x1731e` hashes to
+`fc1fca692a8fc07b5fd7c502ae2d772eeff63c0c3d33d298f9c4fac414f337da` and
+ends `BRA.W` at `$68f26`, extension `$68f28 + $0020`, likewise at `$68f48`.
+This records only exact raw control-flow encodings; D7, flags, cells, selected
+paths, external call effects, and gameplay behavior remain unmodeled.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch

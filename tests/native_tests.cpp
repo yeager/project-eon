@@ -551,6 +551,21 @@ int main() {
     assert(defjam_separate_byte_gate_taken_branch.external_prefix_raw_disk_offset == 0x17348);
     assert(defjam_separate_byte_gate_taken_branch.external_prefix_sha256
         == "dde319f5e57db52df300956d4e3e59dc6dc7967f0ff582674d502109fcfa2f69");
+    const auto defjam_separate_byte_gate_fallthrough =
+        eon::parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
+            defjam_loader_disk, defjam_plan, defjam_separate_byte_gate_convergence);
+    assert(defjam_separate_byte_gate_fallthrough.entry_address == 0x68f06);
+    assert(defjam_separate_byte_gate_fallthrough.raw_disk_offset == 0x17306);
+    assert(defjam_separate_byte_gate_fallthrough.sha256
+        == "4a50d1c5f71ada9a3571e09b00437c51037c3949ff8e57a4b153ea032828d061");
+    assert(defjam_separate_byte_gate_fallthrough.conditional_branch_address == 0x68f1a);
+    assert(defjam_separate_byte_gate_fallthrough.conditional_branch_target == 0x68f48);
+    assert(defjam_separate_byte_gate_fallthrough.other_path_entry_address == 0x68f1e);
+    assert(defjam_separate_byte_gate_fallthrough.other_path_sha256
+        == "fc1fca692a8fc07b5fd7c502ae2d772eeff63c0c3d33d298f9c4fac414f337da");
+    assert(defjam_separate_byte_gate_fallthrough.other_path_branch_address == 0x68f26);
+    assert(defjam_separate_byte_gate_fallthrough.other_path_branch_target == 0x68f48);
+    assert(defjam_separate_byte_gate_fallthrough.convergence_address == 0x68f48);
     // Every supplied Millennium Amiga image shares the verified resident raw
     // range. One image is shorter than a standard ADF, so check the common
     // raw bytes directly rather than incorrectly forcing it through the ADF
@@ -587,6 +602,10 @@ int main() {
             == defjam_separate_byte_gate_taken_branch.sha256);
         assert(eon::to_hex(eon::sha256(bytes.subspan(0x17348, 18)))
             == defjam_separate_byte_gate_taken_branch.external_prefix_sha256);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(0x17306, 24)))
+            == defjam_separate_byte_gate_fallthrough.sha256);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1731e, 12)))
+            == defjam_separate_byte_gate_fallthrough.other_path_sha256);
         for (std::size_t index = 0;
              index < defjam_separate_post_call_tail.target_raw_disk_offsets.size(); ++index) {
             assert(eon::to_hex(eon::sha256(bytes.subspan(
