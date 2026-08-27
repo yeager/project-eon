@@ -343,6 +343,15 @@ does not read the runtime sources, infer the `$7b77e` or `$7ba12` effects, or
 execute either call. This preserves a real caller-side staging protocol while
 retaining the helper's unrecovered executable boundary.
 
+Immediately after the original word-splitter return lies a separate gate at
+`$68078`: it literally calls `$7b816`, tests byte `D3`, returns at `$68082`
+when nonzero, and otherwise continues at `$68084`. The target maps linearly to
+raw disk offset `$29c16`; all six supplied variants share its first 32 bytes
+with SHA-256 `a16a4738b0f577643c343b344ba8b6c19d935daf97dd2291c86ddb2b29dcd96c`.
+`MillenniumAmigaResidentPredicateGate` records this exact control split and
+raw provenance only. Neither the target nor continuation is interpreted or
+executed, because the transformed runtime representation remains unrecovered.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with

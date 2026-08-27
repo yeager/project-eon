@@ -159,6 +159,19 @@ struct MillenniumAmigaResidentStagingDirectReachabilityBoundary {
     std::uint32_t scanned_byte_count = 0;
 };
 
+// The first independent raw-resident gate after the word splitter. Its callee
+// remains a raw-media-only correspondence, so this records only the literal
+// D3-controlled return/continuation split and an immutable target fingerprint.
+struct MillenniumAmigaResidentPredicateGate {
+    std::uint32_t entry_address = 0;
+    std::uint32_t predicate_address = 0;
+    std::uint32_t nonzero_return_address = 0;
+    std::uint32_t zero_continue_address = 0;
+    std::uint32_t predicate_raw_disk_offset = 0;
+    std::array<std::uint8_t, 32> predicate_raw_prefix{};
+    std::string predicate_raw_prefix_sha256;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -242,5 +255,13 @@ parse_millennium_amiga_resident_second_post_helper_static_chain(
 parse_millennium_amiga_resident_staging_direct_reachability_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>& callsites);
+
+// Validates the literal call/test/return gate immediately after the splitter
+// and fingerprints its in-range raw target. It never executes the target or
+// its zero-D3 continuation body.
+[[nodiscard]] MillenniumAmigaResidentPredicateGate
+parse_millennium_amiga_resident_predicate_gate(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentWordSplitter& splitter);
 
 } // namespace eon

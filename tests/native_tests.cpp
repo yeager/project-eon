@@ -258,6 +258,21 @@ int main() {
         == std::array<std::uint32_t, 2>{}));
     assert(defjam_staging_reachability.scanned_raw_disk_offset == 0x16400);
     assert(defjam_staging_reachability.scanned_byte_count == 0x2c000);
+    const auto defjam_predicate_gate = eon::parse_millennium_amiga_resident_predicate_gate(
+        defjam_loader_disk, defjam_plan, defjam_splitter);
+    assert(defjam_predicate_gate.entry_address == 0x68078);
+    assert(defjam_predicate_gate.predicate_address == 0x7b816);
+    assert(defjam_predicate_gate.nonzero_return_address == 0x68082);
+    assert(defjam_predicate_gate.zero_continue_address == 0x68084);
+    assert(defjam_predicate_gate.predicate_raw_disk_offset == 0x29c16);
+    assert((defjam_predicate_gate.predicate_raw_prefix == std::array<std::uint8_t, 32>{{
+        0x00, 0xc2, 0x40, 0x00, 0x6e, 0x00, 0xc2, 0x00,
+        0x04, 0x80, 0x42, 0x00, 0x00, 0xc2, 0x20, 0x00,
+        0x6a, 0x00, 0xc2, 0x00, 0x08, 0x4a, 0x00, 0xc2,
+        0x00, 0x80, 0x62, 0x00, 0xc2, 0x10, 0x00, 0x80,
+    }}));
+    assert(defjam_predicate_gate.predicate_raw_prefix_sha256
+        == "a16a4738b0f577643c343b344ba8b6c19d935daf97dd2291c86ddb2b29dcd96c");
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
