@@ -147,6 +147,14 @@ int main() {
     assert(defjam_plan.resident_stage.destination == 0x68000);
     assert(defjam_plan.resident_entry == 0x68000);
     assert(defjam_plan.loader_magic == 0xa8d398fb);
+    // These source-range fingerprints make the raw loader trace reproducible
+    // without treating either range as an extracted game file.
+    assert(defjam_plan.bootstrap_loader.raw_sha256
+        == "c31e59f83d6825a2da7a6fd5e3297a322993b0483105794fca449d97d3861e06");
+    assert(defjam_plan.first_stage.raw_sha256
+        == "5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a");
+    assert(defjam_plan.resident_stage.raw_sha256
+        == "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e");
     const auto defjam_resident = eon::parse_millennium_amiga_resident_entry(
         defjam_loader_disk, defjam_plan);
     assert(defjam_resident.entry_address == 0x68000);
