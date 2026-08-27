@@ -12,13 +12,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
-  # Package jobs are intentionally allowed to finish: direct main pushes are
-  # frequent during preservation work, and cancelling them would prevent
-  # platform artifacts from ever being verified.
-  cancel-in-progress: false
-
 jobs:
   gitleaks:
     name: Gitleaks
