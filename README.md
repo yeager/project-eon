@@ -140,6 +140,16 @@ The Spanish Millennium floppy is now opened as a native FAT12 filesystem. Its
 integration tests lock the extracted `2200AD.EXE` and `GX.LIB` contents to
 their observed SHA-256 hashes.
 
+Its own `TITLE.LIB` is also read directly from that image: `P00` decodes as
+the original 320×200 indexed title with the Spanish release's own RGB6 DAC and
+logical translation (its final RGBA frame is separately hash-locked). The
+Spanish `2200AD4.BIN` celestial display table starts at its observed `$03db`
+offset and is exposed byte-for-byte, including `Tierra ` and `Asteroides `.
+`--verify-data millennium` reports these FAT12-derived facts without copying
+or unpacking the disk. The Spanish title-to-game launcher boundary remains
+unmodelled: this release supplies a batch launcher rather than the verified
+English `MILL.COM` flow, so Project Eon does not infer a replacement hand-off.
+
 The English DOS `TITLE.LIB` and `GX.LIB` are also parsed natively through their
 verified banked resource directory, exposing 38 title resources and 180
 gameplay resources directly from the hash-identified original archive.

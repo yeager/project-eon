@@ -1,6 +1,7 @@
 #include "data/millennium_dos_game_data.hpp"
 
 #include <algorithm>
+#include <array>
 #include <stdexcept>
 
 namespace eon {
@@ -21,35 +22,32 @@ constexpr std::size_t celestial_label_count = 41;
 
 MillenniumDosGameData parse_millennium_dos_game_data(
     std::span<const std::uint8_t> static_data) {
-    // The first table string begins at 0x3d2 in the verified English binary.
-    // Read every byte from the original media; hard-coded names would be a
-    // synthetic substitute and would lose original padding/translation bytes.
-    constexpr std::size_t table_offset = 0x3d2;
-    if (table_offset >= static_data.size()) {
-        throw std::runtime_error("Truncated Millennium DOS static data");
-    }
-
-    MillenniumDosGameData result;
-    result.celestial_table_offset = table_offset;
-    result.celestial_labels.reserve(celestial_label_count);
-    std::size_t offset = table_offset;
-    for (std::size_t index = 0; index < celestial_label_count; ++index) {
-        if (offset >= static_data.size()) {
-            throw std::runtime_error("Unsupported Millennium DOS celestial-label table");
+    // The verified English and Spanish binaries place the same 41-entry
+    // display table at different file offsets. These are format evidence,
+    // not translated replacement strings: every returned byte comes from the
+    // caller's original media (including spaces and original spelling).
+    constexpr std::array<std::size_t, 2> table_offsets{0x3d2, 0x3db};
+    for (const auto table_offset : table_offsets) {
+        if (table_offset >= static_data.size()) continue;
+        MillenniumDosGameData result;
+        result.celestial_table_offset = table_offset;
+        result.celestial_labels.reserve(celestial_label_count);
+        std::size_t offset = table_offset;
+        for (std::size_t index = 0; index < celestial_label_count; ++index) {
+            if (offset >= static_data.size()) break;
+            const auto terminator = std::find(static_data.begin() + static_cast<std::ptrdiff_t>(offset),
+                static_data.end(), std::uint8_t{0});
+            if (terminator == static_data.end() || terminator == static_data.begin()
+                + static_cast<std::ptrdiff_t>(offset)) break;
+            const auto length = static_cast<std::size_t>(terminator
+                - (static_data.begin() + static_cast<std::ptrdiff_t>(offset)));
+            const std::string value(reinterpret_cast<const char*>(static_data.data() + offset), length);
+            result.celestial_labels.push_back({.source_offset = offset, .text = value});
+            offset += length + 1;
         }
-        const auto terminator = std::find(static_data.begin() + static_cast<std::ptrdiff_t>(offset),
-            static_data.end(), std::uint8_t{0});
-        if (terminator == static_data.end() || terminator == static_data.begin()
-            + static_cast<std::ptrdiff_t>(offset)) {
-            throw std::runtime_error("Unsupported Millennium DOS celestial-label table");
-        }
-        const auto length = static_cast<std::size_t>(terminator
-            - (static_data.begin() + static_cast<std::ptrdiff_t>(offset)));
-        const std::string value(reinterpret_cast<const char*>(static_data.data() + offset), length);
-        result.celestial_labels.push_back({.source_offset = offset, .text = value});
-        offset += length + 1;
+        if (result.celestial_labels.size() == celestial_label_count) return result;
     }
-    return result;
+    throw std::runtime_error("Unsupported Millennium DOS celestial-label table");
 }
 
 MillenniumDosSaveLayout parse_millennium_dos_save_layout(

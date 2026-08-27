@@ -354,12 +354,38 @@ int main() {
     assert(disk.root_entries().size() == 39);
     const auto* executable = disk.find("2200AD.EXE");
     const auto* graphics = disk.find("GX.LIB");
+    const auto* spanish_title = disk.find("TITLE.LIB");
+    const auto* spanish_static_data = disk.find("2200AD4.BIN");
     assert(executable && executable->size == 54'566);
     assert(graphics && graphics->size == 311'420);
+    assert(spanish_title && spanish_title->size == 18'998);
+    assert(spanish_static_data && spanish_static_data->size == 13'254);
     assert(eon::to_hex(eon::sha256(disk.read(*executable)))
         == "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6");
     assert(eon::to_hex(eon::sha256(disk.read(*graphics)))
         == "e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767");
+    const eon::MillenniumDosLib spanish_title_lib(disk.read(*spanish_title));
+    assert(spanish_title_lib.directory_offset() == 0x486e);
+    assert(spanish_title_lib.entries().size() == 38);
+    const auto* spanish_p00 = spanish_title_lib.find("P00");
+    assert(spanish_p00 && spanish_p00->offset == 6 && spanish_p00->size == 10'555);
+    const auto spanish_bitmap = eon::decode_millennium_dos_bitmap(
+        spanish_title_lib.read(*spanish_p00));
+    const auto spanish_palette = eon::decode_millennium_dos_palette(
+        spanish_title_lib.read(*spanish_p00), spanish_bitmap);
+    const auto spanish_rgba = eon::colorize_millennium_dos_bitmap(spanish_bitmap, spanish_palette);
+    assert(spanish_bitmap.width == 320 && spanish_bitmap.height == 200);
+    assert(eon::to_hex(eon::sha256(spanish_bitmap.pixels))
+        == "85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee");
+    assert(eon::to_hex(eon::sha256(spanish_rgba))
+        == "667e297e1cd2860fa5dd6b10749d3af7859dad0844408a32a4d04a682153bc92");
+    const auto spanish_game_data = eon::parse_millennium_dos_game_data(
+        disk.read(*spanish_static_data));
+    assert(spanish_game_data.celestial_table_offset == 0x3db);
+    assert(spanish_game_data.celestial_labels.size() == 41);
+    assert(spanish_game_data.celestial_labels.front().text == "Sistema inter.");
+    assert(spanish_game_data.celestial_labels[4].text == "Tierra ");
+    assert(spanish_game_data.celestial_labels.back().text == "Asteroides ");
 
     const auto atari_release = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st;
