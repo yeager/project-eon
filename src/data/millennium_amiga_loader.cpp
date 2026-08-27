@@ -683,4 +683,24 @@ parse_millennium_amiga_resident_independent_zero_target_boundary(
     return {entry, 0x0120, entry + 4, entry + 6 + 0x12};
 }
 
+MillenniumAmigaResidentIndependentCompareTargetBoundary
+parse_millennium_amiga_resident_independent_compare_target_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentZeroTargetBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68562;
+    constexpr std::array<std::uint8_t, 10> expected{{0x3e, 0x02, 0xde, 0x41, 0xbe, 0x7c, 0x01, 0x20, 0x65, 0x0e}};
+    if (boundary.conditional_branch_target != entry || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga independent compare target placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga independent compare target is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga independent compare target");
+    }
+    return {entry, entry + 8, entry + 10 + 0x0e};
+}
+
 } // namespace eon
