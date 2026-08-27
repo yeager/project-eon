@@ -387,6 +387,10 @@ The next target `$6857a` begins with another fixed-cell test and an encoded
 conditional branch `$68580 → $68586`. This is recorded solely as raw static
 control flow, without assigning meaning to the cell or either path.
 
+At `$68586`, a fixed local register-preparation prefix reaches unknown `JSR
+$7b26a` at `$68590`. This is a boundary only: no register values, target
+effect, or continuation is modeled.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with

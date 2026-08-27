@@ -228,6 +228,11 @@ struct MillenniumAmigaResidentIndependentBranchTargetBoundary {
     std::uint32_t conditional_branch_address = 0;
     std::uint32_t conditional_branch_target = 0;
 };
+struct MillenniumAmigaResidentIndependentBranchPreparationBoundary {
+    std::uint32_t entry_address = 0;
+    std::uint32_t unknown_call_address = 0;
+    std::uint32_t unknown_call_target = 0;
+};
 
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
@@ -357,5 +362,9 @@ parse_millennium_amiga_resident_independent_compare_target_boundary(
 parse_millennium_amiga_resident_independent_branch_target_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentIndependentCompareTargetBoundary& boundary);
+[[nodiscard]] MillenniumAmigaResidentIndependentBranchPreparationBoundary
+parse_millennium_amiga_resident_independent_branch_preparation_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentBranchTargetBoundary& boundary);
 
 } // namespace eon
