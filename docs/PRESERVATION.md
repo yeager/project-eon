@@ -351,6 +351,14 @@ absolute operands `0x7cc46` and `0x7b764`; the second has `0x69bba` with
 boundary from the original ADF. Project Eon neither executes `$7ba12`, assumes
 that it returns, reads either source, nor assigns a meaning to the data flow.
 
+The first caller's longer static continuation is now hash-anchored as well:
+86 bytes at `$69656` map to raw disk offset `0x17a56` and SHA-256
+`5f42f9d3078d374f8b4a70fcc59c618abb9381d6b33ef25b3f2967876f0afe7b`.
+Within that raw range, the original encodings at `$696a0` and `$696a6` are
+`JSR $7b77e` and `JSR $7c802`. This is not a claim that `$7ba12` returns or
+that either later call runs: it is a fail-closed static preservation anchor
+for the next caller-side disassembly step.
+
 The setup target `$7b77e` is now separately fingerprinted at its linear
 raw-media correspondence, disk offset `0x29b7e`. Its first 32 original bytes
 are `04006e00c200044a00c240007a00c200105200c201005200c200014a00c20800`,

@@ -114,6 +114,22 @@ struct MillenniumAmigaResidentHelperStagingPreSetupState {
     std::array<std::uint8_t, 3> sign_bytes{};
 };
 
+// A longer static continuation anchor after the first staging caller's final
+// JSR $7ba12. Its hash and two trailing JSR encodings are raw ADF evidence
+// only; it must not be read as proof that $7ba12 returns or that either later
+// call executes.
+struct MillenniumAmigaResidentFirstPostHelperStaticChain {
+    std::uint32_t staging_entry_address = 0;
+    std::uint32_t static_start_address = 0;
+    std::uint32_t raw_disk_offset = 0;
+    std::uint32_t byte_count = 0;
+    std::string sha256;
+    std::uint32_t next_setup_call_address = 0;
+    std::uint32_t next_setup_target = 0;
+    std::uint32_t following_call_address = 0;
+    std::uint32_t following_target = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -172,5 +188,13 @@ parse_millennium_amiga_resident_helper_staging_callsites(
 stage_millennium_amiga_resident_helper_pre_setup(
     const std::array<std::uint16_t, 3>& source_words,
     const std::array<std::uint8_t, 3>& source_sign_bytes);
+
+// Fingerprints the static 86-byte continuation after the first caller's JSR
+// $7ba12 and validates two later literal JSR encodings in that range. It
+// performs no helper-return, helper, or call execution.
+[[nodiscard]] MillenniumAmigaResidentFirstPostHelperStaticChain
+parse_millennium_amiga_resident_first_post_helper_static_chain(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentHelperStagingCallsite& callsite);
 
 } // namespace eon

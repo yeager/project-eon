@@ -220,6 +220,19 @@ int main() {
     assert(defjam_staging_callsites[0].post_helper_source_address == 0x7cc46);
     assert(defjam_staging_callsites[1].post_helper_return_address == 0x69bba);
     assert(defjam_staging_callsites[1].post_helper_source_address == 0x7cc72);
+    const auto defjam_first_post_helper_chain =
+        eon::parse_millennium_amiga_resident_first_post_helper_static_chain(
+            defjam_loader_disk, defjam_plan, defjam_staging_callsites[0]);
+    assert(defjam_first_post_helper_chain.staging_entry_address == 0x69624);
+    assert(defjam_first_post_helper_chain.static_start_address == 0x69656);
+    assert(defjam_first_post_helper_chain.raw_disk_offset == 0x17a56);
+    assert(defjam_first_post_helper_chain.byte_count == 86);
+    assert(defjam_first_post_helper_chain.sha256
+        == "5f42f9d3078d374f8b4a70fcc59c618abb9381d6b33ef25b3f2967876f0afe7b");
+    assert(defjam_first_post_helper_chain.next_setup_call_address == 0x696a0);
+    assert(defjam_first_post_helper_chain.next_setup_target == 0x7b77e);
+    assert(defjam_first_post_helper_chain.following_call_address == 0x696a6);
+    assert(defjam_first_post_helper_chain.following_target == 0x7c802);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
@@ -241,6 +254,18 @@ int main() {
     assert((splitter_pre_helper.magnitude_words
         == std::array<std::uint16_t, 3>{{0x3039, 0x0007, 0x376a}}));
     assert((splitter_pre_helper.sign_bytes == std::array<std::uint8_t, 3>{{0, 0, 1}}));
+    auto invalid_first_post_helper_chain_disk_bytes = *defjam_adf;
+    invalid_first_post_helper_chain_disk_bytes[0x17aa0] ^= 0x01;
+    bool invalid_first_post_helper_chain_rejected = false;
+    try {
+        const eon::AmigaAdf invalid_first_post_helper_chain_disk(
+            std::move(invalid_first_post_helper_chain_disk_bytes));
+        static_cast<void>(eon::parse_millennium_amiga_resident_first_post_helper_static_chain(
+            invalid_first_post_helper_chain_disk, defjam_plan, defjam_staging_callsites[0]));
+    } catch (const std::runtime_error&) {
+        invalid_first_post_helper_chain_rejected = true;
+    }
+    assert(invalid_first_post_helper_chain_rejected);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);
