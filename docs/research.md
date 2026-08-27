@@ -109,6 +109,13 @@ covers all 74 normal records in bundle 1 and the 72 unflagged records in bundle 
 The remaining 70 bit-15 records use the same RLE controls through `$20eb2` but
 store complete planes sequentially; that path is also implemented and tested.
 
+An SDL-independent interpreter now advances the original channel state at the
+same tick boundaries as `$21380`/`$214aa`. Early opening-sequence assertions
+lock palette, sound, bitmap, coordinate, and wait-state changes to the real
+program. Timing-dependent random commands accept only an explicit compatible
+source, preserving the distinction between deterministic decoding and hardware
+timing still under investigation.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are

@@ -37,6 +37,11 @@ routine `$20c8c`. Its normal `$20da6` branch decodes four RLE control classes
 into interleaved four-bitplane pixels. Bit-15 height records select a separate
 plane-sequential layout at `$20eb2`; both layouts are decoded independently.
 
+The channel scheduler at `$21380` maintains a 24-byte state for each channel
+and invokes `$214aa` until a command yields. The native VM ports its verified
+wait and control-flow behaviour independently of SDL. Bundle 0 reaches palette
+1 and two sound events on tick 2, then bitmap 1 at `(8,183)` on tick 4.
+
 ## Boot block
 
 ```asm
