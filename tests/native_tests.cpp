@@ -7,6 +7,7 @@
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/fat12.hpp"
+#include "data/millennium_dos_lib.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -59,6 +60,43 @@ int main() {
     assert(kind_counts[eon::AssetKind::audio] == 14);
     assert(kind_counts[eon::AssetKind::game_resource] == 12);
     assert(kind_counts[eon::AssetKind::unknown] == 1);
+
+    const auto english_dos = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
+        return release.game == eon::Game::millennium
+            && release.platform == eon::Platform::dos && release.language == "en";
+    });
+    assert(english_dos != releases.end());
+    const auto title_bytes = eon::extract_asset_by_sha256(english_dos->path,
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678");
+    const auto gx_bytes = eon::extract_asset_by_sha256(english_dos->path,
+        "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f");
+    assert(title_bytes && gx_bytes);
+    assert(title_bytes->size() == 18'907);
+    assert(gx_bytes->size() == 312'748);
+    const eon::MillenniumDosLib title_lib(*title_bytes);
+    const eon::MillenniumDosLib gx_lib(*gx_bytes);
+    assert(title_lib.directory_offset() == 0x4813);
+    assert(title_lib.entries().size() == 38);
+    assert(title_lib.entries().front().name == "P00");
+    assert(title_lib.entries().front().offset == 6);
+    assert(title_lib.entries().front().size == 10'555);
+    const auto* title_p01 = title_lib.find("p01");
+    const auto* title_p25 = title_lib.find("P25");
+    assert(title_p01 && title_p01->offset == 0x2941 && title_p01->size == 213);
+    assert(title_p25 && title_p25->offset == 0x473e && title_p25->size == 213);
+    assert(eon::to_hex(eon::sha256(title_lib.read(title_lib.entries().front())))
+        == "14ca6d3c86eba5e9e2afaed21fca9fc6dd1da9e357e305859a495b6dfd69919d");
+    assert(gx_lib.directory_offset() == 0x4bd3c);
+    assert(gx_lib.entries().size() == 180);
+    assert(gx_lib.entries().front().name == "IMG00");
+    assert(gx_lib.entries().front().offset == 6);
+    assert(gx_lib.entries().front().size == 3'461);
+    const auto* gx_img01 = gx_lib.find("IMG01");
+    const auto* gx_imgb3 = gx_lib.find("IMGB3");
+    assert(gx_img01 && gx_img01->offset == 0x0d8b && gx_img01->size == 14'079);
+    assert(gx_imgb3 && gx_imgb3->offset == 0x4bb83 && gx_imgb3->size == 441);
+    assert(eon::to_hex(eon::sha256(gx_lib.read(*gx_imgb3)))
+        == "333c18a883b85c9cefe1072cd44b0a6bc51375ec5f63b87f42106e25dfb6f907");
 
     const auto spanish = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium
@@ -222,6 +260,11 @@ int main() {
     assert(opening_vm.channels()[0].y == 181);
     assert(opening_vm.channels()[0].wait_mode == 6);
     assert(opening_vm.channels()[0].timer == 38);
+    eon::DeuterosAmigaRandom opening_random(system_disk, first_bundle, 0, 0x240);
+    assert(opening_random.next() == 0x11);
+    assert(opening_random.seed() == 0x11);
+    opening_random.advance_vblank();
+    assert(opening_random.vblank_counter() == 0x244);
     for (std::size_t index = 0; index + 1 < first_indexed_blob.record_offsets.size(); ++index) {
         const auto bitmap = eon::decode_deuteros_amiga_bitmap(
             system_disk, first_bundle, first_indexed_blob, index);

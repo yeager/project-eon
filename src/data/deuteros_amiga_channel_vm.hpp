@@ -43,6 +43,24 @@ struct DeuterosAmigaVmEvents {
     bool transition_requested = false;
 };
 
+class DeuterosAmigaRandom {
+public:
+    DeuterosAmigaRandom(const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
+        std::uint16_t seed = 0, std::uint32_t vblank_counter = 0)
+        : disk_(disk), bundle_(bundle), seed_(seed), vblank_counter_(vblank_counter) {}
+
+    [[nodiscard]] std::uint16_t next();
+    void advance_vblank() { vblank_counter_ += 4; }
+    [[nodiscard]] std::uint16_t seed() const { return seed_; }
+    [[nodiscard]] std::uint32_t vblank_counter() const { return vblank_counter_; }
+
+private:
+    const AmigaAdf& disk_;
+    const DeuterosAmigaBundle& bundle_;
+    std::uint16_t seed_ = 0;
+    std::uint32_t vblank_counter_ = 0;
+};
+
 class DeuterosAmigaChannelVm {
 public:
     DeuterosAmigaChannelVm(const AmigaAdf& disk, const DeuterosAmigaBundle& bundle);

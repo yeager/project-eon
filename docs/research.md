@@ -116,6 +116,12 @@ program. Timing-dependent random commands accept only an explicit compatible
 source, preserving the distinction between deterministic decoding and hardware
 timing still under investigation.
 
+The timing source is now reproduced: VBL server `$207fe` increments a counter
+by four after each scheduler pass, while `$2016a` combines that counter and a
+16-bit seed to read a word from the current genuine bundle. The first opening
+random command is reached on tick 145 and returns `$0011` in the zero-phase
+startup. The possible pre-first-tick VBL remains represented as a phase choice.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are
@@ -135,6 +141,12 @@ driver/resource binaries, and `GX.LIB`/`LAST.LIB`. This split is useful:
 executable cross-references can reveal record widths and indexes in the resource
 libraries. Run `tools/analyze_dos.py` with Capstone installed to regenerate an
 entry-point report from an extracted copy.
+
+English `TITLE.LIB` and `GX.LIB` are now opened through their shared banked LIB
+container. The header locates a terminal 12-byte directory using a 16-bit
+offset plus 64-KiB bank, and each entry uses the same banked addressing with an
+eight-byte name. Genuine integration anchors cover all 38 title entries and
+180 gameplay entries before image-code semantics are applied.
 
 ## Completion criteria
 

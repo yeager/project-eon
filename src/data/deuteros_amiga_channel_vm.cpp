@@ -18,6 +18,20 @@ std::uint16_t random_word(const DeuterosAmigaVmInputs& inputs) {
 
 } // namespace
 
+std::uint16_t DeuterosAmigaRandom::next() {
+    const auto index = static_cast<std::uint16_t>(seed_ + static_cast<std::uint16_t>(vblank_counter_))
+        & 0x3ffeU;
+    if (static_cast<std::uint32_t>(index) + 2 > bundle_.length) {
+        throw std::runtime_error("Deuteros random lookup outside bundle");
+    }
+    const auto bytes = disk_.bytes(bundle_.disk_offset + index, 2);
+    const auto source = static_cast<std::uint16_t>(
+        (static_cast<std::uint16_t>(bytes[0]) << 8U) | bytes[1]);
+    const auto result = static_cast<std::uint16_t>(source + 14U);
+    seed_ = static_cast<std::uint16_t>(seed_ + result);
+    return result;
+}
+
 DeuterosAmigaChannelVm::DeuterosAmigaChannelVm(
     const AmigaAdf& disk, const DeuterosAmigaBundle& bundle)
     : disk_(disk), bundle_(bundle) {
