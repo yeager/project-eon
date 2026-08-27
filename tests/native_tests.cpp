@@ -271,6 +271,17 @@ int main() {
     assert(game_data.celestial_labels[4].text == "Earth ");
     assert(game_data.celestial_labels.back().source_offset == 0x513);
     assert(game_data.celestial_labels.back().text == "Asteroids ");
+    const auto text_catalog = eon::parse_millennium_dos_static_text_catalog(*static_data);
+    assert(text_catalog.pointers.size() == eon::MillenniumDosStaticTextCatalog::pointer_count);
+    assert(text_catalog.records.size() == 434);
+    assert(text_catalog.pointers[2].target_offset == 0x36a);
+    assert(text_catalog.pointers[6].target_offset == 0x3d2);
+    assert(text_catalog.pointers[251].target_offset == 0x0ff1);
+    assert(text_catalog.pointers[252].target_offset == 0x0ff1);
+    assert(text_catalog.pointers[401].target_offset == 0x2c1f);
+    assert(text_catalog.pointers[402].target_offset == 0x2c0c);
+    assert(text_catalog.records.front().source_offset == 0x366);
+    assert(text_catalog.records.front().bytes == std::vector<std::uint8_t>({0x20, 0x00}));
     const auto initial_save = eon::extract_asset_by_sha256(english_dos->path,
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7");
     assert(initial_save && initial_save->size() == eon::MillenniumDosSaveLayout::serialized_size);
@@ -386,6 +397,11 @@ int main() {
     assert(spanish_game_data.celestial_labels.front().text == "Sistema inter.");
     assert(spanish_game_data.celestial_labels[4].text == "Tierra ");
     assert(spanish_game_data.celestial_labels.back().text == "Asteroides ");
+    const auto spanish_text_catalog = eon::parse_millennium_dos_static_text_catalog(
+        disk.read(*spanish_static_data));
+    assert(spanish_text_catalog.pointers.size() == eon::MillenniumDosStaticTextCatalog::pointer_count);
+    assert(spanish_text_catalog.records.size() == 434);
+    assert(spanish_text_catalog.pointers[2].target_offset == 0x36a);
 
     const auto atari_release = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st;
@@ -412,6 +428,11 @@ int main() {
     assert(atari_prg.relocation_count == 227);
     assert(atari_prg.first_relocation_offset == 0x6);
     assert(atari_prg.last_relocation_offset == 0x1150);
+    assert(atari_prg.relocations.size() == atari_prg.relocation_count);
+    assert(atari_prg.relocations.front().offset == atari_prg.first_relocation_offset);
+    assert(atari_prg.relocations.front().original_value == 0x115e);
+    assert(atari_prg.relocations.back().offset == atari_prg.last_relocation_offset);
+    assert(atari_prg.relocations.back().original_value == 0x139c8);
 
     const auto deuteros_atari = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st;

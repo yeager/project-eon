@@ -213,8 +213,12 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto static_data = eon::extract_asset_by_sha256(release.path, static_data_sha256);
     if (!static_data) throw std::runtime_error("Verified Millennium static game data missing");
     const auto game_data = eon::parse_millennium_dos_game_data(*static_data);
+    const auto text_catalog = eon::parse_millennium_dos_static_text_catalog(*static_data);
     std::cout << "          2200AD4.BIN: " << game_data.celestial_labels.size()
         << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
+    std::cout << "          2200AD4.BIN static text: " << text_catalog.pointers.size()
+        << " original pointers to " << text_catalog.records.size()
+        << " raw records (read-only)\n";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto initial_save = eon::extract_asset_by_sha256(release.path, initial_save_sha256);
@@ -270,7 +274,12 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
         << prg.first_relocation_offset << "..0x" << prg.last_relocation_offset
-        << std::dec << ")\n";
+        << std::dec << ")\n"
+        << "          relocation values: [0x" << std::hex
+        << prg.relocations.front().offset << "]=0x" << prg.relocations.front().original_value
+        << ", [0x" << prg.relocations.back().offset << "]=0x"
+        << prg.relocations.back().original_value << std::dec
+        << " (unrelocated disk words)\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
