@@ -173,10 +173,66 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     if (big16(input_dispatch, 0x1e) != 0xfe7c) {
         throw std::runtime_error("Unexpected Deuteros input-dispatch continue branch");
     }
+    // Both <= two input paths enter $218cc.  Its fixed post-service tail
+    // advances $21704 and takes $21a4c for result two or $219f8 for result
+    // three.  Decode the two exits from the genuine raw stage so callers do
+    // not have to simulate a named menu/main screen to report the handoff.
+    constexpr std::uint32_t dispatch_service_address = 0x218cc;
+    const auto dispatch_service = stage_bytes.subspan(main_offset(dispatch_service_address));
+    require_word(dispatch_service, 0x38, 0x3039); // move.w $21704,d0
+    require_long(dispatch_service, 0x3a, 0x21704);
+    require_word(dispatch_service, 0x3e, 0x5240); // addq.w #1,d0
+    require_word(dispatch_service, 0x40, 0xb07c); // cmp.w #2,d0
+    if (big16(dispatch_service, 0x42) != 2) {
+        throw std::runtime_error("Unexpected Deuteros input-service first compare value");
+    }
+    require_word(dispatch_service, 0x44, 0x6700); // beq.w $21a4c
+    if (big16(dispatch_service, 0x46) != 0x013a) {
+        throw std::runtime_error("Unexpected Deuteros input-service first exit branch");
+    }
+    require_word(dispatch_service, 0x48, 0xb07c); // cmp.w #3,d0
+    if (big16(dispatch_service, 0x4a) != 3) {
+        throw std::runtime_error("Unexpected Deuteros input-service second compare value");
+    }
+    require_word(dispatch_service, 0x4c, 0x6700); // beq.w $219f8
+    if (big16(dispatch_service, 0x4e) != 0x00de) {
+        throw std::runtime_error("Unexpected Deuteros input-service second exit branch");
+    }
+    constexpr std::uint32_t first_exit_address = 0x21a4c;
+    const auto first_exit = stage_bytes.subspan(main_offset(first_exit_address));
+    require_word(first_exit, 0x00, 0x23fc); // move.l #1,$219f4
+    if (big32(first_exit, 0x02) != 1 || big32(first_exit, 0x06) != 0x219f4) {
+        throw std::runtime_error("Unexpected Deuteros input-service first exit profile write");
+    }
+    // The shared tail preserves incoming controller A1 and carries the
+    // selected longword into the bootstrap's two return slots.
+    require_word(first_exit, 0x46, 0x2039); // move.l $20976,d0
+    require_long(first_exit, 0x48, 0x20976);
+    require_word(first_exit, 0x4c, 0x23c0); // move.l d0,$12ff8
+    require_long(first_exit, 0x4e, 0x12ff8);
+    require_word(first_exit, 0x52, 0x2039); // move.l $219f4,d0
+    require_long(first_exit, 0x54, 0x219f4);
+    require_word(first_exit, 0x58, 0x23c0); // move.l d0,$12ffc
+    require_long(first_exit, 0x5a, 0x12ffc);
+    require_word(first_exit, 0x5e, 0x4e75); // rts
+    constexpr std::uint32_t second_exit_address = 0x219f8;
+    const auto second_exit = stage_bytes.subspan(main_offset(second_exit_address));
+    require_word(second_exit, 0x00, 0x23fc); // move.l #5,$219f4
+    if (big32(second_exit, 0x02) != 5 || big32(second_exit, 0x06) != 0x219f4) {
+        throw std::runtime_error("Unexpected Deuteros input-service second exit profile write");
+    }
+    require_word(second_exit, 0x0a, 0x4eb9); // jsr $20b42
+    require_long(second_exit, 0x0c, 0x20b42);
+    require_word(second_exit, 0x10, 0xb0bc); // cmp.l #$4452f018,d0
+    if (big32(second_exit, 0x12) != 0x4452f018) {
+        throw std::runtime_error("Unexpected Deuteros input-service second exit match value");
+    }
+    require_word(second_exit, 0x16, 0x6746); // beq.b $21a56
     const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
         0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
         0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, input_dispatch_address,
-        0x21704, 2, 1, 0x218cc, 0x2181c};
+        0x21704, 2, 1, 0x218cc, 0x2181c, 0x21704, 2, 0x21a4c, 3, 0x219f8,
+        0x219f4, 1, 0x12ff8, 0x12ffc, 0x219f4, 5, 0x20b42, 0x4452f018, 0x21a56};
 
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table

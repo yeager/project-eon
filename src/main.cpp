@@ -133,6 +133,21 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << main_entry.input_dispatch_clamped_value << ", routes <= to 0x"
         << std::hex << main_entry.input_dispatch_service_address << " and > to 0x"
         << main_entry.input_dispatch_continue_address << std::dec << '\n';
+    std::cout << "          <= service evidence: increments word 0x" << std::hex
+        << main_entry.dispatch_service_state_address << "; result " << std::dec
+        << main_entry.dispatch_service_first_exit_value << " -> 0x" << std::hex
+        << main_entry.dispatch_service_first_exit_address << " (profile cell 0x"
+        << main_entry.first_exit_profile_cell_address << " = " << std::dec
+        << main_entry.first_exit_profile_value << ", return slots 0x" << std::hex
+        << main_entry.bootstrap_controller_return_cell << "/0x"
+        << main_entry.bootstrap_profile_return_cell << "); result " << std::dec
+        << main_entry.dispatch_service_second_exit_value << " -> 0x" << std::hex
+        << main_entry.dispatch_service_second_exit_address << " (cell 0x"
+        << main_entry.second_exit_profile_cell_address << " = " << std::dec
+        << main_entry.second_exit_initial_profile_value << ", service 0x" << std::hex
+        << main_entry.second_exit_service_address << ", match 0x"
+        << main_entry.second_exit_service_match_value << " -> 0x"
+        << main_entry.second_exit_matched_return_address << ")" << std::dec << '\n';
     for (std::size_t index = 0; index < 2; ++index) {
         const auto bundle = eon::parse_deuteros_amiga_bundle(
             disk, plan.resource_disk_offsets[index]);

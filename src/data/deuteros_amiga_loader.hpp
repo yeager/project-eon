@@ -56,6 +56,25 @@ struct DeuterosAmigaMainStageEntry {
     std::uint16_t input_dispatch_clamped_value = 0;
     std::uint32_t input_dispatch_service_address = 0;
     std::uint32_t input_dispatch_continue_address = 0;
+    // The service entered by values <= two reads this same word, increments
+    // it, and selects one of two fully verified exits.  The first sets a
+    // bootstrap-profile cell and returns; the second enters a polling loop.
+    // These remain control-flow facts, rather than names for a screen or a
+    // game mode.
+    std::uint32_t dispatch_service_state_address = 0;
+    std::uint16_t dispatch_service_first_exit_value = 0;
+    std::uint32_t dispatch_service_first_exit_address = 0;
+    std::uint16_t dispatch_service_second_exit_value = 0;
+    std::uint32_t dispatch_service_second_exit_address = 0;
+    std::uint32_t first_exit_profile_cell_address = 0;
+    std::uint32_t first_exit_profile_value = 0;
+    std::uint32_t bootstrap_controller_return_cell = 0;
+    std::uint32_t bootstrap_profile_return_cell = 0;
+    std::uint32_t second_exit_profile_cell_address = 0;
+    std::uint32_t second_exit_initial_profile_value = 0;
+    std::uint32_t second_exit_service_address = 0;
+    std::uint32_t second_exit_service_match_value = 0;
+    std::uint32_t second_exit_matched_return_address = 0;
 };
 
 struct DeuterosAmigaLoadPlan {

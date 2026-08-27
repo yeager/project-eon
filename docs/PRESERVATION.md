@@ -492,6 +492,22 @@ call already present in the loop. This is retained solely as an opcode-level
 clamp and branch map. `$21704`, `$218cc`, and `$2181c` are not assigned guessed
 mode, screen, or gameplay meanings.
 
+The full immediate control-flow consequences are now opcode-validated as well.
+Both paths at or below two reach `$218cc`, whose shared tail reads `$21704`,
+increments the register value, but does not write that increment back. Result
+two branches to `$21a4c`; it writes longword one to `$219f4`, then the common
+return tail copies incoming controller `$20976` to `$12ff8` and `$219f4` to
+`$12ffc` before `RTS`. Thus an initial value below two clamps to one, produces
+result two, and requests bootstrap profile one without asserting a menu or
+gameplay interpretation. An initial value equal to two instead produces result
+three and branches to `$219f8`. That path writes five to the same `$219f4`
+cell, calls `$20b42`, and compares D0 with literal `$4452f018`: equality jumps
+to the shared `$21a56` return tail, while non-equality continues its original
+polling loop. Values above two bypass `$218cc` entirely and resume `$2181c`
+(the scheduler path), leaving this post-service state unchanged. Project Eon
+reports these original branch facts only; it does not synthesize a main screen,
+interpret the sentinel, or mutate supplied media.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
