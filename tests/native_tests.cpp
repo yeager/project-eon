@@ -761,6 +761,17 @@ int main() {
     assert(title_stage.post_transition_dispatch_negative_service_preserves_a0_a1);
     assert(title_stage.post_transition_dispatch_negative_restores_d5_then_d0);
     assert(title_stage.post_transition_dispatch_negative_return_address == 0x1fc20);
+    assert(title_stage.title_exit_first_address == 0x37f56);
+    assert(title_stage.title_exit_first_profile == 2);
+    assert(title_stage.title_exit_second_address == 0x38038);
+    assert(title_stage.title_exit_second_profile == 4);
+    assert(title_stage.title_exit_third_address == 0x38068);
+    assert(title_stage.title_exit_third_profile == 3);
+    assert(title_stage.title_exit_controller_address == 0x12800);
+    assert(title_stage.title_exit_profile_slot_address == 0x12ffc);
+    assert(title_stage.title_exit_profile_table_address == 0x12a36);
+    assert(title_stage.title_exit_resolved_profile == 0);
+    assert(title_stage.title_exit_main_stage_entry_address == 0x21734);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 

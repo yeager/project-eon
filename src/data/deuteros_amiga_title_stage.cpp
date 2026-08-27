@@ -46,6 +46,14 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         }
         return disk.bytes(stage.disk_offset + address - stage.destination, length);
     };
+    const auto bootstrap_code = [&](std::uint32_t address, std::size_t length) {
+        const auto& bootstrap = plan.bootstrap_loader;
+        if (address < bootstrap.destination || address - bootstrap.destination > bootstrap.length
+            || length > bootstrap.length - (address - bootstrap.destination)) {
+            throw std::runtime_error("Deuteros bootstrap helper outside its loaded range");
+        }
+        return disk.bytes(bootstrap.disk_offset + address - bootstrap.destination, length);
+    };
     // This includes the loop's timer branch at $405b6, but deliberately does
     // not turn the remaining 68000 program into guessed gameplay semantics.
     // Covers the main-loop branch and the complete known timer-dispatch
@@ -343,6 +351,52 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_word(zero_set, 98, 0x52b9); // addq.l #1,$1f974
     require_long(zero_set, 100, 0x0001f974);
 
+    // These are the first recovered tails that leave the title image for the
+    // bootstrap. Each saves the title entry's controller pointer, selects a
+    // raw bootstrap profile, then resets through $12800. Do not attach names
+    // to the routes: the original code here proves only their handoff values.
+    const auto require_exit = [&](const std::uint32_t address, const std::size_t handoff_offset,
+                                  const std::uint16_t profile) {
+        const auto exit = stage_code(address, handoff_offset + 30);
+        require_word(exit, handoff_offset, 0x2039); // move.l $206a0,d0
+        require_long(exit, handoff_offset + 2, 0x000206a0);
+        require_word(exit, handoff_offset + 6, 0x23c0); // move.l d0,$12ff8
+        require_long(exit, handoff_offset + 8, 0x00012ff8);
+        require_word(exit, handoff_offset + 12, 0x23fc); // move.l #profile,$12ffc
+        require_long(exit, handoff_offset + 14, profile);
+        require_long(exit, handoff_offset + 18, 0x00012ffc);
+        require_word(exit, handoff_offset + 22, 0x4ef9); // jmp $12800
+        require_long(exit, handoff_offset + 24, 0x00012800);
+    };
+    require_exit(0x37f56, 40, 2);
+    require_exit(0x38038, 14, 4);
+    require_exit(0x38068, 14, 3);
+
+    // $12800 recreates its stack/Exec state then jumps into the same bootstrap
+    // dispatcher used by the boot block. Table values 3 and 4 directly name
+    // profile zero, while value 2 branches to it. Profile zero is the raw
+    // main-stage read already recovered in DeuterosAmigaLoadPlan.
+    const auto bootstrap_entry = bootstrap_code(0x12800, 34);
+    require_word(bootstrap_entry, 0, 0x2e7c); // movea.l #$12dca,a7
+    require_long(bootstrap_entry, 2, 0x00012dca);
+    require_word(bootstrap_entry, 28, 0x4ef9); // jmp $12a4e
+    require_long(bootstrap_entry, 30, 0x00012a4e);
+    const auto profile_table = bootstrap_code(0x12a36, 20);
+    require_long(profile_table, 0, 0x00012b1c); // profile zero
+    require_long(profile_table, 8, 0x00012b44); // profile two
+    require_long(profile_table, 12, 0x00012b1c); // profile three
+    require_long(profile_table, 16, 0x00012b1c); // profile four
+    const auto profile_two = bootstrap_code(0x12b44, 2);
+    require_word(profile_two, 0, 0x60d6); // bra.b $12b1c
+    const auto profile_zero = bootstrap_code(0x12b1c, 20);
+    require_word(profile_zero, 0, 0x223c); // move.l #$20000,d1
+    require_long(profile_zero, 2, plan.main_stage.destination);
+    require_word(profile_zero, 6, 0x203c); // move.l #$4200,d0
+    require_long(profile_zero, 8, plan.main_stage.length);
+    require_word(profile_zero, 12, 0x243c); // move.l #$4,d2
+    require_long(profile_zero, 14, 4);
+    require_word(profile_zero, 18, 0x4e75);
+
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
         0x22d34, 0x11, 0x40410,
@@ -358,7 +412,9 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x1f98e, 0x1fc2c, 0x1fd0a, 0x1f99c, 0x1f974, 0x1f970, 0x1f96c,
         0x1f9a0, 0x28, 0x1f40, 8, 4,
         0x3fbf8, 0x13, 0x0c, 0x20, 0x4e20,
-        true, true, 0x1fc20};
+        true, true, 0x1fc20,
+        0x37f56, 2, 0x38038, 4, 0x38068, 3,
+        0x12800, 0x12ffc, 0x12a36, 0, plan.main_stage.entry_address};
 }
 
 } // namespace eon

@@ -182,6 +182,15 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.post_transition_dispatch_negative_service_d1 << " unless D0=0x"
         << title_stage.post_transition_dispatch_negative_suppress_value << ", delay 0x"
         << title_stage.post_transition_dispatch_negative_delay << std::dec << '\n';
+    std::cout << "          Title exits: 0x" << std::hex
+        << title_stage.title_exit_first_address << "/0x"
+        << title_stage.title_exit_second_address << "/0x"
+        << title_stage.title_exit_third_address << " select bootstrap profiles " << std::dec
+        << title_stage.title_exit_first_profile << "/" << title_stage.title_exit_second_profile
+        << "/" << title_stage.title_exit_third_profile << "; bootstrap 0x" << std::hex
+        << title_stage.title_exit_controller_address << " resolves all to profile " << std::dec
+        << title_stage.title_exit_resolved_profile << " main entry 0x" << std::hex
+        << title_stage.title_exit_main_stage_entry_address << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {

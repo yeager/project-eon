@@ -448,6 +448,26 @@ suppressed and service paths converge on `move.l (a7)+,D5`, `move.l
 (a7)+,D0`, `RTS` at `$1fc20`. Thus this routine returns its incoming D0/D5;
 the service's internal output and purpose remain intentionally unknown.
 
+### Deuteros Amiga title-stage exits
+
+The raw title-stage has three independently validated tails that leave its
+loaded interval. They begin at `$37f56`, `$38038`, and `$38068`. Their prior
+render/control work is intentionally not named, but each tail copies the
+incoming controller pointer from `$206a0` to bootstrap cell `$12ff8`, writes
+respectively long profile values `2`, `4`, or `3` to `$12ffc`, and performs
+`JMP $12800`.
+
+`$12800` resets the original stack/Exec state and jumps to bootstrap dispatcher
+`$12a4e`. The original six-entry table at `$12a36` resolves profiles 3 and 4
+directly to `$12b1c`; profile 2 selects `$12b44`, whose sole instruction is
+`BRA.B $12b1c`. `$12b1c` is the already verified profile-zero loader: it
+returns destination `$20000`, length `$4200`, and track `$4`, whose raw stage
+entry is `$21734`. Therefore these three original title exits demonstrably
+re-enter the raw main-stage load path. They are not yet interpreted as named
+choices, game modes, or completed gameplay transitions. Project Eon records
+only this opcode-validated profile and load-chain evidence; it performs no
+media extraction, generated state, or guessed post-handoff simulation.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
