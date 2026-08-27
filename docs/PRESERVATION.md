@@ -1080,6 +1080,14 @@ at `$02c8..$02ce`. `$02ce` is the first terminal control-transfer opcode
 boundary; the parser stops there and does not infer an interrupt or transfer
 effect from any of these bytes.
 
+MILL.COM's first private `INT 91h` boundary is likewise constrained without
+inventing DOS behavior. At `$0204` it makes the direct near call to `$02cf`;
+the exact caller-side bytes after that call clear `DX`, load `AX=$2591`, and
+execute `INT 21h` at `$0209`. Thus the raw vector request has handler offset
+zero and interrupt number `$91`. The segment derives from the preceding
+runtime loader/DOS results, so it is deliberately not named, read, or treated
+as a handler address; the parser stops at that external boundary.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
