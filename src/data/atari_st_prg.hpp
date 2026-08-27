@@ -55,6 +55,21 @@ struct MillenniumAtariBssEntry {
     std::uint32_t jump_address = 0;
 };
 
+// Provenance of the exact source range consumed by Millennium's second BSS
+// stub.  Its first bytes are the original DATA tail copied by the bootstrap;
+// its remaining bytes are the GEMDOS-established zero portion of BSS.  The
+// byte vector is an in-memory reconstruction of that loader state only: it is
+// neither an unpacked game file nor a writable media image.
+struct MillenniumAtariBssSource {
+    std::uint32_t load_base = 0;
+    std::uint32_t bss_start_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t source_data_offset = 0;
+    std::uint32_t original_data_bytes = 0;
+    std::uint32_t bss_zero_bytes = 0;
+    std::vector<std::uint8_t> bytes;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -71,5 +86,13 @@ struct MillenniumAtariBssEntry {
 [[nodiscard]] MillenniumAtariBssEntry parse_millennium_atari_bss_entry(
     std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
     const MillenniumAtariBootstrap& bootstrap);
+
+// Materializes only the precise source state requested by the BSS entry's
+// first copy: original PRG DATA where the bootstrap proves it was copied, then
+// the remaining loader-zeroed BSS. This validates the calculated load base
+// and refuses any layout that would make either provenance ambiguous.
+[[nodiscard]] MillenniumAtariBssSource materialize_millennium_atari_bss_source(
+    std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
+    const MillenniumAtariBootstrap& bootstrap, const MillenniumAtariBssEntry& entry);
 
 } // namespace eon
