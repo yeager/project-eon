@@ -528,4 +528,34 @@ MillenniumAtariConfigFourthJsr parse_millennium_atari_config_fourth_jsr(
         read_be16(payload, target_offset + 26U)};
 }
 
+MillenniumAtariConfigFourthLoop parse_millennium_atari_config_fourth_loop(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthJsr& setup) {
+    // The immediate post-setup body at $2b464 ends in DBF D5,-$14. On its
+    // taken path the 68000 PC base is the displacement word, returning to the
+    // first byte of the same 22-byte original block. No loop iteration is
+    // executed or interpreted here.
+    constexpr std::uint32_t target_address = 0x2b448;
+    constexpr std::uint32_t body_address = 0x2b464;
+    constexpr std::size_t body_offset = body_address - 0x2a4de;
+    constexpr std::array<std::uint8_t, 22> body_bytes{
+        0x12, 0x14, 0x10, 0x2c, 0x00, 0x01, 0xd2, 0x00, 0x64, 0x02,
+        0xd9, 0x55, 0xe8, 0x4c, 0x18, 0x81, 0x54, 0x8c, 0x51, 0xcd,
+        0xff, 0xec,
+    };
+    constexpr std::uint16_t backedge_opcode = 0x51cd;
+    constexpr std::int16_t backedge_displacement = -20;
+    if (setup.target_address != target_address || setup.target_file_offset + 28U != body_offset
+        || payload.size() < body_offset + body_bytes.size()
+        || !std::equal(body_bytes.begin(), body_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(body_offset))
+        || read_be16(payload, body_offset + 18U) != backedge_opcode
+        || static_cast<std::int16_t>(read_be16(payload, body_offset + 20U)) != backedge_displacement) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf loop");
+    }
+    return {target_address, body_address, static_cast<std::uint32_t>(body_offset),
+        static_cast<std::uint32_t>(body_bytes.size()), read_be16(payload, body_offset + 18U),
+        static_cast<std::int16_t>(read_be16(payload, body_offset + 20U)),
+        body_address, setup.d5_initial_value};
+}
+
 } // namespace eon

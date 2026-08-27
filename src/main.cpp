@@ -460,6 +460,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_fourth_jsr = eon::parse_millennium_atari_config_fourth_jsr(
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
+    const auto config_fourth_loop = eon::parse_millennium_atari_config_fourth_loop(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_jsr);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -569,6 +571,14 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_fourth_jsr.d6_initial_value << "/0x" << config_fourth_jsr.d5_initial_value
         << "/0x" << config_fourth_jsr.d4_initial_value << std::dec
         << " (validated original setup only; no loop, trap, or data interpretation)\n";
+    std::cout << "          MILL22A.inf 0x2b448 first loop: 0x" << std::hex
+        << config_fourth_loop.body_address << " file +0x" << config_fourth_loop.body_file_offset
+        << " (" << std::dec << config_fourth_loop.body_bytes << " bytes), DBF opcode 0x"
+        << std::hex << config_fourth_loop.backedge_opcode << " displacement " << std::dec
+        << config_fourth_loop.backedge_displacement << " -> 0x" << std::hex
+        << config_fourth_loop.backedge_target_address << "; setup D5 0x"
+        << config_fourth_loop.setup_d5_value << std::dec
+        << " (validated backedge only; no iteration or data-state execution)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.

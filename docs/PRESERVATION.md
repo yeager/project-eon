@@ -207,6 +207,14 @@ instruction/dataflow evidence. Project Eon stops before the ensuing loop body
 and does not dereference the pointers, execute its loops or traps, or infer a
 meaning for those registers and constants.
 
+The first local loop after that setup is fully bounded as bytes at `0x2b464`
+(file `+0xf86`): a 22-byte original block ending in `DBF` opcode `0x51cd`
+with displacement `-20`. The taken backedge returns to `0x2b464` itself; the
+adjacent setup had supplied literal `D5=0x0002`. Project Eon validates this
+exact backedge but does not run any iteration, read the loop's pointed-to
+data, derive an iteration outcome, or translate it into replacement game
+state.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

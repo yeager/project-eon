@@ -240,6 +240,19 @@ struct MillenniumAtariConfigFourthJsr {
     std::uint16_t d4_initial_value = 0;
 };
 
+// The first local loop immediately after $2b448's proven setup. This is a
+// byte-precise DBF backedge, not a claim about the loop's data or effects.
+struct MillenniumAtariConfigFourthLoop {
+    std::uint32_t target_address = 0;
+    std::uint32_t body_address = 0;
+    std::uint32_t body_file_offset = 0;
+    std::uint32_t body_bytes = 0;
+    std::uint16_t backedge_opcode = 0;
+    std::int16_t backedge_displacement = 0;
+    std::uint32_t backedge_target_address = 0;
+    std::uint16_t setup_d5_value = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -324,5 +337,11 @@ struct MillenniumAtariConfigFourthJsr {
 // It does not execute the ensuing loops, traps, or any data pointed to here.
 [[nodiscard]] MillenniumAtariConfigFourthJsr parse_millennium_atari_config_fourth_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
+
+// Validates the first exact $2b448 loop body and its DBF backedge only. It
+// never runs iterations, reads pointed-to data, or translates loop effects
+// into a replacement runtime state.
+[[nodiscard]] MillenniumAtariConfigFourthLoop parse_millennium_atari_config_fourth_loop(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthJsr& setup);
 
 } // namespace eon
