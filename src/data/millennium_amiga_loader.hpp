@@ -130,6 +130,20 @@ struct MillenniumAmigaResidentFirstPostHelperStaticChain {
     std::uint32_t following_target = 0;
 };
 
+// Static continuation anchor after the second staging caller's JSR $7ba12.
+// It is independent from the first caller: its own shorter original byte
+// range reaches a different literal JSR. No helper-return or execution claim
+// is represented by this evidence.
+struct MillenniumAmigaResidentSecondPostHelperStaticChain {
+    std::uint32_t staging_entry_address = 0;
+    std::uint32_t static_start_address = 0;
+    std::uint32_t raw_disk_offset = 0;
+    std::uint32_t byte_count = 0;
+    std::string sha256;
+    std::uint32_t static_call_address = 0;
+    std::uint32_t static_call_target = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -194,6 +208,14 @@ stage_millennium_amiga_resident_helper_pre_setup(
 // performs no helper-return, helper, or call execution.
 [[nodiscard]] MillenniumAmigaResidentFirstPostHelperStaticChain
 parse_millennium_amiga_resident_first_post_helper_static_chain(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentHelperStagingCallsite& callsite);
+
+// Fingerprints the second caller's independent 44-byte static continuation
+// and its final literal JSR. It never executes or assumes a return from any
+// helper/call involved.
+[[nodiscard]] MillenniumAmigaResidentSecondPostHelperStaticChain
+parse_millennium_amiga_resident_second_post_helper_static_chain(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentHelperStagingCallsite& callsite);
 

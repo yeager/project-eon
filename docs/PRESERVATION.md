@@ -359,6 +359,13 @@ Within that raw range, the original encodings at `$696a0` and `$696a6` are
 that either later call runs: it is a fail-closed static preservation anchor
 for the next caller-side disassembly step.
 
+The second caller has a distinct, shorter continuation and is anchored on its
+own terms: 44 bytes at `$69bba` map to raw disk `0x17fba` with SHA-256
+`5616f19900cb96ebc81edf90d0d17a9cde1644be07657801e243514b05e6ee23`.
+Its final bytes encode `JSR $68d50` at `$69be0`. This remains a static raw-byte
+fact only—not evidence that `$7ba12` returns, that `$68d50` runs, or that any
+live data or helper effect can be reconstructed.
+
 The setup target `$7b77e` is now separately fingerprinted at its linear
 raw-media correspondence, disk offset `0x29b7e`. Its first 32 original bytes
 are `04006e00c200044a00c240007a00c200105200c201005200c200014a00c20800`,
