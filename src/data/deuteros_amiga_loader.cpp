@@ -315,6 +315,54 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     if (big32(transfer, 0x04) != 0x1600) {
         throw std::runtime_error("Unexpected Deuteros resource transfer chunk length");
     }
+
+    // This helper is the first fully recovered direct consumer of the bytes
+    // loaded to $32a24. It saves A4, uses that exact payload base, combines
+    // two original state cells, and reads a word through the masked index.
+    // Do not assign a resource type or gameplay label here: the validated
+    // instructions establish only the data-flow and arithmetic.
+    constexpr std::uint32_t resource_consumer_address = 0x2016a;
+    constexpr std::uint32_t resource_seed_address = 0x20168;
+    constexpr std::uint32_t resource_counter_address = 0x2079e;
+    const auto resource_consumer = stage_bytes.subspan(main_offset(resource_consumer_address));
+    require_word(resource_consumer, 0x00, 0x2f0c); // move.l a4,-(sp)
+    require_word(resource_consumer, 0x02, 0x49f9); // lea $32a24,a4
+    require_long(resource_consumer, 0x04, resource_payload_address);
+    require_word(resource_consumer, 0x08, 0x3039); // move.w $20168,d0
+    require_long(resource_consumer, 0x0a, resource_seed_address);
+    require_word(resource_consumer, 0x0e, 0xd0b9); // add.l $2079e,d0
+    require_long(resource_consumer, 0x10, resource_counter_address);
+    require_word(resource_consumer, 0x14, 0x0240); // andi.w #$3ffe,d0
+    if (big16(resource_consumer, 0x16) != 0x3ffe) {
+        throw std::runtime_error("Unexpected Deuteros resource consumer index mask");
+    }
+    require_word(resource_consumer, 0x18, 0x3034); // move.w 0(a4,d0.w),d0
+    if (big16(resource_consumer, 0x1a) != 0) {
+        throw std::runtime_error("Unexpected Deuteros resource consumer word displacement");
+    }
+    require_word(resource_consumer, 0x1c, 0x0640); // addi.w #14,d0
+    if (big16(resource_consumer, 0x1e) != 14) {
+        throw std::runtime_error("Unexpected Deuteros resource consumer word addend");
+    }
+    require_word(resource_consumer, 0x20, 0xd179); // add.w d0,$20168
+    require_long(resource_consumer, 0x22, resource_seed_address);
+    require_word(resource_consumer, 0x26, 0x285f); // movea.l (sp)+,a4
+    require_word(resource_consumer, 0x28, 0x4e75); // rts
+
+    // The command dispatcher reaches that consumer through two independent
+    // literal command arms. Preserve only the verified compare/call pairs.
+    constexpr std::array<std::uint16_t, 2> resource_consumer_commands{0x000a, 0x0011};
+    constexpr std::array<std::uint32_t, 2> resource_consumer_call_sites{0x2159c, 0x2163a};
+    for (std::size_t index = 0; index < resource_consumer_call_sites.size(); ++index) {
+        const auto call_site = stage_bytes.subspan(main_offset(resource_consumer_call_sites[index] - 6));
+        require_word(call_site, 0x00, 0xb03c); // cmp.w #literal,d0
+        if (big16(call_site, 0x02) != resource_consumer_commands[index]) {
+            throw std::runtime_error("Unexpected Deuteros resource-consumer command literal");
+        }
+        require_word(call_site, 0x04, index == 0 ? 0x661a : 0x661c); // bne.s around call
+        require_word(call_site, 0x06, 0x4eb9); // jsr absolute long
+        require_long(call_site, 0x08, resource_consumer_address);
+    }
     const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
         0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
         0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, 0x210f8, 0x21248, 0x18,
@@ -323,7 +371,9 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         0x219f4, 1, 0x12ff8, 0x12ffc, 0x219f4, 5, 0x20b42, 0x4452f018, 0x21a56,
         resource_loader_address, resource_table_address, 2, resource_probe_address,
         resource_payload_address, resource_transfer_address, 0x1600, 0xdff016, 10,
-        resource_retry_address};
+        resource_retry_address, resource_consumer_address, resource_payload_address,
+        resource_seed_address, resource_counter_address, 0x3ffe, 14,
+        resource_consumer_commands, resource_consumer_call_sites};
 
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table

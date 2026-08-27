@@ -538,6 +538,17 @@ length word, and original bytes (including that length word). It rejects a
 length outside the physical ADF and returns no payload for the original zero
 retry condition. It never writes, extracts, or unpacks game data.
 
+The first direct consumer of that transferred memory is now bounded too.
+Routine `$2016a` saves A4, loads it with the exact transfer destination
+`$32a24`, combines the word at `$20168` with the longword at `$2079e`, masks
+the low word with `$3ffe`, reads one big-endian word at that A4-relative
+offset, adds `$000e`, adds the result back to `$20168`, restores A4, and
+returns. The main-stage command dispatcher reaches this routine from two
+separate validated compare/call arms: command words `$000a` at `$2159c` and
+`$0011` at `$2163a`. This proves a resource-to-control data path after the
+loader without naming the resource, treating it as an extracted file, or
+assigning gameplay semantics to the state cells.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an

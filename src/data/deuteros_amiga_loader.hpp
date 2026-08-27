@@ -111,6 +111,21 @@ struct DeuterosAmigaMainStageEntry {
     std::uint32_t resource_retry_probe_address = 0;
     std::uint8_t resource_retry_probe_bit = 0;
     std::uint32_t resource_retry_address = 0;
+    // A separately verified consumer in the same main-stage image enters at
+    // resource_consumer_address. It loads A4 from the exact payload
+    // destination above, combines a 16-bit seed with the low word of a
+    // counter, masks the result, reads one big-endian word, adds the literal
+    // below, and adds that result back into the seed. The two dispatcher
+    // sites recorded here reach it for literal command words; these are raw
+    // control/data-flow facts, not a name for the bytes or their effect.
+    std::uint32_t resource_consumer_address = 0;
+    std::uint32_t resource_consumer_base_address = 0;
+    std::uint32_t resource_consumer_seed_address = 0;
+    std::uint32_t resource_consumer_counter_address = 0;
+    std::uint16_t resource_consumer_index_mask = 0;
+    std::uint16_t resource_consumer_word_addend = 0;
+    std::array<std::uint16_t, 2> resource_consumer_command_words{};
+    std::array<std::uint32_t, 2> resource_consumer_call_sites{};
 };
 
 struct DeuterosAmigaLoadPlan {

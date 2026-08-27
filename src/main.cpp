@@ -179,6 +179,17 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
                 << transfer->payload_length << std::dec << " original bytes (in memory only)\n";
         }
     }
+    std::cout << "          Resource consumer: 0x" << std::hex
+        << main_entry.resource_consumer_address << " loads 0x"
+        << main_entry.resource_consumer_base_address << ", seed/counter 0x"
+        << main_entry.resource_consumer_seed_address << "/0x"
+        << main_entry.resource_consumer_counter_address << ", mask 0x"
+        << main_entry.resource_consumer_index_mask << ", +0x"
+        << main_entry.resource_consumer_word_addend << "; command arms 0x"
+        << main_entry.resource_consumer_command_words[0] << "@0x"
+        << main_entry.resource_consumer_call_sites[0] << "/0x"
+        << main_entry.resource_consumer_command_words[1] << "@0x"
+        << main_entry.resource_consumer_call_sites[1] << std::dec << '\n';
     const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);

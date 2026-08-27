@@ -892,6 +892,17 @@ int main() {
     assert(main_entry.resource_retry_probe_address == 0xdff016);
     assert(main_entry.resource_retry_probe_bit == 10);
     assert(main_entry.resource_retry_address == 0x2196e);
+    assert(main_entry.resource_consumer_address == 0x2016a);
+    assert(main_entry.resource_consumer_base_address == 0x32a24);
+    assert(main_entry.resource_consumer_base_address == main_entry.resource_payload_address);
+    assert(main_entry.resource_consumer_seed_address == 0x20168);
+    assert(main_entry.resource_consumer_counter_address == 0x2079e);
+    assert(main_entry.resource_consumer_index_mask == 0x3ffe);
+    assert(main_entry.resource_consumer_word_addend == 14);
+    assert((main_entry.resource_consumer_command_words
+        == std::array<std::uint16_t, 2>{0x000a, 0x0011}));
+    assert((main_entry.resource_consumer_call_sites
+        == std::array<std::uint32_t, 2>{0x2159c, 0x2163a}));
     assert(main_entry.input_dispatch_service_address == 0x218cc);
     assert(main_entry.input_dispatch_continue_address == 0x2181c);
     assert(main_entry.dispatch_service_state_address == 0x21704);
