@@ -1011,13 +1011,26 @@ int main(int argc, char** argv) {
                         }
                         if (const auto trace = millennium_game_session->last_eighth_function_key_trace()) {
                             std::ostringstream f8;
-                            f8 << "F8 ORIGINAL TRACE: HANDLER $" << std::hex << trace->handler_address
+                            f8 << "F8 VERIFIED EFFECT: HANDLER $" << std::hex << trace->handler_address
                                << " -> [$" << trace->reset_runtime_byte_address << "]=$"
                                << static_cast<unsigned>(trace->reset_runtime_byte_value)
                                << " -> PREFLIGHT $" << trace->local_preflight_address
                                << " -> REPEAT CALL $" << trace->repeated_call_address
                                << " (SHR BL,1 CARRY)";
                             draw_text(renderer, 610, 390, f8.str());
+                            if (const auto effect = millennium_game_session->last_runtime_byte_effect()) {
+                                std::ostringstream effect_text;
+                                effect_text << "REIMPLEMENTED PREFIX ONLY: [$" << std::hex
+                                            << effect->address << "] ";
+                                if (effect->previous) {
+                                    effect_text << '$' << static_cast<unsigned>(*effect->previous);
+                                } else {
+                                    effect_text << "UNKNOWN";
+                                }
+                                effect_text << " -> $" << static_cast<unsigned>(effect->value)
+                                            << "; NO SAVE WRITE, NO NATIVE CALL";
+                                draw_text(renderer, 610, 406, effect_text.str());
+                            }
                         }
                         if (const auto trace = millennium_game_session->last_ninth_function_key_trace()) {
                             std::ostringstream f9;

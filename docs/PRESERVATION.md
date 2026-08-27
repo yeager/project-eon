@@ -697,10 +697,15 @@ and calls local preflight `$731a`. That preflight reads `$da39`: its nonzero
 path calls `$7b47`; its other path reads `$da0a`, returns if it is zero, or
 decrements it, applies `XLAT` through `BX=$db4b`, and jumps to `$7948`. Back
 in the handler, `$cafa` is called and the following `SHR BL,1` carry branch
-can repeat that call. These are exact
-code operands/control-flow facts only. Project Eon shows the immutable F8
-trace but never supplies `$da39`, `$da0a`, or `BL`, performs native calls or
-writes original game media or saves.
+can repeat that call. F8's `C6 06 30 DA 00` write is the first F-key effect
+that Project Eon reconstructs, because its byte-level semantics are fully
+established and it executes before any runtime-dependent branch or call: its
+private runtime overlay changes `$da30` to zero. The overlay begins with
+`$da30` **unknown**, rather than deriving an initial value from `2200SAVE.I`;
+a second F8 therefore records `0 -> 0`. It is not a mutable view of the
+original COM image or a save serializer, and is never exported. The later
+preflight/call path remains deliberately unimplemented because `$da39`,
+`$da0a`, and `BL` have no proven initial state or complete helper semantics.
 
 The tenth table record (raw F10 / `$44`) is `36 3c 09 1b 39 09 84 73`, with
 handler entry `$7384`. It returns when native runtime word `$a19e` is nonzero.

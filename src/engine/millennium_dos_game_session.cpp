@@ -7,7 +7,10 @@ namespace eon {
 MillenniumDosGameSession::MillenniumDosGameSession(MillenniumDosGameFlow flow)
     : flow_(flow) {
     if (flow_.action_poll_address != 0x10f05 || flow_.function_key_count != 10
-        || flow_.function_key_table_stride != 8 || flow_.function_key_dispatch_address != 0x76f0) {
+        || flow_.function_key_table_stride != 8 || flow_.function_key_dispatch_address != 0x76f0
+        || flow_.eighth_function_key.handler_address != 0x7306
+        || flow_.eighth_function_key.reset_runtime_byte_address != 0xda30
+        || flow_.eighth_function_key.reset_runtime_byte_value != 0) {
         throw std::runtime_error("Unsupported Millennium DOS action-dispatch profile");
     }
 }
@@ -25,6 +28,7 @@ std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::u
     last_eighth_function_key_trace_.reset();
     last_ninth_function_key_trace_.reset();
     last_tenth_function_key_trace_.reset();
+    last_runtime_byte_effect_.reset();
     if (action == flow_.special_action_0 || action == flow_.special_action_1) {
         last_special_action_ = action;
         return std::nullopt;
@@ -50,12 +54,29 @@ std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::u
         last_seventh_function_key_trace_ = flow_.seventh_function_key;
     } else if (normalized == 7) {
         last_eighth_function_key_trace_ = flow_.eighth_function_key;
+        // Exact effect of the verified F8 prefix:
+        //   0e 1f c6 06 30 da 00 b0 02 ...
+        // `mov byte ptr [$da30], 0` executes before any conditional branch
+        // or external call. Preserve the unknown initial value rather than
+        // fabricating one from unrelated serialized save data.
+        last_runtime_byte_effect_ = MillenniumDosRuntimeByteEffect{
+            .address = flow_.eighth_function_key.reset_runtime_byte_address,
+            .previous = reconstructed_da30_,
+            .value = flow_.eighth_function_key.reset_runtime_byte_value,
+        };
+        reconstructed_da30_ = flow_.eighth_function_key.reset_runtime_byte_value;
     } else if (normalized == 8) {
         last_ninth_function_key_trace_ = flow_.ninth_function_key;
     } else if (normalized == 9) {
         last_tenth_function_key_trace_ = flow_.tenth_function_key;
     }
     return last_function_key_index_;
+}
+
+std::optional<std::uint8_t> MillenniumDosGameSession::reconstructed_runtime_byte(
+    const std::uint16_t address) const {
+    if (address != flow_.eighth_function_key.reset_runtime_byte_address) return std::nullopt;
+    return reconstructed_da30_;
 }
 
 } // namespace eon
