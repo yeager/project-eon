@@ -1,5 +1,6 @@
 #include "platform/game_data.hpp"
 #include "launcher.hpp"
+#include "engine/deuteros_amiga_opening.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/amiga_ofs.hpp"
@@ -359,6 +360,15 @@ int main() {
         first_special_bitmap.color_indices.end(), [](auto color) { return color != 0; }) == 2'712);
     assert(eon::to_hex(eon::sha256(first_special_bitmap.color_indices))
         == "a7abcb6a308f7016e28611862a14de3adfa12881efcce458e5888b07e2d0c1cb");
+    eon::DeuterosAmigaOpening live_opening(*amiga_disk1);
+    static_cast<void>(live_opening.tick());
+    const auto live_tick2 = live_opening.tick();
+    assert(live_tick2.palette == 1);
+    static_cast<void>(live_opening.tick());
+    const auto live_frame = live_opening.rgba_frame();
+    assert(live_frame && live_frame->size() == 320U * 200U * 4U);
+    assert(live_opening.ticks() == 3);
+    assert(live_opening.title_handoff_profile().disk_offset == 0x6e000);
     eon::DeuterosAmigaChannelVm opening_vm(system_disk, first_bundle);
     assert(opening_vm.channels().size() == 4);
     const auto tick1 = opening_vm.tick();

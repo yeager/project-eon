@@ -35,6 +35,7 @@ endif()
 add_executable(project-eon
     src/main.cpp
     src/launcher.cpp
+    src/engine/deuteros_amiga_opening.cpp
     src/data/amiga_adf.cpp
     src/data/amiga_ofs.cpp
     src/data/creative_voice.cpp
@@ -78,6 +79,7 @@ if(BUILD_TESTING)
     add_executable(eon-native-tests
         tests/native_tests.cpp
         src/launcher.cpp
+        src/engine/deuteros_amiga_opening.cpp
         src/data/amiga_adf.cpp
         src/data/amiga_ofs.cpp
         src/data/creative_voice.cpp
