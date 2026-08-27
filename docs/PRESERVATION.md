@@ -156,6 +156,15 @@ sequence in the original FAT chain and reports the control facts. It does not
 name or emulate trap effects, execute the JSRs, synthesize a configuration,
 or write any disk data.
 
+The first of those literal JSRs is also bounded against the genuine file
+chain. Address `0x2b55a` maps to file offset `0x107c`; its eight verified
+bytes are `03 5a 4c df 7f ff 4e 75`. Project Eon retains the first word
+`0x035a` only as an original dynamic-bit-operation boundary because its effect
+depends on register state supplied by the caller. The complete following
+local sequence is `MOVEM.L (A7)+,D0-D7/A0-A6` (`0x4cdf`, mask `0x7fff`) and
+`RTS` (`0x4e75`). This does not execute the JSR, model the caller's registers,
+or claim a routine-level meaning beyond the directly verified bytes.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
