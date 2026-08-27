@@ -224,6 +224,13 @@ the runtime still reads this source ADF range in place and does not unpack it.
 The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
 the passed mode word at `$4040e`, and comparing its low byte with five. The
 meaning of those mode values and the later gameplay dispatch remain unknown.
+For mode five it copies the byte to `$3717e` and writes `$0101` to `$38092`;
+every other path writes byte one to `$19d52`. After shared setup, the recovered
+recurring loop starts at `$40574`, calls `$222c0` then `$23e4e`; a mode/input
+change clears `$40410`, and the loop compares it with `$0000ea60` before the
+original `$4069a` dispatch, subject to another original-state check. The strict
+parser validates these operands directly and does not claim their gameplay
+semantics.
 
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone

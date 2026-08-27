@@ -6,6 +6,7 @@
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
+#include "data/deuteros_amiga_title_stage.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
@@ -91,9 +92,14 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
             << bundle.mode_flag << '\n';
     }
     const auto& handoff = plan.title_handoff_profile;
+    const auto title_stage = eon::parse_deuteros_amiga_title_stage(disk, plan);
     std::cout << "          Title input profile: disk 0x" << std::hex << handoff.disk_offset
         << ", length 0x" << handoff.length << ", memory 0x" << handoff.destination
         << ", entry 0x" << plan.title_stage.entry_address << std::dec << '\n';
+    std::cout << "          Title stage: mode " << title_stage.special_mode << " -> byte 0x"
+        << std::hex << title_stage.special_mode_byte_address << ", config 0x"
+        << title_stage.special_mode_configuration_value << std::dec << "; loop 0x"
+        << std::hex << title_stage.main_loop_address << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {
@@ -132,6 +138,14 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto game_data = eon::parse_millennium_dos_game_data(*static_data);
     std::cout << "          2200AD4.BIN: " << game_data.celestial_labels.size()
         << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
+    constexpr auto initial_save_sha256 =
+        "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
+    const auto initial_save = eon::extract_asset_by_sha256(release.path, initial_save_sha256);
+    if (!initial_save) throw std::runtime_error("Verified Millennium initial save missing");
+    const auto save_layout = eon::parse_millennium_dos_save_layout(*initial_save);
+    std::cout << "          2200SAVE.I: version 0x" << std::hex << save_layout.version
+        << std::dec << ", " << save_layout.state_table.size()
+        << " recovered state-table records\n";
 }
 
 void report_millennium_amiga(const eon::ReleaseArchive& release) {
