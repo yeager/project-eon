@@ -201,14 +201,16 @@ int main(int argc, char** argv) {
         return 2;
     }
     auto request = *parsed.request;
-    if (!std::filesystem::is_directory(request.data_directory)) {
+    if (!std::filesystem::is_directory(request.data_directory)
+        && !std::filesystem::is_regular_file(request.data_directory)) {
         if (request.data_directory_is_default) {
             std::error_code error;
             std::filesystem::create_directories(request.data_directory, error);
         }
     }
-    if (!std::filesystem::is_directory(request.data_directory)) {
-        std::cerr << "Data directory does not exist: " << request.data_directory << '\n';
+    if (!std::filesystem::is_directory(request.data_directory)
+        && !std::filesystem::is_regular_file(request.data_directory)) {
+        std::cerr << "Data path does not exist: " << request.data_directory << '\n';
         return 2;
     }
     eon::ReleaseScanner scanner(request.data_directory);

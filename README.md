@@ -90,7 +90,8 @@ Start the graphical card menu:
 
 By default, Project Eon reads user-supplied media from `~/.projecteon` on
 Linux/macOS and `<install directory>\data` on Windows. `--data` selects a
-different directory, for example a preservation collection in `Hämtningar`.
+different directory or one original archive, for example a preservation
+collection in `Hämtningar`.
 Archives and disk images are read in place: Project Eon never unpacks, copies,
 installs, modifies, or redistributes original game data.
 

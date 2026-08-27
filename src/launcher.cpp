@@ -39,11 +39,11 @@ std::filesystem::path default_data_directory(const char* executable_path) {
 std::string usage() {
     return
         "Usage:\n"
-        "  project-eon [--data <directory>]\n"
-        "  project-eon [--data <directory>] --game millennium|deuteros\n"
+        "  project-eon [--data <directory-or-archive>]\n"
+        "  project-eon [--data <directory-or-archive>] --game millennium|deuteros\n"
         "               [--platform dos|amiga|atari-st]\n"
         "               [--presentation original|modern]\n\n"
-        "  project-eon [--data <directory>] --verify-data millennium|deuteros\n\n"
+        "  project-eon [--data <directory-or-archive>] --verify-data millennium|deuteros\n\n"
         "Without --data, game data is read from ~/.projecteon on Linux/macOS\n"
         "or <install directory>/data on Windows. Without --game, the graphical\n"
         "start menu is shown.\n";

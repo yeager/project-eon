@@ -40,6 +40,11 @@ std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& d
 
 ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
     std::error_code error;
+    if (std::filesystem::is_regular_file(directory, error) && !error) {
+        candidates_.push_back(directory);
+        return;
+    }
+    error.clear();
     for (std::filesystem::recursive_directory_iterator iterator(
              directory, std::filesystem::directory_options::skip_permission_denied, error), end;
          !error && iterator != end; iterator.increment(error)) {

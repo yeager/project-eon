@@ -125,6 +125,11 @@ int main() {
             && release.platform == eon::Platform::dos && release.language == "en";
     });
     assert(english_dos != releases.end());
+    eon::ReleaseScanner direct_archive_scanner(english_dos->path);
+    assert(direct_archive_scanner.candidate_count() == 1);
+    assert(direct_archive_scanner.advance());
+    assert(direct_archive_scanner.releases().size() == 1);
+    assert(direct_archive_scanner.releases().front().sha256 == english_dos->sha256);
     const auto sfx1_bytes = eon::extract_asset_by_sha256(english_dos->path,
         "5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88");
     assert(sfx1_bytes);
