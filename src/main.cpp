@@ -451,6 +451,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)));
     const auto config_first_jsr = eon::parse_millennium_atari_config_first_jsr(
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
+    const auto config_second_jsr = eon::parse_millennium_atari_config_second_jsr(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -514,6 +516,15 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_first_jsr.movem_opcode << " mask 0x" << config_first_jsr.movem_register_mask
         << ", RTS 0x" << config_first_jsr.return_opcode << std::dec
         << " (validated only; no JSR execution or caller-state inference)\n";
+    std::cout << "          MILL22A.inf second JSR target: 0x" << std::hex
+        << config_second_jsr.target_address << " is file +0x" << config_second_jsr.target_file_offset
+        << "; opcode 0x" << config_second_jsr.initial_opcode << " immediate 0x"
+        << config_second_jsr.immediate_bit_number << ", branch 0x"
+        << config_second_jsr.conditional_branch_opcode << " -> 0x"
+        << config_second_jsr.conditional_branch_target_address << "; joined JSR at 0x"
+        << config_second_jsr.join_jsr_address << " -> 0x" << config_second_jsr.join_jsr_target
+        << ", following JSR -> 0x" << config_second_jsr.following_jsr_target << std::dec
+        << " (validated only; no branch evaluation or calls)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.
