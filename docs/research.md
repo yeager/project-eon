@@ -153,7 +153,16 @@ eight-byte name. Genuine integration anchors cover all 38 title entries and
 stream. Its 14-entry delta table and literal/RLE controls are native code
 anchors; decoded indices are row-major and hash to
 `85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee`.
-The hardware RGB palette path remains an explicit next step.
+The hardware RGB6 palette and its logical-index translation are decoded from
+the same original record; their precise layout is recorded in the preservation
+ledger.
+
+The DOS title executable and launcher now have a bounded, byte-validated
+handoff model. `TITLES.EXE` selects resource zero, enters a 37-step
+transition, polls `INT 21h/AH=06/DL=ff`, then exits zero on nonzero returned
+input. `MILL.COM` invokes `TITLES.EXE` and then `2200ad.exe` through its DOS
+EXEC wrapper. The parser records those concrete values without assigning
+unproven semantics to the transition drawing code.
 
 ## Completion criteria
 
