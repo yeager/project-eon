@@ -116,6 +116,14 @@ program. Timing-dependent random commands accept only an explicit compatible
 source, preserving the distinction between deterministic decoding and hardware
 timing still under investigation.
 
+The first title input boundary is now anchored too. Channel 3's `$14,$0001`
+wait reaches `$0f,$00000b38` on tick 82 when the original gate and prior input
+state are asserted; the VM exposes the raw alternate-resource pointer. The
+main loop independently takes its first accepted CIA-A bit-6 input via
+`$21982`, returns profile one to the bootstrap, and table routine `$12b30`
+loads `0x6ca00` bytes from disk `0x6e000` into `0x13000`. This documents a real
+handoff, not an assumed playable-session implementation.
+
 The timing source is now reproduced: VBL server `$207fe` increments a counter
 by four after each scheduler pass, while `$2016a` combines that counter and a
 16-bit seed to read a word from the current genuine bundle. The first opening

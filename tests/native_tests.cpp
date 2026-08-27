@@ -287,6 +287,11 @@ int main() {
     assert(load_plan.main_stage.length == 0x4200);
     assert(load_plan.main_stage.destination == 0x20000);
     assert(load_plan.main_stage.entry_address == 0x21734);
+    // $21982 writes profile one before returning to the bootstrap. Its table
+    // routine supplies these exact raw-track load constants.
+    assert(load_plan.title_handoff_profile.disk_offset == 0x6e000);
+    assert(load_plan.title_handoff_profile.length == 0x6ca00);
+    assert(load_plan.title_handoff_profile.destination == 0x13000);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 
@@ -380,6 +385,26 @@ int main() {
     assert(opening_vm.channels()[0].y == 181);
     assert(opening_vm.channels()[0].wait_mode == 6);
     assert(opening_vm.channels()[0].timer == 38);
+    // Channel 3 is the first opening input waiter: after its verified 0x50
+    // tick delay, $14 accepts the already-polled button and immediately
+    // installs the real bundle-relative alternate pointer through $0f.
+    eon::DeuterosAmigaChannelVm input_vm(system_disk, first_bundle);
+    eon::DeuterosAmigaRandom input_random(system_disk, first_bundle);
+    eon::DeuterosAmigaVmInputs input_vm_inputs;
+    input_vm_inputs.input_pressed = true;
+    input_vm_inputs.random_word = [&input_random] { return input_random.next(); };
+    std::optional<std::uint32_t> first_input_alternate;
+    for (std::size_t tick = 1; tick <= 96; ++tick) {
+        const auto events = input_vm.tick(input_vm_inputs);
+        input_random.advance_vblank();
+        if (!events.alternate_resources.empty()) {
+            assert(events.alternate_resources.size() == 1);
+            first_input_alternate = events.alternate_resources.front();
+            assert(tick == 82);
+            break;
+        }
+    }
+    assert(first_input_alternate == 0x0b38);
     eon::DeuterosAmigaRandom opening_random(system_disk, first_bundle, 0, 0x240);
     assert(opening_random.next() == 0x11);
     assert(opening_random.seed() == 0x11);

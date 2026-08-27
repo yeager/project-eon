@@ -169,6 +169,7 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
         if (command.operands[0] >= bundle_.length) throw std::runtime_error("Deuteros alternate resource outside bundle");
         state.alternate_resource = command.operands[0];
         state.bitmap_selector = 0xfe;
+        events.alternate_resources.push_back(command.operands[0]);
         break;
     case 0x10:
         transition_requested_ = true;
