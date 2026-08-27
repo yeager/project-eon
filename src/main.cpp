@@ -126,6 +126,20 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << static_cast<unsigned>(main_entry.first_input_bit) << " and 0x" << std::hex
         << main_entry.second_input_address << " bit " << std::dec
         << static_cast<unsigned>(main_entry.second_input_bit) << '\n';
+    std::cout << "          >2 scheduler evidence: state 0x" << std::hex
+        << main_entry.scheduler_state_base_address << ", count 0x"
+        << main_entry.scheduler_channel_count_address << ", stride 0x"
+        << main_entry.scheduler_channel_stride << ", program/selector/value +0x"
+        << main_entry.scheduler_active_program_offset << "/+0x"
+        << main_entry.scheduler_wait_selector_offset << "/+0x"
+        << main_entry.scheduler_wait_value_offset << ", selectors 0x" << std::hex
+        << static_cast<unsigned>(main_entry.scheduler_wait_selectors[0]) << "/0x"
+        << static_cast<unsigned>(main_entry.scheduler_wait_selectors[1]) << "/0x"
+        << static_cast<unsigned>(main_entry.scheduler_wait_selectors[2]) << "/0x"
+        << static_cast<unsigned>(main_entry.scheduler_wait_selectors[3])
+        << "; tail bit " << std::dec << static_cast<unsigned>(main_entry.scheduler_tail_probe_bit)
+        << " at 0x" << std::hex << main_entry.scheduler_tail_probe_address
+        << " -> 0x" << main_entry.scheduler_tail_service_address << std::dec << '\n';
     std::cout << "          Input dispatch evidence: 0x" << std::hex
         << main_entry.input_dispatch_address << " compares word 0x"
         << main_entry.input_dispatch_state_address << " with " << std::dec

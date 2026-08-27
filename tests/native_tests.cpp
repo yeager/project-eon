@@ -794,6 +794,17 @@ int main() {
     assert(main_entry.first_input_bit == 10);
     assert(main_entry.second_input_address == 0xbfe001);
     assert(main_entry.second_input_bit == 6);
+    assert(main_entry.scheduler_state_base_address == 0x210f8);
+    assert(main_entry.scheduler_channel_count_address == 0x21248);
+    assert(main_entry.scheduler_channel_stride == 0x18);
+    assert(main_entry.scheduler_active_program_offset == 0x10);
+    assert(main_entry.scheduler_wait_selector_offset == 0x06);
+    assert(main_entry.scheduler_wait_value_offset == 0x08);
+    assert((main_entry.scheduler_wait_selectors
+        == std::array<std::uint8_t, 4>{3, 5, 6, 0x14}));
+    assert(main_entry.scheduler_tail_probe_address == 0xdff01f);
+    assert(main_entry.scheduler_tail_probe_bit == 5);
+    assert(main_entry.scheduler_tail_service_address == 0x21698);
     assert(main_entry.input_dispatch_address == 0x21982);
     assert(main_entry.input_dispatch_state_address == 0x21704);
     assert(main_entry.input_dispatch_compare_value == 2);

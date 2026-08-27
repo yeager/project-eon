@@ -44,6 +44,23 @@ struct DeuterosAmigaMainStageEntry {
     std::uint8_t first_input_bit = 0;
     std::uint32_t second_input_address = 0;
     std::uint8_t second_input_bit = 0;
+    // The > two route returns to $2181c, which enters the genuine 24-byte
+    // channel scheduler at $21380.  These facts identify its state layout
+    // and the four wait selectors proven by the raw code.  They are not a
+    // host timing model and do not assign a gameplay meaning to a selector.
+    std::uint32_t scheduler_state_base_address = 0;
+    std::uint32_t scheduler_channel_count_address = 0;
+    std::uint16_t scheduler_channel_stride = 0;
+    std::uint16_t scheduler_active_program_offset = 0;
+    std::uint16_t scheduler_wait_selector_offset = 0;
+    std::uint16_t scheduler_wait_value_offset = 0;
+    std::array<std::uint8_t, 4> scheduler_wait_selectors{};
+    // After all channel slots, the original probes this custom register bit
+    // and conditionally invokes a raw service.  Preserve that ordering as a
+    // bounded scheduler-tail fact, without labelling the service.
+    std::uint32_t scheduler_tail_probe_address = 0;
+    std::uint8_t scheduler_tail_probe_bit = 0;
+    std::uint32_t scheduler_tail_service_address = 0;
     // The first input-originated branch after the recurring loop.  The
     // original compares the word at input_dispatch_state_address with two;
     // values below two are written back as input_dispatch_clamped_value and
