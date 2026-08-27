@@ -290,6 +290,13 @@ int main() {
     const auto first_opaque_range = save_session.opaque_bytes(0x0002, 4);
     assert(first_opaque_range.size() == 4);
     assert(first_opaque_range[0] == (*initial_save)[0x0002]);
+    // The presentation session owns a byte-for-byte in-memory copy.  It must
+    // not become a mutable view of an archive extraction buffer.
+    const auto original_byte = save_session.serialized_bytes()[0x0002];
+    auto independently_mutated_extraction = *initial_save;
+    independently_mutated_extraction[0x0002] ^= 0xff;
+    assert(save_session.serialized_bytes()[0x0002] == original_byte);
+    assert(save_session.sha256() == "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7");
     bool rejected_bad_save_record = false;
     try {
         static_cast<void>(save_session.state_record(38));

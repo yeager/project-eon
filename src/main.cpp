@@ -67,6 +67,10 @@ struct MillenniumDosLaunchAssets {
     PreviewAnimation title;
     PreviewAnimation gx_canvas;
     eon::MillenniumDosTitleFlow title_flow;
+    // This is intentionally the original serialized image, not a projected
+    // game model.  The launcher exposes only the recovered positional words
+    // once TITLES.EXE has made its verified hand-off.
+    eon::MillenniumDosSaveSession initial_save;
 };
 
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
@@ -290,6 +294,8 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
     constexpr auto launcher_sha256 =
         "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+    constexpr auto initial_save_sha256 =
+        "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
         return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
             && candidate.language == "en";
@@ -307,13 +313,15 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         const auto gx_bytes = eon::extract_asset_by_sha256(release->path, gx_lib_sha256);
         const auto titles = eon::extract_asset_by_sha256(release->path, titles_sha256);
         const auto launcher = eon::extract_asset_by_sha256(release->path, launcher_sha256);
-        if (!gx_bytes || !titles || !launcher) return std::nullopt;
+        const auto initial_save = eon::extract_asset_by_sha256(release->path, initial_save_sha256);
+        if (!gx_bytes || !titles || !launcher || !initial_save) return std::nullopt;
         const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
         return MillenniumDosLaunchAssets{
             .title = {bitmap.width, bitmap.height,
                 {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
             .gx_canvas = {gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
             .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
+            .initial_save = eon::MillenniumDosSaveSession(*initial_save),
         };
     } catch (const std::exception& error) {
         std::cerr << "Unable to load Millennium DOS launch assets: " << error.what() << '\n';
@@ -495,10 +503,12 @@ int main(int argc, char** argv) {
     bool deuteros_input_pressed = false;
     std::optional<std::uint32_t> deuteros_title_resource;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
+    std::size_t millennium_state_page = 0;
     const auto start_millennium_title = [&] {
         if (millennium_assets) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
                 millennium_assets->title_flow);
+            millennium_state_page = 0;
         }
     };
     if (screen == Screen::launching && selected == eon::Game::millennium) {
@@ -522,6 +532,20 @@ int main(int argc, char** argv) {
                 && screen == Screen::launching && selected == eon::Game::millennium
                 && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1
                 && millennium_title_session) {
+                if (millennium_title_session->handed_off()
+                    && (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT)) {
+                    constexpr std::size_t records_per_page = 8;
+                    constexpr std::size_t page_count =
+                        (eon::MillenniumDosSaveLayout::state_table_count + records_per_page - 1)
+                        / records_per_page;
+                    if (event.key.key == SDLK_LEFT && millennium_state_page > 0) {
+                        --millennium_state_page;
+                    }
+                    if (event.key.key == SDLK_RIGHT && millennium_state_page + 1 < page_count) {
+                        ++millennium_state_page;
+                    }
+                    continue;
+                }
                 // TITLES.EXE uses DOS' non-blocking character availability
                 // poll, rather than a game-specific action key.  SDL's key
                 // event supplies that availability signal; the recovered
@@ -702,7 +726,7 @@ int main(int argc, char** argv) {
                     draw_text(renderer, 64, 220,
                         "AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01");
                     draw_text(renderer, 64, 238,
-                        "ORIGINAL GX CANVAS ONLY - UI/STATE SEMANTICS NOT YET INFERRED");
+                        "ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE");
                 } else {
                     draw_text(renderer, 64, 220, "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC");
                     draw_text(renderer, 64, 238,
@@ -710,11 +734,40 @@ int main(int argc, char** argv) {
                 }
                 SDL_SetTextureScaleMode(texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
-                const float scale = 2.0F;
+                const float scale = millennium_handed_off ? 1.65F : 2.0F;
                 SDL_FRect preview_bounds{64, 250,
                     static_cast<float>(image.width) * scale,
                     static_cast<float>(image.height) * scale};
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
+                if (millennium_handed_off) {
+                    const auto& save = millennium_assets->initial_save;
+                    constexpr std::size_t records_per_page = 8;
+                    const auto first_record = millennium_state_page * records_per_page;
+                    std::ostringstream heading;
+                    heading << "2200SAVE.I READ-ONLY  SHA-256 " << save.sha256()
+                            << "  VERSION 0x" << std::hex << save.layout().version << std::dec;
+                    draw_text(renderer, 610, 270, heading.str());
+                    draw_text(renderer, 610, 290,
+                        "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS");
+                    for (std::size_t row = 0; row < records_per_page; ++row) {
+                        const auto record_index = first_record + row;
+                        if (record_index >= save.layout().state_table.size()) break;
+                        const auto& record = save.state_record(record_index);
+                        std::ostringstream line;
+                        line << '[' << record_index << "] +00=0x" << std::hex
+                             << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
+                             << " +06=0x" << record.runtime_offset_6 << " +08=0x"
+                             << record.runtime_offset_8;
+                        draw_text(renderer, 610, 316.0F + static_cast<float>(row) * 21.0F,
+                            line.str());
+                    }
+                    std::ostringstream pager;
+                    pager << "PAGE " << (millennium_state_page + 1) << "/"
+                          << ((eon::MillenniumDosSaveLayout::state_table_count + records_per_page - 1)
+                              / records_per_page)
+                          << "  LEFT/RIGHT: TABLE PAGE";
+                    draw_text(renderer, 610, 496, pager.str());
+                }
                 draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
             } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
                 const auto frame = deuteros_opening->rgba_frame();
