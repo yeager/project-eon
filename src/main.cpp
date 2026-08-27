@@ -903,7 +903,7 @@ int main(int argc, char** argv) {
     // Direct launches and command-line verification intentionally wait for a
     // complete answer. The graphical menu instead advances this scanner after
     // its first frame, mirroring OpenCaptive's non-blocking data scanner.
-    if (request.verify_game || request.game) {
+    if (request.verify_game || request.inspect_data || request.game) {
         while (!scanner.advance(64)) {
         }
         releases = scanner.releases();
@@ -912,10 +912,10 @@ int main(int argc, char** argv) {
             return 3;
         }
     }
-    if (request.verify_game) {
+    if (request.verify_game || request.inspect_data) {
         bool found = false;
         for (const auto& release : releases) {
-            if (release.game != *request.verify_game) continue;
+            if (request.verify_game && release.game != *request.verify_game) continue;
             found = true;
             std::cout << "VERIFIED  " << eon::name(release.game) << " / "
                 << eon::name(release.platform) << " / " << release.language << '\n'
