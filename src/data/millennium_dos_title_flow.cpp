@@ -72,16 +72,32 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     static_cast<void>(require_unique(titles_executable, transition_setup, "title transition loop"));
     static_cast<void>(require_unique(titles_executable, input_poll, "title input poll"));
 
-    // MILL.COM calls its EXEC wrapper at 0x31c first with the title string
-    // and, only after it returns, with the game executable string.
-    constexpr std::array<std::uint8_t, 14> launcher_sequence{
+    // This is a caller-side fact only.  MILL.COM loads DX with each adjacent
+    // program string, makes two near calls to the same local target, and
+    // tests AX between them.  We deliberately do not assign a meaning to
+    // the target or to either post-call status test.
+    constexpr std::array<std::uint8_t, 22> launcher_call_chain{
         0xba, 0x8f, 0x06, 0xe8, 0xd9, 0x00, 0x22, 0xc0,
-        0x75, 0x19, 0x0e, 0x1f, 0xba, 0x9a};
+        0x75, 0x19, 0x0e, 0x1f, 0xba, 0x9a, 0x06, 0xe8,
+        0xcd, 0x00, 0x22, 0xc0, 0x75, 0x0d};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
         '2', '2', '0', '0', 'a', 'd', '.', 'e', 'x', 'e', 0};
-    static_cast<void>(require_unique(mill_launcher, launcher_sequence, "launcher sequence"));
+    constexpr std::size_t mill_load_bias = 0x100;
+    const auto launcher_chain_offset = require_unique(
+        mill_launcher, launcher_call_chain, "launcher caller-side call chain");
+    constexpr std::size_t title_call_in_chain = 3;
+    constexpr std::size_t game_call_in_chain = 15;
+    const auto title_call_offset = launcher_chain_offset + title_call_in_chain;
+    const auto game_call_offset = launcher_chain_offset + game_call_in_chain;
+    const auto title_call_address = title_call_offset + mill_load_bias;
+    const auto game_call_address = game_call_offset + mill_load_bias;
+    const auto title_call_target = title_call_address + 3 + 0x00d9;
+    const auto game_call_target = game_call_address + 3 + 0x00cd;
+    if (title_call_target != game_call_target) {
+        throw std::runtime_error("Invalid Millennium DOS launcher common call target");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -97,6 +113,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_service = 0x06,
         .input_parameter = 0xff,
         .exit_code = 0,
+        .launcher_title_program_address = static_cast<std::uint16_t>(title_offset + mill_load_bias),
+        .launcher_game_program_address = static_cast<std::uint16_t>(game_offset + mill_load_bias),
+        .launcher_title_call_address = static_cast<std::uint16_t>(title_call_address),
+        .launcher_game_call_address = static_cast<std::uint16_t>(game_call_address),
+        .launcher_common_call_target = static_cast<std::uint16_t>(title_call_target),
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",

@@ -925,11 +925,14 @@ program itself does not execute the game binary: it exits with status zero.
 
 The accompanying clean `MILL.COM` (1,445 bytes, SHA-256
 `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`)
-uses its EXEC wrapper at `$031c` first with loaded address `$068f`, the
-NUL-terminated `TITLES.EXE` string at file `$58f`, then after return with
-`$069a`, the adjacent `2200ad.exe` string at file `$59a`. This is the exact
-DOS title-to-game hand-off used by the native parser. It establishes ordering,
-not a new game-state model or an inference about title timing between calls.
+has a caller-side sequence at loaded `$023d`: it loads `DX=$068f` (the
+NUL-terminated `TITLES.EXE` string at file `$58f`) and near-calls `$031c`
+from `$0240`; after the explicit `AND AX,AX` / conditional branch bytes, it
+loads `DX=$069a` (the adjacent `2200ad.exe` string at file `$59a`) and makes
+the same direct near call from `$024c`. This is the exact DOS title-to-game
+hand-off used by the native parser. It establishes only literal dataflow and
+control edges: Project Eon does not assign a DOS/EXEC meaning to `$031c`, the
+post-call `AX` tests, or either callee return.
 
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
