@@ -176,6 +176,18 @@ int main() {
     assert(defjam_splitter.helper_address == 0x7ba12);
     assert(defjam_splitter.signed_word_address == 0x7b768);
     assert(defjam_splitter.signed_sign_address == 0x7b778);
+    const auto defjam_helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
+        defjam_loader_disk, defjam_plan, defjam_splitter);
+    assert(defjam_helper_boundary.helper_address == 0x7ba12);
+    assert(defjam_helper_boundary.raw_disk_offset == 0x29e12);
+    assert((defjam_helper_boundary.raw_prefix == std::array<std::uint8_t, 32>{{
+        0x00, 0x01, 0x20, 0x00, 0x80, 0xac, 0x00, 0x00,
+        0x01, 0x00, 0x08, 0x80, 0x42, 0x00, 0x00, 0x01,
+        0x01, 0x00, 0x80, 0xac, 0x00, 0x00, 0x01, 0x00,
+        0x20, 0x80, 0x42, 0x00, 0x00, 0x01, 0x00, 0x10,
+    }}));
+    assert(defjam_helper_boundary.raw_prefix_sha256
+        == "eb11f5c5dfda4234b0214599bffec09402deff2435c58d57db1f7ab84c07c434");
     // These are real, consecutive words from the supplied raw resident range.
     // They exercise the exact pre-helper LSL/ROXL/LSR data movement without
     // claiming that this disk position was an original A1 caller.
@@ -1466,6 +1478,29 @@ int main() {
     // and the original in-memory pointer distinct.
     assert(input_vm.channels()[3].alternate_resource == 0x0b38);
     assert(input_vm.channels()[3].mode_data == 0x3355c);
+    // The genuine stream after the $0f alternate renderer is
+    // `$05,$0008,$0044,$00`. $213be resumes it only when the low word of
+    // `$22a20 - 1` is eight and parameter `$44` is strictly below `$22a16`.
+    // Opcode zero clears selector +6, while its program pointer survives to
+    // the next scheduler pass.
+    // $05 has already yielded in the same scheduler call as $0f.
+    assert(input_vm.channels()[3].stream_offset == 0x0a96);
+    eon::DeuterosAmigaVmInputs post_input_audio_inputs;
+    post_input_audio_inputs.audio_position = 8;
+    post_input_audio_inputs.audio_limit = 0x45;
+    post_input_audio_inputs.random_word = [&input_random] { return input_random.next(); };
+    const auto premature_audio_wait = input_vm.tick(post_input_audio_inputs);
+    assert(premature_audio_wait.sounds.empty());
+    assert(input_vm.channels()[3].active);
+    assert(input_vm.channels()[3].wait_mode == 5);
+    post_input_audio_inputs.audio_position = 9;
+    const auto resolved_audio_wait = input_vm.tick(post_input_audio_inputs);
+    assert(resolved_audio_wait.sounds.empty());
+    assert(input_vm.channels()[3].active);
+    assert(input_vm.channels()[3].wait_mode == 0);
+    assert(input_vm.channels()[3].stream_offset == 0x0a98);
+    static_cast<void>(input_vm.tick(post_input_audio_inputs));
+    assert(!input_vm.channels()[3].active);
     // The SDL session uses the same input contract, rather than a separately
     // scripted preview path. Holding the recovered input signal reaches the
     // same verified handoff tick and raw resource pointer.

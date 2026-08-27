@@ -233,6 +233,18 @@ negates the word when the byte is nonzero, then returns; the helper may have
 changed either location. Project Eon therefore does not claim a final return
 value or invoke this transform from gameplay.
 
+For preservation, Project Eon records the exact raw-media mapping that would
+correspond to that helper address if the resident request were viewed as a
+linear byte mapping: `$7ba12 - $68000 + $16400 =` disk offset `0x29e12`.
+All five supplied Millennium Amiga variants share its first 32 bytes,
+`0001200080ac00000100088042000001010080ac000001002080420000010010`,
+whose SHA-256 is
+`eb11f5c5dfda4234b0214599bffec09402deff2435c58d57db1f7ab84c07c434`.
+This is a reproducible raw-byte boundary only—not evidence that those bytes
+are the helper's original executable representation. The loader invokes an
+unrecovered transform before the resident entry; no decompressor, helper
+semantics, caller, or media write is inferred from this fingerprint.
+
 ### Deuteros Atari ST protected-media boot chain
 
 The supplied Atari ST collection consists of protected/cracked raw `.st`
@@ -684,6 +696,16 @@ this exact A4/call boundary, then deliberately leaves the `$fe` pixel effect
 unrendered until the setup and all stream control classes are fully recovered.
 It does not reinterpret those bytes as an indexed sprite, create a synthetic
 frame, or write/unpack media.
+
+The same first accepted input channel has a bounded post-renderer tail in the
+real bundle: immediately after `$0f,$00000b38` are `$05,$0008,$0044,$00`.
+The scheduler's selector-five arm at `$213be` resumes only if the low word of
+`$22a20 - 1` equals state word `+8` (`$0008`) and state word `+10` (`$0044`)
+is strictly below `$22a16`. It then dispatches `$00`: `$214ae` clears selector
+`+6` only. On the following scheduler visit, selector zero reaches `$2142a`
+and clears the program longword `+16`. Project Eon models those two original
+in-memory effects across two scheduler calls; it neither manufactures an
+audio clock nor substitutes a completion screen.
 
 The first fully observed `$20580` stream is now executed as a strict in-memory
 trace. The opening input path supplies `$32a24+$0b38`; its original bytes are
