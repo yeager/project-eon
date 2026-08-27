@@ -71,6 +71,13 @@ struct MillenniumDosLaunchAssets {
     PreviewAnimation gx_canvas;
     eon::MillenniumDosTitleFlow title_flow;
     eon::MillenniumDosGameFlow game_flow;
+    // Both private video drivers are loaded from the same verified DOS
+    // release as the launcher. Keeping their parsed ABI profiles alongside
+    // the launch assets prevents the SDL path from silently relying on a
+    // report-only parser, while still leaving driver selection/execution to
+    // a later, evidence-backed startup implementation.
+    eon::MillenniumDosVideoDriverProfile ega_video_driver;
+    eon::MillenniumDosVideoDriverProfile mcga_video_driver;
     // This is intentionally the original serialized image, not a projected
     // game model.  The launcher exposes only the recovered positional words
     // once TITLES.EXE has made its verified hand-off.
@@ -887,6 +894,10 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
+    constexpr auto ega640_sha256 =
+        "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
+    constexpr auto mcga_sha256 =
+        "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
     const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
         return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
             && candidate.language == "en";
@@ -906,7 +917,11 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         const auto launcher = eon::extract_asset_by_sha256(release->path, launcher_sha256);
         const auto game = eon::extract_asset_by_sha256(release->path, game_sha256);
         const auto initial_save = eon::extract_asset_by_sha256(release->path, initial_save_sha256);
-        if (!gx_bytes || !titles || !launcher || !game || !initial_save) return std::nullopt;
+        const auto ega640 = eon::extract_asset_by_sha256(release->path, ega640_sha256);
+        const auto mcga = eon::extract_asset_by_sha256(release->path, mcga_sha256);
+        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga) {
+            return std::nullopt;
+        }
         const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
         return MillenniumDosLaunchAssets{
             .title = {bitmap.width, bitmap.height,
@@ -914,6 +929,10 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
             .gx_canvas = {gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
             .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
             .game_flow = eon::parse_millennium_dos_game_flow(*game),
+            .ega_video_driver = eon::parse_millennium_dos_video_driver(*ega640,
+                eon::MillenniumDosVideoDriverKind::ega640),
+            .mcga_video_driver = eon::parse_millennium_dos_video_driver(*mcga,
+                eon::MillenniumDosVideoDriverKind::mcga),
             .initial_save = eon::MillenniumDosSaveSession(*initial_save),
         };
     } catch (const std::exception& error) {
