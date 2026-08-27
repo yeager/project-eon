@@ -952,6 +952,13 @@ caller-side static dataflow and control edges only. Neither call, the `AX`
 condition, nor the interrupt bytes in this range is given an execution or DOS
 meaning.
 
+The `$0231` direct call's local target is `$02cf`. Its hash-anchored first 19
+bytes are `B8 00 3D CD 21 73 0C 0E 1F 8B 16 D5 05 B4 09 CD 21 EB 87`.
+They contain the first local split, literal `JNC +$0c` at `$02d4` to `$02e2`.
+The sequential bytes end in literal `JMP -$79` at `$02e0` to `$0269`.
+This records only direct byte control edges: no carry condition, interrupt,
+callee result, or higher-level behavior is inferred.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
