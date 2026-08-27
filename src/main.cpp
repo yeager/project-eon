@@ -407,6 +407,8 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     std::cout << "          2200AD.EXE startup: entry 0x" << std::hex
         << game_flow.entry_address << ", SS=CS, SP=0x" << game_flow.startup_stack_pointer
         << ", first CALL 0x" << game_flow.startup_first_call_address
+        << " -> INT 0x" << static_cast<unsigned>(game_flow.startup_first_call_interrupt)
+        << ", static RET 0x" << game_flow.startup_first_call_return_address
         << "; AL==$" << static_cast<unsigned>(game_flow.startup_mode_equal_value)
         << " -> 0x" << game_flow.startup_equal_call_address << ", otherwise 0x"
         << game_flow.startup_other_call_address << "; DX!=0 -> 0x"

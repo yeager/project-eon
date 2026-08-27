@@ -25,6 +25,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t load_bias = 0x100;
     constexpr std::size_t entry_offset = 0xd2b0 - load_bias;
     constexpr std::size_t startup_offset = 0xd2b4 - load_bias;
+    constexpr std::size_t startup_first_call_offset = 0x0124 - load_bias;
     constexpr std::size_t loop_offset = 0xd3d2 - load_bias;
     constexpr std::size_t f1_table_offset = 0x2fbf - load_bias;
     constexpr std::size_t f1_handler_offset = 0x6f9a - load_bias;
@@ -73,6 +74,12 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xe8, 0xd0, 0xfe, 0x52, 0x0e, 0x1f, 0xe8, 0x0f, 0xff,
         0xa3, 0x28, 0xd1, 0x23, 0xd2, 0x74, 0x03, 0xe9, 0x56,
         0x01});
+    // The wrapped first target saves the five original register values around
+    // private INT $91 and ends in RET.  Its interrupt effect and whether it
+    // returns at runtime remain deliberately unmodelled.
+    constexpr auto startup_first_call = std::to_array<std::uint8_t>({
+        0x1e, 0x56, 0x57, 0x55, 0x06, 0xcd, 0x91,
+        0x07, 0x5d, 0x5f, 0x5e, 0x1f, 0xc3});
     constexpr auto loop = std::to_array<std::uint8_t>({
         0xe8, 0xe6, 0x3a, 0xe8, 0x29, 0xa2, 0xe8, 0xf0, 0xa7,
         0xe8, 0x27, 0x3b, 0x22, 0xc0, 0x74, 0xf0, 0x32, 0xe4,
@@ -291,6 +298,9 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     if (!has_bytes(game_executable, startup_offset, startup)) {
         throw std::runtime_error("Unsupported Millennium DOS startup profile");
     }
+    if (!has_bytes(game_executable, startup_first_call_offset, startup_first_call)) {
+        throw std::runtime_error("Unsupported Millennium DOS first startup-call boundary");
+    }
     if (!has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
         || !has_bytes(game_executable, f1_handler_offset, f1_handler)
@@ -333,6 +343,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .startup_address = 0xd2b4,
         .startup_stack_pointer = 0xda00,
         .startup_first_call_address = 0x0124,
+        .startup_first_call_interrupt = 0x91,
+        .startup_first_call_return_address = 0x0130,
         .startup_mode_byte_address = 0xda05,
         .startup_mode_equal_value = 1,
         .startup_equal_call_address = 0xd1a1,
