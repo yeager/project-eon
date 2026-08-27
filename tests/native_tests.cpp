@@ -1737,8 +1737,8 @@ int main() {
     }};
     for (std::size_t index = 0; index < deuteros_state0_plan.requests.size(); ++index) {
         const auto& request = deuteros_state0_plan.requests[index];
-        assert(request.track == 4 + index);
-        assert(request.side == 0);
+        assert(request.track == 2 + index / 2U);
+        assert(request.side == index % 2U);
         assert(request.first_sector == 1);
         assert(request.sector_count == 9);
         assert(request.source_offset == 0x4800 + index * 0x1200);
