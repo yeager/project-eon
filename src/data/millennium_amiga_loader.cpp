@@ -255,4 +255,69 @@ parse_millennium_amiga_resident_helper_raw_boundary(
     return result;
 }
 
+std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>
+parse_millennium_amiga_resident_helper_staging_callsites(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentWordSplitter& splitter) {
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t setup_helper = 0x7b77e;
+    constexpr std::uint32_t magnitude_destination = 0x7b764;
+    constexpr std::uint32_t sign_destination = 0x7b776;
+    constexpr std::uint32_t clear_byte = 0x7b14e;
+    constexpr std::array<std::uint32_t, 2> entries{{0x69624, 0x69b88}};
+    constexpr std::array<std::uint32_t, 2> sources{{0x7cc3c, 0x7cc68}};
+    std::array<MillenniumAmigaResidentHelperStagingCallsite, 2> callsites{};
+    constexpr std::array<std::uint8_t, 6> word_copies_bytes{{0x3a, 0xdc, 0x3a, 0xdc, 0x3a, 0xdc}};
+    constexpr std::array<std::uint8_t, 6> sign_copies_bytes{{0x1a, 0xdc, 0x1a, 0xdc, 0x1a, 0xdc}};
+
+    for (std::size_t index = 0; index < callsites.size(); ++index) {
+        if (entries[index] < plan.resident_stage.destination) {
+            throw std::runtime_error("Millennium Amiga helper staging callsite precedes resident range");
+        }
+        const auto relative = entries[index] - plan.resident_stage.destination;
+        constexpr std::size_t prefix_size = 6;
+        constexpr std::size_t word_copies = 3 * 2;
+        constexpr std::size_t sign_copies = 3 * 2;
+        constexpr std::size_t suffix_size = 6 + 8 + 6;
+        constexpr std::size_t size = prefix_size + 6 + word_copies + 6 + sign_copies + suffix_size;
+        if (relative > plan.resident_stage.length || size > plan.resident_stage.length - relative) {
+            throw std::runtime_error("Millennium Amiga helper staging callsite is outside resident range");
+        }
+        const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, size);
+        const std::array<std::uint8_t, 6> source_prefix{{
+            0x28, 0x7c, static_cast<std::uint8_t>(sources[index] >> 24U),
+            static_cast<std::uint8_t>(sources[index] >> 16U),
+            static_cast<std::uint8_t>(sources[index] >> 8U), static_cast<std::uint8_t>(sources[index]),
+        }};
+        constexpr std::array<std::uint8_t, 6> magnitude_prefix{{0x2a, 0x7c, 0x00, 0x07, 0xb7, 0x64}};
+        constexpr std::array<std::uint8_t, 6> sign_prefix{{0x2a, 0x7c, 0x00, 0x07, 0xb7, 0x76}};
+        constexpr std::array<std::uint8_t, 20> suffix{{
+            0x4e, 0xb9, 0x00, 0x07, 0xb7, 0x7e,
+            0x13, 0xfc, 0x00, 0x00, 0x00, 0x07, 0xb1, 0x4e,
+            0x4e, 0xb9, 0x00, 0x07, 0xba, 0x12,
+        }};
+        if (!std::equal(source_prefix.begin(), source_prefix.end(), bytes.begin())) {
+            throw std::runtime_error("Unexpected Millennium Amiga helper staging source");
+        }
+        if (!std::equal(magnitude_prefix.begin(), magnitude_prefix.end(), bytes.begin() + prefix_size)
+            || !std::equal(bytes.begin() + prefix_size + magnitude_prefix.size(),
+                bytes.begin() + prefix_size + magnitude_prefix.size() + word_copies,
+                word_copies_bytes.begin())) {
+            throw std::runtime_error("Unexpected Millennium Amiga helper word staging");
+        }
+        if (!std::equal(sign_prefix.begin(), sign_prefix.end(), bytes.begin() + prefix_size + magnitude_prefix.size() + word_copies)
+            || !std::equal(bytes.begin() + prefix_size + magnitude_prefix.size() + word_copies + sign_prefix.size(),
+                bytes.begin() + prefix_size + magnitude_prefix.size() + word_copies + sign_prefix.size() + sign_copies,
+                sign_copies_bytes.begin())) {
+            throw std::runtime_error("Unexpected Millennium Amiga helper sign staging");
+        }
+        if (!std::equal(suffix.begin(), suffix.end(), bytes.end() - suffix.size())) {
+            throw std::runtime_error("Unexpected Millennium Amiga helper staging tail");
+        }
+        callsites[index] = {entries[index], sources[index], magnitude_destination, sign_destination,
+            setup_helper, clear_byte, splitter.helper_address};
+    }
+    return callsites;
+}
+
 } // namespace eon
