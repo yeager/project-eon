@@ -136,7 +136,8 @@ The English DOS `TITLE.LIB` and `GX.LIB` are also parsed natively through their
 verified banked resource directory, exposing 38 title resources and 180
 gameplay resources directly from the hash-identified original archive.
 `TITLE.LIB` resource `P00` now decodes into its authentic 320×200 indexed title
-image. Its RGB palette installation remains intentionally pending code-level
+image, and `--verify-data millennium` reports the decoded resource directly.
+Its RGB palette installation remains intentionally pending code-level
 verification; Project Eon does not substitute an assumed VGA palette.
 
 The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
