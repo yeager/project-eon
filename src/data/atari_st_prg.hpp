@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -82,6 +83,25 @@ struct MillenniumAtariMaterializedTarget {
     std::vector<std::uint8_t> bytes;
 };
 
+// The first GEMDOS boundary reached by the verified BSS materialization.
+// These are literal stack arguments and control-flow facts from the original
+// bytes.  `fclose_result_negative_branch_target_offset` is deliberately an
+// offset, not a host behaviour: GEMDOS owns the return value in D0 and Project
+// Eon neither invokes the trap nor decides whether the retry loop terminates.
+struct MillenniumAtariTrapEntry {
+    std::uint32_t target_address = 0;
+    std::uint32_t fopen_filename_address = 0;
+    std::string fopen_filename;
+    std::uint16_t fopen_access_mode = 0;
+    std::uint16_t fopen_function = 0;
+    std::uint32_t fopen_trap_offset = 0;
+    std::uint16_t following_fclose_function = 0;
+    std::uint32_t following_fclose_selector_offset = 0;
+    std::uint32_t fopen_result_test_offset = 0;
+    std::uint32_t fopen_result_negative_branch_offset = 0;
+    std::uint32_t fopen_result_negative_branch_target_offset = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -112,5 +132,12 @@ struct MillenniumAtariMaterializedTarget {
 // PRG relocation, disk extraction, write, or 68000 execution is involved.
 [[nodiscard]] MillenniumAtariMaterializedTarget materialize_millennium_atari_target(
     const MillenniumAtariBssSource& source, const MillenniumAtariBssEntry& entry);
+
+// Validates the original Fopen trap and immediate post-trap setup after the
+// materialized jump. It makes no GEMDOS call or OS emulation; the parser only
+// reports the literal service numbers, original filename bytes and the
+// negative-return retry branch.
+[[nodiscard]] MillenniumAtariTrapEntry parse_millennium_atari_trap_entry(
+    const MillenniumAtariBssSource& source, const MillenniumAtariMaterializedTarget& target);
 
 } // namespace eon

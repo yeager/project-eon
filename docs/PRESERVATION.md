@@ -117,6 +117,20 @@ target at `0x77000`. Its verified first instructions are `MOVE.W #0x2,-(A7)`,
 for preservation; Project Eon does not invoke the trap, emulate a GEMDOS call,
 or infer anything about the target's gameplay meaning.
 
+The strict next boundary is now accounted for without crossing it. The literal
+pointer `0x1d6e4` lies `0x92` bytes into that reconstructed source and names
+the original NUL-terminated `MILL22A.inf` string. The target pushes access mode
+`0x0002`, that pointer, and selector `0x003d`, then executes `TRAP #1`; this is
+the documented GEMDOS `Fopen` interface. It then pushes the returned `D0` word
+and selector `0x003e` (the GEMDOS `Fclose` selector), but no second `TRAP #1`
+exists in this proven range. The following `TST.L D0; BMI.S -2` tests the
+`Fopen` return and branches back to its own branch opcode on a negative OS
+return. Project Eon records those exact offsets (`+0x0e`, the prepared
+`Fclose` selector at `+0x12`, and the `+0x18` self-loop) and validates the
+filename bytes. It does not issue either service, model GEMDOS return values,
+turn the loop into host behaviour, or infer the later successful control path
+as gameplay.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
