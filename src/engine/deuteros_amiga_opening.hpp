@@ -7,6 +7,7 @@
 #include "data/deuteros_amiga_alternate_renderer.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
+#include "engine/deuteros_amiga_title_stage_session.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -32,6 +33,9 @@ public:
     [[nodiscard]] const std::optional<DeuterosAmigaAlternateRendererTrace>& alternate_renderer_trace() const {
         return alternate_renderer_trace_;
     }
+    [[nodiscard]] const std::optional<DeuterosAmigaTitleStageSession>& title_stage_session() const {
+        return title_stage_session_;
+    }
 
 private:
     AmigaAdf disk_;
@@ -45,6 +49,7 @@ private:
     DeuterosAmigaCompositor compositor_;
     std::optional<DeuterosAmigaFrame> last_frame_;
     std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace_;
+    std::optional<DeuterosAmigaTitleStageSession> title_stage_session_;
     bool frame_composed_on_last_tick_ = false;
     std::uint64_t ticks_ = 0;
 };

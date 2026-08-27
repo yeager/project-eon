@@ -1824,6 +1824,26 @@ int main() {
     assert(load_plan.title_stage.length == 0x6ca00);
     assert(load_plan.title_stage.destination == 0x13000);
     assert(load_plan.title_stage.entry_address == 0x40426);
+    const eon::DeuterosAmigaTitleStageSession title_stage_session(system_disk, load_plan);
+    assert(title_stage_session.stage().disk_offset == 0x6e000);
+    assert(title_stage_session.stage().length == 0x6ca00);
+    assert(title_stage_session.stage().destination == 0x13000);
+    assert(title_stage_session.stage().entry_address == 0x40426);
+    assert(title_stage_session.original_bytes().size() == 0x6ca00);
+    assert(title_stage_session.original_sha256()
+        == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x6e000 + 6] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::DeuterosAmigaTitleStageSession(altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto title_stage = eon::parse_deuteros_amiga_title_stage(system_disk, load_plan);
     assert(title_stage.entry_address == 0x40426);
     assert(title_stage.incoming_mode_address == 0x4040e);
@@ -2243,6 +2263,11 @@ int main() {
         }
     }
     assert(live_input_alternate == 0x0b38);
+    const auto& live_title_stage = live_input_opening.title_stage_session();
+    assert(live_title_stage);
+    assert(live_title_stage->stage().entry_address == 0x40426);
+    assert(live_title_stage->original_sha256()
+        == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
     // The first real $fe render pass receives the exact $32a24+$0b38 stream.
     // $20580's observed opening path sets the original position/table globals
     // and requests eleven glyph writes before its zero-byte return. It is traced

@@ -31,6 +31,14 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     inputs.input_pressed = input_pressed;
     inputs.random_word = [this] { return random_.next(); };
     auto events = vm_.tick(inputs);
+    // The initial opening's accepted $14 input reaches $0f with this exact
+    // raw operand. Only that verified route selects bootstrap profile one and
+    // the original title-stage interval; another alternate resource must not
+    // be presented as a title handoff.
+    if (!title_stage_session_ && events.alternate_resources.size() == 1
+        && events.alternate_resources.front() == 0x0b38) {
+        title_stage_session_.emplace(disk_, load_plan_);
+    }
     ++ticks_;
     // $207fe runs independently between scheduler calls, including after an
     // input-triggered title handoff.

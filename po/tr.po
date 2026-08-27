@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: tr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "PROJECT EON"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "OYUN SEÇ   |   YUKARI/AŞAĞI: PLATFORM   |   D: VERİ TARAMA   |   F1: ÖZGÜN / MODERN   |   ESC: ÇIK"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "DOĞRULANMIŞ ÖZGÜN VERİ"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "ÖZGÜN VERİ BULUNAMADI"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "ÖZGÜN VERİ TARANIYOR..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / TIKLA: BAŞLAT"
-msgid "PLATFORM:"
-msgstr "PLATFORM:"
+
 msgid "PLATFORM: "
 msgstr "PLATFORM: "
+
 msgid "AUTO"
 msgstr "OTOMATİK"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "VERİ TARAMA ARACI (içerik karmaları, salt okunur)"
+
+msgid "Files scanned: "
+msgstr "Taranan dosyalar: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Tamamlandı. Yalnızca karmayla doğrulanmış özgün sürümler seçilebilir."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Tarama sürüyor. Bu ilerleme panelini gizlemek için D tuşuna basın."
+
 msgid "LAUNCH REQUEST ACCEPTED"
 msgstr "BAŞLATMA İSTEĞİ KABUL EDİLDİ"
+
+msgid "Game: "
+msgstr "Oyun: "
+
+msgid "Platform: "
+msgstr "Platform: "
+
+msgid "Presentation: Modern"
+msgstr "Sunum: modern"
+
+msgid "Presentation: Original"
+msgstr "Sunum: özgün"
+
+msgid "Original data is present and selected."
+msgstr "Özgün veri mevcut ve seçili."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "Simülasyon eksik; sentetik bir ikame çalıştırılmayacak."
+
 msgid "ESC: QUIT"
 msgstr "ESC: ÇIK"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: MENÜYE DÖN"

@@ -4,6 +4,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "PROJECT EON"
+msgstr "PROJECT EON"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VÄLJ SPEL   |   UPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERN   |   ESC: AVSLUTA"
 
@@ -25,11 +28,20 @@ msgstr "PLATTFORM: "
 msgid "AUTO"
 msgstr "AUTOMATISK"
 
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "STARTBEGÄRAN GODKÄND"
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "DATASKANNER (innehållshashar, skrivskyddad)"
 
 msgid "Files scanned: "
 msgstr "Skannade filer: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Klart. Endast hash-verifierade originalutgåvor kan väljas."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Skanning pågår. Tryck D för att dölja förloppspanelen."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "STARTBEGÄRAN GODKÄND"
 
 msgid "Game: "
 msgstr "Spel: "
@@ -37,17 +49,17 @@ msgstr "Spel: "
 msgid "Platform: "
 msgstr "Plattform: "
 
-msgid "Original data is present and selected."
-msgstr "Originaldata finns och är vald."
-
-msgid "The simulation is incomplete; no synthetic substitute will run."
-msgstr "Simuleringen är inte komplett; ingen syntetisk ersättning körs."
-
 msgid "Presentation: Modern"
 msgstr "Presentation: modern"
 
 msgid "Presentation: Original"
 msgstr "Presentation: original"
+
+msgid "Original data is present and selected."
+msgstr "Originaldata finns och är vald."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "Simuleringen är inte komplett; ingen syntetisk ersättning körs."
 
 msgid "ESC: QUIT"
 msgstr "ESC: AVSLUTA"

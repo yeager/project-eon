@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: no\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "PROJECT EON"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VELG SPILL   |   OPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERNE   |   ESC: AVSLUTT"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "VERIFISERTE ORIGINALDATA"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "ORIGINALDATA IKKE FUNNET"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "SKANNER ORIGINALDATA..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / KLIKK: START"
-msgid "PLATFORM:"
-msgstr "PLATTFORM:"
-msgid "AUTO"
-msgstr "AUTOMATISK"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "STARTFORESPØRSEL GODTATT"
+
 msgid "PLATFORM: "
 msgstr "PLATTFORM: "
+
+msgid "AUTO"
+msgstr "AUTOMATISK"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "DATASKANNER (innholdshasher, skrivebeskyttet)"
+
+msgid "Files scanned: "
+msgstr "Skannede filer: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Fullført. Bare originalutgivelser verifisert med hash kan velges."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Skanning pågår. Trykk D for å skjule dette fremdriftspanelet."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "STARTFORESPØRSEL GODTATT"
+
+msgid "Game: "
+msgstr "Spill: "
+
+msgid "Platform: "
+msgstr "Plattform: "
+
+msgid "Presentation: Modern"
+msgstr "Presentasjon: moderne"
+
+msgid "Presentation: Original"
+msgstr "Presentasjon: original"
+
+msgid "Original data is present and selected."
+msgstr "Originaldata er tilgjengelig og valgt."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "Simuleringen er ufullstendig; ingen syntetisk erstatning vil kjøre."
+
 msgid "ESC: QUIT"
 msgstr "ESC: AVSLUTT"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: TILBAKE TIL MENYEN"

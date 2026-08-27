@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: zh_CN\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "伊恩计划"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "选择游戏   |   上/下：平台   |   D：扫描数据   |   F1：原版 / 现代   |   ESC：退出"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "已验证的原始数据"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "未找到原始数据"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "正在扫描原始数据..."
+
 msgid "ENTER / CLICK: START"
 msgstr "回车 / 单击：开始"
-msgid "PLATFORM:"
-msgstr "平台："
-msgid "AUTO"
-msgstr "自动"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "已接受启动请求"
+
 msgid "PLATFORM: "
 msgstr "平台："
+
+msgid "AUTO"
+msgstr "自动"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "数据扫描器（内容哈希，只读）"
+
+msgid "Files scanned: "
+msgstr "已扫描文件："
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "完成。只能选择经哈希验证的原始发行版。"
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "正在扫描。按 D 隐藏此进度面板。"
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "已接受启动请求"
+
+msgid "Game: "
+msgstr "游戏："
+
+msgid "Platform: "
+msgstr "平台："
+
+msgid "Presentation: Modern"
+msgstr "显示方式：现代"
+
+msgid "Presentation: Original"
+msgstr "显示方式：原版"
+
+msgid "Original data is present and selected."
+msgstr "原始数据已存在并已选定。"
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "模拟尚不完整；不会运行任何合成替代品。"
+
 msgid "ESC: QUIT"
 msgstr "ESC：退出"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC：返回菜单"

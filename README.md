@@ -227,6 +227,11 @@ the same importer, channel VM, compositor, original palettes, VBL tick
 sequence, and recovered input gate. It freezes at the first still-unimplemented stateful
 save/restore boundary rather than fabricating later animation frames.
 
+After the verified held-input route reaches its original `$0f` handoff, the
+runtime also opens the original Amiga title-stage track range read-only and
+reports its exact provenance and SHA-256. It deliberately does not render a
+guessed title menu or execute through the unrecovered Exec/graphics state.
+
 The repository does not contain the commercial games. Point the inventory tool
 at a directory containing the original archives:
 

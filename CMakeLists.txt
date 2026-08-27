@@ -41,6 +41,7 @@ add_executable(project-eon
     src/i18n.cpp
     src/launcher.cpp
     src/engine/deuteros_amiga_opening.cpp
+    src/engine/deuteros_amiga_title_stage_session.cpp
     src/engine/deuteros_amiga_paula.cpp
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_game_session.cpp
@@ -104,6 +105,7 @@ if(BUILD_TESTING)
         src/i18n.cpp
         src/launcher.cpp
         src/engine/deuteros_amiga_opening.cpp
+        src/engine/deuteros_amiga_title_stage_session.cpp
         src/engine/deuteros_amiga_paula.cpp
         src/engine/millennium_dos_title_session.cpp
         src/engine/millennium_dos_game_session.cpp
