@@ -374,6 +374,11 @@ whose zero branch at `$68518` reaches `$6854a`. This is recorded by
 evidence only; neither branch target nor the flag's gameplay meaning is
 inferred.
 
+At that zero-target `$6854a`, the next isolated static boundary compares `D2`
+with immediate `$0120`; its conditional branch is encoded at `$6854e` and
+targets `$68562`. Project Eon records only this byte-exact comparison/branch
+pair and assigns neither values nor branch meanings to it.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with

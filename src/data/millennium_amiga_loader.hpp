@@ -211,6 +211,13 @@ struct MillenniumAmigaResidentIndependentEntryGate {
     std::uint32_t flag_zero_target = 0;
 };
 
+struct MillenniumAmigaResidentIndependentZeroTargetBoundary {
+    std::uint32_t entry_address = 0;
+    std::uint16_t compare_immediate = 0;
+    std::uint32_t conditional_branch_address = 0;
+    std::uint32_t conditional_branch_target = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -323,5 +330,12 @@ parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
 [[nodiscard]] MillenniumAmigaResidentIndependentEntryGate
 parse_millennium_amiga_resident_independent_entry_gate(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
+
+// Validates only the first compare/conditional-branch pair at the independent
+// entry's fixed-flag-zero target. It does not interpret the comparison.
+[[nodiscard]] MillenniumAmigaResidentIndependentZeroTargetBoundary
+parse_millennium_amiga_resident_independent_zero_target_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentEntryGate& gate);
 
 } // namespace eon
