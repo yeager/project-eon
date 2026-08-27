@@ -494,6 +494,12 @@ int main() {
     assert(deuteros_disk2.boot_profile().boot_checksum == 0x1234);
     assert(deuteros_disk2.boot_profile().boot_branch_target == 0x22);
     assert(deuteros_disk2.boot_profile().killer_boot_signature);
+    assert(deuteros_disk2.boot_profile().has_killer_boot_vector_setup);
+    assert(deuteros_disk2.boot_profile().killer_boot_entry_offset == 0x30);
+    assert(deuteros_disk2.boot_profile().killer_boot_vector_source_offset == 0xee);
+    assert(deuteros_disk2.boot_profile().killer_boot_vector_destination == 0x8);
+    assert(deuteros_disk2.boot_profile().killer_boot_vector_longword_count == 10);
+    assert(deuteros_disk2.boot_profile().killer_boot_continuation == 0x12);
 
     const auto deuteros_amiga = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga;
