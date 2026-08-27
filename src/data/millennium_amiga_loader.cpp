@@ -963,4 +963,34 @@ parse_millennium_amiga_resident_separate_comparison_boundary(
         plan.resident_stage.disk_offset + continuation_relative, prefix_hash};
 }
 
+MillenniumAmigaResidentSeparateByteGateBoundary
+parse_millennium_amiga_resident_separate_byte_gate_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparateComparisonBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68e90, target = 0x68ed6, fallthrough = 0x68eb2;
+    constexpr std::array<std::uint8_t, 34> expected{{
+        0x2f,0x00,0x2f,0x01,0x36,0x3c,0x00,0x08,0x34,0x3c,0x00,0x08,
+        0x22,0x1f,0x20,0x1f,0x1e,0x39,0x00,0x07,0xc2,0x4e,0x13,0xc0,
+        0x00,0x07,0xc2,0x4e,0xbe,0x00,0x67,0x00,0x00,0x26,
+    }};
+    constexpr std::string_view expected_hash = "f4a047914e83ab873a037ea16a4f5aaa9a402c38f48a525efc69d9e49cca15a8";
+    constexpr std::string_view target_hash = "79871297097662cd29a3659d5399a17c847a8c46d6753e1d968cb27b83c5210b";
+    constexpr std::string_view fallthrough_hash = "cd83cab5400642c141e3252fd28302a94e7169d1f5bc7a6021cbe78c5daacd02";
+    if (boundary.continuation_raw_disk_offset != 0x17290) throw std::runtime_error("Unexpected Millennium Amiga byte gate placement");
+    const auto relative = entry - plan.resident_stage.destination;
+    const auto target_relative = target - plan.resident_stage.destination;
+    const auto fallthrough_relative = fallthrough - plan.resident_stage.destination;
+    if (expected.size() > plan.resident_stage.length - relative || 32U > plan.resident_stage.length - target_relative || 32U > plan.resident_stage.length - fallthrough_relative) throw std::runtime_error("Millennium Amiga byte gate outside raw range");
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto target_bytes = disk.bytes(plan.resident_stage.disk_offset + target_relative, 32);
+    const auto fallthrough_bytes = disk.bytes(plan.resident_stage.disk_offset + fallthrough_relative, 32);
+    const auto hash = to_hex(sha256(bytes));
+    const auto target_digest = to_hex(sha256(target_bytes));
+    const auto fallthrough_digest = to_hex(sha256(fallthrough_bytes));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash || target_digest != target_hash || fallthrough_digest != fallthrough_hash) throw std::runtime_error("Unexpected Millennium Amiga byte gate");
+    return {entry, plan.resident_stage.disk_offset + relative, hash, 0x7c24e, 0x68eae, target,
+        plan.resident_stage.disk_offset + target_relative, target_digest,
+        plan.resident_stage.disk_offset + fallthrough_relative, fallthrough_digest};
+}
+
 } // namespace eon

@@ -466,6 +466,17 @@ This is byte-exact static provenance only: `D2`, `D3`, condition codes, and
 all resulting paths remain runtime-dependent and have no inferred gameplay
 meaning.
 
+The next static prefix at `$68e90` / ADF `+0x17290` is 34 bytes with SHA-256
+`f4a047914e83ab873a037ea16a4f5aaa9a402c38f48a525efc69d9e49cca15a8`.
+It saves/restores `D0`/`D1`, loads literal `D3`/`D2` values, compares the byte
+at `$7c24e` with `D0`, and encodes `BEQ.W` at `$68eae`. Its extension base
+`$68eb0 + $0026` resolves to `$68ed6`, whose 32-byte raw prefix hashes to
+`79871297097662cd29a3659d5399a17c847a8c46d6753e1d968cb27b83c5210b`; the
+fallthrough `$68eb2` prefix hashes to
+`cd83cab5400642c141e3252fd28302a94e7169d1f5bc7a6021cbe78c5daacd02`.
+This is static provenance only: no register contents, comparison result, or
+control-flow path is executed or assigned gameplay meaning.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch
