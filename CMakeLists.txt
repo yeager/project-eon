@@ -45,6 +45,7 @@ add_executable(project-eon
     src/data/fat12.cpp
     src/data/millennium_dos_bitmap.cpp
     src/data/millennium_dos_lib.cpp
+    src/data/millennium_dos_title_flow.cpp
     src/data/sha256.cpp
     src/data/zip_archive.cpp
     src/platform/game_data.cpp
@@ -87,6 +88,7 @@ if(BUILD_TESTING)
         src/data/fat12.cpp
         src/data/millennium_dos_bitmap.cpp
         src/data/millennium_dos_lib.cpp
+        src/data/millennium_dos_title_flow.cpp
         src/data/sha256.cpp
         src/data/zip_archive.cpp
         src/platform/game_data.cpp

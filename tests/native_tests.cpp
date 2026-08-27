@@ -11,6 +11,7 @@
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_lib.hpp"
+#include "data/millennium_dos_title_flow.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -187,6 +188,24 @@ int main() {
     assert(title_rgba.size() == 320U * 200U * 4U);
     assert(eon::to_hex(eon::sha256(title_rgba))
         == "500a1451ab435a9c8ffaf1dbfaacee52cca0e32b375c883a45dd8f879a952888");
+    const auto titles_bytes = eon::extract_asset_by_sha256(english_dos->path,
+        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6");
+    const auto mill_bytes = eon::extract_asset_by_sha256(english_dos->path,
+        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
+    assert(titles_bytes && mill_bytes);
+    const auto title_flow = eon::parse_millennium_dos_title_flow(*titles_bytes, *mill_bytes);
+    assert(title_flow.title_entry_address == 0x1b80);
+    assert(title_flow.title_resource_index == 0);
+    assert(title_flow.intro_transition_steps == 37);
+    assert(title_flow.intro_step_stride == 0x170);
+    assert(title_flow.input_interrupt == 0x21);
+    assert(title_flow.input_service == 0x06);
+    assert(title_flow.input_parameter == 0xff);
+    assert(title_flow.exit_code == 0);
+    assert(title_flow.launcher_title_offset == 0x58f);
+    assert(title_flow.launcher_game_offset == 0x59a);
+    assert(title_flow.launcher_title_program == "TITLES.EXE");
+    assert(title_flow.launcher_game_program == "2200ad.exe");
     assert(gx_lib.directory_offset() == 0x4bd3c);
     assert(gx_lib.entries().size() == 180);
     assert(gx_lib.entries().front().name == "IMG00");

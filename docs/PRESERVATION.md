@@ -183,6 +183,29 @@ stateless composition rejects those until the saved-frame buffer is present.
 
 ### Millennium DOS execution model
 
+#### Title-to-game hand-off
+
+The clean English DOS `TITLES.EXE` (7,022 bytes, SHA-256
+`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`)
+is a separate flat binary, entered at loaded address `$1b80`. Its code at
+`$1c14` loads title resource index zero through its resource routine. The
+transition routine at `$1941` starts with `CX=$25` and `DX=$0170`, so the
+verified title transition contains 37 steps with that original stride.
+
+The main title loop polls DOS `INT 21h`, `AH=$06`, `DL=$ff` through helper
+`$0d0a`; at `$1c28` it branches out of the loop only after the returned `AL`
+is nonzero. Cleanup writes zero to the process status byte at `$1a0e`, and the
+common exit stub at `$1a12` executes `INT 21h/AH=$4c`. Thus the verified title
+program itself does not execute the game binary: it exits with status zero.
+
+The accompanying clean `MILL.COM` (1,445 bytes, SHA-256
+`4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`)
+uses its EXEC wrapper at `$031c` first with loaded address `$068f`, the
+NUL-terminated `TITLES.EXE` string at file `$58f`, then after return with
+`$069a`, the adjacent `2200ad.exe` string at file `$59a`. This is the exact
+DOS title-to-game hand-off used by the native parser. It establishes ordering,
+not a new game-state model or an inference about title timing between calls.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
