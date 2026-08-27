@@ -15,6 +15,7 @@
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
+#include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_dos_last_screen.hpp"
 #include "data/millennium_amiga_loader.hpp"
@@ -68,6 +69,7 @@ struct MillenniumDosLaunchAssets {
     PreviewAnimation title;
     PreviewAnimation gx_canvas;
     eon::MillenniumDosTitleFlow title_flow;
+    eon::MillenniumDosGameFlow game_flow;
     // This is intentionally the original serialized image, not a projected
     // game model.  The launcher exposes only the recovered positional words
     // once TITLES.EXE has made its verified hand-off.
@@ -147,6 +149,17 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.transition_second_phase_second_work_address << ", slot 0x"
         << title_stage.transition_second_phase_work_pointer_address << ", rts 0x"
         << title_stage.transition_return_address << std::dec << '\n';
+    std::cout << "          Post-transition control: word 0x" << std::hex
+        << title_stage.post_transition_control_address << " reset to 0; helper chain 0x"
+        << title_stage.post_transition_first_helper_address << " -> 0x"
+        << title_stage.post_transition_second_helper_address << " -> 0x"
+        << title_stage.post_transition_third_helper_address << " -> 0x"
+        << title_stage.post_transition_response_helper_address << "; response 0x"
+        << title_stage.post_transition_response_code << ", compares 0x"
+        << title_stage.post_transition_first_compare_value << "/0x"
+        << title_stage.post_transition_second_compare_value << "/0x"
+        << title_stage.post_transition_third_compare_value << ", rts 0x"
+        << title_stage.post_transition_return_address << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {
@@ -348,7 +361,12 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
 }
 
 std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
-    const std::vector<eon::ReleaseArchive>& releases) {
+    const std::vector<eon::ReleaseArchive>& releases,
+    const std::optional<eon::Platform> requested_platform) {
+    // The following executable and library profile is verified solely for
+    // English DOS media. Never substitute it when the caller explicitly chose
+    // the Amiga or Atari ST release.
+    if (requested_platform && *requested_platform != eon::Platform::dos) return std::nullopt;
     constexpr auto title_lib_sha256 =
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
     constexpr auto gx_lib_sha256 =
@@ -357,6 +375,8 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
     constexpr auto launcher_sha256 =
         "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+    constexpr auto game_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
@@ -376,14 +396,16 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         const auto gx_bytes = eon::extract_asset_by_sha256(release->path, gx_lib_sha256);
         const auto titles = eon::extract_asset_by_sha256(release->path, titles_sha256);
         const auto launcher = eon::extract_asset_by_sha256(release->path, launcher_sha256);
+        const auto game = eon::extract_asset_by_sha256(release->path, game_sha256);
         const auto initial_save = eon::extract_asset_by_sha256(release->path, initial_save_sha256);
-        if (!gx_bytes || !titles || !launcher || !initial_save) return std::nullopt;
+        if (!gx_bytes || !titles || !launcher || !game || !initial_save) return std::nullopt;
         const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
         return MillenniumDosLaunchAssets{
             .title = {bitmap.width, bitmap.height,
                 {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
             .gx_canvas = {gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
             .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
+            .game_flow = eon::parse_millennium_dos_game_flow(*game),
             .initial_save = eon::MillenniumDosSaveSession(*initial_save),
         };
     } catch (const std::exception& error) {
@@ -487,7 +509,7 @@ int main(int argc, char** argv) {
         std::cerr << "Requested original release is not present.\n";
         return 4;
     }
-    const auto millennium_assets = load_millennium_launch_assets(releases);
+    const auto millennium_assets = load_millennium_launch_assets(releases, request.platform);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -565,11 +587,14 @@ int main(int argc, char** argv) {
     bool deuteros_input_pressed = false;
     std::optional<std::uint32_t> deuteros_title_resource;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
+    std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
     const auto start_millennium_title = [&] {
         if (millennium_assets) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
                 millennium_assets->title_flow);
+            millennium_game_session = std::make_unique<eon::MillenniumDosGameSession>(
+                millennium_assets->game_flow);
             millennium_state_page = 0;
         }
     };
@@ -586,7 +611,9 @@ int main(int argc, char** argv) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
                 else running = false;
             }
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat
+                && !(screen == Screen::launching && selected == eon::Game::millennium
+                    && millennium_title_session && millennium_title_session->handed_off())) {
                 request.presentation = request.presentation == eon::Presentation::original
                     ? eon::Presentation::modern : eon::Presentation::original;
             }
@@ -606,6 +633,13 @@ int main(int argc, char** argv) {
                     if (event.key.key == SDLK_RIGHT && millennium_state_page + 1 < page_count) {
                         ++millennium_state_page;
                     }
+                    continue;
+                }
+                if (millennium_title_session->handed_off() && millennium_game_session
+                    && event.key.key >= SDLK_F1 && event.key.key <= SDLK_F10) {
+                    const auto raw_action = static_cast<std::uint8_t>(0x3b
+                        + static_cast<unsigned>(event.key.key - SDLK_F1));
+                    static_cast<void>(millennium_game_session->observe_action(raw_action));
                     continue;
                 }
                 // TITLES.EXE uses DOS' non-blocking character availability

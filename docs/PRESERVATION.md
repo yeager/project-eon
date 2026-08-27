@@ -388,9 +388,23 @@ compares words at `$1ffc8`, `$1ffce`, and `$1ffd4`; on its original branch it
 supplies `$12e12`, `$1ffda`, and `$1ffe6` to vector `-$1a4` and stores the last
 address in `$2008e`. It subsequently clears `$202c6`, invokes `-$c0` with
 `$12e12`, `$1ed24`, and count 16, restores the saved `$202b8` word from the
-stack, and returns at `$40776`. The parser opcode-validates every fact here;
+stack, and returns at `$4077c`. The parser opcode-validates every fact here;
 the addresses are preserved as raw machine-state boundaries rather than named
 as a presumed menu, fade, or gameplay subsystem.
+
+### Deuteros Amiga post-transition control loop
+
+Immediately after the previous transition return at `$4077c`, original code
+at `$4077e` clears word `$407e6`, then invokes `$3f7a8`, `$1f9a4`, `$1fe7a`,
+`$3fbf8`, and `$1f238` in its original order while preserving that word on the
+stack. It compares the final returned word with `$001b`; the alternative path
+compares it against `$0020`, `$002e`, and byte `$2c`, uses `subq.b #2,d1` or
+`addq.b #1,d1`, and writes the resulting word back to `$407e6` before returning
+at `$407e4`. Project Eon opcode-validates every listed instruction from the
+raw title stage. This establishes a real post-transition control-state loop,
+but it does not assign names such as “selection”, “menu”, or “start game” to
+the control word, helpers, or literal response values before the original
+subroutines are independently recovered.
 
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
