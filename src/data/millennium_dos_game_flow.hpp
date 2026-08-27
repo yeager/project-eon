@@ -60,7 +60,11 @@ struct MillenniumDosThirdFunctionKeyTrace {
 // handler declines to proceed while its runtime guard is nonzero; its admitted
 // path sets AL to $02 and transfers to a short common routine.  Project Eon
 // reports the code-observed writes but does not execute or emulate either
-// native call in that routine.
+// native call in that routine. Crucially, there is no runtime write before
+// the first call. The first literal write is reachable only if $4d2c returns;
+// the two trailing literal writes are reachable only if $9dd5 returns. Those
+// call-return conditions are part of the preservation boundary, rather than
+// a host-side assumption about the native runtime.
 struct MillenniumDosFourthFunctionKeyTrace {
     std::uint16_t handler_address = 0;
     std::uint16_t initialization_guard_address = 0;
@@ -71,13 +75,16 @@ struct MillenniumDosFourthFunctionKeyTrace {
     std::uint8_t transfer_al_value = 0;
     std::uint16_t common_routine_address = 0;
     std::uint16_t first_call_address = 0;
+    std::uint16_t first_write_instruction_address = 0;
     std::uint16_t first_runtime_byte_address = 0;
     std::uint8_t first_runtime_byte_value = 0;
     std::uint16_t second_call_address = 0;
+    std::uint16_t second_write_instruction_address = 0;
     std::uint16_t second_runtime_byte_address = 0;
     std::uint8_t second_runtime_byte_value = 0;
     std::uint16_t third_runtime_byte_address = 0;
     std::uint8_t third_runtime_byte_value = 0;
+    std::uint16_t common_return_instruction_address = 0;
 };
 
 // Exact, non-semantic trace of table record four (raw F5 / $3f). Its handler

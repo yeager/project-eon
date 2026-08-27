@@ -656,10 +656,14 @@ The fourth table record (raw F4 / `$3e`) is `12 18 09 1b 33 03 f9 72`, with
 handler entry `$72f9`. It first reads runtime word `$a19e`; a nonzero value
 returns immediately. Only when that word is zero does it place `$02` in `AL`
 and transfer to `$ba5e`. The recovered common bytes first load `AX=$0005` and
-call `$4d2c`, then write `$07` to `$da13`, call `$9dd5`, write `$09` to
-`$da1e`, clear `$75a9`, and return. These are code-validated addresses and
-literal writes only: the calls' effects and the runtime cells' meaning are not
-inferred. The guard is not save-backed: original code at `$a557` contains
+call `$4d2c`, then at `$ba64` write `$07` to `$da13`, call `$9dd5`, at `$ba6c`
+write `$09` to `$da1e`, clear `$75a9`, and return at `$ba76`. There is no
+pre-call literal write. The first write is reached only when `$4d2c` returns;
+the final two are reached only when `$9dd5` returns. These are code-validated
+addresses and literal writes only: the calls' effects, their return behavior
+for live runtime state, and the cells' meaning are not inferred. Consequently
+F4 contributes no private-overlay effect, unlike F8's pre-call store. The
+guard is not save-backed: original code at `$a557` contains
 `mov cx,[$a19e]; mov word [$a19e],$0000`, but the preceding path branches on
 native runtime values. This proves the guard's real producer without proving
 that a fresh key event passes it. Project Eon exposes the clear site and the

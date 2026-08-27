@@ -122,8 +122,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xc5, 0x36, 0x12, 0x01});
     // Record three (raw F4 / $3e) only admits when $a19e is zero.  It loads
     // AL=$02 and transfers to $ba5e. That routine calls $4d2c, writes $07 to
-    // $da13, calls $9dd5, writes $09 to $da1e and clears $75a9. The call
-    // effects and all three cells are native runtime facts, not host state.
+    // $da13, calls $9dd5, writes $09 to $da1e and clears $75a9. There is no
+    // pre-call write: each literal write depends on the preceding native call
+    // returning. The call effects and all three cells are native runtime facts,
+    // not host state, so this is deliberately not an overlay effect.
     constexpr auto f4_table = std::to_array<std::uint8_t>({
         0x12, 0x18, 0x09, 0x1b, 0x33, 0x03, 0xf9, 0x72});
     constexpr auto f4_handler = std::to_array<std::uint8_t>({
@@ -328,13 +330,16 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .transfer_al_value = 2,
             .common_routine_address = 0xba5e,
             .first_call_address = 0x4d2c,
+            .first_write_instruction_address = 0xba64,
             .first_runtime_byte_address = 0xda13,
             .first_runtime_byte_value = 7,
             .second_call_address = 0x9dd5,
+            .second_write_instruction_address = 0xba6c,
             .second_runtime_byte_address = 0xda1e,
             .second_runtime_byte_value = 9,
             .third_runtime_byte_address = 0x75a9,
             .third_runtime_byte_value = 0,
+            .common_return_instruction_address = 0xba76,
         },
         .fifth_function_key = {
             .handler_address = 0x7597,
