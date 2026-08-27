@@ -200,6 +200,13 @@ the two D0-dependent gates and their literal branch shape only. It does not
 choose a D0 value, execute either path, or infer a hardware, firmware, or game
 state consequence.
 
+The direct target `0x2b448` is preserved through its complete local setup
+prefix at file `+0xf6a`: it loads `D7=0x0006`, `A5=0x2b428`,
+`A4=0x2b3c8`, `D6=0x000f`, `D5=0x0002`, and `D4=0x0100`. This is only direct
+instruction/dataflow evidence. Project Eon stops before the ensuing loop body
+and does not dereference the pointers, execute its loops or traps, or infer a
+meaning for those registers and constants.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
