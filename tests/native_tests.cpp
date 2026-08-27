@@ -713,6 +713,9 @@ int main() {
     assert(title_stage.post_transition_dispatch_negative_service_d1 == 0x0c);
     assert(title_stage.post_transition_dispatch_negative_suppress_value == 0x20);
     assert(title_stage.post_transition_dispatch_negative_delay == 0x4e20);
+    assert(title_stage.post_transition_dispatch_negative_service_preserves_a0_a1);
+    assert(title_stage.post_transition_dispatch_negative_restores_d5_then_d0);
+    assert(title_stage.post_transition_dispatch_negative_return_address == 0x1fc20);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 

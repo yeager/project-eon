@@ -255,10 +255,17 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_word(dispatch_flow, 28, 0x720c); // moveq #$0c,d1
     require_word(dispatch_flow, 34, 0x4eb9); // jsr $3fbf8
     require_long(dispatch_flow, 36, 0x0003fbf8);
+    require_word(dispatch_flow, 30, 0x2f08); // move.l a0,-(a7)
+    require_word(dispatch_flow, 32, 0x2f09); // move.l a1,-(a7)
+    require_word(dispatch_flow, 40, 0x225f); // movea.l (a7)+,a1
+    require_word(dispatch_flow, 42, 0x205f); // movea.l (a7)+,a0
     require_word(dispatch_flow, 44, 0x203c); // move.l #$4e20,d0
     require_long(dispatch_flow, 46, 0x00004e20);
     require_word(dispatch_flow, 50, 0x5380); // subq.l #1,d0
     require_word(dispatch_flow, 52, 0x66fc); // bne.b delay loop
+    require_word(dispatch_flow, 54, 0x2a1f); // move.l (a7)+,d5
+    require_word(dispatch_flow, 56, 0x201f); // move.l (a7)+,d0
+    require_word(dispatch_flow, 58, 0x4e75); // rts
     const auto zero_branch = stage_code(0x1fc22, 6);
     require_word(zero_branch, 0, 0x4a39); // tst.b $1f98e
     require_long(zero_branch, 2, 0x0001f98e);
@@ -350,7 +357,8 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x1f98c, 0x1fc22, 0x1fc9c,
         0x1f98e, 0x1fc2c, 0x1fd0a, 0x1f99c, 0x1f974, 0x1f970, 0x1f96c,
         0x1f9a0, 0x28, 0x1f40, 8, 4,
-        0x3fbf8, 0x13, 0x0c, 0x20, 0x4e20};
+        0x3fbf8, 0x13, 0x0c, 0x20, 0x4e20,
+        true, true, 0x1fc20};
 }
 
 } // namespace eon
