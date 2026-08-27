@@ -411,6 +411,15 @@ int main() {
         rejected_altered_f8_handler = true;
     }
     assert(rejected_altered_f8_handler);
+    auto altered_f9_handler = *game_executable;
+    altered_f9_handler[0x7339 - 0x100] ^= 0x01;
+    bool rejected_altered_f9_handler = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f9_handler));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f9_handler = true;
+    }
+    assert(rejected_altered_f9_handler);
     eon::MillenniumDosGameSession game_session(game_flow);
     assert(!game_session.observe_action(0));
     assert(!game_session.last_function_key_index());
@@ -462,6 +471,27 @@ int main() {
     assert(game_session.last_eighth_function_key_trace()->handler_address == 0x7306);
     assert(game_session.last_eighth_function_key_trace()->repeated_call_address == 0xcafa);
     assert(!game_session.last_seventh_function_key_trace());
+    assert(game_flow.ninth_function_key.handler_address == 0x7339);
+    assert(game_flow.ninth_function_key.initialization_guard_address == 0xa19e);
+    assert(game_flow.ninth_function_key.display_selector_call_address == 0xd0c9);
+    assert(game_flow.ninth_function_key.first_reset_runtime_byte_address == 0xda30);
+    assert(game_flow.ninth_function_key.first_reset_runtime_byte_value == 0);
+    assert(game_flow.ninth_function_key.initial_al_value == 2);
+    assert(game_flow.ninth_function_key.local_mode_address == 0x6e2f);
+    assert(game_flow.ninth_function_key.local_mode_value == 1);
+    assert(game_flow.ninth_function_key.second_reset_runtime_byte_address == 0xdad7);
+    assert(game_flow.ninth_function_key.second_reset_runtime_byte_value == 0);
+    assert(game_flow.ninth_function_key.enabled_runtime_byte_address == 0xda39);
+    assert(game_flow.ninth_function_key.enabled_call_address == 0x7b47);
+    assert(game_flow.ninth_function_key.limit_runtime_byte_address == 0xda06);
+    assert(game_flow.ninth_function_key.limit_value == 9);
+    assert(game_flow.ninth_function_key.local_preflight_address == 0x731a);
+    assert(game_flow.ninth_function_key.terminal_call_address == 0x14124);
+    assert(game_session.observe_action(0x43) == std::optional<std::size_t>{8});
+    assert(game_session.last_ninth_function_key_trace());
+    assert(game_session.last_ninth_function_key_trace()->handler_address == 0x7339);
+    assert(game_session.last_ninth_function_key_trace()->limit_value == 9);
+    assert(!game_session.last_eighth_function_key_trace());
     assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
     assert(!game_session.last_first_function_key_trace());
     assert(!game_session.observe_action(0x45));

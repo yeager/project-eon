@@ -46,6 +46,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f8_table_offset = 0x2ff7 - load_bias;
     constexpr std::size_t f8_handler_offset = 0x7306 - load_bias;
     constexpr std::size_t f8_preflight_offset = 0x731a - load_bias;
+    constexpr std::size_t f9_table_offset = 0x2fff - load_bias;
+    constexpr std::size_t f9_handler_offset = 0x7339 - load_bias;
     constexpr std::size_t record_pointer_offset = 0x27c4 - load_bias;
     constexpr std::size_t initial_record_offset = 0x12cc - load_bias;
     constexpr std::size_t initial_record_flag_offset = 0x12f0 - load_bias;
@@ -192,6 +194,24 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x23, 0x08, 0xc3, 0xa0, 0x0a, 0xda, 0x22, 0xc0,
         0x75, 0x01, 0xc3, 0xfe, 0xc8, 0xa2, 0x0a, 0xda,
         0xbb, 0x4b, 0xdb, 0xd7, 0xe9, 0x0f, 0x06});
+    // Record eight (raw F9 / $43) admits only when $a19e is zero. It calls
+    // $d0c9 with AX=0, clears $da30, sets its code-local $6e2f to one, clears
+    // $dad7, and conditionally calls $7b47 if $da39 is nonzero. It then loops
+    // through F8's $731a while $da06 is below nine. Its terminal call crosses
+    // 64 KiB, so the trace stores it as a flat image address.
+    constexpr auto f9_table = std::to_array<std::uint8_t>({
+        0x30, 0x36, 0x09, 0x1b, 0x38, 0x08, 0x39, 0x73});
+    constexpr auto f9_handler = std::to_array<std::uint8_t>({
+        0xa1, 0x9e, 0xa1, 0x23, 0xc0, 0x74, 0x01, 0xc3,
+        0x33, 0xc0, 0xe8, 0x83, 0x5d, 0xc6, 0x06, 0x30,
+        0xda, 0x00, 0xb0, 0x02, 0x2e, 0xc6, 0x06, 0x2f,
+        0x6e, 0x01, 0xc6, 0x06, 0xd7, 0xda, 0x00, 0xa0,
+        0x39, 0xda, 0x22, 0xc0, 0x74, 0x03, 0xe8, 0xe5,
+        0x07, 0xa0, 0x06, 0xda, 0x3c, 0x09, 0x72, 0x05,
+        0xe8, 0xae, 0xff, 0xeb, 0xf4, 0x2e, 0xc6, 0x06,
+        0x2f, 0x6e, 0x00, 0xa0, 0x09, 0xda, 0x22, 0xc0,
+        0x75, 0x03, 0xe8, 0x1f, 0x07, 0xe8, 0xa3, 0xcd,
+        0xe9, 0x48, 0x00});
     if (!has_bytes(game_executable, entry_offset, entry)
         || !has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
@@ -215,6 +235,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f8_table_offset, f8_table)
         || !has_bytes(game_executable, f8_handler_offset, f8_handler)
         || !has_bytes(game_executable, f8_preflight_offset, f8_preflight)
+        || !has_bytes(game_executable, f9_table_offset, f9_table)
+        || !has_bytes(game_executable, f9_handler_offset, f9_handler)
         || !has_bytes(game_executable, record_pointer_offset, record_pointer_table)
         || !has_bytes(game_executable, initial_record_offset, initial_record)
         || !has_bytes(game_executable, initial_record_flag_offset, initial_record_flag)) {
@@ -341,6 +363,24 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .depleted_jump_address = 0x7948,
             .repeated_call_address = 0xcafa,
             .repeat_shift_register = 3,
+        },
+        .ninth_function_key = {
+            .handler_address = 0x7339,
+            .initialization_guard_address = 0xa19e,
+            .display_selector_call_address = 0xd0c9,
+            .first_reset_runtime_byte_address = 0xda30,
+            .first_reset_runtime_byte_value = 0,
+            .initial_al_value = 2,
+            .local_mode_address = 0x6e2f,
+            .local_mode_value = 1,
+            .second_reset_runtime_byte_address = 0xdad7,
+            .second_reset_runtime_byte_value = 0,
+            .enabled_runtime_byte_address = 0xda39,
+            .enabled_call_address = 0x7b47,
+            .limit_runtime_byte_address = 0xda06,
+            .limit_value = 9,
+            .local_preflight_address = 0x731a,
+            .terminal_call_address = 0x14124,
         },
     };
 }
