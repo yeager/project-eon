@@ -1,4 +1,5 @@
 #include "data/deuteros_atari_boot.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -66,7 +67,9 @@ DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image) : image_(s
 
     // Disk 2's post-BPB branch at $22 enters a KILLER_BOOT-specific setup.
     // It enters supervisor mode, copies ten literal longwords from the boot
-    // bytes at $ee to absolute RAM $8, then jumps to absolute address $12.
+    // bytes at $f0 to absolute RAM $8, then jumps to absolute address $12.
+    // The LEA extension word is at $e2, so its PC-relative `$000e` resolves
+    // to $f0 rather than the instruction's own offset.
     // Keep this as a protected-media trace: the copied words and destination
     // are not classified as a game executable or resource.
     constexpr std::array<std::uint8_t, 28> killer_vector_setup{{
@@ -82,10 +85,31 @@ DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image) : image_(s
         && starts_with(bytes, 0xd8, killer_vector_setup)) {
         profile_.has_killer_boot_vector_setup = true;
         profile_.killer_boot_entry_offset = 0x30;
-        profile_.killer_boot_vector_source_offset = 0xee;
+        profile_.killer_boot_vector_source_offset = 0xf0;
         profile_.killer_boot_vector_destination = 0x8;
         profile_.killer_boot_vector_longword_count = 10;
         profile_.killer_boot_continuation = 0x12;
+        constexpr std::size_t relocated_byte_count = 40;
+        constexpr auto expected_relocated_sha256 =
+            "21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d";
+        constexpr std::array<std::uint8_t, relocated_byte_count> relocated_code{{
+            0x00, 0x00, 0x00, 0x0c, 0x20, 0x78, 0x00, 0x04,
+            0x4e, 0xd0, 0x41, 0xfa, 0x00, 0x1c, 0x70, 0x00,
+            0x22, 0x00, 0x24, 0x00, 0x26, 0x00, 0x28, 0x00,
+            0x2a, 0x00, 0x2c, 0x00, 0x2e, 0x00, 0x48, 0xd0,
+            0x00, 0xff, 0xd0, 0xfc, 0x00, 0x20, 0x60, 0xf6,
+        }};
+        const auto relocated = bytes.subspan(profile_.killer_boot_vector_source_offset,
+            relocated_byte_count);
+        if (starts_with(bytes, profile_.killer_boot_vector_source_offset, relocated_code)
+            && to_hex(sha256(relocated)) == expected_relocated_sha256) {
+            profile_.has_killer_boot_continuation_profile = true;
+            profile_.killer_boot_relocated_byte_count = relocated_byte_count;
+            profile_.killer_boot_relocated_sha256 = expected_relocated_sha256;
+            profile_.killer_boot_clear_start = 0x30;
+            profile_.killer_boot_clear_stride = 0x20;
+            profile_.killer_boot_clear_longword_count = 8;
+        }
     }
 
     // At $50 the supplied Replicants Disk 1 starts a literal Floprd argument

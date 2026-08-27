@@ -33,6 +33,16 @@ struct DeuterosAtariBootProfile {
     std::size_t killer_boot_vector_longword_count = 0;
     std::uint32_t killer_boot_continuation = 0;
 
+    // The relocated 40-byte continuation starts at RAM $12. It clears
+    // successive 32-byte blocks forever; this describes its literal loop
+    // shape without executing it or assigning it a game-purpose.
+    bool has_killer_boot_continuation_profile = false;
+    std::size_t killer_boot_relocated_byte_count = 0;
+    std::string killer_boot_relocated_sha256;
+    std::uint32_t killer_boot_clear_start = 0;
+    std::uint32_t killer_boot_clear_stride = 0;
+    std::size_t killer_boot_clear_longword_count = 0;
+
     // Recovered from the Replicants Disk 1 boot code's XBIOS Floprd call.
     // This is a raw 9-sector first stage, not a packed archive or a FAT file.
     bool has_recovered_first_stage = false;

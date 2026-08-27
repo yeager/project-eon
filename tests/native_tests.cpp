@@ -1836,10 +1836,28 @@ int main() {
     assert(deuteros_disk2.boot_profile().killer_boot_signature);
     assert(deuteros_disk2.boot_profile().has_killer_boot_vector_setup);
     assert(deuteros_disk2.boot_profile().killer_boot_entry_offset == 0x30);
-    assert(deuteros_disk2.boot_profile().killer_boot_vector_source_offset == 0xee);
+    assert(deuteros_disk2.boot_profile().killer_boot_vector_source_offset == 0xf0);
     assert(deuteros_disk2.boot_profile().killer_boot_vector_destination == 0x8);
     assert(deuteros_disk2.boot_profile().killer_boot_vector_longword_count == 10);
     assert(deuteros_disk2.boot_profile().killer_boot_continuation == 0x12);
+    assert(deuteros_disk2.boot_profile().has_killer_boot_continuation_profile);
+    assert(deuteros_disk2.boot_profile().killer_boot_relocated_byte_count == 40);
+    assert(deuteros_disk2.boot_profile().killer_boot_relocated_sha256
+        == "21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d");
+    assert(deuteros_disk2.boot_profile().killer_boot_clear_start == 0x30);
+    assert(deuteros_disk2.boot_profile().killer_boot_clear_stride == 0x20);
+    assert(deuteros_disk2.boot_profile().killer_boot_clear_longword_count == 8);
+    {
+        auto altered_disk2 = *deuteros_st_disk2;
+        altered_disk2[0xf0 + 39] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::DeuterosAtariDisk(std::move(altered_disk2)));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
 
     const auto deuteros_amiga = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga;

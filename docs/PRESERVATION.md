@@ -560,8 +560,15 @@ or game semantics for the loaded bytes.
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its
-subsequent resource/title semantics remain unclassified.  The runtime reports
-these boundaries rather than inventing a GEMDOS title path or unpacking media.
+post-BPB setup copies ten longwords from boot offset `$f0` (the `LEA
+$000e(PC)` at `$de` resolves from its extension word at `$e2`) to RAM `$8`,
+then jumps to relocated address `$12`. The 40 copied bytes have SHA-256
+`21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d`.
+There, the relocated continuation clears eight longwords at a time beginning
+at `$30`, advances by `$20`, and loops without a counter or return. Project
+Eon records the copy and loop profile but does not execute it, wipe host
+memory, or infer any resource/title semantics. The runtime reports these
+boundaries rather than inventing a GEMDOS title path or unpacking media.
 
 ### Deuteros Amiga execution chain
 

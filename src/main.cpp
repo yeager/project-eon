@@ -988,6 +988,16 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")
         << ", branch 0x" << std::hex << continuation.boot_branch_target << std::dec << '\n';
+    if (continuation.has_killer_boot_continuation_profile) {
+        std::cout << "          Disk 2 relocated continuation: boot +0x" << std::hex
+            << continuation.killer_boot_vector_source_offset << " +0x"
+            << continuation.killer_boot_relocated_byte_count << " -> RAM 0x"
+            << continuation.killer_boot_vector_destination << "; SHA-256 "
+            << continuation.killer_boot_relocated_sha256 << "; clears 0x"
+            << continuation.killer_boot_clear_start << " in 0x"
+            << continuation.killer_boot_clear_stride << "-byte blocks (not executed)" << std::dec
+            << '\n';
+    }
 }
 
 std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
