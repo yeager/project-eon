@@ -61,7 +61,9 @@ const DeuterosAmigaFrame& DeuterosAmigaCompositor::compose(
     for (auto& channel : channels) {
         if (!channel.active || channel.bitmap_selector == 0xff) continue;
         if (channel.bitmap_selector == 0xfe) {
-            // $20580 consumes opcode-$0f data through another verified format.
+            // $21468 loads A4 from state +12 and calls $20580. That stream
+            // writes via global original video pointers, whose setup is not
+            // yet fully recovered; do not fabricate an indexed bitmap here.
             continue;
         }
         const auto selector = channel.bitmap_selector;

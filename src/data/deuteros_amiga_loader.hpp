@@ -126,6 +126,14 @@ struct DeuterosAmigaMainStageEntry {
     std::uint16_t resource_consumer_word_addend = 0;
     std::array<std::uint16_t, 2> resource_consumer_command_words{};
     std::array<std::uint32_t, 2> resource_consumer_call_sites{};
+    // Selector $fe does not use the regular indexed-bitmap route. The render
+    // pass loads its byte-stream pointer from state +12 and calls this exact
+    // original routine. Its global display state remains deliberately raw.
+    std::uint32_t renderer_pass_address = 0;
+    std::uint16_t alternate_renderer_selector = 0;
+    std::uint16_t alternate_renderer_state_data_offset = 0;
+    std::uint32_t alternate_renderer_address = 0;
+    std::uint32_t regular_renderer_address = 0;
 };
 
 struct DeuterosAmigaLoadPlan {
