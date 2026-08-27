@@ -14,6 +14,7 @@ from pathlib import Path
 import hashlib
 import subprocess
 import sys
+import tempfile
 
 
 def media_snapshot(directory: Path) -> dict[Path, str]:
@@ -74,6 +75,22 @@ def main() -> int:
     after = media_snapshot(data_directory)
     if after != before:
         raise SystemExit("Project Eon changed the supplied game-data directory")
+
+    # The Unix default is a read-only lookup at ~/.projecteon.  It must not
+    # bootstrap a missing user-data directory as a side effect of inspection.
+    if os.name != "nt":
+        with tempfile.TemporaryDirectory() as temporary_home:
+            isolated_environment = environment | {"HOME": temporary_home}
+            missing_default = Path(temporary_home) / ".projecteon"
+            completed = subprocess.run(
+                (str(executable), "--inspect"), env=isolated_environment,
+                check=False, capture_output=True, text=True,
+            )
+            if completed.returncode != 2 or missing_default.exists():
+                raise SystemExit(
+                    "Project Eon did not fail cleanly for a missing default data directory:\n"
+                    f"{completed.stderr}"
+                )
     return 0
 
 
