@@ -446,4 +446,38 @@ parse_millennium_amiga_resident_second_post_helper_static_chain(
         static_cast<std::uint32_t>(byte_count), hash, static_call_address, static_call_target};
 }
 
+MillenniumAmigaResidentStagingDirectReachabilityBoundary
+parse_millennium_amiga_resident_staging_direct_reachability_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>& callsites) {
+    // Search only raw absolute JSR/JMP.L encodings. This deliberately stops
+    // short of disassembling arbitrary bytes or resolving register-indirect
+    // calls, which the preceding loader transform may affect.
+    validate_range(plan.resident_stage);
+    constexpr std::array<std::uint32_t, 2> entries{{0x69624, 0x69b88}};
+    if (callsites[0].entry_address != entries[0] || callsites[1].entry_address != entries[1]) {
+        throw std::runtime_error("Unexpected Millennium Amiga staging entries for reachability scan");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset, plan.resident_stage.length);
+    MillenniumAmigaResidentStagingDirectReachabilityBoundary result;
+    result.staging_entry_addresses = entries;
+    result.scanned_raw_disk_offset = plan.resident_stage.disk_offset;
+    result.scanned_byte_count = plan.resident_stage.length;
+    for (std::size_t offset = 0; offset + 6U <= bytes.size(); ++offset) {
+        const auto opcode = static_cast<std::uint16_t>(static_cast<std::uint16_t>(bytes[offset]) << 8U)
+            | bytes[offset + 1U];
+        const auto target = big32(bytes, offset + 2U);
+        for (std::size_t index = 0; index < entries.size(); ++index) {
+            if (target != entries[index]) continue;
+            if (opcode == 0x4eb9U) ++result.absolute_jsr_counts[index];
+            if (opcode == 0x4ef9U) ++result.absolute_jmp_counts[index];
+        }
+    }
+    if (result.absolute_jsr_counts != std::array<std::uint32_t, 2>{}
+        || result.absolute_jmp_counts != std::array<std::uint32_t, 2>{}) {
+        throw std::runtime_error("Millennium Amiga staging entries gained direct absolute reachability");
+    }
+    return result;
+}
+
 } // namespace eon

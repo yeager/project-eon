@@ -144,6 +144,18 @@ struct MillenniumAmigaResidentSecondPostHelperStaticChain {
     std::uint32_t static_call_target = 0;
 };
 
+// Direct absolute call/jump reachability evidence for the two staging entry
+// addresses. A zero count proves only that this raw resident range contains
+// no literal JSR/JMP.L encoding to them; indirect, transformed, or runtime
+// paths remain explicitly unproven.
+struct MillenniumAmigaResidentStagingDirectReachabilityBoundary {
+    std::array<std::uint32_t, 2> staging_entry_addresses{};
+    std::array<std::uint32_t, 2> absolute_jsr_counts{};
+    std::array<std::uint32_t, 2> absolute_jmp_counts{};
+    std::uint32_t scanned_raw_disk_offset = 0;
+    std::uint32_t scanned_byte_count = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -218,5 +230,13 @@ parse_millennium_amiga_resident_first_post_helper_static_chain(
 parse_millennium_amiga_resident_second_post_helper_static_chain(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentHelperStagingCallsite& callsite);
+
+// Scans the supplied resident raw range for exact absolute JSR/JMP encodings
+// to the two known staging entry addresses. It rejects a direct match but does
+// not make any negative claim about indirect or transformed reachability.
+[[nodiscard]] MillenniumAmigaResidentStagingDirectReachabilityBoundary
+parse_millennium_amiga_resident_staging_direct_reachability_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>& callsites);
 
 } // namespace eon
