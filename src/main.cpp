@@ -935,6 +935,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             second_profile, dispatch);
         const auto state5_plan = eon::build_deuteros_atari_state5_raw_load_plan(
             second_profile, dispatch);
+        const auto state5_return = eon::parse_deuteros_atari_state5_return(
+            second_stage, second_profile, dispatch);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -1021,6 +1023,14 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << "), copy 0x" << dispatch.state5_copy_source << " -> 0x"
             << dispatch.state5_copy_destination << " +0x" << dispatch.state5_copy_byte_count
             << ", then reader 0x" << dispatch.state5_second_reader_argument << std::dec << '\n';
+        std::cout << "          Vector-5 return: stage +0x" << std::hex
+            << state5_return.branch_offset << " BRA.W " << std::dec
+            << state5_return.branch_displacement << " -> stage +0x" << std::hex
+            << state5_return.branch_target_offset << "; SHA-256 " << state5_return.branch_sha256
+            << "; tail MOVE.W $" << state5_return.state_word_address << ",D0 / RTS at +0x"
+            << state5_return.dispatcher_tail_offset << "; SHA-256 "
+            << state5_return.dispatcher_tail_sha256 << std::dec
+            << " (validated only; no state selection, raw read, or XBIOS execution)\n";
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")

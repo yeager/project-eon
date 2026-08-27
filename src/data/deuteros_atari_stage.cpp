@@ -334,6 +334,38 @@ DeuterosAtariState5RawLoadPlan build_deuteros_atari_state5_raw_load_plan(
     };
 }
 
+DeuterosAtariState5ReturnProfile parse_deuteros_atari_state5_return(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch) {
+    // Vector 5 ends immediately after its second $70030 call with BRA.W
+    // -$90. For a 68000 word branch the base is the extension word itself:
+    // track-2 +$1a2 / copied RAM $1fa2 therefore resolves to +$114 / $1f14.
+    constexpr std::size_t branch_offset = 0x1a2;
+    constexpr std::array<std::uint8_t, 4> branch_bytes{0x60, 0x00, 0xff, 0x70};
+    constexpr std::size_t tail_offset = 0x114;
+    constexpr std::array<std::uint8_t, 6> tail_bytes{0x30, 0x38, 0x1e, 0xaa, 0x4e, 0x75};
+    constexpr std::string_view branch_sha256 =
+        "4d11113ca2040c3c0d8e9fe7fc7ef2b65175cc580b8a4b81466908ae7c537896";
+    constexpr std::string_view tail_sha256 =
+        "506215d03a2272be5f938a8926864075fc50a79d8c2fc23f22955d290fe0c98f";
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || stage.dispatch_state_address != 0x1eaa || dispatch.vector_addresses[5] != 0x1f52
+        || !std::equal(branch_bytes.begin(), branch_bytes.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(branch_offset))
+        || !std::equal(tail_bytes.begin(), tail_bytes.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(tail_offset))) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST vector-5 return path");
+    }
+    const auto branch_hash = to_hex(sha256(bytes.subspan(branch_offset, branch_bytes.size())));
+    const auto tail_hash = to_hex(sha256(bytes.subspan(tail_offset, tail_bytes.size())));
+    if (branch_hash != branch_sha256 || tail_hash != tail_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST vector-5 return path");
+    }
+    return {branch_offset, static_cast<std::int16_t>(be16(bytes, branch_offset + 2U)), tail_offset,
+        branch_hash, tail_offset, tail_hash, be16(bytes, tail_offset + 2U), be16(bytes, tail_offset),
+        be16(bytes, tail_offset + 4U)};
+}
+
 DeuterosAtariState0DuplicateStagePrefix
 parse_deuteros_atari_state0_duplicate_stage_prefix(const std::span<const std::uint8_t> state0_bytes,
     const std::span<const std::uint8_t> second_stage_bytes) {
