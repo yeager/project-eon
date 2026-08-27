@@ -703,4 +703,18 @@ parse_millennium_amiga_resident_independent_compare_target_boundary(
     return {entry, entry + 8, entry + 10 + 0x0e};
 }
 
+MillenniumAmigaResidentIndependentBranchTargetBoundary
+parse_millennium_amiga_resident_independent_branch_target_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentCompareTargetBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x6857a;
+    constexpr std::array<std::uint8_t, 8> expected{{0x4a, 0x39, 0x00, 0x07, 0xb1, 0x42, 0x67, 0x04}};
+    if (boundary.conditional_branch_target != entry || entry < plan.resident_stage.destination) throw std::runtime_error("Unexpected Millennium Amiga independent branch target placement");
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) throw std::runtime_error("Millennium Amiga independent branch target is outside raw range");
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())) throw std::runtime_error("Unexpected Millennium Amiga independent branch target");
+    return {entry, entry + 6, entry + 8 + 4};
+}
+
 } // namespace eon

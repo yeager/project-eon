@@ -383,6 +383,10 @@ At `$68562`, the branch-target's next exact static prefix reaches a conditional
 branch at `$6856a`, whose encoded target is `$6857a`. This is raw control-flow
 provenance only; Project Eon does not assign comparison or branch semantics.
 
+The next target `$6857a` begins with another fixed-cell test and an encoded
+conditional branch `$68580 → $68586`. This is recorded solely as raw static
+control flow, without assigning meaning to the cell or either path.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with
