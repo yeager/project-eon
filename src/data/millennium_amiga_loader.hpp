@@ -523,4 +523,22 @@ parse_millennium_amiga_resident_separate_byte_gate_convergence_boundary(
     const AmigaAdf&, const MillenniumAmigaLoadPlan&,
     const MillenniumAmigaResidentSeparateByteGateTargetBoundary&);
 
+struct MillenniumAmigaResidentSeparateByteGateTakenBranchBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::string sha256;
+    std::array<std::uint32_t, 2> conditional_branch_addresses{};
+    std::array<std::uint32_t, 2> conditional_branch_targets{};
+    std::uint32_t convergence_address = 0;
+    std::uint32_t external_call_address = 0;
+    std::uint32_t external_call_target = 0;
+    std::size_t external_prefix_raw_disk_offset = 0;
+    std::string external_prefix_sha256;
+};
+
+[[nodiscard]] MillenniumAmigaResidentSeparateByteGateTakenBranchBoundary
+parse_millennium_amiga_resident_separate_byte_gate_taken_branch_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&,
+    const MillenniumAmigaResidentSeparateByteGateConvergenceBoundary&);
+
 } // namespace eon
