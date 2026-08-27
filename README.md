@@ -153,6 +153,12 @@ in-place `GX.LIB` `IMG00`/`IMG01` canvas. This is intentionally labelled as a
 canvas: Project Eon has not yet inferred the original game's full UI or mutable
 state semantics from those resources.
 
+After that same verified hand-off, the launcher also presents the original
+English DOS `2200SAVE.I` as a read-only evidence panel: its complete SHA-256,
+format version, and the 38 recovered positional four-word records. The panel
+is paged with Left/Right, uses only `+00`, `+04`, `+06`, and `+08` labels from
+the load code, and has no save, export, or inferred simulation action.
+
 The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
 Millennium disk. Nested extraction locates the disk by SHA-256 independently of
 its filename and reads its 13 root files, including verified `DATA12.BIN`.
