@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: nl\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "PROJECT EON"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "KIES SPEL   |   OMHOOG/OMLAAG: PLATFORM   |   D: DATASCAN   |   F1: ORIGINEEL / MODERN   |   ESC: AFSLUITEN"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "GEVERIFIEERDE ORIGINELE GEGEVENS"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "ORIGINELE GEGEVENS NIET GEVONDEN"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "ORIGINELE GEGEVENS SCANNEN..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / KLIK: STARTEN"
-msgid "PLATFORM:"
-msgstr "PLATFORM:"
-msgid "AUTO"
-msgstr "AUTOMATISCH"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "STARTVERZOEK GEACCEPTEERD"
+
 msgid "PLATFORM: "
 msgstr "PLATFORM: "
+
+msgid "AUTO"
+msgstr "AUTOMATISCH"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "DATASCANNER (inhoudshashes, alleen-lezen)"
+
+msgid "Files scanned: "
+msgstr "Gescande bestanden: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Voltooid. Alleen originele releases die met hashes zijn geverifieerd, kunnen worden gekozen."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Scan wordt uitgevoerd. Druk op D om dit voortgangspaneel te verbergen."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "STARTVERZOEK GEACCEPTEERD"
+
+msgid "Game: "
+msgstr "Spel: "
+
+msgid "Platform: "
+msgstr "Platform: "
+
+msgid "Presentation: Modern"
+msgstr "Weergave: modern"
+
+msgid "Presentation: Original"
+msgstr "Weergave: origineel"
+
+msgid "Original data is present and selected."
+msgstr "Originele gegevens zijn aanwezig en geselecteerd."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "De simulatie is onvolledig; er wordt geen synthetische vervanging uitgevoerd."
+
 msgid "ESC: QUIT"
 msgstr "ESC: AFSLUITEN"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: TERUG NAAR MENU"

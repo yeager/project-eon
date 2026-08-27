@@ -706,6 +706,16 @@ decoded track data from disk offset `0x6e000`, length `0x6ca00`, into memory
 the first word of that real stage is verified as `JMP $00040426`. The target
 is range-checked against the loaded interval and retained as `title_stage`;
 the runtime still reads this source ADF range in place and does not unpack it.
+
+When—and only when—the live opening VM reaches that exact `$0f` handoff with
+raw operand `$0b38`, `DeuterosAmigaTitleStageSession` now opens the same ADF
+interval read-only. The session validates the existing title-stage opcode
+profile, exposes only disk provenance (`+0x6e000`, length `0x6ca00`,
+destination `$13000`, entry `$40426`) and records whole-stage SHA-256
+`48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` for the
+verified clean system ADF. It never creates a title bitmap, inferred registers,
+global work memory, or replacement menu: its next execution requirements still
+cross unrecovered Exec and graphics-library vector boundaries.
 The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
 the passed mode word at `$4040e`, and comparing its low byte with five. The
 meaning of those mode values and the later gameplay dispatch remain unknown.

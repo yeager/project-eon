@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: ru\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "ПРОЕКТ ЭОН"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВЫБРАТЬ ИГРУ   |   ВВЕРХ/ВНИЗ: ПЛАТФОРМА   |   D: ПРОВЕРКА ДАННЫХ   |   F1: ОРИГИНАЛ / СОВРЕМЕННЫЙ   |   ESC: ВЫХОД"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "ПРОВЕРЕННЫЕ ОРИГИНАЛЬНЫЕ ДАННЫЕ"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "ОРИГИНАЛЬНЫЕ ДАННЫЕ НЕ НАЙДЕНЫ"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "ПРОВЕРКА ОРИГИНАЛЬНЫХ ДАННЫХ..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / ЩЕЛЧОК: ЗАПУСК"
-msgid "PLATFORM:"
-msgstr "ПЛАТФОРМА:"
-msgid "AUTO"
-msgstr "АВТО"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "ЗАПРОС НА ЗАПУСК ПРИНЯТ"
+
 msgid "PLATFORM: "
 msgstr "ПЛАТФОРМА: "
+
+msgid "AUTO"
+msgstr "АВТО"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "СКАНЕР ДАННЫХ (хеши содержимого, только чтение)"
+
+msgid "Files scanned: "
+msgstr "Проверено файлов: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Готово. Можно выбрать только оригинальные выпуски, проверенные по хешу."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Идёт проверка. Нажмите D, чтобы скрыть эту панель прогресса."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "ЗАПРОС НА ЗАПУСК ПРИНЯТ"
+
+msgid "Game: "
+msgstr "Игра: "
+
+msgid "Platform: "
+msgstr "Платформа: "
+
+msgid "Presentation: Modern"
+msgstr "Отображение: современное"
+
+msgid "Presentation: Original"
+msgstr "Отображение: оригинальное"
+
+msgid "Original data is present and selected."
+msgstr "Оригинальные данные доступны и выбраны."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "Симуляция неполная; синтетическая замена не будет запущена."
+
 msgid "ESC: QUIT"
 msgstr "ESC: ВЫХОД"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: НАЗАД В МЕНЮ"

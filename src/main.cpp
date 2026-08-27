@@ -1702,8 +1702,20 @@ int main(int argc, char** argv) {
                         + handoff.str()
                         + " -> STAGE ENTRY 0x40426 (REIMPLEMENTATION IN PROGRESS)");
                 }
+                const auto& title_stage = deuteros_opening->title_stage_session();
+                if (title_stage) {
+                    std::ostringstream provenance;
+                    provenance << "AUTHENTIC TITLE STAGE READY: ADF +0x" << std::hex
+                               << title_stage->stage().disk_offset << " length 0x"
+                               << title_stage->stage().length << " -> RAM 0x"
+                               << title_stage->stage().destination << ", entry 0x"
+                               << title_stage->stage().entry_address;
+                    draw_text(renderer, 64, 284, provenance.str());
+                    draw_text(renderer, 64, 298,
+                        "EXECUTION STATE / EXEC-GRAPHICS VECTORS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED");
+                }
                 if (const auto& trace = deuteros_opening->alternate_renderer_trace()) {
-                    draw_text(renderer, 64, 284, "ORIGINAL $20580 STREAM: +0x"
+                    draw_text(renderer, 64, title_stage ? 314 : 284, "ORIGINAL $20580 STREAM: +0x"
                         + [&] { std::ostringstream stream; stream << std::hex << trace->stream_offset;
                             return stream.str(); }()
                         + " - " + std::to_string(trace->glyph_codes.size())
@@ -1711,8 +1723,10 @@ int main(int argc, char** argv) {
                 }
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
-                const float scale = 2.0F;
-                SDL_FRect preview_bounds{64, deuteros_title_resource ? 306.0F : 274.0F,
+                // Keep the original pixels intact while allowing the extra
+                // provenance boundary to remain visible after title handoff.
+                const float scale = title_stage ? 1.8F : 2.0F;
+                SDL_FRect preview_bounds{64, title_stage ? 336.0F : deuteros_title_resource ? 306.0F : 274.0F,
                     static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
                 if (modern) draw_modern_surface_frame(renderer, preview_bounds);

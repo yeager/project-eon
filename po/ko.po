@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: ko\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "프로젝트 이온"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "게임 선택   |   위/아래: 플랫폼   |   D: 데이터 검사   |   F1: 원본 / 현대식   |   ESC: 종료"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "검증된 원본 데이터"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "원본 데이터를 찾을 수 없습니다"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "원본 데이터를 검사하는 중..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / 클릭: 시작"
-msgid "PLATFORM:"
-msgstr "플랫폼:"
-msgid "AUTO"
-msgstr "자동"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "시작 요청을 수락했습니다"
+
 msgid "PLATFORM: "
 msgstr "플랫폼: "
+
+msgid "AUTO"
+msgstr "자동"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "데이터 검사기(콘텐츠 해시, 읽기 전용)"
+
+msgid "Files scanned: "
+msgstr "검사한 파일: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "완료되었습니다. 해시로 검증된 원본 릴리스만 선택할 수 있습니다."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "검사가 진행 중입니다. 이 진행 패널을 숨기려면 D를 누르세요."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "시작 요청을 수락했습니다"
+
+msgid "Game: "
+msgstr "게임: "
+
+msgid "Platform: "
+msgstr "플랫폼: "
+
+msgid "Presentation: Modern"
+msgstr "표시 방식: 현대식"
+
+msgid "Presentation: Original"
+msgstr "표시 방식: 원본"
+
+msgid "Original data is present and selected."
+msgstr "원본 데이터가 있으며 선택되었습니다."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "시뮬레이션이 불완전하므로 합성 대체물을 실행하지 않습니다."
+
 msgid "ESC: QUIT"
 msgstr "ESC: 종료"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: 메뉴로 돌아가기"

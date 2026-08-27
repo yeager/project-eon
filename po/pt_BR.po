@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: pt_BR\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "PROJECT EON"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "SELECIONE O JOGO   |   CIMA/BAIXO: PLATAFORMA   |   D: VARREDURA DE DADOS   |   F1: ORIGINAL / MODERNO   |   ESC: SAIR"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "DADOS ORIGINAIS VERIFICADOS"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "DADOS ORIGINAIS NÃO ENCONTRADOS"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "VERIFICANDO DADOS ORIGINAIS..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / CLIQUE: INICIAR"
-msgid "PLATFORM:"
-msgstr "PLATAFORMA:"
-msgid "AUTO"
-msgstr "AUTOMÁTICO"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "SOLICITAÇÃO DE INÍCIO ACEITA"
+
 msgid "PLATFORM: "
 msgstr "PLATAFORMA: "
+
+msgid "AUTO"
+msgstr "AUTOMÁTICO"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "VERIFICADOR DE DADOS (hashes do conteúdo, somente leitura)"
+
+msgid "Files scanned: "
+msgstr "Arquivos verificados: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Concluído. Somente versões originais verificadas por hash podem ser selecionadas."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Verificação em andamento. Pressione D para ocultar este painel de progresso."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "SOLICITAÇÃO DE INÍCIO ACEITA"
+
+msgid "Game: "
+msgstr "Jogo: "
+
+msgid "Platform: "
+msgstr "Plataforma: "
+
+msgid "Presentation: Modern"
+msgstr "Apresentação: moderna"
+
+msgid "Presentation: Original"
+msgstr "Apresentação: original"
+
+msgid "Original data is present and selected."
+msgstr "Os dados originais estão presentes e selecionados."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "A simulação está incompleta; nenhum substituto sintético será executado."
+
 msgid "ESC: QUIT"
 msgstr "ESC: SAIR"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: VOLTAR AO MENU"

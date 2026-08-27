@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: pl\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "PROJECT EON"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "WYBIERZ GRĘ   |   GÓRA/DÓŁ: PLATFORMA   |   D: SKAN DANYCH   |   F1: ORYGINALNY / NOWOCZESNY   |   ESC: WYJDŹ"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "ZWERYFIKOWANE ORYGINALNE DANE"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "NIE ZNALEZIONO ORYGINALNYCH DANYCH"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "SKANOWANIE ORYGINALNYCH DANYCH..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / KLIKNIJ: START"
-msgid "PLATFORM:"
-msgstr "PLATFORMA:"
-msgid "AUTO"
-msgstr "AUTOMATYCZNIE"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "ŻĄDANIE URUCHOMIENIA PRZYJĘTE"
+
 msgid "PLATFORM: "
 msgstr "PLATFORMA: "
+
+msgid "AUTO"
+msgstr "AUTOMATYCZNIE"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "SKANER DANYCH (hasze zawartości, tylko do odczytu)"
+
+msgid "Files scanned: "
+msgstr "Przeskanowane pliki: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Ukończono. Można wybrać tylko oryginalne wydania zweryfikowane haszem."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Skanowanie trwa. Naciśnij D, aby ukryć ten panel postępu."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "ŻĄDANIE URUCHOMIENIA PRZYJĘTE"
+
+msgid "Game: "
+msgstr "Gra: "
+
+msgid "Platform: "
+msgstr "Platforma: "
+
+msgid "Presentation: Modern"
+msgstr "Prezentacja: nowoczesna"
+
+msgid "Presentation: Original"
+msgstr "Prezentacja: oryginalna"
+
+msgid "Original data is present and selected."
+msgstr "Oryginalne dane są dostępne i wybrane."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "Symulacja jest niekompletna; nie zostanie uruchomiony syntetyczny zamiennik."
+
 msgid "ESC: QUIT"
 msgstr "ESC: WYJDŹ"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: POWRÓT DO MENU"

@@ -2,26 +2,67 @@ msgid ""
 msgstr ""
 "Language: uk\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "PROJECT EON"
+msgstr "ПРОЄКТ ЕОН"
 
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВИБРАТИ ГРУ   |   ВГОРУ/ВНИЗ: ПЛАТФОРМА   |   D: ПЕРЕВІРКА ДАНИХ   |   F1: ОРИГІНАЛ / СУЧАСНИЙ   |   ESC: ВИЙТИ"
+
 msgid "VERIFIED ORIGINAL DATA"
 msgstr "ПЕРЕВІРЕНІ ОРИГІНАЛЬНІ ДАНІ"
+
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr "ОРИГІНАЛЬНІ ДАНІ НЕ ЗНАЙДЕНО"
+
 msgid "SCANNING ORIGINAL DATA..."
 msgstr "ПЕРЕВІРКА ОРИГІНАЛЬНИХ ДАНИХ..."
+
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / КЛАЦНУТИ: ЗАПУСТИТИ"
-msgid "PLATFORM:"
-msgstr "ПЛАТФОРМА:"
-msgid "AUTO"
-msgstr "АВТО"
-msgid "LAUNCH REQUEST ACCEPTED"
-msgstr "ЗАПИТ НА ЗАПУСК ПРИЙНЯТО"
+
 msgid "PLATFORM: "
 msgstr "ПЛАТФОРМА: "
+
+msgid "AUTO"
+msgstr "АВТО"
+
+msgid "DATA SCANNER (content hashes, read-only)"
+msgstr "СКАНЕР ДАНИХ (хеші вмісту, лише читання)"
+
+msgid "Files scanned: "
+msgstr "Перевірено файлів: "
+
+msgid "Complete. Only hash-verified original releases are selectable."
+msgstr "Готово. Можна вибрати лише оригінальні випуски, перевірені хешем."
+
+msgid "Scanning in progress. Press D to hide this progress panel."
+msgstr "Перевірка триває. Натисніть D, щоб приховати цю панель поступу."
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "ЗАПИТ НА ЗАПУСК ПРИЙНЯТО"
+
+msgid "Game: "
+msgstr "Гра: "
+
+msgid "Platform: "
+msgstr "Платформа: "
+
+msgid "Presentation: Modern"
+msgstr "Відображення: сучасне"
+
+msgid "Presentation: Original"
+msgstr "Відображення: оригінальне"
+
+msgid "Original data is present and selected."
+msgstr "Оригінальні дані доступні та вибрані."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "Симуляція неповна; синтетичну заміну не буде запущено."
+
 msgid "ESC: QUIT"
 msgstr "ESC: ВИЙТИ"
+
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: НАЗАД ДО МЕНЮ"
