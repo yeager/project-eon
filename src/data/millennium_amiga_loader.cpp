@@ -743,9 +743,31 @@ parse_millennium_amiga_resident_separate_entry_gate(const AmigaAdf& disk, const 
     return {entry, entry + 8, entry + 12 + 6};
 }
 
-MillenniumAmigaResidentSeparateBranchBoundary parse_millennium_amiga_resident_separate_branch_boundary(const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan, const MillenniumAmigaResidentSeparateEntryGate& gate) {
-    constexpr std::uint32_t entry=0x68d62; constexpr std::array<std::uint8_t,32> expected{{0x42,0x42,0x14,0x39,0x00,0x07,0xc2,0x4e,0x44,0x02,0x4a,0x02,0x6a,0x00,0x00,0x06,0x14,0x3c,0x00,0x02,0xd0,0x42,0x06,0x40,0x01,0x90,0x4e,0xb9,0x00,0x07,0x78,0xf0}};
-    if(gate.branch_target!=entry||entry<plan.resident_stage.destination) throw std::runtime_error("Unexpected Millennium Amiga separate branch placement"); const auto relative=entry-plan.resident_stage.destination; if(relative>plan.resident_stage.length||expected.size()>plan.resident_stage.length-relative) throw std::runtime_error("Millennium Amiga separate branch outside raw range"); const auto bytes=disk.bytes(plan.resident_stage.disk_offset+relative,expected.size()); if(!std::equal(expected.begin(),expected.end(),bytes.begin())) throw std::runtime_error("Unexpected Millennium Amiga separate branch"); return {entry,entry+12,entry+16+6,entry+26,0x778f0};
+MillenniumAmigaResidentSeparateBranchBoundary
+parse_millennium_amiga_resident_separate_branch_boundary(
+    const AmigaAdf& disk,
+    const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparateEntryGate& gate) {
+    constexpr std::uint32_t entry = 0x68d62;
+    constexpr std::array<std::uint8_t, 32> expected{{
+        0x42, 0x42, 0x14, 0x39, 0x00, 0x07, 0xc2, 0x4e,
+        0x44, 0x02, 0x4a, 0x02, 0x6a, 0x00, 0x00, 0x06,
+        0x14, 0x3c, 0x00, 0x02, 0xd0, 0x42, 0x06, 0x40,
+        0x01, 0x90, 0x4e, 0xb9, 0x00, 0x07, 0x78, 0xf0,
+    }};
+    if (gate.branch_target != entry || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga separate branch placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length
+        || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga separate branch outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga separate branch");
+    }
+    return {entry, entry + 12, entry + 16 + 6, entry + 26, 0x778f0};
 }
 
 } // namespace eon
