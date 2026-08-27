@@ -47,6 +47,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 16> title_selection_callee_jle_target_prefix{
         0x50, 0xd1, 0xe0, 0x89, 0xc1, 0xd1, 0xe0, 0x03,
         0xc8, 0x58, 0x51, 0xe8, 0x50, 0xfc, 0x58, 0x0e};
+    constexpr std::array<std::uint8_t, 46> title_selection_nested_callee_prefix{
+        0xb9, 0x0c, 0x00, 0xf7, 0xe1, 0x2e, 0xc5, 0x36,
+        0x4a, 0x0e, 0x2e, 0xc4, 0x3e, 0x46, 0x0e, 0x8c,
+        0xc2, 0x89, 0xfb, 0x0e, 0x07, 0xbf, 0x8c, 0x13,
+        0x01, 0xc6, 0xad, 0x01, 0xc3, 0xad, 0x88, 0xc4,
+        0x32, 0xc0, 0xb9, 0x04, 0x00, 0xd3, 0xe0, 0x01,
+        0xc2, 0x8b, 0xcb, 0xe8, 0x7e, 0xed};
     constexpr std::array<std::uint8_t, 13> transition_setup{
         0xb9, 0x25, 0x00, 0xba, 0x70, 0x01, 0x51, 0x52,
         0xbe, 0x0c, 0x01, 0x8b, 0x04};
@@ -84,6 +91,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     if (!has_bytes(titles_executable, title_selection_callee_jle_target - file_to_load_bias,
                    title_selection_callee_jle_target_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS title selection JLE target");
+    }
+    if (!has_bytes(titles_executable, 0x1390 - file_to_load_bias,
+                   title_selection_nested_callee_prefix)) {
+        throw std::runtime_error("Unsupported Millennium DOS title selection nested callee");
     }
     static_cast<void>(require_unique(titles_executable, transition_setup, "title transition loop"));
     static_cast<void>(require_unique(titles_executable, input_poll, "title input poll"));
@@ -215,6 +226,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .title_selection_callee_fallthrough_return = 0x1731,
         .title_selection_callee_jle_target_call_address = 0x173d,
         .title_selection_callee_jle_target_call_target = 0x1390,
+        .title_selection_nested_callee_call_address = 0x13bb,
+        .title_selection_nested_callee_call_target = 0x13c,
         .title_resource_index = 0,
         .intro_transition_steps = 0x25,
         .intro_step_stride = 0x170,
