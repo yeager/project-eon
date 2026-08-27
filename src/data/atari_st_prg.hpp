@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "data/fat12.hpp"
@@ -292,6 +293,13 @@ struct MillenniumAtariConfigFourthPostOuterBoundary {
     std::uint16_t trap_opcode = 0;
 };
 
+// A byte-level inventory of absolute-JSR encodings in the original config
+// payload. These remain deliberately non-reachability facts: only the six
+// entry-block callsites have a separately proven execution context.
+struct MillenniumAtariConfigAbsoluteJsrInventory {
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> encodings;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -398,5 +406,10 @@ struct MillenniumAtariConfigFourthPostOuterBoundary {
 // emulate, invoke, or infer any service effect beyond the literal arguments.
 [[nodiscard]] MillenniumAtariConfigFourthPostOuterBoundary parse_millennium_atari_config_fourth_post_outer_boundary(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostLoop& post_loop);
+
+// Finds and validates all exact 0x4eb9 absolute-JSR encodings in the verified
+// payload. It does not claim that every byte pattern is reachable code.
+[[nodiscard]] MillenniumAtariConfigAbsoluteJsrInventory inventory_millennium_atari_config_absolute_jsrs(
+    std::span<const std::uint8_t> payload);
 
 } // namespace eon

@@ -236,6 +236,14 @@ original pushes longword `0x2b428`, pushes selector `0x0006`, and reaches
 that opcode: it does not invoke or emulate the trap, infer its service, read
 the argument's data, or manufacture a return value.
 
+For the next disassembly phase, Project Eon now keeps a fail-closed whole-file
+inventory of all 19 original `0x4eb9` absolute-JSR encodings. The first is at
+file `+0x50c` to `0x2a5aa`; the last is at `+0xdb2` to `0x2aa78`. This is
+explicitly a byte inventory, not a reachability claim: only the six encodings
+in the independently verified entry block are established callsites. The
+other patterns remain preservation anchors until their surrounding control
+paths are proven from original bytes.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
