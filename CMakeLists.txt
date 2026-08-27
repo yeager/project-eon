@@ -41,6 +41,7 @@ add_executable(project-eon
     src/data/atari_st_prg.cpp
     src/data/creative_voice.cpp
     src/data/deuteros_amiga_bundle.cpp
+    src/data/deuteros_amiga_audio.cpp
     src/data/deuteros_amiga_channel_vm.cpp
     src/data/deuteros_amiga_frame.cpp
     src/data/deuteros_amiga_loader.cpp
@@ -48,6 +49,7 @@ add_executable(project-eon
     src/data/fat12.cpp
     src/data/millennium_dos_bitmap.cpp
     src/data/millennium_dos_game_data.cpp
+    src/data/millennium_dos_gameplay_screen.cpp
     src/data/millennium_dos_lib.cpp
     src/data/millennium_dos_title_flow.cpp
     src/data/millennium_amiga_loader.cpp
@@ -89,6 +91,7 @@ if(BUILD_TESTING)
         src/data/atari_st_prg.cpp
         src/data/creative_voice.cpp
         src/data/deuteros_amiga_bundle.cpp
+        src/data/deuteros_amiga_audio.cpp
         src/data/deuteros_amiga_channel_vm.cpp
         src/data/deuteros_amiga_frame.cpp
         src/data/deuteros_amiga_loader.cpp
@@ -96,6 +99,7 @@ if(BUILD_TESTING)
         src/data/fat12.cpp
         src/data/millennium_dos_bitmap.cpp
         src/data/millennium_dos_game_data.cpp
+        src/data/millennium_dos_gameplay_screen.cpp
         src/data/millennium_dos_lib.cpp
         src/data/millennium_dos_title_flow.cpp
         src/data/millennium_amiga_loader.cpp

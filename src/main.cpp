@@ -3,6 +3,7 @@
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_audio.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
@@ -10,6 +11,7 @@
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
+#include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -92,6 +94,11 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
             << " bytes, " << bundle.object_count << " objects, mode "
             << bundle.mode_flag << '\n';
     }
+    const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
+        disk, plan.resource_disk_offsets[0]);
+    const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);
+    std::cout << "          Opening Paula table: " << sound_bank.sounds.size()
+        << " original DMA records\n";
     const auto& handoff = plan.title_handoff_profile;
     const auto title_stage = eon::parse_deuteros_amiga_title_stage(disk, plan);
     std::cout << "          Title input profile: disk 0x" << std::hex << handoff.disk_offset
@@ -119,6 +126,13 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << ", indices 0.." << static_cast<unsigned>(bitmap.max_palette_index)
         << ", RGB6 DAC entries 256, logical translation "
         << palette.logical_to_dac.size() << "\n";
+    constexpr auto gx_lib_sha256 =
+        "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
+    const auto gx_bytes = eon::extract_asset_by_sha256(release.path, gx_lib_sha256);
+    if (!gx_bytes) throw std::runtime_error("Verified Millennium GX.LIB missing");
+    const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
+    std::cout << "          GX.LIB IMG00 -> IMG01: " << gx_canvas.canvas.width << 'x'
+        << gx_canvas.canvas.height << " original indexed canvas\n";
     constexpr auto titles_sha256 =
         "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
     constexpr auto launcher_sha256 =

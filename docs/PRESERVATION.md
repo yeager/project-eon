@@ -134,6 +134,36 @@ display list. The words are standard 12-bit Amiga RGB4. Bundle 0, palette 1 is
 anchored by `000 886 664 442 220 a60 840 620 080 ff0 004 008 02f 0cf fff e40`;
 the native decoder expands every nibble exactly to 8-bit (`n × 17`).
 
+### Deuteros Amiga opening audio
+
+Channel opcode `$0b` passes its two words to `$22ab8`: the first is a sound
+index and the second is a four-bit Paula-channel mask. The initialization
+routine at `$212ca` installs bundle auxiliary pointer 3 in `$22aa6`; pointer 4
+is subsequently consumed as the following resource, giving a strict boundary
+for this table. In bundle 0 this is `0x121b4..0x122de`: 21 exact 14-byte
+records plus four raw tail bytes (`0001ce8e`) which the 14-byte stride cannot
+reach. They are retained verbatim rather than treated as padding or a guessed
+twenty-second sound record.
+
+Every record contains a bundle-relative DMA address (longword), DMA length in
+words, Paula period, volume, and two raw control/parameter words. The
+hardware routine at `$22bea` copies the first ten bytes directly to
+`AUDxLCH`, `AUDxLEN`, `AUDxPER`, and `AUDxVOL`; the remaining two words are
+retained verbatim because `$22c08` onward uses their individual flags for
+runtime modulation and looping. The native reader validates the boundary,
+nonzero period/length, `volume <= 64`, and that the complete `length × 2` DMA
+range remains inside the original bundle. It returns the exact signed 8-bit
+Paula PCM bytes in memory only; it neither converts, unpacks, nor writes the
+game media.
+
+The opening's second scheduler tick proves live use of entries 1 and 2:
+`$0b,$0001,$0001` then `$0b,$0002,$0002`. They share source offset `0x2a8b`
+and length `0x40bc` words (`0x8178` bytes; SHA-256
+`f23fcd05f543be31726271b08ebfe7d907acfe31d1780aaf286fd2db701ae5d5`), while
+their original periods are respectively `0x01c0` and `0x01c2`. SDL playback is
+not enabled by this parser: a future mixer must schedule these authentic DMA
+parameters, rather than substitute generated audio.
+
 ### Deuteros channel programs
 
 Each non-null channel pointer begins with ten bytes copied verbatim into the
@@ -310,6 +340,16 @@ reader preserves all 41 labels and their exact byte offsets, from `Inner
 System` through `Asteroids `. It does not trim the original trailing spaces or
 invent a mapping from those labels to mutable simulation records: the loaded
 file proves this immutable display table, not the full game-state layout.
+
+### Millennium DOS GX canvas
+
+The first two `GX.LIB` entries establish a separate authentic bitmap path.
+`IMG00` is a codec-2 240×33 resource containing a 256-entry RGB6 DAC after
+its stream; `IMG01` is a codec-2 320×167 indexed canvas. Its 68-byte
+post-stream index table selects entries from the `IMG00` DAC. Project Eon
+decodes this pair in memory and retains the remaining resource-table bytes as
+opaque rather than inventing UI or state meaning. Exact offsets, sizes and
+pixel hashes are in [the GX canvas evidence](generated/millennium-dos-gx-canvas.md).
 
 `TITLE.LIB` entry `P00` is the first genuine title image: extent `$000006` to
 `$002941`, 10,555 bytes. Its codec-2 record declares 320×200 indexed pixels,

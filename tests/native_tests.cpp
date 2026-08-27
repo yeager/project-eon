@@ -7,6 +7,7 @@
 #include "data/amiga_ofs.hpp"
 #include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_audio.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
@@ -14,6 +15,7 @@
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
+#include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -275,6 +277,13 @@ int main() {
     assert(gx_lib.entries().front().name == "IMG00");
     assert(gx_lib.entries().front().offset == 6);
     assert(gx_lib.entries().front().size == 3'461);
+    const auto gameplay_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
+    assert(gameplay_canvas.canvas.width == 320 && gameplay_canvas.canvas.height == 167);
+    assert(gameplay_canvas.canvas_logical_to_dac.size() == 68);
+    assert(eon::to_hex(eon::sha256(gameplay_canvas.canvas.pixels))
+        == "1ea177a0fe10a1cae9201e6d31bc91f78a943af5fae8ab36a4c882ea32b6f5a8");
+    assert(eon::to_hex(eon::sha256(gameplay_canvas.rgba))
+        == "b433c77e91dc66e98c2d76a90d63eaabccf706d537ff1258c8af7fbab93efe98");
     const auto* gx_img01 = gx_lib.find("IMG01");
     const auto* gx_imgb3 = gx_lib.find("IMGB3");
     assert(gx_img01 && gx_img01->offset == 0x0d8b && gx_img01->size == 14'079);
@@ -402,6 +411,16 @@ int main() {
         0xa98, 0, 0xb4b, 0x121b4, 0x122de, 0x1255e}));
     assert(first_bundle.mode_flag == 0);
     const auto first_palette = eon::decode_deuteros_amiga_palette(system_disk, first_bundle, 1);
+    const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(system_disk, first_bundle);
+    assert(sound_bank.sounds.size() == 21);
+    assert((sound_bank.trailing_bytes == std::vector<std::uint8_t>{0x00, 0x01, 0xce, 0x8e}));
+    assert(sound_bank.sounds[1].sample_relative_offset == 0x2a8b);
+    assert(sound_bank.sounds[1].length_words == 0x40bc);
+    assert(sound_bank.sounds[1].period == 0x1c0 && sound_bank.sounds[2].period == 0x1c2);
+    assert(sound_bank.sounds[1].volume == 0x3f);
+    assert(sound_bank.sounds[1].pcm == sound_bank.sounds[2].pcm);
+    assert(eon::to_hex(eon::sha256(sound_bank.sounds[1].pcm))
+        == "f23fcd05f543be31726271b08ebfe7d907acfe31d1780aaf286fd2db701ae5d5");
     assert((first_palette[0] == eon::RgbColor{0x00, 0x00, 0x00}));
     assert((first_palette[1] == eon::RgbColor{0x88, 0x88, 0x66}));
     assert((first_palette[5] == eon::RgbColor{0xaa, 0x66, 0x00}));
