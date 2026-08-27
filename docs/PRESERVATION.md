@@ -1127,6 +1127,15 @@ The native decoder accepts the original uncompressed sound and continuation
 blocks, preserves the source PCM bytes, and rejects encodings not yet proven
 by game media rather than replacing effects.
 
+`2200AD.EXE` also contains the exact contiguous DOS name sequence
+`SFX1.VOC` through `SFXE.VOC` at loaded address `$cfdd`. This establishes the
+original resource family, but it is not a playback trace: no direct code
+reference from a startup or UI path to that table, nor a verified sound-driver
+call with a selected entry, has yet been recovered. Project Eon therefore does
+not attach any VOC file to a host event, title transition, or timer. The
+existing decoder is retained as a source-byte parser only until a real caller
+and trigger are established.
+
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
 their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 92h, and 95h. `2200AD.EXE` jumps from file offset `0x0004` to `0xd1b0`, then
