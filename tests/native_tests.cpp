@@ -1504,6 +1504,14 @@ int main() {
     assert(atari_fourth_post_outer_tail.trap_opcode == 0x4e4e);
     assert(atari_fourth_post_outer_tail.final_stack_cleanup_opcode == 0x5c8f);
     assert(atari_fourth_post_outer_tail.return_opcode == 0x4e75);
+    const auto atari_fourth_post_outer_recurrence = eon::parse_millennium_atari_config_fourth_post_outer_recurrence(
+        atari_config_payload, atari_fourth_post_outer_tail, atari_fourth_loop);
+    assert(atari_fourth_post_outer_recurrence.prefix_address == 0x2b44c);
+    assert(atari_fourth_post_outer_recurrence.prefix_file_offset == 0xf6e);
+    assert(atari_fourth_post_outer_recurrence.prefix_bytes == 24);
+    assert(atari_fourth_post_outer_recurrence.sha256
+        == "85f6e69ef8d058c021e0c70fe51375ef2f09a2c67c798c73f066ffdb6f14a187");
+    assert(atari_fourth_post_outer_recurrence.continuation_address == 0x2b464);
     const auto atari_jsr_inventory = eon::inventory_millennium_atari_config_absolute_jsrs(atari_config_payload);
     assert(atari_jsr_inventory.encodings.size() == 19);
     assert((atari_jsr_inventory.encodings.front() == std::pair<std::uint32_t, std::uint32_t>{0x50c, 0x2a5aa}));
@@ -1628,6 +1636,17 @@ int main() {
         invalid_atari_fourth_post_outer_tail_rejected = true;
     }
     assert(invalid_atari_fourth_post_outer_tail_rejected);
+    auto invalid_atari_fourth_post_outer_recurrence_payload = atari_config_payload;
+    invalid_atari_fourth_post_outer_recurrence_payload[0xf6e] ^= 0x01;
+    bool invalid_atari_fourth_post_outer_recurrence_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_config_fourth_post_outer_recurrence(
+            invalid_atari_fourth_post_outer_recurrence_payload, atari_fourth_post_outer_tail,
+            atari_fourth_loop));
+    } catch (const std::runtime_error&) {
+        invalid_atari_fourth_post_outer_recurrence_rejected = true;
+    }
+    assert(invalid_atari_fourth_post_outer_recurrence_rejected);
     auto invalid_atari_jsr_inventory_payload = atari_config_payload;
     invalid_atari_jsr_inventory_payload[0xd54] ^= 0x01;
     bool invalid_atari_jsr_inventory_rejected = false;

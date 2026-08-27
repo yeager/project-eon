@@ -669,6 +669,36 @@ MillenniumAtariConfigFourthPostOuterTail parse_millennium_atari_config_fourth_po
         read_be16(bytes, 22), read_be16(bytes, 24)};
 }
 
+MillenniumAtariConfigFourthPostOuterRecurrence parse_millennium_atari_config_fourth_post_outer_recurrence(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostOuterTail& tail,
+    const MillenniumAtariConfigFourthLoop& loop) {
+    // The D7 DBF returns to $2b44c, the LEA A5 opcode, then falls through the
+    // A4/D6/D5/D4 literals to the separately proven loop body at $2b464.
+    constexpr std::uint32_t prefix_address = 0x2b44c;
+    constexpr std::size_t prefix_offset = prefix_address - 0x2a4de;
+    constexpr std::size_t prefix_bytes = 24;
+    constexpr std::uint32_t continuation_address = 0x2b464;
+    constexpr std::array<std::uint8_t, prefix_bytes> expected_bytes{
+        0x2a, 0x7c, 0x00, 0x02, 0xb4, 0x28, 0x28, 0x7c, 0x00, 0x02, 0xb3, 0xc8,
+        0x3c, 0x3c, 0x00, 0x0f, 0x3a, 0x3c, 0x00, 0x02, 0x38, 0x3c, 0x01, 0x00,
+    };
+    constexpr std::string_view expected_sha256 =
+        "85f6e69ef8d058c021e0c70fe51375ef2f09a2c67c798c73f066ffdb6f14a187";
+    if (tail.d7_backedge_target_address != prefix_address
+        || loop.body_address != continuation_address
+        || payload.size() < prefix_offset + prefix_bytes) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-outer-loop recurrence");
+    }
+    const auto bytes = payload.subspan(prefix_offset, prefix_bytes);
+    const auto hash = to_hex(sha256(bytes));
+    if (hash != expected_sha256
+        || !std::equal(expected_bytes.begin(), expected_bytes.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-outer-loop recurrence");
+    }
+    return {prefix_address, static_cast<std::uint32_t>(prefix_offset),
+        static_cast<std::uint32_t>(prefix_bytes), hash, continuation_address};
+}
+
 MillenniumAtariConfigAbsoluteJsrInventory inventory_millennium_atari_config_absolute_jsrs(
     std::span<const std::uint8_t> payload) {
     // Preserve this whole-file byte inventory for subsequent disassembly, but
