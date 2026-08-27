@@ -1126,6 +1126,13 @@ executes the launcher's private `INT $91`, restores those registers, and has
 its `RET` opcode at `$0130`. This is a bounded instruction-level fact only:
 the private interrupt's result and actual return behaviour are not emulated.
 
+If that wrapper returns, its caller's next raw block is independently fixed:
+at `$d2c8` it stores `AX` at `$d128`, moves `AH` to `$4368` and `$da05`, and
+stores `SP` at `$d12c` before comparing `AL` with one at `$d2d9`. The parser
+records these destination operands and the following static branch edges only;
+it does not assume a return, assign values to the cells, or execute either
+branch.
+
 #### Main-loop action dispatch
 
 The supplied English `2200AD.EXE` (54,391 bytes, SHA-256

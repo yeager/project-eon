@@ -418,6 +418,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << ", first CALL 0x" << game_flow.startup_first_call_address
         << " -> INT 0x" << static_cast<unsigned>(game_flow.startup_first_call_interrupt)
         << ", static RET 0x" << game_flow.startup_first_call_return_address
+        << " (return-site 0x" << game_flow.startup_first_call_return_site
+        << ", AX -> 0x" << game_flow.startup_result_word_address
+        << ", AH -> 0x" << game_flow.startup_result_high_byte_first_address << "/0x"
+        << game_flow.startup_result_high_byte_second_address << ", SP -> 0x"
+        << game_flow.startup_stack_snapshot_address << ")"
         << "; AL==$" << static_cast<unsigned>(game_flow.startup_mode_equal_value)
         << " -> 0x" << game_flow.startup_equal_call_address << ", otherwise 0x"
         << game_flow.startup_other_call_address << "; DX!=0 -> 0x"
