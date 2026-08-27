@@ -477,6 +477,20 @@ fallthrough `$68eb2` prefix hashes to
 This is static provenance only: no register contents, comparison result, or
 control-flow path is executed or assigned gameplay meaning.
 
+The taken `BEQ.W` target at `$68ed6` / ADF `+0x172d6` is now independently
+bounded as 30 raw bytes with SHA-256
+`b2d2c6cadc50725eb8b4f0b680c325586ed457b29232481b503f3e337d589341`.
+It encodes an `ADDI.B`, then `BCC.W` at `$68ede` (extension base `$68ee0`,
+literal `$0014`) and another `BCC.W` at `$68eea` (base `$68eec`, literal
+`$0008`), followed by `ADDQ.B`. Both branch encodings and the straight-line
+fallthrough converge at `$68ef4` / ADF `+0x172f4`; the first 32 bytes at that
+convergence hash to
+`93b0d20954d235c624406450161a359968e4f1baefcbaeb47ede08fda0cd1e71`.
+The parser checks the exact 30-byte source and 32-byte convergence prefix
+against all six supplied Amiga variants. This remains static provenance only:
+condition flags, memory-cell meaning, branch decisions, and gameplay effects
+are not recovered or modeled.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch
