@@ -1891,6 +1891,36 @@ int main() {
         }
         assert(rejected);
     }
+    const auto deuteros_supervisor_callback = eon::parse_deuteros_atari_supervisor_callback(
+        deuteros_second_stage, deuteros_second_stage_profile);
+    assert(deuteros_supervisor_callback.callsite_offset == 0xd2);
+    assert(deuteros_supervisor_callback.callsite_bytes == 10);
+    assert(deuteros_supervisor_callback.callsite_sha256
+        == "11b26d5900e614547617a9c95611515e8238184756a0a18c7ff18b1ec372657b");
+    assert(deuteros_supervisor_callback.callback_address == 0x1fa6);
+    assert(deuteros_supervisor_callback.callback_offset == 0x1a6);
+    assert(deuteros_supervisor_callback.callback_bytes == 12);
+    assert(deuteros_supervisor_callback.callback_sha256
+        == "1f8bdb0e61454fef9acb0dc3abcf7bfed2621828937380b415ab85d4f57ef143");
+    assert(deuteros_supervisor_callback.callback_push_opcode == 0x2f3c);
+    assert(deuteros_supervisor_callback.xbios_selector == 0x0026);
+    assert(deuteros_supervisor_callback.trap_opcode == 0x4e4e);
+    assert(deuteros_supervisor_callback.callback_return_address_load_opcode == 0x2017);
+    assert(deuteros_supervisor_callback.callback_stack_address == 0x7b000);
+    assert(deuteros_supervisor_callback.callback_stack_move_opcode == 0x2f00);
+    assert(deuteros_supervisor_callback.callback_return_opcode == 0x4e75);
+    {
+        auto altered_second_stage = deuteros_second_stage;
+        altered_second_stage[0x1a6] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_supervisor_callback(
+                altered_second_stage, deuteros_second_stage_profile));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto materialize_atari_plan = [&deuteros_disk1](const auto& plan) {
         std::vector<std::uint8_t> bytes;
         for (const auto& request : plan.requests) {

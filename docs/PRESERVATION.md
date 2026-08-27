@@ -588,6 +588,16 @@ literal `MOVE.W $1eaa,D0; RTS`. This links the post-read branch to the original
 dispatch-word return only. It does not select vector 5, give the word game
 meaning, perform raw reads, or emulate XBIOS.
 
+A separate copied-dispatcher route reaches an explicit supervisor-callback ABI
+boundary. At track-2 `+$d2` it pushes literal callback `$1fa6`, then selector
+`$0026`; those 10 bytes have SHA-256
+`11b26d5900e614547617a9c95611515e8238184756a0a18c7ff18b1ec372657b` and
+are followed by `TRAP #14`. The callback at track-2 `+$1a6` is 12 bytes,
+SHA-256 `1f8bdb0e61454fef9acb0dc3abcf7bfed2621828937380b415ab85d4f57ef143`:
+`MOVE.L (A7),D0; LEA $7b000,A7; MOVE.L D0,-(A7); RTS`. Project Eon records
+these literal operations but does not emulate XBIOS, supply a callback frame,
+or infer what frame or return path that ABI would establish.
+
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its

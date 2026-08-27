@@ -366,6 +366,43 @@ DeuterosAtariState5ReturnProfile parse_deuteros_atari_state5_return(
         be16(bytes, tail_offset + 4U)};
 }
 
+DeuterosAtariSupervisorCallbackProfile parse_deuteros_atari_supervisor_callback(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage) {
+    // At copied dispatcher +$d2, PEA $1fa6 and selector $26 form an XBIOS
+    // boundary. The callback's direct stack reshaping is literal code only;
+    // the ABI's caller frame and all service effects remain outside this model.
+    constexpr std::size_t callsite_offset = 0xd2;
+    constexpr std::array<std::uint8_t, 10> callsite_bytes{
+        0x2f, 0x3c, 0x00, 0x00, 0x1f, 0xa6, 0x3f, 0x3c, 0x00, 0x26};
+    constexpr std::size_t trap_offset = callsite_offset + callsite_bytes.size();
+    constexpr std::array<std::uint8_t, 2> trap_bytes{0x4e, 0x4e};
+    constexpr std::size_t callback_offset = 0x1a6;
+    constexpr std::array<std::uint8_t, 12> callback_bytes{
+        0x20, 0x17, 0x4f, 0xf9, 0x00, 0x07, 0xb0, 0x00, 0x2f, 0x00, 0x4e, 0x75};
+    constexpr std::string_view callsite_sha256 =
+        "11b26d5900e614547617a9c95611515e8238184756a0a18c7ff18b1ec372657b";
+    constexpr std::string_view callback_sha256 =
+        "1f8bdb0e61454fef9acb0dc3abcf7bfed2621828937380b415ab85d4f57ef143";
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || !std::equal(callsite_bytes.begin(), callsite_bytes.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(callsite_offset))
+        || !std::equal(trap_bytes.begin(), trap_bytes.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(trap_offset))
+        || !std::equal(callback_bytes.begin(), callback_bytes.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(callback_offset))) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST supervisor callback boundary");
+    }
+    const auto callsite_hash = to_hex(sha256(bytes.subspan(callsite_offset, callsite_bytes.size())));
+    const auto callback_hash = to_hex(sha256(bytes.subspan(callback_offset, callback_bytes.size())));
+    if (callsite_hash != callsite_sha256 || callback_hash != callback_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST supervisor callback boundary");
+    }
+    return {callsite_offset, callsite_bytes.size(), callsite_hash, 0x1fa6, callback_offset,
+        callback_bytes.size(), callback_hash, be16(bytes, callsite_offset), be16(bytes, callsite_offset + 8U),
+        be16(bytes, trap_offset), be16(bytes, callback_offset), be32(bytes, callback_offset + 4U),
+        be16(bytes, callback_offset + 8U), be16(bytes, callback_offset + 10U)};
+}
+
 DeuterosAtariState0DuplicateStagePrefix
 parse_deuteros_atari_state0_duplicate_stage_prefix(const std::span<const std::uint8_t> state0_bytes,
     const std::span<const std::uint8_t> second_stage_bytes) {
