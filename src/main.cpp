@@ -408,7 +408,9 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const eon::Fat12Disk disk(*image);
     const auto* executable = disk.find("MILENIUM.TOS");
     if (!executable) throw std::runtime_error("Verified Millennium Atari ST disk has no MILENIUM.TOS");
-    const auto prg = eon::parse_atari_st_prg(disk.read(*executable));
+    const auto executable_bytes = disk.read(*executable);
+    const auto prg = eon::parse_atari_st_prg(executable_bytes);
+    const auto bootstrap = eon::parse_millennium_atari_bootstrap(executable_bytes, prg);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -418,7 +420,12 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << prg.relocations.front().offset << "]=0x" << prg.relocations.front().original_value
         << ", [0x" << prg.relocations.back().offset << "]=0x"
         << prg.relocations.back().original_value << std::dec
-        << " (unrelocated disk words)\n";
+        << " (unrelocated disk words)\n"
+        << "          entry: BRA 0x" << std::hex << bootstrap.branch_target_offset
+        << "; copies 0x" << bootstrap.stage_bytes << " bytes from 0x"
+        << bootstrap.stage_source_offset << "..0x" << bootstrap.stage_last_longword_offset
+        << " to BSS 0x" << bootstrap.stage_destination_offset
+        << " and JMPs there" << std::dec << " (original bootstrap; not executed)\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
