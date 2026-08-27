@@ -184,6 +184,24 @@ eight-character name. `TITLE.LIB` has 38 entries at directory `$4813`;
 non-monotonic resources, invalid padding/flags, and any range outside the
 directory boundary.
 
+`TITLE.LIB` entry `P00` is the first genuine title image: extent `$000006` to
+`$002941`, 10,555 bytes. Its codec-2 record declares 320×200 indexed pixels,
+maximum index 35, and a `$25d7`-byte stream. The decoder consumes low nibble
+then high nibble; controls `$0`–`$d` add one of 14 verified deltas modulo 36,
+`$f` supplies an absolute index, and `$e` repeats the previous index. The
+64,000 row-major indices hash to
+`85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee` with
+7,386 nonzero pixels. The separately stored DOS palette/translation mapping is
+not yet promoted to RGB output.
+
+## Automation integrity
+
+The repository's sole GitHub Actions workflow has read-only repository
+permission and runs Gitleaks over complete history plus native build/test jobs
+on Linux, macOS, and Windows. It handles no releases, tags, artifacts intended
+for publishing, or package uploads. Releases require an explicit maintainer
+request outside CI; normal development is pushed directly to `main`.
+
 ## Evidence levels
 
 - **Verified bytes:** hashes, sizes, checksums, geometry, and fields asserted by

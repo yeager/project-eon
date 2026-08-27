@@ -135,6 +135,9 @@ their observed SHA-256 hashes.
 The English DOS `TITLE.LIB` and `GX.LIB` are also parsed natively through their
 verified banked resource directory, exposing 38 title resources and 180
 gameplay resources directly from the hash-identified original archive.
+`TITLE.LIB` resource `P00` now decodes into its authentic 320×200 indexed title
+image. Its RGB palette installation remains intentionally pending code-level
+verification; Project Eon does not substitute an assumed VGA palette.
 
 The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
 Millennium disk. Nested extraction locates the disk by SHA-256 independently of
@@ -166,6 +169,15 @@ See [docs/research.md](docs/research.md) for the reverse-engineering method and
 current findings. The hash ledger, evidence levels, reproduction procedure,
 and contribution rules live in the
 [preservation record](docs/PRESERVATION.md).
+
+## Continuous integration and Git policy
+
+GitHub Actions builds and tests Linux, macOS, and Windows, runs the preservation
+tool tests without commercial game data, and scans the complete Git history
+with Gitleaks. CI has read-only repository permission and contains no release,
+tagging, publishing, or packaging workflow. Development pushes go directly to
+GitHub `main`; Project Eon does not create GitHub branches. Releases are made
+only when the maintainer explicitly requests one.
 
 ## Repository
 

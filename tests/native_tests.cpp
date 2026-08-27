@@ -7,6 +7,7 @@
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/fat12.hpp"
+#include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/sha256.hpp"
 
@@ -86,6 +87,21 @@ int main() {
     assert(title_p25 && title_p25->offset == 0x473e && title_p25->size == 213);
     assert(eon::to_hex(eon::sha256(title_lib.read(title_lib.entries().front())))
         == "14ca6d3c86eba5e9e2afaed21fca9fc6dd1da9e357e305859a495b6dfd69919d");
+    const auto title_bitmap = eon::decode_millennium_dos_bitmap(
+        title_lib.read(title_lib.entries().front()));
+    assert(title_bitmap.flags == 7);
+    assert(title_bitmap.max_palette_index == 35);
+    assert(title_bitmap.codec == 2);
+    assert(title_bitmap.deduction == 0);
+    assert(title_bitmap.width == 320);
+    assert(title_bitmap.height == 200);
+    assert(title_bitmap.encoded_span == 9'687);
+    assert(title_bitmap.pixels.size() == 64'000);
+    assert(*std::max_element(title_bitmap.pixels.begin(), title_bitmap.pixels.end()) == 35);
+    assert(std::count_if(title_bitmap.pixels.begin(), title_bitmap.pixels.end(),
+        [](std::uint8_t value) { return value != 0; }) == 7'386);
+    assert(eon::to_hex(eon::sha256(title_bitmap.pixels))
+        == "85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee");
     assert(gx_lib.directory_offset() == 0x4bd3c);
     assert(gx_lib.entries().size() == 180);
     assert(gx_lib.entries().front().name == "IMG00");
