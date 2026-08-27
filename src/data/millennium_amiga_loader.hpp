@@ -199,6 +199,18 @@ struct MillenniumAmigaResidentPredicateNotEqualPathBoundary {
     std::uint32_t unknown_call_target = 0;
 };
 
+// Independent raw-resident entry whose first two predicates are fully local.
+// It stops before any later branch body or call is assigned meaning.
+struct MillenniumAmigaResidentIndependentEntryGate {
+    std::uint32_t entry_address = 0;
+    std::uint32_t negative_d3_branch_address = 0;
+    std::uint32_t negative_d3_target = 0;
+    std::uint32_t flag_test_address = 0;
+    std::uint32_t flag_address = 0;
+    std::uint32_t flag_zero_branch_address = 0;
+    std::uint32_t flag_zero_target = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -305,5 +317,11 @@ parse_millennium_amiga_resident_predicate_zero_path_boundary(
 parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentPredicateZeroPathBoundary& zero_path);
+
+// Validates the initial D3-negative and fixed-flag-zero branches at the
+// independent resident entry $68508. It does not enter either target.
+[[nodiscard]] MillenniumAmigaResidentIndependentEntryGate
+parse_millennium_amiga_resident_independent_entry_gate(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
 
 } // namespace eon

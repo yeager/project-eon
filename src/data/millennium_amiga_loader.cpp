@@ -636,4 +636,30 @@ parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
     return {entry, 0, 2, entry + 4, 0x7b90a};
 }
 
+MillenniumAmigaResidentIndependentEntryGate
+parse_millennium_amiga_resident_independent_entry_gate(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t entry = 0x68508;
+    constexpr std::array<std::uint8_t, 18> expected{{
+        0x48, 0xe7, 0xf0, 0x04,             // movem.l d0-d3/a5,-(sp)
+        0x4a, 0x43,                         // tst.w d3
+        0x6b, 0x00, 0x00, 0x86,             // bmi.w $68594
+        0x4a, 0x39, 0x00, 0x07, 0xb1, 0x42, // tst.b $7b142
+        0x67, 0x30,                         // beq.s $68546
+    }};
+    if (entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Millennium Amiga independent entry precedes raw range");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga independent entry is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga independent entry gate");
+    }
+    return {entry, 0x6850e, 0x68598, 0x68512, 0x7b142, 0x68518, 0x6854a};
+}
+
 } // namespace eon

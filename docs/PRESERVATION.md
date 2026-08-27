@@ -367,6 +367,13 @@ then `D2`, and reaches the same unknown `JSR $7b90a` at `$680ce`. No
 post-call stack restoration, loop, or target effect is claimed by
 `MillenniumAmigaResidentPredicateNotEqualPathBoundary`.
 
+Separately, resident entry `$68508` begins with two fully local predicates: a
+negative-`D3` branch at `$6850e` to `$68598`, then a byte test of `$7b142`
+whose zero branch at `$68518` reaches `$6854a`. This is recorded by
+`MillenniumAmigaResidentIndependentEntryGate` as byte-exact raw control-flow
+evidence only; neither branch target nor the flag's gameplay meaning is
+inferred.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with
