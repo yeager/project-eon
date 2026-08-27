@@ -517,4 +517,46 @@ parse_millennium_amiga_resident_staging_direct_reachability_boundary(
     return result;
 }
 
+MillenniumAmigaResidentPredicateGate
+parse_millennium_amiga_resident_predicate_gate(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentWordSplitter& splitter) {
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t entry = 0x68078;
+    constexpr std::uint32_t predicate = 0x7b816;
+    constexpr std::array<std::uint8_t, 14> gate{{
+        0x4e, 0xb9, 0x00, 0x07, 0xb8, 0x16, // jsr $7b816
+        0x4a, 0x03,                         // tst.b d3
+        0x67, 0x02,                         // beq.s continuation
+        0x4e, 0x75,                         // rts
+        0x2f, 0x09,                         // first continuation instruction
+    }};
+    if (splitter.entry_address != 0x68016 || entry < plan.resident_stage.destination
+        || predicate < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga resident predicate gate placement");
+    }
+    const auto entry_relative = entry - plan.resident_stage.destination;
+    const auto predicate_relative = predicate - plan.resident_stage.destination;
+    constexpr std::size_t prefix_size = 32;
+    if (entry_relative > plan.resident_stage.length || gate.size() > plan.resident_stage.length - entry_relative
+        || predicate_relative > plan.resident_stage.length
+        || prefix_size > plan.resident_stage.length - predicate_relative) {
+        throw std::runtime_error("Millennium Amiga resident predicate gate is outside raw range");
+    }
+    const auto gate_bytes = disk.bytes(plan.resident_stage.disk_offset + entry_relative, gate.size());
+    if (!std::equal(gate.begin(), gate.end(), gate_bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga resident predicate gate");
+    }
+    const auto raw_prefix = disk.bytes(plan.resident_stage.disk_offset + predicate_relative, prefix_size);
+    MillenniumAmigaResidentPredicateGate result;
+    result.entry_address = entry;
+    result.predicate_address = predicate;
+    result.nonzero_return_address = entry + 10;
+    result.zero_continue_address = entry + 12;
+    result.predicate_raw_disk_offset = plan.resident_stage.disk_offset + predicate_relative;
+    std::copy(raw_prefix.begin(), raw_prefix.end(), result.predicate_raw_prefix.begin());
+    result.predicate_raw_prefix_sha256 = to_hex(sha256(raw_prefix));
+    return result;
+}
+
 } // namespace eon
