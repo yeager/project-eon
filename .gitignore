@@ -1,6 +1,6 @@
 # Original game data is supplied by the user and must never be committed.
 game-data/
 analysis-work/
+build/
 __pycache__/
 *.pyc
-
