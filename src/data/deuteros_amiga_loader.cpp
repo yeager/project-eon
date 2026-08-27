@@ -398,6 +398,24 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     require_long(renderer_pass, 0x32, alternate_renderer_address);
     require_word(renderer_pass, 0x3e, 0x4eb9); // jsr $20c8c
     require_long(renderer_pass, 0x40, regular_renderer_address);
+    // $2162a stores $ffff into $210f4. Once the scheduler returns, $21856
+    // tests that same cell and $2185c branches to $21892 when it is nonzero.
+    // This is a raw main-stage request edge, not a named gameplay handoff.
+    constexpr std::uint32_t channel_request_cell_address = 0x210f4;
+    constexpr std::uint16_t channel_request_value = 0xffff;
+    constexpr std::uint32_t channel_request_loop_test_address = 0x21856;
+    constexpr std::uint32_t channel_request_loop_branch_address = 0x2185c;
+    constexpr std::uint32_t channel_request_continuation_address = 0x21892;
+    const auto channel_request_arm = stage_bytes.subspan(main_offset(0x2162a));
+    require_word(channel_request_arm, 0x00, 0x33fc);
+    if (big16(channel_request_arm, 0x02) != channel_request_value
+        || big32(channel_request_arm, 0x04) != channel_request_cell_address) {
+        throw std::runtime_error("Unexpected Deuteros channel-request write");
+    }
+    const auto channel_request_loop = stage_bytes.subspan(main_offset(channel_request_loop_test_address));
+    require_word(channel_request_loop, 0x00, 0x4a39);
+    require_long(channel_request_loop, 0x02, channel_request_cell_address);
+    require_word(channel_request_loop, 0x06, 0x6634);
     const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
         0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
         0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, 0x210f8, 0x21248, 0x18,
@@ -411,7 +429,9 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         resource_consumer_commands, resource_consumer_call_sites,
         renderer_pass_address, alternate_renderer_selector,
         alternate_renderer_state_data_offset, alternate_renderer_address,
-        regular_renderer_address};
+        regular_renderer_address, channel_request_cell_address,
+        channel_request_value, channel_request_loop_test_address,
+        channel_request_loop_branch_address, channel_request_continuation_address};
 
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table

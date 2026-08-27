@@ -194,6 +194,8 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
         events.alternate_resources.push_back(command.operands[0]);
         break;
     case 0x10:
+        // $2162a writes $ffff to raw main-loop cell $210f4. This event is
+        // that exact request observation, not an inferred title transition.
         transition_requested_ = true;
         events.transition_requested = true;
         // $2162a sets the global request then reaches $2167a. With D0 still
