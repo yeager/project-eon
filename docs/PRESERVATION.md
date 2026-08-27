@@ -465,6 +465,13 @@ System` through `Asteroids `. It does not trim the original trailing spaces or
 invent a mapping from those labels to mutable simulation records: the loaded
 file proves this immutable display table, not the full game-state layout.
 
+The same data file begins with a verified 435-entry, 16-bit static-text
+pointer table ending at `$0365`. It maps to 434 distinct raw records in the
+English release (one target is intentionally shared) and is not target-sorted.
+Project Eon preserves pointer order and raw record boundaries without assigning
+meaning to the native control bytes. The exact cross-edition evidence is in
+[the static-text report](generated/millennium-dos-static-text.md).
+
 ### Millennium DOS GX canvas
 
 The first two `GX.LIB` entries establish a separate authentic bitmap path.

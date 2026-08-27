@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <set>
 #include <stdexcept>
 
 namespace eon {
@@ -48,6 +49,42 @@ MillenniumDosGameData parse_millennium_dos_game_data(
         if (result.celestial_labels.size() == celestial_label_count) return result;
     }
     throw std::runtime_error("Unsupported Millennium DOS celestial-label table");
+}
+
+MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
+    const std::span<const std::uint8_t> static_data) {
+    if (static_data.size() <= MillenniumDosStaticTextCatalog::pointer_table_size) {
+        throw std::runtime_error("Truncated Millennium DOS static text catalog");
+    }
+
+    MillenniumDosStaticTextCatalog result;
+    result.pointers.reserve(MillenniumDosStaticTextCatalog::pointer_count);
+    std::set<std::size_t> record_offsets;
+    for (std::size_t index = 0; index < MillenniumDosStaticTextCatalog::pointer_count; ++index) {
+        const auto target_offset = static_cast<std::size_t>(read_u16(static_data, index * 2));
+        if (target_offset < MillenniumDosStaticTextCatalog::pointer_table_size
+            || target_offset >= static_data.size()) {
+            throw std::runtime_error("Invalid Millennium DOS static text pointer");
+        }
+        result.pointers.push_back({.table_index = index, .target_offset = target_offset});
+        record_offsets.insert(target_offset);
+    }
+    // Both verified DOS editions begin at the first byte after the pointer
+    // table. Requiring this catches shifted or invented tables while still
+    // allowing each edition's differently sized translated records.
+    if (result.pointers.front().target_offset != MillenniumDosStaticTextCatalog::pointer_table_size) {
+        throw std::runtime_error("Unsupported Millennium DOS static text table origin");
+    }
+
+    result.records.reserve(record_offsets.size());
+    for (auto it = record_offsets.begin(); it != record_offsets.end(); ++it) {
+        const auto next = std::next(it) == record_offsets.end() ? static_data.size() : *std::next(it);
+        if (next <= *it) throw std::runtime_error("Invalid Millennium DOS static text record range");
+        result.records.push_back({.source_offset = *it,
+            .bytes = {static_data.begin() + static_cast<std::ptrdiff_t>(*it),
+                static_data.begin() + static_cast<std::ptrdiff_t>(next)}});
+    }
+    return result;
 }
 
 MillenniumDosSaveLayout parse_millennium_dos_save_layout(
