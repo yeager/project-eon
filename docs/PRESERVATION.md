@@ -132,7 +132,11 @@ it configures supervisor stack `$7b000`, application stack `$2478`, then jumps
 directly to `$1ec4`.  Its local raw-reader routine at `+$60` caps each XBIOS
 request at nine sectors and maps linear tracks from `$50` onward to side 1.
 The `$1ec4` target belongs to the preceding protected load chain; no title or
-game-stage meaning has been asserted for it.
+game-stage meaning has been asserted for it. Specifically, the preceding
+routine copies `0x1200` bytes from a runtime-supplied `A0` to `$1e00` before
+that handoff; no static source address for `A0` is established by the raw
+track bytes. Project Eon therefore refuses to reinterpret disk byte `+0xc4`
+as executable code merely because it shares the numeric offset.
 
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
