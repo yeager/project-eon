@@ -206,6 +206,24 @@ struct MillenniumAtariConfigForwardedJsr {
     std::uint16_t return_opcode = 0;
 };
 
+// The direct $2b2be config target begins with a local D0 gate whose branch
+// target is still in original file bytes. Project Eon records the exact
+// machine words and branch shape, not the resulting D0-dependent behaviour.
+struct MillenniumAtariConfigThirdJsr {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t target_address = 0;
+    std::uint32_t target_file_offset = 0;
+    std::uint16_t initial_opcode = 0;
+    std::uint16_t gate_opcode = 0;
+    std::uint16_t gate_immediate = 0;
+    std::uint16_t branch_opcode = 0;
+    std::uint16_t branch_displacement = 0;
+    std::uint32_t branch_target_address = 0;
+    std::uint16_t branch_target_opcode = 0;
+    std::uint16_t branch_target_immediate = 0;
+    std::uint16_t branch_target_branch_opcode = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -278,6 +296,12 @@ struct MillenniumAtariConfigForwardedJsr {
 // Validates the repeated $2aa0c forwarding target and its immediate local
 // body. It does not invoke TRAP #14 or infer any XBIOS/firmware effect.
 [[nodiscard]] MillenniumAtariConfigForwardedJsr parse_millennium_atari_config_forwarded_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
+
+// Validates only the first local gate in direct target $2b2be and the original
+// bytes at its taken branch destination. It never chooses a D0 value or
+// executes either side of the branch.
+[[nodiscard]] MillenniumAtariConfigThirdJsr parse_millennium_atari_config_third_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
 } // namespace eon

@@ -465,4 +465,39 @@ MillenniumAtariConfigForwardedJsr parse_millennium_atari_config_forwarded_jsr(
         read_be16(payload, forwarded_offset + 10U)};
 }
 
+MillenniumAtariConfigThirdJsr parse_millennium_atari_config_third_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
+    // Direct entry-block target $2b2be has a local 10-byte gate: the original
+    // BNE.W reaches $2b300. Both the source and destination prefixes are
+    // retained verbatim; their D0-dependent meanings stay unmodelled.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t target_address = 0x2b2be;
+    constexpr std::size_t target_offset = target_address - load_base;
+    constexpr std::uint32_t branch_target_address = 0x2b300;
+    constexpr std::size_t branch_target_offset = branch_target_address - load_base;
+    constexpr std::array<std::uint8_t, 10> entry_bytes{
+        0x14, 0x00, 0x02, 0x00, 0x00, 0xc0, 0x66, 0x00, 0x00, 0x3a,
+    };
+    constexpr std::array<std::uint8_t, 8> branch_target_bytes{
+        0x08, 0x02, 0x00, 0x06, 0x67, 0x00, 0x00, 0x90,
+    };
+    const auto has_target = std::find(entry.jsr_targets.begin(), entry.jsr_targets.end(), target_address)
+        != entry.jsr_targets.end();
+    if (entry.proven_load_base != load_base || !has_target
+        || payload.size() < target_offset + entry_bytes.size()
+        || payload.size() < branch_target_offset + branch_target_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset))
+        || !std::equal(branch_target_bytes.begin(), branch_target_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(branch_target_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST third MILL22A.inf JSR target");
+    }
+    return {load_base, target_address, static_cast<std::uint32_t>(target_offset),
+        read_be16(payload, target_offset), read_be16(payload, target_offset + 2U),
+        read_be16(payload, target_offset + 4U), read_be16(payload, target_offset + 6U),
+        read_be16(payload, target_offset + 8U), branch_target_address,
+        read_be16(payload, branch_target_offset), read_be16(payload, branch_target_offset + 2U),
+        read_be16(payload, branch_target_offset + 4U)};
+}
+
 } // namespace eon
