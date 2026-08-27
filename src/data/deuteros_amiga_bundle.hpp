@@ -47,6 +47,12 @@ struct DeuterosAmigaIndexedBlob {
     std::vector<std::uint32_t> record_offsets;
 };
 
+struct DeuterosAmigaBitmap {
+    std::uint16_t width = 0;
+    std::uint16_t height = 0;
+    std::vector<std::uint8_t> color_indices;
+};
+
 // Parse the in-memory pointer catalogue used by the original 68000 program.
 // Offsets remain relative to the bundle, just as they are stored on disk.
 [[nodiscard]] DeuterosAmigaBundle parse_deuteros_amiga_bundle(
@@ -70,5 +76,10 @@ struct DeuterosAmigaIndexedBlob {
 // payload. Its content semantics are deliberately left unnamed until proven.
 [[nodiscard]] DeuterosAmigaIndexedBlob parse_deuteros_amiga_indexed_blob(
     const AmigaAdf& disk, const DeuterosAmigaBundle& bundle);
+
+// Decode the interleaved $20da6 and plane-sequential $20eb2 RLE paths.
+[[nodiscard]] DeuterosAmigaBitmap decode_deuteros_amiga_bitmap(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
+    const DeuterosAmigaIndexedBlob& blob, std::size_t record_index);
 
 } // namespace eon

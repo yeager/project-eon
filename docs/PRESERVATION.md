@@ -109,12 +109,26 @@ while the remaining five start with `$05`. These values are asserted directly
 against the clean system ADF.
 
 Auxiliary pointers 4 and 5 delimit a big-endian longword index and its payload
-blob. Bundle 0 reserves 160 index slots, of which the leading 143 address
-records in a `0x1ce96`-byte blob. Bundle 1 reserves 128 slots with 75 records in
-a `0xb95e`-byte blob. In both, record 0 starts at offset zero, subsequent used
+blob. Bundle 0 reserves 160 index slots, with 143 populated boundaries for 142
+records in a `0x1ce96`-byte blob. Bundle 1 reserves 128 slots with 75 boundaries
+for 74 records in a `0xb95e`-byte blob. In both, record 0 starts at offset zero, subsequent used
 offsets strictly increase, and the unused table tail is zero-filled. The parser
 validates these invariants but does not yet label the record contents as
 graphics until the consuming routine is fully traced.
+
+Routine `$20c8c` proves that this bank contains four-bitplane bitmap records.
+For the normal path, each record begins with total planar words per row and a
+height. The RLE control byte's top two bits select literal words, a repeated
+byte-pair, a short repeated word, or a 14-bit-length repeated word. Decoded
+words cycle through planes 0–3 for each 16-pixel group; bit 15 is the leftmost
+pixel. All 74 records in bundle 1 use this normal path. Bundle 0 mixes 72
+normal records with 70 bit-15 records; `$20eb2` proves those use the same RLE
+classes but store each complete plane sequentially. Both paths now decode
+natively, covering all 216 records in the two verified bundles.
+
+As a stable decoded-output anchor, bundle 0 record 1 is 48×17 pixels, has 311
+nonzero pixels, and its 816 palette indices have SHA-256
+`fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3`.
 
 ### Millennium DOS execution model
 
@@ -175,6 +189,6 @@ evidence instead of rewriting earlier uncertainty away.
 
 Release recognition, archive traversal, selected FAT12 content, Deuteros ADF
 geometry/checksums, its first two load stages, two resource headers, and the
-first verified palette bank are implemented and tested. Bitmap encoding, audio
+first verified palette bank and both bitmap layouts are implemented and tested. Audio
 mapping, full resource semantics, simulation, AI, saves, and timing remain incomplete. The SDL app
 must report those areas honestly rather than presenting fabricated gameplay.

@@ -32,6 +32,11 @@ four and six channels respectively. Native parsing implements the original
 operand widths for the entire recognized opcode range `$00`–`$14` while
 leaving still-unverified gameplay semantics unnamed.
 
+The table/payload pair in auxiliary slots 4 and 5 is consumed by bitmap
+routine `$20c8c`. Its normal `$20da6` branch decodes four RLE control classes
+into interleaved four-bitplane pixels. Bit-15 height records select a separate
+plane-sequential layout at `$20eb2`; both layouts are decoded independently.
+
 ## Boot block
 
 ```asm
