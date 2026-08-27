@@ -125,6 +125,15 @@ RAM `$70000`.  It then retains the prior 4,608-byte buffer for a byte copy to
 `$1e00`.  These are control-flow facts, not claims that the next interval is a
 title screen; the latter remains unclassified.
 
+That track-2 interval has SHA-256
+`2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
+At its loaded address `$70000`, it is executable code rather than a resource:
+it configures supervisor stack `$7b000`, application stack `$2478`, then jumps
+directly to `$1ec4`.  Its local raw-reader routine at `+$60` caps each XBIOS
+request at nine sectors and maps linear tracks from `$50` onward to side 1.
+The `$1ec4` target belongs to the preceding protected load chain; no title or
+game-stage meaning has been asserted for it.
+
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its

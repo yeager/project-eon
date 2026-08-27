@@ -53,6 +53,20 @@ struct DeuterosAtariFirstStageProfile {
 [[nodiscard]] DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
     std::span<const std::uint8_t> bytes);
 
+struct DeuterosAtariSecondStageProfile {
+    std::uint32_t supervisor_stack = 0;
+    std::uint32_t application_stack = 0;
+    std::uint32_t direct_entry = 0;
+    std::size_t raw_read_routine_offset = 0;
+    std::uint16_t raw_read_max_sector_count = 0;
+    std::uint16_t side_switch_track = 0;
+};
+
+// Parses the raw track-2 stage loaded by the first-stage profile. It has no
+// embedded title resource: its proven direct hand-off is an absolute RAM jump.
+[[nodiscard]] DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
+    std::span<const std::uint8_t> bytes);
+
 class DeuterosAtariDisk {
 public:
     static constexpr std::size_t standard_size = 737'280;
