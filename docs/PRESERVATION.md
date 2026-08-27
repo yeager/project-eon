@@ -1088,6 +1088,13 @@ zero and interrupt number `$91`. The segment derives from the preceding
 runtime loader/DOS results, so it is deliberately not named, read, or treated
 as a handler address; the parser stops at that external boundary.
 
+The old-vector preservation chain is also raw-byte-validated. `$0167` loads
+`AX=$3591`, makes its external call, then stores `BX` and `ES` at adjacent
+cells `$05e7/$05e9`. On the terminal cleanup path `$0269`, `LDS DX,[$05e7]`
+feeds the same pair to another literal `AX=$2591` call. This connects the
+caller-side save and restore operands only; it does not assert that either
+external call reads, writes, installs, or restores any particular vector.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
