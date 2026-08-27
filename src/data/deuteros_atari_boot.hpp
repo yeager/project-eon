@@ -140,6 +140,22 @@ struct DeuterosAtariRawLoadPlan {
     const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch);
 
+// State 1 has equally static raw-reader arguments, but spans more than the
+// fixed four side-sized reads used by state 0. This records the original
+// requests, including the final short request, without selecting the state or
+// assigning meaning to the destination bytes.
+struct DeuterosAtariRawRangeLoadPlan {
+    std::uint32_t destination = 0;
+    std::uint32_t byte_count = 0;
+    std::uint32_t source_linear_sector = 0;
+    std::size_t source_offset = 0;
+    std::vector<DeuterosAtariRawReadRequest> requests;
+};
+
+[[nodiscard]] DeuterosAtariRawRangeLoadPlan build_deuteros_atari_state1_raw_load_plan(
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch);
+
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is
 // known to enter the duplicate at its `$13200` load address.

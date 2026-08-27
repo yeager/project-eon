@@ -894,6 +894,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto dispatch = eon::parse_deuteros_atari_dispatch(second_stage);
         const auto state0_plan = eon::build_deuteros_atari_state0_raw_load_plan(
             second_profile, dispatch);
+        const auto state1_plan = eon::build_deuteros_atari_state1_raw_load_plan(
+            second_profile, dispatch);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -936,6 +938,19 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << " -> RAM 0x" << state0_plan.destination << std::dec << " in "
             << state0_plan.requests.size() << " original nine-sector reads; SHA-256 "
             << eon::to_hex(eon::sha256(state0_bytes))
+            << " (not selected or interpreted at runtime)\n";
+        std::vector<std::uint8_t> state1_bytes;
+        state1_bytes.reserve(state1_plan.byte_count);
+        for (const auto& request : state1_plan.requests) {
+            const auto chunk = disk1.read_sectors(request.track, request.side,
+                request.first_sector, request.sector_count);
+            state1_bytes.insert(state1_bytes.end(), chunk.begin(), chunk.end());
+        }
+        std::cout << "          Static state-1 raw-load plan: Disk 1 +0x" << std::hex
+            << state1_plan.source_offset << " +0x" << state1_plan.byte_count
+            << " -> RAM 0x" << state1_plan.destination << std::dec << " in "
+            << state1_plan.requests.size() << " original reads; SHA-256 "
+            << eon::to_hex(eon::sha256(state1_bytes))
             << " (not selected or interpreted at runtime)\n";
         std::cout << "          Static vector 5: raw args (RAM 0x" << std::hex
             << dispatch.state5_first_destination << ", 0x" << dispatch.state5_first_byte_count

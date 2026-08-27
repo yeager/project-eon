@@ -1772,6 +1772,27 @@ int main() {
     assert(deuteros_dispatch.state1_destination == 0xb000);
     assert(deuteros_dispatch.state1_byte_count == 0x5e400);
     assert(deuteros_dispatch.state1_linear_sector == 0x4c);
+    const auto deuteros_state1_plan = eon::build_deuteros_atari_state1_raw_load_plan(
+        deuteros_second_stage_profile, deuteros_dispatch);
+    assert(deuteros_state1_plan.destination == 0xb000);
+    assert(deuteros_state1_plan.byte_count == 0x5e400);
+    assert(deuteros_state1_plan.source_offset == 0x55800);
+    assert(deuteros_state1_plan.requests.size() == 84);
+    assert(deuteros_state1_plan.requests.front().track == 38);
+    assert(deuteros_state1_plan.requests.front().side == 0);
+    assert(deuteros_state1_plan.requests.back().track == 79);
+    assert(deuteros_state1_plan.requests.back().side == 1);
+    assert(deuteros_state1_plan.requests.back().sector_count == 7);
+    std::vector<std::uint8_t> deuteros_state1_bytes;
+    for (const auto& request : deuteros_state1_plan.requests) {
+        const auto chunk = deuteros_disk1.read_sectors(request.track, request.side,
+            request.first_sector, request.sector_count);
+        assert(chunk.size() == static_cast<std::size_t>(request.sector_count) * 512U);
+        deuteros_state1_bytes.insert(deuteros_state1_bytes.end(), chunk.begin(), chunk.end());
+    }
+    assert(deuteros_state1_bytes.size() == deuteros_state1_plan.byte_count);
+    assert(eon::to_hex(eon::sha256(deuteros_state1_bytes))
+        == "0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47");
     assert(deuteros_dispatch.state5_first_destination == 0xb000);
     assert(deuteros_dispatch.state5_first_byte_count == 0xb400);
     assert(deuteros_dispatch.state5_first_reader_argument == 0x55800);
