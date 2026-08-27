@@ -9,10 +9,13 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3_image/SDL_image.h>
 
+#include <algorithm>
 #include <array>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -25,6 +28,12 @@ struct Card {
     const char* filename;
     SDL_FRect bounds;
     SDL_Texture* texture = nullptr;
+};
+
+struct PreviewImage {
+    int width = 0;
+    int height = 0;
+    std::vector<std::uint8_t> rgba;
 };
 
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
@@ -66,6 +75,38 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
             << bundle.disk_offset << ", 0x" << bundle.length << std::dec
             << " bytes, " << bundle.object_count << " objects, mode "
             << bundle.mode_flag << '\n';
+    }
+}
+
+std::optional<PreviewImage> load_deuteros_preview(
+    const std::vector<eon::ReleaseArchive>& releases) {
+    constexpr auto clean_system_adf =
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
+    const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
+        return candidate.game == eon::Game::deuteros && candidate.platform == eon::Platform::amiga;
+    });
+    if (release == releases.end()) return std::nullopt;
+    try {
+        const auto image = eon::extract_asset_by_sha256(release->path, clean_system_adf);
+        if (!image) return std::nullopt;
+        const eon::AmigaAdf disk(*image);
+        const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
+        const auto bundle = eon::parse_deuteros_amiga_bundle(disk, plan.resource_disk_offsets[0]);
+        const auto blob = eon::parse_deuteros_amiga_indexed_blob(disk, bundle);
+        // Channel 1 selects palette 1 before the opening animation. Record 0
+        // is its authentic 112x77 plane-sequential graphic.
+        const auto bitmap = eon::decode_deuteros_amiga_bitmap(disk, bundle, blob, 0);
+        const auto palette = eon::decode_deuteros_amiga_palette(disk, bundle, 1);
+        PreviewImage preview{bitmap.width, bitmap.height, {}};
+        preview.rgba.reserve(bitmap.color_indices.size() * 4);
+        for (const auto index : bitmap.color_indices) {
+            const auto color = palette[index];
+            preview.rgba.insert(preview.rgba.end(), {color.red, color.green, color.blue, 0xff});
+        }
+        return preview;
+    } catch (const std::exception& error) {
+        std::cerr << "Unable to decode Deuteros preview: " << error.what() << '\n';
+        return std::nullopt;
     }
 }
 
@@ -111,6 +152,7 @@ int main(int argc, char** argv) {
         std::cerr << "Requested original release is not present.\n";
         return 4;
     }
+    const auto deuteros_preview = load_deuteros_preview(releases);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -131,6 +173,15 @@ int main(int argc, char** argv) {
         {eon::Game::deuteros, "DEUTEROS", "THE NEXT MILLENNIUM", "deuteros.png", {664, 170, 552, 310}},
     }};
     for (auto& card : cards) card.texture = load_card(renderer, card.filename);
+    SDL_Texture* preview_texture = nullptr;
+    if (deuteros_preview) {
+        preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+            SDL_TEXTUREACCESS_STATIC, deuteros_preview->width, deuteros_preview->height);
+        if (preview_texture) {
+            SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview->rgba.data(),
+                deuteros_preview->width * 4);
+        }
+    }
 
     Screen screen = request.game ? Screen::launching : Screen::menu;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
@@ -195,13 +246,26 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 92, "Game: " + eon::name(selected));
             draw_text(renderer, 64, 116, modern ? "Presentation: Modern" : "Presentation: Original");
             draw_text(renderer, 64, 156, "Original data is present and selected.");
-            draw_text(renderer, 64, 180, "The decoder/simulation is incomplete; no synthetic substitute will run.");
-            draw_text(renderer, 64, 220, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+            draw_text(renderer, 64, 180, "The simulation is incomplete; no synthetic substitute will run.");
+            if (selected == eon::Game::deuteros && preview_texture && deuteros_preview) {
+                draw_text(renderer, 64, 220, "AUTHENTIC AMIGA RESOURCE - ADF BITPLANES + ORIGINAL PALETTE");
+                SDL_SetTextureScaleMode(preview_texture,
+                    modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
+                const float scale = 4.0F;
+                SDL_FRect preview_bounds{64, 250,
+                    static_cast<float>(deuteros_preview->width) * scale,
+                    static_cast<float>(deuteros_preview->height) * scale};
+                SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
+                draw_text(renderer, 64, 580, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+            } else {
+                draw_text(renderer, 64, 220, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+            }
         }
         SDL_RenderPresent(renderer);
     }
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
+    SDL_DestroyTexture(preview_texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();

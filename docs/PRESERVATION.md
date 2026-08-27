@@ -192,3 +192,9 @@ geometry/checksums, its first two load stages, two resource headers, and the
 first verified palette bank and both bitmap layouts are implemented and tested. Audio
 mapping, full resource semantics, simulation, AI, saves, and timing remain incomplete. The SDL app
 must report those areas honestly rather than presenting fabricated gameplay.
+
+The SDL Deuteros launch view performs the complete verified chain at runtime:
+outer archive SHA-256 → nested clean system ADF SHA-256 → boot/load plan →
+bundle 0 → indexed bitmap 0 → palette 1 → RGBA texture. Thus the displayed
+pixels remain derived from user-supplied original data and are not packaged in
+the executable or repository.
