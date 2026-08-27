@@ -401,6 +401,25 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     const auto profile_five = bootstrap_code(0x12b46, 6);
     require_word(profile_five, 0, 0x6100); // bsr.w $12932
     require_word(profile_five, 2, 0xfdea);
+    // The helper itself has a straight-line, local prefix. Stop exactly at
+    // its first library vector; neither its return nor that vector's effect
+    // is part of this preservation profile.
+    const auto profile_five_helper = bootstrap_code(0x12932, 34);
+    require_word(profile_five_helper, 0, 0x2279); // movea.l $12822,a1
+    require_long(profile_five_helper, 2, 0x00012822);
+    require_word(profile_five_helper, 6, 0x237c); // move.l #1,$24(a1)
+    require_long(profile_five_helper, 8, 1);
+    require_word(profile_five_helper, 12, 0x0024);
+    require_word(profile_five_helper, 14, 0x337c); // move.w #9,$1c(a1)
+    require_word(profile_five_helper, 16, 9);
+    require_word(profile_five_helper, 18, 0x001c);
+    require_word(profile_five_helper, 20, 0x137c); // move.b #0,$1e(a1)
+    require_word(profile_five_helper, 22, 0);
+    require_word(profile_five_helper, 24, 0x001e);
+    require_word(profile_five_helper, 26, 0x2c78); // movea.l $4,a6
+    require_word(profile_five_helper, 28, 4);
+    require_word(profile_five_helper, 30, 0x4eae); // jsr -$1c8(a6)
+    require_word(profile_five_helper, 32, 0xfe38);
 
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
@@ -421,7 +440,8 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x37f56, 2, 0x38038, 4, 0x38068, 3,
         0x12800, 0x12ffc, 0x12a36, 0, plan.main_stage.entry_address,
         {0x12b1c, 0x12b30, 0x12b44, 0x12b1c, 0x12b1c, 0x12b46},
-        0x12b46, 0x12932};
+        0x12b46, 0x12932,
+        0x12822, 0x24, 1, 0x1c, 9, 0x1e, 0, 4, static_cast<std::int16_t>(-0x1c8)};
 }
 
 } // namespace eon

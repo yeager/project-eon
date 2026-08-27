@@ -224,6 +224,16 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.bootstrap_profile_five_address << " -> BSR 0x"
         << title_stage.bootstrap_profile_five_first_call_address << std::dec
         << " (return intentionally unmodelled)\n";
+    std::cout << "          Profile 5 helper: controller cell 0x" << std::hex
+        << title_stage.bootstrap_profile_five_helper_controller_cell << ", writes +0x"
+        << title_stage.bootstrap_profile_five_helper_long_offset << "=0x"
+        << title_stage.bootstrap_profile_five_helper_long_value << ", +0x"
+        << title_stage.bootstrap_profile_five_helper_word_offset << "=0x"
+        << title_stage.bootstrap_profile_five_helper_word_value << std::dec
+        << ", +0x" << std::hex
+        << title_stage.bootstrap_profile_five_helper_byte_offset << "=0x"
+        << static_cast<unsigned>(title_stage.bootstrap_profile_five_helper_byte_value) << std::dec
+        << ", then vector -0x1c8 (return unmodelled)\n";
     std::cout << "          Transition gate: counter 0x" << std::hex
         << title_stage.timer_counter_address << " >= 0x" << title_stage.timer_threshold
         << ", skip when word 0x" << title_stage.timer_dispatch_inhibit_address

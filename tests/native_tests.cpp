@@ -1744,6 +1744,15 @@ int main() {
             0x12b1c, 0x12b1c, 0x12b46}}));
     assert(title_stage.bootstrap_profile_five_address == 0x12b46);
     assert(title_stage.bootstrap_profile_five_first_call_address == 0x12932);
+    assert(title_stage.bootstrap_profile_five_helper_controller_cell == 0x12822);
+    assert(title_stage.bootstrap_profile_five_helper_long_offset == 0x24);
+    assert(title_stage.bootstrap_profile_five_helper_long_value == 1);
+    assert(title_stage.bootstrap_profile_five_helper_word_offset == 0x1c);
+    assert(title_stage.bootstrap_profile_five_helper_word_value == 9);
+    assert(title_stage.bootstrap_profile_five_helper_byte_offset == 0x1e);
+    assert(title_stage.bootstrap_profile_five_helper_byte_value == 0);
+    assert(title_stage.bootstrap_profile_five_helper_library_base == 4);
+    assert(title_stage.bootstrap_profile_five_helper_library_vector == -0x1c8);
     assert(title_stage.title_exit_resolved_profile == 0);
     assert(title_stage.title_exit_main_stage_entry_address == 0x21734);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
