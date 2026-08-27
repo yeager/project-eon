@@ -770,6 +770,20 @@ int main() {
     assert(main_entry.input_dispatch_clamped_value == 1);
     assert(main_entry.input_dispatch_service_address == 0x218cc);
     assert(main_entry.input_dispatch_continue_address == 0x2181c);
+    assert(main_entry.dispatch_service_state_address == 0x21704);
+    assert(main_entry.dispatch_service_first_exit_value == 2);
+    assert(main_entry.dispatch_service_first_exit_address == 0x21a4c);
+    assert(main_entry.dispatch_service_second_exit_value == 3);
+    assert(main_entry.dispatch_service_second_exit_address == 0x219f8);
+    assert(main_entry.first_exit_profile_cell_address == 0x219f4);
+    assert(main_entry.first_exit_profile_value == 1);
+    assert(main_entry.bootstrap_controller_return_cell == 0x12ff8);
+    assert(main_entry.bootstrap_profile_return_cell == 0x12ffc);
+    assert(main_entry.second_exit_profile_cell_address == 0x219f4);
+    assert(main_entry.second_exit_initial_profile_value == 5);
+    assert(main_entry.second_exit_service_address == 0x20b42);
+    assert(main_entry.second_exit_service_match_value == 0x4452f018);
+    assert(main_entry.second_exit_matched_return_address == 0x21a56);
     // $21982 writes profile one before returning to the bootstrap. Its table
     // routine supplies these exact raw-track load constants.
     assert(load_plan.title_handoff_profile.disk_offset == 0x6e000);
