@@ -959,6 +959,11 @@ The sequential bytes end in literal `JMP -$79` at `$02e0` to `$0269`.
 This records only direct byte control edges: no carry condition, interrupt,
 callee result, or higher-level behavior is inferred.
 
+The `$02d4` JNC target at `$02e2` is anchored for its first 14 bytes:
+`50 93 33 D2 33 C9 B8 02 42 CD 21 72 E7 50`. Its next direct control edge is
+literal `JC -$19` at `$02ed` to `$02d6`. This remains raw static control/data
+evidence only; Project Eon infers no carry, interrupt, result, or DOS effect.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
