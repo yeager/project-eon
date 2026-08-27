@@ -3,6 +3,7 @@
 #include "data/amiga_adf.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
+#include "data/deuteros_amiga_audio.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 
@@ -26,11 +27,13 @@ public:
     [[nodiscard]] const DeuterosAmigaBootstrapProfile& title_handoff_profile() const {
         return load_plan_.title_handoff_profile;
     }
+    [[nodiscard]] const DeuterosAmigaSoundBank& sound_bank() const { return sound_bank_; }
 
 private:
     AmigaAdf disk_;
     DeuterosAmigaLoadPlan load_plan_;
     DeuterosAmigaBundle bundle_;
+    DeuterosAmigaSoundBank sound_bank_;
     DeuterosAmigaIndexedBlob blob_;
     DeuterosAmigaChannelVm vm_;
     DeuterosAmigaRandom random_;

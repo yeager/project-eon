@@ -1,5 +1,6 @@
 #include "launcher.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/deuteros_amiga_paula.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
@@ -363,12 +364,35 @@ int main(int argc, char** argv) {
     }};
     for (auto& card : cards) card.texture = load_card(renderer, card.filename);
     std::unique_ptr<eon::DeuterosAmigaOpening> deuteros_opening;
+    std::unique_ptr<eon::DeuterosAmigaPaulaMixer> deuteros_paula;
+    SDL_AudioStream* deuteros_audio_stream = nullptr;
     SDL_Texture* preview_texture = nullptr;
     const auto create_deuteros_opening_texture = [&] {
         if (!deuteros_opening || preview_texture) return;
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
             SDL_TEXTUREACCESS_STREAMING, eon::DeuterosAmigaFrame::width,
             eon::DeuterosAmigaFrame::height);
+    };
+    const auto start_deuteros_audio = [&] {
+        if (!deuteros_opening) return;
+        deuteros_paula = std::make_unique<eon::DeuterosAmigaPaulaMixer>(
+            deuteros_opening->sound_bank());
+        if (deuteros_audio_stream) {
+            static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
+            return;
+        }
+        const SDL_AudioSpec format{SDL_AUDIO_F32, 2, 48'000};
+        deuteros_audio_stream = SDL_OpenAudioDeviceStream(
+            SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &format, nullptr, nullptr);
+        if (!deuteros_audio_stream) {
+            std::cerr << "Unable to open Deuteros audio output: " << SDL_GetError() << '\n';
+            return;
+        }
+        if (!SDL_ResumeAudioStreamDevice(deuteros_audio_stream)) {
+            std::cerr << "Unable to start Deuteros audio output: " << SDL_GetError() << '\n';
+            SDL_DestroyAudioStream(deuteros_audio_stream);
+            deuteros_audio_stream = nullptr;
+        }
     };
     SDL_Texture* millennium_preview_texture = nullptr;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
@@ -453,6 +477,7 @@ int main(int argc, char** argv) {
                         if (selected == eon::Game::deuteros) {
                             deuteros_opening = load_deuteros_opening(releases);
                             create_deuteros_opening_texture();
+                            start_deuteros_audio();
                             deuteros_last_tick = SDL_GetTicks();
                             deuteros_title_resource.reset();
                         }
@@ -472,6 +497,7 @@ int main(int argc, char** argv) {
                             if (selected == eon::Game::deuteros) {
                                 deuteros_opening = load_deuteros_opening(releases);
                                 create_deuteros_opening_texture();
+                                start_deuteros_audio();
                                 deuteros_last_tick = SDL_GetTicks();
                                 deuteros_title_resource.reset();
                             }
@@ -489,6 +515,7 @@ int main(int argc, char** argv) {
             && !deuteros_opening) {
             deuteros_opening = load_deuteros_opening(releases);
             create_deuteros_opening_texture();
+            start_deuteros_audio();
             deuteros_last_tick = SDL_GetTicks();
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
@@ -500,6 +527,15 @@ int main(int argc, char** argv) {
             while (now - deuteros_last_tick >= scheduler_period_ms
                 && tick_count < maximum_catch_up_ticks) {
                 const auto events = deuteros_opening->tick(deuteros_input_pressed);
+                if (deuteros_paula) {
+                    for (const auto& sound : events.sounds) {
+                        if (!deuteros_paula->submit(sound) && sound.sound != 0) {
+                            std::cerr << "Deuteros event uses unsupported Paula descriptor "
+                                << sound.sound << " / mask 0x" << std::hex << sound.channels
+                                << std::dec << '\n';
+                        }
+                    }
+                }
                 if (!events.alternate_resources.empty()) {
                     // Opcode $0f exposes this original bundle-relative target.
                     // It is retained as evidence for the subsequent verified
@@ -512,6 +548,27 @@ int main(int argc, char** argv) {
             if (tick_count == maximum_catch_up_ticks
                 && now - deuteros_last_tick >= scheduler_period_ms) {
                 deuteros_last_tick = now;
+            }
+            // VM events are proven at 50 Hz, but the exact relation between
+            // that scheduler and host-device latency is not yet recovered.
+            // Keep just one VBL of original PCM queued; do not manufacture a
+            // silent/fallback waveform to fill the device.
+            if (deuteros_audio_stream && deuteros_paula && deuteros_paula->has_active_channels()) {
+                constexpr int queued_target_bytes = 960 * 2 * static_cast<int>(sizeof(float));
+                constexpr int bytes_per_frame = 2 * static_cast<int>(sizeof(float));
+                int queued = SDL_GetAudioStreamQueued(deuteros_audio_stream);
+                while (queued >= 0 && queued < queued_target_bytes
+                    && deuteros_paula->has_active_channels()) {
+                    const auto missing_frames = static_cast<std::size_t>(
+                        (queued_target_bytes - queued + bytes_per_frame - 1) / bytes_per_frame);
+                    const auto samples = deuteros_paula->render(missing_frames);
+                    if (!SDL_PutAudioStreamData(deuteros_audio_stream, samples.data(),
+                        static_cast<int>(samples.size() * sizeof(float)))) {
+                        std::cerr << "Unable to queue Deuteros audio: " << SDL_GetError() << '\n';
+                        break;
+                    }
+                    queued = SDL_GetAudioStreamQueued(deuteros_audio_stream);
+                }
             }
         }
 
@@ -590,17 +647,18 @@ int main(int argc, char** argv) {
                     eon::DeuterosAmigaFrame::width * 4);
                 draw_text(renderer, 64, 220, "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE");
                 draw_text(renderer, 64, 238, "HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL");
+                draw_text(renderer, 64, 252, "PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)");
                 if (deuteros_title_resource) {
                     std::ostringstream handoff;
                     handoff << std::hex << *deuteros_title_resource;
-                    draw_text(renderer, 64, 252, "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
+                    draw_text(renderer, 64, 268, "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
                         + handoff.str()
                         + " -> STAGE ENTRY 0x40426 (REIMPLEMENTATION IN PROGRESS)");
                 }
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 const float scale = 2.0F;
-                SDL_FRect preview_bounds{64, deuteros_title_resource ? 274.0F : 258.0F,
+                SDL_FRect preview_bounds{64, deuteros_title_resource ? 290.0F : 274.0F,
                     static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
@@ -616,6 +674,7 @@ int main(int argc, char** argv) {
     SDL_DestroyTexture(millennium_preview_texture);
     SDL_DestroyTexture(millennium_gx_canvas_texture);
     SDL_DestroyTexture(preview_texture);
+    SDL_DestroyAudioStream(deuteros_audio_stream);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();

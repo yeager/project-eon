@@ -6,6 +6,7 @@ DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
     : disk_(std::move(system_adf)),
       load_plan_(parse_deuteros_amiga_load_plan(disk_)),
       bundle_(parse_deuteros_amiga_bundle(disk_, load_plan_.resource_disk_offsets[0])),
+      sound_bank_(parse_deuteros_amiga_sound_bank(disk_, bundle_)),
       blob_(parse_deuteros_amiga_indexed_blob(disk_, bundle_)),
       vm_(disk_, bundle_),
       random_(disk_, bundle_) {}

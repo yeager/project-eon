@@ -8,6 +8,7 @@
 #include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_audio.hpp"
+#include "engine/deuteros_amiga_paula.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
@@ -25,6 +26,8 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <map>
@@ -429,6 +432,32 @@ int main() {
     assert(sound_bank.sounds[1].pcm == sound_bank.sounds[2].pcm);
     assert(eon::to_hex(eon::sha256(sound_bank.sounds[1].pcm))
         == "f23fcd05f543be31726271b08ebfe7d907acfe31d1780aaf286fd2db701ae5d5");
+    // $0b writes the selected original descriptor to AUDx. The first two
+    // genuine opening events target AUD0 then AUD1, whose physical stereo
+    // routing is left then right. The integer phase model keeps the original
+    // AUDxPER cadence at a host-independent clock boundary.
+    eon::DeuterosAmigaPaulaMixer paula(sound_bank);
+    assert(paula.submit({1, 1}));
+    assert(paula.submit({2, 2}));
+    const auto opening_audio = paula.render(6);
+    assert(opening_audio.size() == 12);
+    const auto encoded_first_pcm = sound_bank.sounds[1].pcm[0];
+    const auto signed_first_pcm = encoded_first_pcm < 0x80U
+        ? static_cast<std::int16_t>(encoded_first_pcm)
+        : static_cast<std::int16_t>(encoded_first_pcm) - 256;
+    const auto first_pcm = static_cast<float>(signed_first_pcm)
+        / 128.0F * static_cast<float>(sound_bank.sounds[1].volume) / 64.0F;
+    assert(std::fabs(opening_audio[0] - first_pcm) < 0.000001F);
+    assert(std::fabs(opening_audio[1] - first_pcm) < 0.000001F);
+    assert(paula.channels()[0].sample_index == 0);
+    assert(paula.channels()[1].sample_index == 0);
+    static_cast<void>(paula.render(1));
+    assert(paula.channels()[0].sample_index == 1);
+    assert(paula.channels()[1].sample_index == 1);
+    // Sound zero uses the private $22aaa descriptor rather than bundle PCM;
+    // an out-of-range or empty mask must fail closed.
+    assert(!paula.submit({0, 1}));
+    assert(!paula.submit({1, 0}));
     assert((first_palette[0] == eon::RgbColor{0x00, 0x00, 0x00}));
     assert((first_palette[1] == eon::RgbColor{0x88, 0x88, 0x66}));
     assert((first_palette[5] == eon::RgbColor{0xaa, 0x66, 0x00}));
