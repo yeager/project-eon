@@ -953,6 +953,11 @@ int main() {
         == std::array<std::uint16_t, 2>{0x000a, 0x0011}));
     assert((main_entry.resource_consumer_call_sites
         == std::array<std::uint32_t, 2>{0x2159c, 0x2163a}));
+    assert(main_entry.renderer_pass_address == 0x21448);
+    assert(main_entry.alternate_renderer_selector == 0x00fe);
+    assert(main_entry.alternate_renderer_state_data_offset == 0x000c);
+    assert(main_entry.alternate_renderer_address == 0x20580);
+    assert(main_entry.regular_renderer_address == 0x20c8c);
     assert(main_entry.input_dispatch_service_address == 0x218cc);
     assert(main_entry.input_dispatch_continue_address == 0x2181c);
     assert(main_entry.dispatch_service_state_address == 0x21704);

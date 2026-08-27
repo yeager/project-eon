@@ -590,6 +590,20 @@ strict sampler before every word read. This replaces no game data, unpacks
 nothing, and preserves the previous raw-ADF reader solely for independent
 parser tests.
 
+The first renderer use of the input path's `$0f` result is bounded at
+`$21448`. The render pass walks the same 24-byte channel states, ignores
+selector `$ff`, then compares selector `$fe` before its ordinary bitmap route.
+For `$fe` it loads A4 from state offset `+$0c`—the exact `$32a24+$0b38`
+pointer installed by `$21610` for the first accepted opening input—and calls
+`$20580`; non-`$fe` live selectors call the indexed-bitmap compositor at
+`$20c8c`. `$20580` is a real byte-stream interpreter, but it writes through
+global original video pointers (`$20510`, `$20508`, `$2050c` and related
+state) rather than the channel's X/Y fields. Project Eon records and tests
+this exact A4/call boundary, then deliberately leaves the `$fe` pixel effect
+unrendered until the setup and all stream control classes are fully recovered.
+It does not reinterpret those bytes as an indexed sprite, create a synthetic
+frame, or write/unpack media.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an

@@ -363,6 +363,41 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         require_word(call_site, 0x06, 0x4eb9); // jsr absolute long
         require_long(call_site, 0x08, resource_consumer_address);
     }
+
+    // The following render pass distinguishes the $0f-installed $fe state
+    // from ordinary indexed bitmaps. It passes state +12 directly to $20580;
+    // do not infer a host bitmap format for that separate byte-stream path.
+    constexpr std::uint32_t renderer_pass_address = 0x21448;
+    constexpr std::uint16_t alternate_renderer_selector = 0x00fe;
+    constexpr std::uint16_t alternate_renderer_state_data_offset = 0x000c;
+    constexpr std::uint32_t alternate_renderer_address = 0x20580;
+    constexpr std::uint32_t regular_renderer_address = 0x20c8c;
+    const auto renderer_pass = stage_bytes.subspan(main_offset(renderer_pass_address));
+    require_word(renderer_pass, 0x00, 0x41f9); // lea $210f8,a0
+    require_long(renderer_pass, 0x02, 0x210f8);
+    require_word(renderer_pass, 0x06, 0x3e39); // move.w $21248,d7
+    require_long(renderer_pass, 0x08, 0x21248);
+    require_word(renderer_pass, 0x0c, 0x5347); // subq.w #1,d7
+    require_word(renderer_pass, 0x10, 0x3028); // move.w 6(a0),d0
+    if (big16(renderer_pass, 0x12) != 6) {
+        throw std::runtime_error("Unexpected Deuteros renderer selector state offset");
+    }
+    require_word(renderer_pass, 0x1a, 0xb07c); // cmp.w #$ff,d0
+    if (big16(renderer_pass, 0x1c) != 0x00ff) {
+        throw std::runtime_error("Unexpected Deuteros renderer disabled selector");
+    }
+    require_word(renderer_pass, 0x20, 0xb07c); // cmp.w #$fe,d0
+    if (big16(renderer_pass, 0x22) != alternate_renderer_selector) {
+        throw std::runtime_error("Unexpected Deuteros alternate renderer selector");
+    }
+    require_word(renderer_pass, 0x26, 0x2868); // movea.l 12(a0),a4
+    if (big16(renderer_pass, 0x28) != alternate_renderer_state_data_offset) {
+        throw std::runtime_error("Unexpected Deuteros alternate renderer state-data offset");
+    }
+    require_word(renderer_pass, 0x30, 0x4eb9); // jsr $20580
+    require_long(renderer_pass, 0x32, alternate_renderer_address);
+    require_word(renderer_pass, 0x3e, 0x4eb9); // jsr $20c8c
+    require_long(renderer_pass, 0x40, regular_renderer_address);
     const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
         0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
         0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, 0x210f8, 0x21248, 0x18,
@@ -373,7 +408,10 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         resource_payload_address, resource_transfer_address, 0x1600, 0xdff016, 10,
         resource_retry_address, resource_consumer_address, resource_payload_address,
         resource_seed_address, resource_counter_address, 0x3ffe, 14,
-        resource_consumer_commands, resource_consumer_call_sites};
+        resource_consumer_commands, resource_consumer_call_sites,
+        renderer_pass_address, alternate_renderer_selector,
+        alternate_renderer_state_data_offset, alternate_renderer_address,
+        regular_renderer_address};
 
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table
