@@ -138,14 +138,24 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr auto f4_guard_clear = std::to_array<std::uint8_t>({
         0x8b, 0x0e, 0x9e, 0xa1, 0xc7, 0x06, 0x9e, 0xa1, 0x00, 0x00,
         0x32, 0xed});
-    // Record four (raw F5 / $3f) enters $7597. Its only directly observable
-    // behavior is AL=$02 followed by four near calls and a return; their
-    // effects depend on native runtime state and are deliberately not run.
+    // Record four (raw F5 / $3f) enters $7597.  It has no store before the
+    // first CALL.  That target immediately calls $52f9, so even the first
+    // possible post-call state depends on native execution and return behavior.
+    // The remaining F5 calls are ordinary 16-bit near targets: do not turn
+    // their signed displacements into fictional addresses above 64 KiB.
     constexpr auto f5_table = std::to_array<std::uint8_t>({
         0x18, 0x1e, 0x09, 0x1b, 0x34, 0x04, 0x97, 0x75});
     constexpr auto f5_handler = std::to_array<std::uint8_t>({
         0xb0, 0x02, 0xe8, 0x8c, 0x48, 0xe8, 0xfe, 0x95,
         0xe8, 0x55, 0xd6, 0xe8, 0xd1, 0x95, 0xc3});
+    constexpr auto f5_first_call = std::to_array<std::uint8_t>({
+        0xe8, 0xce, 0x94});
+    constexpr auto f5_second_call = std::to_array<std::uint8_t>({
+        0x80, 0x3e, 0xf9, 0x07, 0x01, 0x75, 0x20});
+    constexpr auto f5_third_call = std::to_array<std::uint8_t>({
+        0x06, 0x57, 0x1e, 0x56, 0xe8, 0xd9, 0xbf});
+    constexpr auto f5_fourth_call = std::to_array<std::uint8_t>({
+        0x80, 0x3e, 0xf9, 0x07, 0x01, 0x75, 0x12});
     // Record five (raw F6 / $40) uses the same $a19e gate as F3/F4.  On its
     // admitted path the native image snapshots $75a8/$75ae/$75ac into its
     // own $7412/$740f/$7410 scratch cells, then installs literal temporary
@@ -260,6 +270,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f4_guard_clear_context_offset, f4_guard_clear)
         || !has_bytes(game_executable, f5_table_offset, f5_table)
         || !has_bytes(game_executable, f5_handler_offset, f5_handler)
+        || !has_bytes(game_executable, 0xbe28 - load_bias, f5_first_call)
+        || !has_bytes(game_executable, 0x0b9d - load_bias, f5_second_call)
+        || !has_bytes(game_executable, 0x4bf7 - load_bias, f5_third_call)
+        || !has_bytes(game_executable, 0x0b76 - load_bias, f5_fourth_call)
         || !has_bytes(game_executable, f6_table_offset, f6_table)
         || !has_bytes(game_executable, f6_handler_offset, f6_handler)
         || !has_bytes(game_executable, f7_table_offset, f7_table)
@@ -345,9 +359,13 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .handler_address = 0x7597,
             .transfer_al_value = 2,
             .first_call_address = 0xbe28,
-            .second_call_address = 0x10b9d,
-            .third_call_address = 0x14bf7,
-            .fourth_call_address = 0x10b76,
+            .first_call_initial_nested_call_address = 0x52f9,
+            .second_call_address = 0x0b9d,
+            .second_call_mode_address = 0x07f9,
+            .second_call_mode_value = 1,
+            .third_call_address = 0x4bf7,
+            .third_call_initial_nested_call_address = 0x0bd7,
+            .fourth_call_address = 0x0b76,
         },
         .sixth_function_key = {
             .handler_address = 0x7415,

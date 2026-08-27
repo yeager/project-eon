@@ -332,9 +332,13 @@ int main() {
     assert(game_flow.fifth_function_key.handler_address == 0x7597);
     assert(game_flow.fifth_function_key.transfer_al_value == 2);
     assert(game_flow.fifth_function_key.first_call_address == 0xbe28);
-    assert(game_flow.fifth_function_key.second_call_address == 0x10b9d);
-    assert(game_flow.fifth_function_key.third_call_address == 0x14bf7);
-    assert(game_flow.fifth_function_key.fourth_call_address == 0x10b76);
+    assert(game_flow.fifth_function_key.first_call_initial_nested_call_address == 0x52f9);
+    assert(game_flow.fifth_function_key.second_call_address == 0x0b9d);
+    assert(game_flow.fifth_function_key.second_call_mode_address == 0x07f9);
+    assert(game_flow.fifth_function_key.second_call_mode_value == 1);
+    assert(game_flow.fifth_function_key.third_call_address == 0x4bf7);
+    assert(game_flow.fifth_function_key.third_call_initial_nested_call_address == 0x0bd7);
+    assert(game_flow.fifth_function_key.fourth_call_address == 0x0b76);
     assert(game_flow.sixth_function_key.handler_address == 0x7415);
     assert(game_flow.sixth_function_key.initialization_guard_address == 0xa19e);
     assert(game_flow.sixth_function_key.display_selector_call_address == 0xd0c9);
@@ -397,6 +401,15 @@ int main() {
         rejected_altered_f5_handler = true;
     }
     assert(rejected_altered_f5_handler);
+    auto altered_f5_first_boundary = *game_executable;
+    altered_f5_first_boundary[0xbe28 - 0x100] ^= 0x01;
+    bool rejected_altered_f5_first_boundary = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f5_first_boundary));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f5_first_boundary = true;
+    }
+    assert(rejected_altered_f5_first_boundary);
     auto altered_f6_handler = *game_executable;
     altered_f6_handler[0x7415 - 0x100] ^= 0x01;
     bool rejected_altered_f6_handler = false;
