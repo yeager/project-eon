@@ -12,11 +12,13 @@
 #include "data/sha256.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <map>
 #include <set>
+#include <span>
 
 int main() {
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
@@ -102,6 +104,26 @@ int main() {
         [](std::uint8_t value) { return value != 0; }) == 7'386);
     assert(eon::to_hex(eon::sha256(title_bitmap.pixels))
         == "85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee");
+    const auto title_palette = eon::decode_millennium_dos_palette(
+        title_lib.read(title_lib.entries().front()), title_bitmap);
+    assert(title_palette.logical_to_dac.size() == 36);
+    assert(title_palette.auxiliary_translation.size() == 36);
+    assert(eon::to_hex(eon::sha256(std::span<const std::uint8_t>(
+        reinterpret_cast<const std::uint8_t*>(title_palette.dac_rgb6.data()), 768)))
+        == "b6dd34314102e429fdd98390b1fda27d3ea94d16bfcefa2983e3e319a2a20eae");
+    assert(eon::to_hex(eon::sha256(title_palette.logical_to_dac))
+        == "cd7a7f81dd75249a8669e0f4c1792d99b37f3ea28c54319a3f2e84b4a86ff3e2");
+    assert(eon::to_hex(eon::sha256(title_palette.auxiliary_translation))
+        == "652ea21cfa18c27470daaee4521d863a3d377f803a5f80ba0132af49b24083d4");
+    assert(title_palette.logical_to_dac[0] == 0x00);
+    assert(title_palette.logical_to_dac[5] == 0xff);
+    assert(title_palette.logical_to_dac[35] == 0x11);
+    assert((title_palette.dac_rgb6[0xff] == std::array<std::uint8_t, 3>{0x3f, 0x3f, 0x3f}));
+    assert((title_palette.dac_rgb6[0xee] == std::array<std::uint8_t, 3>{0x00, 0x28, 0x1c}));
+    const auto title_rgba = eon::colorize_millennium_dos_bitmap(title_bitmap, title_palette);
+    assert(title_rgba.size() == 320U * 200U * 4U);
+    assert(eon::to_hex(eon::sha256(title_rgba))
+        == "500a1451ab435a9c8ffaf1dbfaacee52cca0e32b375c883a45dd8f879a952888");
     assert(gx_lib.directory_offset() == 0x4bd3c);
     assert(gx_lib.entries().size() == 180);
     assert(gx_lib.entries().front().name == "IMG00");
