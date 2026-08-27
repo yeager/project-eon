@@ -60,7 +60,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x0e, 0x1f, 0x0e, 0x07, 0x8c, 0xc8, 0x8e, 0xd0,
         0xb8, 0x00, 0xda, 0x89, 0xc4, 0xb8, 0x1f};
     // The post-entry block establishes SS=CS and SP=$da00, invokes the
-    // original $10124 routine, then routes an AL==1 result to $d1a1 and all
+    // original $0124 routine (the 16-bit IP wraps), then routes an AL==1 result to $d1a1 and all
     // other results to $d1b5.  A later DX test has a static nonzero edge to
     // $d44b.  This records raw reachability boundaries only: every call
     // between these instructions remains native and unexecuted.
@@ -332,7 +332,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .entry_address = 0xd2b0,
         .startup_address = 0xd2b4,
         .startup_stack_pointer = 0xda00,
-        .startup_first_call_address = 0x10124,
+        .startup_first_call_address = 0x0124,
         .startup_mode_byte_address = 0xda05,
         .startup_mode_equal_value = 1,
         .startup_equal_call_address = 0xd1a1,

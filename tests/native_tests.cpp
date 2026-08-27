@@ -594,7 +594,7 @@ int main() {
     assert(game_flow.entry_address == 0xd2b0);
     assert(game_flow.startup_address == 0xd2b4);
     assert(game_flow.startup_stack_pointer == 0xda00);
-    assert(game_flow.startup_first_call_address == 0x10124);
+    assert(game_flow.startup_first_call_address == 0x0124);
     assert(game_flow.startup_mode_byte_address == 0xda05);
     assert(game_flow.startup_mode_equal_value == 1);
     assert(game_flow.startup_equal_call_address == 0xd1a1);
