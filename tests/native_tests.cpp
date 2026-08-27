@@ -425,6 +425,13 @@ int main() {
     assert(live_opening.frame_composed_on_last_tick());
     assert(live_opening.ticks() == 3);
     assert(live_opening.title_handoff_profile().disk_offset == 0x6e000);
+    // Advance actual bundle-zero programs well beyond the first animation
+    // transition. This catches any stateful selector reached by real control
+    // flow, rather than relying only on a hand-built channel state below.
+    for (std::size_t tick = 0; tick < 512; ++tick) {
+        static_cast<void>(live_opening.tick());
+        assert(live_opening.frame_composed_on_last_tick());
+    }
     eon::DeuterosAmigaChannelVm opening_vm(system_disk, first_bundle);
     assert(opening_vm.channels().size() == 4);
     const auto tick1 = opening_vm.tick();
@@ -452,6 +459,46 @@ int main() {
     const auto tick3_rgba = eon::colorize_deuteros_amiga_frame(
         tick3_frame, eon::decode_deuteros_amiga_palette(system_disk, first_bundle, 1));
     assert(tick3_rgba.size() == 320 * 200 * 4);
+    // $20c9a branches to $21092 on bit 13 and reads the one $23024 scratch
+    // buffer. A restoration before its matching save must fail closed rather
+    // than receiving made-up background pixels.
+    {
+        eon::DeuterosAmigaCompositor compositor;
+        std::vector<eon::DeuterosAmigaChannelState> restore_only(1);
+        restore_only[0].bitmap_selector = 0x2001;
+        restore_only[0].y = 10;
+        bool rejected = false;
+        try {
+            static_cast<void>(compositor.compose(system_disk, first_bundle,
+                first_indexed_blob, restore_only));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    // The genuine record-one pixels exercise the exact Cxxx path: $20cb0
+    // decodes it opaquely, $21034 captures full 320-pixel scanlines, writes
+    // $ffff into the channel, and $21092 restores those lines at the next
+    // channel Y coordinate.
+    {
+        eon::DeuterosAmigaCompositor compositor;
+        std::vector<eon::DeuterosAmigaChannelState> state(1);
+        state[0].bitmap_selector = 0xc001;
+        state[0].x = 8;
+        state[0].y = 180;
+        const auto& saved_frame = compositor.compose(system_disk, first_bundle,
+            first_indexed_blob, state);
+        assert(compositor.has_saved_scanlines());
+        assert(state[0].bitmap_selector == 0xffff);
+        std::vector<std::uint8_t> saved_rows(saved_frame.color_indices.begin()
+                + static_cast<std::size_t>(180 * 320),
+            saved_frame.color_indices.begin() + static_cast<std::size_t>(197 * 320));
+        state[0].y = 160;
+        const auto& restored_frame = compositor.compose(system_disk, first_bundle,
+            first_indexed_blob, state);
+        assert(std::equal(saved_rows.begin(), saved_rows.end(),
+            restored_frame.color_indices.begin() + static_cast<std::size_t>(160 * 320)));
+    }
     static_cast<void>(opening_vm.tick());
     assert(opening_vm.channels()[0].y == 181);
     assert(opening_vm.channels()[0].wait_mode == 6);

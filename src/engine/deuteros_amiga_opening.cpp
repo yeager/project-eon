@@ -1,8 +1,5 @@
 #include "engine/deuteros_amiga_opening.hpp"
 
-#include <stdexcept>
-#include <string_view>
-
 namespace eon {
 
 DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
@@ -23,15 +20,8 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // input-triggered title handoff.
     random_.advance_vblank();
     frame_composed_on_last_tick_ = false;
-    try {
-        last_frame_ = compose_deuteros_amiga_frame(disk_, bundle_, blob_, vm_.channels());
-        frame_composed_on_last_tick_ = true;
-    } catch (const std::runtime_error& error) {
-        // Stateful scanline save/restore is an accurately identified, separate
-        // blitter path. Keep the last fully composed authentic frame until it
-        // is implemented; never invent later pixels.
-        if (std::string_view(error.what()).find("save/restore") == std::string_view::npos) throw;
-    }
+    last_frame_ = compositor_.compose(disk_, bundle_, blob_, vm_.compositor_channels());
+    frame_composed_on_last_tick_ = true;
     return events;
 }
 

@@ -225,13 +225,23 @@ The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
 the passed mode word at `$4040e`, and comparing its low byte with five. The
 meaning of those mode values and the later gameplay dispatch remain unknown.
 
-The compositor draws channels in ascending order. X is measured in 16-pixel
-words and Y in scanlines. Bit 15 selects masked drawing where palette index 0
-is transparent; an unflagged selector overwrites the complete rectangle.
-Original code clips vertically but trusts horizontal coordinates, so native
-code validates the horizontal range instead of silently changing it. Bit 13
-and combined bits 15+14 invoke stateful whole-scanline restore/save paths;
-stateless composition rejects those until the saved-frame buffer is present.
+The compositor draws channels in ascending order into a persistent four-plane
+display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
+selects `$20fb2` masked drawing where palette index 0 is transparent; an
+unflagged selector overwrites the complete rectangle. Original code clips
+vertically but trusts horizontal coordinates, so native code validates the
+horizontal range instead of silently changing it.
+
+The stateful paths are now also recovered from the shipped `$20c8c` code.
+Bit 13 branches directly to `$21092`, which restores rows from the single
+global scratch buffer at `$23024` at the channel's current Y coordinate.
+Selectors with bits 15+14 (`$c000`) first clear both flags, take opaque
+`$20d8e` decoding, then `$21034` copies each affected complete 320-pixel row
+from all four planes into `$23024` and writes `$ffff` back to that channel's
+selector. Thus the later bit-13 route restores exactly that sole buffer; it is
+not per-sprite storage and is not inferred as a conventional background erase.
+Project Eon follows this order with one persistent compositor buffer, rejects
+a restore before a genuine save, and validates the `$ffff` state transition.
 
 ### Millennium DOS execution model
 

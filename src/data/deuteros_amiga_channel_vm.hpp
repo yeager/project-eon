@@ -70,6 +70,9 @@ public:
     DeuterosAmigaChannelVm(const AmigaAdf& disk, const DeuterosAmigaBundle& bundle);
 
     [[nodiscard]] const std::vector<DeuterosAmigaChannelState>& channels() const { return channels_; }
+    // $21034 changes the selector word in this exact state array to $ffff
+    // after saving scanlines.  Only the verified renderer may mutate it.
+    [[nodiscard]] std::vector<DeuterosAmigaChannelState>& compositor_channels() { return channels_; }
     [[nodiscard]] std::uint16_t palette_index() const { return palette_index_; }
     [[nodiscard]] bool input_gate() const { return input_gate_; }
     [[nodiscard]] std::uint8_t mode_byte() const { return mode_byte_; }

@@ -34,6 +34,7 @@ private:
     DeuterosAmigaIndexedBlob blob_;
     DeuterosAmigaChannelVm vm_;
     DeuterosAmigaRandom random_;
+    DeuterosAmigaCompositor compositor_;
     std::optional<DeuterosAmigaFrame> last_frame_;
     bool frame_composed_on_last_tick_ = false;
     std::uint64_t ticks_ = 0;
