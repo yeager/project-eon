@@ -91,6 +91,20 @@ DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
         .copy_byte_count = static_cast<std::size_t>(be32(bytes, 0xad2)) + 1U};
 }
 
+std::uint32_t calculate_deuteros_atari_first_stage_checksum(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariFirstStageProfile& profile) {
+    if (profile.checksum_start_offset > bytes.size()
+        || profile.checksum_byte_count > bytes.size() - profile.checksum_start_offset) {
+        throw std::runtime_error("Deuteros Atari ST checksum range outside first stage");
+    }
+    auto checksum = profile.checksum_seed;
+    for (const auto value : bytes.subspan(profile.checksum_start_offset, profile.checksum_byte_count)) {
+        checksum += value;
+        checksum = (checksum << 8U) | (checksum >> 24U);
+    }
+    return checksum;
+}
+
 DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
     std::span<const std::uint8_t> bytes) {
     if (bytes.size() != 0x1200U) {
@@ -213,6 +227,38 @@ DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     result.state5_second_destination = result.state5_first_destination + 0xb400U;
     result.state5_second_byte_count = be32(bytes, 0x19a);
     result.state5_second_reader_argument = result.state5_first_reader_argument + 0xb400U;
+    return result;
+}
+
+DeuterosAtariRawLoadPlan build_deuteros_atari_state0_raw_load_plan(
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch) {
+    constexpr std::uint32_t bytes_per_track = 0x1200;
+    if (stage.raw_read_max_sector_count != 9 || dispatch.state0_byte_count != 0x4800
+        || dispatch.state0_linear_sector != 4
+        || dispatch.state0_byte_count % bytes_per_track != 0) {
+        throw std::runtime_error("Unsupported Deuteros Atari ST state-0 raw-load plan");
+    }
+    const auto request_count = dispatch.state0_byte_count / bytes_per_track;
+    if (request_count != 4) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-0 raw-load request count");
+    }
+    DeuterosAtariRawLoadPlan result{
+        .destination = dispatch.state0_destination,
+        .byte_count = dispatch.state0_byte_count,
+        .source_linear_sector = dispatch.state0_linear_sector,
+        .source_offset = static_cast<std::size_t>(dispatch.state0_linear_sector) * bytes_per_track,
+    };
+    for (std::size_t index = 0; index < result.requests.size(); ++index) {
+        const auto linear_track = dispatch.state0_linear_sector + static_cast<std::uint32_t>(index);
+        result.requests[index] = {
+            .track = static_cast<std::uint16_t>(linear_track % 0x50U),
+            .side = static_cast<std::uint8_t>(linear_track / 0x50U),
+            .first_sector = 1,
+            .sector_count = stage.raw_read_max_sector_count,
+            .source_offset = result.source_offset + index * bytes_per_track,
+        };
+    }
     return result;
 }
 

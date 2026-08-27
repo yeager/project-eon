@@ -1684,6 +1684,16 @@ int main() {
     assert(deuteros_first_stage_profile.checksum_byte_count == 0x43c);
     assert(deuteros_first_stage_profile.checksum_seed == 0x22225555);
     assert(deuteros_first_stage_profile.checksum_expected == 0x7ae26af7);
+    assert(eon::calculate_deuteros_atari_first_stage_checksum(
+        deuteros_first_stage, deuteros_first_stage_profile)
+        == deuteros_first_stage_profile.checksum_expected);
+    {
+        auto altered_first_stage = deuteros_first_stage;
+        altered_first_stage[deuteros_first_stage_profile.checksum_start_offset] ^= 0x01;
+        assert(eon::calculate_deuteros_atari_first_stage_checksum(
+            altered_first_stage, deuteros_first_stage_profile)
+            != deuteros_first_stage_profile.checksum_expected);
+    }
     assert(deuteros_first_stage_profile.next_track == 2);
     assert(deuteros_first_stage_profile.next_side == 0);
     assert(deuteros_first_stage_profile.next_sector == 1);
@@ -1712,6 +1722,34 @@ int main() {
     assert(deuteros_dispatch.state0_destination == 0x13200);
     assert(deuteros_dispatch.state0_byte_count == 0x4800);
     assert(deuteros_dispatch.state0_linear_sector == 4);
+    const auto deuteros_state0_plan = eon::build_deuteros_atari_state0_raw_load_plan(
+        deuteros_second_stage_profile, deuteros_dispatch);
+    assert(deuteros_state0_plan.destination == 0x13200);
+    assert(deuteros_state0_plan.byte_count == 0x4800);
+    assert(deuteros_state0_plan.source_linear_sector == 4);
+    assert(deuteros_state0_plan.source_offset == 0x4800);
+    std::vector<std::uint8_t> deuteros_state0_bytes;
+    const std::array<std::string_view, 4> state0_chunk_hashes{{
+        "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7",
+        "c5cef5d02d47d09a758487e873ce1e86a9905b0e62241fc3bff7a8bf9114718a",
+        "2515d3507aa37eaf5bbc0dd12f72a8dcc44712e4773a1e9e3f57517f8a21777c",
+        "510e1793d5d08ef18d5bc5039f5843aa403024c63abaad000078c61f65011e34",
+    }};
+    for (std::size_t index = 0; index < deuteros_state0_plan.requests.size(); ++index) {
+        const auto& request = deuteros_state0_plan.requests[index];
+        assert(request.track == 4 + index);
+        assert(request.side == 0);
+        assert(request.first_sector == 1);
+        assert(request.sector_count == 9);
+        assert(request.source_offset == 0x4800 + index * 0x1200);
+        const auto chunk = deuteros_disk1.read_sectors(request.track, request.side,
+            request.first_sector, request.sector_count);
+        assert(eon::to_hex(eon::sha256(chunk)) == state0_chunk_hashes[index]);
+        deuteros_state0_bytes.insert(deuteros_state0_bytes.end(), chunk.begin(), chunk.end());
+    }
+    assert(deuteros_state0_bytes.size() == deuteros_state0_plan.byte_count);
+    assert(eon::to_hex(eon::sha256(deuteros_state0_bytes))
+        == "88afae4bd5182d916183b01bf688ab524d739749e84a092eda1435e386b57b58");
     assert(deuteros_dispatch.state1_destination == 0xb000);
     assert(deuteros_dispatch.state1_byte_count == 0x5e400);
     assert(deuteros_dispatch.state1_linear_sector == 0x4c);

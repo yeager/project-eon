@@ -65,6 +65,12 @@ struct DeuterosAtariFirstStageProfile {
 [[nodiscard]] DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
     std::span<const std::uint8_t> bytes);
 
+// Reproduces only the first-stage's literal add-byte / rotate-left-eight
+// checksum. It is a gate on the original raw stage, not an Atari CPU or
+// protection emulator.
+[[nodiscard]] std::uint32_t calculate_deuteros_atari_first_stage_checksum(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariFirstStageProfile& profile);
+
 struct DeuterosAtariSecondStageProfile {
     std::uint32_t supervisor_stack = 0;
     std::uint32_t application_stack = 0;
@@ -108,6 +114,30 @@ struct DeuterosAtariDispatchProfile {
 
 [[nodiscard]] DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     std::span<const std::uint8_t> bytes);
+
+// The first dispatch vector provides a wholly static raw-load request. This
+// plan preserves that request as four original nine-sector reads; it neither
+// selects a runtime state nor interprets the resulting bytes as a title/game
+// screen.
+struct DeuterosAtariRawReadRequest {
+    std::uint16_t track = 0;
+    std::uint8_t side = 0;
+    std::uint8_t first_sector = 1;
+    std::uint16_t sector_count = 0;
+    std::size_t source_offset = 0;
+};
+
+struct DeuterosAtariRawLoadPlan {
+    std::uint32_t destination = 0;
+    std::uint32_t byte_count = 0;
+    std::uint32_t source_linear_sector = 0;
+    std::size_t source_offset = 0;
+    std::array<DeuterosAtariRawReadRequest, 4> requests{};
+};
+
+[[nodiscard]] DeuterosAtariRawLoadPlan build_deuteros_atari_state0_raw_load_plan(
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch);
 
 class DeuterosAtariDisk {
 public:

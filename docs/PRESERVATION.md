@@ -510,6 +510,20 @@ Slot 2's `$1f50` is a literal branch to `$1f1a`; slots 3 and 4 point directly
 to `$1f1a`. Thus all three aliases share only the already-proven state-0 raw
 arguments, without a new state interpretation.
 
+`build_deuteros_atari_state0_raw_load_plan` now models that one wholly static
+dispatch result without selecting it at runtime: destination `$13200`, length
+`$4800`, linear sector 4, represented as four original nine-sector reads from
+Disk 1 offsets `+$4800`, `+$5a00`, `+$6c00`, and `+$7e00`. Their independent
+SHA-256 values are respectively
+`2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`,
+`c5cef5d02d47d09a758487e873ce1e86a9905b0e62241fc3bff7a8bf9114718a`,
+`2515d3507aa37eaf5bbc0dd12f72a8dcc44712e4773a1e9e3f57517f8a21777c`, and
+`510e1793d5d08ef18d5bc5039f5843aa403024c63abaad000078c61f65011e34`.
+The concatenated raw span is hash-locked to
+`88afae4bd5182d916183b01bf688ab524d739749e84a092eda1435e386b57b58`.
+No consumer, format, state-selection source, or title/game semantics are
+inferred for these bytes.
+
 The statically calculable state-1 reader span (`$4c * $1200 = $55800` bytes
 from Disk 1) has SHA-256
 `0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47`.
