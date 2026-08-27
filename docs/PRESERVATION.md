@@ -282,6 +282,15 @@ original `$4069a` dispatch, subject to another original-state check. The strict
 parser validates these operands directly and does not claim their gameplay
 semantics.
 
+When that counter reaches the verified threshold, the call at `$405b6` enters
+`$4069a`. This transition sets byte `$202c6`, saves and clears word `$202b8`,
+then copies exactly sixteen RGB4 words from `$1ed24` to `$40678`. Each copied
+word is ANDed with `$0eee` and shifted right once before being written. It then
+uses the original graphics-library base from `$12fec` for vectors `-$c0` and
+`-$1a4`; both vector calls and all operands are opcode-validated. Project Eon
+records this as a timed title display transition, not as a guessed description
+of a menu or gameplay screen.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
