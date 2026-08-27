@@ -171,12 +171,35 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 10> launcher_private_interrupt_restore{
         0x50, 0xc5, 0x16, 0xe7, 0x05, 0xb8, 0x91, 0x25,
         0xcd, 0x21};
+    // Before the first call to $02cf, AL==1 keeps DX=$0617; the other path
+    // loads DX=$05f9. $02cf opens the selected original file, seeks to its
+    // end, rounds the length to paragraphs, allocates a segment, rewinds,
+    // reads CX bytes at DS:0000, closes, and returns. The code proves this
+    // transfer ABI but deliberately does not assign any DOS result, segment,
+    // or handler execution semantics.
+    constexpr std::array<std::uint8_t, 12> launcher_private_interrupt_handler_selection{
+        0xba, 0x17, 0x06, 0x3c, 0x01, 0x74, 0x19, 0xba, 0xf9,
+        0x05, 0xeb, 0x14};
+    constexpr std::array<std::uint8_t, 77> launcher_private_interrupt_handler_loader{
+        0xb8, 0x00, 0x3d, 0xcd, 0x21, 0x73, 0x0c, 0x0e, 0x1f,
+        0x8b, 0x16, 0xd5, 0x05, 0xb4, 0x09, 0xcd, 0x21, 0xeb,
+        0x87, 0x50, 0x93, 0x33, 0xd2, 0x33, 0xc9, 0xb8, 0x02,
+        0x42, 0xcd, 0x21, 0x72, 0xe7, 0x50, 0x05, 0x0f, 0x00,
+        0xb1, 0x04, 0xd3, 0xe8, 0x93, 0xb4, 0x48, 0xcd, 0x21,
+        0x72, 0xd8, 0x8e, 0xd8, 0x5f, 0x5b, 0x33, 0xd2, 0x33,
+        0xc9, 0xb8, 0x00, 0x42, 0xcd, 0x21, 0x72, 0xc9, 0xb4,
+        0x3f, 0x8b, 0xcf, 0x33, 0xd2, 0xcd, 0x21, 0x72, 0xbf,
+        0xb4, 0x3e, 0xcd, 0x21, 0xc3};
     constexpr std::array<std::uint8_t, 7> launcher_pre_title_callee_join_target_prefix{
         0xb4, 0x4c, 0xcd, 0x21, 0x32, 0xc0, 0xcf};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
         '2', '2', '0', '0', 'a', 'd', '.', 'e', 'x', 'e', 0};
+    constexpr std::array<std::uint8_t, 10> ega640_name{
+        'e', 'g', 'a', '6', '4', '0', '.', 'b', 'i', 'n'};
+    constexpr std::array<std::uint8_t, 8> mcga_name{
+        'm', 'c', 'g', 'a', '.', 'b', 'i', 'n'};
     constexpr std::size_t mill_load_bias = 0x100;
     const auto launcher_chain_offset = require_unique(
         mill_launcher, launcher_call_chain, "launcher caller-side call chain");
@@ -247,6 +270,15 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
                       launcher_private_interrupt_restore)) {
         throw std::runtime_error("Unsupported Millennium DOS private interrupt preservation chain");
     }
+    constexpr std::size_t private_interrupt_handler_selection_address = 0x1de;
+    if (!has_bytes(mill_launcher, private_interrupt_handler_selection_address - mill_load_bias,
+                   launcher_private_interrupt_handler_selection)
+        || !has_bytes(mill_launcher, private_interrupt_loader_call_target - mill_load_bias,
+                      launcher_private_interrupt_handler_loader)
+        || !has_bytes(mill_launcher, 0x0617 - mill_load_bias, ega640_name)
+        || !has_bytes(mill_launcher, 0x03ae - mill_load_bias, mcga_name)) {
+        throw std::runtime_error("Unsupported Millennium DOS private interrupt handler loader");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -303,6 +335,20 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_private_interrupt_saved_offset_cell = 0x5e7,
         .launcher_private_interrupt_saved_segment_cell = 0x5e9,
         .launcher_private_interrupt_restore_address = private_interrupt_restore_address,
+        .launcher_private_interrupt_handler_loader_entry = private_interrupt_loader_call_target,
+        .launcher_private_interrupt_handler_destination_offset = 0,
+        .launcher_private_interrupt_handler_open_service = 0x3d,
+        .launcher_private_interrupt_handler_seek_end_service = 0x42,
+        .launcher_private_interrupt_handler_allocate_service = 0x48,
+        .launcher_private_interrupt_handler_rewind_service = 0x42,
+        .launcher_private_interrupt_handler_read_service = 0x3f,
+        .launcher_private_interrupt_handler_close_service = 0x3e,
+        .launcher_private_interrupt_handler_first_selector = 1,
+        .launcher_private_interrupt_handler_first_program_address = 0x0617,
+        .launcher_private_interrupt_handler_other_selector = 2,
+        .launcher_private_interrupt_handler_other_program_address = 0x03ae,
+        .launcher_private_interrupt_handler_first_program = "ega640.bin",
+        .launcher_private_interrupt_handler_other_program = "mcga.bin",
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",
