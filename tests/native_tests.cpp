@@ -2098,6 +2098,24 @@ int main() {
     assert(title_stage.bootstrap_profile_five_helper_byte_value == 0);
     assert(title_stage.bootstrap_profile_five_helper_library_base == 4);
     assert(title_stage.bootstrap_profile_five_helper_library_vector == -0x1c8);
+    assert(title_stage.initialization_stack_address == 0x40b62);
+    assert(title_stage.initialization_exec_base_address == 4);
+    assert((title_stage.initialization_exec_vectors
+        == std::array<std::int16_t, 2>{{-0x96, -0x9c}}));
+    assert(title_stage.initialization_exec_allocation_size == 0x7fff0);
+    assert((title_stage.initialization_internal_calls
+        == std::array<std::uint32_t, 11>{{0x1ed80, 0x1f172, 0x1f182, 0x1ef74,
+            0x206d4, 0x206be, 0x403e6, 0x403f4, 0x204c8, 0x389e2, 0x37180}}));
+    assert(title_stage.initialization_copy_source_address == 0x1f168);
+    assert((title_stage.initialization_copy_destinations
+        == std::array<std::uint32_t, 2>{{0x1f974, 0x410d8}}));
+    assert(title_stage.initialization_custom_base_address == 0xdff000);
+    assert((title_stage.initialization_custom_offsets
+        == std::array<std::uint16_t, 4>{{0x40, 0x42, 0x9a, 0x96}}));
+    assert((title_stage.initialization_custom_values
+        == std::array<std::uint16_t, 4>{{0x7fff, 0x7fff, 0xc000, 0x87ff}}));
+    assert(title_stage.initialization_mode_five_call_address == 0x36a8c);
+    assert(title_stage.initialization_normal_call_address == 0x1fb9a);
     assert(title_stage.title_exit_resolved_profile == 0);
     assert(title_stage.title_exit_main_stage_entry_address == 0x21734);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{

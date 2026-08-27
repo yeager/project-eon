@@ -260,6 +260,14 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << std::hex << title_stage.special_mode_byte_address << ", config 0x"
         << title_stage.special_mode_configuration_value << std::dec << "; loop 0x"
         << std::hex << title_stage.main_loop_address << std::dec << '\n';
+    std::cout << "          Title initialization requirement: stack 0x" << std::hex
+        << title_stage.initialization_stack_address << ", Exec base 0x"
+        << title_stage.initialization_exec_base_address << " vectors -0x"
+        << static_cast<std::uint16_t>(-title_stage.initialization_exec_vectors[0]) << "/-0x"
+        << static_cast<std::uint16_t>(-title_stage.initialization_exec_vectors[1])
+        << ", D0 0x" << title_stage.initialization_exec_allocation_size
+        << "; custom 0x" << title_stage.initialization_custom_base_address
+        << "+40/42/9a/96 (not called or written)" << std::dec << '\n';
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec
