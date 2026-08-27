@@ -2,6 +2,7 @@
 
 #include "data/amiga_adf.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string>
 
@@ -38,6 +39,21 @@ struct MillenniumAmigaResidentEntry {
     std::uint16_t d3_nonzero_or_mask = 0;
 };
 
+// The next complete subroutine in the raw resident range is a literal
+// sign/magnitude splitter.  It reads three words from A1+$36, writes their
+// low fifteen bits and former high bits to fixed RAM locations, then calls a
+// resident helper.  Names here describe data movement only, not gameplay
+// meaning.  Project Eon does not execute this routine.
+struct MillenniumAmigaResidentWordSplitter {
+    std::uint32_t entry_address = 0;
+    std::uint16_t source_a1_offset = 0;
+    std::array<std::uint32_t, 3> magnitude_word_addresses{};
+    std::array<std::uint32_t, 3> sign_byte_addresses{};
+    std::uint32_t helper_address = 0;
+    std::uint32_t signed_word_address = 0;
+    std::uint32_t signed_sign_address = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -48,6 +64,12 @@ struct MillenniumAmigaResidentEntry {
 // handoff. This is a read-only control-flow profile, not a decoder for the
 // transformed first-stage RAM image.
 [[nodiscard]] MillenniumAmigaResidentEntry parse_millennium_amiga_resident_entry(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
+
+// Validates the next, independent resident subroutine after the entry gate.
+// It is a read-only byte profile of the supplied raw ADF; no transformed first
+// stage, disk extraction, or 68000 execution is involved.
+[[nodiscard]] MillenniumAmigaResidentWordSplitter parse_millennium_amiga_resident_word_splitter(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
 
 } // namespace eon
