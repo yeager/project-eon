@@ -615,6 +615,10 @@ int main() {
     assert(game_flow.startup_mode_equal_value == 1);
     assert(game_flow.startup_equal_call_address == 0xd1a1);
     assert(game_flow.startup_other_call_address == 0xd1b5);
+    assert(game_flow.startup_equal_path_private_call_site == 0xd1a9);
+    assert(game_flow.startup_equal_path_next_call_address == 0x044e);
+    assert(game_flow.startup_other_path_private_call_site == 0xd1bd);
+    assert(game_flow.startup_other_path_next_call_address == 0x0466);
     assert(game_flow.startup_nonzero_dx_branch_address == 0xd44b);
     assert(game_flow.main_loop_address == 0xd3d2);
     assert(game_flow.action_poll_address == 0x10f05);
@@ -728,6 +732,15 @@ int main() {
         rejected_altered_startup_first_call = true;
     }
     assert(rejected_altered_startup_first_call);
+    auto altered_startup_selector_path = *game_executable;
+    altered_startup_selector_path[0xd1a9 - 0x100] ^= 0x01;
+    bool rejected_altered_startup_selector_path = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_startup_selector_path));
+    } catch (const std::runtime_error&) {
+        rejected_altered_startup_selector_path = true;
+    }
+    assert(rejected_altered_startup_selector_path);
     auto altered_f2_gate = *game_executable;
     altered_f2_gate[0x71ca - 0x100] ^= 0x01;
     bool rejected_altered_f2_gate = false;

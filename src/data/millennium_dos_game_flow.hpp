@@ -284,6 +284,14 @@ struct MillenniumDosGameFlow {
     std::uint8_t startup_mode_equal_value = 0;
     std::uint32_t startup_equal_call_address = 0;
     std::uint32_t startup_other_call_address = 0;
+    // The two static selector targets both prepare AX=$0004, ES=CS and
+    // BX=$d19f before their own direct call back to $0124.  Their following
+    // call targets are only reachable if that private-interrupt wrapper
+    // returns; these remain byte-level control-flow facts, not call effects.
+    std::uint16_t startup_equal_path_private_call_site = 0;
+    std::uint16_t startup_equal_path_next_call_address = 0;
+    std::uint16_t startup_other_path_private_call_site = 0;
+    std::uint16_t startup_other_path_next_call_address = 0;
     std::uint32_t startup_nonzero_dx_branch_address = 0;
     std::uint16_t main_loop_address = 0;
     std::uint32_t action_poll_address = 0;

@@ -26,6 +26,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t entry_offset = 0xd2b0 - load_bias;
     constexpr std::size_t startup_offset = 0xd2b4 - load_bias;
     constexpr std::size_t startup_first_call_offset = 0x0124 - load_bias;
+    constexpr std::size_t startup_equal_path_offset = 0xd1a1 - load_bias;
+    constexpr std::size_t startup_other_path_offset = 0xd1b5 - load_bias;
     constexpr std::size_t loop_offset = 0xd3d2 - load_bias;
     constexpr std::size_t f1_table_offset = 0x2fbf - load_bias;
     constexpr std::size_t f1_handler_offset = 0x6f9a - load_bias;
@@ -80,6 +82,20 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr auto startup_first_call = std::to_array<std::uint8_t>({
         0x1e, 0x56, 0x57, 0x55, 0x06, 0xcd, 0x91,
         0x07, 0x5d, 0x5f, 0x5e, 0x1f, 0xc3});
+    // The two calls selected at $d2dd/$d2e2 use distinct small paths. Both
+    // independently prepare the same $0124 private-interrupt wrapper, then
+    // make a different immediate follow-up call if that wrapper returns.
+    // Their native call effects and return behaviour are deliberately not
+    // interpreted here.
+    constexpr auto startup_equal_path = std::to_array<std::uint8_t>({
+        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1,
+        0xe8, 0x78, 0x2f, 0xe8, 0x9f, 0x32, 0xb0, 0x01,
+        0xa2, 0x05, 0xda, 0xc3});
+    constexpr auto startup_other_path = std::to_array<std::uint8_t>({
+        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1,
+        0xe8, 0x64, 0x2f, 0xe8, 0xa3, 0x32, 0xa0, 0x05,
+        0xda, 0x3c, 0x02, 0x75, 0x06, 0xb8, 0x00, 0xb8,
+        0xa3, 0x07, 0x01, 0xc3});
     constexpr auto loop = std::to_array<std::uint8_t>({
         0xe8, 0xe6, 0x3a, 0xe8, 0x29, 0xa2, 0xe8, 0xf0, 0xa7,
         0xe8, 0x27, 0x3b, 0x22, 0xc0, 0x74, 0xf0, 0x32, 0xe4,
@@ -301,6 +317,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     if (!has_bytes(game_executable, startup_first_call_offset, startup_first_call)) {
         throw std::runtime_error("Unsupported Millennium DOS first startup-call boundary");
     }
+    if (!has_bytes(game_executable, startup_equal_path_offset, startup_equal_path)
+        || !has_bytes(game_executable, startup_other_path_offset, startup_other_path)) {
+        throw std::runtime_error("Unsupported Millennium DOS startup selector paths");
+    }
     if (!has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
         || !has_bytes(game_executable, f1_handler_offset, f1_handler)
@@ -355,6 +375,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .startup_mode_equal_value = 1,
         .startup_equal_call_address = 0xd1a1,
         .startup_other_call_address = 0xd1b5,
+        .startup_equal_path_private_call_site = 0xd1a9,
+        .startup_equal_path_next_call_address = 0x044e,
+        .startup_other_path_private_call_site = 0xd1bd,
+        .startup_other_path_next_call_address = 0x0466,
         .startup_nonzero_dx_branch_address = 0xd44b,
         .main_loop_address = 0xd3d2,
         .action_poll_address = 0x10f05,
