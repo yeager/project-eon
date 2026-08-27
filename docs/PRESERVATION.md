@@ -191,8 +191,28 @@ then high nibble; controls `$0`–`$d` add one of 14 verified deltas modulo 36,
 `$f` supplies an absolute index, and `$e` repeats the previous index. The
 64,000 row-major indices hash to
 `85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee` with
-7,386 nonzero pixels. The separately stored DOS palette/translation mapping is
-not yet promoted to RGB output.
+7,386 nonzero pixels.
+
+The remaining `$348` bytes of P00 are verified VGA colour data. Relative to
+the P00 record, the `$300` bytes at `$25f3..$28f2` are 256 consecutive RGB6
+triples (DAC index 0 first, component order R/G/B); their SHA-256 is
+`b6dd34314102e429fdd98390b1fda27d3ea94d16bfcefa2983e3e319a2a20eae`.
+The 36-byte table at `$28f3..$2916` (SHA-256
+`652ea21cfa18c27470daaee4521d863a3d377f803a5f80ba0132af49b24083d4`) is
+retained exactly but neutrally named: this path does not prove its purpose.
+The final 36 bytes at `$2917..$293a` translate the decoded logical indices
+`0..35` to VGA DAC indices; their SHA-256 is
+`cd7a7f81dd75249a8669e0f4c1792d99b37f3ea28c54319a3f2e84b4a86ff3e2`.
+`TITLES.EXE` selects this exact latter address for its mode-1 `XLAT` path:
+`record + $1c + word[record+$1a] + $300 + byte[record+$01] + 1`
+(file `$139f..$13d6`, loaded `$149f..$14d6`). Its `P00` values resolve to
+`$2917`. The verified display drivers write their supplied triples unchanged:
+`VGA.BIN` `$104e..$105d` writes DAC index to `$3c8`, then three `LODSB` values
+to `$3c9`; `TITLES.EXE` `$1226..$1232` uses the same order for animated DAC
+entry 9. The hardware values are 6-bit, `$00..$3f`; Project Eon expands them
+for SDL with `(v << 2) | (v >> 4)`, an explicit host-presentation adaptation,
+not an invented original conversion. The resulting 320×200 RGBA title hashes
+to `500a1451ab435a9c8ffaf1dbfaacee52cca0e32b375c883a45dd8f879a952888`.
 
 ## Automation integrity
 

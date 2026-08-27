@@ -85,10 +85,6 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {
-    // This is the supplied English DOS TITLE.LIB, nested in the verified
-    // original archive.  P00 is decoded only to its authentic palette indices;
-    // its RGB DAC mapping remains deliberately unavailable until recovered
-    // from original executable evidence.
     constexpr auto title_lib_sha256 =
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
     const auto title_bytes = eon::extract_asset_by_sha256(release.path, title_lib_sha256);
@@ -96,11 +92,40 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const eon::MillenniumDosLib title_lib(*title_bytes);
     const auto* p00 = title_lib.find("P00");
     if (!p00) throw std::runtime_error("Verified Millennium TITLE.LIB has no P00 entry");
-    const auto bitmap = eon::decode_millennium_dos_bitmap(title_lib.read(*p00));
+    const auto resource = title_lib.read(*p00);
+    const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
+    const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
     std::cout << "          TITLE.LIB P00: " << bitmap.width << 'x' << bitmap.height
         << ", codec " << static_cast<unsigned>(bitmap.codec)
         << ", indices 0.." << static_cast<unsigned>(bitmap.max_palette_index)
-        << " (RGB palette pending original-code verification)\n";
+        << ", RGB6 DAC entries 256, logical translation "
+        << palette.logical_to_dac.size() << "\n";
+}
+
+std::optional<PreviewAnimation> load_millennium_preview(
+    const std::vector<eon::ReleaseArchive>& releases) {
+    constexpr auto title_lib_sha256 =
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+    const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
+        return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
+            && candidate.language == "en";
+    });
+    if (release == releases.end()) return std::nullopt;
+    try {
+        const auto bytes = eon::extract_asset_by_sha256(release->path, title_lib_sha256);
+        if (!bytes) return std::nullopt;
+        const eon::MillenniumDosLib title_lib(*bytes);
+        const auto* p00 = title_lib.find("P00");
+        if (!p00) return std::nullopt;
+        const auto resource = title_lib.read(*p00);
+        const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
+        const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
+        return PreviewAnimation{bitmap.width, bitmap.height,
+            {eon::colorize_millennium_dos_bitmap(bitmap, palette)}};
+    } catch (const std::exception& error) {
+        std::cerr << "Unable to decode Millennium title preview: " << error.what() << '\n';
+        return std::nullopt;
+    }
 }
 
 std::optional<PreviewAnimation> load_deuteros_preview(
@@ -196,6 +221,7 @@ int main(int argc, char** argv) {
         return 4;
     }
     const auto deuteros_preview = load_deuteros_preview(releases);
+    const auto millennium_preview = load_millennium_preview(releases);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -223,6 +249,15 @@ int main(int argc, char** argv) {
         if (preview_texture) {
             SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview->rgba_frames.front().data(),
                 deuteros_preview->width * 4);
+        }
+    }
+    SDL_Texture* millennium_preview_texture = nullptr;
+    if (millennium_preview) {
+        millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+            SDL_TEXTUREACCESS_STATIC, millennium_preview->width, millennium_preview->height);
+        if (millennium_preview_texture) {
+            SDL_UpdateTexture(millennium_preview_texture, nullptr,
+                millennium_preview->rgba_frames.front().data(), millennium_preview->width * 4);
         }
     }
 
@@ -294,7 +329,17 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 116, modern ? "Presentation: Modern" : "Presentation: Original");
             draw_text(renderer, 64, 156, "Original data is present and selected.");
             draw_text(renderer, 64, 180, "The simulation is incomplete; no synthetic substitute will run.");
-            if (selected == eon::Game::deuteros && preview_texture && deuteros_preview) {
+            if (selected == eon::Game::millennium && millennium_preview_texture && millennium_preview) {
+                draw_text(renderer, 64, 220, "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC");
+                SDL_SetTextureScaleMode(millennium_preview_texture,
+                    modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
+                const float scale = 2.0F;
+                SDL_FRect preview_bounds{64, 250,
+                    static_cast<float>(millennium_preview->width) * scale,
+                    static_cast<float>(millennium_preview->height) * scale};
+                SDL_RenderTexture(renderer, millennium_preview_texture, nullptr, &preview_bounds);
+                draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
+            } else if (selected == eon::Game::deuteros && preview_texture && deuteros_preview) {
                 const auto elapsed_ticks = static_cast<std::size_t>((SDL_GetTicks() - animation_start) / 20U);
                 const auto frame_index = std::min(elapsed_ticks,
                     deuteros_preview->rgba_frames.size() - 1);
@@ -320,6 +365,7 @@ int main(int argc, char** argv) {
     }
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
+    SDL_DestroyTexture(millennium_preview_texture);
     SDL_DestroyTexture(preview_texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
