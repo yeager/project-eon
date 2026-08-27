@@ -386,6 +386,8 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto plan = eon::parse_millennium_amiga_load_plan(disk);
     const auto resident = eon::parse_millennium_amiga_resident_entry(disk, plan);
     const auto splitter = eon::parse_millennium_amiga_resident_word_splitter(disk, plan);
+    const auto helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
+        disk, plan, splitter);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -407,7 +409,11 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << ", 0x" << splitter.sign_byte_addresses[2] << "; helper 0x"
         << splitter.helper_address << std::dec << '\n'
         << "          splitter pre-helper transform is modeled in memory; no raw-resident "
-           "caller or helper return effect is yet proven\n";
+           "caller or helper return effect is yet proven\n"
+        << "          helper raw boundary: target 0x" << std::hex << helper_boundary.helper_address
+        << " maps to disk 0x" << helper_boundary.raw_disk_offset << std::dec
+        << "; 32-byte SHA-256 " << helper_boundary.raw_prefix_sha256
+        << " (not treated as an executable helper)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
