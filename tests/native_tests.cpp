@@ -214,7 +214,12 @@ int main() {
         assert(callsite.setup_helper_address == 0x7b77e);
         assert(callsite.clear_byte_address == 0x7b14e);
         assert(callsite.helper_address == 0x7ba12);
+        assert(callsite.post_helper_magnitude_address == 0x7b764);
     }
+    assert(defjam_staging_callsites[0].post_helper_return_address == 0x69656);
+    assert(defjam_staging_callsites[0].post_helper_source_address == 0x7cc46);
+    assert(defjam_staging_callsites[1].post_helper_return_address == 0x69bba);
+    assert(defjam_staging_callsites[1].post_helper_source_address == 0x7cc72);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words

@@ -395,6 +395,8 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         disk, plan, splitter);
     const auto setup_helper_boundary =
         eon::parse_millennium_amiga_resident_setup_helper_raw_boundary(disk, plan);
+    const auto staging_callsites = eon::parse_millennium_amiga_resident_helper_staging_callsites(
+        disk, plan, splitter);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -426,6 +428,15 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << setup_helper_boundary.raw_disk_offset << std::dec << "; 32-byte SHA-256 "
         << setup_helper_boundary.raw_prefix_sha256
         << " (not treated as an executable helper)\n";
+    for (const auto& callsite : staging_callsites) {
+        std::cout << "          staging caller 0x" << std::hex << callsite.entry_address
+            << ": source 0x" << callsite.source_address << ", JSR setup 0x"
+            << callsite.setup_helper_address << ", JSR helper 0x" << callsite.helper_address
+            << "; static post-JSR bytes at 0x" << callsite.post_helper_return_address
+            << " load 0x" << callsite.post_helper_source_address << " and 0x"
+            << callsite.post_helper_magnitude_address << std::dec
+            << " (byte boundary only; no helper-return execution)\n";
+    }
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
