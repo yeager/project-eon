@@ -85,7 +85,23 @@ struct DeuterosAmigaTitleStageProfile {
     // this is control-flow evidence, not a name for the rendered data.
     std::uint32_t post_transition_dispatch_state_address = 0;
     std::uint32_t post_transition_dispatch_zero_branch_address = 0;
-    std::uint32_t post_transition_dispatch_nonnegative_branch_address = 0;
+    // Positive enters this sibling byte-combine route; it has its own
+    // clear/set split on the same second state byte below.
+    std::uint32_t post_transition_dispatch_positive_branch_address = 0;
+    // Zero selects one of two bounded byte-combine routines with this byte.
+    // The pointer cells are machine facts, not inferred resource names.
+    std::uint32_t post_transition_dispatch_zero_variant_state_address = 0;
+    std::uint32_t post_transition_dispatch_zero_clear_variant_address = 0;
+    std::uint32_t post_transition_dispatch_zero_set_variant_address = 0;
+    std::uint32_t post_transition_dispatch_zero_pattern_table_address = 0;
+    std::uint32_t post_transition_dispatch_zero_destination_pointer_address = 0;
+    std::uint32_t post_transition_dispatch_zero_clear_source_pointer_address = 0;
+    std::uint32_t post_transition_dispatch_zero_set_source_pointer_address = 0;
+    std::uint32_t post_transition_dispatch_zero_pointer_advance_address = 0;
+    std::uint16_t post_transition_dispatch_zero_row_advance = 0;
+    std::uint16_t post_transition_dispatch_zero_plane_advance = 0;
+    std::uint8_t post_transition_dispatch_zero_row_count = 0;
+    std::uint8_t post_transition_dispatch_zero_plane_count = 0;
     std::uint32_t post_transition_dispatch_negative_service_address = 0;
     std::uint16_t post_transition_dispatch_negative_service_d0 = 0;
     std::uint16_t post_transition_dispatch_negative_service_d1 = 0;
