@@ -319,6 +319,17 @@ struct MillenniumAtariConfigFourthPostOuterTail {
     std::uint16_t return_opcode = 0;
 };
 
+// The literal setup prefix at the D7 DBF backedge target. This ties the
+// native-dependent tail to the independently validated loop entry without
+// treating either loop as executable.
+struct MillenniumAtariConfigFourthPostOuterRecurrence {
+    std::uint32_t prefix_address = 0;
+    std::uint32_t prefix_file_offset = 0;
+    std::uint32_t prefix_bytes = 0;
+    std::string sha256;
+    std::uint32_t continuation_address = 0;
+};
+
 // A byte-level inventory of absolute-JSR encodings in the original config
 // payload. These remain deliberately non-reachability facts: only the six
 // entry-block callsites have a separately proven execution context.
@@ -439,6 +450,12 @@ struct MillenniumAtariConfigAbsoluteJsrInventory {
 [[nodiscard]] MillenniumAtariConfigFourthPostOuterTail parse_millennium_atari_config_fourth_post_outer_tail(
     std::span<const std::uint8_t> payload,
     const MillenniumAtariConfigFourthPostOuterBoundary& boundary);
+
+// Validates the exact static setup reached by the tail's DBF backedge. It
+// establishes only a byte-level return to the already proven loop body.
+[[nodiscard]] MillenniumAtariConfigFourthPostOuterRecurrence parse_millennium_atari_config_fourth_post_outer_recurrence(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostOuterTail& tail,
+    const MillenniumAtariConfigFourthLoop& loop);
 
 // Finds and validates all exact 0x4eb9 absolute-JSR encodings in the verified
 // payload. It does not claim that every byte pattern is reachable code.

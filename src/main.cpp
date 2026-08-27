@@ -699,6 +699,9 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_loop);
     const auto config_fourth_post_outer_tail = eon::parse_millennium_atari_config_fourth_post_outer_tail(
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_outer);
+    const auto config_fourth_post_outer_recurrence = eon::parse_millennium_atari_config_fourth_post_outer_recurrence(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_outer_tail,
+        config_fourth_loop);
     const auto config_jsr_inventory = eon::inventory_millennium_atari_config_absolute_jsrs(
         disk.read(*disk.find(equinox_config.requested_filename)));
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
@@ -859,6 +862,13 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_fourth_post_outer_tail.final_stack_cleanup_opcode << "/0x"
         << config_fourth_post_outer_tail.return_opcode << std::dec
         << " (validated only; no post-trap execution or state interpretation)\n";
+    std::cout << "          MILL22A.inf post-trap recurrence: 0x" << std::hex
+        << config_fourth_post_outer_recurrence.prefix_address << " file +0x"
+        << config_fourth_post_outer_recurrence.prefix_file_offset << std::dec << "; "
+        << config_fourth_post_outer_recurrence.prefix_bytes << " bytes, SHA-256 "
+        << config_fourth_post_outer_recurrence.sha256 << ", falls through to 0x" << std::hex
+        << config_fourth_post_outer_recurrence.continuation_address << std::dec
+        << " (static linkage only; no trap return or loop execution)\n";
     std::cout << "          MILL22A.inf absolute-JSR encodings: "
         << config_jsr_inventory.encodings.size() << " (file +0x" << std::hex
         << config_jsr_inventory.encodings.front().first << " -> 0x"

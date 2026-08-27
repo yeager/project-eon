@@ -248,6 +248,14 @@ stack cleanup and `RTS`. This records bytes, operands, and PC-relative
 targets only. Loop effects, native service calls, return values, and any
 resulting game state remain unrecovered rather than inferred.
 
+The tail's corrected `DBF` target is also linked to its complete 24-byte setup
+prefix at `0x2b44c` (file `+0xf6e`, SHA-256
+`85f6e69ef8d058c021e0c70fe51375ef2f09a2c67c798c73f066ffdb6f14a187`). That
+prefix is the literal A5/A4/D6/D5/D4 setup and falls through to the separately
+validated loop body at `0x2b464`. This establishes a static byte/control-flow
+relationship only; it does not make the native trap return, recurrence, or
+loop effects runnable.
+
 For the next disassembly phase, Project Eon now keeps a fail-closed whole-file
 inventory of all 19 original `0x4eb9` absolute-JSR encodings. The first is at
 file `+0x50c` to `0x2a5aa`; the last is at `+0xdb2` to `0x2aa78`. This is
