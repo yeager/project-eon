@@ -192,6 +192,14 @@ with `0x4e75`. These are exact original machine-code facts only. Project Eon
 does not invoke the trap, infer a selector meaning, choose a Line-A/XBIOS or
 firmware implementation, or synthesize a result or configuration state.
 
+The direct entry-block target `0x2b2be` is also now bounded at file `+0xde0`.
+Its initial original words are `0x1400 0x0200 0x00c0 0x6600 0x003a`; the
+conditional branch's exact destination is `0x2b300` (file `+0xe22`), where
+the original bytes begin `0x0802 0x0006 0x6700 0x0090`. Project Eon preserves
+the two D0-dependent gates and their literal branch shape only. It does not
+choose a D0 value, execute either path, or infer a hardware, firmware, or game
+state consequence.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
