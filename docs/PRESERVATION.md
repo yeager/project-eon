@@ -362,6 +362,11 @@ and fingerprints the in-range raw target at disk `$29d0a` (SHA-256
 does not provide `A1`, interpret either selector result, enter `$680ca`, or
 execute `$7b90a`.
 
+The inequality target `$680ca` is separate static evidence: it pushes `D0`,
+then `D2`, and reaches the same unknown `JSR $7b90a` at `$680ce`. No
+post-call stack restoration, loop, or target effect is claimed by
+`MillenniumAmigaResidentPredicateNotEqualPathBoundary`.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with

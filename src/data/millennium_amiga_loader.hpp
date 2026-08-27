@@ -189,6 +189,16 @@ struct MillenniumAmigaResidentPredicateZeroPathBoundary {
     std::string unknown_call_raw_prefix_sha256;
 };
 
+// The not-equal target has its own two-register argument setup before reaching
+// the same unknown resident call. It records no post-call behavior.
+struct MillenniumAmigaResidentPredicateNotEqualPathBoundary {
+    std::uint32_t entry_address = 0;
+    std::uint32_t pushed_first_register = 0;
+    std::uint32_t pushed_second_register = 0;
+    std::uint32_t unknown_call_address = 0;
+    std::uint32_t unknown_call_target = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -288,5 +298,12 @@ parse_millennium_amiga_resident_predicate_gate(
 parse_millennium_amiga_resident_predicate_zero_path_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentPredicateGate& gate);
+
+// Validates the BNE target's two literal stack arguments through its next
+// unknown call. It never models a call return or later loop instructions.
+[[nodiscard]] MillenniumAmigaResidentPredicateNotEqualPathBoundary
+parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentPredicateZeroPathBoundary& zero_path);
 
 } // namespace eon
