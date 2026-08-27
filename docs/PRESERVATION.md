@@ -524,6 +524,16 @@ The concatenated raw span is hash-locked to
 No consumer, format, state-selection source, or title/game semantics are
 inferred for these bytes.
 
+The state-0 span's first `0x1200` bytes are byte-identical to the already
+validated track-2 loader (`248925…81d7`): at state-0 base `$13200` they contain
+the same stack setup, absolute jump `$1ec4`, copied dispatcher at `+$c4`, and
+raw-loader argument vector at `+$11a`. `parse_deuteros_atari_state0_duplicate_stage_prefix`
+asserts this identity and the duplicated parser boundaries. It does not claim
+that `$13200` or `$132c4` is entered: the proven original path instead copies
+the track-2 bytes to `$1e00` and enters `$1ec4`; no loader-return continuation
+selecting the duplicate has been recovered. The remaining state-0 chunks stay
+unclassified raw data.
+
 The statically calculable state-1 reader span (`$4c * $1200 = $55800` bytes
 from Disk 1) has SHA-256
 `0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47`.

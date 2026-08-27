@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -138,6 +139,20 @@ struct DeuterosAtariRawLoadPlan {
 [[nodiscard]] DeuterosAtariRawLoadPlan build_deuteros_atari_state0_raw_load_plan(
     const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch);
+
+// The state-0 load begins with a byte-identical duplicate of the recovered
+// second boot stage. This records identity only: no original return path is
+// known to enter the duplicate at its `$13200` load address.
+struct DeuterosAtariState0DuplicateStagePrefix {
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::size_t direct_entry_offset = 0;
+    std::size_t dispatcher_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariState0DuplicateStagePrefix
+parse_deuteros_atari_state0_duplicate_stage_prefix(std::span<const std::uint8_t> state0_bytes,
+    std::span<const std::uint8_t> second_stage_bytes);
 
 class DeuterosAtariDisk {
 public:
