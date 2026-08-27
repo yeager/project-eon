@@ -26,6 +26,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -343,6 +344,7 @@ int main(int argc, char** argv) {
     int focused = 0;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
+    std::optional<std::uint32_t> deuteros_title_resource;
     bool show_scanner = false;
     bool running = true;
     while (running) {
@@ -381,6 +383,7 @@ int main(int argc, char** argv) {
                             deuteros_opening = load_deuteros_opening(releases);
                             create_deuteros_opening_texture();
                             deuteros_last_tick = SDL_GetTicks();
+                            deuteros_title_resource.reset();
                         }
                     }
                 }
@@ -398,6 +401,7 @@ int main(int argc, char** argv) {
                                 deuteros_opening = load_deuteros_opening(releases);
                                 create_deuteros_opening_texture();
                                 deuteros_last_tick = SDL_GetTicks();
+                                deuteros_title_resource.reset();
                             }
                         }
                     }
@@ -423,7 +427,13 @@ int main(int argc, char** argv) {
             std::size_t tick_count = 0;
             while (now - deuteros_last_tick >= scheduler_period_ms
                 && tick_count < maximum_catch_up_ticks) {
-                static_cast<void>(deuteros_opening->tick(deuteros_input_pressed));
+                const auto events = deuteros_opening->tick(deuteros_input_pressed);
+                if (!events.alternate_resources.empty()) {
+                    // Opcode $0f exposes this original bundle-relative target.
+                    // It is retained as evidence for the subsequent verified
+                    // stage, not given an invented title/menu interpretation.
+                    deuteros_title_resource = events.alternate_resources.front();
+                }
                 deuteros_last_tick += scheduler_period_ms;
                 ++tick_count;
             }
@@ -492,10 +502,17 @@ int main(int argc, char** argv) {
                     eon::DeuterosAmigaFrame::width * 4);
                 draw_text(renderer, 64, 220, "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE");
                 draw_text(renderer, 64, 238, "HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL");
+                if (deuteros_title_resource) {
+                    std::ostringstream handoff;
+                    handoff << std::hex << *deuteros_title_resource;
+                    draw_text(renderer, 64, 252, "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
+                        + handoff.str()
+                        + " -> STAGE ENTRY 0x40426 (REIMPLEMENTATION IN PROGRESS)");
+                }
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 const float scale = 2.0F;
-                SDL_FRect preview_bounds{64, 258,
+                SDL_FRect preview_bounds{64, deuteros_title_resource ? 274.0F : 258.0F,
                     static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
