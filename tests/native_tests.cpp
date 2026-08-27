@@ -172,6 +172,32 @@ int main() {
     assert(first_indexed_blob.record_offsets.front() == 0);
     assert(first_indexed_blob.record_offsets[1] == 0x994);
     assert(first_indexed_blob.record_offsets.back() == 0x1ce8e);
+    const auto first_bitmap = eon::decode_deuteros_amiga_bitmap(
+        system_disk, first_bundle, first_indexed_blob, 1);
+    assert(first_bitmap.width == 48);
+    assert(first_bitmap.height == 17);
+    assert(first_bitmap.color_indices.size() == 816);
+    assert(std::count_if(first_bitmap.color_indices.begin(), first_bitmap.color_indices.end(),
+        [](auto color) { return color != 0; }) == 311);
+    assert(eon::to_hex(eon::sha256(first_bitmap.color_indices))
+        == "fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3");
+    const auto first_special_bitmap = eon::decode_deuteros_amiga_bitmap(
+        system_disk, first_bundle, first_indexed_blob, 0);
+    assert(first_special_bitmap.width == 112);
+    assert(first_special_bitmap.height == 77);
+    assert(std::count_if(first_special_bitmap.color_indices.begin(),
+        first_special_bitmap.color_indices.end(), [](auto color) { return color != 0; }) == 2'712);
+    assert(eon::to_hex(eon::sha256(first_special_bitmap.color_indices))
+        == "a7abcb6a308f7016e28611862a14de3adfa12881efcce458e5888b07e2d0c1cb");
+    for (std::size_t index = 0; index + 1 < first_indexed_blob.record_offsets.size(); ++index) {
+        const auto bitmap = eon::decode_deuteros_amiga_bitmap(
+            system_disk, first_bundle, first_indexed_blob, index);
+        assert(bitmap.width > 0 && bitmap.height > 0);
+        assert(bitmap.color_indices.size()
+            == static_cast<std::size_t>(bitmap.width) * bitmap.height);
+        assert(std::all_of(bitmap.color_indices.begin(), bitmap.color_indices.end(),
+            [](auto color) { return color < 16; }));
+    }
 
     const auto second_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[1]);
@@ -201,5 +227,14 @@ int main() {
     assert(second_indexed_blob.record_offsets.front() == 0);
     assert(second_indexed_blob.record_offsets[1] == 0xf2e);
     assert(second_indexed_blob.record_offsets.back() == 0xb956);
+    for (std::size_t index = 0; index + 1 < second_indexed_blob.record_offsets.size(); ++index) {
+        const auto bitmap = eon::decode_deuteros_amiga_bitmap(
+            system_disk, second_bundle, second_indexed_blob, index);
+        assert(bitmap.width > 0 && bitmap.height > 0);
+        assert(bitmap.color_indices.size()
+            == static_cast<std::size_t>(bitmap.width) * bitmap.height);
+        assert(std::all_of(bitmap.color_indices.begin(), bitmap.color_indices.end(),
+            [](auto color) { return color < 16; }));
+    }
     return 0;
 }

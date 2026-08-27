@@ -1,5 +1,6 @@
 #include "data/deuteros_amiga_bundle.hpp"
 
+#include <algorithm>
 #include <span>
 #include <stdexcept>
 
@@ -167,6 +168,101 @@ DeuterosAmigaIndexedBlob parse_deuteros_amiga_indexed_blob(
         result.record_offsets.push_back(offset);
     }
     if (result.record_offsets.empty()) throw std::runtime_error("Empty Deuteros indexed blob table");
+    return result;
+}
+
+DeuterosAmigaBitmap decode_deuteros_amiga_bitmap(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
+    const DeuterosAmigaIndexedBlob& blob, std::size_t record_index) {
+    // The final populated offset is the end boundary, not another record.
+    if (record_index + 1 >= blob.record_offsets.size()) {
+        throw std::runtime_error("Deuteros bitmap index outside table");
+    }
+    const auto start = blob.record_offsets[record_index];
+    const auto end = blob.record_offsets[record_index + 1];
+    if (end <= start || end > blob.data_size || end - start < 4) {
+        throw std::runtime_error("Invalid Deuteros bitmap record range");
+    }
+    const auto encoded = disk.bytes(bundle.disk_offset + blob.data_relative_offset + start, end - start);
+    const auto words_per_row = big16(encoded, 0);
+    const auto encoded_height = big16(encoded, 2);
+    const bool plane_sequential = encoded_height >= 200;
+    const auto height = plane_sequential
+        ? static_cast<std::uint16_t>(encoded_height & 0xffU) : encoded_height;
+    // The normal path interleaves four plane words per 16 pixels. Bit-15
+    // records use $20eb2, which emits each complete plane sequentially.
+    if (words_per_row == 0 || words_per_row > 80 || words_per_row % 4 != 0
+        || height == 0 || height >= 200
+        || (plane_sequential && (encoded_height & 0xff00U) != 0x8000U)) {
+        throw std::runtime_error("Deuteros bitmap uses unsupported special layout");
+    }
+    const auto width = static_cast<std::uint16_t>(words_per_row * 4);
+    const auto output_words = static_cast<std::size_t>(words_per_row) * height;
+    std::vector<std::uint16_t> planar_words;
+    planar_words.reserve(output_words);
+    std::size_t cursor = 4;
+    auto require = [&encoded, &cursor](std::size_t count) {
+        if (cursor > encoded.size() || count > encoded.size() - cursor) {
+            throw std::runtime_error("Truncated Deuteros bitmap RLE stream");
+        }
+    };
+    auto append_repeat = [&planar_words, output_words](std::uint16_t value, std::size_t count) {
+        if (count == 0) throw std::runtime_error("Zero-length Deuteros bitmap RLE run");
+        const auto remaining = output_words - planar_words.size();
+        planar_words.insert(planar_words.end(), std::min(count, remaining), value);
+    };
+    while (planar_words.size() < output_words) {
+        require(1);
+        const auto control = encoded[cursor++];
+        const auto kind = control & 0xc0U;
+        if (kind == 0) {
+            const auto count = static_cast<std::size_t>(control);
+            if (count == 0) throw std::runtime_error("Zero-length Deuteros bitmap literal");
+            const auto needed = std::min(count, output_words - planar_words.size());
+            require(needed * 2);
+            for (std::size_t index = 0; index < needed; ++index) {
+                planar_words.push_back(big16(encoded, cursor));
+                cursor += 2;
+            }
+        } else if (kind == 0x40U) {
+            const auto count = static_cast<std::size_t>(control & 0x3fU);
+            require(1);
+            const auto byte = encoded[cursor++];
+            append_repeat(static_cast<std::uint16_t>(byte * 0x101U), count);
+        } else {
+            std::size_t count = control & 0x3fU;
+            if (kind == 0x80U) {
+                require(1);
+                count = (count << 8U) | encoded[cursor++];
+            }
+            require(2);
+            // The 68000 loop deliberately stores source byte 1 before byte 0.
+            const auto value = static_cast<std::uint16_t>(
+                (static_cast<std::uint16_t>(encoded[cursor + 1]) << 8U) | encoded[cursor]);
+            cursor += 2;
+            append_repeat(value, count);
+        }
+    }
+
+    DeuterosAmigaBitmap result;
+    result.width = width;
+    result.height = height;
+    result.color_indices.assign(static_cast<std::size_t>(width) * result.height, 0);
+    const auto groups_per_row = static_cast<std::size_t>(words_per_row / 4);
+    for (std::size_t index = 0; index < planar_words.size(); ++index) {
+        const auto plane_words = groups_per_row * height;
+        const auto plane = plane_sequential ? index / plane_words : index % 4;
+        const auto plane_position = plane_sequential ? index % plane_words : 0;
+        const auto row = plane_sequential ? plane_position / groups_per_row : index / words_per_row;
+        const auto within_row = index % words_per_row;
+        const auto group = plane_sequential ? plane_position % groups_per_row : within_row / 4;
+        const auto word = planar_words[index];
+        for (std::size_t bit = 0; bit < 16; ++bit) {
+            const auto pixel = row * groups_per_row * 16 + group * 16 + bit;
+            result.color_indices[pixel] |= static_cast<std::uint8_t>(
+                ((word >> (15U - bit)) & 1U) << plane);
+        }
+    }
     return result;
 }
 

@@ -97,9 +97,17 @@ until their external calls and state effects have been verified.
 
 The final two auxiliary pointers bound an indexed payload: a big-endian
 longword table followed by the data it addresses. Verified bundle 0 contains
-143 used records and bundle 1 contains 75. The native parser checks the
+143 populated boundaries for 142 records and bundle 1 contains 75 boundaries
+for 74 records. The native parser checks the
 strictly increasing used prefix, zero-filled unused tail, and all blob ranges;
 the contents remain neutrally named pending caller-level format proof.
+
+Caller `$20c8c` identifies those records as compressed four-bitplane bitmaps.
+The normal `$20da6` path has four RLE control classes and writes interleaved
+plane words into a 320-pixel, 40-byte-per-plane row layout. Native decoding now
+covers all 74 normal records in bundle 1 and the 72 unflagged records in bundle 0.
+The remaining 70 bit-15 records use the same RLE controls through `$20eb2` but
+store complete planes sequentially; that path is also implemented and tested.
 
 ## Initial DOS observations
 
