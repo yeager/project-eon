@@ -11,8 +11,28 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import hashlib
 import subprocess
 import sys
+
+
+def media_snapshot(directory: Path) -> dict[Path, str]:
+    """Return a content snapshot without trusting timestamps or filenames."""
+    snapshot: dict[Path, str] = {}
+    for path in sorted(directory.rglob("*")):
+        relative = path.relative_to(directory)
+        if path.is_dir():
+            snapshot[relative] = "directory"
+            continue
+        if not path.is_file():
+            snapshot[relative] = "other"
+            continue
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
+        snapshot[relative] = f"file:{digest.hexdigest()}"
+    return snapshot
 
 
 def main() -> int:
@@ -26,6 +46,7 @@ def main() -> int:
     if not data_directory.is_dir():
         raise SystemExit(f"Real data directory not found: {data_directory}")
 
+    before = media_snapshot(data_directory)
     environment = os.environ | {"SDL_VIDEODRIVER": "dummy"}
     platforms = (
         ("millennium", "dos"),
@@ -50,6 +71,9 @@ def main() -> int:
             f"{game}/{platform} exited before its SDL loop (status {completed.returncode}):\n"
             f"{completed.stderr}"
         )
+    after = media_snapshot(data_directory)
+    if after != before:
+        raise SystemExit("Project Eon changed the supplied game-data directory")
     return 0
 
 
