@@ -379,6 +379,10 @@ with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch
 pair and assigns neither values nor branch meanings to it.
 
+At `$68562`, the branch-target's next exact static prefix reaches a conditional
+branch at `$6856a`, whose encoded target is `$6857a`. This is raw control-flow
+provenance only; Project Eon does not assign comparison or branch semantics.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with
