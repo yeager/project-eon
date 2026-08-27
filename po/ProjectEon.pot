@@ -104,3 +104,75 @@ msgstr ""
 #: src/main.cpp
 msgid "ORIGINAL TITLE STAGE SHA-256: "
 msgstr ""
+
+#: src/main.cpp
+msgid "AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE"
+msgstr ""
+
+#: src/main.cpp
+msgid "AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC"
+msgstr ""
+
+#: src/main.cpp
+msgid "EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED"
+msgstr ""
+
+#: src/main.cpp
+msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
+msgstr ""
+
+#: src/main.cpp
+msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr ""
+
+#: src/main.cpp
+msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
+msgstr ""
+
+#: src/main.cpp
+msgid "VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION"
+msgstr ""
+
+#: src/main.cpp
+msgid "INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED."
+msgstr ""
+
+#: src/main.cpp
+msgid "NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."
+msgstr ""
+
+#: src/main.cpp
+msgid "VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY"
+msgstr ""
+
+#: src/main.cpp
+msgid "INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED."
+msgstr ""
+
+#: src/main.cpp
+msgid "NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM."
+msgstr ""
+
+#: src/main.cpp
+msgid "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"
+msgstr ""
+
+#: src/main.cpp
+msgid "HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"
+msgstr ""
+
+#: src/main.cpp
+msgid "PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL $20580 STREAM: +0x"
+msgstr ""
