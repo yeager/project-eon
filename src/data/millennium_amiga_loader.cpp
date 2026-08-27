@@ -1,4 +1,5 @@
 #include "data/millennium_amiga_loader.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -26,6 +27,14 @@ void validate_range(const MillenniumAmigaLoadStage& stage) {
         || stage.length > AmigaAdf::standard_size - stage.disk_offset) {
         throw std::runtime_error("Millennium Amiga loader requests data outside ADF");
     }
+}
+
+MillenniumAmigaLoadStage make_stage(const AmigaAdf& disk, std::uint32_t disk_offset,
+                                    std::uint32_t length, std::uint32_t destination) {
+    MillenniumAmigaLoadStage stage{disk_offset, length, destination, {}};
+    validate_range(stage);
+    stage.raw_sha256 = to_hex(sha256(disk.bytes(stage.disk_offset, stage.length)));
+    return stage;
 }
 
 } // namespace
@@ -87,9 +96,9 @@ MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(const AmigaAdf& disk) {
     }
 
     MillenniumAmigaLoadPlan plan{
-        {bootstrap_disk_offset, bootstrap_length, bootstrap_destination},
-        {0x24200, first_chunk * multiplier, 0x41000},
-        {0x16400, resident_length, 0x68000},
+        make_stage(disk, bootstrap_disk_offset, bootstrap_length, bootstrap_destination),
+        make_stage(disk, 0x24200, first_chunk * multiplier, 0x41000),
+        make_stage(disk, 0x16400, resident_length, 0x68000),
         0x68000,
         big32(loader, magic_offset),
     };

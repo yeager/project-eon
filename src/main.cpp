@@ -255,6 +255,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << "; disk 0x" << plan.resident_stage.disk_offset << " + 0x"
         << plan.resident_stage.length << " -> entry 0x" << plan.resident_entry
         << ", marker 0x" << plan.loader_magic << std::dec << '\n'
+        << "          raw stage SHA-256: bootstrap " << plan.bootstrap_loader.raw_sha256
+        << "; first " << plan.first_stage.raw_sha256
+        << "; resident " << plan.resident_stage.raw_sha256 << '\n'
         << "          resident gate: entry 0x" << std::hex << resident.entry_address
         << " calls 0x" << resident.initializer_address << "; d3 != 0 ORs 0x"
         << resident.d3_nonzero_or_mask << " into d0, stores word at 0x"

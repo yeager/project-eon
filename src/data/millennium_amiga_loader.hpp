@@ -3,6 +3,7 @@
 #include "data/amiga_adf.hpp"
 
 #include <cstdint>
+#include <string>
 
 namespace eon {
 
@@ -13,6 +14,9 @@ struct MillenniumAmigaLoadStage {
     std::uint32_t disk_offset = 0;
     std::uint32_t length = 0;
     std::uint32_t destination = 0;
+    // SHA-256 of precisely the bytes requested from the supplied ADF. This is
+    // evidence only; Project Eon never materializes this range as a file.
+    std::string raw_sha256;
 };
 
 struct MillenniumAmigaLoadPlan {

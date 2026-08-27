@@ -111,6 +111,13 @@ them to a cache. The alternate supplied crack images alter boot/loader code;
 they remain separately fingerprinted media rather than assumed equivalent
 executables.
 
+For a reproducible chain of custody, the parser also reports a SHA-256 for
+each exact raw source range (including the bootstrap). These are fingerprints
+of immutable bytes read directly from the supplied ADF, not hashes of an
+unpacked representation. The command-line verifier exposes them so a future
+analysis can identify the exact input range before making any claim about the
+transformed RAM image.
+
 The destination `0x68000` begins with a separate, directly verifiable resident
 entry gate: `JSR $787d4`, test byte `d3`, conditionally OR `0x0100` into `d0`,
 then store the resulting word at `0x7b75a` and return. The call target lies
