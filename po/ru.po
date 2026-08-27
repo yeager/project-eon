@@ -66,3 +66,12 @@ msgstr "ESC: ВЫХОД"
 
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: НАЗАД В МЕНЮ"
+
+msgid "AUTHENTIC TITLE STAGE READY"
+msgstr "АУТЕНТИЧНЫЙ ЭТАП ТИТУЛЬНОГО ЭКРАНА ГОТОВ"
+
+msgid "TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"
+msgstr "ВЫПОЛНЕНИЕ ЭТАПА ТИТУЛЬНОГО ЭКРАНА ЕЩЁ НЕ ВОССТАНОВЛЕНО; ТИТУЛЬНЫЙ ЭКРАН НЕ СОЗДАЁТСЯ ИСКУССТВЕННО"
+
+msgid "ORIGINAL TITLE STAGE SHA-256: "
+msgstr "SHA-256 ОРИГИНАЛЬНОГО ЭТАПА ТИТУЛЬНОГО ЭКРАНА: "
