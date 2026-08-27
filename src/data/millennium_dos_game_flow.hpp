@@ -6,6 +6,22 @@
 
 namespace eon {
 
+// Exact, non-semantic trace of the first record in 2200AD.EXE's F-key table.
+// These fields are code/data addresses in the flat image, not host pointers.
+// The handler only changes its own emulated runtime image; Project Eon keeps
+// the supplied executable and save media immutable.
+struct MillenniumDosFirstFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t selector_address = 0;
+    std::uint8_t selector_value = 0;
+    std::uint16_t record_pointer_table_address = 0;
+    std::uint16_t selected_record_address = 0;
+    std::uint16_t screen_descriptor_address = 0;
+    std::uint8_t screen_descriptor_mode = 0;
+    std::uint8_t selected_record_byte_2 = 0;
+    std::uint8_t selected_record_byte_36 = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -20,6 +36,7 @@ struct MillenniumDosGameFlow {
     std::uint16_t function_key_table_address = 0;
     std::size_t function_key_table_stride = 0;
     std::uint32_t function_key_dispatch_address = 0;
+    MillenniumDosFirstFunctionKeyTrace first_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(

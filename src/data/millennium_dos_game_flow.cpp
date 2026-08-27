@@ -25,6 +25,12 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t load_bias = 0x100;
     constexpr std::size_t entry_offset = 0xd2b0 - load_bias;
     constexpr std::size_t loop_offset = 0xd3d2 - load_bias;
+    constexpr std::size_t f1_table_offset = 0x2fbf - load_bias;
+    constexpr std::size_t f1_handler_offset = 0x6f9a - load_bias;
+    constexpr std::size_t f1_setup_offset = 0x771d - load_bias;
+    constexpr std::size_t record_pointer_offset = 0x27c4 - load_bias;
+    constexpr std::size_t initial_record_offset = 0x12cc - load_bias;
+    constexpr std::size_t initial_record_flag_offset = 0x12f0 - load_bias;
     constexpr std::array<std::uint8_t, 15> entry{
         0x0e, 0x1f, 0x0e, 0x07, 0x8c, 0xc8, 0x8e, 0xd0,
         0xb8, 0x00, 0xda, 0x89, 0xc4, 0xb8, 0x1f};
@@ -36,8 +42,33 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x3c, 0x0c, 0x75, 0x05, 0xe8, 0x79, 0x01, 0x33, 0xc0,
         0x2c, 0x3b, 0x3c, 0x0a, 0x73, 0xd3, 0xbe, 0xbf, 0x2f,
         0x32, 0xe4, 0xc0, 0xe0, 0x03, 0x01, 0xc6, 0xe8, 0xe4, 0xa2});
+    // Table record 0 contains its non-semantic rectangle followed by the
+    // handler entry.  The F1 handler clears AX, calls the common display
+    // selector, then calls the setup block below.  That setup writes selector
+    // zero and resolves it through the original word table at $27c4.
+    constexpr auto f1_table = std::to_array<std::uint8_t>({
+        0x00, 0x06, 0x09, 0x1b, 0x30, 0x00, 0x9a, 0x6f});
+    constexpr auto f1_handler = std::to_array<std::uint8_t>({
+        0x33, 0xc0, 0xe8, 0x2a, 0x61, 0xe8, 0x7b, 0x07,
+        0xe8, 0x55, 0x9a, 0xd0, 0xeb, 0x72, 0xf9, 0xc3});
+    constexpr auto f1_setup = std::to_array<std::uint8_t>({
+        0xb8, 0xcc, 0x12, 0xc6, 0x06, 0x1f, 0xda, 0x00,
+        0xa3, 0x20, 0xda, 0xb9, 0x0f, 0x30, 0xa0, 0x1f,
+        0xda, 0x22, 0xc0, 0xb0, 0x07, 0x74, 0x05, 0xb0,
+        0x05, 0xb9, 0x47, 0x30, 0xa2, 0xa8, 0x75});
+    constexpr auto record_pointer_table = std::to_array<std::uint8_t>({
+        0xcc, 0x12, 0x84, 0x13, 0x44, 0x14, 0x04, 0x15});
+    constexpr auto initial_record = std::to_array<std::uint8_t>({
+        0x03, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00});
+    constexpr auto initial_record_flag = std::to_array<std::uint8_t>({0x00});
     if (!has_bytes(game_executable, entry_offset, entry)
-        || !has_bytes(game_executable, loop_offset, loop)) {
+        || !has_bytes(game_executable, loop_offset, loop)
+        || !has_bytes(game_executable, f1_table_offset, f1_table)
+        || !has_bytes(game_executable, f1_handler_offset, f1_handler)
+        || !has_bytes(game_executable, f1_setup_offset, f1_setup)
+        || !has_bytes(game_executable, record_pointer_offset, record_pointer_table)
+        || !has_bytes(game_executable, initial_record_offset, initial_record)
+        || !has_bytes(game_executable, initial_record_flag_offset, initial_record_flag)) {
         throw std::runtime_error("Unsupported Millennium DOS main-loop control flow");
     }
     return {
@@ -51,6 +82,17 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .function_key_table_address = 0x2fbf,
         .function_key_table_stride = 8,
         .function_key_dispatch_address = 0x76f0,
+        .first_function_key = {
+            .handler_address = 0x6f9a,
+            .selector_address = 0xda1f,
+            .selector_value = 0,
+            .record_pointer_table_address = 0x27c4,
+            .selected_record_address = 0x12cc,
+            .screen_descriptor_address = 0x300f,
+            .screen_descriptor_mode = 7,
+            .selected_record_byte_2 = 0x11,
+            .selected_record_byte_36 = 0,
+        },
     };
 }
 
