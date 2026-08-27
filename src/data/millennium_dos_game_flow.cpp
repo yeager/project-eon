@@ -37,6 +37,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f4_table_offset = 0x2fd7 - load_bias;
     constexpr std::size_t f4_handler_offset = 0x72f9 - load_bias;
     constexpr std::size_t f4_common_offset = 0xba5e - load_bias;
+    constexpr std::size_t f5_table_offset = 0x2fdf - load_bias;
+    constexpr std::size_t f5_handler_offset = 0x7597 - load_bias;
     constexpr std::size_t record_pointer_offset = 0x27c4 - load_bias;
     constexpr std::size_t initial_record_offset = 0x12cc - load_bias;
     constexpr std::size_t initial_record_flag_offset = 0x12f0 - load_bias;
@@ -119,6 +121,14 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xb8, 0x05, 0x00, 0xe8, 0xc8, 0x92, 0xc6, 0x06,
         0x13, 0xda, 0x07, 0xe8, 0x69, 0xe3, 0xc6, 0x06,
         0x1e, 0xda, 0x09, 0xc6, 0x06, 0xa9, 0x75, 0x00, 0xc3});
+    // Record four (raw F5 / $3f) enters $7597. Its only directly observable
+    // behavior is AL=$02 followed by four near calls and a return; their
+    // effects depend on native runtime state and are deliberately not run.
+    constexpr auto f5_table = std::to_array<std::uint8_t>({
+        0x18, 0x1e, 0x09, 0x1b, 0x34, 0x04, 0x97, 0x75});
+    constexpr auto f5_handler = std::to_array<std::uint8_t>({
+        0xb0, 0x02, 0xe8, 0x8c, 0x48, 0xe8, 0xfe, 0x95,
+        0xe8, 0x55, 0xd6, 0xe8, 0xd1, 0x95, 0xc3});
     if (!has_bytes(game_executable, entry_offset, entry)
         || !has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
@@ -133,6 +143,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f4_table_offset, f4_table)
         || !has_bytes(game_executable, f4_handler_offset, f4_handler)
         || !has_bytes(game_executable, f4_common_offset, f4_common)
+        || !has_bytes(game_executable, f5_table_offset, f5_table)
+        || !has_bytes(game_executable, f5_handler_offset, f5_handler)
         || !has_bytes(game_executable, record_pointer_offset, record_pointer_table)
         || !has_bytes(game_executable, initial_record_offset, initial_record)
         || !has_bytes(game_executable, initial_record_flag_offset, initial_record_flag)) {
@@ -198,6 +210,14 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .second_runtime_byte_value = 9,
             .third_runtime_byte_address = 0x75a9,
             .third_runtime_byte_value = 0,
+        },
+        .fifth_function_key = {
+            .handler_address = 0x7597,
+            .transfer_al_value = 2,
+            .first_call_address = 0xbe28,
+            .second_call_address = 0x10b9d,
+            .third_call_address = 0x14bf7,
+            .fourth_call_address = 0x10b76,
         },
     };
 }

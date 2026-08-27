@@ -572,6 +572,14 @@ literal writes only: the calls' effects and the runtime cells' meaning are not
 inferred. Project Eon exposes the gate and first write after F4, never supplies
 the guard, invokes native code, or mutates executable/archive/save media.
 
+The fifth table record (raw F5 / `$3f`) is `18 1e 09 1b 34 04 97 75`, with
+handler entry `$7597`. It loads `AL=$02`, then makes near calls to `$be28`,
+`$10b9d`, `$14bf7`, and `$10b76` before returning. Those four call targets and
+the literal register value are direct code facts; their effects, required
+runtime values, and game meaning are not yet recovered. Project Eon displays
+this immutable trace after F5 but never executes the native calls, supplies
+state, or writes the original executable, archive, or save media.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
