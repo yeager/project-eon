@@ -105,6 +105,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0x97, 0x6e, 0x06, 0xc7, 0x06, 0xd5, 0x05, 0xde,
         0x03, 0xe8, 0x9b, 0x00, 0x33, 0xd2, 0xb8, 0x95,
         0x25, 0xcd, 0x21, 0x0e, 0x1f};
+    // The local target of the near call at 0x231 is only profiled through its
+    // first conditional split.  The conditional's meaning and all interrupt
+    // effects remain deliberately unmodelled.
+    constexpr std::array<std::uint8_t, 19> launcher_pre_title_callee_prefix{
+        0xb8, 0x00, 0x3d, 0xcd, 0x21, 0x73, 0x0c, 0x0e,
+        0x1f, 0x8b, 0x16, 0xd5, 0x05, 0xb4, 0x09, 0xcd,
+        0x21, 0xeb, 0x87};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
@@ -137,6 +144,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
                    launcher_pre_title_chain)) {
         throw std::runtime_error("Unsupported Millennium DOS launcher pre-title chain");
     }
+    constexpr std::size_t pre_title_callee_address = 0x2cf;
+    if (!has_bytes(mill_launcher, pre_title_callee_address - mill_load_bias,
+                   launcher_pre_title_callee_prefix)) {
+        throw std::runtime_error("Unsupported Millennium DOS launcher pre-title callee prefix");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -165,6 +177,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_pre_title_gate_target = 0x21a,
         .launcher_pre_title_call_address = 0x231,
         .launcher_pre_title_call_target = 0x2cf,
+        .launcher_pre_title_callee_branch_address = 0x2d4,
+        .launcher_pre_title_callee_branch_target = 0x2e2,
+        .launcher_pre_title_callee_fallthrough_jump_address = 0x2e0,
+        .launcher_pre_title_callee_fallthrough_jump_target = 0x269,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",
