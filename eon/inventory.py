@@ -7,7 +7,6 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
-import struct
 import zipfile
 
 
@@ -24,6 +23,10 @@ def classify(name: str, data: bytes) -> str:
     suffix = PurePosixPath(name).suffix.lower()
     if data[:2] == b"MZ":
         return "dos-mz-executable"
+    # Millennium's DOS files use .EXE names but are flat binaries loaded by
+    # MILL.COM through a private interrupt API, rather than MZ executables.
+    if suffix == ".exe":
+        return "dos-flat-executable"
     if suffix == ".com":
         return "dos-com-program"
     if suffix == ".adf" or len(data) == 901_120:
@@ -93,4 +96,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
