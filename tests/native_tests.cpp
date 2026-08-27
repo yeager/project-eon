@@ -301,6 +301,16 @@ int main() {
     assert(defjam_predicate_not_equal_path.pushed_second_register == 2);
     assert(defjam_predicate_not_equal_path.unknown_call_address == 0x680ce);
     assert(defjam_predicate_not_equal_path.unknown_call_target == 0x7b90a);
+    const auto defjam_independent_entry =
+        eon::parse_millennium_amiga_resident_independent_entry_gate(
+            defjam_loader_disk, defjam_plan);
+    assert(defjam_independent_entry.entry_address == 0x68508);
+    assert(defjam_independent_entry.negative_d3_branch_address == 0x6850e);
+    assert(defjam_independent_entry.negative_d3_target == 0x68598);
+    assert(defjam_independent_entry.flag_test_address == 0x68512);
+    assert(defjam_independent_entry.flag_address == 0x7b142);
+    assert(defjam_independent_entry.flag_zero_branch_address == 0x68518);
+    assert(defjam_independent_entry.flag_zero_target == 0x6854a);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
