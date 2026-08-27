@@ -1096,6 +1096,20 @@ and the exact source ABI `DS:$0000`, whose code bytes originate in the selected
 original external file. Project Eon does not assign a numeric DOS segment,
 assume any DOS call succeeds, or infer handler execution/return behavior.
 
+The loaded `ega640.bin` (4,632 bytes, SHA-256
+`ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a`) and
+`mcga.bin` (4,366 bytes, SHA-256
+`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`) both
+start an `INT 91h` dispatcher that doubles `AX` into their local word table.
+Function `$00` resolves to `$01c8` (EGA) or `$01e6` (MCGA): each makes a
+literal BIOS mode request through `INT $10`, mode `$0e` at `$01de` or mode
+`$13` at `$01fc`, then has a local zero-`AX` mismatch return. Function `$04`
+resolves to `$0c17` / `$0815`, reads the input byte at `ES:BX`, masks it with
+`$03`, and updates only its code-local byte (`$008d` / `$00af`) before `RET`.
+This is a strict SDL-adapter boundary for requested video mode and a masked
+driver-local option; Project Eon executes neither the driver, BIOS call, nor
+any path-dependent initial presentation.
+
 The old-vector preservation chain is also raw-byte-validated. `$0167` loads
 `AX=$3591`, makes its external call, then stores `BX` and `ES` at adjacent
 cells `$05e7/$05e9`. On the terminal cleanup path `$0269`, `LDS DX,[$05e7]`

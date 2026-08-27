@@ -24,6 +24,7 @@
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
+#include "data/millennium_dos_video_driver.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -598,6 +599,31 @@ int main() {
     assert(title_flow.launcher_private_interrupt_handler_other_selector == 2);
     assert(title_flow.launcher_private_interrupt_handler_other_program_address == 0x3ae);
     assert(title_flow.launcher_private_interrupt_handler_other_program == "mcga.bin");
+    const auto ega640 = eon::extract_asset_by_sha256(english_dos->path,
+        "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a");
+    const auto mcga = eon::extract_asset_by_sha256(english_dos->path,
+        "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228");
+    assert(ega640 && mcga);
+    const auto ega_profile = eon::parse_millennium_dos_video_driver(*ega640,
+        eon::MillenniumDosVideoDriverKind::ega640);
+    const auto mcga_profile = eon::parse_millennium_dos_video_driver(*mcga,
+        eon::MillenniumDosVideoDriverKind::mcga);
+    assert(ega_profile.dispatch_table_address == 0x20);
+    assert(ega_profile.function_zero_address == 0x1c8);
+    assert(ega_profile.function_four_address == 0xc17);
+    assert(ega_profile.function_zero_video_mode == 0x0e);
+    assert(ega_profile.function_zero_set_mode_interrupt_site == 0x1de);
+    assert(ega_profile.function_zero_mode_mismatch_return == 0x1ea);
+    assert(ega_profile.function_four_input_offset == 0 && ega_profile.function_four_input_mask == 3);
+    assert(ega_profile.function_four_state_address == 0x8d);
+    assert(mcga_profile.dispatch_table_address == 0x32);
+    assert(mcga_profile.function_zero_address == 0x1e6);
+    assert(mcga_profile.function_four_address == 0x815);
+    assert(mcga_profile.function_zero_video_mode == 0x13);
+    assert(mcga_profile.function_zero_set_mode_interrupt_site == 0x1fc);
+    assert(mcga_profile.function_zero_mode_mismatch_return == 0x208);
+    assert(mcga_profile.function_four_input_offset == 0 && mcga_profile.function_four_input_mask == 3);
+    assert(mcga_profile.function_four_state_address == 0xaf);
     assert(title_flow.launcher_title_offset == 0x58f);
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");

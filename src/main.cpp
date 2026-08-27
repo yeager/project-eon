@@ -22,6 +22,7 @@
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
+#include "data/millennium_dos_video_driver.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
@@ -400,6 +401,24 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_private_interrupt_saved_offset_cell << "/0x"
         << flow.launcher_private_interrupt_saved_segment_cell << ", restore 0x"
         << flow.launcher_private_interrupt_restore_address << std::dec << "))\n";
+    const auto ega640 = eon::extract_asset_by_sha256(release.path,
+        "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a");
+    const auto mcga = eon::extract_asset_by_sha256(release.path,
+        "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228");
+    if (!ega640 || !mcga) throw std::runtime_error("Verified Millennium video driver missing");
+    const auto ega_driver = eon::parse_millennium_dos_video_driver(*ega640,
+        eon::MillenniumDosVideoDriverKind::ega640);
+    const auto mcga_driver = eon::parse_millennium_dos_video_driver(*mcga,
+        eon::MillenniumDosVideoDriverKind::mcga);
+    std::cout << "          private INT 91 video ABI: EGA640 AX=0 -> BIOS mode 0x"
+        << std::hex << static_cast<unsigned>(ega_driver.function_zero_video_mode)
+        << " at 0x" << ega_driver.function_zero_set_mode_interrupt_site
+        << "; MCGA AX=0 -> BIOS mode 0x"
+        << static_cast<unsigned>(mcga_driver.function_zero_video_mode) << " at 0x"
+        << mcga_driver.function_zero_set_mode_interrupt_site
+        << "; AX=4 masks ES:BX[0] with 0x"
+        << static_cast<unsigned>(ega_driver.function_four_input_mask)
+        << " (validated ABI only; no BIOS/driver execution)\n" << std::dec;
     constexpr auto static_data_sha256 =
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
     const auto static_data = eon::extract_asset_by_sha256(release.path, static_data_sha256);
