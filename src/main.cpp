@@ -466,6 +466,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_loop);
     const auto config_fourth_outer_setup = eon::parse_millennium_atari_config_fourth_outer_setup(
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_loop);
+    const auto config_fourth_post_outer = eon::parse_millennium_atari_config_fourth_post_outer_boundary(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_loop);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -600,6 +602,13 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_fourth_outer_setup.d4_initial_value << " -> 0x"
         << config_fourth_outer_setup.continuation_address << std::dec
         << " (validated fall-through only; no loop iterations or data access)\n";
+    std::cout << "          MILL22A.inf post-outer-loop boundary: 0x" << std::hex
+        << config_fourth_post_outer.boundary_address << " file +0x"
+        << config_fourth_post_outer.boundary_file_offset << "; pushes 0x"
+        << config_fourth_post_outer.longword_argument << " and selector 0x"
+        << config_fourth_post_outer.trap_selector << ", TRAP #14 opcode 0x"
+        << config_fourth_post_outer.trap_opcode << std::dec
+        << " (validated boundary only; no trap/native call or result inference)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.

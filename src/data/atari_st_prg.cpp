@@ -609,4 +609,26 @@ MillenniumAtariConfigFourthOuterSetup parse_millennium_atari_config_fourth_outer
         continuation_address};
 }
 
+MillenniumAtariConfigFourthPostOuterBoundary parse_millennium_atari_config_fourth_post_outer_boundary(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostLoop& post_loop) {
+    // The fall-through after DBF D6 reaches a literal longword, selector $6,
+    // and TRAP #14. This is the first native-service boundary after the nested
+    // loops, so parsing intentionally ends at the trap opcode.
+    constexpr std::uint32_t boundary_address = 0x2b480;
+    constexpr std::size_t boundary_offset = boundary_address - 0x2a4de;
+    constexpr std::array<std::uint8_t, 12> boundary_bytes{
+        0x2f, 0x3c, 0x00, 0x02, 0xb4, 0x28, 0x3f, 0x3c, 0x00, 0x06, 0x4e, 0x4e,
+    };
+    if (post_loop.post_loop_address != 0x2b47a
+        || payload.size() < boundary_offset + boundary_bytes.size()
+        || !std::equal(boundary_bytes.begin(), boundary_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(boundary_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-outer-loop boundary");
+    }
+    return {boundary_address, static_cast<std::uint32_t>(boundary_offset),
+        read_be16(payload, boundary_offset), read_be32(payload, boundary_offset + 2U),
+        read_be16(payload, boundary_offset + 6U), read_be16(payload, boundary_offset + 8U),
+        read_be16(payload, boundary_offset + 10U)};
+}
+
 } // namespace eon
