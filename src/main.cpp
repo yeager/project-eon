@@ -88,6 +88,36 @@ void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text
     SDL_RenderDebugText(renderer, x, y, text.c_str());
 }
 
+// Modern presentation is deliberately a renderer-only treatment. It frames
+// the same decoded original surfaces with scalable SDL primitives; it neither
+// substitutes an asset nor changes an input, simulation, or saved-state byte.
+void draw_modern_chrome(SDL_Renderer* renderer) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 9, 28, 48, 235);
+    SDL_FRect header{32, 24, 1216, 112};
+    SDL_RenderFillRect(renderer, &header);
+    SDL_SetRenderDrawColor(renderer, 39, 202, 213, 210);
+    SDL_RenderRect(renderer, &header);
+    SDL_SetRenderDrawColor(renderer, 19, 86, 116, 110);
+    for (int x = 48; x < 1248; x += 48) {
+        SDL_RenderLine(renderer, static_cast<float>(x), 144, static_cast<float>(x), 696);
+    }
+    for (int y = 168; y < 696; y += 48) {
+        SDL_RenderLine(renderer, 32, static_cast<float>(y), 1248, static_cast<float>(y));
+    }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+void draw_modern_surface_frame(SDL_Renderer* renderer, const SDL_FRect& bounds) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 4, 13, 25, 210);
+    SDL_FRect shadow{bounds.x - 12, bounds.y - 12, bounds.w + 24, bounds.h + 24};
+    SDL_RenderFillRect(renderer, &shadow);
+    SDL_SetRenderDrawColor(renderer, 39, 202, 213, 235);
+    SDL_RenderRect(renderer, &shadow);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
 bool inside(const SDL_FRect& rectangle, float x, float y) {
     return x >= rectangle.x && x <= rectangle.x + rectangle.w
         && y >= rectangle.y && y <= rectangle.y + rectangle.h;
@@ -1303,6 +1333,7 @@ int main(int argc, char** argv) {
         const bool modern = request.presentation == eon::Presentation::modern;
         SDL_SetRenderDrawColor(renderer, modern ? 5 : 0, modern ? 15 : 0, modern ? 27 : 0, 255);
         SDL_RenderClear(renderer);
+        if (modern) draw_modern_chrome(renderer);
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
 
         if (screen == Screen::menu) {
@@ -1367,6 +1398,7 @@ int main(int argc, char** argv) {
                 SDL_FRect preview_bounds{64, 250,
                     static_cast<float>(image.width) * scale,
                     static_cast<float>(image.height) * scale};
+                if (modern) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (millennium_handed_off) {
                     const auto& save = millennium_assets->initial_save;
@@ -1577,6 +1609,7 @@ int main(int argc, char** argv) {
                 SDL_FRect preview_bounds{64, deuteros_title_resource ? 306.0F : 274.0F,
                     static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
+                if (modern) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
                 draw_text(renderer, 64, 580, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
             } else {
