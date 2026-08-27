@@ -290,8 +290,14 @@ struct MillenniumDosGameFlow {
     // returns; these remain byte-level control-flow facts, not call effects.
     std::uint16_t startup_equal_path_private_call_site = 0;
     std::uint16_t startup_equal_path_next_call_address = 0;
+    std::uint16_t startup_equal_followup_write_address = 0;
+    std::uint8_t startup_equal_followup_write_value = 0;
     std::uint16_t startup_other_path_private_call_site = 0;
     std::uint16_t startup_other_path_next_call_address = 0;
+    std::uint16_t startup_other_followup_table_address = 0;
+    std::uint8_t startup_other_followup_table_size = 0;
+    std::uint16_t startup_other_followup_interrupt_site = 0;
+    std::uint8_t startup_other_followup_interrupt_number = 0;
     std::uint32_t startup_nonzero_dx_branch_address = 0;
     std::uint16_t main_loop_address = 0;
     std::uint32_t action_poll_address = 0;
