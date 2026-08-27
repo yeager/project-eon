@@ -586,4 +586,27 @@ MillenniumAtariConfigFourthPostLoop parse_millennium_atari_config_fourth_post_lo
         read_be16(payload, target_offset), read_be16(payload, target_offset + 2U)};
 }
 
+MillenniumAtariConfigFourthOuterSetup parse_millennium_atari_config_fourth_outer_setup(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostLoop& post_loop) {
+    // The outer DBF's target at $2b45c consists only of MOVE.W #2,D5 and
+    // MOVE.W #$100,D4 before directly falling through to $2b464, the verified
+    // inner-loop body. This maintains the original control/dataflow boundary.
+    constexpr std::uint32_t setup_address = 0x2b45c;
+    constexpr std::size_t setup_offset = setup_address - 0x2a4de;
+    constexpr std::uint32_t continuation_address = 0x2b464;
+    constexpr std::array<std::uint8_t, 8> setup_bytes{
+        0x3a, 0x3c, 0x00, 0x02, 0x38, 0x3c, 0x01, 0x00,
+    };
+    if (post_loop.outer_backedge_target_address != setup_address
+        || payload.size() < setup_offset + setup_bytes.size()
+        || !std::equal(setup_bytes.begin(), setup_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(setup_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf outer-loop setup");
+    }
+    return {setup_address, static_cast<std::uint32_t>(setup_offset),
+        read_be16(payload, setup_offset), read_be16(payload, setup_offset + 2U),
+        read_be16(payload, setup_offset + 4U), read_be16(payload, setup_offset + 6U),
+        continuation_address};
+}
+
 } // namespace eon

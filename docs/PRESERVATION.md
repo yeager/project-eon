@@ -223,6 +223,12 @@ verified prefix is `0x3a3c 0x0002`, the local D5 setup. Project Eon records
 the backedge and literal setup only; it runs neither loop, accesses no loop
 data, and invokes no native service.
 
+The target's full local prefix is now also linked: `0x2b45c` contains exactly
+`0x3a3c 0x0002` (`D5`) and `0x383c 0x0100` (`D4`), then falls through at
+`0x2b464` to the already verified 22-byte inner-loop body. This is a strict
+control/dataflow continuation, not an execution model: Project Eon does not
+run an outer or inner iteration, read the referenced data, or derive state.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

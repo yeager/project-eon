@@ -266,6 +266,19 @@ struct MillenniumAtariConfigFourthPostLoop {
     std::uint16_t target_setup_immediate = 0;
 };
 
+// The exact outer-loop target prefix reached by the post-inner-loop DBF. It
+// establishes the two immediate register words immediately before the already
+// verified inner loop; no loop execution is implied.
+struct MillenniumAtariConfigFourthOuterSetup {
+    std::uint32_t setup_address = 0;
+    std::uint32_t setup_file_offset = 0;
+    std::uint16_t d5_setup_opcode = 0;
+    std::uint16_t d5_initial_value = 0;
+    std::uint16_t d4_setup_opcode = 0;
+    std::uint16_t d4_initial_value = 0;
+    std::uint32_t continuation_address = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -361,5 +374,11 @@ struct MillenniumAtariConfigFourthPostLoop {
 // never performs either loop, follows data pointers, or invokes native calls.
 [[nodiscard]] MillenniumAtariConfigFourthPostLoop parse_millennium_atari_config_fourth_post_loop(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthLoop& loop);
+
+// Validates the immediate setup at the outer DBF target and its direct fall
+// through to the previously proven inner-loop body. It never iterates either
+// loop or accesses data.
+[[nodiscard]] MillenniumAtariConfigFourthOuterSetup parse_millennium_atari_config_fourth_outer_setup(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthPostLoop& post_loop);
 
 } // namespace eon
