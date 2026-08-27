@@ -148,6 +148,13 @@ offset plus 64-KiB bank, and each entry uses the same banked addressing with an
 eight-byte name. Genuine integration anchors cover all 38 title entries and
 180 gameplay entries before image-code semantics are applied.
 
+`TITLE.LIB` P00 (the actual offset-6 first entry, not the small P01 record at
+`$2941`) decodes as a 320×200 image through the TITLES.EXE codec-2 nibble
+stream. Its 14-entry delta table and literal/RLE controls are native code
+anchors; decoded indices are row-major and hash to
+`85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee`.
+The hardware RGB palette path remains an explicit next step.
+
 ## Completion criteria
 
 - All supplied platform releases are detected and their required resources load.
