@@ -577,6 +577,17 @@ These are preserved instruction/dataflow facts only; they do not authorize
 Project Eon to select vector 5, perform its runtime callbacks, or infer title
 or game semantics for the loaded bytes.
 
+The vector's immediate static continuation is now bounded too. Track-2
+`+$1a2` (Disk 1 `+$49a2`, copied RAM `$1fa2`) is exactly `60 00 ff 70`,
+SHA-256 `4d11113ca2040c3c0d8e9fe7fc7ef2b65175cc580b8a4b81466908ae7c537896`.
+Its `BRA.W` displacement is relative to the extension word, so it resolves to
+track-2 `+$114` / copied RAM `$1f14`. The target is exactly six bytes,
+`30 38 1e aa 4e 75`, SHA-256
+`506215d03a2272be5f938a8926864075fc50a79d8c2fc23f22955d290fe0c98f`:
+literal `MOVE.W $1eaa,D0; RTS`. This links the post-read branch to the original
+dispatch-word return only. It does not select vector 5, give the word game
+meaning, perform raw reads, or emulate XBIOS.
+
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its

@@ -181,6 +181,26 @@ struct DeuterosAtariState5RawLoadPlan {
     const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch);
 
+// The sixth vector's second raw-reader return falls through a literal BRA.W
+// to the copied dispatcher's local return tail. This preserves only the
+// original branch and its final MOVE.W/RTS bytes; it does not select vector 5,
+// perform either raw read, or attach a game meaning to the runtime word.
+struct DeuterosAtariState5ReturnProfile {
+    std::size_t branch_offset = 0;
+    std::int16_t branch_displacement = 0;
+    std::size_t branch_target_offset = 0;
+    std::string branch_sha256;
+    std::size_t dispatcher_tail_offset = 0;
+    std::string dispatcher_tail_sha256;
+    std::uint16_t state_word_address = 0;
+    std::uint16_t move_word_opcode = 0;
+    std::uint16_t return_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariState5ReturnProfile parse_deuteros_atari_state5_return(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch);
+
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is
 // known to enter the duplicate at its `$13200` load address.

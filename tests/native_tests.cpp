@@ -1866,6 +1866,31 @@ int main() {
     assert(deuteros_state5_plan.second_read.source_offset == 0x60c00);
     assert(deuteros_state5_plan.second_read.requests.front().track == 43);
     assert(deuteros_state5_plan.second_read.requests.front().side == 0);
+    const auto deuteros_state5_return = eon::parse_deuteros_atari_state5_return(
+        deuteros_second_stage, deuteros_second_stage_profile, deuteros_dispatch);
+    assert(deuteros_state5_return.branch_offset == 0x1a2);
+    assert(deuteros_state5_return.branch_displacement == -144);
+    assert(deuteros_state5_return.branch_target_offset == 0x114);
+    assert(deuteros_state5_return.branch_sha256
+        == "4d11113ca2040c3c0d8e9fe7fc7ef2b65175cc580b8a4b81466908ae7c537896");
+    assert(deuteros_state5_return.dispatcher_tail_offset == 0x114);
+    assert(deuteros_state5_return.dispatcher_tail_sha256
+        == "506215d03a2272be5f938a8926864075fc50a79d8c2fc23f22955d290fe0c98f");
+    assert(deuteros_state5_return.state_word_address == 0x1eaa);
+    assert(deuteros_state5_return.move_word_opcode == 0x3038);
+    assert(deuteros_state5_return.return_opcode == 0x4e75);
+    {
+        auto altered_second_stage = deuteros_second_stage;
+        altered_second_stage[0x1a2] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_state5_return(
+                altered_second_stage, deuteros_second_stage_profile, deuteros_dispatch));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto materialize_atari_plan = [&deuteros_disk1](const auto& plan) {
         std::vector<std::uint8_t> bytes;
         for (const auto& request : plan.requests) {
