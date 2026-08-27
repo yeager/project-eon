@@ -125,6 +125,11 @@ streams and CRCs, and fingerprints all 67 contained assets. The verified corpus
 contains 17 Amiga ADF images, 18 Atari ST images and both English and Spanish
 DOS data for Millennium 2.2.
 
+The Spanish Millennium floppy is now opened as a native FAT12 filesystem. Its
+39 genuine root files can be listed and read through validated cluster chains;
+integration tests lock the extracted `2200AD.EXE` and `GX.LIB` contents to
+their observed SHA-256 hashes.
+
 The repository does not contain the commercial games. Point the inventory tool
 at a directory containing the original archives:
 

@@ -1,7 +1,10 @@
 #include "platform/game_data.hpp"
 #include "launcher.hpp"
 #include "data/zip_archive.hpp"
+#include "data/fat12.hpp"
+#include "data/sha256.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <iostream>
@@ -51,5 +54,27 @@ int main() {
     assert(kind_counts[eon::AssetKind::audio] == 14);
     assert(kind_counts[eon::AssetKind::game_resource] == 12);
     assert(kind_counts[eon::AssetKind::unknown] == 1);
+
+    const auto spanish = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
+        return release.game == eon::Game::millennium
+            && release.platform == eon::Platform::dos && release.language == "es";
+    });
+    assert(spanish != releases.end());
+    const auto spanish_zip = eon::ZipArchive::open(spanish->path);
+    const auto image_entry = std::find_if(spanish_zip.entries().begin(), spanish_zip.entries().end(),
+        [](const auto& entry) { return entry.name == "MRTE.IMG"; });
+    assert(image_entry != spanish_zip.entries().end());
+    const eon::Fat12Disk disk(spanish_zip.extract(*image_entry));
+    assert(disk.bytes_per_sector() == 512);
+    assert(disk.sectors_per_cluster() == 2);
+    assert(disk.root_entries().size() == 39);
+    const auto* executable = disk.find("2200AD.EXE");
+    const auto* graphics = disk.find("GX.LIB");
+    assert(executable && executable->size == 54'566);
+    assert(graphics && graphics->size == 311'420);
+    assert(eon::to_hex(eon::sha256(disk.read(*executable)))
+        == "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6");
+    assert(eon::to_hex(eon::sha256(disk.read(*graphics)))
+        == "e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767");
     return 0;
 }
