@@ -145,6 +145,44 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     if (big16(loop_bytes, 0x6a) != 6 || big32(loop_bytes, 0x6c) != 0xbfe001) {
         throw std::runtime_error("Unexpected Deuteros CIA input probe");
     }
+    // Values above two at $21982 branch to $2181c, the scheduler call rather
+    // than one of the bootstrap exits. Decode the scheduler's fixed layout
+    // and its wait dispatch from the raw stage. This provides a bounded
+    // evidence model for the resumed path; the VM remains responsible for
+    // executing only already understood channel opcodes.
+    constexpr std::uint32_t scheduler_address = 0x21380;
+    const auto scheduler = stage_bytes.subspan(main_offset(scheduler_address));
+    require_word(scheduler, 0x00, 0x41f9); // lea $210f8,a0
+    require_long(scheduler, 0x02, 0x210f8);
+    require_word(scheduler, 0x06, 0x3e39); // move.w $21248,d7
+    require_long(scheduler, 0x08, 0x21248);
+    require_word(scheduler, 0x0c, 0x5347); // subq.w #1,d7
+    require_word(scheduler, 0x0e, 0x2028); // move.l $10(a0),d0
+    if (big16(scheduler, 0x10) != 0x0010) {
+        throw std::runtime_error("Unexpected Deuteros scheduler program-state offset");
+    }
+    require_word(scheduler, 0x16, 0x2240); // movea.l d0,a1
+    require_word(scheduler, 0x18, 0x3028); // move.w $6(a0),d0
+    if (big16(scheduler, 0x1a) != 0x0006) {
+        throw std::runtime_error("Unexpected Deuteros scheduler selector offset");
+    }
+    // Four mutually exclusive selector checks lead to timer, audio-position,
+    // stepped-position, and gated-input handling respectively. The selectors
+    // and their state offsets are literal bytecode facts, not inferred modes.
+    require_word(scheduler, 0x20, 0xb03c); // cmp.b #3,d0
+    if (big16(scheduler, 0x22) != 3) throw std::runtime_error("Unexpected scheduler timer selector");
+    require_word(scheduler, 0x38, 0xb03c); // cmp.b #5,d0
+    if (big16(scheduler, 0x3a) != 5) throw std::runtime_error("Unexpected scheduler audio selector");
+    require_word(scheduler, 0x62, 0xb03c); // cmp.b #6,d0
+    if (big16(scheduler, 0x64) != 6) throw std::runtime_error("Unexpected scheduler step selector");
+    require_word(scheduler, 0x8c, 0xb03c); // cmp.b #$14,d0
+    if (big16(scheduler, 0x8e) != 0x14) throw std::runtime_error("Unexpected scheduler input selector");
+    require_word(scheduler, 0xba, 0x0839); // btst #5,$dff01f
+    if (big16(scheduler, 0xbc) != 5 || big32(scheduler, 0xbe) != 0xdff01f) {
+        throw std::runtime_error("Unexpected Deuteros scheduler tail probe");
+    }
+    require_word(scheduler, 0xc2, 0x4eb9); // jsr $21698
+    require_long(scheduler, 0xc4, 0x21698);
     // The gated input path at $2188e reaches $21982.  Preserve the exact
     // unsigned comparison/clamp route rather than inferring meanings for the
     // state word or its two downstream services.
@@ -230,7 +268,8 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     require_word(second_exit, 0x16, 0x6746); // beq.b $21a56
     const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
         0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
-        0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, input_dispatch_address,
+        0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, 0x210f8, 0x21248, 0x18,
+        0x10, 0x06, 0x08, {3, 5, 6, 0x14}, 0xdff01f, 5, 0x21698, input_dispatch_address,
         0x21704, 2, 1, 0x218cc, 0x2181c, 0x21704, 2, 0x21a4c, 3, 0x219f8,
         0x219f4, 1, 0x12ff8, 0x12ffc, 0x219f4, 5, 0x20b42, 0x4452f018, 0x21a56};
 

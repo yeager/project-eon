@@ -492,6 +492,20 @@ call already present in the loop. This is retained solely as an opcode-level
 clamp and branch map. `$21704`, `$218cc`, and `$2181c` are not assigned guessed
 mode, screen, or gameplay meanings.
 
+The greater-than-two route is now bounded further without executing guessed
+main-game logic. It branches to `$2181c`, whose first instruction calls the
+original scheduler at `$21380`. That routine starts at state base `$210f8`,
+loads its channel count from `$21248`, and advances 24 bytes per slot. It
+tests the active program longword at `+16` and a selector word at `+6`; the
+raw comparisons accept selectors `$03`, `$05`, `$06`, and `$14`. The original
+uses the word at `+8` in these paths before resuming its opcode dispatcher.
+After the channel walk, it probes bit 5 at `$dff01f` and conditionally calls
+`$21698`. These are opcode-validated scheduling and timing/service facts only:
+they do not name the channel fields, emulate a hardware interrupt, or invent
+any gameplay state. The bounded native VM already uses this original 24-byte
+layout for its verified opening commands; parsing this continuation keeps the
+post-input route anchored to the same supplied ADF bytes.
+
 The full immediate control-flow consequences are now opcode-validated as well.
 Both paths at or below two reach `$218cc`, whose shared tail reads `$21704`,
 increments the register value, but does not write that increment back. Result
