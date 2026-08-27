@@ -4,6 +4,7 @@
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_audio.hpp"
+#include "data/deuteros_amiga_alternate_renderer.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 
@@ -28,6 +29,9 @@ public:
         return load_plan_.title_handoff_profile;
     }
     [[nodiscard]] const DeuterosAmigaSoundBank& sound_bank() const { return sound_bank_; }
+    [[nodiscard]] const std::optional<DeuterosAmigaAlternateRendererTrace>& alternate_renderer_trace() const {
+        return alternate_renderer_trace_;
+    }
 
 private:
     AmigaAdf disk_;
@@ -40,6 +44,7 @@ private:
     DeuterosAmigaRandom random_;
     DeuterosAmigaCompositor compositor_;
     std::optional<DeuterosAmigaFrame> last_frame_;
+    std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace_;
     bool frame_composed_on_last_tick_ = false;
     std::uint64_t ticks_ = 0;
 };

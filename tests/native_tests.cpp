@@ -813,6 +813,20 @@ int main() {
     assert(atari_bss_entry.initial_d0 == 0x100);
     assert(atari_bss_entry.copied_words == 0x101);
     assert(atari_bss_entry.jump_address == 0x77000);
+    const auto atari_bss_source = eon::materialize_millennium_atari_bss_source(
+        atari_disk.read(*atari_executable), atari_prg, atari_bootstrap, atari_bss_entry);
+    assert(atari_bss_source.load_base == 0x116c4);
+    assert(atari_bss_source.bss_start_address == 0x1d636);
+    assert(atari_bss_source.source_address == 0x1d652);
+    assert(atari_bss_source.source_data_offset == 0x117a);
+    assert(atari_bss_source.original_data_bytes == 0xbc);
+    assert(atari_bss_source.bss_zero_bytes == 0x146);
+    assert(atari_bss_source.bytes.size() == 0x202);
+    const auto atari_executable_bytes = atari_disk.read(*atari_executable);
+    assert(std::equal(atari_bss_source.bytes.begin(), atari_bss_source.bytes.begin() + 0xbc,
+        atari_executable_bytes.begin() + 28 + 0x117a));
+    assert(std::all_of(atari_bss_source.bytes.begin() + 0xbc, atari_bss_source.bytes.end(),
+        [](std::uint8_t value) { return value == 0; }));
 
     const auto deuteros_atari = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st;
@@ -1346,6 +1360,23 @@ int main() {
         }
     }
     assert(live_input_alternate == 0x0b38);
+    // The first real $fe render pass receives the exact $32a24+$0b38 stream.
+    // $20580's observed opening path sets the original position/table globals
+    // and requests eleven glyph writes before its zero-byte return. It is traced
+    // in memory only: global video/font setup has not been replaced with a
+    // fabricated bitmap renderer.
+    const auto& alternate_trace = live_input_opening.alternate_renderer_trace();
+    assert(alternate_trace);
+    assert(alternate_trace->stream_address == 0x3355c);
+    assert(alternate_trace->stream_offset == 0x0b38);
+    assert(alternate_trace->position_column == 0x0f);
+    assert(alternate_trace->position_row == 0x30);
+    assert(alternate_trace->primary_video_offset == 0x1e0f);
+    assert(alternate_trace->primary_table_selector == 1);
+    assert(alternate_trace->secondary_table_selector == 0);
+    const std::vector<std::uint8_t> expected_alternate_glyphs{
+        'p', 'l', 'e', 'a', 's', 'e', ' ', 'w', 'a', 'i', 't'};
+    assert(alternate_trace->glyph_codes == expected_alternate_glyphs);
     eon::DeuterosAmigaRandom opening_random(system_disk, first_bundle, 0, 0x240);
     assert(opening_random.next() == 0x11);
     assert(opening_random.seed() == 0x11);

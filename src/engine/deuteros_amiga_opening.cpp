@@ -37,6 +37,13 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     random_.advance_vblank();
     frame_composed_on_last_tick_ = false;
     last_frame_ = compositor_.compose(disk_, bundle_, blob_, vm_.compositor_channels());
+    for (const auto& channel : vm_.channels()) {
+        if (channel.active && channel.bitmap_selector == load_plan_.main_stage_entry.alternate_renderer_selector) {
+            alternate_renderer_trace_ = trace_deuteros_amiga_alternate_renderer(
+                transferred_bundle_, load_plan_.main_stage_entry, channel.mode_data);
+            break;
+        }
+    }
     frame_composed_on_last_tick_ = true;
     return events;
 }
