@@ -2,6 +2,7 @@
 #include "launcher.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
+#include "data/deuteros_amiga_loader.hpp"
 #include "data/fat12.hpp"
 #include "data/sha256.hpp"
 
@@ -116,5 +117,14 @@ int main() {
     assert(system_root[0] == 0x4e && system_root[1] == 0xf9); // JMP $00040426
     assert(data_root[0] == 0x00 && data_root[1] == 0x04
         && data_root[2] == 0xbb && data_root[3] == 0x1a);
+    const auto load_plan = eon::parse_deuteros_amiga_load_plan(system_disk);
+    assert(load_plan.bootstrap_loader.disk_offset == 0x2c00);
+    assert(load_plan.bootstrap_loader.length == 0x1600);
+    assert(load_plan.bootstrap_loader.destination == 0x12800);
+    assert(load_plan.bootstrap_loader.entry_address == 0x12a4e);
+    assert(load_plan.main_stage.disk_offset == 0x5800);
+    assert(load_plan.main_stage.length == 0x4200);
+    assert(load_plan.main_stage.destination == 0x20000);
+    assert(load_plan.main_stage.entry_address == 0x21734);
     return 0;
 }

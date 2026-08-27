@@ -59,13 +59,22 @@ images, and both boot blocks pass the Amiga carry-around checksum. Disk 1 uses
 the `DOS\0` identifier while data disk 2 deliberately uses `DEU\0`; neither
 exposes the game through a normal root directory.
 
-Disassembly of the genuine disk 1 boot code shows a `trackdisk.device` raw-read
-request (`io_Command = 0x8002`). It requests `0x1600` bytes from raw-track
-offset `2 * 0x1600 = 0x2c00` into address `0x12800`, then returns execution
+Disassembly of the genuine disk 1 boot code shows an extended decoded read
+(`trackdisk.device` command `CMD_READ | TDF_EXTCOM = 0x8002`), not a raw-MFM
+read. It requests one complete `0x1600`-byte logical track from disk offset
+`2 * 0x1600 = 0x2c00` into address `0x12800`, then returns execution
 address `0x12a4e`. Logical block 880 on disk 1 starts with `JMP $00040426`;
 the equivalent disk 2 block begins `00 04 bb 1a` and is custom indexed data,
 not an AmigaDOS root block. `tools/analyze_m68k.py` regenerates the boot
 disassembly directly from an extracted verified ADF.
+
+Following the selected profile (`D0 = 0`) reveals the next stage without
+emulation: the loader reads `0x4200` bytes from decoded track 4 (ADF offset
+`0x5800`) into memory at `0x20000`. That block begins with `JMP $00021734`.
+The main entry establishes a stack at `0x22296`, initialises graphics-library
+state, reserves memory up to `0x7fff0`, programs Amiga custom-chip registers,
+and enters its input/display loop. These constants are decoded and opcode-
+validated by the native `parse_deuteros_amiga_load_plan` implementation.
 
 ## Initial DOS observations
 

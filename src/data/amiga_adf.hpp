@@ -27,6 +27,7 @@ public:
     [[nodiscard]] std::span<const std::uint8_t, sector_size> sector(
         unsigned cylinder, unsigned side, unsigned sector) const;
     [[nodiscard]] std::span<const std::uint8_t, 1024> boot_block() const;
+    [[nodiscard]] std::span<const std::uint8_t> bytes(std::size_t offset, std::size_t length) const;
 
 private:
     std::vector<std::uint8_t> image_;
@@ -34,4 +35,3 @@ private:
 };
 
 } // namespace eon
-

@@ -54,4 +54,11 @@ std::span<const std::uint8_t, 1024> AmigaAdf::boot_block() const {
     return std::span<const std::uint8_t, 1024>(image_.data(), 1024);
 }
 
+std::span<const std::uint8_t> AmigaAdf::bytes(std::size_t offset, std::size_t length) const {
+    if (offset > image_.size() || length > image_.size() - offset) {
+        throw std::out_of_range("ADF byte range outside disk");
+    }
+    return std::span<const std::uint8_t>(image_.data() + offset, length);
+}
+
 } // namespace eon
