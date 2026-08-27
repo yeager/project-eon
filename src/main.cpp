@@ -1,4 +1,8 @@
 #include "launcher.hpp"
+#include "data/amiga_adf.hpp"
+#include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_loader.hpp"
+#include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
 #include <SDL3/SDL.h>
@@ -45,6 +49,26 @@ SDL_Texture* load_card(SDL_Renderer* renderer, const char* filename) {
     return nullptr;
 }
 
+void report_deuteros_amiga(const eon::ReleaseArchive& release) {
+    constexpr auto clean_system_adf =
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
+    const auto image = eon::extract_asset_by_sha256(release.path, clean_system_adf);
+    if (!image) return;
+    const eon::AmigaAdf disk(*image);
+    const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
+    std::cout << "          ADF boot checksum valid; main stage disk 0x" << std::hex
+        << plan.main_stage.disk_offset << " -> memory 0x" << plan.main_stage.destination
+        << ", entry 0x" << plan.main_stage.entry_address << std::dec << '\n';
+    for (std::size_t index = 0; index < 2; ++index) {
+        const auto bundle = eon::parse_deuteros_amiga_bundle(
+            disk, plan.resource_disk_offsets[index]);
+        std::cout << "          Resource bundle " << index << ": disk 0x" << std::hex
+            << bundle.disk_offset << ", 0x" << bundle.length << std::dec
+            << " bytes, " << bundle.object_count << " objects, mode "
+            << bundle.mode_flag << '\n';
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -76,6 +100,10 @@ int main(int argc, char** argv) {
                 << eon::name(release.platform) << " / " << release.language << '\n'
                 << "          " << release.sha256 << '\n'
                 << "          " << release.path << '\n';
+            if (release.game == eon::Game::deuteros
+                && release.platform == eon::Platform::amiga) {
+                report_deuteros_amiga(release);
+            }
         }
         return found ? 0 : 5;
     }
