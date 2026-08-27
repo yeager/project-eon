@@ -60,6 +60,23 @@ dumps are preferred as semantic baselines.
 - Deuteros identifiers are `DOS\0` (system) and `DEU\0` (custom data). Logical
   block 880 is game code/data rather than a normal AmigaDOS root directory.
 
+### Millennium AmigaDOS filesystem evidence
+
+The Millennium archive contains six independently cracked images. The two
+Razor images are standard 880 KiB `DOS\0` ADFs with an intact root block at
+block 880. The verified Razor image has SHA-256
+`fe83c10119ef9bf2953b6fcd9a13d07f2c276215aaa64e2e541402a527a616f2` and
+root volume label `Millennium (Crack Razor)`. Its 72 root hash slots contain
+no file entries: game content is loaded from raw sectors (not fabricated as
+filesystem files). Four other supplied Millennium variants have game code at
+the boot-declared root-block location, so they are correctly rejected as
+non-standard AmigaDOS volumes.
+
+`AmigaOfs` is therefore a strict, read-only OFS/FFS reader for future standard
+images: it validates root, directory and hash-chain block types; detects
+cycles; bounds every block reference; and refuses incomplete file chains. It
+does not infer missing files or mutate image data.
+
 ### Deuteros Amiga execution chain
 
 Opcode-validated 68000 decoding proves:
