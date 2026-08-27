@@ -137,10 +137,25 @@ std::vector<std::uint8_t> AmigaOfs::read_file(std::string_view path) const {
             current = be32(data, first_data);
         }
     } else {
-        for (std::size_t index = hash_slots; index-- > 0 && output.size() < entry->byte_size;) {
-            const auto current = be32(header, hash_table + index * 4);
-            if (current == 0) continue;
-            append_checked(output, block(current), entry->byte_size);
+        // FFS extends a large file with more file-header blocks. The pointer
+        // table in each header is populated from the high end down.
+        std::vector<std::uint32_t> headers;
+        std::uint32_t current_header = entry->header_block;
+        while (current_header != 0 && output.size() < entry->byte_size) {
+            if (std::find(headers.begin(), headers.end(), current_header) != headers.end()) {
+                throw std::runtime_error("Cycle in FFS file-header extension chain");
+            }
+            headers.push_back(current_header);
+            const auto current = block(current_header);
+            if (be32(current, 0) != type_header || be32s(current, secondary_type) != st_file) {
+                throw std::runtime_error("Invalid FFS file-header extension");
+            }
+            for (std::size_t index = hash_slots; index-- > 0 && output.size() < entry->byte_size;) {
+                const auto data_block = be32(current, hash_table + index * 4);
+                if (data_block == 0) continue;
+                append_checked(output, block(data_block), entry->byte_size);
+            }
+            current_header = be32(current, extension);
         }
     }
     if (output.size() != entry->byte_size) throw std::runtime_error("Truncated AmigaDOS file");
