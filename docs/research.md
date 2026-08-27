@@ -34,6 +34,17 @@ content hashes, never archive filenames. Extraction rejects out-of-bounds
 metadata, oversized entries, unsupported compression, incomplete Deflate
 streams and CRC mismatches before an asset reaches a decoder.
 
+### DOS FAT12
+
+The Spanish 720 KiB `MRTE.IMG` uses a conventional FAT12 layout with 512-byte
+sectors, two sectors per cluster, two FAT copies and 112 root directory slots.
+Project Eon reads its 39 live root files directly from the supplied nested ZIP.
+Cluster traversal is bounded and rejects invalid, cyclic and out-of-image
+chains. As evidence anchors, the extracted Spanish `2200AD.EXE` is 54,566
+bytes with SHA-256 `9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6`;
+`GX.LIB` is 311,420 bytes with SHA-256
+`e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767`.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are
