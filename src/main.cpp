@@ -473,7 +473,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << staging_reachability.absolute_jsr_counts[0] << '/' << staging_reachability.absolute_jmp_counts[0]
         << ", 0x" << std::hex << staging_reachability.staging_entry_addresses[1] << " = " << std::dec
         << staging_reachability.absolute_jsr_counts[1] << '/' << staging_reachability.absolute_jmp_counts[1]
-        << " (direct encodings only; indirect/transformed paths unproven)\n";
+        << "; PC-relative BSR.W counts = " << staging_reachability.pc_relative_bsr_word_counts[0]
+        << '/' << staging_reachability.pc_relative_bsr_word_counts[1]
+        << " (only these static encodings; indirect/transformed paths unproven)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
