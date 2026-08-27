@@ -1151,6 +1151,16 @@ back-edge is raw code only. The BIOS interrupt is the first external boundary
 for this route. No BIOS behavior, loop iteration, or runtime state is
 emulated.
 
+The register setup at that boundary is exact: each iteration moves a byte from
+the `$0456` table into `BH`, sets `AX=$1000` (`AH=$10`, `AL=$00`), and invokes
+`INT $10` with incrementing `BL` from zero through fifteen. This is the
+documented BIOS "set single palette register" operation: `BL` is the palette
+register and `BH` its raw color value. Project Eon's narrowly typed SDL-facing
+adapter payload therefore exposes the 16 verified `(register, value)` pairs,
+but nothing calls it automatically: reaching this routine still depends on
+the preceding private-interrupt paths returning, and no BIOS or SDL palette
+effect is presumed.
+
 #### Main-loop action dispatch
 
 The supplied English `2200AD.EXE` (54,391 bytes, SHA-256

@@ -1,10 +1,22 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
 
 namespace eon {
+
+// SDL has no BIOS interrupt surface. This is the narrow host-adapter payload
+// for BIOS INT 10h / AH=10h / AL=00h (set one EGA/VGA palette register): the
+// original BL register selects the register and BH supplies its raw value.
+// It describes requests encoded by original bytes, not a current host palette.
+struct MillenniumDosEgaPaletteRegisterWrite {
+    std::uint8_t register_index = 0;
+    std::uint8_t color_value = 0;
+
+    constexpr bool operator==(const MillenniumDosEgaPaletteRegisterWrite&) const = default;
+};
 
 // Exact, non-semantic trace of the first record in 2200AD.EXE's F-key table.
 // These fields are code/data addresses in the flat image, not host pointers.
@@ -296,8 +308,11 @@ struct MillenniumDosGameFlow {
     std::uint16_t startup_other_path_next_call_address = 0;
     std::uint16_t startup_other_followup_table_address = 0;
     std::uint8_t startup_other_followup_table_size = 0;
+    std::array<std::uint8_t, 16> startup_other_followup_table_values{};
     std::uint16_t startup_other_followup_interrupt_site = 0;
     std::uint8_t startup_other_followup_interrupt_number = 0;
+    std::uint8_t startup_other_followup_video_function = 0;
+    std::uint8_t startup_other_followup_video_subfunction = 0;
     std::uint32_t startup_nonzero_dx_branch_address = 0;
     std::uint16_t main_loop_address = 0;
     std::uint32_t action_poll_address = 0;
@@ -322,5 +337,12 @@ struct MillenniumDosGameFlow {
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
     std::span<const std::uint8_t> game_executable);
+
+// Projects the verified, finite sequence of original BIOS palette-register
+// requests into the SDL-facing adapter payload. Callers must still establish
+// the conditional native path themselves; this function neither invokes BIOS
+// nor applies a palette to SDL or any reconstructed runtime state.
+[[nodiscard]] std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
+millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow);
 
 } // namespace eon
