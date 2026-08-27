@@ -114,9 +114,10 @@ Verify genuine release archives by SHA-256 without opening SDL:
 The current SDL application is deliberately an incremental reimplementation,
 not a mock game. It lists detected real releases and proves the Original/Modern
 presentation boundary while reverse engineering proceeds. Selecting Deuteros
-now displays an authentic bitmap decoded at runtime from the verified Amiga ADF
-with its original RGB4 palette; it never substitutes placeholder art or
-invented game behaviour for undecoded original data.
+now runs the recovered Amiga opening channel program live at runtime from the
+verified ADF, with its original RGB4 palette, VBL random source and recovered
+input edge. It never substitutes placeholder art or invented game behaviour
+for undecoded original data.
 
 The launcher follows the same broad structure as OpenCaptive: a native SDL3
 start menu, separate game cards, direct CLI game selection, a platform-neutral
@@ -157,8 +158,8 @@ validated against the real images. The 68000 bootloader's decoded-track request 
 documented in [the generated disassembly](docs/generated/deuteros-amiga-boot.md).
 Both discovered four-bitplane RLE layouts are implemented, covering all 216
 bitmap records in the first two resource bundles. The SDL launch view exercises
-the same importer, channel VM, compositor, original palettes, and VBL tick
-sequence. It freezes at the first still-unimplemented stateful
+the same importer, channel VM, compositor, original palettes, VBL tick
+sequence, and recovered input gate. It freezes at the first still-unimplemented stateful
 save/restore boundary rather than fabricating later animation frames.
 
 The repository does not contain the commercial games. Point the inventory tool

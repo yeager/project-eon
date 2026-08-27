@@ -19,6 +19,7 @@
 #include <array>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -148,33 +149,21 @@ std::optional<PreviewAnimation> load_millennium_preview(
     }
 }
 
-std::optional<PreviewAnimation> load_deuteros_preview(
+std::unique_ptr<eon::DeuterosAmigaOpening> load_deuteros_opening(
     const std::vector<eon::ReleaseArchive>& releases) {
     constexpr auto clean_system_adf =
         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
     const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
         return candidate.game == eon::Game::deuteros && candidate.platform == eon::Platform::amiga;
     });
-    if (release == releases.end()) return std::nullopt;
+    if (release == releases.end()) return {};
     try {
         const auto image = eon::extract_asset_by_sha256(release->path, clean_system_adf);
-        if (!image) return std::nullopt;
-        eon::DeuterosAmigaOpening opening(*image);
-        PreviewAnimation preview{eon::DeuterosAmigaFrame::width,
-            eon::DeuterosAmigaFrame::height, {}};
-        constexpr std::size_t maximum_verified_ticks = 512;
-        for (std::size_t tick = 0; tick < maximum_verified_ticks; ++tick) {
-            static_cast<void>(opening.tick());
-            if (!opening.frame_composed_on_last_tick()) break;
-            const auto frame = opening.rgba_frame();
-            if (!frame) break;
-            preview.rgba_frames.push_back(*frame);
-        }
-        if (preview.rgba_frames.empty()) return std::nullopt;
-        return preview;
+        if (!image) return {};
+        return std::make_unique<eon::DeuterosAmigaOpening>(std::move(*image));
     } catch (const std::exception& error) {
-        std::cerr << "Unable to decode Deuteros preview: " << error.what() << '\n';
-        return std::nullopt;
+        std::cerr << "Unable to start Deuteros opening: " << error.what() << '\n';
+        return {};
     }
 }
 
@@ -242,8 +231,6 @@ int main(int argc, char** argv) {
         std::cerr << "Requested original release is not present.\n";
         return 4;
     }
-    std::optional<PreviewAnimation> deuteros_preview;
-    if (!releases.empty()) deuteros_preview = load_deuteros_preview(releases);
     const auto millennium_preview = load_millennium_preview(releases);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
@@ -265,17 +252,14 @@ int main(int argc, char** argv) {
         {eon::Game::deuteros, "DEUTEROS", "THE NEXT MILLENNIUM", "deuteros.png", {664, 170, 552, 310}},
     }};
     for (auto& card : cards) card.texture = load_card(renderer, card.filename);
+    std::unique_ptr<eon::DeuterosAmigaOpening> deuteros_opening;
     SDL_Texture* preview_texture = nullptr;
-    const auto create_deuteros_preview_texture = [&] {
-        if (!deuteros_preview || preview_texture) return;
+    const auto create_deuteros_opening_texture = [&] {
+        if (!deuteros_opening || preview_texture) return;
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-            SDL_TEXTUREACCESS_STREAMING, deuteros_preview->width, deuteros_preview->height);
-        if (preview_texture) {
-            SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview->rgba_frames.front().data(),
-                deuteros_preview->width * 4);
-        }
+            SDL_TEXTUREACCESS_STREAMING, eon::DeuterosAmigaFrame::width,
+            eon::DeuterosAmigaFrame::height);
     };
-    create_deuteros_preview_texture();
     SDL_Texture* millennium_preview_texture = nullptr;
     if (millennium_preview) {
         millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -289,8 +273,8 @@ int main(int argc, char** argv) {
     Screen screen = request.game ? Screen::launching : Screen::menu;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     int focused = 0;
-    std::uint64_t animation_start = SDL_GetTicks();
-    std::size_t displayed_preview_frame = 0;
+    std::uint64_t deuteros_last_tick = SDL_GetTicks();
+    bool deuteros_input_pending = false;
     bool show_scanner = false;
     bool running = true;
     while (running) {
@@ -305,6 +289,13 @@ int main(int argc, char** argv) {
                 request.presentation = request.presentation == eon::Presentation::original
                     ? eon::Presentation::modern : eon::Presentation::original;
             }
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+                && screen == Screen::launching && selected == eon::Game::deuteros
+                && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1) {
+                // The recovered title stream only distinguishes an input edge.
+                // Preserve that contract; the VM decides whether its delay has elapsed.
+                deuteros_input_pending = true;
+            }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) {
                 show_scanner = !show_scanner;
@@ -316,7 +307,11 @@ int main(int argc, char** argv) {
                     if (eon::release_available(releases, game, std::nullopt)) {
                         selected = game;
                         screen = Screen::launching;
-                        animation_start = SDL_GetTicks();
+                        if (selected == eon::Game::deuteros) {
+                            deuteros_opening = load_deuteros_opening(releases);
+                            create_deuteros_opening_texture();
+                            deuteros_last_tick = SDL_GetTicks();
+                        }
                     }
                 }
             }
@@ -329,7 +324,11 @@ int main(int argc, char** argv) {
                         if (eon::release_available(releases, cards[index].game, std::nullopt)) {
                             selected = cards[index].game;
                             screen = Screen::launching;
-                            animation_start = SDL_GetTicks();
+                            if (selected == eon::Game::deuteros) {
+                                deuteros_opening = load_deuteros_opening(releases);
+                                create_deuteros_opening_texture();
+                                deuteros_last_tick = SDL_GetTicks();
+                            }
                         }
                     }
                 }
@@ -339,8 +338,30 @@ int main(int argc, char** argv) {
         if (!scanner.done()) {
             static_cast<void>(scanner.advance(show_scanner ? 32 : 1));
             releases = scanner.releases();
-            if (!deuteros_preview) deuteros_preview = load_deuteros_preview(releases);
-            create_deuteros_preview_texture();
+        }
+        if (screen == Screen::launching && selected == eon::Game::deuteros
+            && !deuteros_opening) {
+            deuteros_opening = load_deuteros_opening(releases);
+            create_deuteros_opening_texture();
+            deuteros_last_tick = SDL_GetTicks();
+        }
+        if (screen == Screen::launching && selected == eon::Game::deuteros
+            && deuteros_opening) {
+            constexpr std::uint64_t scheduler_period_ms = 20;
+            constexpr std::size_t maximum_catch_up_ticks = 4;
+            const auto now = SDL_GetTicks();
+            std::size_t tick_count = 0;
+            while (now - deuteros_last_tick >= scheduler_period_ms
+                && tick_count < maximum_catch_up_ticks) {
+                static_cast<void>(deuteros_opening->tick(deuteros_input_pending));
+                deuteros_input_pending = false;
+                deuteros_last_tick += scheduler_period_ms;
+                ++tick_count;
+            }
+            if (tick_count == maximum_catch_up_ticks
+                && now - deuteros_last_tick >= scheduler_period_ms) {
+                deuteros_last_tick = now;
+            }
         }
 
         const bool modern = request.presentation == eon::Presentation::modern;
@@ -396,22 +417,17 @@ int main(int argc, char** argv) {
                     static_cast<float>(millennium_preview->height) * scale};
                 SDL_RenderTexture(renderer, millennium_preview_texture, nullptr, &preview_bounds);
                 draw_text(renderer, 64, 680, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
-            } else if (selected == eon::Game::deuteros && preview_texture && deuteros_preview) {
-                const auto elapsed_ticks = static_cast<std::size_t>((SDL_GetTicks() - animation_start) / 20U);
-                const auto frame_index = std::min(elapsed_ticks,
-                    deuteros_preview->rgba_frames.size() - 1);
-                if (frame_index != displayed_preview_frame) {
-                    SDL_UpdateTexture(preview_texture, nullptr,
-                        deuteros_preview->rgba_frames[frame_index].data(), deuteros_preview->width * 4);
-                    displayed_preview_frame = frame_index;
-                }
+            } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
+                const auto frame = deuteros_opening->rgba_frame();
+                if (frame) SDL_UpdateTexture(preview_texture, nullptr, frame->data(),
+                    eon::DeuterosAmigaFrame::width * 4);
                 draw_text(renderer, 64, 220, "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE");
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 const float scale = 2.0F;
                 SDL_FRect preview_bounds{64, 250,
-                    static_cast<float>(deuteros_preview->width) * scale,
-                    static_cast<float>(deuteros_preview->height) * scale};
+                    static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
+                    static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
                 draw_text(renderer, 64, 580, request.game ? "ESC: QUIT" : "ESC: BACK TO MENU");
             } else {
