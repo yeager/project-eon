@@ -412,6 +412,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto prg = eon::parse_atari_st_prg(executable_bytes);
     const auto bootstrap = eon::parse_millennium_atari_bootstrap(executable_bytes, prg);
     const auto bss_entry = eon::parse_millennium_atari_bss_entry(executable_bytes, prg, bootstrap);
+    const auto bss_source = eon::materialize_millennium_atari_bss_source(
+        executable_bytes, prg, bootstrap, bss_entry);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -430,7 +432,11 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << "          BSS entry: copies " << bss_entry.copied_words << " words from 0x"
         << std::hex << bss_entry.copy_source_address << " to 0x"
         << bss_entry.copy_destination_address << "; JMP 0x" << bss_entry.jump_address
-        << std::dec << " (source initialization not yet proven; not executed)\n";
+        << std::dec << " (original bootstrap; not executed)\n"
+        << "          BSS source: PRG load base 0x" << std::hex << bss_source.load_base
+        << "; " << std::dec << bss_source.original_data_bytes << " original DATA bytes at 0x"
+        << std::hex << bss_source.source_data_offset << " plus " << std::dec
+        << bss_source.bss_zero_bytes << " loader-zeroed BSS bytes (in-memory only)\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
@@ -1144,10 +1150,17 @@ int main(int argc, char** argv) {
                         + handoff.str()
                         + " -> STAGE ENTRY 0x40426 (REIMPLEMENTATION IN PROGRESS)");
                 }
+                if (const auto& trace = deuteros_opening->alternate_renderer_trace()) {
+                    draw_text(renderer, 64, 284, "ORIGINAL $20580 STREAM: +0x"
+                        + [&] { std::ostringstream stream; stream << std::hex << trace->stream_offset;
+                            return stream.str(); }()
+                        + " - " + std::to_string(trace->glyph_codes.size())
+                        + " VERIFIED GLYPH WRITES (GLOBAL VIDEO SETUP PENDING)");
+                }
                 SDL_SetTextureScaleMode(preview_texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 const float scale = 2.0F;
-                SDL_FRect preview_bounds{64, deuteros_title_resource ? 290.0F : 274.0F,
+                SDL_FRect preview_bounds{64, deuteros_title_resource ? 306.0F : 274.0F,
                     static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);

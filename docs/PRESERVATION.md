@@ -100,10 +100,15 @@ The copied bytes start with a second strict stub: `MOVEA.L #0x77000,A1`,
 `MOVEA.L #0x1d652,A0`, `MOVE.W #0x100,D0`, `MOVE.W (A0)+,(A1)+`,
 `DBF D0,-4`, then `JMP 0x77000`. Thus it requests 257 original 16-bit words
 from the literal address `0x1d652` into `0x77000` before the next transfer.
-The bootstrap itself proves only its initial `0xd8`-byte BSS copy, not that
-the complete source range is initialized. Project Eon records this boundary
-and deliberately does not invent the missing producer, create either buffer,
-or execute the jump.
+The source's provenance is now fully accounted for from the PRG layout and
+that bootstrap. `0x1d636 - (TEXT + DATA)` establishes the observed load base
+`0x116c4`, so `0x1d636` is the first BSS byte. The requested source begins
+`0x1c` bytes into the transferred bootstrap: its first `0xbc` bytes are the
+original DATA range `0x117a..0x1235`; its remaining `0x146` bytes lie in the
+declared BSS and are therefore the loader-zeroed tail. Project Eon can form
+that exact 514-byte source only in memory, retaining the original DATA bytes
+and explicitly zeroing only the PRG's BSS portion. It neither unpacks nor
+writes media, applies no relocation, and still does not execute the jump.
 
 ### Millennium AmigaDOS filesystem evidence
 
@@ -612,6 +617,18 @@ this exact A4/call boundary, then deliberately leaves the `$fe` pixel effect
 unrendered until the setup and all stream control classes are fully recovered.
 It does not reinterpret those bytes as an indexed sprite, create a synthetic
 frame, or write/unpack media.
+
+The first fully observed `$20580` stream is now executed as a strict in-memory
+trace. The opening input path supplies `$32a24+$0b38`; its original bytes are
+`$16,$0f,$30,$10,$01,$11,$00`, then the eleven bit-7-clear glyph bytes
+`please wait`, followed by `$00`. `$20580` therefore calls `$2069c`, which
+sets `$20510` to `$20128 + $1e0f`; `$10` and `$11` select `$20488 + 8` and
+`$20488` for `$20508` and `$2050c`; each glyph calls `$206e6`. The latter
+writes through original global font/video pointers (`$20538`, `$20510`,
+`$20508`, `$2050c`), whose initialization is not fully recovered. Project
+Eon preserves those eleven byte values and exact pointer arithmetic, but does
+not claim pixels or substitute host buffers. Any other command class or an
+out-of-range payload pointer is rejected as a preservation boundary.
 
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
