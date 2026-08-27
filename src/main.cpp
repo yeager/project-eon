@@ -962,6 +962,17 @@ int main(int argc, char** argv) {
                                << " -> POLL $" << trace->wait_call_address;
                             draw_text(renderer, 610, 390, f6.str());
                         }
+                        if (const auto trace = millennium_game_session->last_seventh_function_key_trace()) {
+                            std::ostringstream f7;
+                            f7 << "F7 ORIGINAL GATE: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                               << trace->handler_address << " -> [$"
+                               << trace->first_runtime_word_address << "],[$"
+                               << trace->second_runtime_word_address << "],[$"
+                               << trace->third_runtime_word_address << "] -> CALL $"
+                               << trace->terminal_call_address;
+                            draw_text(renderer, 610, 390, f7.str());
+                        }
                     }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;

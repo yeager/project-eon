@@ -41,6 +41,8 @@ public:
     last_fifth_function_key_trace() const { return last_fifth_function_key_trace_; }
     [[nodiscard]] std::optional<MillenniumDosSixthFunctionKeyTrace>
     last_sixth_function_key_trace() const { return last_sixth_function_key_trace_; }
+    [[nodiscard]] std::optional<MillenniumDosSeventhFunctionKeyTrace>
+    last_seventh_function_key_trace() const { return last_seventh_function_key_trace_; }
     [[nodiscard]] const MillenniumDosGameFlow& flow() const { return flow_; }
 
 private:
@@ -53,6 +55,7 @@ private:
     std::optional<MillenniumDosFourthFunctionKeyTrace> last_fourth_function_key_trace_;
     std::optional<MillenniumDosFifthFunctionKeyTrace> last_fifth_function_key_trace_;
     std::optional<MillenniumDosSixthFunctionKeyTrace> last_sixth_function_key_trace_;
+    std::optional<MillenniumDosSeventhFunctionKeyTrace> last_seventh_function_key_trace_;
 };
 
 } // namespace eon

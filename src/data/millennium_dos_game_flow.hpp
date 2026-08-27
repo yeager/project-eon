@@ -117,6 +117,33 @@ struct MillenniumDosSixthFunctionKeyTrace {
     std::uint16_t wait_call_address = 0;
 };
 
+// Exact, non-semantic trace of table record six (raw F7 / $41). Its native
+// handler has the same $a19e admission gate as F3/F4/F6. The admitted path
+// reads several native runtime words and routes them through in-image helper
+// calls. Project Eon exposes only the verified control-flow literals and
+// addresses; it neither supplies those values nor executes the helpers.
+struct MillenniumDosSeventhFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t initialization_guard_address = 0;
+    std::uint8_t initial_al_value = 0;
+    std::uint16_t first_call_address = 0;
+    std::uint16_t first_command_value = 0;
+    std::uint16_t first_command_call_address = 0;
+    std::uint16_t second_command_value = 0;
+    std::uint16_t second_command_call_address = 0;
+    std::uint16_t first_runtime_word_address = 0;
+    std::uint16_t second_runtime_word_address = 0;
+    std::uint16_t third_runtime_word_address = 0;
+    std::uint16_t fourth_runtime_word_address = 0;
+    std::uint16_t fifth_runtime_word_address = 0;
+    std::uint16_t sixth_runtime_word_address = 0;
+    std::uint16_t helper_a_address = 0;
+    std::uint16_t helper_b_address = 0;
+    std::uint16_t helper_c_address = 0;
+    std::uint16_t literal_al_value = 0;
+    std::uint16_t terminal_call_address = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -137,6 +164,7 @@ struct MillenniumDosGameFlow {
     MillenniumDosFourthFunctionKeyTrace fourth_function_key;
     MillenniumDosFifthFunctionKeyTrace fifth_function_key;
     MillenniumDosSixthFunctionKeyTrace sixth_function_key;
+    MillenniumDosSeventhFunctionKeyTrace seventh_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(

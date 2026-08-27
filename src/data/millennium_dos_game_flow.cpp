@@ -41,6 +41,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f5_handler_offset = 0x7597 - load_bias;
     constexpr std::size_t f6_table_offset = 0x2fe7 - load_bias;
     constexpr std::size_t f6_handler_offset = 0x7415 - load_bias;
+    constexpr std::size_t f7_table_offset = 0x2fef - load_bias;
+    constexpr std::size_t f7_handler_offset = 0x7521 - load_bias;
     constexpr std::size_t record_pointer_offset = 0x27c4 - load_bias;
     constexpr std::size_t initial_record_offset = 0x12cc - load_bias;
     constexpr std::size_t initial_record_flag_offset = 0x12f0 - load_bias;
@@ -148,6 +150,28 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xc6, 0x06, 0xa8, 0x75, 0x0c, 0xc6, 0x06, 0xae,
         0x75, 0x00, 0xb8, 0x07, 0x32, 0xa3, 0xa6, 0x75,
         0xe8, 0xaa, 0x95, 0xd0, 0xeb, 0x72, 0xf9, 0xc3});
+    // Record six (raw F7 / $41) uses the same native $a19e gate. On its
+    // admitted path it reads words at $da17/$da18/$da27/$da26/$da35/$da37,
+    // calls the observed helper sequence, and returns. The values and helper
+    // effects are native runtime state, so this parser records no semantics.
+    constexpr auto f7_table = std::to_array<std::uint8_t>({
+        0x24, 0x2a, 0x09, 0x1b, 0x36, 0x06, 0x21, 0x75});
+    constexpr auto f7_handler = std::to_array<std::uint8_t>({
+        0xa1, 0x9e, 0xa1, 0x23, 0xc0, 0x74, 0x01, 0xc3,
+        0xb0, 0x1d, 0xe8, 0xfe, 0xd7, 0xb8, 0x12, 0x06,
+        0xe8, 0x08, 0x92, 0xb8, 0x2a, 0x01, 0xe8, 0x2c,
+        0x91, 0xa0, 0x17, 0xda, 0x32, 0xe4, 0x05, 0xa2,
+        0x01, 0x2e, 0x8b, 0x1e, 0xca, 0x05, 0xe8, 0x1c,
+        0x91, 0xa1, 0x18, 0xda, 0xe8, 0x92, 0x91, 0x2e,
+        0x89, 0x1e, 0xca, 0x05, 0xe8, 0x76, 0x90, 0xa1,
+        0x27, 0xda, 0xe8, 0x7e, 0x91, 0xe8, 0x6d, 0x90,
+        0xa0, 0x26, 0xda, 0x32, 0xe4, 0xe8, 0x73, 0x91,
+        0xe8, 0x62, 0x90, 0xa1, 0x35, 0xda, 0xe8, 0x6a,
+        0x91, 0xe8, 0x59, 0x90, 0xa1, 0x37, 0xda, 0x50,
+        0x32, 0xe4, 0xe8, 0x5e, 0x91, 0xb0, 0x2e, 0xe8,
+        0xfb, 0x91, 0x58, 0x88, 0xe0, 0x32, 0xe4, 0xe8,
+        0x7f, 0x91, 0xb0, 0x25, 0xe8, 0xee, 0x91, 0xe8,
+        0x0a, 0x96, 0xe8, 0x61, 0xd6, 0xc3});
     if (!has_bytes(game_executable, entry_offset, entry)
         || !has_bytes(game_executable, loop_offset, loop)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
@@ -166,6 +190,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f5_handler_offset, f5_handler)
         || !has_bytes(game_executable, f6_table_offset, f6_table)
         || !has_bytes(game_executable, f6_handler_offset, f6_handler)
+        || !has_bytes(game_executable, f7_table_offset, f7_table)
+        || !has_bytes(game_executable, f7_handler_offset, f7_handler)
         || !has_bytes(game_executable, record_pointer_offset, record_pointer_table)
         || !has_bytes(game_executable, initial_record_offset, initial_record)
         || !has_bytes(game_executable, initial_record_flag_offset, initial_record_flag)) {
@@ -258,6 +284,27 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .callback_word_value = 0x3207,
             .callback_word_address = 0x75a6,
             .wait_call_address = 0x09fa,
+        },
+        .seventh_function_key = {
+            .handler_address = 0x7521,
+            .initialization_guard_address = 0xa19e,
+            .initial_al_value = 0x1d,
+            .first_call_address = 0x4d2c,
+            .first_command_value = 0x0612,
+            .first_command_call_address = 0x073c,
+            .second_command_value = 0x012a,
+            .second_command_call_address = 0x0666,
+            .first_runtime_word_address = 0xda17,
+            .second_runtime_word_address = 0xda18,
+            .third_runtime_word_address = 0xda27,
+            .fourth_runtime_word_address = 0xda26,
+            .fifth_runtime_word_address = 0xda35,
+            .sixth_runtime_word_address = 0xda37,
+            .helper_a_address = 0x06dc,
+            .helper_b_address = 0x05ce,
+            .helper_c_address = 0x077e,
+            .literal_al_value = 0x0025,
+            .terminal_call_address = 0x4bf7,
         },
     };
 }
