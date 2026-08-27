@@ -144,6 +144,35 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {
+    if (release.language == "es") {
+        // The Spanish release is a genuine FAT12 floppy rather than a loose
+        // file archive. Read the verified image in memory; never unpack it
+        // into a runtime directory.
+        constexpr auto spanish_image_sha256 =
+            "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
+        const auto image = eon::extract_asset_by_sha256(release.path, spanish_image_sha256);
+        if (!image) throw std::runtime_error("Verified Spanish Millennium floppy missing");
+        const eon::Fat12Disk disk(*image);
+        const auto* title_entry = disk.find("TITLE.LIB");
+        const auto* static_entry = disk.find("2200AD4.BIN");
+        if (!title_entry || !static_entry) {
+            throw std::runtime_error("Verified Spanish Millennium media missing title data");
+        }
+        const eon::MillenniumDosLib title_lib(disk.read(*title_entry));
+        const auto* p00 = title_lib.find("P00");
+        if (!p00) throw std::runtime_error("Verified Spanish TITLE.LIB has no P00 entry");
+        const auto resource = title_lib.read(*p00);
+        const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
+        const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
+        const auto game_data = eon::parse_millennium_dos_game_data(disk.read(*static_entry));
+        std::cout << "          Spanish FAT12: " << disk.root_entries().size()
+            << " root files; TITLE.LIB P00 " << bitmap.width << 'x' << bitmap.height
+            << ", RGB6 DAC entries 256, logical translation "
+            << palette.logical_to_dac.size() << '\n';
+        std::cout << "          Spanish 2200AD4.BIN: " << game_data.celestial_labels.size()
+            << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
+        return;
+    }
     constexpr auto title_lib_sha256 =
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
     const auto title_bytes = eon::extract_asset_by_sha256(release.path, title_lib_sha256);
@@ -418,8 +447,7 @@ int main(int argc, char** argv) {
                 report_millennium_amiga(release);
             }
             if (release.game == eon::Game::millennium
-                && release.platform == eon::Platform::dos
-                && release.language == "en") {
+                && release.platform == eon::Platform::dos) {
                 report_millennium_dos(release);
             }
             if (release.game == eon::Game::millennium

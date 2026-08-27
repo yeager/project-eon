@@ -411,6 +411,30 @@ their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 uses DOS services and loads original libraries. See the
 [DOS analysis](generated/dos-millennium.md).
 
+### Millennium Spanish DOS floppy evidence
+
+The verified Spanish outer archive contains one 737,280-byte FAT12 image
+(SHA-256 `1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d`).
+Its 39 root entries include distinct `TITLE.LIB` (18,998 bytes, SHA-256
+`30d6ccb95e7f501d59e72fc2e34583302116bd88f6eceaae989f6ad986ef7f19`) and
+`2200AD4.BIN` (13,254 bytes, SHA-256
+`8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31`).
+
+The same native LIB reader finds 38 resources at directory `$486e`. `P00`
+starts at `$000006`, has 10,555 bytes, and decodes to a 320×200 indexed frame.
+Its index bytes match the supplied English release (`85ec…f4ee`), while the
+Spanish palette/translation produces its own RGBA SHA-256
+`667e297e1cd2860fa5dd6b10749d3af7859dad0844408a32a4d04a682153bc92`.
+The reader therefore retains the release's actual palette rather than
+substituting an English one.
+
+Spanish `2200AD4.BIN` has its 41 NUL-terminated celestial labels at `$03db`,
+not the English `$03d2`; Project Eon reads the media bytes at the observed
+layout and preserves labels such as `Tierra ` and `Asteroides ` unchanged.
+The floppy has `MILL.BAT`, not the verified English `MILL.COM` launcher, so
+the title-to-game control boundary is deliberately not claimed for this
+release.
+
 The English DOS `TITLE.LIB` (18,907 bytes, SHA-256
 `6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678`)
 and `GX.LIB` (312,748 bytes, SHA-256
