@@ -208,8 +208,18 @@ successive words beginning at `A1+0x36`; for each, original `LSL`, `ROXL`, and
 last word/byte pair and conditionally negates the word. This is a byte-exact
 control/data-flow profile only. Project Eon calls it
 `MillenniumAmigaResidentWordSplitter`, does not assign gameplay meaning to the
-values, does not execute its 68000 instructions, and fails closed on any
-changed opcode or RAM operand.
+values, and fails closed on any changed opcode or RAM operand. Its proven
+pre-helper operation is also available as an in-memory transform: for three
+already-resident source words it emits the exact three low-15-bit words and
+three `0`/`1` former-high-bit bytes. It neither reads nor writes game media.
+
+This is deliberately not an implementation of the full subroutine. No raw
+resident caller of `0x68016` has been recovered, and the `JSR 0x7ba12` target
+does not yet have a validated executable boundary in the supplied raw range.
+After that call the original reloads `0x7b768` and `0x7b778`, conditionally
+negates the word when the byte is nonzero, then returns; the helper may have
+changed either location. Project Eon therefore does not claim a final return
+value or invoke this transform from gameplay.
 
 ### Deuteros Atari ST protected-media boot chain
 

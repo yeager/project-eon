@@ -405,7 +405,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << ", 0x" << splitter.magnitude_word_addresses[2] << "; sign bytes -> 0x"
         << splitter.sign_byte_addresses[0] << ", 0x" << splitter.sign_byte_addresses[1]
         << ", 0x" << splitter.sign_byte_addresses[2] << "; helper 0x"
-        << splitter.helper_address << std::dec << '\n';
+        << splitter.helper_address << std::dec << '\n'
+        << "          splitter pre-helper transform is modeled in memory; no raw-resident "
+           "caller or helper return effect is yet proven\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
