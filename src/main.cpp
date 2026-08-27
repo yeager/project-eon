@@ -896,6 +896,15 @@ int main(int argc, char** argv) {
                                << " +$" << trace->record_stride;
                             draw_text(renderer, 610, 342, f2.str());
                         }
+                        if (const auto trace = millennium_game_session->last_third_function_key_trace()) {
+                            std::ostringstream f3;
+                            f3 << "F3 ORIGINAL GATES: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0; [$"
+                               << trace->availability_address << "] != 0 -> HANDLER $"
+                               << trace->handler_address << " -> CALLBACK $"
+                               << trace->callback_address;
+                            draw_text(renderer, 610, 358, f3.str());
+                        }
                     }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;
@@ -906,7 +915,7 @@ int main(int argc, char** argv) {
                              << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
                              << " +06=0x" << record.runtime_offset_6 << " +08=0x"
                              << record.runtime_offset_8;
-                        draw_text(renderer, 610, 366.0F + static_cast<float>(row) * 17.0F,
+                        draw_text(renderer, 610, 382.0F + static_cast<float>(row) * 17.0F,
                             line.str());
                     }
                     std::ostringstream pager;

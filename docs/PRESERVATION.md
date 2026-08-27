@@ -546,6 +546,16 @@ names for a menu, records, or action. Project Eon surfaces this gate after F2
 in the SDL evidence panel while leaving original media and its unknown runtime
 state immutable.
 
+The third table record (raw F3 / `$3d`) is `0c 12 09 1b 32 02 aa 6f`, with
+handler entry `$6faa`. It returns if runtime word `$a19e` is nonzero. Only
+with that word zero does it inspect runtime word `$da27`; while that word is
+zero it calls `$09fa` in the original wait loop. Its admitted setup at `$6fc6`
+installs callback `$712a` in `$6f98`, writes mode `$00` to `$6e98`, and begins
+its list at `$6e99` from the original far pointer stored at `$0112`. Project
+Eon presents these two gates and setup addresses after F3, but does not invent
+the runtime values, dereference a host-side replacement list, or assign the
+handler a game meaning.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
