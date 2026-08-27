@@ -136,7 +136,7 @@ its filename and reads its 13 root files, including verified `DATA12.BIN`.
 
 Deuteros' clean Amiga system and data disks are also opened natively as ADF.
 Geometry, boot identifiers, carry-around checksums and arbitrary sectors are
-validated against the real images. The 68000 bootloader's raw-track request is
+validated against the real images. The 68000 bootloader's decoded-track request is
 documented in [the generated disassembly](docs/generated/deuteros-amiga-boot.md).
 
 The repository does not contain the commercial games. Point the inventory tool
