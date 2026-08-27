@@ -809,6 +809,13 @@ choices, game modes, or completed gameplay transitions. Project Eon records
 only this opcode-validated profile and load-chain evidence; it performs no
 media extraction, generated state, or guessed post-handoff simulation.
 
+The full six-entry bootstrap table is also preserved: `$12b1c`, `$12b30`,
+`$12b44`, `$12b1c`, `$12b1c`, `$12b46`. The recovered title exits do not
+select entry five. Its first instruction is nevertheless independently
+verified as `BSR.W $12932` at `$12b46`; no return value or continuation is
+assumed, so this remains a hard bootstrap boundary rather than a fabricated
+title or loading path.
+
 ### Deuteros Amiga re-entered main stage
 
 After any of those title exits, the original raw track is loaded again at

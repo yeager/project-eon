@@ -220,6 +220,10 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.transition_work_palette_address << ", " << std::dec
         << title_stage.transition_palette_word_count << " RGB4 words, mask 0x"
         << std::hex << title_stage.transition_palette_mask << std::dec << '\n';
+    std::cout << "          Bootstrap profile table: entry 5 0x" << std::hex
+        << title_stage.bootstrap_profile_five_address << " -> BSR 0x"
+        << title_stage.bootstrap_profile_five_first_call_address << std::dec
+        << " (return intentionally unmodelled)\n";
     std::cout << "          Transition gate: counter 0x" << std::hex
         << title_stage.timer_counter_address << " >= 0x" << title_stage.timer_threshold
         << ", skip when word 0x" << title_stage.timer_dispatch_inhibit_address

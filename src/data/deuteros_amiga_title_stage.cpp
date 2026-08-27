@@ -381,11 +381,13 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(bootstrap_entry, 2, 0x00012dca);
     require_word(bootstrap_entry, 28, 0x4ef9); // jmp $12a4e
     require_long(bootstrap_entry, 30, 0x00012a4e);
-    const auto profile_table = bootstrap_code(0x12a36, 20);
+    const auto profile_table = bootstrap_code(0x12a36, 24);
     require_long(profile_table, 0, 0x00012b1c); // profile zero
+    require_long(profile_table, 4, 0x00012b30); // profile one
     require_long(profile_table, 8, 0x00012b44); // profile two
     require_long(profile_table, 12, 0x00012b1c); // profile three
     require_long(profile_table, 16, 0x00012b1c); // profile four
+    require_long(profile_table, 20, 0x00012b46); // profile five
     const auto profile_two = bootstrap_code(0x12b44, 2);
     require_word(profile_two, 0, 0x60d6); // bra.b $12b1c
     const auto profile_zero = bootstrap_code(0x12b1c, 20);
@@ -396,6 +398,9 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_word(profile_zero, 12, 0x243c); // move.l #$4,d2
     require_long(profile_zero, 14, 4);
     require_word(profile_zero, 18, 0x4e75);
+    const auto profile_five = bootstrap_code(0x12b46, 6);
+    require_word(profile_five, 0, 0x6100); // bsr.w $12932
+    require_word(profile_five, 2, 0xfdea);
 
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
@@ -414,7 +419,9 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x3fbf8, 0x13, 0x0c, 0x20, 0x4e20,
         true, true, 0x1fc20,
         0x37f56, 2, 0x38038, 4, 0x38068, 3,
-        0x12800, 0x12ffc, 0x12a36, 0, plan.main_stage.entry_address};
+        0x12800, 0x12ffc, 0x12a36, 0, plan.main_stage.entry_address,
+        {0x12b1c, 0x12b30, 0x12b44, 0x12b1c, 0x12b1c, 0x12b46},
+        0x12b46, 0x12932};
 }
 
 } // namespace eon

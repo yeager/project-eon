@@ -1739,6 +1739,11 @@ int main() {
     assert(title_stage.title_exit_controller_address == 0x12800);
     assert(title_stage.title_exit_profile_slot_address == 0x12ffc);
     assert(title_stage.title_exit_profile_table_address == 0x12a36);
+    assert((title_stage.bootstrap_profile_table_entries
+        == std::array<std::uint32_t, 6>{{0x12b1c, 0x12b30, 0x12b44,
+            0x12b1c, 0x12b1c, 0x12b46}}));
+    assert(title_stage.bootstrap_profile_five_address == 0x12b46);
+    assert(title_stage.bootstrap_profile_five_first_call_address == 0x12932);
     assert(title_stage.title_exit_resolved_profile == 0);
     assert(title_stage.title_exit_main_stage_entry_address == 0x21734);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
