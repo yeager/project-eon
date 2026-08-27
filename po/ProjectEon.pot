@@ -92,3 +92,15 @@ msgstr ""
 #: src/main.cpp
 msgid "ESC: BACK TO MENU"
 msgstr ""
+
+#: src/main.cpp
+msgid "AUTHENTIC TITLE STAGE READY"
+msgstr ""
+
+#: src/main.cpp
+msgid "TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL TITLE STAGE SHA-256: "
+msgstr ""

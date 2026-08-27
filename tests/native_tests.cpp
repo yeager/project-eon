@@ -172,6 +172,39 @@ int main() {
     assert(eon::to_hex(eon::sha256(*razor_adf))
         == "fe83c10119ef9bf2953b6fcd9a13d07f2c276215aaa64e2e541402a527a616f2");
     const eon::AmigaAdf razor_disk(*razor_adf);
+    // The original bootstrap/first-stage bytes differ across supplied Amiga
+    // releases, but every genuine image carries this exact raw resident span.
+    // Validate that common evidence directly from each image, including the
+    // shorter Defjam [u] image whose resident interval is still complete.
+    const std::array<std::string_view, 6> millennium_amiga_hashes{{
+        "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c",
+        "41dfea33ee6eb2bc80573b7819bf313e8b214ac2910208586a1bee88fd14fb95",
+        "756745ee6dff5e7ea3312ca37424c0089bf0db566fb28761d55ae02da26aadf0",
+        "f3ec073ecdc40c8b858658aa9854ae9de66dc50787fee29a930c28d393d2a502",
+        "fe83c10119ef9bf2953b6fcd9a13d07f2c276215aaa64e2e541402a527a616f2",
+        "f12ac46debdbaca04f54475cb766324a180323419d560a3fbd271c901cca52c1",
+    }};
+    for (const auto hash : millennium_amiga_hashes) {
+        const auto image = eon::extract_asset_by_sha256(amiga_millennium->path, hash);
+        assert(image);
+        const auto shared = eon::parse_millennium_amiga_shared_resident_layout(*image);
+        assert(shared.disk_offset == 0x16400);
+        assert(shared.length == 0x2c000);
+        assert(shared.destination == 0x68000);
+        assert(shared.raw_sha256
+            == "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e");
+    }
+    {
+        auto altered = *razor_adf;
+        altered[0x17a24] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_amiga_shared_resident_layout(altered));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const eon::AmigaOfs razor_filesystem(razor_disk);
     assert(razor_filesystem.root_block() == 880);
     assert(razor_filesystem.volume_name() == "Millennium (Crack Razor)");

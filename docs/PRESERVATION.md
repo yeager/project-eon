@@ -270,6 +270,17 @@ checksummed boot block first loads 0x400 bytes from disk offset `0x400` to
 memory `0x70000`.  The recovered 68000 first-stage code then issues these raw
 `trackdisk.device` reads:
 
+All six supplied Millennium Amiga images nevertheless share one independently
+validated resident raw interval: disk `+0x16400`, length `0x2c000`, linear
+destination `$68000`, SHA-256
+`d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e`.
+`parse_millennium_amiga_shared_resident_layout` validates that exact range
+directly from each original image—even the shorter Defjam `[u]` image, whose
+complete resident interval remains present. This permits platform evidence to
+be shared without claiming its divergent bootstrap or transformed first stage
+is equivalent to Defjam's loader, and without executing, unpacking, or
+substituting any variant.
+
 | Disk offset | Bytes | Destination | Observed continuation |
 | ---: | ---: | ---: | --- |
 | `0x24200` | `0x6e000` | `0x41000` | Call loaded stage |

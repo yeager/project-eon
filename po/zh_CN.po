@@ -66,3 +66,12 @@ msgstr "ESC：退出"
 
 msgid "ESC: BACK TO MENU"
 msgstr "ESC：返回菜单"
+
+msgid "AUTHENTIC TITLE STAGE READY"
+msgstr "原始标题阶段已就绪"
+
+msgid "TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"
+msgstr "标题阶段执行尚未恢复；不会伪造标题画面"
+
+msgid "ORIGINAL TITLE STAGE SHA-256: "
+msgstr "原始标题阶段 SHA-256："

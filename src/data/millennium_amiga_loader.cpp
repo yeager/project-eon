@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <stdexcept>
+#include <string_view>
 
 namespace eon {
 namespace {
@@ -106,6 +107,24 @@ MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(const AmigaAdf& disk) {
     validate_range(plan.first_stage);
     validate_range(plan.resident_stage);
     return plan;
+}
+
+MillenniumAmigaSharedResidentLayout parse_millennium_amiga_shared_resident_layout(
+    const std::span<const std::uint8_t> image) {
+    constexpr std::uint32_t disk_offset = 0x16400;
+    constexpr std::uint32_t length = 0x2c000;
+    constexpr std::uint32_t destination = 0x68000;
+    constexpr std::string_view expected_sha256 =
+        "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e";
+    if (image.size() < static_cast<std::size_t>(disk_offset) + length) {
+        throw std::runtime_error("Millennium Amiga image truncates shared resident range");
+    }
+    const auto resident = image.subspan(disk_offset, length);
+    const auto digest = to_hex(sha256(resident));
+    if (digest != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Amiga shared resident range");
+    }
+    return {disk_offset, length, destination, digest};
 }
 
 MillenniumAmigaResidentEntry parse_millennium_amiga_resident_entry(

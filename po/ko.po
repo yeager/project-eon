@@ -66,3 +66,12 @@ msgstr "ESC: 종료"
 
 msgid "ESC: BACK TO MENU"
 msgstr "ESC: 메뉴로 돌아가기"
+
+msgid "AUTHENTIC TITLE STAGE READY"
+msgstr "원본 타이틀 단계 준비 완료"
+
+msgid "TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"
+msgstr "타이틀 단계 실행은 아직 복원되지 않았으며, 타이틀 화면을 임의로 만들지 않습니다"
+
+msgid "ORIGINAL TITLE STAGE SHA-256: "
+msgstr "원본 타이틀 단계 SHA-256: "

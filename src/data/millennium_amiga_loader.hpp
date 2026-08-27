@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
 #include <string>
 
 namespace eon {
@@ -26,6 +27,17 @@ struct MillenniumAmigaLoadPlan {
     MillenniumAmigaLoadStage resident_stage;
     std::uint32_t resident_entry = 0;
     std::uint32_t loader_magic = 0;
+};
+
+// Several supplied Amiga variants differ in their bootstrap and transformed
+// first stage but share this literal resident raw range. It is independently
+// hash-validated so callers can preserve common evidence without treating a
+// Defjam-specific load plan as proof for another release.
+struct MillenniumAmigaSharedResidentLayout {
+    std::uint32_t disk_offset = 0;
+    std::uint32_t length = 0;
+    std::uint32_t destination = 0;
+    std::string raw_sha256;
 };
 
 // The resident range begins with a small 68000 entry gate.  It calls into the
@@ -245,6 +257,13 @@ struct MillenniumAmigaResidentSeparateBranchBoundary { std::uint32_t entry_addre
 // intentionally does not decompress, write, or otherwise unpack game media.
 [[nodiscard]] MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(
     const AmigaAdf& disk);
+
+// Validates the common raw resident interval directly from an ADF image byte
+// span. This deliberately accepts a shorter supplied image when the complete
+// resident range itself is present, since it performs no geometry, boot, or
+// loader inference.
+[[nodiscard]] MillenniumAmigaSharedResidentLayout
+parse_millennium_amiga_shared_resident_layout(std::span<const std::uint8_t> image);
 
 // Decode the exact first resident instructions after the verified raw-loader
 // handoff. This is a read-only control-flow profile, not a decoder for the
