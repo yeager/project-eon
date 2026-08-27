@@ -1,4 +1,5 @@
 #include "launcher.hpp"
+#include "engine/deuteros_amiga_opening.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
@@ -158,31 +159,16 @@ std::optional<PreviewAnimation> load_deuteros_preview(
     try {
         const auto image = eon::extract_asset_by_sha256(release->path, clean_system_adf);
         if (!image) return std::nullopt;
-        const eon::AmigaAdf disk(*image);
-        const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
-        const auto bundle = eon::parse_deuteros_amiga_bundle(disk, plan.resource_disk_offsets[0]);
-        const auto blob = eon::parse_deuteros_amiga_indexed_blob(disk, bundle);
-        eon::DeuterosAmigaChannelVm vm(disk, bundle);
-        eon::DeuterosAmigaRandom random(disk, bundle);
-        eon::DeuterosAmigaVmInputs vm_inputs;
-        vm_inputs.random_word = [&random] { return random.next(); };
+        eon::DeuterosAmigaOpening opening(*image);
         PreviewAnimation preview{eon::DeuterosAmigaFrame::width,
             eon::DeuterosAmigaFrame::height, {}};
         constexpr std::size_t maximum_verified_ticks = 512;
         for (std::size_t tick = 0; tick < maximum_verified_ticks; ++tick) {
-            static_cast<void>(vm.tick(vm_inputs));
-            eon::DeuterosAmigaFrame frame;
-            try {
-                frame = eon::compose_deuteros_amiga_frame(disk, bundle, blob, vm.channels());
-            } catch (const std::runtime_error& error) {
-                if (std::string_view(error.what()).find("save/restore") != std::string_view::npos) break;
-                throw;
-            }
-            const auto palette = eon::decode_deuteros_amiga_palette(
-                disk, bundle, vm.palette_index());
-            preview.rgba_frames.push_back(eon::colorize_deuteros_amiga_frame(frame, palette));
-            // $207fe runs from the VBL server between scheduler invocations.
-            random.advance_vblank();
+            static_cast<void>(opening.tick());
+            if (!opening.frame_composed_on_last_tick()) break;
+            const auto frame = opening.rgba_frame();
+            if (!frame) break;
+            preview.rgba_frames.push_back(*frame);
         }
         if (preview.rgba_frames.empty()) return std::nullopt;
         return preview;

@@ -22,8 +22,10 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // $207fe runs independently between scheduler calls, including after an
     // input-triggered title handoff.
     random_.advance_vblank();
+    frame_composed_on_last_tick_ = false;
     try {
         last_frame_ = compose_deuteros_amiga_frame(disk_, bundle_, blob_, vm_.channels());
+        frame_composed_on_last_tick_ = true;
     } catch (const std::runtime_error& error) {
         // Stateful scanline save/restore is an accurately identified, separate
         // blitter path. Keep the last fully composed authentic frame until it
