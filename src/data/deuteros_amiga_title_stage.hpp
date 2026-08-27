@@ -2,6 +2,7 @@
 
 #include "data/deuteros_amiga_loader.hpp"
 
+#include <array>
 #include <cstdint>
 
 namespace eon {
@@ -130,6 +131,9 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t title_exit_profile_table_address = 0;
     std::uint16_t title_exit_resolved_profile = 0;
     std::uint32_t title_exit_main_stage_entry_address = 0;
+    std::array<std::uint32_t, 6> bootstrap_profile_table_entries{};
+    std::uint32_t bootstrap_profile_five_address = 0;
+    std::uint32_t bootstrap_profile_five_first_call_address = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
