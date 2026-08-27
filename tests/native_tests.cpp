@@ -13,6 +13,7 @@
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
+#include "data/deuteros_atari_boot.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
@@ -372,6 +373,35 @@ int main() {
     assert(atari_prg.relocation_count == 227);
     assert(atari_prg.first_relocation_offset == 0x6);
     assert(atari_prg.last_relocation_offset == 0x1150);
+
+    const auto deuteros_atari = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
+        return release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st;
+    });
+    assert(deuteros_atari != releases.end());
+    const auto deuteros_st_disk1 = eon::extract_asset_by_sha256(deuteros_atari->path,
+        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee");
+    const auto deuteros_st_disk2 = eon::extract_asset_by_sha256(deuteros_atari->path,
+        "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193");
+    assert(deuteros_st_disk1 && deuteros_st_disk2);
+    const eon::DeuterosAtariDisk deuteros_disk1(*deuteros_st_disk1);
+    const eon::DeuterosAtariDisk deuteros_disk2(*deuteros_st_disk2);
+    const auto& deuteros_st_boot = deuteros_disk1.boot_profile();
+    assert(deuteros_st_boot.bytes_per_sector == 512);
+    assert(deuteros_st_boot.sectors_per_cluster == 2);
+    assert(deuteros_st_boot.total_sectors == 1440);
+    assert(deuteros_st_boot.sectors_per_track == 9);
+    assert(deuteros_st_boot.heads == 2);
+    assert(deuteros_st_boot.boot_checksum == 0x1234);
+    assert(deuteros_st_boot.boot_branch_target == 0x1e);
+    assert(deuteros_st_boot.has_recovered_first_stage);
+    assert(deuteros_st_boot.first_stage_track == 70);
+    assert(deuteros_st_boot.first_stage_length == 0x1200);
+    const auto deuteros_first_stage = deuteros_disk1.read_sectors(70, 0, 1, 9);
+    assert(eon::to_hex(eon::sha256(deuteros_first_stage))
+        == "dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168");
+    assert(deuteros_disk2.boot_profile().boot_checksum == 0x1234);
+    assert(deuteros_disk2.boot_profile().boot_branch_target == 0x22);
+    assert(deuteros_disk2.boot_profile().killer_boot_signature);
 
     const auto deuteros_amiga = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga;

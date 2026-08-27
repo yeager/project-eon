@@ -11,6 +11,7 @@
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
+#include "data/deuteros_atari_boot.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
@@ -225,6 +226,37 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << std::dec << ")\n";
 }
 
+void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
+    // The corpus has no pristine ST master: this hash identifies the supplied
+    // Replicants Disk 1 whose boot code contains the recovered XBIOS stage.
+    constexpr auto replicants_disk1_sha256 =
+        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
+    constexpr auto disk2_sha256 =
+        "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193";
+    const auto disk1_image = eon::extract_asset_by_sha256(release.path, replicants_disk1_sha256);
+    const auto disk2_image = eon::extract_asset_by_sha256(release.path, disk2_sha256);
+    if (!disk1_image || !disk2_image) return;
+    const eon::DeuterosAtariDisk disk1(*disk1_image);
+    const eon::DeuterosAtariDisk disk2(*disk2_image);
+    const auto& stage = disk1.boot_profile();
+    const auto& continuation = disk2.boot_profile();
+    std::cout << "          protected ST media: " << stage.total_sectors << " sectors, "
+        << stage.sectors_per_track << " sectors/track, boot checksum 0x" << std::hex
+        << stage.boot_checksum << std::dec << "; FAT root intentionally unavailable\n";
+    if (stage.has_recovered_first_stage) {
+        const auto first_stage = disk1.read_sectors(stage.first_stage_track, stage.first_stage_side,
+            stage.first_stage_sector, stage.first_stage_sector_count);
+        std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
+            << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
+            << static_cast<unsigned>(stage.first_stage_sector) << ".."
+            << stage.first_stage_sector_count << " (" << first_stage.size()
+            << " original bytes)\n";
+    }
+    std::cout << "          Disk 2 boot continuation: "
+        << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")
+        << ", branch 0x" << std::hex << continuation.boot_branch_target << std::dec << '\n';
+}
+
 std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
     const std::vector<eon::ReleaseArchive>& releases) {
     constexpr auto title_lib_sha256 =
@@ -335,6 +367,10 @@ int main(int argc, char** argv) {
             if (release.game == eon::Game::deuteros
                 && release.platform == eon::Platform::amiga) {
                 report_deuteros_amiga(release);
+            }
+            if (release.game == eon::Game::deuteros
+                && release.platform == eon::Platform::atari_st) {
+                report_deuteros_atari_st(release);
             }
             if (release.game == eon::Game::millennium
                 && release.platform == eon::Platform::amiga
