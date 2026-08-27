@@ -1142,6 +1142,15 @@ These are control-flow operands only: Project Eon neither assumes either
 wrapper return nor interprets the register setup, follow-up calls, or their
 results.
 
+The direct follow-up targets are also bounded by original bytes. `$044e`
+loads literal `$01`, writes it to `$da05`, and returns. `$0466` sets `DS=CS`,
+points `SI` at the verified 16-byte in-image sequence `$00..$07`, `$38..$3f`
+at `$0456`,
+sets `CX=$0010` and `BL=0`, then reaches `INT $10` at `$0476`; its local loop
+back-edge is raw code only. The BIOS interrupt is the first external boundary
+for this route. No BIOS behavior, loop iteration, or runtime state is
+emulated.
+
 #### Main-loop action dispatch
 
 The supplied English `2200AD.EXE` (54,391 bytes, SHA-256

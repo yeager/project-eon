@@ -617,8 +617,14 @@ int main() {
     assert(game_flow.startup_other_call_address == 0xd1b5);
     assert(game_flow.startup_equal_path_private_call_site == 0xd1a9);
     assert(game_flow.startup_equal_path_next_call_address == 0x044e);
+    assert(game_flow.startup_equal_followup_write_address == 0xda05);
+    assert(game_flow.startup_equal_followup_write_value == 1);
     assert(game_flow.startup_other_path_private_call_site == 0xd1bd);
     assert(game_flow.startup_other_path_next_call_address == 0x0466);
+    assert(game_flow.startup_other_followup_table_address == 0x0456);
+    assert(game_flow.startup_other_followup_table_size == 16);
+    assert(game_flow.startup_other_followup_interrupt_site == 0x0476);
+    assert(game_flow.startup_other_followup_interrupt_number == 0x10);
     assert(game_flow.startup_nonzero_dx_branch_address == 0xd44b);
     assert(game_flow.main_loop_address == 0xd3d2);
     assert(game_flow.action_poll_address == 0x10f05);
@@ -741,6 +747,15 @@ int main() {
         rejected_altered_startup_selector_path = true;
     }
     assert(rejected_altered_startup_selector_path);
+    auto altered_startup_other_followup = *game_executable;
+    altered_startup_other_followup[0x0476 - 0x100] ^= 0x01;
+    bool rejected_altered_startup_other_followup = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_startup_other_followup));
+    } catch (const std::runtime_error&) {
+        rejected_altered_startup_other_followup = true;
+    }
+    assert(rejected_altered_startup_other_followup);
     auto altered_f2_gate = *game_executable;
     altered_f2_gate[0x71ca - 0x100] ^= 0x01;
     bool rejected_altered_f2_gate = false;

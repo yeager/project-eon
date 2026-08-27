@@ -428,7 +428,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << game_flow.startup_other_call_address << " (both re-enter INT 0x"
         << static_cast<unsigned>(game_flow.startup_first_call_interrupt) << " wrapper at 0x"
         << game_flow.startup_equal_path_private_call_site << "/0x"
-        << game_flow.startup_other_path_private_call_site << "); DX!=0 -> 0x"
+        << game_flow.startup_other_path_private_call_site << "; equal follow-up writes $"
+        << static_cast<unsigned>(game_flow.startup_equal_followup_write_value) << " -> 0x"
+        << game_flow.startup_equal_followup_write_address << ", other first reaches INT 0x"
+        << static_cast<unsigned>(game_flow.startup_other_followup_interrupt_number) << " at 0x"
+        << game_flow.startup_other_followup_interrupt_site << "); DX!=0 -> 0x"
         << game_flow.startup_nonzero_dx_branch_address << std::dec
         << " (validated boundary only; no native calls executed)\n";
     constexpr auto initial_save_sha256 =

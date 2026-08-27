@@ -28,6 +28,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t startup_first_call_offset = 0x0124 - load_bias;
     constexpr std::size_t startup_equal_path_offset = 0xd1a1 - load_bias;
     constexpr std::size_t startup_other_path_offset = 0xd1b5 - load_bias;
+    constexpr std::size_t startup_equal_followup_offset = 0x044e - load_bias;
+    constexpr std::size_t startup_other_followup_offset = 0x0466 - load_bias;
     constexpr std::size_t loop_offset = 0xd3d2 - load_bias;
     constexpr std::size_t f1_table_offset = 0x2fbf - load_bias;
     constexpr std::size_t f1_handler_offset = 0x6f9a - load_bias;
@@ -96,6 +98,19 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xe8, 0x64, 0x2f, 0xe8, 0xa3, 0x32, 0xa0, 0x05,
         0xda, 0x3c, 0x02, 0x75, 0x06, 0xb8, 0x00, 0xb8,
         0xa3, 0x07, 0x01, 0xc3});
+    // The equal path's follow-up writes a literal one then returns. The
+    // other path reaches a BIOS interrupt after a fixed 16-byte in-image
+    // table and local register setup. INT $10 is the first external boundary
+    // in that path; neither its behavior nor the loop is executed here.
+    constexpr auto startup_equal_followup = std::to_array<std::uint8_t>({
+        0xb0, 0x01, 0x2e, 0x88, 0x06, 0x05, 0xda, 0xc3});
+    constexpr auto startup_other_followup = std::to_array<std::uint8_t>({
+        0x0e, 0x1f, 0xbe, 0x56, 0x04, 0xb9, 0x10, 0x00,
+        0x32, 0xdb, 0xac, 0x8a, 0xf8, 0xb8, 0x00, 0x10,
+        0xcd, 0x10, 0xfe, 0xc3, 0xe2, 0xf4, 0xc3});
+    constexpr auto startup_other_followup_table = std::to_array<std::uint8_t>({
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f});
     constexpr auto loop = std::to_array<std::uint8_t>({
         0xe8, 0xe6, 0x3a, 0xe8, 0x29, 0xa2, 0xe8, 0xf0, 0xa7,
         0xe8, 0x27, 0x3b, 0x22, 0xc0, 0x74, 0xf0, 0x32, 0xe4,
@@ -318,7 +333,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         throw std::runtime_error("Unsupported Millennium DOS first startup-call boundary");
     }
     if (!has_bytes(game_executable, startup_equal_path_offset, startup_equal_path)
-        || !has_bytes(game_executable, startup_other_path_offset, startup_other_path)) {
+        || !has_bytes(game_executable, startup_other_path_offset, startup_other_path)
+        || !has_bytes(game_executable, startup_equal_followup_offset, startup_equal_followup)
+        || !has_bytes(game_executable, startup_other_followup_offset, startup_other_followup)
+        || !has_bytes(game_executable, 0x0456 - load_bias, startup_other_followup_table)) {
         throw std::runtime_error("Unsupported Millennium DOS startup selector paths");
     }
     if (!has_bytes(game_executable, loop_offset, loop)
@@ -377,8 +395,14 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .startup_other_call_address = 0xd1b5,
         .startup_equal_path_private_call_site = 0xd1a9,
         .startup_equal_path_next_call_address = 0x044e,
+        .startup_equal_followup_write_address = 0xda05,
+        .startup_equal_followup_write_value = 1,
         .startup_other_path_private_call_site = 0xd1bd,
         .startup_other_path_next_call_address = 0x0466,
+        .startup_other_followup_table_address = 0x0456,
+        .startup_other_followup_table_size = 16,
+        .startup_other_followup_interrupt_site = 0x0476,
+        .startup_other_followup_interrupt_number = 0x10,
         .startup_nonzero_dx_branch_address = 0xd44b,
         .main_loop_address = 0xd3d2,
         .action_poll_address = 0x10f05,
