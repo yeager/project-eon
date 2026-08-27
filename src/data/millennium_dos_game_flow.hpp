@@ -8,16 +8,24 @@ namespace eon {
 
 // Exact, non-semantic trace of the first record in 2200AD.EXE's F-key table.
 // These fields are code/data addresses in the flat image, not host pointers.
-// The handler only changes its own emulated runtime image; Project Eon keeps
-// the supplied executable and save media immutable.
+// The handler first calls the common display selector, so none of the setup
+// stores below is a host-side effect: their reachability depends on that
+// native call returning. Project Eon keeps the supplied executable and save
+// media immutable.
 struct MillenniumDosFirstFunctionKeyTrace {
     std::uint16_t handler_address = 0;
+    std::uint16_t display_selector_call_address = 0;
+    std::uint16_t setup_entry_address = 0;
     std::uint16_t selector_address = 0;
     std::uint8_t selector_value = 0;
     std::uint16_t record_pointer_table_address = 0;
     std::uint16_t selected_record_address = 0;
+    std::uint16_t selected_record_storage_address = 0;
     std::uint16_t screen_descriptor_address = 0;
     std::uint8_t screen_descriptor_mode = 0;
+    std::uint16_t screen_selector_storage_address = 0;
+    std::uint16_t screen_descriptor_storage_address = 0;
+    std::uint16_t setup_first_call_address = 0;
     std::uint8_t selected_record_byte_2 = 0;
     std::uint8_t selected_record_byte_36 = 0;
 };

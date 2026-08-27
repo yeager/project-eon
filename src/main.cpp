@@ -969,8 +969,10 @@ int main(int argc, char** argv) {
                         if (const auto trace = millennium_game_session->last_first_function_key_trace()) {
                             std::ostringstream f1;
                             f1 << "F1 ORIGINAL TRACE: HANDLER $" << std::hex << trace->handler_address
-                               << " -> SELECTOR $" << trace->selector_address << "=0 -> RECORD $"
-                               << trace->selected_record_address << "  (BYTE +02=$"
+                               << " -> CALL $" << trace->display_selector_call_address
+                               << " -> SETUP $" << trace->setup_entry_address
+                               << " (RETURN REQUIRED); SELECTOR $" << trace->selector_address
+                               << "=0 -> RECORD $" << trace->selected_record_address << "  (BYTE +02=$"
                                << static_cast<unsigned>(trace->selected_record_byte_2) << ')';
                             draw_text(renderer, 610, 326, f1.str());
                         }
