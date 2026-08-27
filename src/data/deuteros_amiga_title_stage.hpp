@@ -134,6 +134,15 @@ struct DeuterosAmigaTitleStageProfile {
     std::array<std::uint32_t, 6> bootstrap_profile_table_entries{};
     std::uint32_t bootstrap_profile_five_address = 0;
     std::uint32_t bootstrap_profile_five_first_call_address = 0;
+    std::uint32_t bootstrap_profile_five_helper_controller_cell = 0;
+    std::uint16_t bootstrap_profile_five_helper_long_offset = 0;
+    std::uint32_t bootstrap_profile_five_helper_long_value = 0;
+    std::uint16_t bootstrap_profile_five_helper_word_offset = 0;
+    std::uint16_t bootstrap_profile_five_helper_word_value = 0;
+    std::uint16_t bootstrap_profile_five_helper_byte_offset = 0;
+    std::uint8_t bootstrap_profile_five_helper_byte_value = 0;
+    std::uint32_t bootstrap_profile_five_helper_library_base = 0;
+    std::int16_t bootstrap_profile_five_helper_library_vector = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates

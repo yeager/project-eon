@@ -816,6 +816,13 @@ verified as `BSR.W $12932` at `$12b46`; no return value or continuation is
 assumed, so this remains a hard bootstrap boundary rather than a fabricated
 title or loading path.
 
+The direct callee has one further independent, straight-line boundary before
+its own unknown library call. `$12932` loads the controller pointer from
+`$12822`, writes long `$00000001` at `+$24`, word `$0009` at `+$1c`, and byte
+zero at `+$1e`, then loads `A6` from `$0004` and calls vector `-$1c8(A6)`.
+Project Eon validates these raw writes and stops at that call; it neither names
+the fields nor assumes the vector returns.
+
 ### Deuteros Amiga re-entered main stage
 
 After any of those title exits, the original raw track is loaded again at
