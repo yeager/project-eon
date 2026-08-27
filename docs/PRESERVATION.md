@@ -352,6 +352,16 @@ with SHA-256 `a16a4738b0f577643c343b344ba8b6c19d935daf97dd2291c86ddb2b29dcd96c`.
 raw provenance only. Neither the target nor continuation is interpreted or
 executed, because the transformed runtime representation remains unrecovered.
 
+The zero-`D3` continuation has one further fully local boundary before its
+next unknown call. At `$68084` it preserves `A1`, compares word `A1+$12` with
+`1`, and branches on inequality from `$6808e` to `$680ca`. The equal path reads
+word `A1+$14`, prepares it, and reaches `JSR $7b90a` at `$68096`.
+`MillenniumAmigaResidentPredicateZeroPathBoundary` verifies those exact bytes
+and fingerprints the in-range raw target at disk `$29d0a` (SHA-256
+`bdb907adb3114dbaa58eb3bbe516ab91ffc4e1bf70e536bd47f497f49c8d5042`). It
+does not provide `A1`, interpret either selector result, enter `$680ca`, or
+execute `$7b90a`.
+
 For each of those callers, the static bytes immediately after the final
 `JSR $7ba12` are now also verified, while carefully not treating them as a
 runtime helper return. The first has return-address `0x69656` and begins with

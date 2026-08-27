@@ -172,6 +172,23 @@ struct MillenniumAmigaResidentPredicateGate {
     std::string predicate_raw_prefix_sha256;
 };
 
+// The zero-D3 fallthrough from the predicate gate has a complete local
+// selector/branch sequence before it prepares one word argument and reaches
+// its next unknown call. This is a static boundary only.
+struct MillenniumAmigaResidentPredicateZeroPathBoundary {
+    std::uint32_t entry_address = 0;
+    std::uint16_t selector_a1_offset = 0;
+    std::uint16_t selector_compare_value = 0;
+    std::uint32_t selector_not_equal_branch_address = 0;
+    std::uint32_t selector_not_equal_target = 0;
+    std::uint16_t equal_path_argument_a1_offset = 0;
+    std::uint32_t unknown_call_address = 0;
+    std::uint32_t unknown_call_target = 0;
+    std::uint32_t unknown_call_raw_disk_offset = 0;
+    std::array<std::uint8_t, 32> unknown_call_raw_prefix{};
+    std::string unknown_call_raw_prefix_sha256;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -263,5 +280,13 @@ parse_millennium_amiga_resident_staging_direct_reachability_boundary(
 parse_millennium_amiga_resident_predicate_gate(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentWordSplitter& splitter);
+
+// Validates the zero-D3 local selector branch after the predicate gate and
+// fingerprints its next unknown call target. It neither supplies A1 data nor
+// enters the branch target or call.
+[[nodiscard]] MillenniumAmigaResidentPredicateZeroPathBoundary
+parse_millennium_amiga_resident_predicate_zero_path_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentPredicateGate& gate);
 
 } // namespace eon
