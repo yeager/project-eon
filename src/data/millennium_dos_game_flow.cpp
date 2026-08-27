@@ -42,6 +42,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f5_handler_offset = 0x7597 - load_bias;
     constexpr std::size_t f6_table_offset = 0x2fe7 - load_bias;
     constexpr std::size_t f6_handler_offset = 0x7415 - load_bias;
+    constexpr std::size_t f6_restoration_offset = 0x7455 - load_bias;
     constexpr std::size_t f7_table_offset = 0x2fef - load_bias;
     constexpr std::size_t f7_handler_offset = 0x7521 - load_bias;
     constexpr std::size_t f8_table_offset = 0x2ff7 - load_bias;
@@ -173,6 +174,15 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xc6, 0x06, 0xa8, 0x75, 0x0c, 0xc6, 0x06, 0xae,
         0x75, 0x00, 0xb8, 0x07, 0x32, 0xa3, 0xa6, 0x75,
         0xe8, 0xaa, 0x95, 0xd0, 0xeb, 0x72, 0xf9, 0xc3});
+    // $7455 is a separate routine immediately following F6. It restores the
+    // exact three F6 snapshots before its first CALL ($0b0c). The dispatch
+    // path which reaches it is not yet proved, so this is cleanup evidence,
+    // not an executed host effect.
+    constexpr auto f6_restoration = std::to_array<std::uint8_t>({
+        0xa0, 0x0f, 0x74, 0xa2, 0xae, 0x75,
+        0xa1, 0x10, 0x74, 0xa3, 0xac, 0x75,
+        0xa0, 0x12, 0x74, 0xa2, 0xa8, 0x75,
+        0xe8, 0xa2, 0x96});
     // Record six (raw F7 / $41) uses the same native $a19e gate. On its
     // admitted path it reads words at $da17/$da18/$da27/$da26/$da35/$da37,
     // calls the observed helper sequence, and returns. The values and helper
@@ -276,6 +286,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, 0x0b76 - load_bias, f5_fourth_call)
         || !has_bytes(game_executable, f6_table_offset, f6_table)
         || !has_bytes(game_executable, f6_handler_offset, f6_handler)
+        || !has_bytes(game_executable, f6_restoration_offset, f6_restoration)
         || !has_bytes(game_executable, f7_table_offset, f7_table)
         || !has_bytes(game_executable, f7_handler_offset, f7_handler)
         || !has_bytes(game_executable, f8_table_offset, f8_table)
@@ -385,6 +396,14 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .callback_word_value = 0x3207,
             .callback_word_address = 0x75a6,
             .wait_call_address = 0x09fa,
+            .restoration_handler_address = 0x7455,
+            .restoration_first_source_address = 0x740f,
+            .restoration_first_destination_address = 0x75ae,
+            .restoration_word_source_address = 0x7410,
+            .restoration_word_destination_address = 0x75ac,
+            .restoration_second_source_address = 0x7412,
+            .restoration_second_destination_address = 0x75a8,
+            .restoration_first_call_address = 0x0b0c,
         },
         .seventh_function_key = {
             .handler_address = 0x7521,

@@ -112,9 +112,12 @@ struct MillenniumDosFifthFunctionKeyTrace {
 
 // Exact, non-semantic trace of table record five (raw F6 / $40).  Its native
 // handler is guarded by the same runtime word as F3/F4.  On admission it
-// temporarily changes three runtime cells, enters the original $09fa polling
-// loop, and returns.  Project Eon records the observed addresses/literals but
-// never manufactures the guard, executes the calls, or applies the writes.
+// snapshots three runtime cells, changes them after two native calls, enters
+// the original $09fa polling loop, and returns. A separately verified
+// follow-up routine restores those snapshots before making its own first
+// native call. The route that selects that follow-up remains unproven, so
+// Project Eon records the bytes but never manufactures the guard, executes
+// calls, or applies either the temporary writes or restoration.
 struct MillenniumDosSixthFunctionKeyTrace {
     std::uint16_t handler_address = 0;
     std::uint16_t initialization_guard_address = 0;
@@ -133,6 +136,14 @@ struct MillenniumDosSixthFunctionKeyTrace {
     std::uint16_t callback_word_value = 0;
     std::uint16_t callback_word_address = 0;
     std::uint16_t wait_call_address = 0;
+    std::uint16_t restoration_handler_address = 0;
+    std::uint16_t restoration_first_source_address = 0;
+    std::uint16_t restoration_first_destination_address = 0;
+    std::uint16_t restoration_word_source_address = 0;
+    std::uint16_t restoration_word_destination_address = 0;
+    std::uint16_t restoration_second_source_address = 0;
+    std::uint16_t restoration_second_destination_address = 0;
+    std::uint16_t restoration_first_call_address = 0;
 };
 
 // Exact, non-semantic trace of table record six (raw F7 / $41). Its native
