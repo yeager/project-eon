@@ -95,6 +95,16 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 14> launcher_branch_target_bytes{
         0xba, 0x70, 0x03, 0x89, 0xd2, 0xb4, 0x09, 0xcd,
         0x21, 0xb8, 0x0a, 0x4c, 0xcd, 0x21};
+    // This static caller-side range is immediately before the DX=0x68f
+    // setup.  It records a post-call JE and the later local near call without
+    // claiming either call's return behavior or assigning meaning to AX.
+    constexpr std::array<std::uint8_t, 45> launcher_pre_title_chain{
+        0xe8, 0xfe, 0x02, 0x22, 0xc0, 0x74, 0x03, 0x05,
+        0x02, 0x00, 0x8b, 0xd8, 0x04, 0x30, 0xbe, 0x88,
+        0x06, 0x2e, 0x88, 0x44, 0x02, 0xd1, 0xe3, 0x8b,
+        0x97, 0x6e, 0x06, 0xc7, 0x06, 0xd5, 0x05, 0xde,
+        0x03, 0xe8, 0x9b, 0x00, 0x33, 0xd2, 0xb8, 0x95,
+        0x25, 0xcd, 0x21, 0x0e, 0x1f};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
@@ -122,6 +132,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
                    launcher_branch_target_bytes)) {
         throw std::runtime_error("Unsupported Millennium DOS launcher branch target");
     }
+    constexpr std::size_t pre_title_chain_address = 0x210;
+    if (!has_bytes(mill_launcher, pre_title_chain_address - mill_load_bias,
+                   launcher_pre_title_chain)) {
+        throw std::runtime_error("Unsupported Millennium DOS launcher pre-title chain");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -146,6 +161,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_common_branch_target = common_branch_target,
         .launcher_common_fallthrough_return = 0x34b,
         .launcher_common_branch_target_static_boundary = 0x35a,
+        .launcher_pre_title_gate_address = 0x215,
+        .launcher_pre_title_gate_target = 0x21a,
+        .launcher_pre_title_call_address = 0x231,
+        .launcher_pre_title_call_target = 0x2cf,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",

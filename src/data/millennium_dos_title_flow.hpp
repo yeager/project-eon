@@ -31,6 +31,10 @@ struct MillenniumDosTitleFlow {
     std::uint16_t launcher_common_branch_target = 0;
     std::uint16_t launcher_common_fallthrough_return = 0;
     std::uint16_t launcher_common_branch_target_static_boundary = 0;
+    std::uint16_t launcher_pre_title_gate_address = 0;
+    std::uint16_t launcher_pre_title_gate_target = 0;
+    std::uint16_t launcher_pre_title_call_address = 0;
+    std::uint16_t launcher_pre_title_call_target = 0;
     std::size_t launcher_title_offset = 0;
     std::size_t launcher_game_offset = 0;
     std::string launcher_title_program;

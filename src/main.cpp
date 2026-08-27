@@ -354,7 +354,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_common_call_target << ", JC 0x"
         << flow.launcher_common_branch_address << " -> 0x"
         << flow.launcher_common_branch_target << " (static boundary 0x"
-        << flow.launcher_common_branch_target_static_boundary << std::dec << "))\n";
+        << flow.launcher_common_branch_target_static_boundary << "); pre-title JE 0x"
+        << flow.launcher_pre_title_gate_address << " -> 0x"
+        << flow.launcher_pre_title_gate_target << ", near-call 0x"
+        << flow.launcher_pre_title_call_address << " -> 0x"
+        << flow.launcher_pre_title_call_target << std::dec << ")\n";
     constexpr auto static_data_sha256 =
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
     const auto static_data = eon::extract_asset_by_sha256(release.path, static_data_sha256);

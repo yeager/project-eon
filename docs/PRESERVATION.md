@@ -943,6 +943,15 @@ byte, at `$035a`, is the static text-data boundary. This is a static byte/contro
 fact only; in particular, Project Eon does not interpret the interrupt bytes,
 the carry condition, or the return as DOS behavior.
 
+Immediately before the title-string setup, `$0210` starts with a direct near
+call to `$0511`, followed by `AND AX,AX` and literal `JE +$03` at `$0215` to
+`$021a`; the unbranched bytes `$0217..$0219` are `05 02 00`. The rejoined raw
+sequence reaches another direct near-call at `$0231` to `$02cf`, then the
+bytes through `$023c` precede `DX=$068f` at `$023d`. These are preserved as
+caller-side static dataflow and control edges only. Neither call, the `AX`
+condition, nor the interrupt bytes in this range is given an execution or DOS
+meaning.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.
