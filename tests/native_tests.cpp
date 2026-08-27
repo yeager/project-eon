@@ -1420,6 +1420,8 @@ int main() {
     const auto deuteros_dispatch = eon::parse_deuteros_atari_dispatch(deuteros_second_stage);
     assert((deuteros_dispatch.vector_addresses
         == std::array<std::uint32_t, 6>{{0x1f1a, 0x1f2e, 0x1f50, 0x1f1a, 0x1f1a, 0x1f52}}));
+    assert((deuteros_dispatch.state0_alias_addresses
+        == std::array<std::uint32_t, 3>{{0x1f50, 0x1f1a, 0x1f1a}}));
     assert(deuteros_dispatch.state0_destination == 0x13200);
     assert(deuteros_dispatch.state0_byte_count == 0x4800);
     assert(deuteros_dispatch.state0_linear_sector == 4);
