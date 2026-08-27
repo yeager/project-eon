@@ -246,11 +246,20 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
     if (stage.has_recovered_first_stage) {
         const auto first_stage = disk1.read_sectors(stage.first_stage_track, stage.first_stage_side,
             stage.first_stage_sector, stage.first_stage_sector_count);
+        const auto profile = eon::parse_deuteros_atari_first_stage(first_stage);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
             << stage.first_stage_sector_count << " (" << first_stage.size()
             << " original bytes)\n";
+        std::cout << "          First-stage control flow: entry +0x" << std::hex
+            << profile.entry_offset << ", checksum +0x" << profile.checksum_start_offset
+            << " +0x" << profile.checksum_byte_count << " (seed 0x"
+            << profile.checksum_seed << ", expected 0x" << profile.checksum_expected
+            << "); next raw load track " << std::dec << profile.next_track << ", side "
+            << static_cast<unsigned>(profile.next_side) << ", sectors "
+            << static_cast<unsigned>(profile.next_sector) << ".." << profile.next_sector_count
+            << " -> RAM 0x" << std::hex << profile.next_destination << std::dec << '\n';
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")
