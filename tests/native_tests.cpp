@@ -739,6 +739,12 @@ int main() {
     assert(main_entry.first_input_bit == 10);
     assert(main_entry.second_input_address == 0xbfe001);
     assert(main_entry.second_input_bit == 6);
+    assert(main_entry.input_dispatch_address == 0x21982);
+    assert(main_entry.input_dispatch_state_address == 0x21704);
+    assert(main_entry.input_dispatch_compare_value == 2);
+    assert(main_entry.input_dispatch_clamped_value == 1);
+    assert(main_entry.input_dispatch_service_address == 0x218cc);
+    assert(main_entry.input_dispatch_continue_address == 0x2181c);
     // $21982 writes profile one before returning to the bootstrap. Its table
     // routine supplies these exact raw-track load constants.
     assert(load_plan.title_handoff_profile.disk_offset == 0x6e000);

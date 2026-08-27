@@ -126,6 +126,13 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << static_cast<unsigned>(main_entry.first_input_bit) << " and 0x" << std::hex
         << main_entry.second_input_address << " bit " << std::dec
         << static_cast<unsigned>(main_entry.second_input_bit) << '\n';
+    std::cout << "          Input dispatch evidence: 0x" << std::hex
+        << main_entry.input_dispatch_address << " compares word 0x"
+        << main_entry.input_dispatch_state_address << " with " << std::dec
+        << main_entry.input_dispatch_compare_value << ", clamps below to "
+        << main_entry.input_dispatch_clamped_value << ", routes <= to 0x"
+        << std::hex << main_entry.input_dispatch_service_address << " and > to 0x"
+        << main_entry.input_dispatch_continue_address << std::dec << '\n';
     for (std::size_t index = 0; index < 2; ++index) {
         const auto bundle = eon::parse_deuteros_amiga_bundle(
             disk, plan.resource_disk_offsets[index]);

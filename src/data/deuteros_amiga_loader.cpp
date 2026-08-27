@@ -145,9 +145,38 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     if (big16(loop_bytes, 0x6a) != 6 || big32(loop_bytes, 0x6c) != 0xbfe001) {
         throw std::runtime_error("Unexpected Deuteros CIA input probe");
     }
+    // The gated input path at $2188e reaches $21982.  Preserve the exact
+    // unsigned comparison/clamp route rather than inferring meanings for the
+    // state word or its two downstream services.
+    constexpr std::uint32_t input_dispatch_address = 0x21982;
+    const auto input_dispatch = stage_bytes.subspan(main_offset(input_dispatch_address));
+    require_word(input_dispatch, 0x00, 0x3039); // move.w $21704,d0
+    require_long(input_dispatch, 0x02, 0x21704);
+    require_word(input_dispatch, 0x06, 0xb03c); // cmp.w #2,d0
+    if (big16(input_dispatch, 0x08) != 2) {
+        throw std::runtime_error("Unexpected Deuteros input-dispatch compare value");
+    }
+    require_word(input_dispatch, 0x0a, 0x640c); // bcc.s $2199a
+    require_word(input_dispatch, 0x0c, 0x33fc); // move.w #1,$21704
+    if (big16(input_dispatch, 0x0e) != 1 || big32(input_dispatch, 0x10) != 0x21704) {
+        throw std::runtime_error("Unexpected Deuteros input-dispatch clamp");
+    }
+    require_word(input_dispatch, 0x14, 0x6000); // bra.w $218cc
+    if (big16(input_dispatch, 0x16) != 0xff34) {
+        throw std::runtime_error("Unexpected Deuteros input-dispatch service branch");
+    }
+    require_word(input_dispatch, 0x18, 0x6700); // beq.w $218cc
+    if (big16(input_dispatch, 0x1a) != 0xff30) {
+        throw std::runtime_error("Unexpected Deuteros input-dispatch equality branch");
+    }
+    require_word(input_dispatch, 0x1c, 0x6000); // bra.w $2181c
+    if (big16(input_dispatch, 0x1e) != 0xfe7c) {
+        throw std::runtime_error("Unexpected Deuteros input-dispatch continue branch");
+    }
     const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
         0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
-        0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6};
+        0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6, input_dispatch_address,
+        0x21704, 2, 1, 0x218cc, 0x2181c};
 
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table

@@ -44,6 +44,18 @@ struct DeuterosAmigaMainStageEntry {
     std::uint8_t first_input_bit = 0;
     std::uint32_t second_input_address = 0;
     std::uint8_t second_input_bit = 0;
+    // The first input-originated branch after the recurring loop.  The
+    // original compares the word at input_dispatch_state_address with two;
+    // values below two are written back as input_dispatch_clamped_value and
+    // enter input_dispatch_service_address.  Two enters that same service;
+    // greater values branch back to input_dispatch_continue_address.  These
+    // are raw dispatch facts, not names for modes or menus.
+    std::uint32_t input_dispatch_address = 0;
+    std::uint32_t input_dispatch_state_address = 0;
+    std::uint16_t input_dispatch_compare_value = 0;
+    std::uint16_t input_dispatch_clamped_value = 0;
+    std::uint32_t input_dispatch_service_address = 0;
+    std::uint32_t input_dispatch_continue_address = 0;
 };
 
 struct DeuterosAmigaLoadPlan {
