@@ -803,4 +803,72 @@ MillenniumAmigaResidentSeparatePostCallBoundary parse_millennium_amiga_resident_
     return {entry, plan.resident_stage.disk_offset + relative, hash, 0x2208, 0x6934e, 0x7c256, entry + 20, next_target, plan.resident_stage.disk_offset + target_relative, target_prefix_hash};
 }
 
+MillenniumAmigaResidentSeparatePostCallTailBoundary
+parse_millennium_amiga_resident_separate_post_call_tail_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparatePostCallBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68d9c;
+    constexpr std::array<std::uint8_t, 36> expected{{
+        0x4e, 0xb9, 0x00, 0x07, 0xdb, 0xa8,
+        0x4e, 0xb9, 0x00, 0x07, 0xd8, 0xa8,
+        0x4e, 0xb9, 0x00, 0x07, 0xd4, 0x80,
+        0x4e, 0xb9, 0x00, 0x07, 0xb5, 0x94,
+        0x4e, 0xb9, 0x00, 0x07, 0xd5, 0xc8,
+        0x4e, 0xb9, 0x00, 0x07, 0xb3, 0x6c,
+    }};
+    constexpr std::array<std::uint32_t, 6> targets{{
+        0x7dba8, 0x7d8a8, 0x7d480, 0x7b594, 0x7d5c8, 0x7b36c,
+    }};
+    constexpr std::array<std::string_view, 6> target_hashes{{
+        "b388a3622caeeccac01d793650e63e192de821abc789ca334b6ba00a1475ca34",
+        "819055da14479352b3f672e6db10424bdebb90230350b0e8088eb0cb0acbd087",
+        "dbb41359b827129e186a7cf2f4d79c7f45f11f4cbe53e964a0633b7ee7070df5",
+        "e9aa8c8f766b3486163339990968f9829d29b69c3c991ed2a7fc71c483d16846",
+        "de1fdcc69a46a7f661c191fa69cd64a693053f4026708400ca4bc6defe224c79",
+        "cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f909f",
+    }};
+    constexpr std::string_view expected_hash =
+        "08c660de1ed6d0b0f535e451c84450397383a923a1808fa9678d3ae85a8cc17b";
+    if (boundary.following_call_address != 0x68d96
+        || boundary.following_call_target != 0x7b342
+        || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga separate post-call tail placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga separate post-call tail is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto hash = to_hex(sha256(bytes));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga separate post-call tail");
+    }
+    MillenniumAmigaResidentSeparatePostCallTailBoundary result{
+        .entry_address = entry,
+        .raw_disk_offset = plan.resident_stage.disk_offset + relative,
+        .byte_count = expected.size(),
+        .sha256 = hash,
+        .call_addresses = {entry, entry + 6, entry + 12, entry + 18, entry + 24, entry + 30},
+        .call_targets = targets,
+    };
+    for (std::size_t index = 0; index < targets.size(); ++index) {
+        if (targets[index] < plan.resident_stage.destination) {
+            throw std::runtime_error("Millennium Amiga separate post-call tail target precedes raw range");
+        }
+        const auto target_relative = targets[index] - plan.resident_stage.destination;
+        if (target_relative > plan.resident_stage.length
+            || 32U > plan.resident_stage.length - target_relative) {
+            throw std::runtime_error("Millennium Amiga separate post-call tail target is outside raw range");
+        }
+        const auto prefix = disk.bytes(plan.resident_stage.disk_offset + target_relative, 32);
+        const auto prefix_hash = to_hex(sha256(prefix));
+        if (prefix_hash != target_hashes[index]) {
+            throw std::runtime_error("Unexpected Millennium Amiga separate post-call tail target");
+        }
+        result.target_raw_disk_offsets[index] = plan.resident_stage.disk_offset + target_relative;
+        result.target_prefix_sha256[index] = prefix_hash;
+    }
+    return result;
+}
+
 } // namespace eon
