@@ -343,6 +343,14 @@ does not read the runtime sources, infer the `$7b77e` or `$7ba12` effects, or
 execute either call. This preserves a real caller-side staging protocol while
 retaining the helper's unrecovered executable boundary.
 
+For each of those callers, the static bytes immediately after the final
+`JSR $7ba12` are now also verified, while carefully not treating them as a
+runtime helper return. The first has return-address `0x69656` and begins with
+absolute operands `0x7cc46` and `0x7b764`; the second has `0x69bba` with
+`0x7cc72` and `0x7b764`. This records the exact caller-side continuation
+boundary from the original ADF. Project Eon neither executes `$7ba12`, assumes
+that it returns, reads either source, nor assigns a meaning to the data flow.
+
 The setup target `$7b77e` is now separately fingerprinted at its linear
 raw-media correspondence, disk offset `0x29b7e`. Its first 32 original bytes
 are `04006e00c200044a00c240007a00c200105200c201005200c200014a00c20800`,

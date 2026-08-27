@@ -298,6 +298,7 @@ parse_millennium_amiga_resident_helper_staging_callsites(
     constexpr std::uint32_t clear_byte = 0x7b14e;
     constexpr std::array<std::uint32_t, 2> entries{{0x69624, 0x69b88}};
     constexpr std::array<std::uint32_t, 2> sources{{0x7cc3c, 0x7cc68}};
+    constexpr std::array<std::uint32_t, 2> post_helper_sources{{0x7cc46, 0x7cc72}};
     std::array<MillenniumAmigaResidentHelperStagingCallsite, 2> callsites{};
     constexpr std::array<std::uint8_t, 6> word_copies_bytes{{0x3a, 0xdc, 0x3a, 0xdc, 0x3a, 0xdc}};
     constexpr std::array<std::uint8_t, 6> sign_copies_bytes{{0x1a, 0xdc, 0x1a, 0xdc, 0x1a, 0xdc}};
@@ -312,10 +313,12 @@ parse_millennium_amiga_resident_helper_staging_callsites(
         constexpr std::size_t sign_copies = 3 * 2;
         constexpr std::size_t suffix_size = 6 + 8 + 6;
         constexpr std::size_t size = prefix_size + 6 + word_copies + 6 + sign_copies + suffix_size;
-        if (relative > plan.resident_stage.length || size > plan.resident_stage.length - relative) {
+        constexpr std::size_t post_helper_prefix_size = 12;
+        if (relative > plan.resident_stage.length
+            || size + post_helper_prefix_size > plan.resident_stage.length - relative) {
             throw std::runtime_error("Millennium Amiga helper staging callsite is outside resident range");
         }
-        const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, size);
+        const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, size + post_helper_prefix_size);
         const std::array<std::uint8_t, 6> source_prefix{{
             0x28, 0x7c, static_cast<std::uint8_t>(sources[index] >> 24U),
             static_cast<std::uint8_t>(sources[index] >> 16U),
@@ -343,11 +346,24 @@ parse_millennium_amiga_resident_helper_staging_callsites(
                 sign_copies_bytes.begin())) {
             throw std::runtime_error("Unexpected Millennium Amiga helper sign staging");
         }
-        if (!std::equal(suffix.begin(), suffix.end(), bytes.end() - suffix.size())) {
+        if (!std::equal(suffix.begin(), suffix.end(), bytes.begin() + size - suffix.size())) {
             throw std::runtime_error("Unexpected Millennium Amiga helper staging tail");
         }
+        const std::array<std::uint8_t, 12> post_helper_prefix{{
+            0x2a, 0x7c,
+            static_cast<std::uint8_t>(post_helper_sources[index] >> 24U),
+            static_cast<std::uint8_t>(post_helper_sources[index] >> 16U),
+            static_cast<std::uint8_t>(post_helper_sources[index] >> 8U),
+            static_cast<std::uint8_t>(post_helper_sources[index]),
+            0x28, 0x7c, 0x00, 0x07, 0xb7, 0x64,
+        }};
+        if (!std::equal(post_helper_prefix.begin(), post_helper_prefix.end(), bytes.begin() + size)) {
+            throw std::runtime_error("Unexpected Millennium Amiga post-helper static boundary");
+        }
         callsites[index] = {entries[index], sources[index], magnitude_destination, sign_destination,
-            setup_helper, clear_byte, splitter.helper_address};
+            setup_helper, clear_byte, splitter.helper_address,
+            entries[index] + static_cast<std::uint32_t>(size),
+            post_helper_sources[index], magnitude_destination};
     }
     return callsites;
 }

@@ -97,6 +97,12 @@ struct MillenniumAmigaResidentHelperStagingCallsite {
     std::uint32_t setup_helper_address = 0;
     std::uint32_t clear_byte_address = 0;
     std::uint32_t helper_address = 0;
+    // Static instruction address immediately after JSR $7ba12, plus the two
+    // literal absolute operands beginning there. This is not a claim that the
+    // unrecovered helper returns at runtime.
+    std::uint32_t post_helper_return_address = 0;
+    std::uint32_t post_helper_source_address = 0;
+    std::uint32_t post_helper_magnitude_address = 0;
 };
 
 // The exact six source values transferred by a validated staging callsite
@@ -152,7 +158,9 @@ parse_millennium_amiga_resident_setup_helper_raw_boundary(
 // Validates the two additional literal staging callsites for $7ba12. Each
 // copies three words and three bytes from a runtime source into the same fixed
 // fields used by the splitter, calls $7b77e, clears $7b14e, then calls the
-// unimplemented helper. It never reads source values or invokes either call.
+// unimplemented helper. It also records the static bytes immediately after
+// that final JSR without claiming a runtime return. It never reads source
+// values or invokes either call.
 [[nodiscard]] std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>
 parse_millennium_amiga_resident_helper_staging_callsites(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
