@@ -366,7 +366,9 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_pre_title_callee_jnc_target_branch_address << " -> 0x"
         << flow.launcher_pre_title_callee_jnc_target_branch_target << "; JC target JMP 0x"
         << flow.launcher_pre_title_callee_jc_target_jump_address << " -> 0x"
-        << flow.launcher_pre_title_callee_jc_target_jump_target << std::dec << "))\n";
+        << flow.launcher_pre_title_callee_jc_target_jump_target << "; join JE 0x"
+        << flow.launcher_pre_title_callee_join_branch_address << " -> 0x"
+        << flow.launcher_pre_title_callee_join_branch_target << std::dec << "))\n";
     constexpr auto static_data_sha256 =
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
     const auto static_data = eon::extract_asset_by_sha256(release.path, static_data_sha256);
