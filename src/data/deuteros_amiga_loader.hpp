@@ -4,6 +4,8 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
+#include <vector>
 
 namespace eon {
 
@@ -126,8 +128,30 @@ struct DeuterosAmigaLoadPlan {
     AmigaLoadStage title_stage;
 };
 
+// A read-only representation of one completed pass through the main stage's
+// resource loader at $21932. `payload` is copied only into this host-memory
+// value: neither the supplied ADF nor the user's data directory is modified.
+// The bytes deliberately include the four-byte length word because the
+// original second transfer starts at the same source offset as its probe.
+struct DeuterosAmigaMainResourceTransfer {
+    std::uint16_t resource_index = 0;
+    std::uint32_t source_disk_offset = 0;
+    std::uint32_t probe_destination_address = 0;
+    std::uint32_t payload_destination_address = 0;
+    std::uint32_t payload_length = 0;
+    std::vector<std::uint8_t> payload;
+};
+
 // Decode load constants from the genuine 68000 instructions. Every expected
 // opcode is checked before its immediate value is accepted.
 [[nodiscard]] DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk);
+
+// Models one exact, successful loader pass in memory. A zero probe is the
+// original retry path, so it returns std::nullopt instead of inventing a
+// payload. A nonzero length must fit in the physical original ADF; malformed
+// media is rejected before any host-memory representation is returned.
+[[nodiscard]] std::optional<DeuterosAmigaMainResourceTransfer>
+read_deuteros_amiga_main_resource(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index);
 
 } // namespace eon

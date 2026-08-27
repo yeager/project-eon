@@ -989,6 +989,28 @@ int main() {
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 
+    // The main loader's probe and body pass start at the same physical ADF
+    // offset. These are in-memory copies of the genuine first two complete
+    // resources, not extracted files or inferred data formats.
+    const auto transferred_bundle0 = eon::read_deuteros_amiga_main_resource(
+        system_disk, load_plan, 0);
+    assert(transferred_bundle0);
+    assert(transferred_bundle0->source_disk_offset == 0x1b800);
+    assert(transferred_bundle0->probe_destination_address == 0x2ad24);
+    assert(transferred_bundle0->payload_destination_address == 0x32a24);
+    assert(transferred_bundle0->payload_length == 0x2f3f4);
+    assert(transferred_bundle0->payload == std::vector<std::uint8_t>(
+        system_disk.bytes(0x1b800, 0x2f3f4).begin(),
+        system_disk.bytes(0x1b800, 0x2f3f4).end()));
+    const auto transferred_bundle1 = eon::read_deuteros_amiga_main_resource(
+        system_disk, load_plan, 1);
+    assert(transferred_bundle1);
+    assert(transferred_bundle1->source_disk_offset == 0x4ba00);
+    assert(transferred_bundle1->payload_length == 0x215f0);
+    assert(transferred_bundle1->payload == std::vector<std::uint8_t>(
+        system_disk.bytes(0x4ba00, 0x215f0).begin(),
+        system_disk.bytes(0x4ba00, 0x215f0).end()));
+
     const auto first_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[0]);
     assert(first_bundle.length == 0x2f3f4);
