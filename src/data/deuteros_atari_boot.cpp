@@ -64,6 +64,30 @@ DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image) : image_(s
         'K', 'I', 'L', 'L', 'E', 'R', '_', 'B', 'O', 'O', 'T', 0}};
     profile_.killer_boot_signature = starts_with(bytes, 0x24, killer_boot);
 
+    // Disk 2's post-BPB branch at $22 enters a KILLER_BOOT-specific setup.
+    // It enters supervisor mode, copies ten literal longwords from the boot
+    // bytes at $ee to absolute RAM $8, then jumps to absolute address $12.
+    // Keep this as a protected-media trace: the copied words and destination
+    // are not classified as a game executable or resource.
+    constexpr std::array<std::uint8_t, 28> killer_vector_setup{{
+        0x46, 0xfc, 0x27, 0x00, // move.w #$2700,sr
+        0x43, 0xf8, 0x00, 0x08, // lea $8.w,a1
+        0x41, 0xfa, 0x00, 0x0e, // lea $ee(pc),a0
+        0x7e, 0x09,             // moveq #9,d7
+        0x22, 0xd8,             // move.l (a0)+,(a1)+
+        0x51, 0xcf, 0xff, 0xfc, // dbf d7,$e4
+        0x4e, 0xf8, 0x00, 0x12  // jmp $12.w
+    }};
+    if (profile_.killer_boot_signature && profile_.boot_branch_target == 0x22U
+        && starts_with(bytes, 0xd8, killer_vector_setup)) {
+        profile_.has_killer_boot_vector_setup = true;
+        profile_.killer_boot_entry_offset = 0x30;
+        profile_.killer_boot_vector_source_offset = 0xee;
+        profile_.killer_boot_vector_destination = 0x8;
+        profile_.killer_boot_vector_longword_count = 10;
+        profile_.killer_boot_continuation = 0x12;
+    }
+
     // At $50 the supplied Replicants Disk 1 starts a literal Floprd argument
     // sequence. It reads 9 sectors at track 70 / side 0 / sector 1 into A6.
     // Do not generalize this to the other crack boot sectors.

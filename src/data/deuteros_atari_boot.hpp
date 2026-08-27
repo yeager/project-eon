@@ -21,6 +21,16 @@ struct DeuterosAtariBootProfile {
     std::uint16_t boot_branch_target = 0;
     bool killer_boot_signature = false;
 
+    // The supplied unlabelled Disk 2 has a distinct KILLER_BOOT routine.
+    // These fields record only its literal vector-table copy and absolute
+    // jump; no game-stage meaning is inferred from the protection code.
+    bool has_killer_boot_vector_setup = false;
+    std::size_t killer_boot_entry_offset = 0;
+    std::size_t killer_boot_vector_source_offset = 0;
+    std::uint32_t killer_boot_vector_destination = 0;
+    std::size_t killer_boot_vector_longword_count = 0;
+    std::uint32_t killer_boot_continuation = 0;
+
     // Recovered from the Replicants Disk 1 boot code's XBIOS Floprd call.
     // This is a raw 9-sector first stage, not a packed archive or a FAT file.
     bool has_recovered_first_stage = false;
