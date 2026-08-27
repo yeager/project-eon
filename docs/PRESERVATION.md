@@ -101,6 +101,29 @@ them to a cache. The alternate supplied crack images alter boot/loader code;
 they remain separately fingerprinted media rather than assumed equivalent
 executables.
 
+### Deuteros Atari ST protected-media boot chain
+
+The supplied Atari ST collection consists of protected/cracked raw `.st`
+images; it does not include a pristine, ordinary GEMDOS release.  Although the
+boot sector retains a 720 KiB BPB (512-byte sectors, two heads, nine sectors
+per track), its FAT root area is overwritten by loader/data bytes.  Project
+Eon therefore must not present this medium as a valid FAT12 filesystem.
+
+Both verified evidence disks retain the Atari boot-sector word checksum of
+`0x1234`.  Replicants Disk 1
+(`aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`)
+branches to `$1e`; its literal XBIOS `Floprd` argument setup at boot offset
+`$50` reads track 70, side 0, sectors 1 through 9 (4,608 bytes).  The SHA-256
+of that direct sector interval is
+`dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168`.
+This is a raw first stage, not a resource archive and is only read in memory.
+
+The supplied unlabelled Disk 2
+(`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
+branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its
+subsequent resource/title semantics remain unclassified.  The runtime reports
+these boundaries rather than inventing a GEMDOS title path or unpacking media.
+
 ### Deuteros Amiga execution chain
 
 Opcode-validated 68000 decoding proves:
