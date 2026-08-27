@@ -420,6 +420,22 @@ first 32 bytes have SHA-256
 This records a static post-return boundary, not a claim that `$778f0` returns,
 that absolute RAM is populated, or that `$7b342` is executed or understood.
 
+If both preceding unknown calls return, the six immediately following absolute
+JSRs at `$68d9c..$68dbf` are another static-only boundary. Their 36 original
+bytes have SHA-256
+`08c660de1ed6d0b0f535e451c84450397383a923a1808fa9678d3ae85a8cc17b`:
+they target `$7dba8`, `$7d8a8`, `$7d480`, `$7b594`, `$7d5c8`, and `$7b36c`.
+The corresponding 32-byte linear raw-prefix fingerprints are respectively ADF
+`+0x2bfa8` / `b388a3622caeeccac01d793650e63e192de821abc789ca334b6ba00a1475ca34`,
+`+0x2bca8` / `819055da14479352b3f672e6db10424bdebb90230350b0e8088eb0cb0acbd087`,
+`+0x2b880` / `dbb41359b827129e186a7cf2f4d79c7f45f11f4cbe53e964a0633b7ee7070df5`,
+`+0x29994` / `e9aa8c8f766b3486163339990968f9829d29b69c3c991ed2a7fc71c483d16846`,
+`+0x2b9c8` / `de1fdcc69a46a7f661c191fa69cd64a693053f4026708400ca4bc6defe224c79`,
+and `+0x2976c` / `cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f909f`.
+This proves only an immutable post-return call tail and raw-media
+correspondences: it does not establish any return, transformed executable
+representation, callee semantics, or call execution.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch

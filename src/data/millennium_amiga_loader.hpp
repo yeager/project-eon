@@ -251,7 +251,33 @@ struct MillenniumAmigaResidentSeparateEntryGate {
     std::uint32_t branch_target = 0;
 };
 struct MillenniumAmigaResidentSeparateBranchBoundary { std::uint32_t entry_address = 0; std::uint32_t long_branch_address = 0; std::uint32_t long_branch_target = 0; std::uint32_t unknown_call_address = 0; std::uint32_t unknown_call_target = 0; };
-struct MillenniumAmigaResidentSeparatePostCallBoundary { std::uint32_t entry_address = 0; std::size_t raw_disk_offset = 0; std::string sha256; std::uint16_t d0_immediate = 0; std::uint32_t a5_source_address = 0; std::uint32_t stored_d0_address = 0; std::uint32_t following_call_address = 0; std::uint32_t following_call_target = 0; std::size_t following_target_raw_disk_offset = 0; std::string following_target_prefix_sha256; };
+struct MillenniumAmigaResidentSeparatePostCallBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::string sha256;
+    std::uint16_t d0_immediate = 0;
+    std::uint32_t a5_source_address = 0;
+    std::uint32_t stored_d0_address = 0;
+    std::uint32_t following_call_address = 0;
+    std::uint32_t following_call_target = 0;
+    std::size_t following_target_raw_disk_offset = 0;
+    std::string following_target_prefix_sha256;
+};
+
+// If the preceding unknown JSR and the post-call JSR both return, the next
+// six absolute JSR instructions are fixed raw bytes. Their targets are kept
+// as independent ADF correspondences only; neither target execution nor any
+// call/return behavior is modeled.
+struct MillenniumAmigaResidentSeparatePostCallTailBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::array<std::uint32_t, 6> call_addresses{};
+    std::array<std::uint32_t, 6> call_targets{};
+    std::array<std::size_t, 6> target_raw_disk_offsets{};
+    std::array<std::string, 6> target_prefix_sha256{};
+};
 
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
@@ -397,5 +423,9 @@ parse_millennium_amiga_resident_separate_entry_gate(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
 [[nodiscard]] MillenniumAmigaResidentSeparateBranchBoundary parse_millennium_amiga_resident_separate_branch_boundary(const AmigaAdf&, const MillenniumAmigaLoadPlan&, const MillenniumAmigaResidentSeparateEntryGate&);
 [[nodiscard]] MillenniumAmigaResidentSeparatePostCallBoundary parse_millennium_amiga_resident_separate_post_call_boundary(const AmigaAdf&, const MillenniumAmigaLoadPlan&, const MillenniumAmigaResidentSeparateBranchBoundary&);
+[[nodiscard]] MillenniumAmigaResidentSeparatePostCallTailBoundary
+parse_millennium_amiga_resident_separate_post_call_tail_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&,
+    const MillenniumAmigaResidentSeparatePostCallBoundary&);
 
 } // namespace eon

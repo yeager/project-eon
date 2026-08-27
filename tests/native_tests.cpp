@@ -436,6 +436,28 @@ int main() {
     assert(defjam_separate_post_call.following_call_target == 0x7b342);
     assert(defjam_separate_post_call.following_target_raw_disk_offset == 0x29742);
     assert(defjam_separate_post_call.following_target_prefix_sha256 == "731d016983d29dcb23abad28f3f0f225bd3708073e8c0c8481a97a50b460cdcf");
+    const auto defjam_separate_post_call_tail =
+        eon::parse_millennium_amiga_resident_separate_post_call_tail_boundary(
+            defjam_loader_disk, defjam_plan, defjam_separate_post_call);
+    assert(defjam_separate_post_call_tail.entry_address == 0x68d9c);
+    assert(defjam_separate_post_call_tail.raw_disk_offset == 0x1719c);
+    assert(defjam_separate_post_call_tail.byte_count == 36);
+    assert(defjam_separate_post_call_tail.sha256 == "08c660de1ed6d0b0f535e451c84450397383a923a1808fa9678d3ae85a8cc17b");
+    assert((defjam_separate_post_call_tail.call_addresses
+        == std::array<std::uint32_t, 6>{{0x68d9c, 0x68da2, 0x68da8, 0x68dae, 0x68db4, 0x68dba}}));
+    assert((defjam_separate_post_call_tail.call_targets
+        == std::array<std::uint32_t, 6>{{0x7dba8, 0x7d8a8, 0x7d480, 0x7b594, 0x7d5c8, 0x7b36c}}));
+    assert((defjam_separate_post_call_tail.target_raw_disk_offsets
+        == std::array<std::size_t, 6>{{0x2bfa8, 0x2bca8, 0x2b880, 0x29994, 0x2b9c8, 0x2976c}}));
+    assert((defjam_separate_post_call_tail.target_prefix_sha256
+        == std::array<std::string, 6>{{
+            "b388a3622caeeccac01d793650e63e192de821abc789ca334b6ba00a1475ca34",
+            "819055da14479352b3f672e6db10424bdebb90230350b0e8088eb0cb0acbd087",
+            "dbb41359b827129e186a7cf2f4d79c7f45f11f4cbe53e964a0633b7ee7070df5",
+            "e9aa8c8f766b3486163339990968f9829d29b69c3c991ed2a7fc71c483d16846",
+            "de1fdcc69a46a7f661c191fa69cd64a693053f4026708400ca4bc6defe224c79",
+            "cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f909f",
+        }}));
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
