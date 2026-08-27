@@ -346,7 +346,9 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto flow = eon::parse_millennium_dos_title_flow(*titles, *launcher);
     std::cout << "          TITLES.EXE: resource " << flow.title_resource_index
         << ", " << flow.intro_transition_steps << " transition steps, key poll INT 0x"
-        << std::hex << static_cast<unsigned>(flow.input_interrupt) << std::dec
+        << std::hex << static_cast<unsigned>(flow.input_interrupt) << "; selection JLE 0x"
+        << flow.title_selection_callee_branch_address << " -> 0x"
+        << flow.title_selection_callee_branch_target << std::dec
         << "; launcher hand-off " << flow.launcher_title_program << " -> "
         << flow.launcher_game_program << " (DX 0x" << std::hex
         << flow.launcher_title_program_address << " / 0x"

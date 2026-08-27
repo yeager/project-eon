@@ -914,6 +914,10 @@ The clean English DOS `TITLES.EXE` (7,022 bytes, SHA-256
 `3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`)
 is a separate flat binary, entered at loaded address `$1b80`. Its code at
 `$1c14` loads title resource index zero through its resource routine. The
+direct near-call there targets `$1725`. Its first 13 original bytes end in
+literal `JLE +$01` at `$172f` to `$1732`; the sequential byte is `RET` at
+`$1731`. This is a caller/callee byte boundary only: the comparison condition,
+callee return, and any resource effect remain unmodelled.
 transition routine at `$1941` starts with `CX=$25` and `DX=$0170`, so the
 verified title transition contains 37 steps with that original stride.
 

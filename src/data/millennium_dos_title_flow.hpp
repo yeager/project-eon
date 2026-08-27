@@ -12,6 +12,10 @@ namespace eon {
 // it is not a replacement implementation of TITLES.EXE's renderer.
 struct MillenniumDosTitleFlow {
     std::uint16_t title_entry_address = 0;
+    std::uint16_t title_selection_callee_entry_address = 0;
+    std::uint16_t title_selection_callee_branch_address = 0;
+    std::uint16_t title_selection_callee_branch_target = 0;
+    std::uint16_t title_selection_callee_fallthrough_return = 0;
     std::uint16_t title_resource_index = 0;
     std::uint16_t intro_transition_steps = 0;
     std::uint16_t intro_step_stride = 0;

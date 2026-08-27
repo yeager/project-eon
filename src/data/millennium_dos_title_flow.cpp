@@ -41,6 +41,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0x0e, 0x1f, 0x0e, 0x07, 0xe9, 0x79, 0x1a};
     constexpr std::array<std::uint8_t, 6> title_selection{
         0xb8, 0x00, 0x00, 0xe8, 0x0b, 0xfb}; // AX=0; call 0x1725
+    constexpr std::array<std::uint8_t, 13> title_selection_callee_prefix{
+        0x0e, 0x1f, 0x0e, 0x07, 0x8b, 0x0e, 0x5d, 0x0e,
+        0x3b, 0xc1, 0x7e, 0x01, 0xc3};
     constexpr std::array<std::uint8_t, 13> transition_setup{
         0xb9, 0x25, 0x00, 0xba, 0x70, 0x01, 0x51, 0x52,
         0xbe, 0x0c, 0x01, 0x8b, 0x04};
@@ -68,6 +71,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         || !has_bytes(titles_executable, clean_exit_offset, clean_exit)
         || !has_bytes(titles_executable, dos_exit_offset, dos_exit)) {
         throw std::runtime_error("Unsupported Millennium DOS title control flow");
+    }
+    constexpr std::size_t title_selection_callee_address = 0x1725;
+    if (!has_bytes(titles_executable, title_selection_callee_address - file_to_load_bias,
+                   title_selection_callee_prefix)) {
+        throw std::runtime_error("Unsupported Millennium DOS title selection callee");
     }
     static_cast<void>(require_unique(titles_executable, transition_setup, "title transition loop"));
     static_cast<void>(require_unique(titles_executable, input_poll, "title input poll"));
@@ -193,6 +201,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
 
     return {
         .title_entry_address = 0x1b80,
+        .title_selection_callee_entry_address = 0x1725,
+        .title_selection_callee_branch_address = 0x172f,
+        .title_selection_callee_branch_target = 0x1732,
+        .title_selection_callee_fallthrough_return = 0x1731,
         .title_resource_index = 0,
         .intro_transition_steps = 0x25,
         .intro_step_stride = 0x170,
