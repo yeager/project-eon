@@ -417,6 +417,16 @@ code; it is explicitly not evidence of a handoff to the separately loaded
 main/game stage. Project Eon preserves the arithmetic, write, and destination
 without inventing menu or gameplay labels.
 
+The selector destination is now also bounded. `$1fbe6` tests signed byte
+`$1f98c`: zero enters `$1fc22` (which immediately tests `$1f98e`), positive
+enters `$1fc9e`, and the negative fall-through calls `$1fc24`. On that negative
+path, the original preserves D0/D5, suppresses a service call if D0 is `$0020`,
+otherwise supplies literal D0/D1 values `$0013`/`$000c` to `$3fbf8`, then runs
+a `$00004e20` decrement loop before restoring registers and returning. These
+are opcode-validated control-flow, call, and timing facts from the raw title
+stage; Project Eon does not name the state bytes, service, or output, and does
+not synthesize their unknown data.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
