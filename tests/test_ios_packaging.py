@@ -1,4 +1,5 @@
 import pathlib
+import os
 import shutil
 import subprocess
 import tempfile
@@ -10,7 +11,8 @@ SCRIPT = ROOT / "packaging" / "ios" / "package-ipa.sh"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 
-@unittest.skipUnless(shutil.which("bash") and shutil.which("unzip"), "requires bash and unzip")
+@unittest.skipUnless(os.name != "nt" and shutil.which("bash") and shutil.which("unzip"),
+                     "requires POSIX bash and unzip")
 class IosPackagingTests(unittest.TestCase):
     def test_ci_cross_compiles_png_dependencies_for_ios(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
