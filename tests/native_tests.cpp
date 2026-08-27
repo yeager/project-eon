@@ -176,6 +176,22 @@ int main() {
     assert(defjam_splitter.helper_address == 0x7ba12);
     assert(defjam_splitter.signed_word_address == 0x7b768);
     assert(defjam_splitter.signed_sign_address == 0x7b778);
+    // These are real, consecutive words from the supplied raw resident range.
+    // They exercise the exact pre-helper LSL/ROXL/LSR data movement without
+    // claiming that this disk position was an original A1 caller.
+    const auto splitter_source = defjam_loader_disk.bytes(
+        defjam_plan.resident_stage.disk_offset + 0x100, 6);
+    const std::array<std::uint16_t, 3> splitter_words{{
+        static_cast<std::uint16_t>((splitter_source[0] << 8U) | splitter_source[1]),
+        static_cast<std::uint16_t>((splitter_source[2] << 8U) | splitter_source[3]),
+        static_cast<std::uint16_t>((splitter_source[4] << 8U) | splitter_source[5]),
+    }};
+    assert((splitter_words == std::array<std::uint16_t, 3>{{0x3039, 0x0007, 0xb76a}}));
+    const auto splitter_pre_helper = eon::split_millennium_amiga_resident_words_pre_helper(
+        splitter_words);
+    assert((splitter_pre_helper.magnitude_words
+        == std::array<std::uint16_t, 3>{{0x3039, 0x0007, 0x376a}}));
+    assert((splitter_pre_helper.sign_bytes == std::array<std::uint8_t, 3>{{0, 0, 1}}));
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);

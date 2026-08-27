@@ -210,4 +210,17 @@ MillenniumAmigaResidentWordSplitter parse_millennium_amiga_resident_word_splitte
         magnitude_addresses, sign_addresses, 0x7ba12, 0x7b768, 0x7b778};
 }
 
+MillenniumAmigaResidentWordSplitterPreHelperState
+split_millennium_amiga_resident_words_pre_helper(
+    const std::array<std::uint16_t, 3>& source_words) {
+    MillenniumAmigaResidentWordSplitterPreHelperState state;
+    for (std::size_t index = 0; index < source_words.size(); ++index) {
+        // LSL.W #1 sends original bit 15 to X; ROXL.B #1 rotates that X
+        // into cleared D3 bit 0; LSR.W #1 restores bits 14..0.
+        state.magnitude_words[index] = static_cast<std::uint16_t>(source_words[index] & 0x7fffU);
+        state.sign_bytes[index] = static_cast<std::uint8_t>(source_words[index] >> 15U);
+    }
+    return state;
+}
+
 } // namespace eon

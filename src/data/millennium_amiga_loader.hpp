@@ -54,6 +54,14 @@ struct MillenniumAmigaResidentWordSplitter {
     std::uint32_t signed_sign_address = 0;
 };
 
+// Exact observable state immediately before the splitter's JSR $7ba12.  This
+// is intentionally not presented as the subroutine's final result: the helper
+// is not yet independently decoded, and may alter the fixed output locations.
+struct MillenniumAmigaResidentWordSplitterPreHelperState {
+    std::array<std::uint16_t, 3> magnitude_words{};
+    std::array<std::uint8_t, 3> sign_bytes{};
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -71,5 +79,13 @@ struct MillenniumAmigaResidentWordSplitter {
 // stage, disk extraction, or 68000 execution is involved.
 [[nodiscard]] MillenniumAmigaResidentWordSplitter parse_millennium_amiga_resident_word_splitter(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
+
+// Models only the three LSL/ROXL/LSR iterations proven by the validated raw
+// routine. `source_words` are the big-endian words already resident at
+// A1+$36..+$3b. It performs no disk I/O and cannot stand in for the later
+// helper call or the routine's return value.
+[[nodiscard]] MillenniumAmigaResidentWordSplitterPreHelperState
+split_millennium_amiga_resident_words_pre_helper(
+    const std::array<std::uint16_t, 3>& source_words);
 
 } // namespace eon
