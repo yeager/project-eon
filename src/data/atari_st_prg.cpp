@@ -120,4 +120,37 @@ MillenniumAtariBootstrap parse_millennium_atari_bootstrap(
     return {0, 0x24, source_offset, last_longword_offset, destination_offset, stage_bytes};
 }
 
+MillenniumAtariBssEntry parse_millennium_atari_bss_entry(
+    std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
+    const MillenniumAtariBootstrap& bootstrap) {
+    // MOVEA.L #$77000,A1; MOVEA.L #$1d652,A0; MOVE.W #$100,D0;
+    // MOVE.W (A0)+,(A1)+; DBF D0,-4; JMP $77000. DBF reaches its body once
+    // for D0 = 0, therefore #$100 means 257 words. The source remains an
+    // unproven runtime-memory dependency: bootstrap only established 0xd8
+    // bytes, not this entire requested range.
+    constexpr std::size_t header_bytes = 28;
+    constexpr std::uint32_t source_address = 0x1d652;
+    constexpr std::uint32_t destination_address = 0x77000;
+    constexpr std::uint16_t initial_d0 = 0x100;
+    constexpr std::array<std::uint8_t, 28> entry_bytes{
+        0x22, 0x7c, 0x00, 0x07, 0x70, 0x00, 0x20, 0x7c, 0x00, 0x01,
+        0xd6, 0x52, 0x30, 0x3c, 0x01, 0x00, 0x32, 0xd8, 0x51, 0xc8,
+        0xff, 0xfc, 0x4e, 0xf9, 0x00, 0x07, 0x70, 0x00,
+    };
+    const auto stage_offset = static_cast<std::size_t>(bootstrap.stage_source_offset);
+    if (bootstrap.stage_source_offset != prg.text_bytes
+        || bootstrap.stage_bytes < entry_bytes.size()
+        || stage_offset > bytes.size() - std::min(bytes.size(), header_bytes)
+        || header_bytes + stage_offset > bytes.size()
+        || entry_bytes.size() > bytes.size() - header_bytes - stage_offset) {
+        throw std::runtime_error("Millennium Atari ST BSS entry is outside PRG data");
+    }
+    const auto begin = bytes.begin() + static_cast<std::ptrdiff_t>(header_bytes + stage_offset);
+    if (!std::equal(entry_bytes.begin(), entry_bytes.end(), begin)) {
+        throw std::runtime_error("Unexpected Millennium Atari ST BSS entry");
+    }
+    return {bootstrap.stage_destination_offset, source_address, destination_address,
+        initial_d0, static_cast<std::uint32_t>(initial_d0) + 1U, destination_address};
+}
+
 } // namespace eon

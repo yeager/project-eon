@@ -411,6 +411,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto executable_bytes = disk.read(*executable);
     const auto prg = eon::parse_atari_st_prg(executable_bytes);
     const auto bootstrap = eon::parse_millennium_atari_bootstrap(executable_bytes, prg);
+    const auto bss_entry = eon::parse_millennium_atari_bss_entry(executable_bytes, prg, bootstrap);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -425,7 +426,11 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << "; copies 0x" << bootstrap.stage_bytes << " bytes from 0x"
         << bootstrap.stage_source_offset << "..0x" << bootstrap.stage_last_longword_offset
         << " to BSS 0x" << bootstrap.stage_destination_offset
-        << " and JMPs there" << std::dec << " (original bootstrap; not executed)\n";
+        << " and JMPs there" << std::dec << " (original bootstrap; not executed)\n"
+        << "          BSS entry: copies " << bss_entry.copied_words << " words from 0x"
+        << std::hex << bss_entry.copy_source_address << " to 0x"
+        << bss_entry.copy_destination_address << "; JMP 0x" << bss_entry.jump_address
+        << std::dec << " (source initialization not yet proven; not executed)\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
