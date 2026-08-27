@@ -458,6 +458,25 @@ int main() {
             "de1fdcc69a46a7f661c191fa69cd64a693053f4026708400ca4bc6defe224c79",
             "cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f909f",
         }}));
+    // Every supplied Millennium Amiga image shares the verified resident raw
+    // range. One image is shorter than a standard ADF, so check the common
+    // raw bytes directly rather than incorrectly forcing it through the ADF
+    // filesystem abstraction. This neither accepts nor interprets the other
+    // variants' altered boot paths.
+    for (const auto hash : millennium_amiga_hashes) {
+        const auto image = eon::extract_asset_by_sha256(amiga_millennium->path, hash);
+        assert(image);
+        const std::span bytes(*image);
+        assert(bytes.size() >= 0x2bfc8);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1719c, 36)))
+            == defjam_separate_post_call_tail.sha256);
+        for (std::size_t index = 0;
+             index < defjam_separate_post_call_tail.target_raw_disk_offsets.size(); ++index) {
+            assert(eon::to_hex(eon::sha256(bytes.subspan(
+                defjam_separate_post_call_tail.target_raw_disk_offsets[index], 32)))
+                == defjam_separate_post_call_tail.target_prefix_sha256[index]);
+        }
+    }
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words

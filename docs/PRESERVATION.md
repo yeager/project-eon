@@ -435,6 +435,11 @@ and `+0x2976c` / `cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f90
 This proves only an immutable post-return call tail and raw-media
 correspondences: it does not establish any return, transformed executable
 representation, callee semantics, or call execution.
+The identical tail and every target fingerprint are checked against all six
+supplied Amiga variants; their differing bootstrap paths remain separate
+evidence and are not treated as interchangeable executable provenance. One
+shorter supplied dump is checked by direct bounded raw spans, not forced into
+the standard-ADF reader it does not satisfy.
 
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
