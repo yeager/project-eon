@@ -98,7 +98,22 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         resource_offsets[index] = big32(resource_table, index * 4);
         static_cast<void>(disk.bytes(resource_offsets[index], 1));
     }
-    return {loader, main_stage, resource_offsets, title_handoff_profile};
+
+    // The selected title profile is not a data-only blob: its first longword
+    // is the 68000 absolute-JMP vector.  Decode it from the original track,
+    // and insist that it remains within the loaded memory interval.  This is
+    // deliberately distinct from profile zero's main-stage check above.
+    const auto title_bytes = disk.bytes(title_handoff_profile.disk_offset,
+        title_handoff_profile.length);
+    require_word(title_bytes, 0, 0x4ef9); // jmp absolute long
+    const auto title_entry = big32(title_bytes, 2);
+    if (title_entry < title_handoff_profile.destination
+        || title_entry - title_handoff_profile.destination >= title_handoff_profile.length) {
+        throw std::runtime_error("Deuteros title entry outside loaded title stage");
+    }
+    const AmigaLoadStage title_stage{title_handoff_profile.disk_offset,
+        title_handoff_profile.length, title_handoff_profile.destination, title_entry};
+    return {loader, main_stage, resource_offsets, title_handoff_profile, title_stage};
 }
 
 } // namespace eon

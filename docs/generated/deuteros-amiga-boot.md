@@ -7,6 +7,8 @@
 - Bootstrap entry: `0x12a4e`
 - Main stage load: disk `0x5800` → memory `0x20000`, length `0x4200`
 - Main entry: `0x21734` (disk `0x6f34`)
+- Title handoff stage: disk `0x6e000` → memory `0x13000`, length `0x6ca00`
+- Title entry: `0x40426` (disk `0x9b426`)
 
 ## Resource catalogue
 
@@ -254,3 +256,43 @@ zero to one and enters `$218cc`. Its next confirmed branch reaches `$21a4c`,
 which places profile one in `$12ffc` for the bootstrap. Table entry one at
 `$12a3a` is routine `$12b30`, returning destination `$13000`, length `$6ca00`,
 and track `$50` (disk offset `$6e000`).
+
+## Title handoff entry
+
+```asm
+00040426  move.l     a1, $206a0.l
+0004042c  move.w     d0, $4040e.l
+00040432  cmp.b      #$5, d0
+00040436  bne.b      $40448
+00040438  move.b     d0, $3717e.l
+0004043e  move.w     #$101, $38092.l
+00040446  bra.b      $40450
+00040448  move.b     #$1, $19d52.l
+00040450  movea.l    #$40b62, a7
+00040456  movea.l    $4.w, a6
+0004045a  jsr        -$96(a6)
+0004045e  move.l     #$7fff0, d0
+00040464  movea.l    $4.w, a6
+00040468  jsr        -$9c(a6)
+0004046c  jsr        $1ed80.l
+00040472  jsr        $1f172.l
+00040478  move.l     $1f168.l, $1f974.l
+00040482  jsr        $1f182.l
+00040488  move.l     $1f168.l, $410d8.l
+00040492  movea.l    #$dff000, a0
+00040498  move.w     #$7fff, $40(a0)
+0004049e  move.w     #$7fff, $42(a0)
+000404a4  move.w     #$c000, $9a(a0)
+000404aa  move.w     #$87ff, $96(a0)
+000404b0  jsr        $1ef74.l
+000404b6  jsr        $206d4.l
+000404bc  jsr        $206be.l
+000404c2  move.l     #$13000, d1
+000404c8  jsr        $403e6.l
+000404ce  jsr        $403f4.l
+000404d4  lea.l      $12ff4.l, a0
+000404da  move.l     (a0)+, d0
+000404dc  move.l     d0, $37ef2.l
+000404e2  move.l     (a0)+, d0
+000404e4  move.l     d0, $37ef6.l
+```

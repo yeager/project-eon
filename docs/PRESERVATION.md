@@ -194,7 +194,12 @@ to `$219f4`, copies it to bootstrap return slot `$12ffc`, and returns.
 Bootstrap table entry one at `$12a3a` is routine `$12b30`: it requests raw
 decoded track data from disk offset `0x6e000`, length `0x6ca00`, into memory
 `0x13000`. Project Eon retains these load constants as `title_handoff_profile`;
-it does not claim to emulate the later stage yet.
+the first word of that real stage is verified as `JMP $00040426`. The target
+is range-checked against the loaded interval and retained as `title_stage`;
+the runtime still reads this source ADF range in place and does not unpack it.
+The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
+the passed mode word at `$4040e`, and comparing its low byte with five. The
+meaning of those mode values and the later gameplay dispatch remain unknown.
 
 The compositor draws channels in ascending order. X is measured in 16-pixel
 words and Y in scanlines. Bit 15 selects masked drawing where palette index 0
@@ -256,6 +261,14 @@ eight-character name. `TITLE.LIB` has 38 entries at directory `$4813`;
 `GX.LIB` has 180 at `$4bd3c`. Native parsing rejects duplicate names,
 non-monotonic resources, invalid padding/flags, and any range outside the
 directory boundary.
+
+The English `2200AD4.BIN` static-data file (12,494 bytes, SHA-256
+`1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d`)
+contains a NUL-terminated celestial-label table at file `$03d2`. The native
+reader preserves all 41 labels and their exact byte offsets, from `Inner
+System` through `Asteroids `. It does not trim the original trailing spaces or
+invent a mapping from those labels to mutable simulation records: the loaded
+file proves this immutable display table, not the full game-state layout.
 
 `TITLE.LIB` entry `P00` is the first genuine title image: extent `$000006` to
 `$002941`, 10,555 bytes. Its codec-2 record declares 320×200 indexed pixels,
