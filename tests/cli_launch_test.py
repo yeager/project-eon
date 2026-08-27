@@ -49,18 +49,20 @@ def main() -> int:
 
     before = media_snapshot(data_directory)
     environment = os.environ | {"SDL_VIDEODRIVER": "dummy"}
-    platforms = (
-        ("millennium", "dos"),
-        ("millennium", "amiga"),
-        ("millennium", "atari-st"),
-        ("deuteros", "amiga"),
-        ("deuteros", "atari-st"),
+    starts = (
+        ("start-menu", (str(executable), "--data", str(data_directory))),
+        ("millennium/dos", (str(executable), "--data", str(data_directory), "--game",
+            "millennium", "--platform", "dos", "--presentation", "original")),
+        ("millennium/amiga", (str(executable), "--data", str(data_directory), "--game",
+            "millennium", "--platform", "amiga", "--presentation", "original")),
+        ("millennium/atari-st", (str(executable), "--data", str(data_directory), "--game",
+            "millennium", "--platform", "atari-st", "--presentation", "original")),
+        ("deuteros/amiga", (str(executable), "--data", str(data_directory), "--game",
+            "deuteros", "--platform", "amiga", "--presentation", "original")),
+        ("deuteros/atari-st", (str(executable), "--data", str(data_directory), "--game",
+            "deuteros", "--platform", "atari-st", "--presentation", "original")),
     )
-    for game, platform in platforms:
-        command = (
-            str(executable), "--data", str(data_directory), "--game", game,
-            "--platform", platform, "--presentation", "original",
-        )
+    for name, command in starts:
         try:
             completed = subprocess.run(
                 command, env=environment, check=False, capture_output=True,
@@ -69,7 +71,7 @@ def main() -> int:
         except subprocess.TimeoutExpired:
             continue
         raise SystemExit(
-            f"{game}/{platform} exited before its SDL loop (status {completed.returncode}):\n"
+            f"{name} exited before its SDL loop (status {completed.returncode}):\n"
             f"{completed.stderr}"
         )
     after = media_snapshot(data_directory)
