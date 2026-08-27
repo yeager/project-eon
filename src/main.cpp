@@ -109,6 +109,23 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     std::cout << "          ADF boot checksum valid; main stage disk 0x" << std::hex
         << plan.main_stage.disk_offset << " -> memory 0x" << plan.main_stage.destination
         << ", entry 0x" << plan.main_stage.entry_address << std::dec << '\n';
+    const auto& main_entry = plan.main_stage_entry;
+    std::cout << "          Main entry evidence: incoming A1/D0 -> 0x" << std::hex
+        << main_entry.incoming_controller_cell << "/0x" << main_entry.incoming_mode_cell
+        << ", stack 0x" << main_entry.stack_address << ", ceiling 0x"
+        << main_entry.memory_ceiling << ", raw init calls 0x"
+        << main_entry.initialization_calls[0] << "/0x" << main_entry.initialization_calls[1]
+        << std::dec << '\n';
+    std::cout << "          Main loop evidence: 0x" << std::hex << main_entry.loop_address
+        << " resets words 0x" << main_entry.first_state_word_address << "/0x"
+        << main_entry.second_state_word_address << ", enables 0x"
+        << main_entry.scheduler_enable_word_address << "=0x"
+        << main_entry.scheduler_enable_word_value << ", services 0x"
+        << main_entry.loop_first_service_address << "/0x" << main_entry.loop_scheduler_address
+        << ", probes 0x" << main_entry.first_input_address << " bit " << std::dec
+        << static_cast<unsigned>(main_entry.first_input_bit) << " and 0x" << std::hex
+        << main_entry.second_input_address << " bit " << std::dec
+        << static_cast<unsigned>(main_entry.second_input_bit) << '\n';
     for (std::size_t index = 0; index < 2; ++index) {
         const auto bundle = eon::parse_deuteros_amiga_bundle(
             disk, plan.resource_disk_offsets[index]);

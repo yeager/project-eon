@@ -468,6 +468,22 @@ choices, game modes, or completed gameplay transitions. Project Eon records
 only this opcode-validated profile and load-chain evidence; it performs no
 media extraction, generated state, or guessed post-handoff simulation.
 
+### Deuteros Amiga re-entered main stage
+
+After any of those title exits, the original raw track is loaded again at
+`$20000` and enters `$21734`. The first instructions save incoming A1 and D0
+verbatim to longword `$20976` and word `$21704`, install stack `$22296`, then
+request the literal memory ceiling `$7fff0`, then call raw addresses `$20068`
+and `$2013a`.
+
+The main-stage parser opcode-validates that straight-line path and the first
+recurring loop at `$217f6`. The loop calls `$22a5a`, clears words `$21720` and
+`$2171e`, sets `$210f2` to one, calls `$21276` then `$21380`, and probes bit
+10 at `$dff016` plus bit 6 at `$bfe001`. These are deliberately raw addresses, values, and bit tests:
+their gameplay/UI semantics are not claimed. The parser reads only the
+already supplied ADF in memory, rejects mismatching bytes, and neither
+unpacks nor writes game data.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an

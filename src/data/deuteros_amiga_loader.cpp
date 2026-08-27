@@ -1,6 +1,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 
 #include <span>
+#include <string>
 #include <stdexcept>
 
 namespace eon {
@@ -16,7 +17,14 @@ std::uint32_t big32(std::span<const std::uint8_t> bytes, std::size_t offset) {
 }
 
 void require_word(std::span<const std::uint8_t> bytes, std::size_t offset, std::uint16_t opcode) {
-    if (big16(bytes, offset) != opcode) throw std::runtime_error("Unexpected Deuteros loader opcode");
+    if (big16(bytes, offset) != opcode) {
+        throw std::runtime_error("Unexpected Deuteros loader opcode at offset " + std::to_string(offset)
+            + ", wanted " + std::to_string(opcode) + ", got " + std::to_string(big16(bytes, offset)));
+    }
+}
+
+void require_long(std::span<const std::uint8_t> bytes, std::size_t offset, std::uint32_t value) {
+    if (big32(bytes, offset) != value) throw std::runtime_error("Unexpected Deuteros loader longword");
 }
 
 } // namespace
@@ -83,6 +91,64 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     const AmigaLoadStage main_stage{profile_zero.disk_offset, profile_zero.length,
         profile_zero.destination, entry};
 
+    // Decode the earliest main-stage facts from raw loaded bytes.  This has
+    // deliberately no emulator or host-side state: it anchors the post-title
+    // re-entry at $21734 without inventing the meaning of any service/cell.
+    const auto main_offset = [&](std::uint32_t address) -> std::size_t {
+        if (address < main_stage.destination || address - main_stage.destination >= main_stage.length) {
+            throw std::runtime_error("Deuteros main-stage address outside raw load");
+        }
+        return static_cast<std::size_t>(address - main_stage.destination);
+    };
+    const auto entry_bytes = stage_bytes.subspan(main_offset(entry));
+    require_word(entry_bytes, 0x00, 0x23c9); // move.l a1,$20976
+    require_long(entry_bytes, 0x02, 0x20976);
+    require_word(entry_bytes, 0x06, 0x33c0); // move.w d0,$21704
+    require_long(entry_bytes, 0x08, 0x21704);
+    require_word(entry_bytes, 0x0c, 0x2e7c); // movea.l #$22296,a7
+    require_long(entry_bytes, 0x0e, 0x22296);
+    require_word(entry_bytes, 0x1a, 0x203c); // move.l #$7fff0,d0
+    require_long(entry_bytes, 0x1c, 0x7fff0);
+    constexpr std::array<std::uint32_t, 2> initialization_calls{0x20068, 0x2013a};
+    constexpr std::array<std::size_t, 2> call_offsets{0x28, 0x2e};
+    for (std::size_t index = 0; index < initialization_calls.size(); ++index) {
+        require_word(entry_bytes, call_offsets[index], 0x4eb9);
+        require_long(entry_bytes, call_offsets[index] + 2, initialization_calls[index]);
+    }
+    // The first recurring loop begins at $217f6 and initializes two words,
+    // enables a scheduler word, calls two services, then probes hardware
+    // addresses/bits exactly as the original code does.
+    constexpr std::uint32_t loop_address = 0x217f6;
+    const auto loop_bytes = stage_bytes.subspan(main_offset(loop_address));
+    require_word(loop_bytes, 0x00, 0x4e71);
+    require_word(loop_bytes, 0x02, 0x4eb9);
+    require_long(loop_bytes, 0x04, 0x22a5a);
+    require_word(loop_bytes, 0x08, 0x33fc);
+    require_long(loop_bytes, 0x0c, 0x21720);
+    require_word(loop_bytes, 0x10, 0x33fc);
+    require_long(loop_bytes, 0x14, 0x2171e);
+    require_word(loop_bytes, 0x18, 0x33fc);
+    if (big16(loop_bytes, 0x1a) != 1 || big32(loop_bytes, 0x1c) != 0x210f2) {
+        throw std::runtime_error("Unexpected Deuteros scheduler enable setup");
+    }
+    require_word(loop_bytes, 0x20, 0x4eb9);
+    require_long(loop_bytes, 0x22, 0x21276);
+    require_word(loop_bytes, 0x26, 0x4eb9);
+    require_long(loop_bytes, 0x28, 0x21380);
+    require_word(loop_bytes, 0x2c, 0x0839); // btst #10,$dff016
+    if (big16(loop_bytes, 0x2e) != 10 || big32(loop_bytes, 0x30) != 0xdff016) {
+        throw std::runtime_error("Unexpected Deuteros custom input probe");
+    }
+    // Later in the same loop bit 6 at $bfe001 is probed. Keep both addresses
+    // raw rather than assigning platform-control names.
+    require_word(loop_bytes, 0x68, 0x0839);
+    if (big16(loop_bytes, 0x6a) != 6 || big32(loop_bytes, 0x6c) != 0xbfe001) {
+        throw std::runtime_error("Unexpected Deuteros CIA input probe");
+    }
+    const DeuterosAmigaMainStageEntry main_stage_entry{entry, 0x20976, 0x21704,
+        0x22296, 0x7fff0, initialization_calls, loop_address, 0x22a5a, 0x21380, 0x21720,
+        0x2171e, 0x210f2, 1, 0xdff016, 10, 0xbfe001, 6};
+
     // The resource loader at $21932 indexes five longwords at $21708. Both
     // addresses reside in the verified main stage, so translate the table
     // back to its ADF position instead of duplicating its contents.
@@ -113,7 +179,7 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     }
     const AmigaLoadStage title_stage{title_handoff_profile.disk_offset,
         title_handoff_profile.length, title_handoff_profile.destination, title_entry};
-    return {loader, main_stage, resource_offsets, title_handoff_profile, title_stage};
+    return {loader, main_stage, main_stage_entry, resource_offsets, title_handoff_profile, title_stage};
 }
 
 } // namespace eon
