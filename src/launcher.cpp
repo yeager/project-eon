@@ -1,5 +1,6 @@
 #include "launcher.hpp"
 
+#include <cstdlib>
 #include <string_view>
 
 namespace eon {
@@ -18,21 +19,39 @@ std::optional<Platform> parse_platform(std::string_view value) {
     return std::nullopt;
 }
 
+std::filesystem::path default_data_directory(const char* executable_path) {
+#ifdef _WIN32
+    std::error_code error;
+    const auto absolute_executable = std::filesystem::absolute(executable_path, error);
+    if (!error) return absolute_executable.parent_path() / "data";
+    return std::filesystem::path("data");
+#else
+    static_cast<void>(executable_path);
+    if (const auto* home = std::getenv("HOME"); home && *home) {
+        return std::filesystem::path(home) / ".projecteon";
+    }
+    return std::filesystem::path(".projecteon");
+#endif
+}
+
 } // namespace
 
 std::string usage() {
     return
         "Usage:\n"
-        "  project-eon --data <directory>\n"
-        "  project-eon --data <directory> --game millennium|deuteros\n"
+        "  project-eon [--data <directory>]\n"
+        "  project-eon [--data <directory>] --game millennium|deuteros\n"
         "               [--platform dos|amiga|atari-st]\n"
         "               [--presentation original|modern]\n\n"
-        "  project-eon --data <directory> --verify-data millennium|deuteros\n\n"
-        "Without --game, the graphical start menu is shown.\n";
+        "  project-eon [--data <directory>] --verify-data millennium|deuteros\n\n"
+        "Without --data, game data is read from ~/.projecteon on Linux/macOS\n"
+        "or <install directory>/data on Windows. Without --game, the graphical\n"
+        "start menu is shown.\n";
 }
 
 ParseResult parse_command_line(int argc, char** argv) {
     LaunchRequest request;
+    request.data_directory = default_data_directory(argc > 0 ? argv[0] : "project-eon");
     for (int index = 1; index < argc; ++index) {
         const std::string_view argument = argv[index];
         if (argument == "--help" || argument == "-h") return {{}, {}, true};
@@ -40,6 +59,7 @@ ParseResult parse_command_line(int argc, char** argv) {
         const std::string_view value = argv[++index];
         if (argument == "--data") {
             request.data_directory = value;
+            request.data_directory_is_default = false;
         } else if (argument == "--game") {
             request.game = parse_game(value);
             if (!request.game) return {{}, "Unknown game: " + std::string(value), false};
@@ -57,7 +77,6 @@ ParseResult parse_command_line(int argc, char** argv) {
             return {{}, "Unknown option: " + std::string(argument), false};
         }
     }
-    if (request.data_directory.empty()) return {{}, "--data is required", false};
     if (request.game && request.verify_game) return {{}, "--game and --verify-data cannot be combined", false};
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
     return {request, {}, false};

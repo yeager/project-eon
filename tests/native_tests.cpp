@@ -2,6 +2,8 @@
 #include "launcher.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
+#include "data/amiga_ofs.hpp"
+#include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
@@ -17,10 +19,24 @@
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 #include <set>
 #include <span>
 
 int main() {
+    {
+        char program[] = "project-eon";
+        char* args[] = {program};
+        const auto defaults = eon::parse_command_line(1, args);
+        assert(defaults.request && defaults.request->data_directory_is_default);
+        assert(!defaults.request->data_directory.empty());
+        char data_option[] = "--data";
+        char custom_path[] = "original-media";
+        char* explicit_args[] = {program, data_option, custom_path};
+        const auto explicit_data = eon::parse_command_line(3, explicit_args);
+        assert(explicit_data.request && !explicit_data.request->data_directory_is_default);
+        assert(explicit_data.request->data_directory == "original-media");
+    }
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
     if (data_directory.empty() || !std::filesystem::is_directory(data_directory)) {
         std::cout << "SKIP: configure -DEON_REAL_DATA_DIR=<original archive directory>\n";
@@ -74,11 +90,48 @@ int main() {
     assert(kind_counts[eon::AssetKind::game_resource] == 12);
     assert(kind_counts[eon::AssetKind::unknown] == 1);
 
+    const auto amiga_millennium = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
+        return release.game == eon::Game::millennium && release.platform == eon::Platform::amiga;
+    });
+    assert(amiga_millennium != releases.end());
+    // Razor is a genuine supplied 880 KiB DOS\0 image whose standard root
+    // block is intact. Other supplied crack variants replace this block with
+    // game code, so only this one is evidence for the filesystem reader.
+    const auto razor_adf = eon::extract_asset_by_sha256(amiga_millennium->path,
+        "fe83c10119ef9bf2953b6fcd9a13d07f2c276215aaa64e2e541402a527a616f2");
+    assert(razor_adf && razor_adf->size() == eon::AmigaAdf::standard_size);
+    assert(eon::to_hex(eon::sha256(*razor_adf))
+        == "fe83c10119ef9bf2953b6fcd9a13d07f2c276215aaa64e2e541402a527a616f2");
+    const eon::AmigaAdf razor_disk(*razor_adf);
+    const eon::AmigaOfs razor_filesystem(razor_disk);
+    assert(razor_filesystem.root_block() == 880);
+    assert(razor_filesystem.volume_name() == "Millennium (Crack Razor)");
+    assert(razor_filesystem.entries().empty());
+    const auto defjam_adf = eon::extract_asset_by_sha256(amiga_millennium->path,
+        "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c");
+    assert(defjam_adf && defjam_adf->size() == eon::AmigaAdf::standard_size);
+    bool rejected_non_filesystem = false;
+    try {
+        const eon::AmigaAdf defjam_disk(*defjam_adf);
+        static_cast<void>(eon::AmigaOfs(defjam_disk));
+    } catch (const std::runtime_error&) {
+        rejected_non_filesystem = true;
+    }
+    assert(rejected_non_filesystem);
+
     const auto english_dos = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium
             && release.platform == eon::Platform::dos && release.language == "en";
     });
     assert(english_dos != releases.end());
+    const auto sfx1_bytes = eon::extract_asset_by_sha256(english_dos->path,
+        "5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88");
+    assert(sfx1_bytes);
+    const auto sfx1 = eon::decode_creative_voice(*sfx1_bytes);
+    assert(sfx1.sample_rate == 10'000);
+    assert(sfx1.unsigned_pcm.size() == 738);
+    assert(eon::to_hex(eon::sha256(sfx1.unsigned_pcm))
+        == "811de4108fe6551e09da1865f3ff2e18a8313aad30a6916210c4d5d49b1e1c06");
     const auto title_bytes = eon::extract_asset_by_sha256(english_dos->path,
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678");
     const auto gx_bytes = eon::extract_asset_by_sha256(english_dos->path,

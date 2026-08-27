@@ -12,6 +12,7 @@ enum class Presentation { original, modern };
 
 struct LaunchRequest {
     std::filesystem::path data_directory;
+    bool data_directory_is_default = true;
     std::optional<Game> game;
     std::optional<Game> verify_game;
     std::optional<Platform> platform;

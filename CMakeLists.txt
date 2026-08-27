@@ -36,6 +36,8 @@ add_executable(project-eon
     src/main.cpp
     src/launcher.cpp
     src/data/amiga_adf.cpp
+    src/data/amiga_ofs.cpp
+    src/data/creative_voice.cpp
     src/data/deuteros_amiga_bundle.cpp
     src/data/deuteros_amiga_channel_vm.cpp
     src/data/deuteros_amiga_frame.cpp
@@ -76,6 +78,8 @@ if(BUILD_TESTING)
         tests/native_tests.cpp
         src/launcher.cpp
         src/data/amiga_adf.cpp
+        src/data/amiga_ofs.cpp
+        src/data/creative_voice.cpp
         src/data/deuteros_amiga_bundle.cpp
         src/data/deuteros_amiga_channel_vm.cpp
         src/data/deuteros_amiga_frame.cpp
@@ -94,3 +98,26 @@ if(BUILD_TESTING)
     )
     add_test(NAME native-data-detection COMMAND eon-native-tests)
 endif()
+
+# Distribution packages deliberately contain no commercial game media. The
+# executable creates/uses its data directory and reads user-supplied archives
+# and disk images in place through the verified scanners.
+include(GNUInstallDirs)
+install(TARGETS project-eon RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+install(FILES README.md LICENSE DESTINATION "${CMAKE_INSTALL_DOCDIR}")
+
+set(CPACK_PACKAGE_NAME "project-eon")
+set(CPACK_PACKAGE_VENDOR "Project Eon contributors")
+set(CPACK_PACKAGE_CONTACT "https://github.com/yeager/project-eon")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "SDL3 reimplementation project for Millennium 2.2 and Deuteros")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+# SDL3 is intentionally built from upstream source in CI. Do not ask
+# dpkg-shlibdeps to infer a Debian package name from that local build: package
+# generation must stay deterministic across the supported CI architectures.
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
+set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
+include(CPack)

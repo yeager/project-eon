@@ -85,8 +85,14 @@ ctest --test-dir build --output-on-failure
 Start the graphical card menu:
 
 ```sh
-./build/project-eon --data "$HOME/Hämtningar"
+./build/project-eon
 ```
+
+By default, Project Eon reads user-supplied media from `~/.projecteon` on
+Linux/macOS and `<install directory>\data` on Windows. `--data` selects a
+different directory, for example a preservation collection in `Hämtningar`.
+Archives and disk images are read in place: Project Eon never unpacks, copies,
+installs, modifies, or redistributes original game data.
 
 Or select a game directly from the CLI:
 
@@ -175,10 +181,13 @@ and contribution rules live in the
 
 GitHub Actions builds and tests Linux, macOS, and Windows, runs the preservation
 tool tests without commercial game data, and scans the complete Git history
-with Gitleaks. CI has read-only repository permission and contains no release,
-tagging, publishing, or packaging workflow. Development pushes go directly to
-GitHub `main`; Project Eon does not create GitHub branches. Releases are made
-only when the maintainer explicitly requests one.
+with Gitleaks. CI also produces non-published test artifacts: `.deb` and
+`.rpm` packages, separate macOS arm64 and x86_64 app bundles, and a Windows
+Inno Setup installer. Packages contain Project Eon only—never original game
+media. CI has read-only repository permission and cannot release, tag, or
+publish. Development pushes go directly to GitHub `main`; Project Eon does not
+create GitHub branches. Releases are made only when the maintainer explicitly
+requests one.
 
 ## Repository
 
