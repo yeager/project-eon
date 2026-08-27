@@ -319,13 +319,16 @@ int main() {
     assert(game_flow.fourth_function_key.transfer_al_value == 2);
     assert(game_flow.fourth_function_key.common_routine_address == 0xba5e);
     assert(game_flow.fourth_function_key.first_call_address == 0x4d2c);
+    assert(game_flow.fourth_function_key.first_write_instruction_address == 0xba64);
     assert(game_flow.fourth_function_key.first_runtime_byte_address == 0xda13);
     assert(game_flow.fourth_function_key.first_runtime_byte_value == 7);
     assert(game_flow.fourth_function_key.second_call_address == 0x9dd5);
+    assert(game_flow.fourth_function_key.second_write_instruction_address == 0xba6c);
     assert(game_flow.fourth_function_key.second_runtime_byte_address == 0xda1e);
     assert(game_flow.fourth_function_key.second_runtime_byte_value == 9);
     assert(game_flow.fourth_function_key.third_runtime_byte_address == 0x75a9);
     assert(game_flow.fourth_function_key.third_runtime_byte_value == 0);
+    assert(game_flow.fourth_function_key.common_return_instruction_address == 0xba76);
     assert(game_flow.fifth_function_key.handler_address == 0x7597);
     assert(game_flow.fifth_function_key.transfer_al_value == 2);
     assert(game_flow.fifth_function_key.first_call_address == 0xbe28);
@@ -458,6 +461,13 @@ int main() {
     assert(game_session.last_fourth_function_key_trace());
     assert(game_session.last_fourth_function_key_trace()->common_routine_address == 0xba5e);
     assert(game_session.last_fourth_function_key_trace()->second_runtime_byte_value == 9);
+    // Unlike F8, F4 has no pre-call write. Its first call must return before
+    // the first literal store and its second call must return before the two
+    // trailing stores. The private overlay must therefore stay untouched.
+    assert(!game_session.last_runtime_byte_effect());
+    assert(!game_session.reconstructed_runtime_byte(0xda13));
+    assert(!game_session.reconstructed_runtime_byte(0xda1e));
+    assert(!game_session.reconstructed_runtime_byte(0x75a9));
     assert(!game_session.last_third_function_key_trace());
     assert(game_session.observe_action(0x3f) == std::optional<std::size_t>{4});
     assert(game_session.last_fifth_function_key_trace());
