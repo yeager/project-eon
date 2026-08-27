@@ -262,6 +262,79 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     const auto zero_branch = stage_code(0x1fc22, 6);
     require_word(zero_branch, 0, 0x4a39); // tst.b $1f98e
     require_long(zero_branch, 2, 0x0001f98e);
+    require_word(stage_code(0x1fc28, 4), 0, 0x6600); // bne.w $1fd0a
+    require_word(stage_code(0x1fc28, 4), 2, 0x00e0);
+    // 68000 Bcc.W displacement is relative to the extension word: BPL.W
+    // lands at $1fc9c, the sibling route's tst.b (not its preceding RTS).
+    const auto positive = stage_code(0x1fc9c, 108);
+    require_word(positive, 0, 0x4a39); // tst.b $1f98e
+    require_long(positive, 2, 0x0001f98e);
+    require_word(positive, 6, 0x6600); // bne.w $1fd7a
+    require_word(positive, 8, 0x00d6);
+    const auto positive_clear = stage_code(0x1fca6, 100);
+    require_word(positive_clear, 6, 0x7c28); // moveq #$28,d6
+    require_word(positive_clear, 8, 0x3e3c); // move.w #$1f40,d7
+    require_word(positive_clear, 10, 0x1f40);
+    require_word(positive_clear, 22, 0x2079); // movea.l $1f99c,a0
+    require_long(positive_clear, 24, 0x0001f99c);
+    require_word(positive_clear, 30, 0x2879); // movea.l $1f974,a4
+    require_long(positive_clear, 32, 0x0001f974);
+    require_word(positive_clear, 36, 0x2479); // movea.l $1f96c,a2
+    require_long(positive_clear, 38, 0x0001f96c);
+    require_word(positive_clear, 42, 0x7a07); // moveq #7,d5
+    require_word(positive_clear, 52, 0x7803); // moveq #3,d4
+    require_word(positive_clear, 82, 0x51cd); // dbra d5
+    require_word(positive_clear, 84, 0xffd8);
+    require_word(positive_clear, 86, 0x52b9); // addq.l #1,$1f974
+    require_long(positive_clear, 88, 0x0001f974);
+    const auto positive_set = stage_code(0x1fd7a, 102);
+    require_word(positive_set, 6, 0x2c39); // move.l $1f994,d6
+    require_long(positive_set, 8, 0x0001f994);
+    require_word(positive_set, 12, 0x2e39); // move.l $1f998,d7
+    require_long(positive_set, 14, 0x0001f998);
+    require_word(positive_set, 28, 0x2079); // movea.l $1f99c,a0
+    require_long(positive_set, 30, 0x0001f99c);
+    require_word(positive_set, 36, 0x2879); // movea.l $1f974,a4
+    require_long(positive_set, 38, 0x0001f974);
+    require_word(positive_set, 42, 0x2479); // movea.l $1f96c,a2
+    require_long(positive_set, 44, 0x0001f96c);
+    require_word(positive_set, 48, 0x7a07); // moveq #7,d5
+    require_word(positive_set, 58, 0x7803); // moveq #3,d4
+    const auto zero_clear = stage_code(0x1fc2c, 108);
+    require_word(zero_clear, 6, 0x7c28); // moveq #$28,d6
+    require_word(zero_clear, 8, 0x3e3c); // move.w #$1f40,d7
+    require_word(zero_clear, 10, 0x1f40);
+    require_word(zero_clear, 22, 0x2079); // movea.l $1f99c,a0
+    require_long(zero_clear, 24, 0x0001f99c);
+    require_word(zero_clear, 30, 0x2879); // movea.l $1f974,a4
+    require_long(zero_clear, 32, 0x0001f974);
+    require_word(zero_clear, 36, 0x2479); // movea.l $1f96c,a2
+    require_long(zero_clear, 38, 0x0001f96c);
+    require_word(zero_clear, 42, 0x2279); // movea.l $1f970,a1
+    require_long(zero_clear, 44, 0x0001f970);
+    require_word(zero_clear, 48, 0x7a07); // moveq #7,d5
+    require_word(zero_clear, 58, 0x7803); // moveq #3,d4
+    require_word(zero_clear, 92, 0x2039); // move.l $1f9a0,d0
+    require_long(zero_clear, 94, 0x0001f9a0);
+    require_word(zero_clear, 98, 0xd1b9); // add.l d0,$1f974
+    require_long(zero_clear, 100, 0x0001f974);
+    const auto zero_set = stage_code(0x1fd0a, 104);
+    require_word(zero_set, 6, 0x2c39); // move.l $1f994,d6
+    require_long(zero_set, 8, 0x0001f994);
+    require_word(zero_set, 12, 0x2e39); // move.l $1f998,d7
+    require_long(zero_set, 14, 0x0001f998);
+    require_word(zero_set, 28, 0x2079); // movea.l $1f99c,a0
+    require_long(zero_set, 30, 0x0001f99c);
+    require_word(zero_set, 36, 0x2879); // movea.l $1f974,a4
+    require_long(zero_set, 38, 0x0001f974);
+    require_word(zero_set, 42, 0x2479); // movea.l $1f96c,a2
+    require_long(zero_set, 44, 0x0001f96c);
+    require_word(zero_set, 48, 0x2279); // movea.l $1f970,a1
+    require_long(zero_set, 50, 0x0001f970);
+    require_word(zero_set, 54, 0x7a07); // moveq #7,d5
+    require_word(zero_set, 64, 0x7803); // moveq #3,d4
+    require_word(zero_set, 98, 0x52b9); // addq.l #1,$1f974
+    require_long(zero_set, 100, 0x0001f974);
 
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
@@ -274,7 +347,10 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x1b, 0x20, 0x2e, 0x2c, 0x407e4,
         selector_address, 0x0000ffff, 0x0064, 0x000a, 0x0030,
         0x1fe54, 0x1fbe6,
-        0x1f98c, 0x1fc22, 0x1fc9e, 0x3fbf8, 0x13, 0x0c, 0x20, 0x4e20};
+        0x1f98c, 0x1fc22, 0x1fc9c,
+        0x1f98e, 0x1fc2c, 0x1fd0a, 0x1f99c, 0x1f974, 0x1f970, 0x1f96c,
+        0x1f9a0, 0x28, 0x1f40, 8, 4,
+        0x3fbf8, 0x13, 0x0c, 0x20, 0x4e20};
 }
 
 } // namespace eon

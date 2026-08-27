@@ -418,8 +418,23 @@ main/game stage. Project Eon preserves the arithmetic, write, and destination
 without inventing menu or gameplay labels.
 
 The selector destination is now also bounded. `$1fbe6` tests signed byte
-`$1f98c`: zero enters `$1fc22` (which immediately tests `$1f98e`), positive
-enters `$1fc9e`, and the negative fall-through calls `$1fc24`. On that negative
+`$1f98c`: zero enters `$1fc22` (which immediately tests `$1f98e`), while the
+positive `BPL.W` target is `$1fc9c`: this is the sibling route's `tst.b
+$1f98e`, immediately after the prior route's `RTS`; it does not target the
+middle of an instruction or return directly. Its clear/set variants begin at
+`$1fca6`/`$1fd7a`, use the same `$1f99c` pattern-table and `$1f974` destination
+pointer cells, combine bytes across eight rows by four planes, and increment
+`$1f974`. Clear uses literal `$28`/`$1f40` strides; set loads stride cells
+`$1f994`/`$1f998`. This is a concrete original byte-combine/pointer effect,
+not an inferred resource or UI label.
+For zero, a clear `$1f98e` enters `$1fc2c`; a set value enters `$1fd0a`. Both
+preserve registers and traverse eight rows by four planes using pattern-table
+pointer cell `$1f99c` and destination-pointer cell `$1f974`. The clear route
+combines source cells `$1f970` and `$1f96c`, uses literal row/plane advances
+`$28`/`$1f40`, then advances `$1f974` by the long in `$1f9a0`. The set route
+uses long stride cells `$1f994`/`$1f998`, source cell `$1f96c`, and increments
+`$1f974`. These are raw byte-combine and pointer effects, not names for
+resources or UI. The negative fall-through calls `$1fc24`. On that negative
 path, the original preserves D0/D5, suppresses a service call if D0 is `$0020`,
 otherwise supplies literal D0/D1 values `$0013`/`$000c` to `$3fbf8`, then runs
 a `$00004e20` decrement loop before restoring registers and returning. These

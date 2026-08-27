@@ -172,7 +172,11 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     std::cout << "          Selector dispatch: signed byte 0x" << std::hex
         << title_stage.post_transition_dispatch_state_address << " zero/positive branches 0x"
         << title_stage.post_transition_dispatch_zero_branch_address << "/0x"
-        << title_stage.post_transition_dispatch_nonnegative_branch_address
+        << title_stage.post_transition_dispatch_positive_branch_address
+        << " (sibling byte-combine route); zero's second state 0x"
+        << title_stage.post_transition_dispatch_zero_variant_state_address
+        << " selects 0x" << title_stage.post_transition_dispatch_zero_clear_variant_address
+        << "/0x" << title_stage.post_transition_dispatch_zero_set_variant_address
         << "; negative path calls 0x" << title_stage.post_transition_dispatch_negative_service_address
         << " with D0/D1=0x" << title_stage.post_transition_dispatch_negative_service_d0 << "/0x"
         << title_stage.post_transition_dispatch_negative_service_d1 << " unless D0=0x"
