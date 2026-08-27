@@ -588,6 +588,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto separate_post_call_tail =
         eon::parse_millennium_amiga_resident_separate_post_call_tail_boundary(
             disk, plan, separate_post_call);
+    const auto separate_post_call_tail_branch =
+        eon::parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
+            disk, plan, separate_post_call_tail);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -686,6 +689,17 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
             << " (SHA-256 " << separate_post_call_tail.target_prefix_sha256[index] << ')';
     }
     std::cout << std::dec << " (static only, no prior-return/call execution)\n";
+    std::cout << "          separate post-call tail branch: entry 0x" << std::hex
+        << separate_post_call_tail_branch.entry_address << " (disk 0x"
+        << separate_post_call_tail_branch.raw_disk_offset << ", SHA-256 "
+        << separate_post_call_tail_branch.sha256 << "); CMP.B #0x"
+        << static_cast<unsigned>(separate_post_call_tail_branch.compare_immediate)
+        << ", 0x" << separate_post_call_tail_branch.compared_byte_address
+        << "; BCS.W at 0x" << separate_post_call_tail_branch.conditional_branch_address
+        << " -> 0x" << separate_post_call_tail_branch.conditional_branch_target
+        << " (target disk 0x" << separate_post_call_tail_branch.target_raw_disk_offset
+        << ", SHA-256 " << separate_post_call_tail_branch.target_prefix_sha256 << std::dec
+        << "; static only, no prior-return/RAM/call execution)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
