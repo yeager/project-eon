@@ -177,6 +177,12 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
                 << transfer->source_disk_offset << " -> RAM 0x"
                 << transfer->payload_destination_address << ", 0x"
                 << transfer->payload_length << std::dec << " original bytes (in memory only)\n";
+            const auto observation = eon::sample_deuteros_amiga_main_resource_consumer(
+                *transfer, main_entry, 0, 0);
+            std::cout << "            $2016a raw observation (seed/counter 0): offset 0x"
+                << std::hex << observation.table_offset << ", word 0x"
+                << observation.sampled_word << ", result 0x" << observation.addend_result
+                << ", seed 0x" << observation.seed_after << std::dec << '\n';
         }
     }
     std::cout << "          Resource consumer: 0x" << std::hex

@@ -432,4 +432,35 @@ read_deuteros_amiga_main_resource(const AmigaAdf& disk,
     };
 }
 
+DeuterosAmigaResourceConsumerSample
+sample_deuteros_amiga_main_resource_consumer(
+    const DeuterosAmigaMainResourceTransfer& transfer,
+    const DeuterosAmigaMainStageEntry& entry,
+    std::uint16_t seed, std::uint32_t counter) {
+    if (transfer.payload_destination_address != entry.resource_consumer_base_address
+        || transfer.payload_destination_address != entry.resource_payload_address) {
+        throw std::runtime_error("Deuteros resource consumer payload destination mismatch");
+    }
+    if (transfer.payload.size() != transfer.payload_length || transfer.payload.size() < 4) {
+        throw std::runtime_error("Malformed Deuteros resource consumer payload");
+    }
+    if (big32(transfer.payload, 0) != transfer.payload_length) {
+        throw std::runtime_error("Deuteros resource consumer length word mismatch");
+    }
+    if (entry.resource_consumer_index_mask != 0x3ffe
+        || entry.resource_consumer_word_addend != 14) {
+        throw std::runtime_error("Unsupported Deuteros resource consumer layout");
+    }
+    const auto index = static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(seed + static_cast<std::uint16_t>(counter))
+        & entry.resource_consumer_index_mask);
+    if (static_cast<std::size_t>(index) + 2 > transfer.payload.size()) {
+        throw std::runtime_error("Deuteros resource consumer lookup outside payload");
+    }
+    const auto word = big16(transfer.payload, index);
+    const auto addend_result = static_cast<std::uint16_t>(word + entry.resource_consumer_word_addend);
+    return {seed, counter, index, word, addend_result,
+        static_cast<std::uint16_t>(seed + addend_result)};
+}
+
 } // namespace eon
