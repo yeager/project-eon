@@ -5,6 +5,12 @@
 namespace eon {
 namespace {
 
+// $21612 adds this exact base before storing the result at channel-state
+// offset +12. The bundle transferred by $21932 occupies this address in the
+// original main-stage memory map; the VM retains only the resulting address,
+// never a decoded or copied resource.
+constexpr std::uint32_t channel_resource_base_address = 0x32a24;
+
 std::int16_t signed_word(std::uint32_t value) {
     return static_cast<std::int16_t>(static_cast<std::uint16_t>(value));
 }
@@ -180,6 +186,7 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
     case 0x0f:
         if (command.operands[0] >= bundle_.length) throw std::runtime_error("Deuteros alternate resource outside bundle");
         state.alternate_resource = command.operands[0];
+        state.mode_data = channel_resource_base_address + command.operands[0];
         state.bitmap_selector = 0xfe;
         events.alternate_resources.push_back(command.operands[0]);
         break;

@@ -1305,6 +1305,11 @@ int main() {
         }
     }
     assert(first_input_alternate == 0x0b38);
+    // $21610 adds the verified main-resource base $32a24 before it stores
+    // the $0f operand at state +12. Keep both the raw stream displacement
+    // and the original in-memory pointer distinct.
+    assert(input_vm.channels()[3].alternate_resource == 0x0b38);
+    assert(input_vm.channels()[3].mode_data == 0x3355c);
     // The SDL session uses the same input contract, rather than a separately
     // scripted preview path. Holding the recovered input signal reaches the
     // same verified handoff tick and raw resource pointer.

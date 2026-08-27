@@ -340,9 +340,10 @@ scheduler at `$2140c` resumes `$14` only after both the global gate at
 `$2171e` is set and the previously-polled input word at `$21720` is nonzero.
 The opening's `$13` sets that gate on tick 2. With continuously asserted prior
 input, the real channel reaches `$0f,$00000b38` on scheduler tick 82; `$0f`
-stores that bundle-relative address at state offset `$0c` and replaces the
-selector with `$fe`. The VM reports this exact pointer as an alternate-resource
-event, without giving it an invented gameplay name.
+adds it to the verified main-resource base `$32a24`, stores `$3355c` at state
+offset `$0c`, and replaces the selector with `$fe`. The VM separately retains
+the raw bundle-relative `$0b38` operand for its alternate-resource event,
+without giving either value an invented gameplay name.
 
 Separately, the main loop polls active-low CIA-A port-A bit 6 at `$bfe001`
 after `$21380`. Once the gate and recorded input are both set, the first-buffer

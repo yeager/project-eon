@@ -17,7 +17,12 @@ struct DeuterosAmigaChannelState {
     std::uint16_t wait_mode = 0;
     std::uint16_t timer = 0;
     std::uint16_t parameter = 0;
+    // Raw longword at state +12. Opcode $06 stores stepping data here;
+    // opcode $0f instead stores the original runtime address $32a24 plus
+    // its immediate resource-relative displacement.
     std::uint32_t mode_data = 0;
+    // Preserve the $0f immediate separately for callers that need the
+    // source-relative observation. It is not the value written to +12.
     std::optional<std::uint32_t> alternate_resource;
     std::uint32_t stream_offset = 0;
     std::optional<std::uint32_t> return_offset;
