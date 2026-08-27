@@ -508,6 +508,14 @@ int main() {
     assert(title_stage.transition_graphics_library_base_address == 0x12fec);
     assert(title_stage.transition_first_library_vector == -0xc0);
     assert(title_stage.transition_second_library_vector == -0x1a4);
+    assert(title_stage.transition_second_phase_source_address == 0x12e12);
+    assert(title_stage.transition_second_phase_first_work_address == 0x1ffda);
+    assert(title_stage.transition_second_phase_second_work_address == 0x1ffe6);
+    assert(title_stage.transition_second_phase_work_pointer_address == 0x2008e);
+    assert(title_stage.transition_first_compare_address == 0x1ffc8);
+    assert(title_stage.transition_second_compare_address == 0x1ffce);
+    assert(title_stage.transition_third_compare_address == 0x1ffd4);
+    assert(title_stage.transition_return_address == 0x40776);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 

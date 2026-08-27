@@ -36,6 +36,17 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t transition_graphics_library_base_address = 0;
     std::int16_t transition_first_library_vector = 0;
     std::int16_t transition_second_library_vector = 0;
+    // The transition's second phase supplies three original work addresses to
+    // the same graphics library before comparing three original display words.
+    // Their roles are deliberately not inferred from these instructions.
+    std::uint32_t transition_second_phase_source_address = 0;
+    std::uint32_t transition_second_phase_first_work_address = 0;
+    std::uint32_t transition_second_phase_second_work_address = 0;
+    std::uint32_t transition_second_phase_work_pointer_address = 0;
+    std::uint32_t transition_first_compare_address = 0;
+    std::uint32_t transition_second_compare_address = 0;
+    std::uint32_t transition_third_compare_address = 0;
+    std::uint32_t transition_return_address = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
