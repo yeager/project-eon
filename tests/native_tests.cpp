@@ -2764,6 +2764,19 @@ int main() {
             * eon::DeuterosAmigaFrame::height, 0);
     eon::apply_deuteros_amiga_alternate_renderer(
         alternate_frame, system_disk, load_plan, *alternate_trace);
+    {
+        auto altered_renderer_disk_bytes = *amiga_disk1;
+        altered_renderer_disk_bytes[0x6f68] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_renderer_disk(std::move(altered_renderer_disk_bytes));
+            eon::apply_deuteros_amiga_alternate_renderer(
+                alternate_frame, altered_renderer_disk, load_plan, *alternate_trace);
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     // The third raw $201b0+($70-$20)*8 row for `p` is $7c: the final
     // two pixels are clear and therefore retain the selector-zero index.
     const std::array<std::uint8_t, 8> expected_p_row{0, 1, 1, 1, 1, 1, 0, 0};

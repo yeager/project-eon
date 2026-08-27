@@ -1188,6 +1188,20 @@ unrendered until the setup and all stream control classes are fully recovered.
 It does not reinterpret those bytes as an indexed sprite, create a synthetic
 frame, or write/unpack media.
 
+The renderer-only evidence now includes the local main-stage video link at
+`$21768` / ADF `+0x6f68`: its 20 bytes hash to
+`66c68dea1896b857f9cda825ef5511b34254ceed8db8a1b1481c3e3477514194` and
+copy `$20128` to `$20510` and `$20c20`. It follows external initialization
+calls, whose ABI is still not emulated; the subsequent local copy is recorded
+only as raw provenance. The original `$2069c` position helper is also locked
+as 48 bytes at ADF `+0x5e9c`, SHA-256
+`b167cbda0c4e419b50e8dea16172b80a3db31e52385fe606efd146a54ce4d772`.
+It bounds the `$20128`-relative `$20510` calculation used by the observed
+`$20580` stream without materializing the unknown runtime value of `$20128`.
+For the verified selectors one/zero, the exact original masks at `$20490` and
+`$20488` are required. Altering the raw video-link bytes fails closed before
+any host-frame pixel is written.
+
 The same first accepted input channel has a bounded post-renderer tail in the
 real bundle: immediately after `$0f,$00000b38` are `$05,$0008,$0044,$00`.
 The scheduler's selector-five arm at `$213be` resumes only if the low word of
