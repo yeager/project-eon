@@ -6,6 +6,7 @@
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/millennium_dos_bitmap.hpp"
+#include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/zip_archive.hpp"
@@ -89,7 +90,7 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     const auto& handoff = plan.title_handoff_profile;
     std::cout << "          Title input profile: disk 0x" << std::hex << handoff.disk_offset
         << ", length 0x" << handoff.length << ", memory 0x" << handoff.destination
-        << std::dec << '\n';
+        << ", entry 0x" << plan.title_stage.entry_address << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {
@@ -121,6 +122,13 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << std::hex << static_cast<unsigned>(flow.input_interrupt) << std::dec
         << "; launcher hand-off " << flow.launcher_title_program << " -> "
         << flow.launcher_game_program << '\n';
+    constexpr auto static_data_sha256 =
+        "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
+    const auto static_data = eon::extract_asset_by_sha256(release.path, static_data_sha256);
+    if (!static_data) throw std::runtime_error("Verified Millennium static game data missing");
+    const auto game_data = eon::parse_millennium_dos_game_data(*static_data);
+    std::cout << "          2200AD4.BIN: " << game_data.celestial_labels.size()
+        << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
 }
 
 std::optional<PreviewAnimation> load_millennium_preview(

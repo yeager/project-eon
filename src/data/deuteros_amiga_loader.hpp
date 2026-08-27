@@ -31,6 +31,10 @@ struct DeuterosAmigaLoadPlan {
     // returns to this bootstrap. Retain the real load constants so callers
     // can hand off without guessing an unpacked game executable.
     DeuterosAmigaBootstrapProfile title_handoff_profile;
+    // Profile one is itself a raw, relocatable 68000 stage.  Its first word
+    // is an absolute JMP, so this supplies the real entry address without
+    // treating the disk bytes as an unpacked host-side executable.
+    AmigaLoadStage title_stage;
 };
 
 // Decode load constants from the genuine 68000 instructions. Every expected

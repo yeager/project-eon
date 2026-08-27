@@ -11,6 +11,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
+#include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/sha256.hpp"
@@ -212,6 +213,17 @@ int main() {
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");
     assert(title_flow.launcher_game_program == "2200ad.exe");
+    const auto static_data = eon::extract_asset_by_sha256(english_dos->path,
+        "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d");
+    assert(static_data && static_data->size() == 12'494);
+    const auto game_data = eon::parse_millennium_dos_game_data(*static_data);
+    assert(game_data.celestial_table_offset == 0x3d2);
+    assert(game_data.celestial_labels.size() == 41);
+    assert(game_data.celestial_labels.front().source_offset == 0x3d2);
+    assert(game_data.celestial_labels.front().text == "Inner System");
+    assert(game_data.celestial_labels[4].text == "Earth ");
+    assert(game_data.celestial_labels.back().source_offset == 0x513);
+    assert(game_data.celestial_labels.back().text == "Asteroids ");
     assert(gx_lib.directory_offset() == 0x4bd3c);
     assert(gx_lib.entries().size() == 180);
     assert(gx_lib.entries().front().name == "IMG00");
@@ -298,6 +310,12 @@ int main() {
     assert(load_plan.title_handoff_profile.disk_offset == 0x6e000);
     assert(load_plan.title_handoff_profile.length == 0x6ca00);
     assert(load_plan.title_handoff_profile.destination == 0x13000);
+    // Profile one is a raw title/game stage, not an archive to unpack.  Its
+    // on-disk JMP vector enters the loaded interval at this exact address.
+    assert(load_plan.title_stage.disk_offset == 0x6e000);
+    assert(load_plan.title_stage.length == 0x6ca00);
+    assert(load_plan.title_stage.destination == 0x13000);
+    assert(load_plan.title_stage.entry_address == 0x40426);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 

@@ -150,6 +150,12 @@ executable cross-references can reveal record widths and indexes in the resource
 libraries. Run `tools/analyze_dos.py` with Capstone installed to regenerate an
 entry-point report from an extracted copy.
 
+The first directly parsed gameplay-static component is the 41-item
+celestial-label sequence in genuine English `2200AD4.BIN`, beginning at
+`$03d2`. It retains display bytes (including original padding spaces) and
+source offsets only. That makes it usable by a future UI without pretending
+that labels alone establish the state record layout or world rules.
+
 English `TITLE.LIB` and `GX.LIB` are now opened through their shared banked LIB
 container. The header locates a terminal 12-byte directory using a 16-bit
 offset plus 64-KiB bank, and each entry uses the same banked addressing with an

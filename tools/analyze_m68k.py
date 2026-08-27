@@ -39,6 +39,14 @@ def main() -> None:
     stage_offset = track * track_size
     stage_entry = int.from_bytes(data[stage_offset + 2 : stage_offset + 6], "big")
     stage_entry_offset = stage_offset + stage_entry - destination
+    title_profile_address = int.from_bytes(data[table_offset + 4 : table_offset + 8], "big")
+    title_profile_offset = loader_disk_offset + title_profile_address - loader_destination
+    title_destination = int.from_bytes(data[title_profile_offset + 2 : title_profile_offset + 6], "big")
+    title_length = int.from_bytes(data[title_profile_offset + 8 : title_profile_offset + 12], "big")
+    title_track = int.from_bytes(data[title_profile_offset + 14 : title_profile_offset + 18], "big")
+    title_offset = title_track * track_size
+    title_entry = int.from_bytes(data[title_offset + 2 : title_offset + 6], "big")
+    title_entry_offset = title_offset + title_entry - title_destination
     lines = [
         "# Generated Deuteros Amiga boot disassembly",
         "",
@@ -49,6 +57,8 @@ def main() -> None:
         f"- Bootstrap entry: `0x{loader_entry:x}`",
         f"- Main stage load: disk `0x{stage_offset:x}` → memory `0x{destination:x}`, length `0x{length:x}`",
         f"- Main entry: `0x{stage_entry:x}` (disk `0x{stage_entry_offset:x}`)",
+        f"- Title handoff stage: disk `0x{title_offset:x}` → memory `0x{title_destination:x}`, length `0x{title_length:x}`",
+        f"- Title entry: `0x{title_entry:x}` (disk `0x{title_entry_offset:x}`)",
         "",
         "## Boot block",
         "",
@@ -65,6 +75,16 @@ def main() -> None:
     # absolute LEA; Capstone otherwise substitutes its invalid-input sentinel
     # for a deliberately truncated operand.
     for instruction in decoder.disasm(data[stage_entry_offset : stage_entry_offset + 0x1FE], stage_entry):
+        lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
+    lines.extend(["```", "", "## Title handoff entry", "", "```asm"])
+    # Use a fresh decoder after the intentionally truncated main-entry view.
+    # Capstone's M68K binding otherwise can retain an invalid-input sentinel
+    # while decoding the next independent byte range.
+    title_decoder = Cs(CS_ARCH_M68K, CS_MODE_BIG_ENDIAN | CS_MODE_M68K_000)
+    # 196 bytes ends immediately after the complete six-byte move at $404e4.
+    # Do not terminate in the following JSR operand: Capstone then renders a
+    # misleading sentinel address for that truncated final instruction.
+    for instruction in title_decoder.disasm(data[title_entry_offset : title_entry_offset + 196], title_entry):
         lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
     lines.extend(["```", ""])
     report = "\n".join(lines)
