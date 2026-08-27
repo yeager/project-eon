@@ -61,9 +61,10 @@ const DeuterosAmigaFrame& DeuterosAmigaCompositor::compose(
     for (auto& channel : channels) {
         if (!channel.active || channel.bitmap_selector == 0xff) continue;
         if (channel.bitmap_selector == 0xfe) {
-            // $21468 loads A4 from state +12 and calls $20580. That stream
-            // writes via global original video pointers, whose setup is not
-            // yet fully recovered; do not fabricate an indexed bitmap here.
+            // $21468 loads A4 from state +12 and calls $20580. Its bounded
+            // route writes global original video pointers through
+            // DeuterosAmigaOpening after this channel pass; do not invent a
+            // bitmap interpretation for untraced streams here.
             continue;
         }
         const auto selector = channel.bitmap_selector;
