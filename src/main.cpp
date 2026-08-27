@@ -385,6 +385,7 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const eon::AmigaAdf disk(*image);
     const auto plan = eon::parse_millennium_amiga_load_plan(disk);
     const auto resident = eon::parse_millennium_amiga_resident_entry(disk, plan);
+    const auto splitter = eon::parse_millennium_amiga_resident_word_splitter(disk, plan);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -397,7 +398,14 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << "          resident gate: entry 0x" << std::hex << resident.entry_address
         << " calls 0x" << resident.initializer_address << "; d3 != 0 ORs 0x"
         << resident.d3_nonzero_or_mask << " into d0, stores word at 0x"
-        << resident.result_word_address << std::dec << '\n';
+        << resident.result_word_address << '\n'
+        << "          resident word splitter: entry 0x" << splitter.entry_address
+        << " reads A1+0x" << splitter.source_a1_offset << "; low 15-bit words -> 0x"
+        << splitter.magnitude_word_addresses[0] << ", 0x" << splitter.magnitude_word_addresses[1]
+        << ", 0x" << splitter.magnitude_word_addresses[2] << "; sign bytes -> 0x"
+        << splitter.sign_byte_addresses[0] << ", 0x" << splitter.sign_byte_addresses[1]
+        << ", 0x" << splitter.sign_byte_addresses[2] << "; helper 0x"
+        << splitter.helper_address << std::dec << '\n';
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
@@ -416,6 +424,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         executable_bytes, prg, bootstrap, bss_entry);
     const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
     const auto trap_entry = eon::parse_millennium_atari_trap_entry(bss_source, target);
+    const auto equinox_config = eon::probe_millennium_atari_config(disk);
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -451,7 +460,43 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << " is prepared at +0x" << trap_entry.following_fclose_selector_offset << std::dec
         << "; Fopen negative D0 loops at +0x" << std::hex
         << trap_entry.fopen_result_negative_branch_target_offset << std::dec
-        << " (reported only; no GEMDOS emulation)\n";
+        << " (reported only; no GEMDOS emulation)\n"
+        << "          requested config " << equinox_config.requested_filename << ": "
+        << (equinox_config.present ? "present" : "absent") << " in Equinox FAT12 root ("
+        << equinox_config.root_entry_count << " live entries)";
+    if (equinox_config.present) {
+        std::cout << "; cluster " << equinox_config.first_cluster << ", "
+            << equinox_config.size << " bytes, SHA-256 " << equinox_config.sha256
+            << ", leading words 0x" << std::hex << equinox_config.first_word << " 0x"
+            << equinox_config.first_longword_operand << std::dec;
+    }
+    std::cout << " (metadata only; never generated or written)\n";
+
+    // The outer archive is the supplied-media boundary.  Inspect every ST
+    // leaf in memory so absence is not guessed from the one Equinox variant.
+    std::size_t supplied_st_images = 0;
+    std::size_t readable_fat12_images = 0;
+    std::size_t config_files = 0;
+    for (const auto& asset : eon::inventory_zip(release.path)) {
+        if (asset.kind != eon::AssetKind::atari_st_disk) continue;
+        ++supplied_st_images;
+        const auto candidate = eon::extract_asset_by_sha256(release.path, asset.sha256);
+        if (!candidate) throw std::runtime_error("Verified Atari ST asset disappeared during scan");
+        std::optional<eon::Fat12Disk> candidate_disk;
+        try {
+            candidate_disk.emplace(*candidate);
+        } catch (const std::runtime_error&) {
+            // The remaining supplied ST images may be raw/protected media.
+            // They do not expose a FAT12 filename namespace to this parser.
+            continue;
+        }
+        ++readable_fat12_images;
+        if (eon::probe_millennium_atari_config(*candidate_disk).present) ++config_files;
+    }
+    std::cout << "          supplied ST config scan: " << supplied_st_images << " images, "
+        << readable_fat12_images << " valid FAT12 volumes, " << config_files << " files named "
+        << equinox_config.requested_filename
+        << " (raw/protected images are not reinterpreted as files)\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {

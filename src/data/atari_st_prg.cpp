@@ -1,5 +1,7 @@
 #include "data/atari_st_prg.hpp"
 
+#include "data/sha256.hpp"
+
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -265,6 +267,29 @@ MillenniumAtariTrapEntry parse_millennium_atari_trap_entry(
     result.fopen_result_test_offset = 22;
     result.fopen_result_negative_branch_offset = 24;
     result.fopen_result_negative_branch_target_offset = 24;
+    return result;
+}
+
+MillenniumAtariConfigEvidence probe_millennium_atari_config(const Fat12Disk& disk) {
+    constexpr std::string_view requested_filename = "MILL22A.inf";
+    MillenniumAtariConfigEvidence result;
+    result.requested_filename = requested_filename;
+    result.root_entry_count = disk.root_entries().size();
+    if (const auto* entry = disk.find(requested_filename)) {
+        if (entry->directory()) {
+            throw std::runtime_error("Millennium Atari ST configuration name is a directory");
+        }
+        result.present = true;
+        result.first_cluster = entry->first_cluster;
+        result.size = entry->size;
+        const auto payload = disk.read(*entry);
+        if (payload.size() != result.size || payload.size() < 2U) {
+            throw std::runtime_error("Truncated Millennium Atari ST configuration payload");
+        }
+        result.sha256 = to_hex(sha256(payload));
+        result.first_word = read_be16(payload, 0);
+        if (payload.size() >= 6U) result.first_longword_operand = read_be32(payload, 2);
+    }
     return result;
 }
 

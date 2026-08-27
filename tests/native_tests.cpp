@@ -165,6 +165,17 @@ int main() {
     assert(defjam_resident.initializer_address == 0x787d4);
     assert(defjam_resident.result_word_address == 0x7b75a);
     assert(defjam_resident.d3_nonzero_or_mask == 0x0100);
+    const auto defjam_splitter = eon::parse_millennium_amiga_resident_word_splitter(
+        defjam_loader_disk, defjam_plan);
+    assert(defjam_splitter.entry_address == 0x68016);
+    assert(defjam_splitter.source_a1_offset == 0x36);
+    assert((defjam_splitter.magnitude_word_addresses
+        == std::array<std::uint32_t, 3>{{0x7b764, 0x7b766, 0x7b768}}));
+    assert((defjam_splitter.sign_byte_addresses
+        == std::array<std::uint32_t, 3>{{0x7b776, 0x7b777, 0x7b778}}));
+    assert(defjam_splitter.helper_address == 0x7ba12);
+    assert(defjam_splitter.signed_word_address == 0x7b768);
+    assert(defjam_splitter.signed_sign_address == 0x7b778);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);
@@ -843,6 +854,36 @@ int main() {
     assert(atari_trap.fopen_result_test_offset == 22);
     assert(atari_trap.fopen_result_negative_branch_offset == 24);
     assert(atari_trap.fopen_result_negative_branch_target_offset == 24);
+    const auto atari_config = eon::probe_millennium_atari_config(atari_disk);
+    assert(atari_config.requested_filename == "MILL22A.inf");
+    assert(atari_config.root_entry_count == 13);
+    assert(atari_config.present);
+    assert(atari_config.first_cluster == 3);
+    assert(atari_config.size == 7'506);
+    assert(atari_config.first_word == 0x4ef9);
+    assert(atari_config.first_longword_operand == 0x2aa88);
+    assert(atari_config.sha256 == "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6");
+    std::size_t millennium_st_images = 0;
+    std::size_t millennium_fat12_images = 0;
+    std::size_t millennium_config_files = 0;
+    for (const auto& asset : eon::inventory_zip(atari_release->path)) {
+        if (asset.kind != eon::AssetKind::atari_st_disk) continue;
+        ++millennium_st_images;
+        const auto candidate = eon::extract_asset_by_sha256(atari_release->path, asset.sha256);
+        assert(candidate);
+        try {
+            const eon::Fat12Disk candidate_disk(*candidate);
+            ++millennium_fat12_images;
+            if (eon::probe_millennium_atari_config(candidate_disk).present) {
+                ++millennium_config_files;
+            }
+        } catch (const std::runtime_error&) {
+            // Protected/raw supplied ST media have no FAT12 file namespace.
+        }
+    }
+    assert(millennium_st_images == 7);
+    assert(millennium_fat12_images == 5);
+    assert(millennium_config_files == 4);
     auto invalid_atari_target_source = atari_bss_source;
     invalid_atari_target_source.bytes.front() ^= 0x01;
     bool invalid_atari_target_rejected = false;

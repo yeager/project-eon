@@ -131,6 +131,19 @@ filename bytes. It does not issue either service, model GEMDOS return values,
 turn the loop into host behaviour, or infer the later successful control path
 as gameplay.
 
+The requested file is genuinely supplied rather than synthesized. On the
+SHA-identified Equinox disk, the FAT12 root entry for `MILL22A.inf` starts at
+cluster 3 and is 7,506 bytes. Its exact file-chain SHA-256 is
+`74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6`; its
+first recovered words are `0x4ef9 0x0002aa88`. Those are retained strictly as
+file and machine-word facts, not interpreted as a configuration schema or
+executed. A read-only inventory scan covers all seven supplied Millennium ST
+images: five expose valid FAT12 volumes and four contain a regular
+`MILL22A.inf` entry. The other two are raw/protected media and therefore have
+no FAT12 pathname namespace to substitute. Project Eon reads a present entry
+only through its original cluster chain in memory, and never creates, changes,
+or falls back to a synthetic `.inf` file.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
@@ -186,6 +199,17 @@ been transformed by its preceding loader call; its corresponding raw disk
 bytes are not treated as an executable or an inferred compression format.
 `MillenniumAmigaResidentEntry` therefore records only the literal gate and
 fails closed if any opcode, target range, or return instruction differs.
+
+The next complete resident subroutine starts at `0x68016`. It takes three
+successive words beginning at `A1+0x36`; for each, original `LSL`, `ROXL`, and
+`LSR` instructions preserve the lower 15 bits in `0x7b764`, `0x7b766`, and
+`0x7b768`, while the former high bit is written as a byte to `0x7b776`,
+`0x7b777`, and `0x7b778`. It then calls `0x7ba12`; its return path reads the
+last word/byte pair and conditionally negates the word. This is a byte-exact
+control/data-flow profile only. Project Eon calls it
+`MillenniumAmigaResidentWordSplitter`, does not assign gameplay meaning to the
+values, does not execute its 68000 instructions, and fails closed on any
+changed opcode or RAM operand.
 
 ### Deuteros Atari ST protected-media boot chain
 
