@@ -189,6 +189,19 @@ int main() {
     }}));
     assert(defjam_helper_boundary.raw_prefix_sha256
         == "eb11f5c5dfda4234b0214599bffec09402deff2435c58d57db1f7ab84c07c434");
+    const auto defjam_staging_callsites = eon::parse_millennium_amiga_resident_helper_staging_callsites(
+        defjam_loader_disk, defjam_plan, defjam_splitter);
+    assert(defjam_staging_callsites[0].entry_address == 0x69624);
+    assert(defjam_staging_callsites[0].source_address == 0x7cc3c);
+    assert(defjam_staging_callsites[1].entry_address == 0x69b88);
+    assert(defjam_staging_callsites[1].source_address == 0x7cc68);
+    for (const auto& callsite : defjam_staging_callsites) {
+        assert(callsite.magnitude_destination == 0x7b764);
+        assert(callsite.sign_destination == 0x7b776);
+        assert(callsite.setup_helper_address == 0x7b77e);
+        assert(callsite.clear_byte_address == 0x7b14e);
+        assert(callsite.helper_address == 0x7ba12);
+    }
     // These are real, consecutive words from the supplied raw resident range.
     // They exercise the exact pre-helper LSL/ROXL/LSR data movement without
     // claiming that this disk position was an original A1 caller.

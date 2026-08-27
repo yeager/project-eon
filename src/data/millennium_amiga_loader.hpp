@@ -75,6 +75,20 @@ struct MillenniumAmigaResidentHelperRawBoundary {
     std::string raw_prefix_sha256;
 };
 
+// Two further raw-resident routines stage the helper-visible fixed RAM fields
+// before directly calling $7ba12.  Their source values remain runtime RAM and
+// the helper itself has no validated executable representation, so this is
+// preservation evidence only rather than an implementation of either call.
+struct MillenniumAmigaResidentHelperStagingCallsite {
+    std::uint32_t entry_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t magnitude_destination = 0;
+    std::uint32_t sign_destination = 0;
+    std::uint32_t setup_helper_address = 0;
+    std::uint32_t clear_byte_address = 0;
+    std::uint32_t helper_address = 0;
+};
+
 // Recovers the explicit raw-read requests from the first-stage 68000 loader.
 // It validates the instruction sequence and every resulting disk range.  It
 // intentionally does not decompress, write, or otherwise unpack game media.
@@ -107,6 +121,15 @@ split_millennium_amiga_resident_words_pre_helper(
 // routine boundary to those bytes.
 [[nodiscard]] MillenniumAmigaResidentHelperRawBoundary
 parse_millennium_amiga_resident_helper_raw_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentWordSplitter& splitter);
+
+// Validates the two additional literal staging callsites for $7ba12. Each
+// copies three words and three bytes from a runtime source into the same fixed
+// fields used by the splitter, calls $7b77e, clears $7b14e, then calls the
+// unimplemented helper. It never reads source values or invokes either call.
+[[nodiscard]] std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>
+parse_millennium_amiga_resident_helper_staging_callsites(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentWordSplitter& splitter);
 

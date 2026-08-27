@@ -254,6 +254,16 @@ are the helper's original executable representation. The loader invokes an
 unrecovered transform before the resident entry; no decompressor, helper
 semantics, caller, or media write is inferred from this fingerprint.
 
+There are two further raw-resident helper staging callsites at `$69624` and
+`$69b88`. Each sets `A4` to a live runtime source (`$7cc3c` and `$7cc68`,
+respectively), copies three words to `$7b764..$7b768`, then copies three bytes
+to `$7b776..$7b778`. Both call `$7b77e`, clear byte `$7b14e`, and directly call
+`$7ba12`. `MillenniumAmigaResidentHelperStagingCallsite` checks every
+instruction and operand of these common tails in the supplied raw ADF. It
+does not read the runtime sources, infer the `$7b77e` or `$7ba12` effects, or
+execute either call. This preserves a real caller-side staging protocol while
+retaining the helper's unrecovered executable boundary.
+
 ### Deuteros Atari ST protected-media boot chain
 
 The supplied Atari ST collection consists of protected/cracked raw `.st`
