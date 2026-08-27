@@ -500,4 +500,32 @@ MillenniumAtariConfigThirdJsr parse_millennium_atari_config_third_jsr(
         read_be16(payload, branch_target_offset + 4U)};
 }
 
+MillenniumAtariConfigFourthJsr parse_millennium_atari_config_fourth_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
+    // The direct $2b448 target starts with six unambiguous immediate/absolute
+    // register writes. Stop before the following loop body, where dataflow
+    // depends on memory contents and platform state outside this local proof.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t target_address = 0x2b448;
+    constexpr std::size_t target_offset = target_address - load_base;
+    constexpr std::array<std::uint8_t, 28> setup_bytes{
+        0x3e, 0x3c, 0x00, 0x06, 0x2a, 0x7c, 0x00, 0x02, 0xb4, 0x28,
+        0x28, 0x7c, 0x00, 0x02, 0xb3, 0xc8, 0x3c, 0x3c, 0x00, 0x0f,
+        0x3a, 0x3c, 0x00, 0x02, 0x38, 0x3c, 0x01, 0x00,
+    };
+    const auto has_target = std::find(entry.jsr_targets.begin(), entry.jsr_targets.end(), target_address)
+        != entry.jsr_targets.end();
+    if (entry.proven_load_base != load_base || !has_target
+        || payload.size() < target_offset + setup_bytes.size()
+        || !std::equal(setup_bytes.begin(), setup_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf JSR target");
+    }
+    return {load_base, target_address, static_cast<std::uint32_t>(target_offset),
+        read_be16(payload, target_offset), read_be16(payload, target_offset + 2U),
+        read_be32(payload, target_offset + 6U), read_be32(payload, target_offset + 12U),
+        read_be16(payload, target_offset + 18U), read_be16(payload, target_offset + 22U),
+        read_be16(payload, target_offset + 26U)};
+}
+
 } // namespace eon

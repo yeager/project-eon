@@ -224,6 +224,22 @@ struct MillenniumAtariConfigThirdJsr {
     std::uint16_t branch_target_branch_opcode = 0;
 };
 
+// The $2b448 direct target has a complete, local register/address setup
+// prefix before its first loop body. These are literal 68000 dataflow facts;
+// Project Eon does not infer what the pointers or counters represent.
+struct MillenniumAtariConfigFourthJsr {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t target_address = 0;
+    std::uint32_t target_file_offset = 0;
+    std::uint16_t d7_setup_opcode = 0;
+    std::uint16_t d7_initial_value = 0;
+    std::uint32_t a5_initial_address = 0;
+    std::uint32_t a4_initial_address = 0;
+    std::uint16_t d6_initial_value = 0;
+    std::uint16_t d5_initial_value = 0;
+    std::uint16_t d4_initial_value = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -302,6 +318,11 @@ struct MillenniumAtariConfigThirdJsr {
 // bytes at its taken branch destination. It never chooses a D0 value or
 // executes either side of the branch.
 [[nodiscard]] MillenniumAtariConfigThirdJsr parse_millennium_atari_config_third_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
+
+// Validates the direct $2b448 target's initial register/address setup only.
+// It does not execute the ensuing loops, traps, or any data pointed to here.
+[[nodiscard]] MillenniumAtariConfigFourthJsr parse_millennium_atari_config_fourth_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
 } // namespace eon
