@@ -81,8 +81,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0x75, 0x19, 0x0e, 0x1f, 0xba, 0x9a, 0x06, 0xe8,
         0xcd, 0x00, 0x22, 0xc0, 0x75, 0x0d};
     // The shared local target is preserved as raw control flow.  Its first
-    // local branch is JC +5 at 0x346: the non-taken bytes end in RET at
-    // 0x34c, while the taken destination starts at 0x34d.  No interrupt or
+    // local branch is JC +5 at 0x345: the non-taken bytes end in RET at
+    // 0x34b, while the taken destination starts at 0x34c.  No interrupt or
     // return semantics are inferred here.
     constexpr std::array<std::uint8_t, 50> launcher_common_routine{
         0x8c, 0xc8, 0x89, 0x06, 0x7e, 0x06, 0x89, 0x06,
@@ -92,6 +92,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0x2e, 0x8b, 0x26, 0xf7, 0x05, 0x8e, 0xd9, 0x8e,
         0xc1, 0x72, 0x05, 0xb4, 0x4d, 0xcd, 0x21, 0xc3,
         0xba, 0x70};
+    constexpr std::array<std::uint8_t, 14> launcher_branch_target_bytes{
+        0xba, 0x70, 0x03, 0x89, 0xd2, 0xb4, 0x09, 0xcd,
+        0x21, 0xb8, 0x0a, 0x4c, 0xcd, 0x21};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
@@ -114,6 +117,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         || !has_bytes(mill_launcher, title_call_target - mill_load_bias, launcher_common_routine)) {
         throw std::runtime_error("Unsupported Millennium DOS launcher common routine");
     }
+    constexpr std::size_t common_branch_target = 0x34c;
+    if (!has_bytes(mill_launcher, common_branch_target - mill_load_bias,
+                   launcher_branch_target_bytes)) {
+        throw std::runtime_error("Unsupported Millennium DOS launcher branch target");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -134,9 +142,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_title_call_address = static_cast<std::uint16_t>(title_call_address),
         .launcher_game_call_address = static_cast<std::uint16_t>(game_call_address),
         .launcher_common_call_target = static_cast<std::uint16_t>(title_call_target),
-        .launcher_common_branch_address = 0x346,
-        .launcher_common_branch_target = 0x34d,
-        .launcher_common_fallthrough_return = 0x34c,
+        .launcher_common_branch_address = 0x345,
+        .launcher_common_branch_target = common_branch_target,
+        .launcher_common_fallthrough_return = 0x34b,
+        .launcher_common_branch_target_static_boundary = 0x35a,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",

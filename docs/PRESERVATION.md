@@ -934,10 +934,12 @@ hand-off used by the native parser. It establishes only literal dataflow and
 control edges: Project Eon does not assign a DOS/EXEC meaning to `$031c`, the
 post-call `AX` tests, or either callee return.
 
-The directly called local bytes at `$031c..$034e` are separately anchored by
-the parser. Their first local branch is the literal `JC +$05` at `$0346`:
-the taken target begins at `$034d`, while the sequential bytes are
-`B4 4D CD 21 C3` and end in `RET` at `$034c`. This is a static byte/control
+The directly called local bytes at `$031c..$034d` are separately anchored by
+the parser. Their first local branch is the literal `JC +$05` at `$0345`:
+the taken target begins at `$034c`, while the sequential bytes are
+`B4 4D CD 21 C3` and end in `RET` at `$034b`. The branch target's next 14
+bytes are `BA 70 03 89 D2 B4 09 CD 21 B8 0A 4C CD 21`; the first following
+byte, at `$035a`, is the static text-data boundary. This is a static byte/control
 fact only; in particular, Project Eon does not interpret the interrupt bytes,
 the carry condition, or the return as DOS behavior.
 
