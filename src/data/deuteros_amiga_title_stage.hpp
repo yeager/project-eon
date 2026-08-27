@@ -24,6 +24,12 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t timer_counter_address = 0;
     std::uint32_t timer_threshold = 0;
     std::uint32_t timer_dispatch_address = 0;
+    // The caller performs this equality check immediately before entering the
+    // transition.  When it matches, the transition is skipped; when the
+    // transition returns, the caller clears the elapsed counter again.
+    std::uint32_t timer_dispatch_inhibit_address = 0;
+    std::uint16_t timer_dispatch_inhibit_value = 0;
+    std::uint32_t timer_counter_reset_address = 0;
     // The dispatch begins a bounded, opcode-validated palette/display
     // transition before control returns to the caller.  These are machine
     // state facts, not inferred menu/gameplay meanings.
