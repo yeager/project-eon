@@ -194,7 +194,14 @@ endif()
 # executable creates/uses its data directory and reads user-supplied archives
 # and disk images in place through the verified scanners.
 include(GNUInstallDirs)
-install(TARGETS project-eon RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+# Apple bundle targets require a BUNDLE destination.  Keep it separate from
+# the desktop runtime rule so an iPadOS cross-build can configure and stage
+# ProjectEon.app before the unsigned IPA packaging guard examines it.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    install(TARGETS project-eon BUNDLE DESTINATION ".")
+else()
+    install(TARGETS project-eon RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
 # Linux CI builds SDL3 and SDL_image from source, outside the distribution's
 # package database.  Ship those two runtime libraries with the executable so
 # DEB/RPM artifacts remain launchable without proprietary media or a

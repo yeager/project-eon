@@ -23,6 +23,10 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn("-DZLIB_ROOT=\"$IOS_PREFIX\"", workflow)
         self.assertIn("-DSDL3_DIR=\"$IOS_PREFIX/lib/cmake/SDL3\"", workflow)
 
+    def test_ios_bundle_has_an_install_destination(self):
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn('install(TARGETS project-eon BUNDLE DESTINATION ".")', cmake)
+
     def test_creates_payload_with_relative_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
