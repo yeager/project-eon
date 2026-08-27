@@ -847,7 +847,18 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_fourth_post_outer_tail.tail_file_offset << std::dec << "; "
         << config_fourth_post_outer_tail.tail_bytes << " bytes, SHA-256 "
         << config_fourth_post_outer_tail.sha256
-        << " (hash anchor only; no post-trap control/state interpretation)\n";
+        << "; stack cleanup 0x" << std::hex
+        << config_fourth_post_outer_tail.initial_stack_cleanup_opcode << ", D0 0x"
+        << config_fourth_post_outer_tail.d0_initial_value << " decrement branch " << std::dec
+        << static_cast<int>(config_fourth_post_outer_tail.d0_nonzero_branch_displacement)
+        << " -> 0x" << std::hex << config_fourth_post_outer_tail.d0_nonzero_branch_target_address
+        << "; DBF D7 " << std::dec << config_fourth_post_outer_tail.d7_backedge_displacement
+        << " -> 0x" << std::hex << config_fourth_post_outer_tail.d7_backedge_target_address
+        << "; selector 0x" << config_fourth_post_outer_tail.selector << ", TRAP #14 0x"
+        << config_fourth_post_outer_tail.trap_opcode << ", cleanup/RTS 0x"
+        << config_fourth_post_outer_tail.final_stack_cleanup_opcode << "/0x"
+        << config_fourth_post_outer_tail.return_opcode << std::dec
+        << " (validated only; no post-trap execution or state interpretation)\n";
     std::cout << "          MILL22A.inf absolute-JSR encodings: "
         << config_jsr_inventory.encodings.size() << " (file +0x" << std::hex
         << config_jsr_inventory.encodings.front().first << " -> 0x"

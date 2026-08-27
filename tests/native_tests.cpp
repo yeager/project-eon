@@ -1489,6 +1489,21 @@ int main() {
     assert(atari_fourth_post_outer_tail.tail_bytes == 26);
     assert(atari_fourth_post_outer_tail.sha256
         == "34d497b9c4408944ea24d4eede21838f691c43d5a0d772db922187bed0e87fc8");
+    assert(atari_fourth_post_outer_tail.initial_stack_cleanup_opcode == 0x5c8f);
+    assert(atari_fourth_post_outer_tail.d0_load_opcode == 0x203c);
+    assert(atari_fourth_post_outer_tail.d0_initial_value == 0x4e20);
+    assert(atari_fourth_post_outer_tail.d0_decrement_opcode == 0x5380);
+    assert(atari_fourth_post_outer_tail.d0_nonzero_branch_opcode == 0x66fc);
+    assert(atari_fourth_post_outer_tail.d0_nonzero_branch_displacement == -4);
+    assert(atari_fourth_post_outer_tail.d0_nonzero_branch_target_address == 0x2b494);
+    assert(atari_fourth_post_outer_tail.d7_backedge_opcode == 0x51cf);
+    assert(atari_fourth_post_outer_tail.d7_backedge_displacement == -78);
+    assert(atari_fourth_post_outer_tail.d7_backedge_target_address == 0x2b44e);
+    assert(atari_fourth_post_outer_tail.selector_push_opcode == 0x3f3c);
+    assert(atari_fourth_post_outer_tail.selector == 0x0006);
+    assert(atari_fourth_post_outer_tail.trap_opcode == 0x4e4e);
+    assert(atari_fourth_post_outer_tail.final_stack_cleanup_opcode == 0x5c8f);
+    assert(atari_fourth_post_outer_tail.return_opcode == 0x4e75);
     const auto atari_jsr_inventory = eon::inventory_millennium_atari_config_absolute_jsrs(atari_config_payload);
     assert(atari_jsr_inventory.encodings.size() == 19);
     assert((atari_jsr_inventory.encodings.front() == std::pair<std::uint32_t, std::uint32_t>{0x50c, 0x2a5aa}));

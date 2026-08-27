@@ -241,8 +241,12 @@ a hash-addressed preservation anchor: address `0x2b48c`, file `+0xfae`, SHA-256
 `34d497b9c4408944ea24d4eede21838f691c43d5a0d772db922187bed0e87fc8`.
 This does **not** establish that the suffix executes: reaching it requires a
 native `TRAP #14` return that Project Eon does not emulate. Its instruction
-semantics, loop effects, service calls, and any resulting game state remain
-unrecovered rather than inferred.
+words are now also decoded literally: `ADDQ.L #6,SP`; `MOVE.L #0x4e20,D0`;
+`SUBQ.L #1,D0` and `BNE.S -4` back to `0x2b494`; then `DBF D7,-78` to
+`0x2b44e`; selector `0x0006` and another `TRAP #14`; followed by the same
+stack cleanup and `RTS`. This records bytes, operands, and PC-relative
+targets only. Loop effects, native service calls, return values, and any
+resulting game state remain unrecovered rather than inferred.
 
 For the next disassembly phase, Project Eon now keeps a fail-closed whole-file
 inventory of all 19 original `0x4eb9` absolute-JSR encodings. The first is at
