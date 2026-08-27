@@ -137,6 +137,17 @@ if(BUILD_TESTING)
         EON_REAL_DATA_DIR="${EON_REAL_DATA_DIR}"
     )
     add_test(NAME native-data-detection COMMAND eon-native-tests)
+    # Commercial game data is never available in CI.  A developer build that
+    # explicitly supplies it receives a separate black-box launch test for
+    # every supported platform path.
+    if(EON_REAL_DATA_DIR)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        add_test(NAME cli-real-platform-starts
+            COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_launch_test.py"
+                "$<TARGET_FILE:project-eon>"
+                "${EON_REAL_DATA_DIR}")
+    endif()
 endif()
 
 # Distribution packages deliberately contain no commercial game media. The
