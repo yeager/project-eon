@@ -23,6 +23,29 @@ struct MillenniumDosGameData {
     std::vector<MillenniumDosCelestialLabel> celestial_labels;
 };
 
+// `2200AD4.BIN` begins with a 0x366-byte array of 16-bit offsets.  It is a
+// native pointer table into the rest of the same static-data file, rather
+// than a replacement UI description.  Several pointers intentionally share
+// a record and one pair is not in ascending target order, so preserve the
+// table order separately from the deduplicated raw record extents.
+struct MillenniumDosStaticTextPointer {
+    std::size_t table_index = 0;
+    std::size_t target_offset = 0;
+};
+
+struct MillenniumDosStaticTextRecord {
+    std::size_t source_offset = 0;
+    std::vector<std::uint8_t> bytes;
+};
+
+struct MillenniumDosStaticTextCatalog {
+    static constexpr std::size_t pointer_table_size = 0x366;
+    static constexpr std::size_t pointer_count = pointer_table_size / 2;
+
+    std::vector<MillenniumDosStaticTextPointer> pointers;
+    std::vector<MillenniumDosStaticTextRecord> records;
+};
+
 // The save/load routines in the verified English 2200AD.EXE transfer this
 // four-word subset in columns, not as a packed file record.  The executable
 // reconstructs each element at a 28-byte stride in its runtime table.  Names
@@ -55,6 +78,12 @@ struct MillenniumDosSaveLayout {
 // no fallback labels, translations, or generated data if original media is
 // absent or differs from the currently verified release.
 [[nodiscard]] MillenniumDosGameData parse_millennium_dos_game_data(
+    std::span<const std::uint8_t> static_data);
+
+// Preserves the full pointer-to-raw-record topology of the original static
+// data. No text is normalized, decoded as a UI command, or assigned gameplay
+// meaning; callers can only inspect bytes read from supplied media.
+[[nodiscard]] MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
     std::span<const std::uint8_t> static_data);
 
 // Parses the exact, read-only save serialization established by the English
