@@ -49,19 +49,20 @@ def main() -> int:
 
     before = media_snapshot(data_directory)
     environment = os.environ | {"SDL_VIDEODRIVER": "dummy"}
-    starts = (
-        ("start-menu", (str(executable), "--data", str(data_directory))),
-        ("millennium/dos", (str(executable), "--data", str(data_directory), "--game",
-            "millennium", "--platform", "dos", "--presentation", "original")),
-        ("millennium/amiga", (str(executable), "--data", str(data_directory), "--game",
-            "millennium", "--platform", "amiga", "--presentation", "original")),
-        ("millennium/atari-st", (str(executable), "--data", str(data_directory), "--game",
-            "millennium", "--platform", "atari-st", "--presentation", "original")),
-        ("deuteros/amiga", (str(executable), "--data", str(data_directory), "--game",
-            "deuteros", "--platform", "amiga", "--presentation", "original")),
-        ("deuteros/atari-st", (str(executable), "--data", str(data_directory), "--game",
-            "deuteros", "--platform", "atari-st", "--presentation", "original")),
-    )
+    starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
+    for presentation in ("original", "modern"):
+        for game, platform in (
+            ("millennium", "dos"),
+            ("millennium", "amiga"),
+            ("millennium", "atari-st"),
+            ("deuteros", "amiga"),
+            ("deuteros", "atari-st"),
+        ):
+            starts.append((
+                f"{game}/{platform}/{presentation}",
+                (str(executable), "--data", str(data_directory), "--game", game,
+                    "--platform", platform, "--presentation", presentation),
+            ))
     for name, command in starts:
         try:
             completed = subprocess.run(
