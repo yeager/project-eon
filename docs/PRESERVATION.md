@@ -1106,6 +1106,11 @@ After another original call it tests `DX`; the nonzero static edge is `$d44b`.
 Project Eon validates these bytes, addresses, and branch targets, but does not
 assume any call returns or make this into a host-side startup sequence.
 
+The wrapped `$0124` target itself saves `DS`, `SI`, `DI`, `BP`, and `ES`,
+executes the launcher's private `INT $91`, restores those registers, and has
+its `RET` opcode at `$0130`. This is a bounded instruction-level fact only:
+the private interrupt's result and actual return behaviour are not emulated.
+
 #### Main-loop action dispatch
 
 The supplied English `2200AD.EXE` (54,391 bytes, SHA-256
