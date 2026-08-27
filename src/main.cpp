@@ -4,6 +4,8 @@
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
+#include "data/millennium_dos_bitmap.hpp"
+#include "data/millennium_dos_lib.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
@@ -80,6 +82,25 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
             << " bytes, " << bundle.object_count << " objects, mode "
             << bundle.mode_flag << '\n';
     }
+}
+
+void report_millennium_dos(const eon::ReleaseArchive& release) {
+    // This is the supplied English DOS TITLE.LIB, nested in the verified
+    // original archive.  P00 is decoded only to its authentic palette indices;
+    // its RGB DAC mapping remains deliberately unavailable until recovered
+    // from original executable evidence.
+    constexpr auto title_lib_sha256 =
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+    const auto title_bytes = eon::extract_asset_by_sha256(release.path, title_lib_sha256);
+    if (!title_bytes) return;
+    const eon::MillenniumDosLib title_lib(*title_bytes);
+    const auto* p00 = title_lib.find("P00");
+    if (!p00) throw std::runtime_error("Verified Millennium TITLE.LIB has no P00 entry");
+    const auto bitmap = eon::decode_millennium_dos_bitmap(title_lib.read(*p00));
+    std::cout << "          TITLE.LIB P00: " << bitmap.width << 'x' << bitmap.height
+        << ", codec " << static_cast<unsigned>(bitmap.codec)
+        << ", indices 0.." << static_cast<unsigned>(bitmap.max_palette_index)
+        << " (RGB palette pending original-code verification)\n";
 }
 
 std::optional<PreviewAnimation> load_deuteros_preview(
@@ -161,6 +182,11 @@ int main(int argc, char** argv) {
             if (release.game == eon::Game::deuteros
                 && release.platform == eon::Platform::amiga) {
                 report_deuteros_amiga(release);
+            }
+            if (release.game == eon::Game::millennium
+                && release.platform == eon::Platform::dos
+                && release.language == "en") {
+                report_millennium_dos(release);
             }
         }
         return found ? 0 : 5;
