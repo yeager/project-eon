@@ -41,6 +41,8 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
         if (channel.active && channel.bitmap_selector == load_plan_.main_stage_entry.alternate_renderer_selector) {
             alternate_renderer_trace_ = trace_deuteros_amiga_alternate_renderer(
                 transferred_bundle_, load_plan_.main_stage_entry, channel.mode_data);
+            apply_deuteros_amiga_alternate_renderer(*last_frame_, disk_, load_plan_,
+                *alternate_renderer_trace_);
             break;
         }
     }

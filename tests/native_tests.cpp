@@ -8,6 +8,7 @@
 #include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_audio.hpp"
+#include "data/deuteros_amiga_alternate_renderer.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
@@ -1395,6 +1396,21 @@ int main() {
     const std::vector<std::uint8_t> expected_alternate_glyphs{
         'p', 'l', 'e', 'a', 's', 'e', ' ', 'w', 'a', 'i', 't'};
     assert(alternate_trace->glyph_codes == expected_alternate_glyphs);
+    // $206e6 reads the genuine eight-byte `p` glyph at $201b0 + ($70-$20)*8
+    // and combines it with selectors one/zero.  In the recovered four-plane
+    // write formula that makes set bits palette index two and clear bits
+    // index four.  The in-memory frame update must retain that exact
+    // bitplane result, rather than rasterising a replacement host font.
+    eon::DeuterosAmigaFrame alternate_frame;
+    alternate_frame.color_indices.assign(
+        static_cast<std::size_t>(eon::DeuterosAmigaFrame::width)
+            * eon::DeuterosAmigaFrame::height, 0);
+    eon::apply_deuteros_amiga_alternate_renderer(
+        alternate_frame, system_disk, load_plan, *alternate_trace);
+    const std::array<std::uint8_t, 8> expected_p_row{4, 2, 2, 2, 2, 2, 2, 4};
+    const auto p_row = alternate_frame.color_indices.begin()
+        + static_cast<std::size_t>(194) * eon::DeuterosAmigaFrame::width + 120;
+    assert(std::equal(expected_p_row.begin(), expected_p_row.end(), p_row));
     eon::DeuterosAmigaRandom opening_random(system_disk, first_bundle, 0, 0x240);
     assert(opening_random.next() == 0x11);
     assert(opening_random.seed() == 0x11);

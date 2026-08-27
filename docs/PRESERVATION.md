@@ -631,11 +631,18 @@ trace. The opening input path supplies `$32a24+$0b38`; its original bytes are
 `please wait`, followed by `$00`. `$20580` therefore calls `$2069c`, which
 sets `$20510` to `$20128 + $1e0f`; `$10` and `$11` select `$20488 + 8` and
 `$20488` for `$20508` and `$2050c`; each glyph calls `$206e6`. The latter
-writes through original global font/video pointers (`$20538`, `$20510`,
-`$20508`, `$2050c`), whose initialization is not fully recovered. Project
-Eon preserves those eleven byte values and exact pointer arithmetic, but does
-not claim pixels or substitute host buffers. Any other command class or an
-out-of-range payload pointer is rejected as a preservation boundary.
+writes through original global font/video pointers. This first stream now has
+a fully verified pixel path: the raw main stage initializes `$20538` to its
+embedded `$201b0` 8-bytes-per-glyph font and `$2053c` to one byte of horizontal
+advance. `$206e6` reads each glyph row, then writes each of the four Amiga
+planes using `(~glyph & secondary-mask) | (glyph & primary-mask)`. The exact
+selector tables are raw bytes at `$20488`; for the observed selectors 1/0,
+the result is plane 1 for set glyph bits and plane 2 for clear bits. The
+verified `$1e0f` display offset is byte 15 of scanline 192, so the eleven
+8x8 original glyphs fit through scanline 199. Project Eon applies precisely
+those writes to its existing in-memory four-plane-equivalent frame; it does
+not create a font, artwork, or source-media output. Any other command class,
+global layout, or out-of-plane write is rejected as a preservation boundary.
 
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
