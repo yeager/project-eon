@@ -116,7 +116,7 @@ not a mock game. It lists detected real releases and proves the Original/Modern
 presentation boundary while reverse engineering proceeds. Selecting Deuteros
 now runs the recovered Amiga opening channel program live at runtime from the
 verified ADF, with its original RGB4 palette, VBL random source and recovered
-input edge. It never substitutes placeholder art or invented game behaviour
+held input signal. It never substitutes placeholder art or invented game behaviour
 for undecoded original data.
 
 The launcher follows the same broad structure as OpenCaptive: a native SDL3
