@@ -93,6 +93,15 @@ struct DeuterosAtariDispatchProfile {
     std::uint32_t state1_destination = 0;
     std::uint32_t state1_byte_count = 0;
     std::uint32_t state1_linear_sector = 0;
+    std::uint32_t state5_first_destination = 0;
+    std::uint32_t state5_first_byte_count = 0;
+    std::uint32_t state5_first_reader_argument = 0;
+    std::uint32_t state5_copy_source = 0;
+    std::uint32_t state5_copy_destination = 0;
+    std::uint32_t state5_copy_byte_count = 0;
+    std::uint32_t state5_second_destination = 0;
+    std::uint32_t state5_second_byte_count = 0;
+    std::uint32_t state5_second_reader_argument = 0;
 };
 
 [[nodiscard]] DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(

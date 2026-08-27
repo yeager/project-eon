@@ -780,6 +780,12 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << "; state 0 raw args (RAM 0x" << dispatch.state0_destination << ", 0x"
             << dispatch.state0_byte_count << " bytes, sector 0x"
             << dispatch.state0_linear_sector << ")" << std::dec << '\n';
+        std::cout << "          Static vector 5: raw args (RAM 0x" << std::hex
+            << dispatch.state5_first_destination << ", 0x" << dispatch.state5_first_byte_count
+            << " bytes, reader 0x" << dispatch.state5_first_reader_argument
+            << "), copy 0x" << dispatch.state5_copy_source << " -> 0x"
+            << dispatch.state5_copy_destination << " +0x" << dispatch.state5_copy_byte_count
+            << ", then reader 0x" << dispatch.state5_second_reader_argument << std::dec << '\n';
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")

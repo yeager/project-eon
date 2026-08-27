@@ -170,6 +170,24 @@ DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
         0x20, 0x3c, 0x00, 0x05, 0xe4, 0x00,
         0x24, 0x3c, 0x00, 0x00, 0x00, 0x4c, 0x4e, 0x75}};
     require_bytes(bytes, 0x12e, state1, "Unexpected Deuteros Atari ST dispatch state 1");
+    // Vector 5 ($1f52) is the next wholly static loader branch. It invokes
+    // $70030 twice around a literal byte copy; these are raw arguments, not
+    // inferred file names, sectors, or game-state meanings.
+    constexpr auto state5 = std::to_array<std::uint8_t>({
+        0x20, 0x3c, 0x00, 0x00, 0xb4, 0x00,
+        0x22, 0x3c, 0x00, 0x00, 0xb0, 0x00,
+        0x2f, 0x01, 0x2e, 0x3c, 0x00, 0x00, 0x00, 0x4c,
+        0xce, 0xfc, 0x12, 0x00, 0x2f, 0x07, 0x61, 0x00, 0xfe, 0xc2,
+        0x41, 0xf9, 0x00, 0x05, 0x7a, 0x00,
+        0x22, 0x7c, 0x00, 0x00, 0xb0, 0x06,
+        0x30, 0x3c, 0x93, 0x92, 0x53, 0x40,
+        0x12, 0xd8, 0x51, 0xc8, 0xff, 0xfc,
+        0x2e, 0x1f, 0x22, 0x17,
+        0x06, 0x87, 0x00, 0x00, 0xb4, 0x00,
+        0x06, 0x81, 0x00, 0x00, 0xb4, 0x00,
+        0x20, 0x3c, 0x00, 0x04, 0xc8, 0x00,
+        0x61, 0x00, 0xfe, 0x90, 0x60, 0x00, 0xff, 0x70});
+    require_bytes(bytes, 0x152, state5, "Unexpected Deuteros Atari ST dispatch state 5");
     DeuterosAtariDispatchProfile result;
     for (std::size_t index = 0; index < result.vector_addresses.size(); ++index) {
         result.vector_addresses[index] = be32(bytes, 0xac + index * 4U);
@@ -180,6 +198,15 @@ DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     result.state1_destination = be32(bytes, 0x13e);
     result.state1_byte_count = be32(bytes, 0x144);
     result.state1_linear_sector = be32(bytes, 0x14a);
+    result.state5_first_destination = be32(bytes, 0x15a);
+    result.state5_first_byte_count = be32(bytes, 0x154);
+    result.state5_first_reader_argument = be32(bytes, 0x162) * 0x1200U;
+    result.state5_copy_source = be32(bytes, 0x172);
+    result.state5_copy_destination = be32(bytes, 0x178);
+    result.state5_copy_byte_count = static_cast<std::uint32_t>(be16(bytes, 0x17e)) + 1U;
+    result.state5_second_destination = result.state5_first_destination + 0xb400U;
+    result.state5_second_byte_count = be32(bytes, 0x19a);
+    result.state5_second_reader_argument = result.state5_first_reader_argument + 0xb400U;
     return result;
 }
 
