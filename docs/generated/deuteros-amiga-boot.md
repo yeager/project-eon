@@ -26,6 +26,12 @@ ADF data before exposing them to the game layer.
 | `0x1b800` | `0x2f3f4` | 4 | 0 |
 | `0x4ba00` | `0x215f0` | 6 | 1 |
 
+Each channel catalogue entry addresses a 10-byte initial-state header followed
+by a word-opcoded program interpreted at `$214aa`. The verified bundles expose
+four and six channels respectively. Native parsing implements the original
+operand widths for the entire recognized opcode range `$00`–`$14` while
+leaving still-unverified gameplay semantics unnamed.
+
 ## Boot block
 
 ```asm

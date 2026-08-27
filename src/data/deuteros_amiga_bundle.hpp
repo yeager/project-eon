@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
 
 namespace eon {
 
@@ -24,6 +25,21 @@ struct RgbColor {
     bool operator==(const RgbColor&) const = default;
 };
 
+struct DeuterosAmigaChannel {
+    std::uint32_t relative_offset = 0;
+    std::uint32_t initial_state_0 = 0;
+    std::uint32_t initial_state_4 = 0;
+    std::uint16_t initial_state_8 = 0;
+    std::uint32_t stream_relative_offset = 0;
+};
+
+struct DeuterosAmigaChannelCommand {
+    std::uint16_t opcode = 0;
+    std::array<std::uint32_t, 2> operands{};
+    std::uint8_t operand_count = 0;
+    std::uint8_t encoded_size = 0;
+};
+
 // Parse the in-memory pointer catalogue used by the original 68000 program.
 // Offsets remain relative to the bundle, just as they are stored on disk.
 [[nodiscard]] DeuterosAmigaBundle parse_deuteros_amiga_bundle(
@@ -33,5 +49,14 @@ struct RgbColor {
 // code and copied as sixteen Amiga RGB4 colour words.
 [[nodiscard]] std::array<RgbColor, 16> decode_deuteros_amiga_palette(
     const AmigaAdf& disk, const DeuterosAmigaBundle& bundle, std::uint16_t index);
+
+[[nodiscard]] std::vector<DeuterosAmigaChannel> parse_deuteros_amiga_channels(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle);
+
+// Decode one command using the exact operand widths selected by the original
+// interpreter at $214aa. Control-flow execution is intentionally separate.
+[[nodiscard]] DeuterosAmigaChannelCommand decode_deuteros_amiga_channel_command(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
+    std::uint32_t stream_relative_offset);
 
 } // namespace eon

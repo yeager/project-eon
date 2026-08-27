@@ -146,6 +146,24 @@ int main() {
     assert((first_palette[9] == eon::RgbColor{0xff, 0xff, 0x00}));
     assert((first_palette[14] == eon::RgbColor{0xff, 0xff, 0xff}));
     assert((first_palette[15] == eon::RgbColor{0xee, 0x44, 0x00}));
+    const auto first_channels = eon::parse_deuteros_amiga_channels(system_disk, first_bundle);
+    assert(first_channels.size() == 4);
+    for (const auto& channel : first_channels) {
+        assert(channel.initial_state_0 == 0x00ff0000);
+        assert(channel.initial_state_4 == 3);
+        assert(channel.initial_state_8 == 1);
+    }
+    const auto opening_command = eon::decode_deuteros_amiga_channel_command(
+        system_disk, first_bundle, first_channels[0].stream_relative_offset);
+    assert(opening_command.opcode == 0x13);
+    assert(opening_command.operand_count == 0);
+    assert(opening_command.encoded_size == 2);
+    const auto palette_command = eon::decode_deuteros_amiga_channel_command(
+        system_disk, first_bundle, first_channels[1].stream_relative_offset);
+    assert(palette_command.opcode == 4);
+    assert(palette_command.operand_count == 1);
+    assert(palette_command.operands[0] == 1);
+    assert(palette_command.encoded_size == 4);
 
     const auto second_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[1]);
@@ -156,5 +174,16 @@ int main() {
     assert((second_bundle.auxiliary_offsets == std::array<std::uint32_t, 6>{
         0x1f4c, 0x22ac, 0, 0, 0x15a92, 0x15c92}));
     assert(second_bundle.mode_flag == 1);
+    const auto second_channels = eon::parse_deuteros_amiga_channels(system_disk, second_bundle);
+    assert(second_channels.size() == 6);
+    for (const auto& channel : second_channels) {
+        assert(channel.initial_state_0 == 0x00ff0009);
+        assert(channel.initial_state_4 == 0x00c60003);
+        assert(channel.initial_state_8 == 1);
+    }
+    const auto second_command = eon::decode_deuteros_amiga_channel_command(
+        system_disk, second_bundle, second_channels[0].stream_relative_offset);
+    assert(second_command.opcode == 4);
+    assert(second_command.operands[0] == 0x10);
     return 0;
 }

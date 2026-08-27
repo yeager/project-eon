@@ -89,6 +89,12 @@ Interpreter command 4 selects `base + index * 32` and copies the resulting 16
 words into both active display structures. The native decoder preserves the
 stored order and expands each four-bit component to eight bits.
 
+Each bundle channel starts with a 10-byte initial-state record followed by a
+word-opcoded program. Disassembly of interpreter `$214aa` establishes all
+operand widths for opcodes `$00` through `$14`; native parsing now rejects
+unknown and truncated commands. Higher-level names remain deliberately absent
+until their external calls and state effects have been verified.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are
