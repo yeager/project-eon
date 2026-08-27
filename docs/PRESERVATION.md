@@ -78,6 +78,29 @@ images: it validates root, directory and hash-chain block types; detects
 cycles; bounds every block reference; and refuses incomplete file chains. It
 does not infer missing files or mutate image data.
 
+### Millennium Amiga raw-loader evidence
+
+Millennium's usable game media are not AmigaDOS files.  In the supplied Defjam
+image (ADF SHA-256
+`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`), the
+checksummed boot block first loads 0x400 bytes from disk offset `0x400` to
+memory `0x70000`.  The recovered 68000 first-stage code then issues these raw
+`trackdisk.device` reads:
+
+| Disk offset | Bytes | Destination | Observed continuation |
+| ---: | ---: | ---: | --- |
+| `0x24200` | `0x6e000` | `0x41000` | Call loaded stage |
+| `0x16400` | `0x2c000` | `0x68000` | Jump to `0x68000` |
+
+The latter hand-off places `0xa8d398fb` in `d6` immediately before the jump.
+`MillenniumAmigaLoadPlan` recognizes the actual instruction sequence, derives
+the two lengths from its immediate values (`0x1600 * 0x50` and
+`0x1600 * 2 * 0x10`), and bounds both ranges against the ADF. It deliberately
+does not claim those ranges are filesystem files, decompress them, or write
+them to a cache. The alternate supplied crack images alter boot/loader code;
+they remain separately fingerprinted media rather than assumed equivalent
+executables.
+
 ### Deuteros Amiga execution chain
 
 Opcode-validated 68000 decoding proves:

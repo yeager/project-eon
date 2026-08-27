@@ -49,6 +49,17 @@ The Atari ST one-disk Millennium releases also expose FAT12 filesystems. The
 verified 819,200-byte Equinox image contains 13 live root entries. Its
 `DATA12.BIN` resource is 932 bytes with SHA-256
 `6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda`.
+
+### Millennium Amiga loader path
+
+The supplied Amiga ADFs must not be treated as installed-file distributions.
+The Razor image has an empty valid AmigaDOS root, while Defjam's boot-stage
+loader demonstrates that actual gameplay media are raw reads. The native
+loader-plan parser verifies Defjam's boot checksum and 68000 request sequence:
+it bootstraps `0x400` bytes from disk offset `0x400` to `0x70000`, requests
+`0x24200..0x923ff` to `0x41000`, then requests `0x16400..0x423ff` to `0x68000`
+and jumps there with `d6 = 0xa8d398fb`. This is preservation evidence and a
+read-only platform boundary, not a decompressor or a replacement game loop.
 This proves a native outer ZIP → inner ZIP → ST disk → file path without using
 filenames as release identity.
 
