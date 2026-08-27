@@ -31,9 +31,26 @@ struct AtariStPrg {
     std::vector<AtariStRelocation> relocations;
 };
 
+// The first executable control transfer in the verified Equinox Millennium
+// PRG. GEMDOS has already performed its ordinary relocation before execution;
+// this retains original offsets and never selects a host load address.
+struct MillenniumAtariBootstrap {
+    std::uint32_t entry_offset = 0;
+    std::uint32_t branch_target_offset = 0;
+    std::uint32_t stage_source_offset = 0;
+    std::uint32_t stage_last_longword_offset = 0;
+    std::uint32_t stage_destination_offset = 0;
+    std::uint32_t stage_bytes = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
 [[nodiscard]] AtariStPrg parse_atari_st_prg(std::span<const std::uint8_t> bytes);
+
+// Validates the exact earliest bootstrap path in Millennium's verified Atari
+// ST executable. It never emits a relocated or unpacked image.
+[[nodiscard]] MillenniumAtariBootstrap parse_millennium_atari_bootstrap(
+    std::span<const std::uint8_t> bytes, const AtariStPrg& prg);
 
 } // namespace eon

@@ -797,6 +797,14 @@ int main() {
     assert(atari_prg.relocations.front().original_value == 0x115e);
     assert(atari_prg.relocations.back().offset == atari_prg.last_relocation_offset);
     assert(atari_prg.relocations.back().original_value == 0x139c8);
+    const auto atari_bootstrap = eon::parse_millennium_atari_bootstrap(
+        atari_disk.read(*atari_executable), atari_prg);
+    assert(atari_bootstrap.entry_offset == 0);
+    assert(atari_bootstrap.branch_target_offset == 0x24);
+    assert(atari_bootstrap.stage_source_offset == 0x115e);
+    assert(atari_bootstrap.stage_last_longword_offset == 0x1232);
+    assert(atari_bootstrap.stage_destination_offset == 0x1d636);
+    assert(atari_bootstrap.stage_bytes == 0xd8);
 
     const auto deuteros_atari = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st;

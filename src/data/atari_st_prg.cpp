@@ -1,5 +1,7 @@
 #include "data/atari_st_prg.hpp"
 
+#include <algorithm>
+#include <array>
 #include <limits>
 #include <stdexcept>
 
@@ -88,6 +90,34 @@ AtariStPrg parse_atari_st_prg(std::span<const std::uint8_t> bytes) {
         result.relocations.push_back({relocation, read_be32(bytes, loadable_offset + relocation)});
     }
     throw std::runtime_error("Unterminated Atari ST PRG relocation table");
+}
+
+MillenniumAtariBootstrap parse_millennium_atari_bootstrap(
+    std::span<const std::uint8_t> bytes, const AtariStPrg& prg) {
+    // 0: BRA.W $24; $24: LEA source,A0; LEA last-longword,A1;
+    // LEA BSS destination,A2; MOVE.L (A0)+,(A2)+; CMPA.L A0,A1;
+    // BGE.W copy; JMP destination. Comparison follows the increment, so the
+    // final source longword is included.
+    constexpr std::size_t header_bytes = 28;
+    constexpr std::uint32_t source_offset = 0x115e;
+    constexpr std::uint32_t last_longword_offset = 0x1232;
+    constexpr std::uint32_t destination_offset = 0x1d636;
+    constexpr std::uint32_t stage_bytes = last_longword_offset - source_offset + 4;
+    constexpr std::array<std::uint8_t, 36> entry_bytes{
+        0x60, 0x00, 0x00, 0x22, 0x41, 0xf9, 0x00, 0x00, 0x11, 0x5e,
+        0x43, 0xf9, 0x00, 0x00, 0x12, 0x32, 0x45, 0xf9, 0x00, 0x01,
+        0xd6, 0x36, 0x24, 0xd8, 0xb3, 0xc8, 0x6c, 0x00, 0xff, 0xfa,
+        0x4e, 0xf9, 0x00, 0x01, 0xd6, 0x36,
+    };
+    if (prg.text_bytes != source_offset || prg.data_bytes < stage_bytes
+        || prg.bss_bytes < destination_offset + stage_bytes - (prg.text_bytes + prg.data_bytes)) {
+        throw std::runtime_error("Unexpected Millennium Atari ST PRG segment layout");
+    }
+    if (bytes.size() < header_bytes + entry_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(), bytes.begin() + header_bytes)) {
+        throw std::runtime_error("Unexpected Millennium Atari ST bootstrap entry");
+    }
+    return {0, 0x24, source_offset, last_longword_offset, destination_offset, stage_bytes};
 }
 
 } // namespace eon

@@ -87,6 +87,15 @@ first site is offset `0x6`, value `0x0000115e`; the last is `0x1150`, value
 SHA-identified disk file and are native test anchors for future execution
 research.
 
+The earliest literal TEXT path is independently anchored too. Entry offset
+`0x0` is `BRA.W 0x24`; that bootstrap loads `A0 = 0x115e`, `A1 = 0x1232`, and
+`A2 = 0x1d636`, then post-increment copies longwords while `A0 <= A1`. It
+therefore transfers exactly `0xd8` bytes (inclusive source range
+`0x115e..0x1232`) from original DATA into BSS at `0x1d636` and makes an
+absolute `JMP 0x1d636`. Project Eon validates and reports that path without
+choosing a GEMDOS base, creating a relocated image, or executing the
+as-yet-unanalysed transferred bytes.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
