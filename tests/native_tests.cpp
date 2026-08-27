@@ -367,6 +367,7 @@ int main() {
     static_cast<void>(live_opening.tick());
     const auto live_frame = live_opening.rgba_frame();
     assert(live_frame && live_frame->size() == 320U * 200U * 4U);
+    assert(live_opening.frame_composed_on_last_tick());
     assert(live_opening.ticks() == 3);
     assert(live_opening.title_handoff_profile().disk_offset == 0x6e000);
     eon::DeuterosAmigaChannelVm opening_vm(system_disk, first_bundle);

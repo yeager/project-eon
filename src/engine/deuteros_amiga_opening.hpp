@@ -21,6 +21,7 @@ public:
 
     [[nodiscard]] DeuterosAmigaVmEvents tick(bool input_pressed = false);
     [[nodiscard]] std::optional<std::vector<std::uint8_t>> rgba_frame() const;
+    [[nodiscard]] bool frame_composed_on_last_tick() const { return frame_composed_on_last_tick_; }
     [[nodiscard]] std::uint64_t ticks() const { return ticks_; }
     [[nodiscard]] const DeuterosAmigaBootstrapProfile& title_handoff_profile() const {
         return load_plan_.title_handoff_profile;
@@ -34,6 +35,7 @@ private:
     DeuterosAmigaChannelVm vm_;
     DeuterosAmigaRandom random_;
     std::optional<DeuterosAmigaFrame> last_frame_;
+    bool frame_composed_on_last_tick_ = false;
     std::uint64_t ticks_ = 0;
 };
 
