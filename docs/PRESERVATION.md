@@ -101,6 +101,15 @@ them to a cache. The alternate supplied crack images alter boot/loader code;
 they remain separately fingerprinted media rather than assumed equivalent
 executables.
 
+The destination `0x68000` begins with a separate, directly verifiable resident
+entry gate: `JSR $787d4`, test byte `d3`, conditionally OR `0x0100` into `d0`,
+then store the resulting word at `0x7b75a` and return. The call target lies
+inside the first RAM stage (`0x41000..0xaefff`), but that stage has already
+been transformed by its preceding loader call; its corresponding raw disk
+bytes are not treated as an executable or an inferred compression format.
+`MillenniumAmigaResidentEntry` therefore records only the literal gate and
+fails closed if any opcode, target range, or return instruction differs.
+
 ### Deuteros Atari ST protected-media boot chain
 
 The supplied Atari ST collection consists of protected/cracked raw `.st`

@@ -202,12 +202,17 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     if (!image) return;
     const eon::AmigaAdf disk(*image);
     const auto plan = eon::parse_millennium_amiga_load_plan(disk);
+    const auto resident = eon::parse_millennium_amiga_resident_entry(disk, plan);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
         << "; disk 0x" << plan.resident_stage.disk_offset << " + 0x"
         << plan.resident_stage.length << " -> entry 0x" << plan.resident_entry
-        << ", marker 0x" << plan.loader_magic << std::dec << '\n';
+        << ", marker 0x" << plan.loader_magic << std::dec << '\n'
+        << "          resident gate: entry 0x" << std::hex << resident.entry_address
+        << " calls 0x" << resident.initializer_address << "; d3 != 0 ORs 0x"
+        << resident.d3_nonzero_or_mask << " into d0, stores word at 0x"
+        << resident.result_word_address << std::dec << '\n';
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
