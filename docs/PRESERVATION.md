@@ -374,6 +374,10 @@ whose zero branch at `$68518` reaches `$6854a`. This is recorded by
 evidence only; neither branch target nor the flag's gameplay meaning is
 inferred.
 
+At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
+$68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control
+flow only; no register, path, target, or continuation meaning is inferred.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch

@@ -336,6 +336,12 @@ int main() {
     assert(defjam_separate_entry.entry_address == 0x68d50);
     assert(defjam_separate_entry.branch_address == 0x68d58);
     assert(defjam_separate_entry.branch_target == 0x68d62);
+    const auto defjam_separate_branch = eon::parse_millennium_amiga_resident_separate_branch_boundary(defjam_loader_disk, defjam_plan, defjam_separate_entry);
+    assert(defjam_separate_branch.entry_address == 0x68d62);
+    assert(defjam_separate_branch.long_branch_address == 0x68d6e);
+    assert(defjam_separate_branch.long_branch_target == 0x68d78);
+    assert(defjam_separate_branch.unknown_call_address == 0x68d7c);
+    assert(defjam_separate_branch.unknown_call_target == 0x778f0);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
