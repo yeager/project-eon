@@ -1162,11 +1162,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
     const auto menu_platforms_for = [&](const eon::Game game) {
-        std::vector<eon::Platform> platforms;
-        for (const auto platform : {eon::Platform::dos, eon::Platform::amiga, eon::Platform::atari_st}) {
-            if (eon::release_available(releases, game, platform)) platforms.push_back(platform);
-        }
-        return platforms;
+        return eon::available_platforms(releases, game);
     };
     const auto start_millennium_title = [&] {
         load_millennium_assets_if_available();

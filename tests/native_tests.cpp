@@ -84,6 +84,11 @@ int main() {
     const auto releases = eon::find_release_archives(data_directory);
     // Six genuine outer archives: five platform/game pairs plus Spanish DOS.
     assert(releases.size() == 6);
+    assert((eon::available_platforms(releases, eon::Game::millennium)
+        == std::vector<eon::Platform>{eon::Platform::dos, eon::Platform::amiga,
+            eon::Platform::atari_st}));
+    assert((eon::available_platforms(releases, eon::Game::deuteros)
+        == std::vector<eon::Platform>{eon::Platform::amiga, eon::Platform::atari_st}));
     std::size_t millennium = 0;
     std::size_t deuteros = 0;
     for (const auto& release : releases) {
