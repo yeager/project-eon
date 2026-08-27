@@ -109,7 +109,7 @@ def main() -> int:
         try:
             completed = subprocess.run(
                 command, env=environment, check=False, capture_output=True,
-                text=True, timeout=1,
+                text=True, timeout=0.75,
             )
         except subprocess.TimeoutExpired:
             continue

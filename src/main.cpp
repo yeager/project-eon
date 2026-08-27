@@ -1,4 +1,5 @@
 #include "launcher.hpp"
+#include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/millennium_dos_title_session.hpp"
@@ -46,6 +47,8 @@ namespace {
 
 enum class Screen { menu, launching };
 
+const eon::Translator* active_translator = nullptr;
+
 struct Card {
     eon::Game game;
     const char* title;
@@ -68,24 +71,27 @@ struct PreviewAnimation {
 // claim that IMG01 names or implements the full game UI.
 struct MillenniumDosLaunchAssets {
     PreviewAnimation title;
-    PreviewAnimation gx_canvas;
-    eon::MillenniumDosTitleFlow title_flow;
-    eon::MillenniumDosGameFlow game_flow;
+    std::string language;
+    std::optional<PreviewAnimation> gx_canvas;
+    std::optional<eon::MillenniumDosTitleFlow> title_flow;
+    std::optional<eon::MillenniumDosGameFlow> game_flow;
     // Both private video drivers are loaded from the same verified DOS
     // release as the launcher. Keeping their parsed ABI profiles alongside
     // the launch assets prevents the SDL path from silently relying on a
     // report-only parser, while still leaving driver selection/execution to
     // a later, evidence-backed startup implementation.
-    eon::MillenniumDosVideoDriverProfile ega_video_driver;
-    eon::MillenniumDosVideoDriverProfile mcga_video_driver;
+    std::optional<eon::MillenniumDosVideoDriverProfile> ega_video_driver;
+    std::optional<eon::MillenniumDosVideoDriverProfile> mcga_video_driver;
     // This is intentionally the original serialized image, not a projected
     // game model.  The launcher exposes only the recovered positional words
     // once TITLES.EXE has made its verified hand-off.
-    eon::MillenniumDosSaveSession initial_save;
+    std::optional<eon::MillenniumDosSaveSession> initial_save;
 };
 
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
-    SDL_RenderDebugText(renderer, x, y, text.c_str());
+    const auto translated = active_translator ? active_translator->translate(text) : std::string_view(text);
+    const std::string localized(translated);
+    SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
 // Modern presentation is deliberately a renderer-only treatment. It frames
@@ -932,8 +938,41 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
             && candidate.language == "en";
     });
-    if (release == releases.end()) return std::nullopt;
+    const auto spanish_release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
+        return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
+            && candidate.language == "es";
+    });
+    if (release == releases.end() && spanish_release == releases.end()) return std::nullopt;
     try {
+        if (release == releases.end()) {
+            // The Spanish edition is an original FAT12 floppy. Its P00
+            // resource is independently verified, but no executable handoff
+            // ABI has been recovered, so expose only this authentic title.
+            constexpr auto spanish_image_sha256 =
+                "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
+            const auto image = eon::extract_asset_by_sha256(spanish_release->path, spanish_image_sha256);
+            if (!image) return std::nullopt;
+            const eon::Fat12Disk disk(*image);
+            const auto* title_entry = disk.find("TITLE.LIB");
+            if (!title_entry) return std::nullopt;
+            const eon::MillenniumDosLib title_lib(disk.read(*title_entry));
+            const auto* p00 = title_lib.find("P00");
+            if (!p00) return std::nullopt;
+            const auto resource = title_lib.read(*p00);
+            const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
+            const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
+            return MillenniumDosLaunchAssets{
+                .title = {bitmap.width, bitmap.height,
+                    {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
+                .language = "es",
+                .gx_canvas = std::nullopt,
+                .title_flow = std::nullopt,
+                .game_flow = std::nullopt,
+                .ega_video_driver = std::nullopt,
+                .mcga_video_driver = std::nullopt,
+                .initial_save = std::nullopt,
+            };
+        }
         const auto bytes = eon::extract_asset_by_sha256(release->path, title_lib_sha256);
         if (!bytes) return std::nullopt;
         const eon::MillenniumDosLib title_lib(*bytes);
@@ -956,7 +995,8 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         return MillenniumDosLaunchAssets{
             .title = {bitmap.width, bitmap.height,
                 {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
-            .gx_canvas = {gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
+            .language = "en",
+            .gx_canvas = PreviewAnimation{gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
             .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
             .game_flow = eon::parse_millennium_dos_game_flow(*game),
             .ega_video_driver = eon::parse_millennium_dos_video_driver(*ega640,
@@ -1004,6 +1044,12 @@ int main(int argc, char** argv) {
         return 2;
     }
     auto request = *parsed.request;
+    const auto translator = eon::Translator::from_language(request.language,
+        argc > 0 ? std::filesystem::path(argv[0]) : std::filesystem::path{});
+    active_translator = &translator;
+    const auto tr = [&translator](std::string_view message) {
+        return std::string(translator.translate(message));
+    };
     if (!std::filesystem::is_directory(request.data_directory)
         && !std::filesystem::is_regular_file(request.data_directory)) {
         std::cerr << "Data path does not exist: " << request.data_directory << '\n';
@@ -1126,20 +1172,22 @@ int main(int argc, char** argv) {
         millennium_assets.reset();
     };
     const auto create_millennium_textures = [&] {
-        if (!millennium_assets || millennium_preview_texture || millennium_gx_canvas_texture) return;
+        if (!millennium_assets || millennium_preview_texture) return;
         millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
             SDL_TEXTUREACCESS_STATIC, millennium_assets->title.width, millennium_assets->title.height);
         if (millennium_preview_texture) {
             SDL_UpdateTexture(millennium_preview_texture, nullptr,
                 millennium_assets->title.rgba_frames.front().data(), millennium_assets->title.width * 4);
         }
-        millennium_gx_canvas_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-            SDL_TEXTUREACCESS_STATIC, millennium_assets->gx_canvas.width,
-            millennium_assets->gx_canvas.height);
-        if (millennium_gx_canvas_texture) {
-            SDL_UpdateTexture(millennium_gx_canvas_texture, nullptr,
-                millennium_assets->gx_canvas.rgba_frames.front().data(),
-                millennium_assets->gx_canvas.width * 4);
+        if (millennium_assets->gx_canvas) {
+            millennium_gx_canvas_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                SDL_TEXTUREACCESS_STATIC, millennium_assets->gx_canvas->width,
+                millennium_assets->gx_canvas->height);
+            if (millennium_gx_canvas_texture) {
+                SDL_UpdateTexture(millennium_gx_canvas_texture, nullptr,
+                    millennium_assets->gx_canvas->rgba_frames.front().data(),
+                    millennium_assets->gx_canvas->width * 4);
+            }
         }
     };
     create_millennium_textures();
@@ -1166,11 +1214,11 @@ int main(int argc, char** argv) {
     };
     const auto start_millennium_title = [&] {
         load_millennium_assets_if_available();
-        if (millennium_assets) {
+        if (millennium_assets && millennium_assets->title_flow && millennium_assets->game_flow) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
-                millennium_assets->title_flow);
+                *millennium_assets->title_flow);
             millennium_game_session = std::make_unique<eon::MillenniumDosGameSession>(
-                millennium_assets->game_flow);
+                *millennium_assets->game_flow);
             millennium_state_page = 0;
         }
     };
@@ -1368,8 +1416,8 @@ int main(int argc, char** argv) {
 
         if (screen == Screen::menu) {
             draw_text(renderer, 64, 56, "PROJECT EON");
-            draw_text(renderer, 64, 82,
-                "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT");
+            draw_text(renderer, 64, 82, tr(
+                "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"));
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 auto& card = cards[index];
                 if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
@@ -1380,16 +1428,17 @@ int main(int argc, char** argv) {
                 SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(focused) ? 255 : 130,
                     index == static_cast<std::size_t>(focused) ? 195 : 150, 80, 255);
                 SDL_RenderRect(renderer, &card.bounds);
-                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, card.title);
-                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, card.subtitle);
+                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, tr(card.title));
+                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, tr(card.subtitle));
                 const auto available = eon::release_available(releases, card.game, std::nullopt);
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
-                    available ? "VERIFIED ORIGINAL DATA" : scanner.done() ? "ORIGINAL DATA NOT FOUND" : "SCANNING ORIGINAL DATA...");
+                    available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
+                    ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
             }
-            draw_text(renderer, 64, 530, "ENTER / CLICK: START");
+            draw_text(renderer, 64, 530, tr("ENTER / CLICK: START"));
             const auto focused_game = cards[static_cast<std::size_t>(focused)].game;
             const auto menu_platforms = menu_platforms_for(focused_game);
-            std::string platform_text = "PLATFORM: ";
+            std::string platform_text = tr("PLATFORM: ");
             if (active_platform) {
                 platform_text += eon::name(*active_platform);
             } else {
@@ -1409,28 +1458,28 @@ int main(int argc, char** argv) {
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
                 SDL_FRect overlay{64, 574, 1152, 104};
                 SDL_RenderFillRect(renderer, &overlay);
-                draw_text(renderer, 86, 596, "DATA SCANNER (content hashes, read-only)");
-                draw_text(renderer, 86, 620, "Files scanned: " + std::to_string(scanner.scanned_count())
+                draw_text(renderer, 86, 596, tr("DATA SCANNER (content hashes, read-only)"));
+                draw_text(renderer, 86, 620, tr("Files scanned: ") + std::to_string(scanner.scanned_count())
                     + " / " + std::to_string(scanner.candidate_count()));
                 draw_text(renderer, 86, 644, scanner.done()
-                    ? "Complete. Only hash-verified original releases are selectable."
-                    : "Scanning in progress. Press D to hide this progress panel.");
+                    ? tr("Complete. Only hash-verified original releases are selectable.")
+                    : tr("Scanning in progress. Press D to hide this progress panel."));
             }
         } else {
-            draw_text(renderer, 64, 56, "LAUNCH REQUEST ACCEPTED");
-            draw_text(renderer, 64, 92, "Game: " + eon::name(selected));
-            draw_text(renderer, 64, 116, "Platform: "
+            draw_text(renderer, 64, 56, tr("LAUNCH REQUEST ACCEPTED"));
+            draw_text(renderer, 64, 92, tr("Game: ") + eon::name(selected));
+            draw_text(renderer, 64, 116, tr("Platform: ")
                 + (active_platform ? eon::name(*active_platform) : std::string("Auto")));
-            draw_text(renderer, 64, 136, modern ? "Presentation: Modern" : "Presentation: Original");
-            draw_text(renderer, 64, 156, "Original data is present and selected.");
-            draw_text(renderer, 64, 180, "The simulation is incomplete; no synthetic substitute will run.");
+            draw_text(renderer, 64, 136, modern ? tr("Presentation: Modern") : tr("Presentation: Original"));
+            draw_text(renderer, 64, 156, tr("Original data is present and selected."));
+            draw_text(renderer, 64, 180, tr("The simulation is incomplete; no synthetic substitute will run."));
             if (selected == eon::Game::millennium && millennium_preview_texture && millennium_assets) {
                 const bool millennium_handed_off = millennium_title_session
                     && millennium_title_session->handed_off()
-                    && millennium_gx_canvas_texture;
+                    && millennium_gx_canvas_texture && millennium_assets->gx_canvas;
                 SDL_Texture* texture = millennium_handed_off ? millennium_gx_canvas_texture
                                                               : millennium_preview_texture;
-                const auto& image = millennium_handed_off ? millennium_assets->gx_canvas
+                const auto& image = millennium_handed_off ? *millennium_assets->gx_canvas
                                                             : millennium_assets->title;
                 if (millennium_handed_off) {
                     draw_text(renderer, 64, 220,
@@ -1438,9 +1487,16 @@ int main(int argc, char** argv) {
                     draw_text(renderer, 64, 238,
                         "ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE");
                 } else {
-                    draw_text(renderer, 64, 220, "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC");
-                    draw_text(renderer, 64, 238,
-                        "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF");
+                    if (millennium_assets->language == "es") {
+                        draw_text(renderer, 64, 220,
+                            "AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC");
+                        draw_text(renderer, 64, 238,
+                            "EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED");
+                    } else {
+                        draw_text(renderer, 64, 220, "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC");
+                        draw_text(renderer, 64, 238,
+                            "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF");
+                    }
                 }
                 SDL_SetTextureScaleMode(texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
@@ -1451,7 +1507,7 @@ int main(int argc, char** argv) {
                 if (modern) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (millennium_handed_off) {
-                    const auto& save = millennium_assets->initial_save;
+                    const auto& save = *millennium_assets->initial_save;
                     constexpr std::size_t records_per_page = 8;
                     const auto first_record = millennium_state_page * records_per_page;
                     std::ostringstream heading;

@@ -26,6 +26,7 @@ Source: "{#StagingDir}\SDL3.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\SDL3_image.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#StagingDir}\zlib*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#StagingDir}\assets\*"; DestDir: "{app}\assets"; Flags: recursesubdirs ignoreversion
+Source: "{#StagingDir}\po\*"; DestDir: "{app}\po"; Flags: recursesubdirs ignoreversion
 Source: "{#StagingDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 

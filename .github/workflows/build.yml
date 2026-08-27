@@ -179,10 +179,11 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           ninja -C build
           APP=ProjectEon.app
-          mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/Resources"
+          mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/Resources/po"
           mkdir -p "$APP/Contents/Frameworks"
           cp build/project-eon "$APP/Contents/MacOS/ProjectEon"
           cp assets/cards/*.png "$APP/Contents/MacOS/assets/cards/"
+          cp po/*.po "$APP/Contents/Resources/po/"
           cp README.md LICENSE "$APP/Contents/Resources/"
           bundle_dylib() {
             local binary="$1"
@@ -247,7 +248,7 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install;${{ github.workspace }}/libpng-install;${{ github.workspace }}/zlib-install"
           cmake --build build --config Release --parallel 2
-          New-Item -ItemType Directory -Force dist/assets/cards | Out-Null
+          New-Item -ItemType Directory -Force dist/assets/cards,dist/po | Out-Null
           Copy-Item build/Release/project-eon.exe dist/project-eon.exe
           Copy-Item "${{ github.workspace }}/SDL3-install/bin/SDL3.dll" dist/SDL3.dll
           $sdlImage = Get-ChildItem build -Recurse -Filter SDL3_image.dll | Select-Object -First 1
@@ -256,6 +257,7 @@ jobs:
           Get-ChildItem "${{ github.workspace }}/libpng-install/bin/libpng*.dll" | Copy-Item -Destination dist
           Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" -ErrorAction SilentlyContinue | Copy-Item -Destination dist
           Copy-Item assets/cards/*.png dist/assets/cards/
+          Copy-Item po/*.po dist/po/
           Copy-Item README.md,LICENSE dist/
       - name: Create Inno Setup installer
         shell: pwsh

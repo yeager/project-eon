@@ -1,0 +1,56 @@
+msgid ""
+msgstr ""
+"Language: sv\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
+msgstr "VÄLJ SPEL   |   UPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERN   |   ESC: AVSLUTA"
+
+msgid "VERIFIED ORIGINAL DATA"
+msgstr "VERIFIERAD ORIGINALDATA"
+
+msgid "ORIGINAL DATA NOT FOUND"
+msgstr "ORIGINALDATA HITTADES INTE"
+
+msgid "SCANNING ORIGINAL DATA..."
+msgstr "SKANNAR ORIGINALDATA..."
+
+msgid "ENTER / CLICK: START"
+msgstr "ENTER / KLICKA: STARTA"
+
+msgid "PLATFORM: "
+msgstr "PLATTFORM: "
+
+msgid "AUTO"
+msgstr "AUTOMATISK"
+
+msgid "LAUNCH REQUEST ACCEPTED"
+msgstr "STARTBEGÄRAN GODKÄND"
+
+msgid "Files scanned: "
+msgstr "Skannade filer: "
+
+msgid "Game: "
+msgstr "Spel: "
+
+msgid "Platform: "
+msgstr "Plattform: "
+
+msgid "Original data is present and selected."
+msgstr "Originaldata finns och är vald."
+
+msgid "The simulation is incomplete; no synthetic substitute will run."
+msgstr "Simuleringen är inte komplett; ingen syntetisk ersättning körs."
+
+msgid "Presentation: Modern"
+msgstr "Presentation: modern"
+
+msgid "Presentation: Original"
+msgstr "Presentation: original"
+
+msgid "ESC: QUIT"
+msgstr "ESC: AVSLUTA"
+
+msgid "ESC: BACK TO MENU"
+msgstr "ESC: TILLBAKA TILL MENYN"

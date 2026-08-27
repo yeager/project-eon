@@ -1,5 +1,6 @@
 #include "platform/game_data.hpp"
 #include "launcher.hpp"
+#include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
@@ -37,6 +38,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <stdexcept>
@@ -65,6 +67,36 @@ int main() {
         char* conflicting_args[] = {program, inspect_option, verify_option, millennium};
         const auto conflict = eon::parse_command_line(4, conflicting_args);
         assert(!conflict.request);
+
+        assert(eon::normalize_language("sv_SE.UTF-8") == "sv");
+        assert(eon::normalize_language("pt-BR") == "pt");
+        assert(eon::normalize_language("C") == "c");
+        assert(eon::normalize_language("not a locale").empty());
+        char language_option[] = "--language";
+        char swedish[] = "sv_SE.UTF-8";
+        char* language_args[] = {program, language_option, swedish};
+        const auto language = eon::parse_command_line(3, language_args);
+        assert(language.request && language.request->language == "sv");
+
+        const auto temporary_po = std::filesystem::temp_directory_path() / "project-eon-i18n-test.po";
+        {
+            std::ofstream po(temporary_po, std::ios::binary);
+            po << "msgid \"\"\nmsgstr \"header\"\n\n"
+                  "msgid \"Start game\"\nmsgstr \"Starta spel\"\n\n"
+                  "#, fuzzy\nmsgid \"Ignore\"\nmsgstr \"Ignorera\"\n";
+        }
+        const auto translations = eon::Translator::from_po_file(temporary_po);
+        assert(translations.translate("Start game") == "Starta spel");
+        assert(translations.translate("Ignore") == "Ignore");
+        assert(translations.translate("Missing") == "Missing");
+        std::filesystem::remove(temporary_po);
+
+        const auto swedish_catalog = eon::Translator::from_language("sv");
+        assert(swedish_catalog.translate("ENTER / CLICK: START") == "ENTER / KLICKA: STARTA");
+        const auto portuguese_catalog = eon::Translator::from_language("pt_BR.UTF-8");
+        assert(!portuguese_catalog.empty());
+        const auto chinese_catalog = eon::Translator::from_language("zh_CN.UTF-8");
+        assert(!chinese_catalog.empty());
     }
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
     if (data_directory.empty() || !std::filesystem::is_directory(data_directory)) {

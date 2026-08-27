@@ -18,6 +18,7 @@ struct LaunchRequest {
     bool inspect_data = false;
     std::optional<Platform> platform;
     Presentation presentation = Presentation::original;
+    std::string language;
 };
 
 struct ParseResult {
