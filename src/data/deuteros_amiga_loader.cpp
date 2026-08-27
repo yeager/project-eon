@@ -70,7 +70,24 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     const auto stage_bytes = disk.bytes(disk_offset, length);
     require_word(stage_bytes, 0, 0x4ef9); // jmp absolute long
     const auto entry = big32(stage_bytes, 2);
-    return {loader, {disk_offset, length, destination, entry}};
+    const AmigaLoadStage main_stage{disk_offset, length, destination, entry};
+
+    // The resource loader at $21932 indexes five longwords at $21708. Both
+    // addresses reside in the verified main stage, so translate the table
+    // back to its ADF position instead of duplicating its contents.
+    constexpr std::uint32_t resource_table_address = 0x21708;
+    if (resource_table_address < main_stage.destination
+        || resource_table_address - main_stage.destination + 20 > main_stage.length) {
+        throw std::runtime_error("Deuteros resource table outside main stage");
+    }
+    const auto resource_table = disk.bytes(main_stage.disk_offset
+        + resource_table_address - main_stage.destination, 20);
+    std::array<std::uint32_t, 5> resource_offsets{};
+    for (std::size_t index = 0; index < resource_offsets.size(); ++index) {
+        resource_offsets[index] = big32(resource_table, index * 4);
+        static_cast<void>(disk.bytes(resource_offsets[index], 1));
+    }
+    return {loader, main_stage, resource_offsets};
 }
 
 } // namespace eon

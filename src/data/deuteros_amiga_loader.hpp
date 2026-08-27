@@ -2,6 +2,7 @@
 
 #include "data/amiga_adf.hpp"
 
+#include <array>
 #include <cstdint>
 
 namespace eon {
@@ -16,6 +17,7 @@ struct AmigaLoadStage {
 struct DeuterosAmigaLoadPlan {
     AmigaLoadStage bootstrap_loader;
     AmigaLoadStage main_stage;
+    std::array<std::uint32_t, 5> resource_disk_offsets{};
 };
 
 // Decode load constants from the genuine 68000 instructions. Every expected
@@ -23,4 +25,3 @@ struct DeuterosAmigaLoadPlan {
 [[nodiscard]] DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk);
 
 } // namespace eon
-
