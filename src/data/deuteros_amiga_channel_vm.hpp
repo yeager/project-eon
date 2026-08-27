@@ -50,6 +50,7 @@ public:
     [[nodiscard]] const std::vector<DeuterosAmigaChannelState>& channels() const { return channels_; }
     [[nodiscard]] std::uint16_t palette_index() const { return palette_index_; }
     [[nodiscard]] bool input_gate() const { return input_gate_; }
+    [[nodiscard]] std::uint8_t mode_byte() const { return mode_byte_; }
     [[nodiscard]] bool transition_requested() const { return transition_requested_; }
     [[nodiscard]] DeuterosAmigaVmEvents tick(const DeuterosAmigaVmInputs& inputs = {});
 
@@ -62,6 +63,7 @@ private:
     std::vector<DeuterosAmigaChannelState> channels_;
     std::uint16_t palette_index_ = 0;
     bool input_gate_ = false;
+    std::uint8_t mode_byte_ = 0;
     bool transition_requested_ = false;
 };
 
