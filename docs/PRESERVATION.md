@@ -508,6 +508,19 @@ pointer table at `$27c4`, and therefore selects original in-image record
 Project Eon exposes that trace after F1 only as immutable evidence: it neither
 names the handler nor writes any original executable, archive, or save byte.
 
+The second table record (raw F2 / `$3c`) is `06 0c 09 1b 31 01 ca 71`, with
+handler entry `$71ca`. This handler reads its runtime byte at `$da26` and
+compares it with `$02`. If the byte is lower, it repeatedly calls `$09fa` and
+returns; Project Eon neither fabricates that runtime byte nor pretends the
+gate was admitted. Its admitted path at `$71de` writes callback `$7221` to
+`$6f98`, records the one-byte selector `$01` at `$6e98`, and makes a word list
+at `$6e99`: it begins at original in-image `$1384` and advances by `$00c0` for
+each unit calculated from `$da26 - 1`. The code then writes `$08` to `$da1e`
+and calls `$0b76`. These are strictly address/value observations, not inferred
+names for a menu, records, or action. Project Eon surfaces this gate after F2
+in the SDL evidence panel while leaving original media and its unknown runtime
+state immutable.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image

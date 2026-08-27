@@ -169,6 +169,15 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.post_transition_selector_addend << ", clears 0x"
         << title_stage.post_transition_selector_flag_address << ", then jumps within title stage to 0x"
         << title_stage.post_transition_selector_dispatch_address << std::dec << '\n';
+    std::cout << "          Selector dispatch: signed byte 0x" << std::hex
+        << title_stage.post_transition_dispatch_state_address << " zero/positive branches 0x"
+        << title_stage.post_transition_dispatch_zero_branch_address << "/0x"
+        << title_stage.post_transition_dispatch_nonnegative_branch_address
+        << "; negative path calls 0x" << title_stage.post_transition_dispatch_negative_service_address
+        << " with D0/D1=0x" << title_stage.post_transition_dispatch_negative_service_d0 << "/0x"
+        << title_stage.post_transition_dispatch_negative_service_d1 << " unless D0=0x"
+        << title_stage.post_transition_dispatch_negative_suppress_value << ", delay 0x"
+        << title_stage.post_transition_dispatch_negative_delay << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {

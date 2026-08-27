@@ -234,6 +234,34 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     const auto dispatch = stage_code(0x1fbe6, 6);
     require_word(dispatch, 0, 0x4a39); // tst.b $1f98c
     require_long(dispatch, 2, 0x0001f98c);
+    // The selector destination is not a generic return trampoline. The
+    // original tests a signed state byte: zero goes to $1fc22, positive goes
+    // to $1fc9e, and the negative fall-through preserves D0/D5, calls the
+    // $1fc24 helper, then conditionally invokes $3fbf8 with literal D0/D1.
+    // Record that concrete call boundary without assigning a UI/gameplay
+    // meaning to its service or state bytes.
+    const auto dispatch_flow = stage_code(0x1fbe6, 60);
+    require_word(dispatch_flow, 6, 0x6734); // beq.b $1fc22
+    require_word(dispatch_flow, 8, 0x6a00); // bpl.w $1fc9e
+    require_word(dispatch_flow, 10, 0x00ac);
+    require_word(dispatch_flow, 12, 0x2f00); // move.l d0,-(a7)
+    require_word(dispatch_flow, 14, 0x6100); // bsr.w $1fc24
+    require_word(dispatch_flow, 16, 0x002c);
+    require_word(dispatch_flow, 18, 0x2f05); // move.l d5,-(a7)
+    require_word(dispatch_flow, 20, 0xb03c); // cmpi.w #$20,d0
+    require_word(dispatch_flow, 22, 0x0020);
+    require_word(dispatch_flow, 24, 0x6712); // beq.b bypass service
+    require_word(dispatch_flow, 26, 0x7013); // moveq #$13,d0
+    require_word(dispatch_flow, 28, 0x720c); // moveq #$0c,d1
+    require_word(dispatch_flow, 34, 0x4eb9); // jsr $3fbf8
+    require_long(dispatch_flow, 36, 0x0003fbf8);
+    require_word(dispatch_flow, 44, 0x203c); // move.l #$4e20,d0
+    require_long(dispatch_flow, 46, 0x00004e20);
+    require_word(dispatch_flow, 50, 0x5380); // subq.l #1,d0
+    require_word(dispatch_flow, 52, 0x66fc); // bne.b delay loop
+    const auto zero_branch = stage_code(0x1fc22, 6);
+    require_word(zero_branch, 0, 0x4a39); // tst.b $1f98e
+    require_long(zero_branch, 2, 0x0001f98e);
 
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
@@ -245,7 +273,8 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x407e6, 0, 0x3f7a8, 0x1f9a4, 0x1fe7a, 0x1f238,
         0x1b, 0x20, 0x2e, 0x2c, 0x407e4,
         selector_address, 0x0000ffff, 0x0064, 0x000a, 0x0030,
-        0x1fe54, 0x1fbe6};
+        0x1fe54, 0x1fbe6,
+        0x1f98c, 0x1fc22, 0x1fc9e, 0x3fbf8, 0x13, 0x0c, 0x20, 0x4e20};
 }
 
 } // namespace eon
