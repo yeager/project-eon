@@ -84,6 +84,10 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
             << " bytes, " << bundle.object_count << " objects, mode "
             << bundle.mode_flag << '\n';
     }
+    const auto& handoff = plan.title_handoff_profile;
+    std::cout << "          Title input profile: disk 0x" << std::hex << handoff.disk_offset
+        << ", length 0x" << handoff.length << ", memory 0x" << handoff.destination
+        << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {
