@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "data/fat12.hpp"
+
 namespace eon {
 
 // A longword in the combined TEXT+DATA image which GEMDOS asks the loader to
@@ -102,6 +104,22 @@ struct MillenniumAtariTrapEntry {
     std::uint32_t fopen_result_negative_branch_target_offset = 0;
 };
 
+// Evidence for the exact configuration filename requested by the recovered
+// Fopen boundary.  The profile retains only filesystem facts, a whole-payload
+// hash and the literal leading instruction word(s); it never projects the
+// supplied payload into a host-side model or rewrites it as an inferred
+// default.
+struct MillenniumAtariConfigEvidence {
+    std::string requested_filename;
+    std::size_t root_entry_count = 0;
+    bool present = false;
+    std::uint16_t first_cluster = 0;
+    std::uint32_t size = 0;
+    std::string sha256;
+    std::uint16_t first_word = 0;
+    std::uint32_t first_longword_operand = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -139,5 +157,12 @@ struct MillenniumAtariTrapEntry {
 // negative-return retry branch.
 [[nodiscard]] MillenniumAtariTrapEntry parse_millennium_atari_trap_entry(
     const MillenniumAtariBssSource& source, const MillenniumAtariMaterializedTarget& target);
+
+// Looks for exactly the filename requested by the verified Fopen sequence in
+// one already-parsed supplied FAT12 image.  For a present regular file it
+// reads the exact FAT chain in memory to preserve its hash and leading machine
+// words; it never treats absence as permission to generate a configuration.
+[[nodiscard]] MillenniumAtariConfigEvidence probe_millennium_atari_config(
+    const Fat12Disk& disk);
 
 } // namespace eon
