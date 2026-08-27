@@ -3,6 +3,7 @@
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/fat12.hpp"
 #include "data/sha256.hpp"
@@ -189,6 +190,23 @@ int main() {
         first_special_bitmap.color_indices.end(), [](auto color) { return color != 0; }) == 2'712);
     assert(eon::to_hex(eon::sha256(first_special_bitmap.color_indices))
         == "a7abcb6a308f7016e28611862a14de3adfa12881efcce458e5888b07e2d0c1cb");
+    eon::DeuterosAmigaChannelVm opening_vm(system_disk, first_bundle);
+    assert(opening_vm.channels().size() == 4);
+    const auto tick1 = opening_vm.tick();
+    assert(!tick1.palette && tick1.sounds.empty());
+    const auto tick2 = opening_vm.tick();
+    assert(tick2.palette == 1);
+    assert(tick2.sounds.size() == 2);
+    assert(tick2.sounds[0].sound == 1 && tick2.sounds[0].channels == 1);
+    assert(tick2.sounds[1].sound == 2 && tick2.sounds[1].channels == 2);
+    assert(opening_vm.input_gate());
+    static_cast<void>(opening_vm.tick());
+    static_cast<void>(opening_vm.tick());
+    assert(opening_vm.channels()[0].bitmap_selector == 1);
+    assert(opening_vm.channels()[0].x == 8);
+    assert(opening_vm.channels()[0].y == 183);
+    assert(opening_vm.channels()[0].wait_mode == 3);
+    assert(opening_vm.channels()[0].timer == 1);
     for (std::size_t index = 0; index + 1 < first_indexed_blob.record_offsets.size(); ++index) {
         const auto bitmap = eon::decode_deuteros_amiga_bitmap(
             system_disk, first_bundle, first_indexed_blob, index);

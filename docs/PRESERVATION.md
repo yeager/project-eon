@@ -130,6 +130,22 @@ As a stable decoded-output anchor, bundle 0 record 1 is 48×17 pixels, has 311
 nonzero pixels, and its 816 palette indices have SHA-256
 `fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3`.
 
+### Channel runtime
+
+The native, SDL-independent channel VM mirrors the 24-byte state consumed by
+`$21380` and the opcode effects at `$214aa`. Implemented state transitions
+include bitmap selection, signed coordinates, palette selection, timer waits,
+audio-position waits, stepped vertical motion, relative jumps, one-level
+calls/returns, sound events, alternate-resource selection, input gates, and
+transition requests. Random opcodes require an explicit original-compatible
+random source; absence fails closed instead of inventing a sequence.
+
+The opening program provides tick anchors from genuine data. Tick 1 only
+decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
+emits sound `(1,1)` then `(2,2)`. After ticks 3 and 4, channel 0 selects bitmap
+1 at word coordinate `x=8`, pixel coordinate `y=183`, with wait mode 3 and
+timer 1. Integration tests assert this ordering directly from bundle 0.
+
 ### Millennium DOS execution model
 
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
