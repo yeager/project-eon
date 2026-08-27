@@ -646,13 +646,24 @@ MillenniumAtariConfigFourthPostOuterTail parse_millennium_atari_config_fourth_po
         || payload.size() < tail_offset + tail_bytes) {
         throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-outer-loop tail");
     }
+    constexpr std::array<std::uint8_t, tail_bytes> expected_bytes{
+        0x5c, 0x8f, 0x20, 0x3c, 0x00, 0x00, 0x4e, 0x20, 0x53, 0x80, 0x66, 0xfc,
+        0x51, 0xcf, 0xff, 0xb2, 0x3f, 0x3c, 0x00, 0x06, 0x4e, 0x4e, 0x5c, 0x8f,
+        0x4e, 0x75,
+    };
     const auto bytes = payload.subspan(tail_offset, tail_bytes);
     const auto hash = to_hex(sha256(bytes));
-    if (hash != expected_sha256) {
+    if (hash != expected_sha256
+        || !std::equal(expected_bytes.begin(), expected_bytes.end(), bytes.begin())) {
         throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-outer-loop tail");
     }
     return {tail_address, static_cast<std::uint32_t>(tail_offset),
-        static_cast<std::uint32_t>(tail_bytes), hash};
+        static_cast<std::uint32_t>(tail_bytes), hash,
+        read_be16(bytes, 0), read_be16(bytes, 2), read_be32(bytes, 4), read_be16(bytes, 8),
+        read_be16(bytes, 10), static_cast<std::int8_t>(bytes[11]), 0x2b494,
+        read_be16(bytes, 12), static_cast<std::int16_t>(read_be16(bytes, 14)), 0x2b44e,
+        read_be16(bytes, 16), read_be16(bytes, 18), read_be16(bytes, 20),
+        read_be16(bytes, 22), read_be16(bytes, 24)};
 }
 
 MillenniumAtariConfigAbsoluteJsrInventory inventory_millennium_atari_config_absolute_jsrs(

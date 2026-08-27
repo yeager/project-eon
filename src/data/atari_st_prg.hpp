@@ -302,6 +302,21 @@ struct MillenniumAtariConfigFourthPostOuterTail {
     std::uint32_t tail_file_offset = 0;
     std::uint32_t tail_bytes = 0;
     std::string sha256;
+    std::uint16_t initial_stack_cleanup_opcode = 0;
+    std::uint16_t d0_load_opcode = 0;
+    std::uint32_t d0_initial_value = 0;
+    std::uint16_t d0_decrement_opcode = 0;
+    std::uint16_t d0_nonzero_branch_opcode = 0;
+    std::int8_t d0_nonzero_branch_displacement = 0;
+    std::uint32_t d0_nonzero_branch_target_address = 0;
+    std::uint16_t d7_backedge_opcode = 0;
+    std::int16_t d7_backedge_displacement = 0;
+    std::uint32_t d7_backedge_target_address = 0;
+    std::uint16_t selector_push_opcode = 0;
+    std::uint16_t selector = 0;
+    std::uint16_t trap_opcode = 0;
+    std::uint16_t final_stack_cleanup_opcode = 0;
+    std::uint16_t return_opcode = 0;
 };
 
 // A byte-level inventory of absolute-JSR encodings in the original config
