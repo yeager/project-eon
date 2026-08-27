@@ -452,9 +452,10 @@ int main() {
     assert(title_flow.launcher_title_call_address == 0x240);
     assert(title_flow.launcher_game_call_address == 0x24c);
     assert(title_flow.launcher_common_call_target == 0x31c);
-    assert(title_flow.launcher_common_branch_address == 0x346);
-    assert(title_flow.launcher_common_branch_target == 0x34d);
-    assert(title_flow.launcher_common_fallthrough_return == 0x34c);
+    assert(title_flow.launcher_common_branch_address == 0x345);
+    assert(title_flow.launcher_common_branch_target == 0x34c);
+    assert(title_flow.launcher_common_fallthrough_return == 0x34b);
+    assert(title_flow.launcher_common_branch_target_static_boundary == 0x35a);
     assert(title_flow.launcher_title_offset == 0x58f);
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");
