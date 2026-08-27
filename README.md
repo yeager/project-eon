@@ -112,6 +112,16 @@ Verify genuine release archives by SHA-256 without opening SDL:
 ./build/project-eon --data "$HOME/Hämtningar" --verify-data deuteros
 ```
 
+Inspect every recognised original release in one read-only scan:
+
+```sh
+./build/project-eon --data "$HOME/Hämtningar" --inspect
+```
+
+`--inspect` reports each detected game/platform archive and its recovered
+preservation evidence directly from the supplied media. It neither extracts
+files to disk nor creates, alters, or substitutes game data.
+
 The current SDL application is deliberately an incremental reimplementation,
 not a mock game. It lists detected real releases and proves the Original/Modern
 presentation boundary while reverse engineering proceeds. Selecting Deuteros

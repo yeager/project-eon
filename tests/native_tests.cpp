@@ -55,6 +55,15 @@ int main() {
         const auto explicit_data = eon::parse_command_line(3, explicit_args);
         assert(explicit_data.request && !explicit_data.request->data_directory_is_default);
         assert(explicit_data.request->data_directory == "original-media");
+        char inspect_option[] = "--inspect";
+        char* inspect_args[] = {program, inspect_option};
+        const auto inspect = eon::parse_command_line(2, inspect_args);
+        assert(inspect.request && inspect.request->inspect_data);
+        char verify_option[] = "--verify-data";
+        char millennium[] = "millennium";
+        char* conflicting_args[] = {program, inspect_option, verify_option, millennium};
+        const auto conflict = eon::parse_command_line(4, conflicting_args);
+        assert(!conflict.request);
     }
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
     if (data_directory.empty() || !std::filesystem::is_directory(data_directory)) {

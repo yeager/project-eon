@@ -15,6 +15,7 @@ struct LaunchRequest {
     bool data_directory_is_default = true;
     std::optional<Game> game;
     std::optional<Game> verify_game;
+    bool inspect_data = false;
     std::optional<Platform> platform;
     Presentation presentation = Presentation::original;
 };
