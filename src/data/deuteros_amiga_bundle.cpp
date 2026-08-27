@@ -52,4 +52,28 @@ DeuterosAmigaBundle parse_deuteros_amiga_bundle(const AmigaAdf& disk, std::uint3
     return bundle;
 }
 
+std::array<RgbColor, 16> decode_deuteros_amiga_palette(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle, std::uint16_t index) {
+    constexpr std::uint32_t encoded_size = 16 * 2;
+    const auto palette_base = bundle.auxiliary_offsets[0];
+    if (palette_base == 0) throw std::runtime_error("Deuteros bundle has no palette channel");
+    const auto relative = static_cast<std::uint64_t>(palette_base)
+        + static_cast<std::uint64_t>(index) * encoded_size;
+    if (relative > bundle.length || encoded_size > bundle.length - relative) {
+        throw std::runtime_error("Deuteros palette outside bundle");
+    }
+    const auto encoded = disk.bytes(bundle.disk_offset + static_cast<std::size_t>(relative), encoded_size);
+    std::array<RgbColor, 16> colors{};
+    for (std::size_t color = 0; color < colors.size(); ++color) {
+        const auto rgb4 = big16(encoded, color * 2);
+        if ((rgb4 & 0xf000U) != 0) throw std::runtime_error("Invalid Amiga RGB4 colour word");
+        colors[color] = {
+            static_cast<std::uint8_t>(((rgb4 >> 8U) & 0xfU) * 17U),
+            static_cast<std::uint8_t>(((rgb4 >> 4U) & 0xfU) * 17U),
+            static_cast<std::uint8_t>((rgb4 & 0xfU) * 17U),
+        };
+    }
+    return colors;
+}
+
 } // namespace eon

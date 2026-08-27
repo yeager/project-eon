@@ -139,6 +139,13 @@ int main() {
     assert((first_bundle.auxiliary_offsets == std::array<std::uint32_t, 6>{
         0xa98, 0, 0xb4b, 0x121b4, 0x122de, 0x1255e}));
     assert(first_bundle.mode_flag == 0);
+    const auto first_palette = eon::decode_deuteros_amiga_palette(system_disk, first_bundle, 1);
+    assert((first_palette[0] == eon::RgbColor{0x00, 0x00, 0x00}));
+    assert((first_palette[1] == eon::RgbColor{0x88, 0x88, 0x66}));
+    assert((first_palette[5] == eon::RgbColor{0xaa, 0x66, 0x00}));
+    assert((first_palette[9] == eon::RgbColor{0xff, 0xff, 0x00}));
+    assert((first_palette[14] == eon::RgbColor{0xff, 0xff, 0xff}));
+    assert((first_palette[15] == eon::RgbColor{0xee, 0x44, 0x00}));
 
     const auto second_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[1]);
