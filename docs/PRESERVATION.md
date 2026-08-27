@@ -499,6 +499,15 @@ Slot 2's `$1f50` is a literal branch to `$1f1a`; slots 3 and 4 point directly
 to `$1f1a`. Thus all three aliases share only the already-proven state-0 raw
 arguments, without a new state interpretation.
 
+The statically calculable state-1 reader span (`$4c * $1200 = $55800` bytes
+from Disk 1) has SHA-256
+`0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47`.
+It has no unique GEM, DEGAS, or other image-resource header paired with a
+proved consumer, dimensions, and palette. Header-like words inside this raw
+protected-media interval are therefore not promoted to artwork. Project Eon
+does not render the interval or choose state 1 merely because its physical
+span can be calculated.
+
 The sixth vector (`$1f52`) makes two further static calls to `$70030`: first
 with raw arguments destination `$b000`, byte count `$b400`, and computed
 reader value `$4c * $1200 = $55800`; then it copies `$9393` bytes from `$57a00`
