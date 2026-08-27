@@ -1047,6 +1047,11 @@ int main() {
     assert(atari_fourth_post_outer.selector_push_opcode == 0x3f3c);
     assert(atari_fourth_post_outer.trap_selector == 0x0006);
     assert(atari_fourth_post_outer.trap_opcode == 0x4e4e);
+    const auto atari_jsr_inventory = eon::inventory_millennium_atari_config_absolute_jsrs(atari_config_payload);
+    assert(atari_jsr_inventory.encodings.size() == 19);
+    assert((atari_jsr_inventory.encodings.front() == std::pair<std::uint32_t, std::uint32_t>{0x50c, 0x2a5aa}));
+    assert((atari_jsr_inventory.encodings[9] == std::pair<std::uint32_t, std::uint32_t>{0x60a, 0x2aa0c}));
+    assert((atari_jsr_inventory.encodings.back() == std::pair<std::uint32_t, std::uint32_t>{0xdb2, 0x2aa78}));
     auto invalid_atari_config_payload = atari_config_payload;
     invalid_atari_config_payload[0x5b9] ^= 0x01;
     bool invalid_atari_config_rejected = false;
@@ -1156,6 +1161,16 @@ int main() {
         invalid_atari_fourth_post_outer_rejected = true;
     }
     assert(invalid_atari_fourth_post_outer_rejected);
+    auto invalid_atari_jsr_inventory_payload = atari_config_payload;
+    invalid_atari_jsr_inventory_payload[0xd54] ^= 0x01;
+    bool invalid_atari_jsr_inventory_rejected = false;
+    try {
+        static_cast<void>(eon::inventory_millennium_atari_config_absolute_jsrs(
+            invalid_atari_jsr_inventory_payload));
+    } catch (const std::runtime_error&) {
+        invalid_atari_jsr_inventory_rejected = true;
+    }
+    assert(invalid_atari_jsr_inventory_rejected);
     std::size_t millennium_st_images = 0;
     std::size_t millennium_fat12_images = 0;
     std::size_t millennium_config_files = 0;

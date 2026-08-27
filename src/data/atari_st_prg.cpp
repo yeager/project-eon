@@ -631,4 +631,30 @@ MillenniumAtariConfigFourthPostOuterBoundary parse_millennium_atari_config_fourt
         read_be16(payload, boundary_offset + 10U)};
 }
 
+MillenniumAtariConfigAbsoluteJsrInventory inventory_millennium_atari_config_absolute_jsrs(
+    std::span<const std::uint8_t> payload) {
+    // Preserve this whole-file byte inventory for subsequent disassembly, but
+    // do not promote raw patterns to executed callsites without a control-flow
+    // proof. The fixed verified set makes a different config payload fail
+    // closed instead of silently looking compatible.
+    static constexpr std::array<std::pair<std::uint32_t, std::uint32_t>, 19> expected{{
+        {0x50c, 0x2a5aa}, {0x528, 0x2a5c2}, {0x53a, 0x2b568}, {0x5a4, 0x2a51c},
+        {0x5c2, 0x2b55a}, {0x5c8, 0x2aa68}, {0x5d4, 0x2aa0c}, {0x5ec, 0x2b2be},
+        {0x5fe, 0x2b448}, {0x60a, 0x2aa0c}, {0xcee, 0x2a596}, {0xd08, 0x2b4c8},
+        {0xd30, 0x2b2be}, {0xd42, 0x2b448}, {0xd54, 0x2b458}, {0xd7a, 0x2a596},
+        {0xd94, 0x2a596}, {0xdac, 0x2b576}, {0xdb2, 0x2aa78},
+    }};
+    MillenniumAtariConfigAbsoluteJsrInventory result;
+    for (std::size_t offset = 0; offset + 6U <= payload.size(); ++offset) {
+        if (read_be16(payload, offset) == 0x4eb9U) {
+            result.encodings.emplace_back(static_cast<std::uint32_t>(offset), read_be32(payload, offset + 2U));
+        }
+    }
+    if (result.encodings.size() != expected.size()
+        || !std::equal(result.encodings.begin(), result.encodings.end(), expected.begin())) {
+        throw std::runtime_error("Unexpected Millennium Atari ST MILL22A.inf absolute JSR inventory");
+    }
+    return result;
+}
+
 } // namespace eon

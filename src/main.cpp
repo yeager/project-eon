@@ -468,6 +468,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_loop);
     const auto config_fourth_post_outer = eon::parse_millennium_atari_config_fourth_post_outer_boundary(
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_post_loop);
+    const auto config_jsr_inventory = eon::inventory_millennium_atari_config_absolute_jsrs(
+        disk.read(*disk.find(equinox_config.requested_filename)));
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex
@@ -609,6 +611,13 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_fourth_post_outer.trap_selector << ", TRAP #14 opcode 0x"
         << config_fourth_post_outer.trap_opcode << std::dec
         << " (validated boundary only; no trap/native call or result inference)\n";
+    std::cout << "          MILL22A.inf absolute-JSR encodings: "
+        << config_jsr_inventory.encodings.size() << " (file +0x" << std::hex
+        << config_jsr_inventory.encodings.front().first << " -> 0x"
+        << config_jsr_inventory.encodings.front().second << ", final +0x"
+        << config_jsr_inventory.encodings.back().first << " -> 0x"
+        << config_jsr_inventory.encodings.back().second << std::dec
+        << "; byte inventory only, not reachability claims)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.
