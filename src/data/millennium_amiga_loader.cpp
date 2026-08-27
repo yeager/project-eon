@@ -662,4 +662,25 @@ parse_millennium_amiga_resident_independent_entry_gate(
     return {entry, 0x6850e, 0x68598, 0x68512, 0x7b142, 0x68518, 0x6854a};
 }
 
+MillenniumAmigaResidentIndependentZeroTargetBoundary
+parse_millennium_amiga_resident_independent_zero_target_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentEntryGate& gate) {
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t entry = 0x6854a;
+    constexpr std::array<std::uint8_t, 6> expected{{0xb4, 0x7c, 0x01, 0x20, 0x65, 0x12}};
+    if (gate.flag_zero_target != entry || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga independent zero target placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga independent zero target is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Amiga independent zero target");
+    }
+    return {entry, 0x0120, entry + 4, entry + 6 + 0x12};
+}
+
 } // namespace eon
