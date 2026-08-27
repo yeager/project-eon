@@ -23,10 +23,23 @@ so a filename alone is not a stable identity; SHA-256 fingerprints are used.
 
 ## Initial DOS observations
 
-The English Millennium distribution contains two MZ executables (`2200AD.EXE`
-and `2200GX.EXE`), a small launcher (`MILL.COM`), driver/resource binaries,
-VOC effects, and `GX.LIB`/`LAST.LIB`. This split is useful: executable
-cross-references can reveal record widths and indexes in the resource libraries.
+Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are
+not MZ files. They are flat 16-bit x86 binaries managed by the `MILL.COM`
+launcher. `MILL.COM` installs private interrupt handlers including `INT 91h`,
+`92h`, and `95h`; the game modules call these as a loader/runtime API.
+
+`2200AD.EXE` starts with segment-register setup and a near jump from file offset
+`0x0004` to `0xd1b0` (loaded address `0xd2b0`). Its entry routine establishes a
+stack, uses DOS `INT 21h` memory services, selects a text/graphics mode, loads
+`2200AD4.BIN`, `GX.LIB`, and `LAST.LIB`, then enters the UI loop. Literal names
+for bases, asteroid analysis actions, save slots, and time units occur in this
+module and provide anchors for code cross-references.
+
+The distribution also contains Creative Voice (`.VOC`) effects,
+driver/resource binaries, and `GX.LIB`/`LAST.LIB`. This split is useful:
+executable cross-references can reveal record widths and indexes in the resource
+libraries. Run `tools/analyze_dos.py` with Capstone installed to regenerate an
+entry-point report from an extracted copy.
 
 ## Completion criteria
 

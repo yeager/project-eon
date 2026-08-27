@@ -10,6 +10,7 @@ from eon.inventory import classify, inventory
 class InventoryTests(unittest.TestCase):
     def test_signature_classification(self):
         self.assertEqual(classify("GAME.EXE", b"MZ" + bytes(20)), "dos-mz-executable")
+        self.assertEqual(classify("GAME.EXE", b"\x0e\x1f\xe9"), "dos-flat-executable")
         self.assertEqual(classify("disk.adf", bytes(901_120)), "amiga-adf")
         self.assertEqual(classify("disk.st", bytes(10)), "atari-st-disk")
 
@@ -27,4 +28,3 @@ class InventoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

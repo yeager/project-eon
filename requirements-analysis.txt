@@ -1,0 +1,3 @@
+# Optional tooling used only for disassembly; the runtime/importer is stdlib-only.
+capstone>=5,<6
+
