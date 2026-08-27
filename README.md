@@ -152,6 +152,13 @@ The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
 Millennium disk. Nested extraction locates the disk by SHA-256 independently of
 its filename and reads its 13 root files, including verified `DATA12.BIN`.
 
+Millennium's Amiga media is now distinguished from those filesystem variants:
+the verified Defjam ADF boot chain loads a 1 KiB first stage and then two
+authentic raw disk ranges (`0x24200`/`0x6e000` to `0x41000`, and
+`0x16400`/`0x2c000` to `0x68000`). Project Eon validates this original 68000
+request sequence directly from the in-place ADF; it does not invent files or
+unpack the ranges.
+
 Deuteros' clean Amiga system and data disks are also opened natively as ADF.
 Geometry, boot identifiers, carry-around checksums and arbitrary sectors are
 validated against the real images. The 68000 bootloader's decoded-track request is

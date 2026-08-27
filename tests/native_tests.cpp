@@ -13,6 +13,7 @@
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
+#include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/sha256.hpp"
@@ -111,9 +112,32 @@ int main() {
     assert(razor_filesystem.root_block() == 880);
     assert(razor_filesystem.volume_name() == "Millennium (Crack Razor)");
     assert(razor_filesystem.entries().empty());
+    bool rejected_patched_loader = false;
+    try {
+        static_cast<void>(eon::parse_millennium_amiga_load_plan(razor_disk));
+    } catch (const std::runtime_error&) {
+        rejected_patched_loader = true;
+    }
+    assert(rejected_patched_loader);
     const auto defjam_adf = eon::extract_asset_by_sha256(amiga_millennium->path,
         "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c");
     assert(defjam_adf && defjam_adf->size() == eon::AmigaAdf::standard_size);
+    // Millennium's supplied images keep game media in raw ranges. The plan is
+    // recovered from Defjam's original first-stage 68000 loader without
+    // unpacking the ADF.
+    const eon::AmigaAdf defjam_loader_disk(*defjam_adf);
+    const auto defjam_plan = eon::parse_millennium_amiga_load_plan(defjam_loader_disk);
+    assert(defjam_plan.bootstrap_loader.disk_offset == 0x400);
+    assert(defjam_plan.bootstrap_loader.length == 0x400);
+    assert(defjam_plan.bootstrap_loader.destination == 0x70000);
+    assert(defjam_plan.first_stage.disk_offset == 0x24200);
+    assert(defjam_plan.first_stage.length == 0x6e000);
+    assert(defjam_plan.first_stage.destination == 0x41000);
+    assert(defjam_plan.resident_stage.disk_offset == 0x16400);
+    assert(defjam_plan.resident_stage.length == 0x2c000);
+    assert(defjam_plan.resident_stage.destination == 0x68000);
+    assert(defjam_plan.resident_entry == 0x68000);
+    assert(defjam_plan.loader_magic == 0xa8d398fb);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);

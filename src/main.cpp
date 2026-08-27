@@ -9,6 +9,7 @@
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
+#include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/zip_archive.hpp"
@@ -133,6 +134,23 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
 }
 
+void report_millennium_amiga(const eon::ReleaseArchive& release) {
+    // Defjam's image contains the recovered raw-sector loader. Other supplied
+    // crack variants preserve the shared media ranges but patch this stage.
+    constexpr auto loader_adf_sha256 =
+        "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
+    const auto image = eon::extract_asset_by_sha256(release.path, loader_adf_sha256);
+    if (!image) return;
+    const eon::AmigaAdf disk(*image);
+    const auto plan = eon::parse_millennium_amiga_load_plan(disk);
+    std::cout << "          raw loader: disk 0x" << std::hex
+        << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
+        << " -> memory 0x" << plan.first_stage.destination
+        << "; disk 0x" << plan.resident_stage.disk_offset << " + 0x"
+        << plan.resident_stage.length << " -> entry 0x" << plan.resident_entry
+        << ", marker 0x" << plan.loader_magic << std::dec << '\n';
+}
+
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     constexpr auto equinox_disk_sha256 =
         "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
@@ -244,6 +262,11 @@ int main(int argc, char** argv) {
             if (release.game == eon::Game::deuteros
                 && release.platform == eon::Platform::amiga) {
                 report_deuteros_amiga(release);
+            }
+            if (release.game == eon::Game::millennium
+                && release.platform == eon::Platform::amiga
+                && release.language == "en") {
+                report_millennium_amiga(release);
             }
             if (release.game == eon::Game::millennium
                 && release.platform == eon::Platform::dos
