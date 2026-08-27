@@ -153,4 +153,50 @@ MillenniumAtariBssEntry parse_millennium_atari_bss_entry(
         initial_d0, static_cast<std::uint32_t>(initial_d0) + 1U, destination_address};
 }
 
+MillenniumAtariBssSource materialize_millennium_atari_bss_source(
+    std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
+    const MillenniumAtariBootstrap& bootstrap, const MillenniumAtariBssEntry& entry) {
+    constexpr std::size_t header_bytes = 28;
+    const auto loadable_bytes = static_cast<std::uint64_t>(prg.text_bytes) + prg.data_bytes;
+    const auto copy_bytes = static_cast<std::uint64_t>(entry.copied_words) * 2U;
+    if (entry.entry_offset != bootstrap.stage_destination_offset
+        || entry.copy_source_address < entry.entry_offset
+        || copy_bytes > std::numeric_limits<std::uint32_t>::max()
+        || loadable_bytes > std::numeric_limits<std::uint32_t>::max()
+        || entry.entry_offset < loadable_bytes) {
+        throw std::runtime_error("Millennium Atari ST BSS source layout is inconsistent");
+    }
+    const auto load_base = entry.entry_offset - static_cast<std::uint32_t>(loadable_bytes);
+    if (load_base > std::numeric_limits<std::uint32_t>::max() - static_cast<std::uint32_t>(loadable_bytes)
+        || load_base + static_cast<std::uint32_t>(loadable_bytes) != entry.entry_offset
+        || static_cast<std::uint64_t>(entry.copy_source_address) + copy_bytes
+            > static_cast<std::uint64_t>(entry.entry_offset) + prg.bss_bytes) {
+        throw std::runtime_error("Millennium Atari ST BSS source lies outside loader BSS");
+    }
+    const auto source_into_stage = entry.copy_source_address - entry.entry_offset;
+    if (source_into_stage >= bootstrap.stage_bytes) {
+        throw std::runtime_error("Millennium Atari ST BSS source has no bootstrap DATA provenance");
+    }
+    const auto original_data_bytes = std::min<std::uint64_t>(
+        copy_bytes, static_cast<std::uint64_t>(bootstrap.stage_bytes) - source_into_stage);
+    const auto source_data_offset = static_cast<std::uint64_t>(bootstrap.stage_source_offset) + source_into_stage;
+    if (source_data_offset > loadable_bytes || original_data_bytes > loadable_bytes - source_data_offset
+        || header_bytes + source_data_offset > bytes.size()
+        || original_data_bytes > bytes.size() - header_bytes - source_data_offset) {
+        throw std::runtime_error("Millennium Atari ST BSS source DATA range is outside PRG");
+    }
+
+    MillenniumAtariBssSource result;
+    result.load_base = load_base;
+    result.bss_start_address = entry.entry_offset;
+    result.source_address = entry.copy_source_address;
+    result.source_data_offset = static_cast<std::uint32_t>(source_data_offset);
+    result.original_data_bytes = static_cast<std::uint32_t>(original_data_bytes);
+    result.bss_zero_bytes = static_cast<std::uint32_t>(copy_bytes - original_data_bytes);
+    result.bytes.resize(static_cast<std::size_t>(copy_bytes));
+    std::copy_n(bytes.begin() + static_cast<std::ptrdiff_t>(header_bytes + source_data_offset),
+        static_cast<std::ptrdiff_t>(original_data_bytes), result.bytes.begin());
+    return result;
+}
+
 } // namespace eon
