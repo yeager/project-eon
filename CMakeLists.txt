@@ -42,6 +42,7 @@ add_executable(project-eon
     src/engine/deuteros_amiga_opening.cpp
     src/engine/deuteros_amiga_paula.cpp
     src/engine/millennium_dos_title_session.cpp
+    src/engine/millennium_dos_game_session.cpp
     src/engine/millennium_dos_save_session.cpp
     src/data/amiga_adf.cpp
     src/data/amiga_ofs.cpp
@@ -58,6 +59,7 @@ add_executable(project-eon
     src/data/fat12.cpp
     src/data/millennium_dos_bitmap.cpp
     src/data/millennium_dos_game_data.cpp
+    src/data/millennium_dos_game_flow.cpp
     src/data/millennium_dos_gameplay_screen.cpp
     src/data/millennium_dos_last_screen.cpp
     src/data/millennium_dos_lib.cpp
@@ -98,6 +100,7 @@ if(BUILD_TESTING)
         src/engine/deuteros_amiga_opening.cpp
         src/engine/deuteros_amiga_paula.cpp
         src/engine/millennium_dos_title_session.cpp
+        src/engine/millennium_dos_game_session.cpp
         src/engine/millennium_dos_save_session.cpp
         src/data/amiga_adf.cpp
         src/data/amiga_ofs.cpp
@@ -114,6 +117,7 @@ if(BUILD_TESTING)
         src/data/fat12.cpp
         src/data/millennium_dos_bitmap.cpp
         src/data/millennium_dos_game_data.cpp
+        src/data/millennium_dos_game_flow.cpp
         src/data/millennium_dos_gameplay_screen.cpp
         src/data/millennium_dos_last_screen.cpp
         src/data/millennium_dos_lib.cpp

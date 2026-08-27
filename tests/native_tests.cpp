@@ -17,12 +17,14 @@
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
+#include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_dos_last_screen.hpp"
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "engine/millennium_dos_title_session.hpp"
+#include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "data/sha256.hpp"
 
@@ -269,6 +271,26 @@ int main() {
     assert(title_session.poll_console(true));
     assert(title_session.handed_off());
     assert(!title_session.poll_console(true));
+    const auto game_executable = eon::extract_asset_by_sha256(english_dos->path,
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57");
+    assert(game_executable && game_executable->size() == 54'391);
+    const auto game_flow = eon::parse_millennium_dos_game_flow(*game_executable);
+    assert(game_flow.entry_address == 0xd2b0);
+    assert(game_flow.main_loop_address == 0xd3d2);
+    assert(game_flow.action_poll_address == 0x10f05);
+    assert(game_flow.special_action_0 == 0x0b && game_flow.special_action_1 == 0x0c);
+    assert(game_flow.function_key_first_action == 0x3b && game_flow.function_key_count == 10);
+    assert(game_flow.function_key_table_address == 0x2fbf);
+    assert(game_flow.function_key_table_stride == 8);
+    assert(game_flow.function_key_dispatch_address == 0x76f0);
+    eon::MillenniumDosGameSession game_session(game_flow);
+    assert(!game_session.observe_action(0));
+    assert(!game_session.last_function_key_index());
+    assert(game_session.observe_action(0x3b) == std::optional<std::size_t>{0});
+    assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
+    assert(!game_session.observe_action(0x45));
+    assert(!game_session.observe_action(0x0b));
+    assert(game_session.last_special_action() == std::optional<std::uint8_t>{0x0b});
     const auto static_data = eon::extract_asset_by_sha256(english_dos->path,
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d");
     assert(static_data && static_data->size() == 12'494);
