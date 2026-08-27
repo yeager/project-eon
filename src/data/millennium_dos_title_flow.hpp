@@ -55,6 +55,15 @@ struct MillenniumDosTitleFlow {
     std::uint16_t launcher_pre_title_callee_join_branch_address = 0;
     std::uint16_t launcher_pre_title_callee_join_branch_target = 0;
     std::uint16_t launcher_pre_title_callee_join_branch_terminal_address = 0;
+    // MILL.COM first reaches its private 91h service through this local load
+    // routine. The following raw setup clears DX and invokes AX=$2591. That
+    // fixes the handler offset at zero, but the segment comes from unmodelled
+    // DOS results, so no handler bytes or segment are claimed here.
+    std::uint16_t launcher_private_interrupt_loader_call_address = 0;
+    std::uint16_t launcher_private_interrupt_loader_call_target = 0;
+    std::uint16_t launcher_private_interrupt_install_address = 0;
+    std::uint8_t launcher_private_interrupt_number = 0;
+    std::uint16_t launcher_private_interrupt_handler_offset = 0;
     std::size_t launcher_title_offset = 0;
     std::size_t launcher_game_offset = 0;
     std::string launcher_title_program;

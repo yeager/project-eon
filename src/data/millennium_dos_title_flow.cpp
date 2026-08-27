@@ -158,6 +158,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 10> launcher_pre_title_callee_join_branch{
         0xb8, 0x08, 0x25, 0xcd, 0x21, 0x58, 0x22, 0xc0,
         0x74, 0x14};
+    // The raw private-vector installation is preceded by a local loader call.
+    // The call's DOS effects are intentionally not evaluated: this byte range
+    // establishes only the direct call target and the literal DX=0 / AX=$2591
+    // setup at the following interrupt instruction.
+    constexpr std::array<std::uint8_t, 12> launcher_private_interrupt_install{
+        0xe8, 0xc8, 0x00, 0x33, 0xd2, 0xb8, 0x91, 0x25,
+        0xcd, 0x21, 0x0e, 0x1f};
     constexpr std::array<std::uint8_t, 7> launcher_pre_title_callee_join_target_prefix{
         0xb4, 0x4c, 0xcd, 0x21, 0x32, 0xc0, 0xcf};
     constexpr std::array<std::uint8_t, 11> title_name{
@@ -219,6 +226,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
                    launcher_pre_title_callee_join_target_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS launcher join target");
     }
+    constexpr std::size_t private_interrupt_loader_call_address = 0x204;
+    constexpr std::size_t private_interrupt_loader_call_target = 0x2cf;
+    constexpr std::size_t private_interrupt_install_address = 0x209;
+    if (!has_bytes(mill_launcher, private_interrupt_loader_call_address - mill_load_bias,
+                   launcher_private_interrupt_install)) {
+        throw std::runtime_error("Unsupported Millennium DOS private interrupt installation");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -267,6 +281,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_pre_title_callee_join_branch_address = 0x2b2,
         .launcher_pre_title_callee_join_branch_target = 0x2c8,
         .launcher_pre_title_callee_join_branch_terminal_address = 0x2ce,
+        .launcher_private_interrupt_loader_call_address = private_interrupt_loader_call_address,
+        .launcher_private_interrupt_loader_call_target = private_interrupt_loader_call_target,
+        .launcher_private_interrupt_install_address = private_interrupt_install_address,
+        .launcher_private_interrupt_number = 0x91,
+        .launcher_private_interrupt_handler_offset = 0,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",
