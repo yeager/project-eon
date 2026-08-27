@@ -56,6 +56,7 @@ struct DeuterosAtariFirstStageProfile {
     std::uint8_t next_sector = 0;
     std::uint16_t next_sector_count = 0;
     std::uint32_t next_destination = 0;
+    std::uint32_t copy_source = 0;
     std::uint32_t copy_destination = 0;
     std::size_t copy_byte_count = 0;
 };
@@ -67,6 +68,10 @@ struct DeuterosAtariSecondStageProfile {
     std::uint32_t supervisor_stack = 0;
     std::uint32_t application_stack = 0;
     std::uint32_t direct_entry = 0;
+    std::size_t direct_entry_source_offset = 0;
+    std::uint32_t dispatch_state_address = 0;
+    std::uint32_t dispatch_table_address = 0;
+    std::uint32_t dispatch_raw_reader_address = 0;
     std::size_t raw_read_routine_offset = 0;
     std::uint16_t raw_read_max_sector_count = 0;
     std::uint16_t side_switch_track = 0;
