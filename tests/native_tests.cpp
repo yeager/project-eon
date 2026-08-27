@@ -440,6 +440,10 @@ int main() {
     assert(titles_bytes && mill_bytes);
     const auto title_flow = eon::parse_millennium_dos_title_flow(*titles_bytes, *mill_bytes);
     assert(title_flow.title_entry_address == 0x1b80);
+    assert(title_flow.title_selection_callee_entry_address == 0x1725);
+    assert(title_flow.title_selection_callee_branch_address == 0x172f);
+    assert(title_flow.title_selection_callee_branch_target == 0x1732);
+    assert(title_flow.title_selection_callee_fallthrough_return == 0x1731);
     assert(title_flow.title_resource_index == 0);
     assert(title_flow.intro_transition_steps == 37);
     assert(title_flow.intro_step_stride == 0x170);
