@@ -243,7 +243,7 @@ This does **not** establish that the suffix executes: reaching it requires a
 native `TRAP #14` return that Project Eon does not emulate. Its instruction
 words are now also decoded literally: `ADDQ.L #6,SP`; `MOVE.L #0x4e20,D0`;
 `SUBQ.L #1,D0` and `BNE.S -4` back to `0x2b494`; then `DBF D7,-78` to
-`0x2b44e`; selector `0x0006` and another `TRAP #14`; followed by the same
+`0x2b44c` (DBF is relative to its extension word); selector `0x0006` and another `TRAP #14`; followed by the same
 stack cleanup and `RTS`. This records bytes, operands, and PC-relative
 targets only. Loop effects, native service calls, return values, and any
 resulting game state remain unrecovered rather than inferred.

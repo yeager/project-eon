@@ -661,7 +661,10 @@ MillenniumAtariConfigFourthPostOuterTail parse_millennium_atari_config_fourth_po
         static_cast<std::uint32_t>(tail_bytes), hash,
         read_be16(bytes, 0), read_be16(bytes, 2), read_be32(bytes, 4), read_be16(bytes, 8),
         read_be16(bytes, 10), static_cast<std::int8_t>(bytes[11]), 0x2b494,
-        read_be16(bytes, 12), static_cast<std::int16_t>(read_be16(bytes, 14)), 0x2b44e,
+        // DBF displacements are relative to their extension word. Therefore
+        // $ffb2 at $2b49a returns to the LEA opcode at $2b44c, rather than
+        // into the middle of its absolute-long operand.
+        read_be16(bytes, 12), static_cast<std::int16_t>(read_be16(bytes, 14)), 0x2b44c,
         read_be16(bytes, 16), read_be16(bytes, 18), read_be16(bytes, 20),
         read_be16(bytes, 22), read_be16(bytes, 24)};
 }
