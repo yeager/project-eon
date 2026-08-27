@@ -284,12 +284,18 @@ int main() {
     assert(game_flow.function_key_table_stride == 8);
     assert(game_flow.function_key_dispatch_address == 0x76f0);
     assert(game_flow.first_function_key.handler_address == 0x6f9a);
+    assert(game_flow.first_function_key.display_selector_call_address == 0xd0c9);
+    assert(game_flow.first_function_key.setup_entry_address == 0x771d);
     assert(game_flow.first_function_key.selector_address == 0xda1f);
     assert(game_flow.first_function_key.selector_value == 0);
     assert(game_flow.first_function_key.record_pointer_table_address == 0x27c4);
     assert(game_flow.first_function_key.selected_record_address == 0x12cc);
+    assert(game_flow.first_function_key.selected_record_storage_address == 0xda20);
     assert(game_flow.first_function_key.screen_descriptor_address == 0x300f);
     assert(game_flow.first_function_key.screen_descriptor_mode == 7);
+    assert(game_flow.first_function_key.screen_selector_storage_address == 0x75a8);
+    assert(game_flow.first_function_key.screen_descriptor_storage_address == 0x75a6);
+    assert(game_flow.first_function_key.setup_first_call_address == 0x5b1f);
     assert(game_flow.first_function_key.selected_record_byte_2 == 0x11);
     assert(game_flow.first_function_key.selected_record_byte_36 == 0);
     assert(game_flow.second_function_key.handler_address == 0x71ca);

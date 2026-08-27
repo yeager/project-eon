@@ -67,9 +67,13 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x2c, 0x3b, 0x3c, 0x0a, 0x73, 0xd3, 0xbe, 0xbf, 0x2f,
         0x32, 0xe4, 0xc0, 0xe0, 0x03, 0x01, 0xc6, 0xe8, 0xe4, 0xa2});
     // Table record 0 contains its non-semantic rectangle followed by the
-    // handler entry.  The F1 handler clears AX, calls the common display
-    // selector, then calls the setup block below.  That setup writes selector
-    // zero and resolves it through the original word table at $27c4.
+    // handler entry. The F1 handler clears AX, calls the common display
+    // selector at $d0c9, then calls the setup block below. That setup has an
+    // unconditional pre-call prefix, but it is reached only if $d0c9 returns;
+    // we therefore record it as code evidence rather than a host overlay.
+    // It selects $12cc through the original word table at $27c4, retains the
+    // word at $da20, and stores mode $07 / descriptor $300f before calling
+    // $5b1f.
     constexpr auto f1_table = std::to_array<std::uint8_t>({
         0x00, 0x06, 0x09, 0x1b, 0x30, 0x00, 0x9a, 0x6f});
     constexpr auto f1_handler = std::to_array<std::uint8_t>({
@@ -79,7 +83,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xb8, 0xcc, 0x12, 0xc6, 0x06, 0x1f, 0xda, 0x00,
         0xa3, 0x20, 0xda, 0xb9, 0x0f, 0x30, 0xa0, 0x1f,
         0xda, 0x22, 0xc0, 0xb0, 0x07, 0x74, 0x05, 0xb0,
-        0x05, 0xb9, 0x47, 0x30, 0xa2, 0xa8, 0x75});
+        0x05, 0xb9, 0x47, 0x30, 0xa2, 0xa8, 0x75, 0x89,
+        0x0e, 0xa6, 0x75, 0xb8, 0x01, 0x00, 0x80, 0x3e,
+        0xa8, 0x75, 0x07, 0x74, 0x03, 0xb8, 0x6d, 0x00,
+        0xe8, 0xcf, 0xe3});
     constexpr auto record_pointer_table = std::to_array<std::uint8_t>({
         0xcc, 0x12, 0x84, 0x13, 0x44, 0x14, 0x04, 0x15});
     constexpr auto initial_record = std::to_array<std::uint8_t>({
@@ -314,12 +321,18 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .function_key_dispatch_address = 0x76f0,
         .first_function_key = {
             .handler_address = 0x6f9a,
+            .display_selector_call_address = 0xd0c9,
+            .setup_entry_address = 0x771d,
             .selector_address = 0xda1f,
             .selector_value = 0,
             .record_pointer_table_address = 0x27c4,
             .selected_record_address = 0x12cc,
+            .selected_record_storage_address = 0xda20,
             .screen_descriptor_address = 0x300f,
             .screen_descriptor_mode = 7,
+            .screen_selector_storage_address = 0x75a8,
+            .screen_descriptor_storage_address = 0x75a6,
+            .setup_first_call_address = 0x5b1f,
             .selected_record_byte_2 = 0x11,
             .selected_record_byte_36 = 0,
         },

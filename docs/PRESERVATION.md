@@ -662,14 +662,19 @@ recovered.
 The first table record (raw F1 / `$3b`) is now traced further without assigning
 it a game-menu name. Its eight original bytes are
 `00 06 09 1b 30 00 9a 6f`, so its handler entry is `$6f9a`. That handler clears
-`AX`, invokes the common display selector, and enters `$771d`. The latter
-writes runtime selector `$da1f = 0`, obtains word zero from the embedded
+`AX`, calls the common display selector at `$d0c9`, and only then calls
+`$771d`. The latter's byte-validated prefix writes runtime selector
+`$da1f = 0`, retains `$12cc` at `$da20`, obtains word zero from the embedded
 pointer table at `$27c4`, and therefore selects original in-image record
-`$12cc`; the observed word is indeed `$12cc`. It also installs descriptor
-`$300f` with mode byte `$07`. The selected record begins
+`$12cc`; the observed word is indeed `$12cc`. It selects mode `$07` at
+`$75a8`, descriptor `$300f` at `$75a6`, and reaches its first further native
+call at `$5b1f`. The selected record begins
 `03 00 11 00 00 00 00 00` (notably byte `+02 = $11` and byte `+24 = $00`).
-Project Eon exposes that trace after F1 only as immutable evidence: it neither
-names the handler nor writes any original executable, archive, or save byte.
+All these F1 setup stores occur after the native `$d0c9` call, whose return and
+side effects are not yet emulated. Project Eon consequently exposes this
+strict boundary only as immutable evidence: it neither creates a host overlay
+for F1 nor names the handler nor writes any original executable, archive, or
+save byte.
 
 The second table record (raw F2 / `$3c`) is `06 0c 09 1b 31 01 ca 71`, with
 handler entry `$71ca`. This handler reads its runtime byte at `$da26` and
