@@ -109,6 +109,19 @@ def main() -> int:
                     "Deuteros Atari ST state-1 raw-load plan did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_state5 = (
+                "Static vector-5 raw-load plans: Disk 1 +0x55800 +0xb400 "
+                "-> RAM 0xb000 in 10 original reads; SHA-256 "
+                "9659b21315e5c0528020be0b41eb75d57428f41b3b632fabfebe16d34038d298; "
+                "copy RAM 0x57a00 +0x9393 -> 0xb006; Disk 1 +0x60c00 +0x4c800 "
+                "-> RAM 0x16400 in 68 original reads; SHA-256 "
+                "6b3e27702649ac201c4ecf92ad54f40656fd4d8633fadf5790014da34ce03ac6"
+            )
+            if expected_state5 not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Atari ST vector-5 raw-load plan did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         archive_starts.append((
             f"archive/{game}/{platform}/{archive.name}",
             (str(executable), "--data", str(archive), "--game", game,

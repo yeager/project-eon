@@ -34,6 +34,40 @@ void require_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
     }
 }
 
+DeuterosAtariRawRangeLoadPlan build_raw_range_load_plan(
+    const std::uint32_t destination, const std::uint32_t byte_count,
+    const std::uint32_t source_offset, const DeuterosAtariSecondStageProfile& stage) {
+    constexpr std::uint32_t bytes_per_sector = 512;
+    constexpr std::uint32_t bytes_per_side = 0x1200;
+    if (stage.raw_read_max_sector_count != 9 || byte_count == 0
+        || byte_count % bytes_per_sector != 0 || source_offset % bytes_per_side != 0) {
+        throw std::runtime_error("Unsupported Deuteros Atari ST raw range load plan");
+    }
+    DeuterosAtariRawRangeLoadPlan result{
+        .destination = destination,
+        .byte_count = byte_count,
+        .source_linear_sector = source_offset / bytes_per_side,
+        .source_offset = source_offset,
+        .requests = {},
+    };
+    auto remaining = byte_count;
+    auto current_source_offset = source_offset;
+    while (remaining != 0) {
+        const auto chunk_bytes = std::min(remaining, bytes_per_side);
+        const auto linear_side = current_source_offset / bytes_per_side;
+        result.requests.push_back({
+            .track = static_cast<std::uint16_t>(linear_side / 2U),
+            .side = static_cast<std::uint8_t>(linear_side % 2U),
+            .first_sector = 1,
+            .sector_count = static_cast<std::uint16_t>(chunk_bytes / bytes_per_sector),
+            .source_offset = current_source_offset,
+        });
+        remaining -= chunk_bytes;
+        current_source_offset += chunk_bytes;
+    }
+    return result;
+}
+
 } // namespace
 
 DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
@@ -269,36 +303,35 @@ DeuterosAtariRawLoadPlan build_deuteros_atari_state0_raw_load_plan(
 DeuterosAtariRawRangeLoadPlan build_deuteros_atari_state1_raw_load_plan(
     const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch) {
-    constexpr std::uint32_t bytes_per_sector = 512;
     constexpr std::uint32_t bytes_per_side = 0x1200;
-    if (stage.raw_read_max_sector_count != 9 || dispatch.state1_destination != 0xb000
+    if (dispatch.state1_destination != 0xb000
         || dispatch.state1_byte_count != 0x5e400 || dispatch.state1_linear_sector != 0x4c
-        || dispatch.state1_byte_count % bytes_per_sector != 0) {
+        || dispatch.state1_linear_sector > UINT32_MAX / bytes_per_side) {
         throw std::runtime_error("Unsupported Deuteros Atari ST state-1 raw-load plan");
     }
-    DeuterosAtariRawRangeLoadPlan result{
-        .destination = dispatch.state1_destination,
-        .byte_count = dispatch.state1_byte_count,
-        .source_linear_sector = dispatch.state1_linear_sector,
-        .source_offset = static_cast<std::size_t>(dispatch.state1_linear_sector) * bytes_per_side,
-        .requests = {},
-    };
-    auto remaining = dispatch.state1_byte_count;
-    auto source_offset = result.source_offset;
-    while (remaining != 0) {
-        const auto chunk_bytes = std::min(remaining, bytes_per_side);
-        const auto linear_side = static_cast<std::uint32_t>(source_offset / bytes_per_side);
-        result.requests.push_back({
-            .track = static_cast<std::uint16_t>(linear_side / 2U),
-            .side = static_cast<std::uint8_t>(linear_side % 2U),
-            .first_sector = 1,
-            .sector_count = static_cast<std::uint16_t>(chunk_bytes / bytes_per_sector),
-            .source_offset = source_offset,
-        });
-        remaining -= chunk_bytes;
-        source_offset += chunk_bytes;
+    return build_raw_range_load_plan(dispatch.state1_destination, dispatch.state1_byte_count,
+        dispatch.state1_linear_sector * bytes_per_side, stage);
+}
+
+DeuterosAtariState5RawLoadPlan build_deuteros_atari_state5_raw_load_plan(
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch) {
+    if (dispatch.state5_first_destination != 0xb000 || dispatch.state5_first_byte_count != 0xb400
+        || dispatch.state5_first_reader_argument != 0x55800 || dispatch.state5_copy_source != 0x57a00
+        || dispatch.state5_copy_destination != 0xb006 || dispatch.state5_copy_byte_count != 0x9393
+        || dispatch.state5_second_destination != 0x16400 || dispatch.state5_second_byte_count != 0x4c800
+        || dispatch.state5_second_reader_argument != 0x60c00) {
+        throw std::runtime_error("Unsupported Deuteros Atari ST state-5 raw-load plan");
     }
-    return result;
+    return {
+        .first_read = build_raw_range_load_plan(dispatch.state5_first_destination,
+            dispatch.state5_first_byte_count, dispatch.state5_first_reader_argument, stage),
+        .copy_source = dispatch.state5_copy_source,
+        .copy_destination = dispatch.state5_copy_destination,
+        .copy_byte_count = dispatch.state5_copy_byte_count,
+        .second_read = build_raw_range_load_plan(dispatch.state5_second_destination,
+            dispatch.state5_second_byte_count, dispatch.state5_second_reader_argument, stage),
+    };
 }
 
 DeuterosAtariState0DuplicateStagePrefix

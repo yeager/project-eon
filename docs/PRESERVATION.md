@@ -545,13 +545,17 @@ protected-media interval are therefore not promoted to artwork. Project Eon
 does not render the interval or choose state 1 merely because its physical
 span can be calculated.
 
-The sixth vector (`$1f52`) makes two further static calls to `$70030`: first
-with raw arguments destination `$b000`, byte count `$b400`, and computed
-reader value `$4c * $1200 = $55800`; then it copies `$9393` bytes from `$57a00`
-to `$b006` and calls again with destination `$16400`, byte count `$4c800`,
-reader value `$60c00`. These are preserved instruction/dataflow facts only;
-they do not authorize Project Eon to perform the disk I/O without a proven
-runtime table selection.
+The sixth vector (`$1f52`) makes two further static calls to `$70030`.
+`build_deuteros_atari_state5_raw_load_plan` records its first as ten complete
+nine-sector reads from Disk 1 `+$55800` (length `$b400`) to `$b000`, SHA-256
+`9659b21315e5c0528020be0b41eb75d57428f41b3b632fabfebe16d34038d298`.
+It then copies `$9393` bytes from RAM `$57a00` to `$b006` before the second
+static raw plan: 68 complete nine-sector reads from Disk 1 `+$60c00` (length
+`$4c800`) to `$16400`, SHA-256
+`6b3e27702649ac201c4ecf92ad54f40656fd4d8633fadf5790014da34ce03ac6`.
+These are preserved instruction/dataflow facts only; they do not authorize
+Project Eon to select vector 5, perform its runtime callbacks, or infer title
+or game semantics for the loaded bytes.
 
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)

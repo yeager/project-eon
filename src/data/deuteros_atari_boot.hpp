@@ -156,6 +156,21 @@ struct DeuterosAtariRawRangeLoadPlan {
     const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch);
 
+// The sixth static dispatch vector makes two raw reads around a literal copy.
+// This is a data-flow record only; it does not select vector 5 or interpret
+// either loaded interval as a game resource.
+struct DeuterosAtariState5RawLoadPlan {
+    DeuterosAtariRawRangeLoadPlan first_read;
+    std::uint32_t copy_source = 0;
+    std::uint32_t copy_destination = 0;
+    std::uint32_t copy_byte_count = 0;
+    DeuterosAtariRawRangeLoadPlan second_read;
+};
+
+[[nodiscard]] DeuterosAtariState5RawLoadPlan build_deuteros_atari_state5_raw_load_plan(
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch);
+
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is
 // known to enter the duplicate at its `$13200` load address.
