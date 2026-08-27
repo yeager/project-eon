@@ -606,6 +606,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto separate_byte_gate_taken_branch =
         eon::parse_millennium_amiga_resident_separate_byte_gate_taken_branch_boundary(
             disk, plan, separate_byte_gate_convergence);
+    const auto separate_byte_gate_fallthrough =
+        eon::parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
+            disk, plan, separate_byte_gate_convergence);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -781,6 +784,17 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << separate_byte_gate_taken_branch.external_prefix_raw_disk_offset << ", SHA-256 "
         << separate_byte_gate_taken_branch.external_prefix_sha256 << std::dec
         << "; static boundary only, no call execution)\n";
+    std::cout << "          byte-gate fallthrough: entry 0x" << std::hex
+        << separate_byte_gate_fallthrough.entry_address << " (disk 0x"
+        << separate_byte_gate_fallthrough.raw_disk_offset << ", SHA-256 "
+        << separate_byte_gate_fallthrough.sha256 << "); BEQ.W at 0x"
+        << separate_byte_gate_fallthrough.conditional_branch_address << " -> 0x"
+        << separate_byte_gate_fallthrough.conditional_branch_target
+        << "; alternate prefix 0x" << separate_byte_gate_fallthrough.other_path_entry_address
+        << " (SHA-256 " << separate_byte_gate_fallthrough.other_path_sha256 << "); BRA.W at 0x"
+        << separate_byte_gate_fallthrough.other_path_branch_address << " -> 0x"
+        << separate_byte_gate_fallthrough.other_path_branch_target << std::dec
+        << " (static only, no register/branch execution)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {

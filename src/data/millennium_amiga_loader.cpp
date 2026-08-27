@@ -1155,4 +1155,49 @@ parse_millennium_amiga_resident_separate_byte_gate_taken_branch_boundary(
         call_prefix_hash};
 }
 
+MillenniumAmigaResidentSeparateByteGateFallthroughBoundary
+parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparateByteGateConvergenceBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68f06;
+    constexpr std::uint32_t other_path = 0x68f1e;
+    constexpr std::uint32_t convergence = 0x68f48;
+    constexpr std::array<std::uint8_t, 24> expected{{
+        0x13, 0xfc, 0x00, 0x02, 0x00, 0x07, 0xc2, 0x50,
+        0x13, 0xfc, 0x00, 0x00, 0x00, 0x07, 0xc2, 0x52,
+        0xbe, 0x3c, 0x00, 0x00, 0x67, 0x00, 0x00, 0x2c,
+    }};
+    constexpr std::array<std::uint8_t, 12> other_path_bytes{{
+        0x13, 0xfc, 0x00, 0x00, 0x00, 0x07, 0xc2, 0x4f,
+        0x60, 0x00, 0x00, 0x20,
+    }};
+    constexpr std::string_view expected_hash =
+        "4a50d1c5f71ada9a3571e09b00437c51037c3949ff8e57a4b153ea032828d061";
+    constexpr std::string_view other_path_hash =
+        "fc1fca692a8fc07b5fd7c502ae2d772eeff63c0c3d33d298f9c4fac414f337da";
+    if (boundary.fallthrough_raw_disk_offset != 0x17306
+        || entry < plan.resident_stage.destination || other_path < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga byte gate fallthrough placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    const auto other_relative = other_path - plan.resident_stage.destination;
+    if (expected.size() > plan.resident_stage.length - relative
+        || other_path_bytes.size() > plan.resident_stage.length - other_relative) {
+        throw std::runtime_error("Millennium Amiga byte gate fallthrough is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto other = disk.bytes(plan.resident_stage.disk_offset + other_relative,
+        other_path_bytes.size());
+    const auto hash = to_hex(sha256(bytes));
+    const auto other_hash = to_hex(sha256(other));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || !std::equal(other_path_bytes.begin(), other_path_bytes.end(), other.begin())
+        || hash != expected_hash || other_hash != other_path_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga byte gate fallthrough");
+    }
+    // BEQ.W and BRA.W both take their displacement from their extension words.
+    return {entry, plan.resident_stage.disk_offset + relative, hash, 0x68f1a, convergence,
+        other_path, other_hash, 0x68f26, convergence, convergence};
+}
+
 } // namespace eon
