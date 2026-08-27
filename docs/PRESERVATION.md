@@ -563,6 +563,23 @@ resulting seed is `$0010`; with that seed and counter `$00000004`, it reads
 in-memory model that rejects malformed length, destination, or range facts.
 It neither labels these values nor changes source media or save state.
 
+The next consumer is the already opcode-validated channel interpreter at
+`$214aa`, not a resource decoder or renderer. Its `$000a` arm calls `$2016a`,
+ANDs the returned word with the following original stream word, stores the
+masked result as state `+8`, writes selector `$0003` at state `+6`, and
+returns to the scheduler. Its `$0011` arm calls the same routine, masks the
+result to four bits, reduces it by the first following stream word when that
+value is not smaller, multiplies by the second following stream word, and
+adds the product to the current command-stream address. Thus the proven
+effects are a timed control yield and a bounded original command-stream
+choice. Neither arm uses the word-plus-14 value as a file/resource selector,
+bitmap index, palette index, or a rendering address. The live opening now
+uses the completed `$21932` transfer held in memory as its `$2016a` source;
+it verifies the transfer's leading length and destination through the same
+strict sampler before every word read. This replaces no game data, unpacks
+nothing, and preserves the previous raw-ADF reader solely for independent
+parser tests.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an

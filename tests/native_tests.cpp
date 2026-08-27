@@ -1296,6 +1296,13 @@ int main() {
     assert(opening_random.seed() == 0x11);
     opening_random.advance_vblank();
     assert(opening_random.vblank_counter() == 0x244);
+    // The live opening must take its $2016a words from the completed $21932
+    // transfer at $32a24, not through a second host-side interpretation of
+    // the raw ADF. Both original-backed forms observe the same word+14 path.
+    eon::DeuterosAmigaRandom transferred_opening_random(
+        *transferred_bundle0, main_entry, 0, 0x240);
+    assert(transferred_opening_random.next() == 0x11);
+    assert(transferred_opening_random.seed() == 0x11);
     for (std::size_t index = 0; index + 1 < first_indexed_blob.record_offsets.size(); ++index) {
         const auto bitmap = eon::decode_deuteros_amiga_bitmap(
             system_disk, first_bundle, first_indexed_blob, index);
