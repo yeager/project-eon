@@ -1133,6 +1133,15 @@ records these destination operands and the following static branch edges only;
 it does not assume a return, assign values to the cells, or execute either
 branch.
 
+The two selected static paths are independently byte-validated as well. The
+`AL == $01` call target `$d1a1` and the other target `$d1b5` each set
+`AX=$0004`, `ES=CS`, and `BX=$d19f` before directly calling the same `$0124`
+private-`INT $91` wrapper again, from `$d1a9` and `$d1bd` respectively. Only
+if those calls return do their next direct calls reach `$044e` or `$0466`.
+These are control-flow operands only: Project Eon neither assumes either
+wrapper return nor interprets the register setup, follow-up calls, or their
+results.
+
 #### Main-loop action dispatch
 
 The supplied English `2200AD.EXE` (54,391 bytes, SHA-256
