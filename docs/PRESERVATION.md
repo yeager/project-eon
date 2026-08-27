@@ -934,6 +934,13 @@ hand-off used by the native parser. It establishes only literal dataflow and
 control edges: Project Eon does not assign a DOS/EXEC meaning to `$031c`, the
 post-call `AX` tests, or either callee return.
 
+The directly called local bytes at `$031c..$034e` are separately anchored by
+the parser. Their first local branch is the literal `JC +$05` at `$0346`:
+the taken target begins at `$034d`, while the sequential bytes are
+`B4 4D CD 21 C3` and end in `RET` at `$034c`. This is a static byte/control
+fact only; in particular, Project Eon does not interpret the interrupt bytes,
+the carry condition, or the return as DOS behavior.
+
 The English DOS archive's `SFX1.VOC` is decoded directly as a Creative Voice
 File: its verified SHA-256 is
 `5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88`.

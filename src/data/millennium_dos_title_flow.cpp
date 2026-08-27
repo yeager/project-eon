@@ -80,6 +80,18 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0xba, 0x8f, 0x06, 0xe8, 0xd9, 0x00, 0x22, 0xc0,
         0x75, 0x19, 0x0e, 0x1f, 0xba, 0x9a, 0x06, 0xe8,
         0xcd, 0x00, 0x22, 0xc0, 0x75, 0x0d};
+    // The shared local target is preserved as raw control flow.  Its first
+    // local branch is JC +5 at 0x346: the non-taken bytes end in RET at
+    // 0x34c, while the taken destination starts at 0x34d.  No interrupt or
+    // return semantics are inferred here.
+    constexpr std::array<std::uint8_t, 50> launcher_common_routine{
+        0x8c, 0xc8, 0x89, 0x06, 0x7e, 0x06, 0x89, 0x06,
+        0x82, 0x06, 0x89, 0x06, 0x86, 0x06, 0x8e, 0xc0,
+        0xbb, 0x7a, 0x06, 0x89, 0x26, 0xf7, 0x05, 0xb8,
+        0x00, 0x4b, 0xcd, 0x21, 0x8c, 0xc9, 0x8e, 0xd1,
+        0x2e, 0x8b, 0x26, 0xf7, 0x05, 0x8e, 0xd9, 0x8e,
+        0xc1, 0x72, 0x05, 0xb4, 0x4d, 0xcd, 0x21, 0xc3,
+        0xba, 0x70};
     constexpr std::array<std::uint8_t, 11> title_name{
         'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
     constexpr std::array<std::uint8_t, 11> game_name{
@@ -97,6 +109,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     const auto game_call_target = game_call_address + 3 + 0x00cd;
     if (title_call_target != game_call_target) {
         throw std::runtime_error("Invalid Millennium DOS launcher common call target");
+    }
+    if (title_call_target < mill_load_bias
+        || !has_bytes(mill_launcher, title_call_target - mill_load_bias, launcher_common_routine)) {
+        throw std::runtime_error("Unsupported Millennium DOS launcher common routine");
     }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
@@ -118,6 +134,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_title_call_address = static_cast<std::uint16_t>(title_call_address),
         .launcher_game_call_address = static_cast<std::uint16_t>(game_call_address),
         .launcher_common_call_target = static_cast<std::uint16_t>(title_call_target),
+        .launcher_common_branch_address = 0x346,
+        .launcher_common_branch_target = 0x34d,
+        .launcher_common_fallthrough_return = 0x34c,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",
