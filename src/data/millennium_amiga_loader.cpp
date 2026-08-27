@@ -414,4 +414,36 @@ parse_millennium_amiga_resident_first_post_helper_static_chain(
         following_call_address, following_target};
 }
 
+MillenniumAmigaResidentSecondPostHelperStaticChain
+parse_millennium_amiga_resident_second_post_helper_static_chain(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentHelperStagingCallsite& callsite) {
+    // The second caller has its own raw continuation form. Preserve only its
+    // 44-byte prefix and final literal JSR; do not reuse or infer the first
+    // caller's path and do not assert any runtime return from $7ba12.
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t entry_address = 0x69b88;
+    constexpr std::uint32_t static_start_address = 0x69bba;
+    constexpr std::uint32_t static_call_address = 0x69be0;
+    constexpr std::uint32_t static_call_target = 0x68d50;
+    constexpr std::size_t byte_count = 44;
+    constexpr std::array<std::uint8_t, 6> tail_call{{0x4e, 0xb9, 0x00, 0x06, 0x8d, 0x50}};
+    if (callsite.entry_address != entry_address || callsite.post_helper_return_address != static_start_address
+        || static_start_address < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga second post-helper static chain caller");
+    }
+    const auto relative = static_start_address - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || byte_count > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga second post-helper static chain outside resident range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, byte_count);
+    const auto hash = to_hex(sha256(bytes));
+    if (hash != "5616f19900cb96ebc81edf90d0d17a9cde1644be07657801e243514b05e6ee23"
+        || !std::equal(tail_call.begin(), tail_call.end(), bytes.end() - tail_call.size())) {
+        throw std::runtime_error("Unexpected Millennium Amiga second post-helper static chain");
+    }
+    return {entry_address, static_start_address, plan.resident_stage.disk_offset + relative,
+        static_cast<std::uint32_t>(byte_count), hash, static_call_address, static_call_target};
+}
+
 } // namespace eon

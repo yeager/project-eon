@@ -400,6 +400,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto first_post_helper_chain =
         eon::parse_millennium_amiga_resident_first_post_helper_static_chain(
             disk, plan, staging_callsites.front());
+    const auto second_post_helper_chain =
+        eon::parse_millennium_amiga_resident_second_post_helper_static_chain(
+            disk, plan, staging_callsites.back());
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -450,6 +453,15 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << first_post_helper_chain.next_setup_call_address << ", then 0x"
         << first_post_helper_chain.following_target << " at 0x"
         << first_post_helper_chain.following_call_address << std::dec
+        << " (byte chain only; no helper-return or call execution)\n";
+    std::cout << "          second post-helper static chain: caller 0x" << std::hex
+        << second_post_helper_chain.staging_entry_address << ", bytes at 0x"
+        << second_post_helper_chain.static_start_address << " (disk 0x"
+        << second_post_helper_chain.raw_disk_offset << ", " << std::dec
+        << second_post_helper_chain.byte_count << " bytes, SHA-256 "
+        << second_post_helper_chain.sha256 << "); static JSR 0x" << std::hex
+        << second_post_helper_chain.static_call_target << " at 0x"
+        << second_post_helper_chain.static_call_address << std::dec
         << " (byte chain only; no helper-return or call execution)\n";
 }
 

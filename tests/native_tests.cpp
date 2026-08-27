@@ -233,6 +233,17 @@ int main() {
     assert(defjam_first_post_helper_chain.next_setup_target == 0x7b77e);
     assert(defjam_first_post_helper_chain.following_call_address == 0x696a6);
     assert(defjam_first_post_helper_chain.following_target == 0x7c802);
+    const auto defjam_second_post_helper_chain =
+        eon::parse_millennium_amiga_resident_second_post_helper_static_chain(
+            defjam_loader_disk, defjam_plan, defjam_staging_callsites[1]);
+    assert(defjam_second_post_helper_chain.staging_entry_address == 0x69b88);
+    assert(defjam_second_post_helper_chain.static_start_address == 0x69bba);
+    assert(defjam_second_post_helper_chain.raw_disk_offset == 0x17fba);
+    assert(defjam_second_post_helper_chain.byte_count == 44);
+    assert(defjam_second_post_helper_chain.sha256
+        == "5616f19900cb96ebc81edf90d0d17a9cde1644be07657801e243514b05e6ee23");
+    assert(defjam_second_post_helper_chain.static_call_address == 0x69be0);
+    assert(defjam_second_post_helper_chain.static_call_target == 0x68d50);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
@@ -266,6 +277,18 @@ int main() {
         invalid_first_post_helper_chain_rejected = true;
     }
     assert(invalid_first_post_helper_chain_rejected);
+    auto invalid_second_post_helper_chain_disk_bytes = *defjam_adf;
+    invalid_second_post_helper_chain_disk_bytes[0x17fe0] ^= 0x01;
+    bool invalid_second_post_helper_chain_rejected = false;
+    try {
+        const eon::AmigaAdf invalid_second_post_helper_chain_disk(
+            std::move(invalid_second_post_helper_chain_disk_bytes));
+        static_cast<void>(eon::parse_millennium_amiga_resident_second_post_helper_static_chain(
+            invalid_second_post_helper_chain_disk, defjam_plan, defjam_staging_callsites[1]));
+    } catch (const std::runtime_error&) {
+        invalid_second_post_helper_chain_rejected = true;
+    }
+    assert(invalid_second_post_helper_chain_rejected);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);
