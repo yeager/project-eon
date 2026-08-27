@@ -580,6 +580,11 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto staging_reachability =
         eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
             disk, plan, staging_callsites);
+    const auto separate_entry = eon::parse_millennium_amiga_resident_separate_entry_gate(disk, plan);
+    const auto separate_branch = eon::parse_millennium_amiga_resident_separate_branch_boundary(
+        disk, plan, separate_entry);
+    const auto separate_post_call = eon::parse_millennium_amiga_resident_separate_post_call_boundary(
+        disk, plan, separate_branch);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -655,6 +660,17 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << staging_reachability.local_immediate_register_jmp_counts[0] << '/'
         << staging_reachability.local_immediate_register_jmp_counts[1]
         << " (only these static encodings; indirect/transformed paths unproven)\n";
+    std::cout << "          separate post-call boundary: entry 0x" << std::hex
+        << separate_post_call.entry_address << " (disk 0x" << separate_post_call.raw_disk_offset
+        << ", SHA-256 " << separate_post_call.sha256 << "); D0 #0x"
+        << separate_post_call.d0_immediate << ", A5 source 0x"
+        << separate_post_call.a5_source_address << ", store D0 0x"
+        << separate_post_call.stored_d0_address << ", JSR 0x"
+        << separate_post_call.following_call_target << " at 0x"
+        << separate_post_call.following_call_address << " (target disk 0x"
+        << separate_post_call.following_target_raw_disk_offset << ", SHA-256 "
+        << separate_post_call.following_target_prefix_sha256 << std::dec
+        << "; static only, no prior-return/RAM/call execution)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
