@@ -134,6 +134,14 @@ struct DeuterosAmigaMainStageEntry {
     std::uint16_t alternate_renderer_state_data_offset = 0;
     std::uint32_t alternate_renderer_address = 0;
     std::uint32_t regular_renderer_address = 0;
+    // Command $10 is not itself a title-stage handoff. Its dispatcher arm
+    // stores the literal below in this main-loop cell; the loop tests the
+    // cell and branches to the recorded raw continuation.
+    std::uint32_t channel_request_cell_address = 0;
+    std::uint16_t channel_request_value = 0;
+    std::uint32_t channel_request_loop_test_address = 0;
+    std::uint32_t channel_request_loop_branch_address = 0;
+    std::uint32_t channel_request_continuation_address = 0;
 };
 
 struct DeuterosAmigaLoadPlan {

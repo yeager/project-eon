@@ -445,6 +445,19 @@ counter `$240` and returns/seeds `$0011`. A VBL can race the very first
 scheduler call on original hardware, so an alternate startup phase remains an
 explicit runtime parameter rather than being erased from the evidence model.
 
+Command `$10` has a deliberately narrower meaning than its former
+`transition_requested` event name suggested. The original dispatcher at
+`$2162a` writes `$ffff` to `$210f4`; after `$21380` returns, the main loop
+tests the byte at `$21856` and its nonzero branch at `$2185c` continues at
+`$21892`. This is a verified main-stage request edge, not evidence for a
+title, menu, or gameplay destination. Exhaustive control-flow walks of the
+four bundle-0 and six bundle-1 channel streams (including their valid relative
+jumps, calls/returns, and every `$11` branch displacement) contain no
+reachable `$10`. The recovered opening input route reaches `$0f`, then `$05`
+and `$00`, rather than `$10`. Consequently Project Eon does not synthesize a
+channel state or expose a user input that would request this unproven later
+continuation.
+
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
 emits sound `(1,1)` then `(2,2)` and immediately consumes the newly yielded

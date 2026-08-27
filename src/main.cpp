@@ -196,6 +196,12 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << main_entry.resource_consumer_call_sites[0] << "/0x"
         << main_entry.resource_consumer_command_words[1] << "@0x"
         << main_entry.resource_consumer_call_sites[1] << std::dec << '\n';
+    std::cout << "          Channel command 0x10: writes 0x" << std::hex
+        << main_entry.channel_request_value << " to 0x"
+        << main_entry.channel_request_cell_address << "; loop tests at 0x"
+        << main_entry.channel_request_loop_test_address << " and nonzero branch 0x"
+        << main_entry.channel_request_loop_branch_address << " -> 0x"
+        << main_entry.channel_request_continuation_address << std::dec << '\n';
     const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);

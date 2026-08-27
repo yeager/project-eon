@@ -1302,6 +1302,11 @@ int main() {
         *transferred_bundle1, main_entry, 0, 0);
     assert(resource_sample_bundle1.sampled_word == 0x0002);
     assert(resource_sample_bundle1.seed_after == 0x0010);
+    assert(main_entry.channel_request_cell_address == 0x210f4);
+    assert(main_entry.channel_request_value == 0xffff);
+    assert(main_entry.channel_request_loop_test_address == 0x21856);
+    assert(main_entry.channel_request_loop_branch_address == 0x2185c);
+    assert(main_entry.channel_request_continuation_address == 0x21892);
 
     const auto first_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[0]);
