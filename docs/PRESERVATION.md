@@ -110,6 +110,13 @@ that exact 514-byte source only in memory, retaining the original DATA bytes
 and explicitly zeroing only the PRG's BSS portion. It neither unpacks nor
 writes media, applies no relocation, and still does not execute the jump.
 
+The second copy is now materialized only as that exact in-memory 514-byte
+target at `0x77000`. Its verified first instructions are `MOVE.W #0x2,-(A7)`,
+`MOVE.L #0x1d6e4,-(A7)`, and `MOVE.W #0x3d,-(A7)` (followed by the original
+`TRAP #1`). These bytes are validated against the source transfer and reported
+for preservation; Project Eon does not invoke the trap, emulate a GEMDOS call,
+or infer anything about the target's gameplay meaning.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

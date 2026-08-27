@@ -70,6 +70,18 @@ struct MillenniumAtariBssSource {
     std::vector<std::uint8_t> bytes;
 };
 
+// The exact 514-byte transfer made by Millennium's next BSS-resident stub.
+// It is loader state assembled solely in memory; its leading bytes retain PRG
+// DATA provenance and its tail is the GEMDOS-zeroed BSS interval.
+struct MillenniumAtariMaterializedTarget {
+    std::uint32_t source_address = 0;
+    std::uint32_t target_address = 0;
+    std::uint16_t first_opcode = 0;
+    std::uint16_t first_immediate_word = 0;
+    std::uint32_t first_immediate_longword = 0;
+    std::vector<std::uint8_t> bytes;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -94,5 +106,11 @@ struct MillenniumAtariBssSource {
 [[nodiscard]] MillenniumAtariBssSource materialize_millennium_atari_bss_source(
     std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
     const MillenniumAtariBootstrap& bootstrap, const MillenniumAtariBssEntry& entry);
+
+// Performs the second proven MOVE.W/DBF transfer in memory and validates the
+// literal first target instructions from the verified Equinox executable. No
+// PRG relocation, disk extraction, write, or 68000 execution is involved.
+[[nodiscard]] MillenniumAtariMaterializedTarget materialize_millennium_atari_target(
+    const MillenniumAtariBssSource& source, const MillenniumAtariBssEntry& entry);
 
 } // namespace eon
