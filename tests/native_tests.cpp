@@ -1,6 +1,7 @@
 #include "platform/game_data.hpp"
 #include "launcher.hpp"
 #include "data/zip_archive.hpp"
+#include "data/amiga_adf.hpp"
 #include "data/fat12.hpp"
 #include "data/sha256.hpp"
 
@@ -90,5 +91,30 @@ int main() {
     assert(atari_data && atari_data->size == 932);
     assert(eon::to_hex(eon::sha256(atari_disk.read(*atari_data)))
         == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
+
+    const auto deuteros_amiga = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
+        return release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga;
+    });
+    assert(deuteros_amiga != releases.end());
+    const auto amiga_disk1 = eon::extract_asset_by_sha256(deuteros_amiga->path,
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+    const auto amiga_disk2 = eon::extract_asset_by_sha256(deuteros_amiga->path,
+        "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a");
+    assert(amiga_disk1 && amiga_disk2);
+    const eon::AmigaAdf system_disk(*amiga_disk1);
+    const eon::AmigaAdf data_disk(*amiga_disk2);
+    assert(system_disk.kind() == eon::AmigaDiskKind::dos);
+    assert(data_disk.kind() == eon::AmigaDiskKind::deuteros_data);
+    assert(system_disk.identifier() == std::string("DOS\0", 4));
+    assert(data_disk.identifier() == std::string("DEU\0", 4));
+    assert(system_disk.boot_checksum_valid());
+    assert(data_disk.boot_checksum_valid());
+    assert(system_disk.root_block() == 880);
+    assert(data_disk.root_block() == 880);
+    const auto system_root = system_disk.sector(40, 0, 0);
+    const auto data_root = data_disk.sector(40, 0, 0);
+    assert(system_root[0] == 0x4e && system_root[1] == 0xf9); // JMP $00040426
+    assert(data_root[0] == 0x00 && data_root[1] == 0x04
+        && data_root[2] == 0xbb && data_root[3] == 0x1a);
     return 0;
 }
