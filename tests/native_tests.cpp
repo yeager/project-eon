@@ -704,6 +704,25 @@ int main() {
     assert(load_plan.main_stage.length == 0x4200);
     assert(load_plan.main_stage.destination == 0x20000);
     assert(load_plan.main_stage.entry_address == 0x21734);
+    const auto& main_entry = load_plan.main_stage_entry;
+    assert(main_entry.entry_address == 0x21734);
+    assert(main_entry.incoming_controller_cell == 0x20976);
+    assert(main_entry.incoming_mode_cell == 0x21704);
+    assert(main_entry.stack_address == 0x22296);
+    assert(main_entry.memory_ceiling == 0x7fff0);
+    assert((main_entry.initialization_calls
+        == std::array<std::uint32_t, 2>{0x20068, 0x2013a}));
+    assert(main_entry.loop_address == 0x217f6);
+    assert(main_entry.loop_first_service_address == 0x22a5a);
+    assert(main_entry.loop_scheduler_address == 0x21380);
+    assert(main_entry.first_state_word_address == 0x21720);
+    assert(main_entry.second_state_word_address == 0x2171e);
+    assert(main_entry.scheduler_enable_word_address == 0x210f2);
+    assert(main_entry.scheduler_enable_word_value == 1);
+    assert(main_entry.first_input_address == 0xdff016);
+    assert(main_entry.first_input_bit == 10);
+    assert(main_entry.second_input_address == 0xbfe001);
+    assert(main_entry.second_input_bit == 6);
     // $21982 writes profile one before returning to the bootstrap. Its table
     // routine supplies these exact raw-track load constants.
     assert(load_plan.title_handoff_profile.disk_offset == 0x6e000);
