@@ -377,4 +377,41 @@ stage_millennium_amiga_resident_helper_pre_setup(
     return {source_words, source_sign_bytes};
 }
 
+MillenniumAmigaResidentFirstPostHelperStaticChain
+parse_millennium_amiga_resident_first_post_helper_static_chain(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentHelperStagingCallsite& callsite) {
+    // This is a static post-JSR byte anchor only. The first caller's next
+    // 86 raw bytes contain two literal JSR encodings at +0x4a and +0x50; the
+    // entire range is hash-bound so a similar-looking patched sequence fails.
+    validate_range(plan.resident_stage);
+    constexpr std::uint32_t entry_address = 0x69624;
+    constexpr std::uint32_t static_start_address = 0x69656;
+    constexpr std::uint32_t next_setup_call_address = 0x696a0;
+    constexpr std::uint32_t next_setup_target = 0x7b77e;
+    constexpr std::uint32_t following_call_address = 0x696a6;
+    constexpr std::uint32_t following_target = 0x7c802;
+    constexpr std::size_t byte_count = 86;
+    constexpr std::array<std::uint8_t, 12> tail_calls{{
+        0x4e, 0xb9, 0x00, 0x07, 0xb7, 0x7e, 0x4e, 0xb9, 0x00, 0x07, 0xc8, 0x02,
+    }};
+    if (callsite.entry_address != entry_address || callsite.post_helper_return_address != static_start_address
+        || static_start_address < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga first post-helper static chain caller");
+    }
+    const auto relative = static_start_address - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || byte_count > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga first post-helper static chain outside resident range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, byte_count);
+    const auto hash = to_hex(sha256(bytes));
+    if (hash != "5f42f9d3078d374f8b4a70fcc59c618abb9381d6b33ef25b3f2967876f0afe7b"
+        || !std::equal(tail_calls.begin(), tail_calls.end(), bytes.end() - tail_calls.size())) {
+        throw std::runtime_error("Unexpected Millennium Amiga first post-helper static chain");
+    }
+    return {entry_address, static_start_address, plan.resident_stage.disk_offset + relative,
+        static_cast<std::uint32_t>(byte_count), hash, next_setup_call_address, next_setup_target,
+        following_call_address, following_target};
+}
+
 } // namespace eon
