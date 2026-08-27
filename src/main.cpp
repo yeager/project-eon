@@ -132,6 +132,15 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.transition_work_palette_address << ", " << std::dec
         << title_stage.transition_palette_word_count << " RGB4 words, mask 0x"
         << std::hex << title_stage.transition_palette_mask << std::dec << '\n';
+    std::cout << "          Transition return: compares 0x" << std::hex
+        << title_stage.transition_first_compare_address << ", 0x"
+        << title_stage.transition_second_compare_address << ", 0x"
+        << title_stage.transition_third_compare_address << "; second phase 0x"
+        << title_stage.transition_second_phase_source_address << " -> 0x"
+        << title_stage.transition_second_phase_first_work_address << "/0x"
+        << title_stage.transition_second_phase_second_work_address << ", slot 0x"
+        << title_stage.transition_second_phase_work_pointer_address << ", rts 0x"
+        << title_stage.transition_return_address << std::dec << '\n';
 }
 
 void report_millennium_dos(const eon::ReleaseArchive& release) {

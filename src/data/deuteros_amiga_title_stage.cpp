@@ -16,11 +16,15 @@ std::uint32_t big32(std::span<const std::uint8_t> bytes, std::size_t offset) {
 }
 
 void require_word(std::span<const std::uint8_t> bytes, std::size_t offset, std::uint16_t expected) {
-    if (big16(bytes, offset) != expected) throw std::runtime_error("Unexpected Deuteros title-stage opcode");
+    if (big16(bytes, offset) != expected) {
+        throw std::runtime_error("Unexpected Deuteros title-stage opcode at offset " + std::to_string(offset));
+    }
 }
 
 void require_long(std::span<const std::uint8_t> bytes, std::size_t offset, std::uint32_t expected) {
-    if (big32(bytes, offset) != expected) throw std::runtime_error("Unexpected Deuteros title-stage operand");
+    if (big32(bytes, offset) != expected) {
+        throw std::runtime_error("Unexpected Deuteros title-stage operand at offset " + std::to_string(offset));
+    }
 }
 
 } // namespace
@@ -36,7 +40,7 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     // not turn the remaining 68000 program into guessed gameplay semantics.
     // Covers the main-loop branch and the complete known timer-dispatch
     // prologue, while remaining inside the verified loaded stage.
-    const auto code = disk.bytes(entry_offset, 0x300);
+    const auto code = disk.bytes(entry_offset, 0x400);
 
     // move.w d0,$4040e; cmp.b #5,d0; bne $40448
     require_word(code, 6, 0x33c0);
@@ -102,11 +106,51 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_word(code, transition + 74, 0xff40);
     require_word(code, transition + 106, 0x4eae); // jsr -$1a4(a6)
     require_word(code, transition + 108, 0xfe5c);
+    require_word(code, transition + 110, 0x3039); // move.w $1ffc8,d0
+    require_long(code, transition + 112, 0x0001ffc8);
+    require_word(code, transition + 116, 0x3239); // move.w $1ffce,d1
+    require_long(code, transition + 118, 0x0001ffce);
+    require_word(code, transition + 122, 0x3439); // move.w $1ffd4,d2
+    require_long(code, transition + 124, 0x0001ffd4);
+    require_word(code, transition + 128, 0xb079); // cmp.w $1ffc8,d0
+    require_long(code, transition + 130, 0x0001ffc8);
+    require_word(code, transition + 136, 0xb279); // cmp.w $1ffce,d1
+    require_long(code, transition + 138, 0x0001ffce);
+    require_word(code, transition + 144, 0xb479); // cmp.w $1ffd4,d2
+    require_long(code, transition + 146, 0x0001ffd4);
+    // The original branch supplies three work addresses to -$1a4, then
+    // clears the active byte, restores the saved display word, and returns.
+    require_word(code, transition + 152, 0x41f9); // lea $12e12,a0
+    require_long(code, transition + 154, 0x00012e12);
+    require_word(code, transition + 158, 0x43f9); // lea $1ffda,a1
+    require_long(code, transition + 160, 0x0001ffda);
+    require_word(code, transition + 164, 0x45f9); // lea $1ffe6,a2
+    require_long(code, transition + 166, 0x0001ffe6);
+    require_word(code, transition + 170, 0x23ca); // move.l a2,$2008e
+    require_long(code, transition + 172, 0x0002008e);
+    require_word(code, transition + 182, 0x4eae); // jsr -$1a4(a6)
+    require_word(code, transition + 184, 0xfe5c);
+    require_word(code, transition + 186, 0x13fc); // move.b #0,$202c6
+    require_word(code, transition + 188, 0x0000);
+    require_long(code, transition + 190, 0x000202c6);
+    require_word(code, transition + 194, 0x41f9); // lea $12e12,a0
+    require_long(code, transition + 196, 0x00012e12);
+    require_word(code, transition + 200, 0x43f9); // lea $1ed24,a1
+    require_long(code, transition + 202, 0x0001ed24);
+    require_word(code, transition + 206, 0x7010); // moveq #16,d0
+    require_word(code, transition + 214, 0x4eae); // jsr -$c0(a6)
+    require_word(code, transition + 216, 0xff40);
+    require_word(code, transition + 218, 0x301f); // move.w (a7)+,d0
+    require_word(code, transition + 220, 0x33c0); // move.w d0,$202b8
+    require_long(code, transition + 222, 0x000202b8);
+    require_word(code, transition + 226, 0x4e75); // rts
 
     return {stage.entry_address, 0x4040e, 5, 0x3717e, 0x38092, 0x101,
         0x19d52, 1, 0x40574, 0x222c0, 0x23e4e, 0x40410, 0xea60, 0x4069a,
         0x202c6, 0x202b8, 0x1ed24, 0x40678, 16, 0x0eee, 0x12fec,
-        static_cast<std::int16_t>(-0xc0), static_cast<std::int16_t>(-0x1a4)};
+        static_cast<std::int16_t>(-0xc0), static_cast<std::int16_t>(-0x1a4),
+        0x12e12, 0x1ffda, 0x1ffe6, 0x2008e, 0x1ffc8, 0x1ffce, 0x1ffd4,
+        0x40776};
 }
 
 } // namespace eon

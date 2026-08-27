@@ -343,6 +343,15 @@ uses the original graphics-library base from `$12fec` for vectors `-$c0` and
 records this as a timed title display transition, not as a guessed description
 of a menu or gameplay screen.
 
+The same `$4069a` routine has a bounded, verified return phase. It reads and
+compares words at `$1ffc8`, `$1ffce`, and `$1ffd4`; on its original branch it
+supplies `$12e12`, `$1ffda`, and `$1ffe6` to vector `-$1a4` and stores the last
+address in `$2008e`. It subsequently clears `$202c6`, invokes `-$c0` with
+`$12e12`, `$1ed24`, and count 16, restores the saved `$202b8` word from the
+stack, and returns at `$40776`. The parser opcode-validates every fact here;
+the addresses are preserved as raw machine-state boundaries rather than named
+as a presumed menu, fade, or gameplay subsystem.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
