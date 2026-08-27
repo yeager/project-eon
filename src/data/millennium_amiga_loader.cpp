@@ -915,4 +915,52 @@ parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
         entry + 10, target, plan.resident_stage.disk_offset + target_relative, prefix_hash};
 }
 
+MillenniumAmigaResidentSeparateComparisonBoundary
+parse_millennium_amiga_resident_separate_comparison_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparatePostCallTailBranchBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68e6c, continuation = 0x68e90;
+    constexpr std::array<std::uint8_t, 4> preceding_branch{{0x66, 0x00, 0x00, 0x5e}};
+    constexpr std::array<std::uint8_t, 36> expected{{
+        0x42, 0x40, 0x42, 0x41, 0xb6, 0x3c, 0x00, 0x08,
+        0x67, 0x00, 0x00, 0x0a, 0x65, 0x00, 0x00, 0x04,
+        0x55, 0x01, 0x52, 0x01, 0xb4, 0x3c, 0x00, 0x08,
+        0x67, 0x00, 0x00, 0x0a, 0x65, 0x00, 0x00, 0x04,
+        0x55, 0x00, 0x52, 0x00,
+    }};
+    constexpr std::string_view expected_hash =
+        "8cb29601f0c76406930e37d44b29853501857c36f3cb833ccdd32e78418597d4";
+    constexpr std::string_view continuation_hash =
+        "8a81ad1a39efe0442addd9302b3b0e5e0c0bd72ecaf5904d2fa5e1c2834cd964";
+    if (boundary.conditional_branch_target != 0x68dec || entry < plan.resident_stage.destination
+        || continuation < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga comparison boundary placement");
+    }
+    constexpr std::uint32_t preceding_address = 0x68e0c;
+    const auto relative = entry - plan.resident_stage.destination;
+    const auto preceding_relative = preceding_address - plan.resident_stage.destination;
+    const auto continuation_relative = continuation - plan.resident_stage.destination;
+    if (expected.size() > plan.resident_stage.length - relative
+        || preceding_branch.size() > plan.resident_stage.length - preceding_relative
+        || 32U > plan.resident_stage.length - continuation_relative) {
+        throw std::runtime_error("Millennium Amiga comparison boundary is outside raw range");
+    }
+    const auto source = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto preceding = disk.bytes(plan.resident_stage.disk_offset + preceding_relative,
+        preceding_branch.size());
+    const auto prefix = disk.bytes(plan.resident_stage.disk_offset + continuation_relative, 32);
+    const auto hash = to_hex(sha256(source));
+    const auto prefix_hash = to_hex(sha256(prefix));
+    if (!std::equal(expected.begin(), expected.end(), source.begin())
+        || !std::equal(preceding_branch.begin(), preceding_branch.end(), preceding.begin())
+        || hash != expected_hash || prefix_hash != continuation_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga comparison boundary");
+    }
+    // The preceding BNE.W displacement is based at extension word $68e0e.
+    return {entry, plan.resident_stage.disk_offset + relative, hash, preceding_address, entry,
+        {entry + 8, entry + 12, entry + 24, entry + 28},
+        {0x68e80, 0x68e7e, 0x68e90, 0x68e8e},
+        plan.resident_stage.disk_offset + continuation_relative, prefix_hash};
+}
+
 } // namespace eon

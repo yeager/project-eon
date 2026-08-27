@@ -454,6 +454,18 @@ static branch/call encodings. This records only raw control-flow provenance:
 none of the prior calls are assumed to return, and no live RAM value, target
 semantics, or later call is executed.
 
+The `BNE.W` at `$68e0c` in that target has extension-word base `$68e0e`; its
+literal `$005e` therefore resolves to `$68e6c`. The 36 raw bytes at that
+destination / ADF `+0x1726c` hash to
+`8cb29601f0c76406930e37d44b29853501857c36f3cb833ccdd32e78418597d4` and
+contain two local compare pairs: the `D3` pair branches to `$68e80`/`$68e7e`,
+and the `D2` pair to `$68e90`/`$68e8e`. Its direct continuation at `$68e90`
+maps to ADF `+0x17290`, whose first 32 bytes hash to
+`8a81ad1a39efe0442addd9302b3b0e5e0c0bd72ecaf5904d2fa5e1c2834cd964`.
+This is byte-exact static provenance only: `D2`, `D3`, condition codes, and
+all resulting paths remain runtime-dependent and have no inferred gameplay
+meaning.
+
 At that zero-target `$6854a`, the next isolated static boundary compares `D2`
 with immediate `$0120`; its conditional branch is encoded at `$6854e` and
 targets `$68562`. Project Eon records only this byte-exact comparison/branch

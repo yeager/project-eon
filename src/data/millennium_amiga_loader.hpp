@@ -447,4 +447,25 @@ parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
     const AmigaAdf&, const MillenniumAmigaLoadPlan&,
     const MillenniumAmigaResidentSeparatePostCallTailBoundary&);
 
+// The BNE.W embedded in the prior target reaches this separate, fully local
+// pair of D3/D2 comparison branches. Only the literal encodings and their
+// resolved local targets are preserved: register values, flags, and purpose
+// remain runtime-dependent and unclassified.
+struct MillenniumAmigaResidentSeparateComparisonBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::string sha256;
+    std::uint32_t preceding_branch_address = 0;
+    std::uint32_t preceding_branch_target = 0;
+    std::array<std::uint32_t, 4> conditional_branch_addresses{};
+    std::array<std::uint32_t, 4> conditional_branch_targets{};
+    std::size_t continuation_raw_disk_offset = 0;
+    std::string continuation_prefix_sha256;
+};
+
+[[nodiscard]] MillenniumAmigaResidentSeparateComparisonBoundary
+parse_millennium_amiga_resident_separate_comparison_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&,
+    const MillenniumAmigaResidentSeparatePostCallTailBranchBoundary&);
+
 } // namespace eon

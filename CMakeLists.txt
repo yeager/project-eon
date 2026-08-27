@@ -79,6 +79,31 @@ target_compile_definitions(project-eon PRIVATE
     EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
 target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
 
+# iPadOS uses the same SDL3 code as the desktop builds, with Project Eon's
+# own cards and catalogs embedded as resources. Supplied game archives are
+# deliberately not copied into the application bundle or IPA.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set_target_properties(project-eon PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME "Project Eon"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.yeager.projecteon"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/ios/Info.plist.in"
+        XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "2"
+        XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0"
+        XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+    )
+    foreach(resource IN ITEMS assets/cards/millennium.png assets/cards/deuteros.png)
+        set_source_files_properties("${resource}" PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources/assets/cards")
+        target_sources(project-eon PRIVATE "${resource}")
+    endforeach()
+    foreach(catalog IN ITEMS ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN)
+        set_source_files_properties("po/${catalog}.po" PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources/po")
+        target_sources(project-eon PRIVATE "po/${catalog}.po")
+    endforeach()
+endif()
+
 # Mirror OpenCaptive's development/package layout: launcher artwork is kept
 # separate from original game data and copied beside the executable.
 add_custom_command(TARGET project-eon POST_BUILD
