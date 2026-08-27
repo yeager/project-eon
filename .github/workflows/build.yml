@@ -94,6 +94,13 @@ jobs:
           cmake -S zlib-src -B zlib-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/zlib-install"
           cmake --build zlib-build --config Release --parallel 2
           cmake --install zlib-build --config Release
+      - name: Build libpng for SDL3_image
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch v1.6.50 https://github.com/pnggroup/libpng.git libpng-src
+          cmake -S libpng-src -B libpng-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/libpng-install" -DPNG_SHARED=ON -DPNG_STATIC=OFF -DZLIB_ROOT="${{ github.workspace }}/zlib-install"
+          cmake --build libpng-build --config Release --parallel 2
+          cmake --install libpng-build --config Release
       - name: Build SDL3
         shell: pwsh
         run: |
@@ -104,12 +111,12 @@ jobs:
       - name: Build Project Eon
         shell: pwsh
         run: |
-          cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install;${{ github.workspace }}/zlib-install"
+          cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install;${{ github.workspace }}/libpng-install;${{ github.workspace }}/zlib-install"
           cmake --build build --config Release --parallel 2
       - name: Test native code without proprietary game data
         shell: pwsh
         run: |
-          $env:PATH = "${{ github.workspace }}/SDL3-install/bin;${{ github.workspace }}/zlib-install/bin;$env:PATH"
+          $env:PATH = "${{ github.workspace }}/SDL3-install/bin;${{ github.workspace }}/libpng-install/bin;${{ github.workspace }}/zlib-install/bin;$env:PATH"
           ctest --test-dir build -C Release -j4 --output-on-failure
       - name: Test preservation tooling
         run: python -m unittest discover -s tests -v
@@ -198,12 +205,12 @@ jobs:
           for framework in "$APP/Contents/Frameworks/"*.dylib; do
             test -e "$framework" && bundle_dylib "$framework"
           done
-          codesign --force --deep -s - "$APP"
           cat > "$APP/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleVersion</key><string>0.1.0</string></dict></plist>
           PLIST
+          codesign --force --deep -s - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "project-eon-macos-${{ matrix.arch }}.zip"
       - uses: actions/upload-artifact@v7
         with:
@@ -227,6 +234,10 @@ jobs:
           cmake -S zlib-src -B zlib-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/zlib-install"
           cmake --build zlib-build --config Release --parallel 2
           cmake --install zlib-build --config Release
+          git clone --depth 1 --branch v1.6.50 https://github.com/pnggroup/libpng.git libpng-src
+          cmake -S libpng-src -B libpng-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/libpng-install" -DPNG_SHARED=ON -DPNG_STATIC=OFF -DZLIB_ROOT="${{ github.workspace }}/zlib-install"
+          cmake --build libpng-build --config Release --parallel 2
+          cmake --install libpng-build --config Release
           git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
           cmake -S SDL3-src -B SDL3-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/SDL3-install" -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
           cmake --build SDL3-build --config Release --parallel 2
@@ -234,11 +245,15 @@ jobs:
       - name: Build and stage Project Eon only
         shell: pwsh
         run: |
-          cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install;${{ github.workspace }}/zlib-install"
+          cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install;${{ github.workspace }}/libpng-install;${{ github.workspace }}/zlib-install"
           cmake --build build --config Release --parallel 2
           New-Item -ItemType Directory -Force dist/assets/cards | Out-Null
           Copy-Item build/Release/project-eon.exe dist/project-eon.exe
           Copy-Item "${{ github.workspace }}/SDL3-install/bin/SDL3.dll" dist/SDL3.dll
+          $sdlImage = Get-ChildItem build -Recurse -Filter SDL3_image.dll | Select-Object -First 1
+          if ($null -eq $sdlImage) { throw "SDL3_image.dll was not produced" }
+          Copy-Item $sdlImage.FullName dist/SDL3_image.dll
+          Get-ChildItem "${{ github.workspace }}/libpng-install/bin/libpng*.dll" | Copy-Item -Destination dist
           Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" -ErrorAction SilentlyContinue | Copy-Item -Destination dist
           Copy-Item assets/cards/*.png dist/assets/cards/
           Copy-Item README.md,LICENSE dist/
