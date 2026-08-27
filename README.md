@@ -130,6 +130,10 @@ The Spanish Millennium floppy is now opened as a native FAT12 filesystem. Its
 integration tests lock the extracted `2200AD.EXE` and `GX.LIB` contents to
 their observed SHA-256 hashes.
 
+The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
+Millennium disk. Nested extraction locates the disk by SHA-256 independently of
+its filename and reads its 13 root files, including verified `DATA12.BIN`.
+
 The repository does not contain the commercial games. Point the inventory tool
 at a directory containing the original archives:
 

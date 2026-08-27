@@ -2,8 +2,10 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace eon {
@@ -54,6 +56,10 @@ struct ArchiveAsset {
 
 [[nodiscard]] std::vector<ArchiveAsset> inventory_zip(
     const std::filesystem::path& path,
+    unsigned maximum_nesting = 2);
+[[nodiscard]] std::optional<std::vector<std::uint8_t>> extract_asset_by_sha256(
+    const std::filesystem::path& path,
+    std::string_view expected_sha256,
     unsigned maximum_nesting = 2);
 
 } // namespace eon

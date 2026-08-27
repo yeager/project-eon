@@ -76,5 +76,19 @@ int main() {
         == "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6");
     assert(eon::to_hex(eon::sha256(disk.read(*graphics)))
         == "e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767");
+
+    const auto atari_release = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
+        return release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st;
+    });
+    assert(atari_release != releases.end());
+    const auto atari_image = eon::extract_asset_by_sha256(atari_release->path,
+        "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7");
+    assert(atari_image);
+    const eon::Fat12Disk atari_disk(*atari_image);
+    assert(atari_disk.root_entries().size() == 13);
+    const auto* atari_data = atari_disk.find("DATA12.BIN");
+    assert(atari_data && atari_data->size == 932);
+    assert(eon::to_hex(eon::sha256(atari_disk.read(*atari_data)))
+        == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
     return 0;
 }
