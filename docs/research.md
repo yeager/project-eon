@@ -76,6 +76,14 @@ state, reserves memory up to `0x7fff0`, programs Amiga custom-chip registers,
 and enters its input/display loop. These constants are decoded and opcode-
 validated by the native `parse_deuteros_amiga_load_plan` implementation.
 
+The main-stage resource loader reads a five-entry disk-offset table from that
+verified code block. The first two entries are bundles at `0x1b800` (length
+`0x2f3f4`, four objects, mode 0) and `0x4ba00` (length `0x215f0`, six objects,
+mode 1). Their 60-byte pointer catalogues are parsed from the clean ADF and all
+non-null relative pointers are checked against the declared bundle length. See
+[PRESERVATION.md](PRESERVATION.md) for the evidence ledger and reproduction
+requirements.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are

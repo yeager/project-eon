@@ -152,7 +152,9 @@ resource decoding and cross-platform comparison. Original data paths are
 ignored by Git.
 
 See [docs/research.md](docs/research.md) for the reverse-engineering method and
-current findings.
+current findings. The hash ledger, evidence levels, reproduction procedure,
+and contribution rules live in the
+[preservation record](docs/PRESERVATION.md).
 
 ## Repository
 
