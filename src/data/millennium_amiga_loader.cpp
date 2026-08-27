@@ -99,4 +99,34 @@ MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(const AmigaAdf& disk) {
     return plan;
 }
 
+MillenniumAmigaResidentEntry parse_millennium_amiga_resident_entry(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    validate_range(plan.first_stage);
+    validate_range(plan.resident_stage);
+    if (plan.resident_entry != plan.resident_stage.destination) {
+        throw std::runtime_error("Millennium Amiga resident entry is outside its loaded range");
+    }
+
+    constexpr std::array<std::uint8_t, 20> entry_prefix{{
+        0x4e, 0xb9, 0x00, 0x07, 0x87, 0xd4, // jsr $787d4
+        0x4a, 0x03,                         // tst.b d3
+        0x67, 0x04,                         // beq.s past OR
+        0x00, 0x40, 0x01, 0x00,             // ori.w #$0100,d0
+        0x33, 0xc0, 0x00, 0x07, 0xb7, 0x5a, // move.w d0,$7b75a
+    }};
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset, entry_prefix.size() + 2U);
+    if (!std::equal(entry_prefix.begin(), entry_prefix.end(), bytes.begin())
+        || bytes[entry_prefix.size()] != 0x4e || bytes[entry_prefix.size() + 1U] != 0x75) {
+        throw std::runtime_error("Unexpected Millennium Amiga resident entry gate");
+    }
+
+    constexpr std::uint32_t initializer_address = 0x787d4;
+    const auto first_end = static_cast<std::uint64_t>(plan.first_stage.destination)
+        + plan.first_stage.length;
+    if (initializer_address < plan.first_stage.destination || initializer_address >= first_end) {
+        throw std::runtime_error("Millennium Amiga resident initializer is outside first stage RAM");
+    }
+    return {plan.resident_entry, initializer_address, 0x7b75a, 0x0100};
+}
+
 } // namespace eon

@@ -147,6 +147,12 @@ int main() {
     assert(defjam_plan.resident_stage.destination == 0x68000);
     assert(defjam_plan.resident_entry == 0x68000);
     assert(defjam_plan.loader_magic == 0xa8d398fb);
+    const auto defjam_resident = eon::parse_millennium_amiga_resident_entry(
+        defjam_loader_disk, defjam_plan);
+    assert(defjam_resident.entry_address == 0x68000);
+    assert(defjam_resident.initializer_address == 0x787d4);
+    assert(defjam_resident.result_word_address == 0x7b75a);
+    assert(defjam_resident.d3_nonzero_or_mask == 0x0100);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);
