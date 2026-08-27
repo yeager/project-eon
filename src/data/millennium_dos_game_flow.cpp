@@ -37,6 +37,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f4_table_offset = 0x2fd7 - load_bias;
     constexpr std::size_t f4_handler_offset = 0x72f9 - load_bias;
     constexpr std::size_t f4_common_offset = 0xba5e - load_bias;
+    constexpr std::size_t f4_guard_clear_context_offset = 0xa553 - load_bias;
     constexpr std::size_t f5_table_offset = 0x2fdf - load_bias;
     constexpr std::size_t f5_handler_offset = 0x7597 - load_bias;
     constexpr std::size_t f6_table_offset = 0x2fe7 - load_bias;
@@ -132,6 +133,9 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0xb8, 0x05, 0x00, 0xe8, 0xc8, 0x92, 0xc6, 0x06,
         0x13, 0xda, 0x07, 0xe8, 0x69, 0xe3, 0xc6, 0x06,
         0x1e, 0xda, 0x09, 0xc6, 0x06, 0xa9, 0x75, 0x00, 0xc3});
+    constexpr auto f4_guard_clear = std::to_array<std::uint8_t>({
+        0x8b, 0x0e, 0x9e, 0xa1, 0xc7, 0x06, 0x9e, 0xa1, 0x00, 0x00,
+        0x32, 0xed});
     // Record four (raw F5 / $3f) enters $7597. Its only directly observable
     // behavior is AL=$02 followed by four near calls and a return; their
     // effects depend on native runtime state and are deliberately not run.
@@ -251,6 +255,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f4_table_offset, f4_table)
         || !has_bytes(game_executable, f4_handler_offset, f4_handler)
         || !has_bytes(game_executable, f4_common_offset, f4_common)
+        || !has_bytes(game_executable, f4_guard_clear_context_offset, f4_guard_clear)
         || !has_bytes(game_executable, f5_table_offset, f5_table)
         || !has_bytes(game_executable, f5_handler_offset, f5_handler)
         || !has_bytes(game_executable, f6_table_offset, f6_table)
@@ -319,6 +324,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .fourth_function_key = {
             .handler_address = 0x72f9,
             .initialization_guard_address = 0xa19e,
+            .initialization_guard_clear_address = 0xa557,
             .transfer_al_value = 2,
             .common_routine_address = 0xba5e,
             .first_call_address = 0x4d2c,

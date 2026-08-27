@@ -659,8 +659,13 @@ and transfer to `$ba5e`. The recovered common bytes first load `AX=$0005` and
 call `$4d2c`, then write `$07` to `$da13`, call `$9dd5`, write `$09` to
 `$da1e`, clear `$75a9`, and return. These are code-validated addresses and
 literal writes only: the calls' effects and the runtime cells' meaning are not
-inferred. Project Eon exposes the gate and first write after F4, never supplies
-the guard, invokes native code, or mutates executable/archive/save media.
+inferred. The guard is not save-backed: original code at `$a557` contains
+`mov cx,[$a19e]; mov word [$a19e],$0000`, but the preceding path branches on
+native runtime values. This proves the guard's real producer without proving
+that a fresh key event passes it. Project Eon exposes the clear site and the
+conditional common-path writes as evidence, but never supplies the guard,
+applies F4's writes to its overlay, invokes native code, or mutates
+executable/archive/save media.
 
 The fifth table record (raw F5 / `$3f`) is `18 1e 09 1b 34 04 97 75`, with
 handler entry `$7597`. It loads `AL=$02`, then makes near calls to `$be28`,

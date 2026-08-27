@@ -315,6 +315,7 @@ int main() {
     assert(game_flow.third_function_key.list_address == 0x6e99);
     assert(game_flow.fourth_function_key.handler_address == 0x72f9);
     assert(game_flow.fourth_function_key.initialization_guard_address == 0xa19e);
+    assert(game_flow.fourth_function_key.initialization_guard_clear_address == 0xa557);
     assert(game_flow.fourth_function_key.transfer_al_value == 2);
     assert(game_flow.fourth_function_key.common_routine_address == 0xba5e);
     assert(game_flow.fourth_function_key.first_call_address == 0x4d2c);
@@ -375,6 +376,15 @@ int main() {
         rejected_altered_f4_common = true;
     }
     assert(rejected_altered_f4_common);
+    auto altered_f4_guard_clear = *game_executable;
+    altered_f4_guard_clear[0xa557 - 0x100] ^= 0x01;
+    bool rejected_altered_f4_guard_clear = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f4_guard_clear));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f4_guard_clear = true;
+    }
+    assert(rejected_altered_f4_guard_clear);
     auto altered_f5_handler = *game_executable;
     altered_f5_handler[0x7597 - 0x100] ^= 0x01;
     bool rejected_altered_f5_handler = false;

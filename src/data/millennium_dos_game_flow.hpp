@@ -64,6 +64,10 @@ struct MillenniumDosThirdFunctionKeyTrace {
 struct MillenniumDosFourthFunctionKeyTrace {
     std::uint16_t handler_address = 0;
     std::uint16_t initialization_guard_address = 0;
+    // Original code here writes zero to initialization_guard_address. Reaching
+    // it still depends on prior native runtime values, so it is provenance,
+    // not permission to manufacture a guard value.
+    std::uint16_t initialization_guard_clear_address = 0;
     std::uint8_t transfer_al_value = 0;
     std::uint16_t common_routine_address = 0;
     std::uint16_t first_call_address = 0;
