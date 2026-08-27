@@ -51,6 +51,9 @@
 0d30d  int      0x21
 ```
 
+The `0x10124` operand shown by the disassembler is arithmetic before 16-bit
+IP wrapping; the actual near-call target is `0x0124`.
+
 Selected strings:
 
 - `0x4b1`: `ERROR!`

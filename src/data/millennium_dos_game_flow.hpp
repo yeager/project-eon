@@ -268,7 +268,7 @@ struct MillenniumDosGameFlow {
     // setup. They do not claim that any called native routine returns.
     std::uint16_t startup_address = 0;
     std::uint16_t startup_stack_pointer = 0;
-    std::uint32_t startup_first_call_address = 0;
+    std::uint16_t startup_first_call_address = 0;
     std::uint16_t startup_mode_byte_address = 0;
     std::uint8_t startup_mode_equal_value = 0;
     std::uint32_t startup_equal_call_address = 0;

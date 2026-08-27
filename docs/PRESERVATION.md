@@ -1099,7 +1099,8 @@ uses DOS services and loads original libraries. See the
 The English `2200AD.EXE` COM entry preserves the original segment setup before
 the recovered main loop: loaded `$d2b0` first establishes `DS=CS` and `ES=CS`;
 the following `$d2b4` block establishes `SS=CS`, `SP=$da00`, and makes its
-first direct call to `$10124`. It stores the native result in original cells,
+first direct call to `$0124` (the raw near-call arithmetic crosses `$ffff`,
+then wraps in 16-bit IP). It stores the native result in original cells,
 compares its `AL` byte with `$01`, and selects direct call `$d1a1` or `$d1b5`.
 After another original call it tests `DX`; the nonzero static edge is `$d44b`.
 Project Eon validates these bytes, addresses, and branch targets, but does not
