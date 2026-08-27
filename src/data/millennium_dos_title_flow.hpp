@@ -64,6 +64,13 @@ struct MillenniumDosTitleFlow {
     std::uint16_t launcher_private_interrupt_install_address = 0;
     std::uint8_t launcher_private_interrupt_number = 0;
     std::uint16_t launcher_private_interrupt_handler_offset = 0;
+    // The original 91h query stores BX/ES in this adjacent raw cell pair.
+    // Later code loads DX/DS from that same pair before a second AX=$2591
+    // call. Neither interrupt's effect nor the cells' runtime contents are
+    // inferred.
+    std::uint16_t launcher_private_interrupt_saved_offset_cell = 0;
+    std::uint16_t launcher_private_interrupt_saved_segment_cell = 0;
+    std::uint16_t launcher_private_interrupt_restore_address = 0;
     std::size_t launcher_title_offset = 0;
     std::size_t launcher_game_offset = 0;
     std::string launcher_title_program;

@@ -393,7 +393,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_private_interrupt_loader_call_target << ", setup 0x"
         << flow.launcher_private_interrupt_install_address << " offset 0x"
         << flow.launcher_private_interrupt_handler_offset << std::dec
-        << " (segment unmodelled))\n";
+        << " (segment unmodelled; raw save 0x" << std::hex
+        << flow.launcher_private_interrupt_saved_offset_cell << "/0x"
+        << flow.launcher_private_interrupt_saved_segment_cell << ", restore 0x"
+        << flow.launcher_private_interrupt_restore_address << std::dec << "))\n";
     constexpr auto static_data_sha256 =
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
     const auto static_data = eon::extract_asset_by_sha256(release.path, static_data_sha256);

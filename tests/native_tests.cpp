@@ -581,6 +581,9 @@ int main() {
     assert(title_flow.launcher_private_interrupt_install_address == 0x209);
     assert(title_flow.launcher_private_interrupt_number == 0x91);
     assert(title_flow.launcher_private_interrupt_handler_offset == 0);
+    assert(title_flow.launcher_private_interrupt_saved_offset_cell == 0x5e7);
+    assert(title_flow.launcher_private_interrupt_saved_segment_cell == 0x5e9);
+    assert(title_flow.launcher_private_interrupt_restore_address == 0x269);
     assert(title_flow.launcher_title_offset == 0x58f);
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");

@@ -165,6 +165,12 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 12> launcher_private_interrupt_install{
         0xe8, 0xc8, 0x00, 0x33, 0xd2, 0xb8, 0x91, 0x25,
         0xcd, 0x21, 0x0e, 0x1f};
+    constexpr std::array<std::uint8_t, 13> launcher_private_interrupt_query{
+        0xb8, 0x91, 0x35, 0xcd, 0x21, 0x89, 0x1e, 0xe7,
+        0x05, 0x8c, 0x06, 0xe9, 0x05};
+    constexpr std::array<std::uint8_t, 10> launcher_private_interrupt_restore{
+        0x50, 0xc5, 0x16, 0xe7, 0x05, 0xb8, 0x91, 0x25,
+        0xcd, 0x21};
     constexpr std::array<std::uint8_t, 7> launcher_pre_title_callee_join_target_prefix{
         0xb4, 0x4c, 0xcd, 0x21, 0x32, 0xc0, 0xcf};
     constexpr std::array<std::uint8_t, 11> title_name{
@@ -233,6 +239,14 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
                    launcher_private_interrupt_install)) {
         throw std::runtime_error("Unsupported Millennium DOS private interrupt installation");
     }
+    constexpr std::size_t private_interrupt_query_address = 0x167;
+    constexpr std::size_t private_interrupt_restore_address = 0x269;
+    if (!has_bytes(mill_launcher, private_interrupt_query_address - mill_load_bias,
+                   launcher_private_interrupt_query)
+        || !has_bytes(mill_launcher, private_interrupt_restore_address - mill_load_bias,
+                      launcher_private_interrupt_restore)) {
+        throw std::runtime_error("Unsupported Millennium DOS private interrupt preservation chain");
+    }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
     const auto game_offset = require_unique(mill_launcher, game_name, "launcher game program");
     if (title_offset >= game_offset || game_offset != title_offset + title_name.size()) {
@@ -286,6 +300,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_private_interrupt_install_address = private_interrupt_install_address,
         .launcher_private_interrupt_number = 0x91,
         .launcher_private_interrupt_handler_offset = 0,
+        .launcher_private_interrupt_saved_offset_cell = 0x5e7,
+        .launcher_private_interrupt_saved_segment_cell = 0x5e9,
+        .launcher_private_interrupt_restore_address = private_interrupt_restore_address,
         .launcher_title_offset = title_offset,
         .launcher_game_offset = game_offset,
         .launcher_title_program = "TITLES.EXE",
