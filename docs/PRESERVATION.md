@@ -369,11 +369,13 @@ live data or helper effect can be reconstructed.
 No proven direct caller into either staging entry exists in the original raw
 resident range. A full raw scan of disk `0x16400..0x42400` finds zero literal
 absolute `JSR`, zero literal absolute `JMP`, and zero PC-relative `BSR.W`
-encodings that resolve to either `$69624` or `$69b88`. This is a precisely
-limited negative fact: it excludes only those static forms. Register-indirect
-calls, other computed branches, transformed first-stage paths, and runtime
-dispatch remain unproven, so Project Eon does not claim that the staging
-entries are unreachable or synthesize callers.
+encodings that resolve to either `$69624` or `$69b88`. It additionally finds
+zero fully local `MOVEA.L #entry,An` immediately followed by `JSR (An)` or
+`JMP (An)` pairs. This is a precisely limited negative fact: it excludes only
+those static forms. Wider register-indirect calls, other computed branches,
+transformed first-stage paths, and runtime dispatch remain unproven, so
+Project Eon does not claim that the staging entries are unreachable or
+synthesize callers.
 
 The setup target `$7b77e` is now separately fingerprinted at its linear
 raw-media correspondence, disk offset `0x29b7e`. Its first 32 original bytes

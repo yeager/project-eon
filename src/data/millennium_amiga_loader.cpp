@@ -450,9 +450,9 @@ MillenniumAmigaResidentStagingDirectReachabilityBoundary
 parse_millennium_amiga_resident_staging_direct_reachability_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const std::array<MillenniumAmigaResidentHelperStagingCallsite, 2>& callsites) {
-    // Search raw absolute JSR/JMP.L and the statically resolvable BSR.W form.
-    // This deliberately stops short of arbitrary disassembly or resolving
-    // register-indirect calls, which the preceding loader transform may affect.
+    // Search raw absolute JSR/JMP.L, statically resolvable BSR.W, and only
+    // fully local MOVEA.L #address,An + JSR/JMP (An) pairs. This deliberately
+    // stops short of arbitrary disassembly or wider register tracking.
     validate_range(plan.resident_stage);
     constexpr std::array<std::uint32_t, 2> entries{{0x69624, 0x69b88}};
     if (callsites[0].entry_address != entries[0] || callsites[1].entry_address != entries[1]) {
@@ -486,10 +486,32 @@ parse_millennium_amiga_resident_staging_direct_reachability_boundary(
                 if (target == entries[index]) ++result.pc_relative_bsr_word_counts[index];
             }
         }
+        if (offset + 8U <= bytes.size() && (opcode & 0xf1ffU) == 0x207cU) {
+            // MOVEA.L #imm,An encodes as 0x20/22/.../2e 0x7c. Restrict to
+            // that exact immediate form and an immediately following (An)
+            // control transfer so the address-register value is fully local.
+            if (bytes[offset + 1U] == 0x7cU) {
+                const auto register_index = static_cast<std::uint16_t>((opcode >> 9U) & 7U);
+                const auto immediate_target = big32(bytes, offset + 2U);
+                const auto transfer = static_cast<std::uint16_t>(
+                    (static_cast<std::uint16_t>(bytes[offset + 6U]) << 8U) | bytes[offset + 7U]);
+                for (std::size_t index = 0; index < entries.size(); ++index) {
+                    if (immediate_target != entries[index]) continue;
+                    if (transfer == static_cast<std::uint16_t>(0x4e90U + register_index)) {
+                        ++result.local_immediate_register_jsr_counts[index];
+                    }
+                    if (transfer == static_cast<std::uint16_t>(0x4ed0U + register_index)) {
+                        ++result.local_immediate_register_jmp_counts[index];
+                    }
+                }
+            }
+        }
     }
     if (result.absolute_jsr_counts != std::array<std::uint32_t, 2>{}
         || result.absolute_jmp_counts != std::array<std::uint32_t, 2>{}
-        || result.pc_relative_bsr_word_counts != std::array<std::uint32_t, 2>{}) {
+        || result.pc_relative_bsr_word_counts != std::array<std::uint32_t, 2>{}
+        || result.local_immediate_register_jsr_counts != std::array<std::uint32_t, 2>{}
+        || result.local_immediate_register_jmp_counts != std::array<std::uint32_t, 2>{}) {
         throw std::runtime_error("Millennium Amiga staging entries gained direct absolute reachability");
     }
     return result;
