@@ -53,11 +53,27 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t transition_second_compare_address = 0;
     std::uint32_t transition_third_compare_address = 0;
     std::uint32_t transition_return_address = 0;
+    // The code immediately following the timed display routine forms another
+    // verified state loop. It clears this word, passes it through original
+    // helper calls, then compares a returned word with these literal values
+    // before writing the word again. The original's higher-level labels for
+    // this state and its values have not been recovered.
+    std::uint32_t post_transition_control_address = 0;
+    std::uint16_t post_transition_control_reset_value = 0;
+    std::uint32_t post_transition_first_helper_address = 0;
+    std::uint32_t post_transition_second_helper_address = 0;
+    std::uint32_t post_transition_third_helper_address = 0;
+    std::uint32_t post_transition_response_helper_address = 0;
+    std::uint16_t post_transition_response_code = 0;
+    std::uint16_t post_transition_first_compare_value = 0;
+    std::uint16_t post_transition_second_compare_value = 0;
+    std::uint16_t post_transition_third_compare_value = 0;
+    std::uint32_t post_transition_return_address = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates
-// the known mode branch, recurring main-loop cadence, and the timed display
-// transition dispatch.
+// the known mode branch, recurring main-loop cadence, timed display
+// transition, and following raw control-state loop.
 [[nodiscard]] DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 

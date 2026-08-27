@@ -614,7 +614,18 @@ int main() {
     assert(title_stage.transition_first_compare_address == 0x1ffc8);
     assert(title_stage.transition_second_compare_address == 0x1ffce);
     assert(title_stage.transition_third_compare_address == 0x1ffd4);
-    assert(title_stage.transition_return_address == 0x40776);
+    assert(title_stage.transition_return_address == 0x4077c);
+    assert(title_stage.post_transition_control_address == 0x407e6);
+    assert(title_stage.post_transition_control_reset_value == 0);
+    assert(title_stage.post_transition_first_helper_address == 0x3f7a8);
+    assert(title_stage.post_transition_second_helper_address == 0x1f9a4);
+    assert(title_stage.post_transition_third_helper_address == 0x1fe7a);
+    assert(title_stage.post_transition_response_helper_address == 0x1f238);
+    assert(title_stage.post_transition_response_code == 0x1b);
+    assert(title_stage.post_transition_first_compare_value == 0x20);
+    assert(title_stage.post_transition_second_compare_value == 0x2e);
+    assert(title_stage.post_transition_third_compare_value == 0x2c);
+    assert(title_stage.post_transition_return_address == 0x407e4);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 
