@@ -89,18 +89,25 @@ struct MillenniumDosFourthFunctionKeyTrace {
 
 // Exact, non-semantic trace of table record four (raw F5 / $3f). Its handler
 // immediately loads AL=$02 and calls four in-image routines before returning.
-// The original code does not expose the calls' effects here, so Project Eon
-// records the control-flow facts without executing them or manufacturing the
-// runtime state they require.
+// F5 itself has no store before its first call. The first callee immediately
+// enters another routine, so no post-call state is safe to reconstruct until
+// native execution/return behavior is understood. Project Eon records that
+// exact boundary without executing calls or manufacturing runtime state.
 struct MillenniumDosFifthFunctionKeyTrace {
     std::uint16_t handler_address = 0;
     std::uint8_t transfer_al_value = 0;
-    // The flat COM image crosses 64 KiB; use 32-bit image addresses rather
-    // than silently truncating the two observed high call targets.
-    std::uint32_t first_call_address = 0;
-    std::uint32_t second_call_address = 0;
-    std::uint32_t third_call_address = 0;
-    std::uint32_t fourth_call_address = 0;
+    std::uint16_t first_call_address = 0;
+    // The first instruction at first_call_address is itself a near call.
+    // It is the preservation boundary: no F5-owned store precedes it.
+    std::uint16_t first_call_initial_nested_call_address = 0;
+    std::uint16_t second_call_address = 0;
+    // The second callee begins by comparing this native mode byte to one,
+    // then may wait on native input/hardware state. This is provenance only.
+    std::uint16_t second_call_mode_address = 0;
+    std::uint8_t second_call_mode_value = 0;
+    std::uint16_t third_call_address = 0;
+    std::uint16_t third_call_initial_nested_call_address = 0;
+    std::uint16_t fourth_call_address = 0;
 };
 
 // Exact, non-semantic trace of table record five (raw F6 / $40).  Its native

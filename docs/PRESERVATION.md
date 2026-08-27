@@ -697,12 +697,17 @@ applies F4's writes to its overlay, invokes native code, or mutates
 executable/archive/save media.
 
 The fifth table record (raw F5 / `$3f`) is `18 1e 09 1b 34 04 97 75`, with
-handler entry `$7597`. It loads `AL=$02`, then makes near calls to `$be28`,
-`$10b9d`, `$14bf7`, and `$10b76` before returning. Those four call targets and
-the literal register value are direct code facts; their effects, required
-runtime values, and game meaning are not yet recovered. Project Eon displays
-this immutable trace after F5 but never executes the native calls, supplies
-state, or writes the original executable, archive, or save media.
+handler entry `$7597`. It loads `AL=$02`, has **no memory store**, then makes
+16-bit near calls to `$be28`, `$0b9d`, `$4bf7`, and `$0b76` before returning.
+The original handler's first call target begins `call $52f9`; therefore no
+F5-owned pre-call state change exists and the first safe post-call boundary is
+the return of an unexecuted native call chain. `$0b9d` begins by comparing
+native byte `$07f9` to `$01` and can enter a native input/hardware wait;
+`$4bf7` itself immediately calls `$0bd7`; `$0b76` begins with the same
+`[$07f9] == $01` comparison. These operand and control-flow facts are not
+gameplay semantics and do not justify a host-side overlay effect. Project Eon
+displays this immutable evidence after F5 but never executes native calls,
+supplies state, or writes the original executable, archive, or save media.
 
 The sixth table record (raw F6 / `$40`) is `1e 24 09 1b 35 05 15 74`, with
 handler entry `$7415`. It first returns when runtime word `$a19e` is nonzero.

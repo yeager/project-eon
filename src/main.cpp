@@ -1010,7 +1010,9 @@ int main(int argc, char** argv) {
                             std::ostringstream f5;
                             f5 << "F5 ORIGINAL TRACE: HANDLER $" << std::hex << trace->handler_address
                                << " -> AL=$" << static_cast<unsigned>(trace->transfer_al_value)
-                               << " -> CALLS $" << trace->first_call_address << ",$"
+                               << " -> NO STORE -> CALL $" << trace->first_call_address
+                               << " -> CALL $" << trace->first_call_initial_nested_call_address
+                               << " (BOUNDARY); THEN $"
                                << trace->second_call_address << ",$" << trace->third_call_address
                                << ",$" << trace->fourth_call_address;
                             draw_text(renderer, 610, 390, f5.str());
