@@ -164,6 +164,30 @@ struct MillenniumDosEighthFunctionKeyTrace {
     std::uint16_t repeat_shift_register = 0;
 };
 
+// Exact, non-semantic trace of table record eight (raw F9 / $43). Its native
+// handler has the established $a19e admission gate, clears two native bytes,
+// selects the observed local mode, and can cycle through the F8 preflight
+// routine while the value at $da06 is below nine. Project Eon records these
+// executable facts only; it never supplies or mutates native runtime state.
+struct MillenniumDosNinthFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint16_t initialization_guard_address = 0;
+    std::uint16_t display_selector_call_address = 0;
+    std::uint16_t first_reset_runtime_byte_address = 0;
+    std::uint8_t first_reset_runtime_byte_value = 0;
+    std::uint8_t initial_al_value = 0;
+    std::uint16_t local_mode_address = 0;
+    std::uint8_t local_mode_value = 0;
+    std::uint16_t second_reset_runtime_byte_address = 0;
+    std::uint8_t second_reset_runtime_byte_value = 0;
+    std::uint16_t enabled_runtime_byte_address = 0;
+    std::uint16_t enabled_call_address = 0;
+    std::uint16_t limit_runtime_byte_address = 0;
+    std::uint8_t limit_value = 0;
+    std::uint16_t local_preflight_address = 0;
+    std::uint32_t terminal_call_address = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -186,6 +210,7 @@ struct MillenniumDosGameFlow {
     MillenniumDosSixthFunctionKeyTrace sixth_function_key;
     MillenniumDosSeventhFunctionKeyTrace seventh_function_key;
     MillenniumDosEighthFunctionKeyTrace eighth_function_key;
+    MillenniumDosNinthFunctionKeyTrace ninth_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(

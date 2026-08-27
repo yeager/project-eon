@@ -1005,6 +1005,18 @@ int main(int argc, char** argv) {
                                << " (SHR BL,1 CARRY)";
                             draw_text(renderer, 610, 390, f8.str());
                         }
+                        if (const auto trace = millennium_game_session->last_ninth_function_key_trace()) {
+                            std::ostringstream f9;
+                            f9 << "F9 ORIGINAL GATE: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                               << trace->handler_address << " -> [$"
+                               << trace->first_reset_runtime_byte_address << "]=$"
+                               << static_cast<unsigned>(trace->first_reset_runtime_byte_value)
+                               << " -> [$" << trace->limit_runtime_byte_address << "] < $"
+                               << static_cast<unsigned>(trace->limit_value)
+                               << " -> PREFLIGHT $" << trace->local_preflight_address;
+                            draw_text(renderer, 610, 390, f9.str());
+                        }
                     }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;

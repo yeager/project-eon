@@ -665,6 +665,18 @@ semantics. Project Eon surfaces the immutable F7 gate in its SDL evidence
 panel; it never supplies the guard/runtime words, executes the helpers, or
 writes original game media or saves.
 
+The ninth table record (raw F9 / `$43`) is `30 36 09 1b 38 08 39 73`, with
+handler entry `$7339`. It returns when native runtime word `$a19e` is nonzero.
+Its admitted path clears AX and calls `$d0c9`, clears `$da30`, loads `AL=$02`,
+sets code-local byte `$6e2f` to `$01`, and clears `$dad7`. If `$da39` is
+nonzero it calls `$7b47`. It then loops through verified F8 preflight `$731a`
+while `$da06` is below `$09`; otherwise it clears `$6e2f`, conditionally calls
+`$7a9e` when `$da09` is zero, then calls flat-image target `$14124`. These are
+strict code operands and branch facts, not inferred gameplay semantics.
+Project Eon exposes the F9 evidence immutably; it does not supply native
+runtime bytes, invoke native calls, execute the loop, or write archives, saves,
+or other original media.
+
 The eighth table record (raw F8 / `$42`) is `2a 30 09 1b 37 07 06 73`, with
 handler entry `$7306`. It clears native runtime byte `$da30`, loads `AL=$02`,
 and calls local preflight `$731a`. That preflight reads `$da39`: its nonzero
