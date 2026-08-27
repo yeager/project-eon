@@ -190,10 +190,19 @@ int main(int argc, char** argv) {
         std::cerr << "Data directory does not exist: " << request.data_directory << '\n';
         return 2;
     }
-    const auto releases = eon::find_release_archives(request.data_directory);
-    if (releases.empty()) {
-        std::cerr << "No recognised original release archives found.\n";
-        return 3;
+    eon::ReleaseScanner scanner(request.data_directory);
+    std::vector<eon::ReleaseArchive> releases;
+    // Direct launches and command-line verification intentionally wait for a
+    // complete answer. The graphical menu instead advances this scanner after
+    // its first frame, mirroring OpenCaptive's non-blocking data scanner.
+    if (request.verify_game || request.game) {
+        while (!scanner.advance(64)) {
+        }
+        releases = scanner.releases();
+        if (releases.empty()) {
+            std::cerr << "No recognised original release archives found.\n";
+            return 3;
+        }
     }
     if (request.verify_game) {
         bool found = false;
@@ -220,7 +229,8 @@ int main(int argc, char** argv) {
         std::cerr << "Requested original release is not present.\n";
         return 4;
     }
-    const auto deuteros_preview = load_deuteros_preview(releases);
+    std::optional<PreviewAnimation> deuteros_preview;
+    if (!releases.empty()) deuteros_preview = load_deuteros_preview(releases);
     const auto millennium_preview = load_millennium_preview(releases);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
@@ -243,14 +253,16 @@ int main(int argc, char** argv) {
     }};
     for (auto& card : cards) card.texture = load_card(renderer, card.filename);
     SDL_Texture* preview_texture = nullptr;
-    if (deuteros_preview) {
+    const auto create_deuteros_preview_texture = [&] {
+        if (!deuteros_preview || preview_texture) return;
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
             SDL_TEXTUREACCESS_STREAMING, deuteros_preview->width, deuteros_preview->height);
         if (preview_texture) {
             SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview->rgba_frames.front().data(),
                 deuteros_preview->width * 4);
         }
-    }
+    };
+    create_deuteros_preview_texture();
     SDL_Texture* millennium_preview_texture = nullptr;
     if (millennium_preview) {
         millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -266,6 +278,7 @@ int main(int argc, char** argv) {
     int focused = 0;
     std::uint64_t animation_start = SDL_GetTicks();
     std::size_t displayed_preview_frame = 0;
+    bool show_scanner = false;
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -279,12 +292,19 @@ int main(int argc, char** argv) {
                 request.presentation = request.presentation == eon::Presentation::original
                     ? eon::Presentation::modern : eon::Presentation::original;
             }
+            if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
+                && event.key.key == SDLK_D && !event.key.repeat) {
+                show_scanner = !show_scanner;
+            }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) focused = 1 - focused;
                 if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                    selected = cards[static_cast<std::size_t>(focused)].game;
-                    screen = Screen::launching;
-                    animation_start = SDL_GetTicks();
+                    const auto game = cards[static_cast<std::size_t>(focused)].game;
+                    if (eon::release_available(releases, game, std::nullopt)) {
+                        selected = game;
+                        screen = Screen::launching;
+                        animation_start = SDL_GetTicks();
+                    }
                 }
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
@@ -293,12 +313,21 @@ int main(int argc, char** argv) {
                 for (std::size_t index = 0; index < cards.size(); ++index) {
                     if (inside(cards[index].bounds, x, y)) {
                         focused = static_cast<int>(index);
-                        selected = cards[index].game;
-                        screen = Screen::launching;
-                        animation_start = SDL_GetTicks();
+                        if (eon::release_available(releases, cards[index].game, std::nullopt)) {
+                            selected = cards[index].game;
+                            screen = Screen::launching;
+                            animation_start = SDL_GetTicks();
+                        }
                     }
                 }
             }
+        }
+
+        if (!scanner.done()) {
+            static_cast<void>(scanner.advance(show_scanner ? 32 : 1));
+            releases = scanner.releases();
+            if (!deuteros_preview) deuteros_preview = load_deuteros_preview(releases);
+            create_deuteros_preview_texture();
         }
 
         const bool modern = request.presentation == eon::Presentation::modern;
@@ -308,7 +337,7 @@ int main(int argc, char** argv) {
 
         if (screen == Screen::menu) {
             draw_text(renderer, 64, 56, "PROJECT EON");
-            draw_text(renderer, 64, 82, "SELECT GAME   |   F1: ORIGINAL / MODERN   |   ESC: QUIT");
+            draw_text(renderer, 64, 82, "SELECT GAME   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT");
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 auto& card = cards[index];
                 if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
@@ -321,8 +350,23 @@ int main(int argc, char** argv) {
                 SDL_RenderRect(renderer, &card.bounds);
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, card.title);
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, card.subtitle);
+                const auto available = eon::release_available(releases, card.game, std::nullopt);
+                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
+                    available ? "VERIFIED ORIGINAL DATA" : scanner.done() ? "ORIGINAL DATA NOT FOUND" : "SCANNING ORIGINAL DATA...");
             }
             draw_text(renderer, 64, 530, "ENTER / CLICK: START");
+            if (show_scanner) {
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
+                SDL_FRect overlay{64, 572, 1152, 104};
+                SDL_RenderFillRect(renderer, &overlay);
+                draw_text(renderer, 86, 594, "DATA SCANNER (content hashes, read-only)");
+                draw_text(renderer, 86, 618, "Files scanned: " + std::to_string(scanner.scanned_count())
+                    + " / " + std::to_string(scanner.candidate_count()));
+                draw_text(renderer, 86, 642, scanner.done()
+                    ? "Complete. Only hash-verified original releases are selectable."
+                    : "Scanning in progress. Press D to hide this progress panel.");
+            }
         } else {
             draw_text(renderer, 64, 56, "LAUNCH REQUEST ACCEPTED");
             draw_text(renderer, 64, 92, "Game: " + eon::name(selected));

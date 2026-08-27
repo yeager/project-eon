@@ -32,31 +32,49 @@ constexpr std::array<KnownRelease, 6> known_releases{{
 } // namespace
 
 std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& directory) {
-    std::vector<ReleaseArchive> releases;
+    ReleaseScanner scanner(directory);
+    while (!scanner.advance(64)) {
+    }
+    return scanner.releases();
+}
+
+ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
     std::error_code error;
-    for (std::filesystem::directory_iterator iterator(directory, error), end;
+    for (std::filesystem::recursive_directory_iterator iterator(
+             directory, std::filesystem::directory_options::skip_permission_denied, error), end;
          !error && iterator != end; iterator.increment(error)) {
-        if (!iterator->is_regular_file()) continue;
+        std::error_code file_error;
+        if (!iterator->is_regular_file(file_error) || file_error) continue;
+        candidates_.push_back(iterator->path());
+    }
+    std::sort(candidates_.begin(), candidates_.end());
+}
+
+bool ReleaseScanner::advance(std::size_t max_files) {
+    const auto until = std::min(candidates_.size(), next_candidate_ + max_files);
+    while (next_candidate_ < until) {
+        const auto& candidate = candidates_[next_candidate_++];
         try {
-            const auto size = iterator->file_size();
+            const auto size = std::filesystem::file_size(candidate);
             if (std::none_of(known_releases.begin(), known_releases.end(),
                     [size](const auto& known) { return known.size == size; })) continue;
-            const auto fingerprint = to_hex(sha256_file(iterator->path()));
+            const auto fingerprint = to_hex(sha256_file(candidate));
             const auto found = std::find_if(known_releases.begin(), known_releases.end(),
                 [&fingerprint](const auto& known) { return fingerprint == known.sha256; });
             if (found != known_releases.end()) {
-                releases.push_back({found->game, found->platform, found->language,
-                    fingerprint, iterator->path()});
+                releases_.push_back({found->game, found->platform, found->language,
+                    fingerprint, candidate});
             }
         } catch (const std::exception&) {
             // A file may disappear during a scan. It is simply not a verified
             // release; no filename fallback is allowed.
         }
     }
-    std::sort(releases.begin(), releases.end(), [](const auto& left, const auto& right) {
+    if (!done()) return false;
+    std::sort(releases_.begin(), releases_.end(), [](const auto& left, const auto& right) {
         return left.sha256 < right.sha256;
     });
-    return releases;
+    return true;
 }
 
 std::string name(Game game) {
