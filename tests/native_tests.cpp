@@ -244,6 +244,15 @@ int main() {
         == "5616f19900cb96ebc81edf90d0d17a9cde1644be07657801e243514b05e6ee23");
     assert(defjam_second_post_helper_chain.static_call_address == 0x69be0);
     assert(defjam_second_post_helper_chain.static_call_target == 0x68d50);
+    const auto defjam_staging_reachability =
+        eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
+            defjam_loader_disk, defjam_plan, defjam_staging_callsites);
+    assert((defjam_staging_reachability.staging_entry_addresses
+        == std::array<std::uint32_t, 2>{{0x69624, 0x69b88}}));
+    assert((defjam_staging_reachability.absolute_jsr_counts == std::array<std::uint32_t, 2>{}));
+    assert((defjam_staging_reachability.absolute_jmp_counts == std::array<std::uint32_t, 2>{}));
+    assert(defjam_staging_reachability.scanned_raw_disk_offset == 0x16400);
+    assert(defjam_staging_reachability.scanned_byte_count == 0x2c000);
     const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
         {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
     assert((staged_pre_setup.magnitude_words
@@ -289,6 +298,22 @@ int main() {
         invalid_second_post_helper_chain_rejected = true;
     }
     assert(invalid_second_post_helper_chain_rejected);
+    auto invalid_staging_reachability_disk_bytes = *defjam_adf;
+    const std::array<std::uint8_t, 6> injected_direct_staging_jsr{{
+        0x4e, 0xb9, 0x00, 0x06, 0x96, 0x24,
+    }};
+    std::copy(injected_direct_staging_jsr.begin(), injected_direct_staging_jsr.end(),
+        invalid_staging_reachability_disk_bytes.begin() + 0x16400);
+    bool invalid_staging_reachability_rejected = false;
+    try {
+        const eon::AmigaAdf invalid_staging_reachability_disk(
+            std::move(invalid_staging_reachability_disk_bytes));
+        static_cast<void>(eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
+            invalid_staging_reachability_disk, defjam_plan, defjam_staging_callsites));
+    } catch (const std::runtime_error&) {
+        invalid_staging_reachability_rejected = true;
+    }
+    assert(invalid_staging_reachability_rejected);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);

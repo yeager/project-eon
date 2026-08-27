@@ -403,6 +403,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto second_post_helper_chain =
         eon::parse_millennium_amiga_resident_second_post_helper_static_chain(
             disk, plan, staging_callsites.back());
+    const auto staging_reachability =
+        eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
+            disk, plan, staging_callsites);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -463,6 +466,14 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << second_post_helper_chain.static_call_target << " at 0x"
         << second_post_helper_chain.static_call_address << std::dec
         << " (byte chain only; no helper-return or call execution)\n";
+    std::cout << "          staging reachability boundary: raw disk 0x" << std::hex
+        << staging_reachability.scanned_raw_disk_offset << " +0x"
+        << staging_reachability.scanned_byte_count << "; direct absolute JSR/JMP counts to 0x"
+        << staging_reachability.staging_entry_addresses[0] << " = " << std::dec
+        << staging_reachability.absolute_jsr_counts[0] << '/' << staging_reachability.absolute_jmp_counts[0]
+        << ", 0x" << std::hex << staging_reachability.staging_entry_addresses[1] << " = " << std::dec
+        << staging_reachability.absolute_jsr_counts[1] << '/' << staging_reachability.absolute_jmp_counts[1]
+        << " (direct encodings only; indirect/transformed paths unproven)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
