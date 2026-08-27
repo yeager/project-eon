@@ -24,6 +24,7 @@
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/millennium_dos_video_driver.hpp"
+#include "data/sha256.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
@@ -891,6 +892,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             profile.next_sector, profile.next_sector_count);
         const auto second_profile = eon::parse_deuteros_atari_second_stage(second_stage);
         const auto dispatch = eon::parse_deuteros_atari_dispatch(second_stage);
+        const auto state0_plan = eon::build_deuteros_atari_state0_raw_load_plan(
+            second_profile, dispatch);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -922,6 +925,18 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << dispatch.state0_linear_sector << ")" << std::dec << '\n';
         std::cout << "          Static aliases: table slots 2/3/4 -> state-0 routine 0x"
             << std::hex << dispatch.vector_addresses[0] << std::dec << '\n';
+        std::vector<std::uint8_t> state0_bytes;
+        for (const auto& request : state0_plan.requests) {
+            const auto chunk = disk1.read_sectors(request.track, request.side,
+                request.first_sector, request.sector_count);
+            state0_bytes.insert(state0_bytes.end(), chunk.begin(), chunk.end());
+        }
+        std::cout << "          Static state-0 raw-load plan: Disk 1 +0x" << std::hex
+            << state0_plan.source_offset << " +0x" << state0_plan.byte_count
+            << " -> RAM 0x" << state0_plan.destination << std::dec << " in "
+            << state0_plan.requests.size() << " original nine-sector reads; SHA-256 "
+            << eon::to_hex(eon::sha256(state0_bytes))
+            << " (not selected or interpreted at runtime)\n";
         std::cout << "          Static vector 5: raw args (RAM 0x" << std::hex
             << dispatch.state5_first_destination << ", 0x" << dispatch.state5_first_byte_count
             << " bytes, reader 0x" << dispatch.state5_first_reader_argument

@@ -250,10 +250,13 @@ DeuterosAtariRawLoadPlan build_deuteros_atari_state0_raw_load_plan(
         .source_offset = static_cast<std::size_t>(dispatch.state0_linear_sector) * bytes_per_track,
     };
     for (std::size_t index = 0; index < result.requests.size(); ++index) {
-        const auto linear_track = dispatch.state0_linear_sector + static_cast<std::uint32_t>(index);
+        // The raw reader's `$1200` units are one nine-sector *side* span.
+        // Convert each source offset back through the disk's two-sided
+        // geometry rather than treating it as a cylinder number.
+        const auto linear_side = dispatch.state0_linear_sector + static_cast<std::uint32_t>(index);
         result.requests[index] = {
-            .track = static_cast<std::uint16_t>(linear_track % 0x50U),
-            .side = static_cast<std::uint8_t>(linear_track / 0x50U),
+            .track = static_cast<std::uint16_t>(linear_side / 2U),
+            .side = static_cast<std::uint8_t>(linear_side % 2U),
             .first_sector = 1,
             .sector_count = stage.raw_read_max_sector_count,
             .source_offset = result.source_offset + index * bytes_per_track,
