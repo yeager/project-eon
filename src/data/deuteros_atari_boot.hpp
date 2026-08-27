@@ -76,8 +76,9 @@ struct DeuterosAtariFirstStageProfile {
 [[nodiscard]] DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
     std::span<const std::uint8_t> bytes);
 
-// Reproduces only the first-stage's literal add-byte / rotate-left-eight
-// checksum. It is a gate on the original raw stage, not an Atari CPU or
+// Reproduces only the first-stage's literal ADD.B (A0)+,D1 / ROL.L #8,D1
+// checksum. ADD.B changes D1's low byte without propagating carry into its
+// upper bytes. This is a gate on the original raw stage, not an Atari CPU or
 // protection emulator.
 [[nodiscard]] std::uint32_t calculate_deuteros_atari_first_stage_checksum(
     std::span<const std::uint8_t> bytes, const DeuterosAtariFirstStageProfile& profile);

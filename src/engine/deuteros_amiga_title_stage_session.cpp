@@ -3,6 +3,7 @@
 #include "data/sha256.hpp"
 
 #include <stdexcept>
+#include <string_view>
 
 namespace eon {
 
@@ -16,6 +17,11 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
         throw std::runtime_error("Invalid Deuteros Amiga title-stage provenance");
     }
     original_sha256_ = to_hex(sha256(original_bytes()));
+    constexpr std::string_view clean_title_stage_sha256 =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    if (original_sha256_ != clean_title_stage_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Amiga title-stage media");
+    }
 }
 
 std::span<const std::uint8_t> DeuterosAmigaTitleStageSession::original_bytes() const {

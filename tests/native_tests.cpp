@@ -372,7 +372,7 @@ int main() {
         0x42, 0x00, 0x00, 0xc2, 0x02, 0x00, 0x42, 0x00,
         0x42, 0x04, 0x42, 0x00, 0xc2, 0x10, 0x08, 0x42,
         0x00, 0xc2, 0x00, 0x10, 0x82, 0x4b, 0x00, 0x00,
-        0x00, 0x50, 0x00, 0x0a, 0x78, 0x1a, 0xc0, 0x00,
+        0x00, 0x50, 0x00, 0xa7, 0x81, 0xac, 0x00, 0x00,
     }}));
     assert(defjam_predicate_zero_path.unknown_call_raw_prefix_sha256
         == "bdb907adb3114dbaa58eb3bbe516ab91ffc4e1bf70e536bd47f497f49c8d5042");
@@ -510,12 +510,12 @@ int main() {
         static_cast<std::uint16_t>((splitter_source[2] << 8U) | splitter_source[3]),
         static_cast<std::uint16_t>((splitter_source[4] << 8U) | splitter_source[5]),
     }};
-    assert((splitter_words == std::array<std::uint16_t, 3>{{0x3039, 0x0007, 0xb76a}}));
+    assert((splitter_words == std::array<std::uint16_t, 3>{{0xb146, 0x5279, 0x0007}}));
     const auto splitter_pre_helper = eon::split_millennium_amiga_resident_words_pre_helper(
         splitter_words);
     assert((splitter_pre_helper.magnitude_words
-        == std::array<std::uint16_t, 3>{{0x3039, 0x0007, 0x376a}}));
-    assert((splitter_pre_helper.sign_bytes == std::array<std::uint8_t, 3>{{0, 0, 1}}));
+        == std::array<std::uint16_t, 3>{{0x3146, 0x5279, 0x0007}}));
+    assert((splitter_pre_helper.sign_bytes == std::array<std::uint8_t, 3>{{1, 0, 0}}));
     auto invalid_first_post_helper_chain_disk_bytes = *defjam_adf;
     invalid_first_post_helper_chain_disk_bytes[0x17aa0] ^= 0x01;
     bool invalid_first_post_helper_chain_rejected = false;
@@ -1084,7 +1084,7 @@ int main() {
     assert(!game_session.last_third_function_key_trace());
     assert(game_session.observe_action(0x3f) == std::optional<std::size_t>{4});
     assert(game_session.last_fifth_function_key_trace());
-    assert(game_session.last_fifth_function_key_trace()->third_call_address == 0x14bf7);
+    assert(game_session.last_fifth_function_key_trace()->third_call_address == 0x4bf7);
     assert(!game_session.last_fourth_function_key_trace());
     assert(game_session.observe_action(0x40) == std::optional<std::size_t>{5});
     assert(game_session.last_sixth_function_key_trace());
@@ -1289,7 +1289,7 @@ int main() {
     assert(eon::to_hex(eon::sha256(last_screen.bitmap.pixels))
         == "b13d52cab4ee715be28bca56997157fa102eaf86f53b0771c6b072dc0b701136");
     assert(eon::to_hex(eon::sha256(last_screen.rgba))
-        == "1e3183b45e50f2c186ab7cf6a7f820f0481c8103150777973d107375b50b0e99");
+        == "c0a556f3e618585967b9ed3d6c0606f958434c94def1afd0940658786a88dd17");
 
     const auto spanish = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium
@@ -1802,7 +1802,7 @@ int main() {
     const auto deuteros_first_stage_profile = eon::parse_deuteros_atari_first_stage(deuteros_first_stage);
     assert(deuteros_first_stage_profile.entry_offset == 0x9c4);
     assert(deuteros_first_stage_profile.checksum_start_offset == 6);
-    assert(deuteros_first_stage_profile.checksum_byte_count == 0x43c);
+    assert(deuteros_first_stage_profile.checksum_byte_count == 0x43b);
     assert(deuteros_first_stage_profile.checksum_seed == 0x22225555);
     assert(deuteros_first_stage_profile.checksum_expected == 0x7ae26af7);
     assert(eon::calculate_deuteros_atari_first_stage_checksum(
@@ -2635,17 +2635,20 @@ int main() {
         'p', 'l', 'e', 'a', 's', 'e', ' ', 'w', 'a', 'i', 't'};
     assert(alternate_trace->glyph_codes == expected_alternate_glyphs);
     // $206e6 reads the genuine eight-byte `p` glyph at $201b0 + ($70-$20)*8
-    // and combines it with selectors one/zero.  In the recovered four-plane
-    // write formula that makes set bits palette index two and clear bits
-    // index four.  The in-memory frame update must retain that exact
-    // bitplane result, rather than rasterising a replacement host font.
+    // and combines it with selectors one/zero.  The selector-one table starts
+    // with $ffff, so the recovered four-plane write formula makes set bits
+    // palette index one and clear bits index zero. The in-memory frame update
+    // must retain that exact bitplane result, rather than rasterising a
+    // replacement host font.
     eon::DeuterosAmigaFrame alternate_frame;
     alternate_frame.color_indices.assign(
         static_cast<std::size_t>(eon::DeuterosAmigaFrame::width)
             * eon::DeuterosAmigaFrame::height, 0);
     eon::apply_deuteros_amiga_alternate_renderer(
         alternate_frame, system_disk, load_plan, *alternate_trace);
-    const std::array<std::uint8_t, 8> expected_p_row{4, 2, 2, 2, 2, 2, 2, 4};
+    // The third raw $201b0+($70-$20)*8 row for `p` is $7c: the final
+    // two pixels are clear and therefore retain the selector-zero index.
+    const std::array<std::uint8_t, 8> expected_p_row{0, 1, 1, 1, 1, 1, 0, 0};
     const auto p_row = alternate_frame.color_indices.begin()
         + static_cast<std::size_t>(194) * eon::DeuterosAmigaFrame::width + 120;
     assert(std::equal(expected_p_row.begin(), expected_p_row.end(), p_row));

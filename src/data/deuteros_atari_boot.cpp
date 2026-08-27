@@ -72,7 +72,7 @@ DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image) : image_(s
     // to $f0 rather than the instruction's own offset.
     // Keep this as a protected-media trace: the copied words and destination
     // are not classified as a game executable or resource.
-    constexpr std::array<std::uint8_t, 28> killer_vector_setup{{
+    constexpr std::array<std::uint8_t, 24> killer_vector_setup{{
         0x46, 0xfc, 0x27, 0x00, // move.w #$2700,sr
         0x43, 0xf8, 0x00, 0x08, // lea $8.w,a1
         0x41, 0xfa, 0x00, 0x0e, // lea $ee(pc),a0

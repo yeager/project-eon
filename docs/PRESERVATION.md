@@ -74,7 +74,7 @@ and retains its original indexed pixels and palette before presenting RGBA.
 The indexed-pixel SHA-256 is
 `b13d52cab4ee715be28bca56997157fa102eaf86f53b0771c6b072dc0b701136`; the
 derived RGBA SHA-256 is
-`1e3183b45e50f2c186ab7cf6a7f820f0481c8103150777973d107375b50b0e99`.
+`c0a556f3e618585967b9ed3d6c0606f958434c94def1afd0940658786a88dd17`.
 The name `LAST.LIB` alone is not treated as proof of a narrative or gameplay
 transition; no selection point is inferred until executable control-flow or
 an original observation supports one.
@@ -543,13 +543,16 @@ of that direct sector interval is
 `dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168`.
 This is a raw first stage, not a resource archive and is only read in memory.
 Its word branch enters at stage offset `$9c4`; there it validates bytes
-`$0006..$0441` using seed `$22225555`, add-byte / rotate-left-eight and
+`$0006..$0440` (exactly `$43b` iterations) using seed `$22225555`,
+`ADD.B (A0)+,D1` / `ROL.L #8,D1` and
 expected value `$7ae26af7`.  Only on that validation path does the recovered
 code request the next raw interval: track 2, side 0, sectors 1 through 9 to
 RAM `$70000`.  Its callback chain pushes `$70000` at `+$a74`, then after the
 read pops that preserved value at `+$ac8` and copies 4,608 bytes to `$1e00`.
 These are control-flow facts, not claims that the next interval is a title
-screen; the latter remains unclassified.
+screen; the latter remains unclassified. `ADD.B` updates only the low byte of
+`D1`, so its carry never propagates into the upper 24 bits before the longword
+rotate; Project Eon models that operand width explicitly.
 
 That track-2 interval has SHA-256
 `2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
@@ -845,9 +848,9 @@ When—and only when—the live opening VM reaches that exact `$0f` handoff with
 raw operand `$0b38`, `DeuterosAmigaTitleStageSession` now opens the same ADF
 interval read-only. The session validates the existing title-stage opcode
 profile, exposes only disk provenance (`+0x6e000`, length `0x6ca00`,
-destination `$13000`, entry `$40426`) and records whole-stage SHA-256
+destination `$13000`, entry `$40426`) and hash-validates whole-stage SHA-256
 `48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` for the
-verified clean system ADF. It never creates a title bitmap, inferred registers,
+verified clean system ADF; altered stage bytes fail closed. It never creates a title bitmap, inferred registers,
 global work memory, or replacement menu: its next execution requirements still
 cross unrecovered Exec and graphics-library vector boundaries.
 The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
@@ -1133,8 +1136,8 @@ embedded `$201b0` 8-bytes-per-glyph font and `$2053c` to one byte of horizontal
 advance. `$206e6` reads each glyph row, then writes each of the four Amiga
 planes using `(~glyph & secondary-mask) | (glyph & primary-mask)`. The exact
 selector tables are raw bytes at `$20488`; for the observed selectors 1/0,
-the result is plane 1 for set glyph bits and plane 2 for clear bits. The
-verified `$1e0f` display offset is byte 15 of scanline 192, so the eleven
+the result is plane 0 for set glyph bits and no plane bits for clear glyph
+bits. The verified `$1e0f` display offset is byte 15 of scanline 192, so the eleven
 8x8 original glyphs fit through scanline 199. Project Eon applies precisely
 those writes to its existing in-memory four-plane-equivalent frame; it does
 not create a font, artwork, or source-media output. Any other command class,
