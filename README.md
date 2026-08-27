@@ -88,6 +88,11 @@ Start the graphical card menu:
 ./build/project-eon
 ```
 
+In the card menu, Left/Right selects a game and Up/Down selects one of that
+game's hash-verified original platforms. The selected platform is carried into
+the launch request: the menu never substitutes a different platform's media.
+Enter, Space, or a card click starts the selected original release.
+
 By default, Project Eon reads user-supplied media from `~/.projecteon` on
 Linux/macOS and `<install directory>\data` on Windows. `--data` selects a
 different directory or one original archive, for example a preservation
