@@ -933,6 +933,18 @@ int main(int argc, char** argv) {
                                << ",$" << trace->fourth_call_address;
                             draw_text(renderer, 610, 390, f5.str());
                         }
+                        if (const auto trace = millennium_game_session->last_sixth_function_key_trace()) {
+                            std::ostringstream f6;
+                            f6 << "F6 ORIGINAL GATE: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                               << trace->handler_address << " -> [$"
+                               << trace->first_byte_address << "]=$"
+                               << static_cast<unsigned>(trace->first_byte_value)
+                               << "; [$" << trace->second_byte_address << "]=$"
+                               << static_cast<unsigned>(trace->second_byte_value)
+                               << " -> POLL $" << trace->wait_call_address;
+                            draw_text(renderer, 610, 390, f6.str());
+                        }
                     }
                     for (std::size_t row = 0; row < records_per_page; ++row) {
                         const auto record_index = first_record + row;

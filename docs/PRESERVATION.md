@@ -600,6 +600,19 @@ runtime values, and game meaning are not yet recovered. Project Eon displays
 this immutable trace after F5 but never executes the native calls, supplies
 state, or writes the original executable, archive, or save media.
 
+The sixth table record (raw F6 / `$40`) is `1e 24 09 1b 35 05 15 74`, with
+handler entry `$7415`. It first returns when runtime word `$a19e` is nonzero.
+On the admitted path it clears `AX`, calls `$d0c9`, then calls `$4d2c` with
+`AX=$0022` and `$c980`. The handler snapshots bytes `$75a8` and `$75ae` into
+its own `$7412` and `$740f` scratch cells and snapshots word `$75ac` into
+`$7410`; it then writes literal `$0c` to `$75a8`, `$00` to `$75ae`, and
+`$3207` to `$75a6` before calling `$09fa`. The immediately following
+`SHR BL,1`/carry branch can repeat that poll. These are only verified native
+control-flow and literal address facts. Project Eon exposes the F6 gate and
+temporary values as immutable evidence, but does not supply the guard/carry,
+invoke native code, dereference callback `$3207`, apply the writes, or alter
+original executable, archive, or save media.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
