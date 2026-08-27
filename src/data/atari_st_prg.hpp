@@ -43,6 +43,18 @@ struct MillenniumAtariBootstrap {
     std::uint32_t stage_bytes = 0;
 };
 
+// The first instruction sequence in the small bootstrap block after it has
+// been copied into BSS. These are original absolute machine addresses, not
+// host addresses selected by Project Eon.
+struct MillenniumAtariBssEntry {
+    std::uint32_t entry_offset = 0;
+    std::uint32_t copy_source_address = 0;
+    std::uint32_t copy_destination_address = 0;
+    std::uint16_t initial_d0 = 0;
+    std::uint32_t copied_words = 0;
+    std::uint32_t jump_address = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -52,5 +64,12 @@ struct MillenniumAtariBootstrap {
 // ST executable. It never emits a relocated or unpacked image.
 [[nodiscard]] MillenniumAtariBootstrap parse_millennium_atari_bootstrap(
     std::span<const std::uint8_t> bytes, const AtariStPrg& prg);
+
+// Validates the next exact BSS-resident stub reached by the verified
+// bootstrap. It reports literal MOVE/DBF/JMP facts only; it never creates its
+// input buffer, applies PRG relocation, or executes 68000 instructions.
+[[nodiscard]] MillenniumAtariBssEntry parse_millennium_atari_bss_entry(
+    std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
+    const MillenniumAtariBootstrap& bootstrap);
 
 } // namespace eon

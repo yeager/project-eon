@@ -96,6 +96,15 @@ absolute `JMP 0x1d636`. Project Eon validates and reports that path without
 choosing a GEMDOS base, creating a relocated image, or executing the
 as-yet-unanalysed transferred bytes.
 
+The copied bytes start with a second strict stub: `MOVEA.L #0x77000,A1`,
+`MOVEA.L #0x1d652,A0`, `MOVE.W #0x100,D0`, `MOVE.W (A0)+,(A1)+`,
+`DBF D0,-4`, then `JMP 0x77000`. Thus it requests 257 original 16-bit words
+from the literal address `0x1d652` into `0x77000` before the next transfer.
+The bootstrap itself proves only its initial `0xd8`-byte BSS copy, not that
+the complete source range is initialized. Project Eon records this boundary
+and deliberately does not invent the missing producer, create either buffer,
+or execute the jump.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

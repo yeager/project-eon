@@ -805,6 +805,14 @@ int main() {
     assert(atari_bootstrap.stage_last_longword_offset == 0x1232);
     assert(atari_bootstrap.stage_destination_offset == 0x1d636);
     assert(atari_bootstrap.stage_bytes == 0xd8);
+    const auto atari_bss_entry = eon::parse_millennium_atari_bss_entry(
+        atari_disk.read(*atari_executable), atari_prg, atari_bootstrap);
+    assert(atari_bss_entry.entry_offset == 0x1d636);
+    assert(atari_bss_entry.copy_source_address == 0x1d652);
+    assert(atari_bss_entry.copy_destination_address == 0x77000);
+    assert(atari_bss_entry.initial_d0 == 0x100);
+    assert(atari_bss_entry.copied_words == 0x101);
+    assert(atari_bss_entry.jump_address == 0x77000);
 
     const auto deuteros_atari = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st;
