@@ -80,6 +80,17 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint16_t post_transition_selector_addend = 0;
     std::uint32_t post_transition_selector_flag_address = 0;
     std::uint32_t post_transition_selector_dispatch_address = 0;
+    // The selector's target begins a three-way signed dispatch on this byte.
+    // Only the negative path's concrete display-service call is recorded;
+    // this is control-flow evidence, not a name for the rendered data.
+    std::uint32_t post_transition_dispatch_state_address = 0;
+    std::uint32_t post_transition_dispatch_zero_branch_address = 0;
+    std::uint32_t post_transition_dispatch_nonnegative_branch_address = 0;
+    std::uint32_t post_transition_dispatch_negative_service_address = 0;
+    std::uint16_t post_transition_dispatch_negative_service_d0 = 0;
+    std::uint16_t post_transition_dispatch_negative_service_d1 = 0;
+    std::uint16_t post_transition_dispatch_negative_suppress_value = 0;
+    std::uint32_t post_transition_dispatch_negative_delay = 0;
 };
 
 // Reads profile-one instructions directly from the original ADF and validates

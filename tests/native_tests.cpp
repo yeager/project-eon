@@ -645,6 +645,14 @@ int main() {
     assert(title_stage.post_transition_selector_addend == 0x30);
     assert(title_stage.post_transition_selector_flag_address == 0x1fe54);
     assert(title_stage.post_transition_selector_dispatch_address == 0x1fbe6);
+    assert(title_stage.post_transition_dispatch_state_address == 0x1f98c);
+    assert(title_stage.post_transition_dispatch_zero_branch_address == 0x1fc22);
+    assert(title_stage.post_transition_dispatch_nonnegative_branch_address == 0x1fc9e);
+    assert(title_stage.post_transition_dispatch_negative_service_address == 0x3fbf8);
+    assert(title_stage.post_transition_dispatch_negative_service_d0 == 0x13);
+    assert(title_stage.post_transition_dispatch_negative_service_d1 == 0x0c);
+    assert(title_stage.post_transition_dispatch_negative_suppress_value == 0x20);
+    assert(title_stage.post_transition_dispatch_negative_delay == 0x4e20);
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 
