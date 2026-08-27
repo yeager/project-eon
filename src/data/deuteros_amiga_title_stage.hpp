@@ -160,10 +160,39 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t initialization_normal_call_address = 0;
 };
 
+// The wholly local prefix of the timer-gated $4069a transition, ending just
+// before its first graphics.library vector. This represents only the original
+// in-memory writes and call ABI; it neither calls a library nor presents a
+// title screen.
+struct DeuterosAmigaTitleTransitionPrefix {
+    std::uint32_t entry_address = 0;
+    std::uint32_t active_flag_address = 0;
+    std::uint8_t active_flag_value = 0;
+    std::uint32_t saved_display_word_address = 0;
+    std::uint16_t saved_display_word = 0;
+    std::uint16_t cleared_display_word = 0;
+    std::uint32_t source_palette_address = 0;
+    std::uint32_t work_palette_address = 0;
+    std::array<std::uint16_t, 16> work_palette_words{};
+    std::uint32_t graphics_library_base_address = 0;
+    std::int16_t graphics_library_vector = 0;
+    std::uint32_t graphics_source_address = 0;
+    std::uint32_t graphics_destination_address = 0;
+    std::uint16_t graphics_word_count = 0;
+};
+
 // Reads profile-one instructions directly from the original ADF and validates
 // the known mode branch, recurring main-loop cadence, timed display
 // transition, and following raw control-state loop.
 [[nodiscard]] DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// Models the literal, hash-locked prefix only. The caller must establish the
+// original $40410/$22d34 gate; this helper deliberately cannot imply that the
+// title stage startup or graphics.library vector has executed.
+[[nodiscard]] DeuterosAmigaTitleTransitionPrefix
+execute_deuteros_amiga_title_transition_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::uint16_t input_display_word);
 
 } // namespace eon

@@ -958,6 +958,21 @@ of a menu or gameplay screen.
 
 The caller's immediate control-flow conditions are also retained. It enters
 `$4069a` only when `$40410 >= $0000ea60` and word `$22d34` is not `$0011`.
+
+Its prefix before the first graphics.library vector is independently executable
+as a read-only in-memory preservation model. At `$4069a` (ADF `+0x9b69a`,
+title-stage `+0x2d69a`), the exact 72 bytes hash to
+`fda01edebbc2e99372cb22a858269202343f98d31bee1e473f751048666759ca`.
+They set `$202c6` to one; read sixteen RGB4 words at `$1ed24`; apply
+`AND.W #$0eee` then `LSR.W #1`; write the results at `$40678`; save and clear
+`$202b8`; and prepare A0=`$12e12`, A1=`$40678`, D0=16 and A6 from `$12fec`
+for `JSR -$c0(A6)`. The source is ADF `+0x79d24` / title-stage `+0xbd24`, 32
+bytes SHA-256 `6920018538a18ca186ef36431678de4fc8f7bc68ac6b481e82086dbda54ff1e1`.
+The recovered transformed sixteen-word result serializes to SHA-256
+`e8f4bdf6b52bc849b626145464ccbc2701c6869cc97e62ef9dcfecb660a01aa8`.
+Project Eon models no graphics vector, custom hardware, timer threshold, or
+title screen here: callers must establish the original gate before this prefix
+can ever be part of a live session.
 Immediately after the routine returns, it writes long zero to `$40410` before
 resuming the normal loop. This is a verified reset/gate relationship only:
 Project Eon does not assign gameplay meaning to `$22d34` or synthesize either

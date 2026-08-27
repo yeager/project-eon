@@ -1,7 +1,10 @@
 #include "data/deuteros_amiga_title_stage.hpp"
 
+#include "data/sha256.hpp"
+
 #include <span>
 #include <stdexcept>
+#include <string_view>
 
 namespace eon {
 namespace {
@@ -549,6 +552,69 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     result.initialization_custom_values = custom_values;
     result.initialization_mode_five_call_address = 0x36a8c;
     result.initialization_normal_call_address = 0x1fb9a;
+    return result;
+}
+
+DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::uint16_t input_display_word) {
+    const auto& stage = plan.title_stage;
+    constexpr std::uint32_t entry_address = 0x4069a;
+    constexpr std::uint32_t source_palette_address = 0x1ed24;
+    constexpr std::uint32_t work_palette_address = 0x40678;
+    constexpr std::uint32_t saved_display_word_address = 0x202b8;
+    constexpr std::uint32_t active_flag_address = 0x202c6;
+    constexpr std::string_view title_stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::array<std::uint8_t, 72> prefix_bytes{{
+        0x13, 0xfc, 0x00, 0x01, 0x00, 0x02, 0x02, 0xc6,
+        0x41, 0xf9, 0x00, 0x01, 0xed, 0x24, 0x43, 0xf9,
+        0x00, 0x04, 0x06, 0x78, 0x7e, 0x0f, 0x30, 0x18,
+        0x02, 0x40, 0x0e, 0xee, 0xe2, 0x48, 0x32, 0xc0,
+        0x51, 0xcf, 0xff, 0xf4, 0x30, 0x39, 0x00, 0x02,
+        0x02, 0xb8, 0x3f, 0x00, 0x13, 0xfc, 0x00, 0x00,
+        0x00, 0x02, 0x02, 0xb8, 0x41, 0xf9, 0x00, 0x01,
+        0x2e, 0x12, 0x43, 0xf9, 0x00, 0x04, 0x06, 0x78,
+        0x70, 0x10, 0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
+    }};
+    constexpr std::string_view prefix_hash =
+        "fda01edebbc2e99372cb22a858269202343f98d31bee1e473f751048666759ca";
+    constexpr std::string_view source_hash =
+        "6920018538a18ca186ef36431678de4fc8f7bc68ac6b481e82086dbda54ff1e1";
+    if (stage.length == 0 || entry_address < stage.destination
+        || source_palette_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || prefix_bytes.size() > stage.length - (entry_address - stage.destination)
+        || 32U > stage.length - (source_palette_address - stage.destination)) {
+        throw std::runtime_error("Deuteros title transition prefix lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto prefix = stage_bytes.subspan(entry_address - stage.destination, prefix_bytes.size());
+    const auto source = stage_bytes.subspan(source_palette_address - stage.destination, 32);
+    if (to_hex(sha256(stage_bytes)) != title_stage_hash
+        || !std::equal(prefix_bytes.begin(), prefix_bytes.end(), prefix.begin())
+        || to_hex(sha256(prefix)) != prefix_hash
+        || to_hex(sha256(source)) != source_hash) {
+        throw std::runtime_error("Unsupported Deuteros title transition prefix");
+    }
+    DeuterosAmigaTitleTransitionPrefix result;
+    result.entry_address = entry_address;
+    result.active_flag_address = active_flag_address;
+    result.active_flag_value = 1;
+    result.saved_display_word_address = saved_display_word_address;
+    result.saved_display_word = input_display_word;
+    result.cleared_display_word = 0;
+    result.source_palette_address = source_palette_address;
+    result.work_palette_address = work_palette_address;
+    for (std::size_t index = 0; index < result.work_palette_words.size(); ++index) {
+        result.work_palette_words[index] = static_cast<std::uint16_t>(
+            (big16(source, index * 2U) & 0x0eeeU) >> 1U);
+    }
+    result.graphics_library_base_address = 0x12fec;
+    result.graphics_library_vector = -0xc0;
+    result.graphics_source_address = 0x12e12;
+    result.graphics_destination_address = work_palette_address;
+    result.graphics_word_count = 16;
     return result;
 }
 

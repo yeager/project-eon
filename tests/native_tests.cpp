@@ -2281,13 +2281,47 @@ int main() {
     assert(title_stage_session.original_bytes().size() == 0x6ca00);
     assert(title_stage_session.original_sha256()
         == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
+    // The timer-gated $4069a route has a wholly local prefix before its first
+    // graphics.library vector. It transforms the real title RGB4 words in
+    // memory only; this test does not imply that the timer gate or vector has
+    // been executed.
+    const auto transition_prefix = eon::execute_deuteros_amiga_title_transition_prefix(
+        system_disk, load_plan, 0x5a5a);
+    assert(transition_prefix.entry_address == 0x4069a);
+    assert(transition_prefix.active_flag_address == 0x202c6);
+    assert(transition_prefix.active_flag_value == 1);
+    assert(transition_prefix.saved_display_word_address == 0x202b8);
+    assert(transition_prefix.saved_display_word == 0x5a5a);
+    assert(transition_prefix.cleared_display_word == 0);
+    assert(transition_prefix.source_palette_address == 0x1ed24);
+    assert(transition_prefix.work_palette_address == 0x40678);
+    const std::array<std::uint16_t, 16> expected_transition_palette{{
+        0x0000, 0x0453, 0x0342, 0x0231, 0x0110, 0x0500, 0x0610, 0x0300,
+        0x0014, 0x0067, 0x0040, 0x0430, 0x0770, 0x0700, 0x0400, 0x0777,
+    }};
+    assert(transition_prefix.work_palette_words == expected_transition_palette);
+    std::array<std::uint8_t, 32> transition_palette_bytes{};
+    for (std::size_t index = 0; index < expected_transition_palette.size(); ++index) {
+        transition_palette_bytes[index * 2U] = static_cast<std::uint8_t>(
+            expected_transition_palette[index] >> 8U);
+        transition_palette_bytes[index * 2U + 1U] = static_cast<std::uint8_t>(
+            expected_transition_palette[index]);
+    }
+    assert(eon::to_hex(eon::sha256(transition_palette_bytes))
+        == "e8f4bdf6b52bc849b626145464ccbc2701c6869cc97e62ef9dcfecb660a01aa8");
+    assert(transition_prefix.graphics_library_base_address == 0x12fec);
+    assert(transition_prefix.graphics_library_vector == -0xc0);
+    assert(transition_prefix.graphics_source_address == 0x12e12);
+    assert(transition_prefix.graphics_destination_address == 0x40678);
+    assert(transition_prefix.graphics_word_count == 16);
     {
         auto altered_title_stage_disk = *amiga_disk1;
-        altered_title_stage_disk[0x6e000 + 6] ^= 0x01;
+        altered_title_stage_disk[0x9b69a] ^= 0x01;
         bool rejected = false;
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
-            static_cast<void>(eon::DeuterosAmigaTitleStageSession(altered_disk, load_plan));
+            static_cast<void>(eon::execute_deuteros_amiga_title_transition_prefix(
+                altered_disk, load_plan, 0));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
