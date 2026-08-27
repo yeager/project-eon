@@ -1802,6 +1802,32 @@ int main() {
     assert(deuteros_dispatch.state5_second_destination == 0x16400);
     assert(deuteros_dispatch.state5_second_byte_count == 0x4c800);
     assert(deuteros_dispatch.state5_second_reader_argument == 0x60c00);
+    const auto deuteros_state5_plan = eon::build_deuteros_atari_state5_raw_load_plan(
+        deuteros_second_stage_profile, deuteros_dispatch);
+    assert(deuteros_state5_plan.first_read.requests.size() == 10);
+    assert(deuteros_state5_plan.first_read.source_offset == 0x55800);
+    assert(deuteros_state5_plan.first_read.requests.front().track == 38);
+    assert(deuteros_state5_plan.first_read.requests.front().side == 0);
+    assert(deuteros_state5_plan.copy_source == 0x57a00);
+    assert(deuteros_state5_plan.copy_destination == 0xb006);
+    assert(deuteros_state5_plan.copy_byte_count == 0x9393);
+    assert(deuteros_state5_plan.second_read.requests.size() == 68);
+    assert(deuteros_state5_plan.second_read.source_offset == 0x60c00);
+    assert(deuteros_state5_plan.second_read.requests.front().track == 43);
+    assert(deuteros_state5_plan.second_read.requests.front().side == 0);
+    const auto materialize_atari_plan = [&deuteros_disk1](const auto& plan) {
+        std::vector<std::uint8_t> bytes;
+        for (const auto& request : plan.requests) {
+            const auto chunk = deuteros_disk1.read_sectors(request.track, request.side,
+                request.first_sector, request.sector_count);
+            bytes.insert(bytes.end(), chunk.begin(), chunk.end());
+        }
+        return bytes;
+    };
+    assert(eon::to_hex(eon::sha256(materialize_atari_plan(deuteros_state5_plan.first_read)))
+        == "9659b21315e5c0528020be0b41eb75d57428f41b3b632fabfebe16d34038d298");
+    assert(eon::to_hex(eon::sha256(materialize_atari_plan(deuteros_state5_plan.second_read)))
+        == "6b3e27702649ac201c4ecf92ad54f40656fd4d8633fadf5790014da34ce03ac6");
     assert(deuteros_second_stage_profile.raw_read_routine_offset == 0x60);
     assert(deuteros_second_stage_profile.raw_read_max_sector_count == 9);
     assert(deuteros_second_stage_profile.side_switch_track == 0x50);

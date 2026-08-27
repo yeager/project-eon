@@ -896,6 +896,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             second_profile, dispatch);
         const auto state1_plan = eon::build_deuteros_atari_state1_raw_load_plan(
             second_profile, dispatch);
+        const auto state5_plan = eon::build_deuteros_atari_state5_raw_load_plan(
+            second_profile, dispatch);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -951,6 +953,30 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << " -> RAM 0x" << state1_plan.destination << std::dec << " in "
             << state1_plan.requests.size() << " original reads; SHA-256 "
             << eon::to_hex(eon::sha256(state1_bytes))
+            << " (not selected or interpreted at runtime)\n";
+        const auto materialize_raw_range = [&disk1](const auto& plan) {
+            std::vector<std::uint8_t> bytes;
+            bytes.reserve(plan.byte_count);
+            for (const auto& request : plan.requests) {
+                const auto chunk = disk1.read_sectors(request.track, request.side,
+                    request.first_sector, request.sector_count);
+                bytes.insert(bytes.end(), chunk.begin(), chunk.end());
+            }
+            return bytes;
+        };
+        const auto state5_first_bytes = materialize_raw_range(state5_plan.first_read);
+        const auto state5_second_bytes = materialize_raw_range(state5_plan.second_read);
+        std::cout << "          Static vector-5 raw-load plans: Disk 1 +0x" << std::hex
+            << state5_plan.first_read.source_offset << " +0x" << state5_plan.first_read.byte_count
+            << " -> RAM 0x" << state5_plan.first_read.destination << std::dec << " in "
+            << state5_plan.first_read.requests.size() << " original reads; SHA-256 "
+            << eon::to_hex(eon::sha256(state5_first_bytes)) << "; copy RAM 0x" << std::hex
+            << state5_plan.copy_source << " +0x" << state5_plan.copy_byte_count << " -> 0x"
+            << state5_plan.copy_destination << std::dec << "; Disk 1 +0x" << std::hex
+            << state5_plan.second_read.source_offset << " +0x" << state5_plan.second_read.byte_count
+            << " -> RAM 0x" << state5_plan.second_read.destination << std::dec << " in "
+            << state5_plan.second_read.requests.size() << " original reads; SHA-256 "
+            << eon::to_hex(eon::sha256(state5_second_bytes))
             << " (not selected or interpreted at runtime)\n";
         std::cout << "          Static vector 5: raw args (RAM 0x" << std::hex
             << dispatch.state5_first_destination << ", 0x" << dispatch.state5_first_byte_count
