@@ -558,4 +558,32 @@ MillenniumAtariConfigFourthLoop parse_millennium_atari_config_fourth_loop(
         body_address, setup.d5_initial_value};
 }
 
+MillenniumAtariConfigFourthPostLoop parse_millennium_atari_config_fourth_post_loop(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthLoop& loop) {
+    // Once the inner DBF falls through, the next original words are ADDQ.L
+    // #2,A5; DBF D6,-$22. The taken outer backedge reaches the immediate D5
+    // setup prefix already present in this same file; no loop is executed.
+    constexpr std::uint32_t post_loop_address = 0x2b47a;
+    constexpr std::size_t post_loop_offset = post_loop_address - 0x2a4de;
+    constexpr std::uint32_t target_address = 0x2b45c;
+    constexpr std::size_t target_offset = target_address - 0x2a4de;
+    constexpr std::array<std::uint8_t, 6> post_loop_bytes{0x54, 0x8d, 0x51, 0xce, 0xff, 0xde};
+    constexpr std::array<std::uint8_t, 4> target_bytes{0x3a, 0x3c, 0x00, 0x02};
+    constexpr std::int16_t displacement = -34;
+    if (loop.body_address != 0x2b464 || loop.body_file_offset + loop.body_bytes != post_loop_offset
+        || payload.size() < post_loop_offset + post_loop_bytes.size()
+        || payload.size() < target_offset + target_bytes.size()
+        || !std::equal(post_loop_bytes.begin(), post_loop_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(post_loop_offset))
+        || !std::equal(target_bytes.begin(), target_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset))
+        || static_cast<std::int16_t>(read_be16(payload, post_loop_offset + 4U)) != displacement) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf post-loop path");
+    }
+    return {post_loop_address, static_cast<std::uint32_t>(post_loop_offset),
+        read_be16(payload, post_loop_offset), read_be16(payload, post_loop_offset + 2U),
+        static_cast<std::int16_t>(read_be16(payload, post_loop_offset + 4U)), target_address,
+        read_be16(payload, target_offset), read_be16(payload, target_offset + 2U)};
+}
+
 } // namespace eon

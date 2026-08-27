@@ -215,6 +215,14 @@ exact backedge but does not run any iteration, read the loop's pointed-to
 data, derive an iteration outcome, or translate it into replacement game
 state.
 
+The immediate fall-through after that inner `DBF` is also bounded. At
+`0x2b47a` (file `+0xf9c`), the original six-byte path is `0x548d 0x51ce
+0xffde`: the first word advances `A5`, and the second is an outer `DBF` with
+displacement `-34`. Its taken target is `0x2b45c` (file `+0xf7e`), whose
+verified prefix is `0x3a3c 0x0002`, the local D5 setup. Project Eon records
+the backedge and literal setup only; it runs neither loop, accesses no loop
+data, and invokes no native service.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two

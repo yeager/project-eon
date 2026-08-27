@@ -253,6 +253,19 @@ struct MillenniumAtariConfigFourthLoop {
     std::uint16_t setup_d5_value = 0;
 };
 
+// The exact six-byte post-inner-loop path. It advances A5 and uses the
+// original outer DBF backedge; this records control/dataflow only.
+struct MillenniumAtariConfigFourthPostLoop {
+    std::uint32_t post_loop_address = 0;
+    std::uint32_t post_loop_file_offset = 0;
+    std::uint16_t a5_advance_opcode = 0;
+    std::uint16_t outer_backedge_opcode = 0;
+    std::int16_t outer_backedge_displacement = 0;
+    std::uint32_t outer_backedge_target_address = 0;
+    std::uint16_t target_setup_opcode = 0;
+    std::uint16_t target_setup_immediate = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -343,5 +356,10 @@ struct MillenniumAtariConfigFourthLoop {
 // into a replacement runtime state.
 [[nodiscard]] MillenniumAtariConfigFourthLoop parse_millennium_atari_config_fourth_loop(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthJsr& setup);
+
+// Validates only the post-inner-loop outer-DBF path and its target prefix. It
+// never performs either loop, follows data pointers, or invokes native calls.
+[[nodiscard]] MillenniumAtariConfigFourthPostLoop parse_millennium_atari_config_fourth_post_loop(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthLoop& loop);
 
 } // namespace eon
