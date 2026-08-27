@@ -3,6 +3,7 @@
 #ifndef MyAppVersion
   #define MyAppVersion "0.1.0"
 #endif
+#define StagingDir "..\..\dist"
 
 [Setup]
 AppId={{0B67A8E0-3C32-4694-9866-AD5A7C9A7562}
@@ -12,7 +13,7 @@ AppPublisher=Project Eon contributors
 AppPublisherURL=https://github.com/yeager/project-eon
 DefaultDirName={autopf}\Project Eon
 DefaultGroupName=Project Eon
-OutputDir=installer
+OutputDir=..\..\installer
 OutputBaseFilename=Project-Eon-{#MyAppVersion}-windows-x64
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -20,13 +21,13 @@ Compression=lzma2
 SolidCompression=yes
 
 [Files]
-Source: "dist\project-eon.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\SDL3.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\SDL3_image.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "dist\zlib*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "dist\assets\*"; DestDir: "{app}\assets"; Flags: recursesubdirs ignoreversion
-Source: "dist\README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StagingDir}\project-eon.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StagingDir}\SDL3.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StagingDir}\SDL3_image.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#StagingDir}\zlib*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#StagingDir}\assets\*"; DestDir: "{app}\assets"; Flags: recursesubdirs ignoreversion
+Source: "{#StagingDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StagingDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 ; The program scans this directory in place. The installer never places game
