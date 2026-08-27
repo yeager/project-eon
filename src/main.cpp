@@ -98,16 +98,14 @@ std::optional<PreviewAnimation> load_deuteros_preview(
         const auto bundle = eon::parse_deuteros_amiga_bundle(disk, plan.resource_disk_offsets[0]);
         const auto blob = eon::parse_deuteros_amiga_indexed_blob(disk, bundle);
         eon::DeuterosAmigaChannelVm vm(disk, bundle);
+        eon::DeuterosAmigaRandom random(disk, bundle);
+        eon::DeuterosAmigaVmInputs vm_inputs;
+        vm_inputs.random_word = [&random] { return random.next(); };
         PreviewAnimation preview{eon::DeuterosAmigaFrame::width,
             eon::DeuterosAmigaFrame::height, {}};
         constexpr std::size_t maximum_verified_ticks = 512;
         for (std::size_t tick = 0; tick < maximum_verified_ticks; ++tick) {
-            try {
-                static_cast<void>(vm.tick());
-            } catch (const std::runtime_error& error) {
-                if (std::string_view(error.what()).find("random source") != std::string_view::npos) break;
-                throw;
-            }
+            static_cast<void>(vm.tick(vm_inputs));
             eon::DeuterosAmigaFrame frame;
             try {
                 frame = eon::compose_deuteros_amiga_frame(disk, bundle, blob, vm.channels());
@@ -118,6 +116,8 @@ std::optional<PreviewAnimation> load_deuteros_preview(
             const auto palette = eon::decode_deuteros_amiga_palette(
                 disk, bundle, vm.palette_index());
             preview.rgba_frames.push_back(eon::colorize_deuteros_amiga_frame(frame, palette));
+            // $207fe runs from the VBL server between scheduler invocations.
+            random.advance_vblank();
         }
         if (preview.rgba_frames.empty()) return std::nullopt;
         return preview;

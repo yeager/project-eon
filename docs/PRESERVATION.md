@@ -138,7 +138,15 @@ include bitmap selection, signed coordinates, palette selection, timer waits,
 audio-position waits, stepped vertical motion, relative jumps, one-level
 calls/returns, sound events, alternate-resource selection, input gates, and
 transition requests. Random opcodes require an explicit original-compatible
-random source; absence fails closed instead of inventing a sequence.
+random source; absence fails closed instead of inventing a sequence. The
+implemented `$2016a` source indexes the current bundle at
+`(seed + vblank_counter) & $3ffe`, reads one big-endian word, adds 14 modulo
+16 bits, then adds that result to the 16-bit seed. VBL interrupt `$207fe`
+advances the 32-bit counter by four between scheduler calls. With the verified
+zero start phase, the first opening random command occurs on tick 145 at
+counter `$240` and returns/seeds `$0011`. A VBL can race the very first
+scheduler call on original hardware, so an alternate startup phase remains an
+explicit runtime parameter rather than being erased from the evidence model.
 
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
@@ -163,6 +171,18 @@ their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 92h, and 95h. `2200AD.EXE` jumps from file offset `0x0004` to `0xd1b0`, then
 uses DOS services and loads original libraries. See the
 [DOS analysis](generated/dos-millennium.md).
+
+The English DOS `TITLE.LIB` (18,907 bytes, SHA-256
+`6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678`)
+and `GX.LIB` (312,748 bytes, SHA-256
+`4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f`)
+share a verified banked container. Its six-byte header stores a little-endian
+entry count, 16-bit directory offset, and 64-KiB bank byte. Each 12-byte entry
+stores a 16-bit asset offset, bank byte, reserved zero byte, and NUL-padded
+eight-character name. `TITLE.LIB` has 38 entries at directory `$4813`;
+`GX.LIB` has 180 at `$4bd3c`. Native parsing rejects duplicate names,
+non-monotonic resources, invalid padding/flags, and any range outside the
+directory boundary.
 
 ## Evidence levels
 

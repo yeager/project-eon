@@ -132,6 +132,10 @@ The Spanish Millennium floppy is now opened as a native FAT12 filesystem. Its
 integration tests lock the extracted `2200AD.EXE` and `GX.LIB` contents to
 their observed SHA-256 hashes.
 
+The English DOS `TITLE.LIB` and `GX.LIB` are also parsed natively through their
+verified banked resource directory, exposing 38 title resources and 180
+gameplay resources directly from the hash-identified original archive.
+
 The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
 Millennium disk. Nested extraction locates the disk by SHA-256 independently of
 its filename and reads its 13 root files, including verified `DATA12.BIN`.
@@ -142,8 +146,8 @@ validated against the real images. The 68000 bootloader's decoded-track request 
 documented in [the generated disassembly](docs/generated/deuteros-amiga-boot.md).
 Both discovered four-bitplane RLE layouts are implemented, covering all 216
 bitmap records in the first two resource bundles. The SDL launch view exercises
-the same importer, channel VM, compositor, original palettes, and 50 Hz PAL tick
-sequence. It freezes at the first still-unimplemented timing/random or stateful
+the same importer, channel VM, compositor, original palettes, and VBL tick
+sequence. It freezes at the first still-unimplemented stateful
 save/restore boundary rather than fabricating later animation frames.
 
 The repository does not contain the commercial games. Point the inventory tool
