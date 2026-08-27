@@ -45,6 +45,13 @@ bytes with SHA-256 `9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec253963
 `GX.LIB` is 311,420 bytes with SHA-256
 `e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767`.
 
+The Atari ST one-disk Millennium releases also expose FAT12 filesystems. The
+verified 819,200-byte Equinox image contains 13 live root entries. Its
+`DATA12.BIN` resource is 932 bytes with SHA-256
+`6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda`.
+This proves a native outer ZIP → inner ZIP → ST disk → file path without using
+filenames as release identity.
+
 ## Initial DOS observations
 
 Despite their `.EXE` suffixes, `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are

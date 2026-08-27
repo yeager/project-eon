@@ -84,6 +84,24 @@ void recurse_inventory(
     }
 }
 
+std::optional<std::vector<std::uint8_t>> recurse_extract(
+    const ZipArchive& archive,
+    std::string_view expected_sha256,
+    unsigned depth,
+    unsigned maximum_nesting) {
+    for (const auto& entry : archive.entries()) {
+        if (entry.directory) continue;
+        auto bytes = archive.extract(entry);
+        if (ends_with_zip(entry.name) && depth < maximum_nesting) {
+            if (auto result = recurse_extract(ZipArchive(std::move(bytes)), expected_sha256,
+                    depth + 1, maximum_nesting)) return result;
+        } else if (to_hex(sha256(bytes)) == expected_sha256) {
+            return bytes;
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 ZipArchive::ZipArchive(std::vector<std::uint8_t> bytes) : bytes_(std::move(bytes)) {
@@ -192,6 +210,14 @@ std::vector<ArchiveAsset> inventory_zip(const std::filesystem::path& path, unsig
     std::vector<ArchiveAsset> assets;
     recurse_inventory(ZipArchive::open(path), path.filename().string(), 0, maximum_nesting, assets);
     return assets;
+}
+
+std::optional<std::vector<std::uint8_t>> extract_asset_by_sha256(
+    const std::filesystem::path& path,
+    std::string_view expected_sha256,
+    unsigned maximum_nesting) {
+    if (expected_sha256.size() != 64) throw std::runtime_error("Expected SHA-256 must be 64 hex characters");
+    return recurse_extract(ZipArchive::open(path), expected_sha256, 0, maximum_nesting);
 }
 
 std::string name(AssetKind kind) {
