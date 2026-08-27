@@ -201,6 +201,29 @@ struct DeuterosAtariState5ReturnProfile {
     std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch);
 
+// A separate copied-dispatcher route passes a literal callback to XBIOS
+// selector $26. The callback's stack operations are byte-proven, but its ABI
+// return provenance is intentionally not emulated or inferred.
+struct DeuterosAtariSupervisorCallbackProfile {
+    std::size_t callsite_offset = 0;
+    std::size_t callsite_bytes = 0;
+    std::string callsite_sha256;
+    std::uint32_t callback_address = 0;
+    std::size_t callback_offset = 0;
+    std::size_t callback_bytes = 0;
+    std::string callback_sha256;
+    std::uint16_t callback_push_opcode = 0;
+    std::uint16_t xbios_selector = 0;
+    std::uint16_t trap_opcode = 0;
+    std::uint16_t callback_return_address_load_opcode = 0;
+    std::uint32_t callback_stack_address = 0;
+    std::uint16_t callback_stack_move_opcode = 0;
+    std::uint16_t callback_return_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariSupervisorCallbackProfile parse_deuteros_atari_supervisor_callback(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage);
+
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is
 // known to enter the duplicate at its `$13200` load address.

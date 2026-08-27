@@ -937,6 +937,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             second_profile, dispatch);
         const auto state5_return = eon::parse_deuteros_atari_state5_return(
             second_stage, second_profile, dispatch);
+        const auto supervisor_callback = eon::parse_deuteros_atari_supervisor_callback(
+            second_stage, second_profile);
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -1031,6 +1033,16 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << state5_return.dispatcher_tail_offset << "; SHA-256 "
             << state5_return.dispatcher_tail_sha256 << std::dec
             << " (validated only; no state selection, raw read, or XBIOS execution)\n";
+        std::cout << "          Supervisor callback boundary: stage +0x" << std::hex
+            << supervisor_callback.callsite_offset << " pushes callback 0x"
+            << supervisor_callback.callback_address << " and XBIOS selector 0x"
+            << supervisor_callback.xbios_selector << ", TRAP #14 0x"
+            << supervisor_callback.trap_opcode << "; callsite SHA-256 "
+            << supervisor_callback.callsite_sha256 << "; callback +0x"
+            << supervisor_callback.callback_offset << " loads (A7),D0, sets A7=0x"
+            << supervisor_callback.callback_stack_address << ", pushes D0, RTS; SHA-256 "
+            << supervisor_callback.callback_sha256 << std::dec
+            << " (ABI boundary only; no XBIOS/callback execution)\n";
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")
