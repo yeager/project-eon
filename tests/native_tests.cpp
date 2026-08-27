@@ -325,6 +325,12 @@ int main() {
     assert(game_flow.fourth_function_key.second_runtime_byte_value == 9);
     assert(game_flow.fourth_function_key.third_runtime_byte_address == 0x75a9);
     assert(game_flow.fourth_function_key.third_runtime_byte_value == 0);
+    assert(game_flow.fifth_function_key.handler_address == 0x7597);
+    assert(game_flow.fifth_function_key.transfer_al_value == 2);
+    assert(game_flow.fifth_function_key.first_call_address == 0xbe28);
+    assert(game_flow.fifth_function_key.second_call_address == 0x10b9d);
+    assert(game_flow.fifth_function_key.third_call_address == 0x14bf7);
+    assert(game_flow.fifth_function_key.fourth_call_address == 0x10b76);
     auto altered_f2_gate = *game_executable;
     altered_f2_gate[0x71ca - 0x100] ^= 0x01;
     bool rejected_altered_f2_gate = false;
@@ -352,6 +358,15 @@ int main() {
         rejected_altered_f4_common = true;
     }
     assert(rejected_altered_f4_common);
+    auto altered_f5_handler = *game_executable;
+    altered_f5_handler[0x7597 - 0x100] ^= 0x01;
+    bool rejected_altered_f5_handler = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(altered_f5_handler));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f5_handler = true;
+    }
+    assert(rejected_altered_f5_handler);
     eon::MillenniumDosGameSession game_session(game_flow);
     assert(!game_session.observe_action(0));
     assert(!game_session.last_function_key_index());
@@ -372,6 +387,10 @@ int main() {
     assert(game_session.last_fourth_function_key_trace()->common_routine_address == 0xba5e);
     assert(game_session.last_fourth_function_key_trace()->second_runtime_byte_value == 9);
     assert(!game_session.last_third_function_key_trace());
+    assert(game_session.observe_action(0x3f) == std::optional<std::size_t>{4});
+    assert(game_session.last_fifth_function_key_trace());
+    assert(game_session.last_fifth_function_key_trace()->third_call_address == 0x14bf7);
+    assert(!game_session.last_fourth_function_key_trace());
     assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
     assert(!game_session.last_first_function_key_trace());
     assert(!game_session.observe_action(0x45));

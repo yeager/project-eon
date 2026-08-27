@@ -76,6 +76,22 @@ struct MillenniumDosFourthFunctionKeyTrace {
     std::uint8_t third_runtime_byte_value = 0;
 };
 
+// Exact, non-semantic trace of table record four (raw F5 / $3f). Its handler
+// immediately loads AL=$02 and calls four in-image routines before returning.
+// The original code does not expose the calls' effects here, so Project Eon
+// records the control-flow facts without executing them or manufacturing the
+// runtime state they require.
+struct MillenniumDosFifthFunctionKeyTrace {
+    std::uint16_t handler_address = 0;
+    std::uint8_t transfer_al_value = 0;
+    // The flat COM image crosses 64 KiB; use 32-bit image addresses rather
+    // than silently truncating the two observed high call targets.
+    std::uint32_t first_call_address = 0;
+    std::uint32_t second_call_address = 0;
+    std::uint32_t third_call_address = 0;
+    std::uint32_t fourth_call_address = 0;
+};
+
 // Narrow, code-validated facts from the English DOS 2200AD.EXE main loop.
 // They describe dispatch mechanics only.  In particular, the meanings of the
 // eight-byte table entries and the routines they reach have not been inferred.
@@ -94,6 +110,7 @@ struct MillenniumDosGameFlow {
     MillenniumDosSecondFunctionKeyTrace second_function_key;
     MillenniumDosThirdFunctionKeyTrace third_function_key;
     MillenniumDosFourthFunctionKeyTrace fourth_function_key;
+    MillenniumDosFifthFunctionKeyTrace fifth_function_key;
 };
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
