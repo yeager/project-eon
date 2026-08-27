@@ -93,6 +93,9 @@ int main() {
     assert(eon::release_available(releases, eon::Game::millennium, eon::Platform::dos));
     assert(eon::release_available(releases, eon::Game::deuteros, eon::Platform::amiga));
     assert(!eon::release_available(releases, eon::Game::deuteros, eon::Platform::dos));
+    assert(eon::deuteros_amiga_opening_supported(std::nullopt));
+    assert(eon::deuteros_amiga_opening_supported(eon::Platform::amiga));
+    assert(!eon::deuteros_amiga_opening_supported(eon::Platform::atari_st));
 
     std::size_t asset_count = 0;
     std::set<std::string> asset_hashes;
