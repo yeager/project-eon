@@ -440,6 +440,14 @@ interval. The `$1f1a` vector returns raw-loader arguments: destination
 call. These returned values flow to `$70030` through the proven dispatcher,
 but state selection is still not emulated and no sector is read by this parser.
 
+The sixth vector (`$1f52`) makes two further static calls to `$70030`: first
+with raw arguments destination `$b000`, byte count `$b400`, and computed
+reader value `$4c * $1200 = $55800`; then it copies `$9393` bytes from `$57a00`
+to `$b006` and calls again with destination `$16400`, byte count `$4c800`,
+reader value `$60c00`. These are preserved instruction/dataflow facts only;
+they do not authorize Project Eon to perform the disk I/O without a proven
+runtime table selection.
+
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its

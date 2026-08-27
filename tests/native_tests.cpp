@@ -1426,6 +1426,15 @@ int main() {
     assert(deuteros_dispatch.state1_destination == 0xb000);
     assert(deuteros_dispatch.state1_byte_count == 0x5e400);
     assert(deuteros_dispatch.state1_linear_sector == 0x4c);
+    assert(deuteros_dispatch.state5_first_destination == 0xb000);
+    assert(deuteros_dispatch.state5_first_byte_count == 0xb400);
+    assert(deuteros_dispatch.state5_first_reader_argument == 0x55800);
+    assert(deuteros_dispatch.state5_copy_source == 0x57a00);
+    assert(deuteros_dispatch.state5_copy_destination == 0xb006);
+    assert(deuteros_dispatch.state5_copy_byte_count == 0x9393);
+    assert(deuteros_dispatch.state5_second_destination == 0x16400);
+    assert(deuteros_dispatch.state5_second_byte_count == 0x4c800);
+    assert(deuteros_dispatch.state5_second_reader_argument == 0x60c00);
     assert(deuteros_second_stage_profile.raw_read_routine_offset == 0x60);
     assert(deuteros_second_stage_profile.raw_read_max_sector_count == 9);
     assert(deuteros_second_stage_profile.side_switch_track == 0x50);
