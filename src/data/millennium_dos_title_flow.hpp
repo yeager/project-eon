@@ -33,6 +33,18 @@ struct MillenniumDosTitleFlow {
     std::uint16_t input_exit_loading_text_address = 0;
     std::string input_exit_loading_text;
     std::uint8_t exit_code = 0;
+    // The title entry makes a direct function-$00 request through the already
+    // installed private INT 91h vector. These fields are byte-level operands;
+    // neither handler installation nor AX/AL after the external interrupt is
+    // inferred by the host.
+    std::uint16_t title_private_interrupt_wrapper_address = 0;
+    std::uint16_t title_private_interrupt_record_address = 0;
+    std::uint16_t title_private_interrupt_function = 0;
+    std::uint16_t title_private_interrupt_result_word_address = 0;
+    std::uint16_t title_private_interrupt_result_low_byte_address = 0;
+    std::uint16_t title_private_interrupt_result_high_byte_address = 0;
+    std::uint16_t title_private_interrupt_equal_branch_target = 0;
+    std::uint16_t title_private_interrupt_other_branch_target = 0;
     // Loaded addresses in the flat MILL.COM image.  These identify only the
     // observed register loads and near-call edges; they do not model EXEC or
     // any return value from the callee.
@@ -45,6 +57,17 @@ struct MillenniumDosTitleFlow {
     std::uint16_t launcher_common_branch_target = 0;
     std::uint16_t launcher_common_fallthrough_return = 0;
     std::uint16_t launcher_common_branch_target_static_boundary = 0;
+    // The common program helper has a literal DOS EXEC boundary. The caller
+    // invokes it for TITLES.EXE and, only after an unmodelled return/result,
+    // for 2200AD.EXE. These fields expose the parent-owned parameter block and
+    // post-EXEC restoration bytes without emulating DOS or child lifetime.
+    std::uint16_t launcher_exec_helper_address = 0;
+    std::uint16_t launcher_exec_param_block_address = 0;
+    std::uint16_t launcher_exec_saved_stack_address = 0;
+    std::uint16_t launcher_exec_interrupt_site = 0;
+    std::uint16_t launcher_exec_result_interrupt_site = 0;
+    std::uint16_t launcher_exec_carry_branch_address = 0;
+    std::uint16_t launcher_exec_noncarry_return_address = 0;
     std::uint16_t launcher_pre_title_gate_address = 0;
     std::uint16_t launcher_pre_title_gate_target = 0;
     std::uint16_t launcher_pre_title_call_address = 0;
