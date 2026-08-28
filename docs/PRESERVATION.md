@@ -358,6 +358,21 @@ unpacked representation. The command-line verifier exposes them so a future
 analysis can identify the exact input range before making any claim about the
 transformed RAM image.
 
+The raw Defjam first-stage source itself has shared AmigaOS/input text anchors:
+within the `0x6e000` source span (SHA-256
+`5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a`),
+`exec.library`, `graphics.library`, and `input.device` occur at stage offsets
+`+0x4a3dc`, `+0x4a648`, and `+0x4a936` (ADF `+0x6e5dc`, `+0x6e848`, and
+`+0x6eb36`). The shared source windows `+0x4a5b0`/`0x160` (SHA-256
+`97bb8cbe026ac3bba2c19cc296bc7cef00fbd0c8095c678f4cc303761b8b8309`) and
+`+0x4a900`/`0x220` (SHA-256
+`ee84336cbf4665bcd2bc48d054c024a20e4c5faaaf26cd5fdcc78e6b8f3931c9`) also
+contain table-like keyboard characters. These are source-only facts: nearby
+absolute references in the raw bytes do not map to the source's nominal
+`$41000 + offset` address. Without the preceding transform's output mapping,
+they establish no entry point, scan-code mapping, input behavior, graphics
+resource, or display mode and are never used by the SDL runtime.
+
 The destination `0x68000` begins with a separate, directly verifiable resident
 entry gate: `JSR $787d4`, test byte `d3`, conditionally OR `0x0100` into `d0`,
 then store the resulting word at `0x7b75a` and return. The call target lies
@@ -1594,9 +1609,16 @@ literal BIOS mode request through `INT $10`, mode `$0e` at `$01de` or mode
 `$13` at `$01fc`, then has a local zero-`AX` mismatch return. Function `$04`
 resolves to `$0c17` / `$0815`, reads the input byte at `ES:BX`, masks it with
 `$03`, and updates only its code-local byte (`$008d` / `$00af`) before `RET`.
-This is a strict SDL-adapter boundary for requested video mode and a masked
-driver-local option; Project Eon executes neither the driver, BIOS call, nor
-any path-dependent initial presentation.
+Function `$1f`, which the `2200AD.EXE` startup wrapper requests at `$d2c5`,
+resolves to `$0235` (EGA) / `$024c` (MCGA). Its exact six-byte prefixes load
+AL from driver-local `$008a` / `$00ac`, set AH to `$04` / `$01`, and return;
+neither reads the caller's `ES:BX`. The supplied on-disk bytes are zero, but
+their launcher/title-runtime values and the original installed-driver choice
+are not established. Therefore this is a driver-specific, read-only ABI fact,
+not permission to select a driver, fix `$da05`, or execute the startup/GX
+path. This is a strict SDL-adapter boundary for requested video mode and a
+masked driver-local option; Project Eon executes neither the driver, BIOS call,
+nor any path-dependent initial presentation.
 
 The caller sites that request private functions `$02` and `$04` leave the
 pointed `ES:BX` records inside the original executable image, but the supplied
@@ -2198,3 +2220,17 @@ The preceding `A1 -> $206a0` transfer remains deliberately unmaterialized:
 its controller pointer is unknown. Execution stops at `$40450`, before its
 first Exec vector; that 16-byte boundary hash is
 `f0c847a4d443e26fc08f6c6864afeca3b33da514f8708f76f2f05314a4c88067`.
+
+The wider hard-ABI span `$40450..$4046b` is 28 bytes at ADF `+0x9b450`
+(SHA-256 `24f5fb4f5019bf450f8b6931fe1c77747461704b139bbe14ec079b1008af1f49`).
+It installs stack `$40b62`, reads the unknown Exec base from address `$4`,
+and calls the conventional `SuperState` and `UserState` vectors at `-$96` and
+`-$9c`; no Kickstart image, vector implementation, return value, condition
+code, privilege transition, or stack state is present in the supplied disk
+media. If both vectors and the following internal calls returned, the static
+span `$4046c..$404d7` (108 bytes, SHA-256
+`69b1aaefdd169565901ae166f15c1a17487f9bd63b7303748869bc7955c7380f`) would
+reach custom-register literal `$dff000` and setup offsets `$40`, `$42`, `$9a`
+and `$96`. That conditional post-boundary code is recorded solely as raw
+preservation evidence; Project Eon does not cross the Exec ABI or claim a
+visual hardware effect.

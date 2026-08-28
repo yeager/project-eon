@@ -571,6 +571,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << mcga_driver.function_zero_set_mode_interrupt_site
         << "; AX=4 masks ES:BX[0] with 0x"
         << static_cast<unsigned>(ega_driver.function_four_input_mask)
+        << "; AX=0x1f returns AH=0x"
+        << static_cast<unsigned>(ega_driver.function_thirty_one_return_ah)
+        << "/0x" << static_cast<unsigned>(mcga_driver.function_thirty_one_return_ah)
+        << " with driver-local AL at 0x" << ega_driver.function_thirty_one_state_address
+        << "/0x" << mcga_driver.function_thirty_one_state_address
         << " (validated ABI only; no BIOS/driver execution)\n" << std::dec;
     constexpr auto static_data_sha256 =
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
