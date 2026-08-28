@@ -30,11 +30,6 @@ Source: "{#StagingDir}\po\*"; DestDir: "{app}\po"; Flags: recursesubdirs ignorev
 Source: "{#StagingDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
-[Dirs]
-; The program scans this directory in place. The installer never places game
-; data here and never unpacks a user archive.
-Name: "{app}\data"
-
 [Icons]
 Name: "{group}\Project Eon"; Filename: "{app}\project-eon.exe"
 Name: "{autodesktop}\Project Eon"; Filename: "{app}\project-eon.exe"; Tasks: desktopicon
