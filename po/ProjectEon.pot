@@ -176,3 +176,33 @@ msgstr ""
 #: src/main.cpp
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr ""
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr ""
+
+msgid "F10: CLOSE"
+msgstr ""
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr ""
+
+msgid "SMOOTH SCALING"
+msgstr ""
+
+msgid "SCANLINES"
+msgstr ""
+
+msgid "MODERN FRAME"
+msgstr ""
+
+msgid "ON"
+msgstr ""
+
+msgid "OFF"
+msgstr ""
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr ""
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr ""

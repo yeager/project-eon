@@ -129,3 +129,33 @@ msgstr "ÖZGÜN BAŞLIK DEVİR TESLİMİ: KAYNAK 0x"
 
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "ÖZGÜN $20580 AKIŞI: +0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "MODERN GRAFİK AYARLARI"
+
+msgid "F10: CLOSE"
+msgstr "F10: KAPAT"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "SOL/SAĞ: DEĞİŞTİR"
+
+msgid "SMOOTH SCALING"
+msgstr "YUMUŞAK ÖLÇEKLEME"
+
+msgid "SCANLINES"
+msgstr "TARAMA ÇİZGİLERİ"
+
+msgid "MODERN FRAME"
+msgstr "MODERN ÇERÇEVE"
+
+msgid "ON"
+msgstr "AÇIK"
+
+msgid "OFF"
+msgstr "KAPALI"
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "AYARLAR YALNIZCA SDL OLUŞTURMAYA UYGULANIR."
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "YUKARI/AŞAĞI: SEÇ   SOL/SAĞ: DEĞİŞTİR   F10: KAPAT"

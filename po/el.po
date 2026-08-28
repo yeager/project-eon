@@ -91,3 +91,33 @@ msgid "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
 msgstr "ΑΡΧΙΚΗ ΠΑΡΑΔΟΣΗ ΤΙΤΛΟΥ: ΠΟΡΟΣ 0x"
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "ΑΡΧΙΚΗ ΡΟΗ $20580: +0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "ΣΥΓΧΡΟΝΕΣ ΡΥΘΜΙΣΕΙΣ ΓΡΑΦΙΚΩΝ"
+
+msgid "F10: CLOSE"
+msgstr "F10: ΚΛΕΙΣΙΜΟ"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "ΑΡΙΣΤΕΡΑ/ΔΕΞΙΑ: ΑΛΛΑΓΗ"
+
+msgid "SMOOTH SCALING"
+msgstr "ΟΜΑΛΗ ΚΛΙΜΑΚΩΣΗ"
+
+msgid "SCANLINES"
+msgstr "ΓΡΑΜΜΕΣ ΣΑΡΩΣΗΣ"
+
+msgid "MODERN FRAME"
+msgstr "ΣΥΓΧΡΟΝΟ ΠΛΑΙΣΙΟ"
+
+msgid "ON"
+msgstr "ΕΝΕΡΓΟ"
+
+msgid "OFF"
+msgstr "ΑΝΕΝΕΡΓΟ"
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "ΟΙ ΡΥΘΜΙΣΕΙΣ ΕΦΑΡΜΟΖΟΝΤΑΙ ΜΟΝΟ ΣΤΗΝ ΑΠΟΔΟΣΗ SDL."
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "ΠΑΝΩ/ΚΑΤΩ: ΕΠΙΛΟΓΗ   ΑΡΙΣΤΕΡΑ/ΔΕΞΙΑ: ΑΛΛΑΓΗ   F10: ΚΛΕΙΣΙΜΟ"

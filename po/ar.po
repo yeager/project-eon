@@ -91,3 +91,33 @@ msgid "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
 msgstr "تسليم العنوان الأصلي: المورد 0x"
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "دفق $20580 الأصلي: +0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "إعدادات الرسوم الحديثة"
+
+msgid "F10: CLOSE"
+msgstr "F10: إغلاق"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "يسار/يمين: تغيير"
+
+msgid "SMOOTH SCALING"
+msgstr "تحجيم سلس"
+
+msgid "SCANLINES"
+msgstr "خطوط المسح"
+
+msgid "MODERN FRAME"
+msgstr "إطار حديث"
+
+msgid "ON"
+msgstr "تشغيل"
+
+msgid "OFF"
+msgstr "إيقاف"
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "تنطبق الإعدادات على عرض SDL فقط."
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "أعلى/أسفل: اختيار   يسار/يمين: تغيير   F10: إغلاق"
