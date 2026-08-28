@@ -2,6 +2,7 @@
 #include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
+#include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -1354,6 +1355,30 @@ std::unique_ptr<eon::MillenniumAtariBootstrapSession> load_millennium_atari_boot
     }
 }
 
+std::unique_ptr<eon::DeuterosAtariBootstrapSession> load_deuteros_atari_bootstrap(
+    const std::vector<eon::ReleaseArchive>& releases,
+    std::optional<eon::Platform> requested_platform) {
+    if (requested_platform != eon::Platform::atari_st) return {};
+    // This is the supplied Replicants Disk 1 whose boot code contains the
+    // verified raw-stage sequence. Other protected ST disks remain detected,
+    // but are never silently substituted for this bounded path.
+    constexpr auto replicants_disk1_sha256 =
+        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
+    const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
+        return candidate.game == eon::Game::deuteros
+            && candidate.platform == eon::Platform::atari_st;
+    });
+    if (release == releases.end()) return {};
+    try {
+        const auto image = eon::extract_asset_by_sha256(release->path, replicants_disk1_sha256);
+        if (!image) return {};
+        return std::make_unique<eon::DeuterosAtariBootstrapSession>(std::move(*image));
+    } catch (const std::exception& error) {
+        std::cerr << "Unable to start Deuteros Atari ST bootstrap: " << error.what() << '\n';
+        return {};
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -1531,6 +1556,7 @@ int main(int argc, char** argv) {
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
     std::optional<std::uint32_t> deuteros_title_resource;
+    std::unique_ptr<eon::DeuterosAtariBootstrapSession> deuteros_atari_session;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
@@ -1551,9 +1577,18 @@ int main(int argc, char** argv) {
             millennium_state_page = 0;
         }
     };
+    const auto start_deuteros = [&] {
+        deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform);
+        deuteros_opening = load_deuteros_opening(releases, active_platform);
+        create_deuteros_opening_texture();
+        start_deuteros_audio();
+        deuteros_last_tick = SDL_GetTicks();
+        deuteros_title_resource.reset();
+    };
     if (screen == Screen::launching && selected == eon::Game::millennium) {
         start_millennium_title();
     }
+    if (screen == Screen::launching && selected == eon::Game::deuteros) start_deuteros();
     bool show_scanner = false;
     bool running = true;
     while (running) {
@@ -1639,13 +1674,7 @@ int main(int argc, char** argv) {
                         selected = game;
                         screen = Screen::launching;
                         if (selected == eon::Game::millennium) start_millennium_title();
-                        if (selected == eon::Game::deuteros) {
-                            deuteros_opening = load_deuteros_opening(releases, active_platform);
-                            create_deuteros_opening_texture();
-                            start_deuteros_audio();
-                            deuteros_last_tick = SDL_GetTicks();
-                            deuteros_title_resource.reset();
-                        }
+                        if (selected == eon::Game::deuteros) start_deuteros();
                     }
                 }
             }
@@ -1659,13 +1688,7 @@ int main(int argc, char** argv) {
                             selected = cards[index].game;
                             screen = Screen::launching;
                             if (selected == eon::Game::millennium) start_millennium_title();
-                            if (selected == eon::Game::deuteros) {
-                                deuteros_opening = load_deuteros_opening(releases, active_platform);
-                                create_deuteros_opening_texture();
-                                start_deuteros_audio();
-                                deuteros_last_tick = SDL_GetTicks();
-                                deuteros_title_resource.reset();
-                            }
+                            if (selected == eon::Game::deuteros) start_deuteros();
                         }
                     }
                 }
@@ -1682,6 +1705,10 @@ int main(int argc, char** argv) {
             create_deuteros_opening_texture();
             start_deuteros_audio();
             deuteros_last_tick = SDL_GetTicks();
+        }
+        if (screen == Screen::launching && selected == eon::Game::deuteros
+            && active_platform == eon::Platform::atari_st && !deuteros_atari_session) {
+            deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && deuteros_opening) {

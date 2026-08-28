@@ -2,6 +2,7 @@
 #include "launcher.hpp"
 #include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
@@ -1933,6 +1934,14 @@ int main() {
     assert(deuteros_st_disk1 && deuteros_st_disk2);
     const eon::DeuterosAtariDisk deuteros_disk1(*deuteros_st_disk1);
     const eon::DeuterosAtariDisk deuteros_disk2(*deuteros_st_disk2);
+    const eon::DeuterosAtariBootstrapSession deuteros_atari_session(*deuteros_st_disk1);
+    assert(deuteros_atari_session.first_stage_sha256()
+        == "dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168");
+    assert(deuteros_atari_session.second_stage_sha256()
+        == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
+    assert(deuteros_atari_session.first_stage().next_destination == 0x70000);
+    assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
+    assert(deuteros_atari_session.dispatch().state0_destination == 0x13200);
     const auto& deuteros_st_boot = deuteros_disk1.boot_profile();
     assert(deuteros_st_boot.bytes_per_sector == 512);
     assert(deuteros_st_boot.sectors_per_cluster == 2);
