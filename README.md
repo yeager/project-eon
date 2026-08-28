@@ -107,7 +107,8 @@ Only Project Eon's own UI is translated—original game text remains sourced fro
 the selected original media.
 
 By default, Project Eon reads user-supplied media from `~/.projecteon` on
-Linux/macOS and `<install directory>\data` on Windows. `--data` selects a
+Linux/macOS and `<install directory>\data` on Windows. `--data` (or the
+explicit alias `--data-dir`) selects a
 different directory or one original archive, for example a preservation
 collection in `Hämtningar`.
 Archives and disk images are read in place: Project Eon never creates the data

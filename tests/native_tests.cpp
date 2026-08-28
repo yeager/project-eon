@@ -61,6 +61,11 @@ int main() {
         const auto explicit_data = eon::parse_command_line(3, explicit_args);
         assert(explicit_data.request && !explicit_data.request->data_directory_is_default);
         assert(explicit_data.request->data_directory == "original-media");
+        char data_directory_option[] = "--data-dir";
+        char* explicit_directory_args[] = {program, data_directory_option, custom_path};
+        const auto explicit_directory = eon::parse_command_line(3, explicit_directory_args);
+        assert(explicit_directory.request && !explicit_directory.request->data_directory_is_default);
+        assert(explicit_directory.request->data_directory == "original-media");
         char inspect_option[] = "--inspect";
         char* inspect_args[] = {program, inspect_option};
         const auto inspect = eon::parse_command_line(2, inspect_args);

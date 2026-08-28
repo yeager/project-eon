@@ -40,14 +40,14 @@ std::filesystem::path default_data_directory(const char* executable_path) {
 std::string usage() {
     return
         "Usage:\n"
-        "  project-eon [--data <directory-or-archive>]\n"
-        "  project-eon [--data <directory-or-archive>] --game millennium|deuteros\n"
+        "  project-eon [--data|--data-dir <directory-or-archive>]\n"
+        "  project-eon [--data|--data-dir <directory-or-archive>] --game millennium|deuteros\n"
         "               [--platform dos|amiga|atari-st]\n"
         "               [--presentation original|modern]\n\n"
         "               [--language <language>]\n\n"
-        "  project-eon [--data <directory-or-archive>] --verify-data millennium|deuteros\n\n"
-        "  project-eon [--data <directory-or-archive>] --inspect\n\n"
-        "Without --data, game data is read from ~/.projecteon on Linux/macOS\n"
+        "  project-eon [--data|--data-dir <directory-or-archive>] --verify-data millennium|deuteros\n\n"
+        "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n\n"
+        "Without --data/--data-dir, game data is read from ~/.projecteon on Linux/macOS\n"
         "or <install directory>/data on Windows. Without --game, the graphical\n"
         "start menu is shown.\n";
 }
@@ -65,7 +65,7 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
         if (index + 1 >= argc) return {{}, "Missing value for " + std::string(argument), false};
         const std::string_view value = argv[++index];
-        if (argument == "--data") {
+        if (argument == "--data" || argument == "--data-dir") {
             request.data_directory = value;
             request.data_directory_is_default = false;
         } else if (argument == "--game") {
