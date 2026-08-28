@@ -94,6 +94,7 @@ def main() -> int:
     # that exact game/platform pair from the same read-only archive path.
     platform_names = {"DOS": "dos", "Amiga": "amiga", "Atari ST": "atari-st"}
     archive_starts: list[tuple[str, tuple[str, ...]]] = []
+    detected_releases: set[tuple[str, str, str]] = set()
     for archive in sorted(data_directory.rglob("*.zip")):
         inspected = subprocess.run(
             (str(executable), "--data", str(archive), "--inspect"),
@@ -110,6 +111,8 @@ def main() -> int:
             if f" / {label} / " in line), None)
         if platform is None:
             raise SystemExit(f"Could not parse inspected platform for {archive}:\n{line}")
+        language = line.rsplit(" / ", 1)[-1]
+        detected_releases.add((game, platform, language))
         expected_bootstrap = {
             ("millennium", "amiga"): (
                 "bounded launcher bootstrap: resident entry 0x68000, raw resident SHA-256 "
@@ -158,8 +161,19 @@ def main() -> int:
             (str(executable), "--data", str(archive), "--game", game,
                 "--platform", platform, "--presentation", "original"),
         ))
-    if len(archive_starts) < 5:
-        raise SystemExit("Did not find every supported original archive as a direct --data input")
+    expected_releases = {
+        ("millennium", "dos", "en"),
+        ("millennium", "dos", "es"),
+        ("millennium", "amiga", "en"),
+        ("millennium", "atari-st", "en"),
+        ("deuteros", "amiga", "en"),
+        ("deuteros", "atari-st", "en"),
+    }
+    if detected_releases != expected_releases:
+        raise SystemExit(
+            "Did not find every supplied supported release as a direct --data input:\n"
+            f"expected {sorted(expected_releases)}, got {sorted(detected_releases)}"
+        )
     for name, command in archive_starts:
         try:
             completed = subprocess.run(
