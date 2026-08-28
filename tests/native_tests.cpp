@@ -936,7 +936,30 @@ int main() {
     assert(!title_session.poll_console(true));
     const auto game_executable = eon::extract_asset_by_sha256(english_dos->path,
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57");
+    const auto gx_overlay = eon::extract_asset_by_sha256(english_dos->path,
+        "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb");
     assert(game_executable && game_executable->size() == 54'391);
+    assert(gx_overlay && gx_overlay->size() == 46'634);
+    const auto gx_overlay_load = eon::parse_millennium_dos_gx_overlay_load_evidence(
+        *game_executable, *gx_overlay);
+    assert(gx_overlay_load.source_name_address == 0x11c2);
+    assert(gx_overlay_load.loader_entry_address == 0x11ce);
+    assert(gx_overlay_load.loader_segment_cell_address == 0x0118);
+    assert(gx_overlay_load.first_call_address == 0x11d1);
+    assert(gx_overlay_load.first_call_target == 0x053a);
+    assert(gx_overlay_load.second_call_address == 0x11e4);
+    assert(gx_overlay_load.second_call_target == 0x0574);
+    assert(gx_overlay_load.third_call_address == 0x11ec);
+    assert(gx_overlay_load.third_call_target == 0x0596);
+    assert(gx_overlay_load.caller_call_address == 0xd335);
+    assert(gx_overlay_load.caller_target == 0x11ce);
+    const auto gx_overlay_adapter = eon::parse_millennium_dos_gx_overlay_adapter_evidence(
+        *game_executable, gx_overlay_load);
+    assert(gx_overlay_adapter.entry_address == 0x6c52);
+    assert(gx_overlay_adapter.overlay_entry_offset == 0);
+    assert(gx_overlay_adapter.far_transfer_address == 0x6c68);
+    assert(gx_overlay_adapter.continuation_address == 0x6c69);
+    assert(gx_overlay_adapter.return_address == 0x6c72);
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game_executable);
     assert(game_flow.entry_address == 0xd2b0);
     assert(game_flow.startup_address == 0xd2b4);

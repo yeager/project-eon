@@ -485,6 +485,47 @@ struct MillenniumDosGameFlow {
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
     std::span<const std::uint8_t> game_executable);
 
+// Hash-locked raw evidence for 2200AD.EXE loading the original 2200GX.EXE
+// overlay. Both executables are immutable inputs. These are only encoded
+// loader/transfer facts: no DOS service, segment value, call return, overlay
+// routine, screen, or resource ordering is modelled.
+struct MillenniumDosGxOverlayLoadEvidence {
+    std::string game_sha256;
+    std::string overlay_sha256;
+    std::uint16_t source_name_address = 0;
+    std::uint16_t loader_entry_address = 0;
+    std::uint16_t loader_segment_cell_address = 0;
+    std::uint16_t first_call_address = 0;
+    std::uint16_t first_call_target = 0;
+    std::uint16_t second_call_address = 0;
+    std::uint16_t second_call_target = 0;
+    std::uint16_t third_call_address = 0;
+    std::uint16_t third_call_target = 0;
+    std::uint16_t loader_return_address = 0;
+    std::uint16_t caller_call_address = 0;
+    std::uint16_t caller_target = 0;
+    std::string loader_sha256;
+};
+
+struct MillenniumDosGxOverlayAdapterEvidence {
+    std::uint16_t entry_address = 0;
+    std::uint16_t overlay_segment_cell_address = 0;
+    std::uint16_t overlay_entry_offset = 0;
+    std::uint16_t far_transfer_address = 0;
+    std::uint16_t continuation_address = 0;
+    std::uint16_t return_address = 0;
+    std::string raw_sha256;
+};
+
+[[nodiscard]] MillenniumDosGxOverlayLoadEvidence
+parse_millennium_dos_gx_overlay_load_evidence(
+    std::span<const std::uint8_t> game_executable,
+    std::span<const std::uint8_t> gx_overlay_executable);
+[[nodiscard]] MillenniumDosGxOverlayAdapterEvidence
+parse_millennium_dos_gx_overlay_adapter_evidence(
+    std::span<const std::uint8_t> game_executable,
+    const MillenniumDosGxOverlayLoadEvidence& loader);
+
 [[nodiscard]] MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     std::span<const std::uint8_t> game_executable,

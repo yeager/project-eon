@@ -939,6 +939,66 @@ MillenniumDosSecondSpecialActionPrefix evaluate_millennium_dos_second_special_ac
     return result;
 }
 
+MillenniumDosGxOverlayLoadEvidence parse_millennium_dos_gx_overlay_load_evidence(
+    const std::span<const std::uint8_t> game_executable,
+    const std::span<const std::uint8_t> gx_overlay_executable) {
+    constexpr auto game_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr auto overlay_sha256 =
+        "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t name_address = 0x11c2;
+    constexpr auto name = std::to_array<std::uint8_t>({
+        0x32, 0x32, 0x30, 0x30, 0x47, 0x58, 0x2e, 0x45, 0x58, 0x45, 0x00, 0x00});
+    constexpr std::uint16_t loader_address = 0x11ce;
+    constexpr auto loader = std::to_array<std::uint8_t>({
+        0xba, 0xc2, 0x11, 0xe8, 0x66, 0xf3, 0x73, 0x03, 0xe9, 0xce, 0xf3,
+        0xb9, 0xff, 0xff, 0x33, 0xd2, 0x2e, 0xa1, 0x18, 0x01, 0x8e, 0xd8,
+        0xe8, 0x8d, 0xf3, 0x73, 0x03, 0xe9, 0xbb, 0xf3, 0xe8, 0xa7, 0xf3,
+        0x0e, 0x1f, 0x73, 0x03, 0xe9, 0xb1, 0xf3, 0xc3});
+    constexpr auto loader_sha256 =
+        "a8972b74ad9d1dfabe508c42b7fcda0fb45e0d449613449ab8a2763ca8ecff45";
+    constexpr std::uint16_t caller_address = 0xd335;
+    constexpr std::array<std::uint8_t, 3> caller{{0xe8, 0x96, 0x3e}};
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (to_hex(sha256(game_executable)) != game_sha256
+        || to_hex(sha256(gx_overlay_executable)) != overlay_sha256
+        || !has_bytes(game_executable, offset(name_address), name)
+        || !has_bytes(game_executable, offset(loader_address), loader)
+        || !has_bytes(game_executable, offset(caller_address), caller)
+        || to_hex(sha256(game_executable.subspan(offset(loader_address), loader.size())))
+            != loader_sha256) {
+        throw std::runtime_error("Unexpected Millennium DOS GX overlay load evidence");
+    }
+    return {game_sha256, overlay_sha256, name_address, loader_address, 0x0118,
+        0x11d1, near_call_target(0x11d4, loader[4], loader[5]),
+        0x11e4, near_call_target(0x11e7, loader[23], loader[24]),
+        0x11ec, near_call_target(0x11ef, loader[31], loader[32]), 0x11f6,
+        caller_address, near_call_target(0xd338, caller[1], caller[2]), loader_sha256};
+}
+
+MillenniumDosGxOverlayAdapterEvidence parse_millennium_dos_gx_overlay_adapter_evidence(
+    const std::span<const std::uint8_t> game_executable,
+    const MillenniumDosGxOverlayLoadEvidence& loader) {
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t entry = 0x6c52;
+    constexpr auto expected = std::to_array<std::uint8_t>({
+        0x1e, 0x56, 0x06, 0x57, 0x51, 0x8c, 0xc9, 0x51, 0xb9, 0x69, 0x6c,
+        0x51, 0x2e, 0x8b, 0x0e, 0x18, 0x01, 0x51, 0xb9, 0x00, 0x00, 0x51,
+        0xcb, 0x50, 0x0e, 0x1f, 0x58, 0x59, 0x5f, 0x07, 0x5e, 0x1f, 0xc3});
+    constexpr auto expected_sha256 =
+        "b34e5abf8ecd790fce3e7a032d7a7fcacc073d03909e98fd33f9503113e3ad87";
+    const auto offset = static_cast<std::size_t>(entry) - load_bias;
+    if (loader.loader_segment_cell_address != 0x0118 || loader.caller_target != loader.loader_entry_address
+        || !has_bytes(game_executable, offset, expected)
+        || to_hex(sha256(game_executable.subspan(offset, expected.size()))) != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium DOS GX overlay adapter evidence");
+    }
+    return {entry, 0x0118, 0x0000, 0x6c68, 0x6c69, 0x6c72, expected_sha256};
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;

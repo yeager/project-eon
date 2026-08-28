@@ -573,7 +573,15 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     const auto game = eon::extract_asset_by_sha256(release.path, game_sha256);
     if (!game) throw std::runtime_error("Verified Millennium DOS executable missing");
+    constexpr auto gx_overlay_sha256 =
+        "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
+    const auto gx_overlay = eon::extract_asset_by_sha256(release.path, gx_overlay_sha256);
+    if (!gx_overlay) throw std::runtime_error("Verified Millennium DOS GX overlay missing");
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game);
+    const auto gx_overlay_load = eon::parse_millennium_dos_gx_overlay_load_evidence(
+        *game, *gx_overlay);
+    const auto gx_overlay_adapter = eon::parse_millennium_dos_gx_overlay_adapter_evidence(
+        *game, gx_overlay_load);
     std::cout << "          2200AD.EXE startup: entry 0x" << std::hex
         << game_flow.entry_address << ", SS=CS, SP=0x" << game_flow.startup_stack_pointer
         << ", first CALL 0x" << game_flow.startup_first_call_address
@@ -598,6 +606,20 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << static_cast<unsigned>(game_flow.startup_other_followup_video_subfunction) << "); DX!=0 -> 0x"
         << game_flow.startup_nonzero_dx_branch_address << std::dec
         << " (validated boundary only; no native calls executed)\n";
+    std::cout << "          2200GX.EXE overlay evidence: name 0x" << std::hex
+        << gx_overlay_load.source_name_address << ", loader 0x"
+        << gx_overlay_load.loader_entry_address << " reads segment cell 0x"
+        << gx_overlay_load.loader_segment_cell_address << "; calls 0x"
+        << gx_overlay_load.first_call_address << " -> 0x" << gx_overlay_load.first_call_target
+        << "/0x" << gx_overlay_load.second_call_address << " -> 0x"
+        << gx_overlay_load.second_call_target << "/0x" << gx_overlay_load.third_call_address
+        << " -> 0x" << gx_overlay_load.third_call_target << "; caller 0x"
+        << gx_overlay_load.caller_call_address << " -> 0x" << gx_overlay_load.caller_target
+        << "; adapter 0x" << gx_overlay_adapter.entry_address << " RETF 0x"
+        << gx_overlay_adapter.far_transfer_address << " to overlay offset 0x"
+        << gx_overlay_adapter.overlay_entry_offset << "; SHA-256 "
+        << gx_overlay_load.overlay_sha256 << std::dec
+        << " (static only; no segment, calls, overlay code, or display executed)\n";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto initial_save = eon::extract_asset_by_sha256(release.path, initial_save_sha256);

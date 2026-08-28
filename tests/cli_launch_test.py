@@ -149,6 +149,18 @@ def main() -> int:
                     "Millennium Amiga post-negative-D3 terminal did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+        if game == "millennium" and platform == "dos" and language == "English":
+            expected_gx_overlay = (
+                "2200GX.EXE overlay evidence: name 0x11c2, loader 0x11ce reads segment cell 0x118; "
+                "calls 0x11d1 -> 0x53a/0x11e4 -> 0x574/0x11ec -> 0x596; caller 0xd335 -> 0x11ce; "
+                "adapter 0x6c52 RETF 0x6c68 to overlay offset 0x0; SHA-256 "
+                "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb"
+            )
+            if expected_gx_overlay not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium DOS GX overlay evidence did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "amiga":
             expected_callee = (
                 "Channel-request first callee: ADF 0x7a9c, entry 0x2229c; bit 5 branch 0x222b4 -> 0x2232c; "
