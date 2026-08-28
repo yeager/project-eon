@@ -15,7 +15,28 @@ if find "$app" -type d -name data -print -quit | grep -q . \
   echo "refusing to package possible original game data" >&2
   exit 1
 fi
+for required in \
+  Resources/assets/cards/millennium.png \
+  Resources/assets/cards/deuteros.png \
+  Resources/po/sv.po \
+  Resources/po/en_GB.po; do
+  if [ ! -f "$app/$required" ]; then
+    echo "refusing to package incomplete iPad application: missing $required" >&2
+    exit 1
+  fi
+done
 stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/Payload"
 cp -R "$app" "$stage/Payload/ProjectEon.app"
 (cd "$stage" && /usr/bin/zip -qr "$ipa" Payload)
+unzip -tq "$ipa" >/dev/null
+for required in \
+  Payload/ProjectEon.app/Resources/assets/cards/millennium.png \
+  Payload/ProjectEon.app/Resources/assets/cards/deuteros.png \
+  Payload/ProjectEon.app/Resources/po/sv.po \
+  Payload/ProjectEon.app/Resources/po/en_GB.po; do
+  if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
+    echo "IPA validation failed: missing $required" >&2
+    exit 1
+  fi
+done
