@@ -1114,6 +1114,14 @@ the service's internal output and purpose remain intentionally unknown.
 
 ### Deuteros Amiga title-stage exits
 
+The title entry's locally verified low-byte-five arm is also retained without
+assigning it a gameplay meaning. At `$40438` (ADF `+$9b438`) its 16 bytes hash
+to `c4f5b0fa571dc0c932e9bb3df9f48e4c4336840d49ae2368e69fffa8c05c87a7`.
+Only when an explicitly supplied incoming word has low byte `$05` does it
+record the low-byte store to `$3717e`, literal word `$0101` at `$38092`, and
+branch to the pre-existing hard Exec boundary `$40450`. No controller value,
+write to original media, or Exec vector call is performed.
+
 The raw title-stage has three independently validated tails that leave its
 loaded interval. They begin at `$37f56`, `$38038`, and `$38068`. Their prior
 render/control work is intentionally not named, but each tail copies the

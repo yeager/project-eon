@@ -246,6 +246,20 @@ struct DeuterosAmigaTitleEntryPrefix {
     std::uint32_t stop_before_exec_address = 0;
 };
 
+// The title-entry CMP.B arm for observed low byte five. It records literal
+// instruction operands only and stops before the first Exec vector.
+struct DeuterosAmigaTitleEntryModeFivePrefix {
+    std::uint16_t incoming_profile = 0;
+    std::uint32_t controller_transfer_address = 0;
+    std::uint32_t mode_word_address = 0;
+    std::uint16_t mode_word_value = 0;
+    std::uint32_t low_byte_destination_address = 0;
+    std::uint8_t low_byte_value = 0;
+    std::uint32_t literal_word_destination_address = 0;
+    std::uint16_t literal_word_value = 0;
+    std::uint32_t stop_before_exec_address = 0;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -346,6 +360,11 @@ evaluate_deuteros_amiga_title_post_transition_response_loop(
 // writes. Other profiles and the controller pointer are rejected/bounded.
 [[nodiscard]] DeuterosAmigaTitleEntryPrefix
 execute_deuteros_amiga_title_entry_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::uint16_t incoming_profile);
+
+[[nodiscard]] DeuterosAmigaTitleEntryModeFivePrefix
+execute_deuteros_amiga_title_entry_mode_five_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint16_t incoming_profile);
 

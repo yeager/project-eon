@@ -3333,6 +3333,14 @@ int main() {
     assert(live_title_entry->normal_mode_byte_address == 0x19d52);
     assert(live_title_entry->normal_mode_byte_value == 1);
     assert(live_title_entry->stop_before_exec_address == 0x40450);
+    const auto mode_five_entry = eon::execute_deuteros_amiga_title_entry_mode_five_prefix(
+        system_disk, load_plan, 0x0105);
+    assert(mode_five_entry.mode_word_value == 0x0105);
+    assert(mode_five_entry.low_byte_destination_address == 0x3717e);
+    assert(mode_five_entry.low_byte_value == 5);
+    assert(mode_five_entry.literal_word_destination_address == 0x38092);
+    assert(mode_five_entry.literal_word_value == 0x0101);
+    assert(mode_five_entry.stop_before_exec_address == 0x40450);
     {
         bool rejected = false;
         try {
