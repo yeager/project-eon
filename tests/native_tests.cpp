@@ -2822,6 +2822,7 @@ int main() {
             assert(events.alternate_resources.size() == 1);
             live_input_alternate = events.alternate_resources.front();
             assert(tick == 82);
+            assert(events.title_handoff);
             break;
         }
     }
@@ -2831,6 +2832,19 @@ int main() {
     assert(live_title_stage->stage().entry_address == 0x40426);
     assert(live_title_stage->original_sha256()
         == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
+    assert(live_input_opening.title_handed_off());
+    assert(live_input_opening.ticks() == 82);
+    assert(live_input_opening.vblank_counter() == 82 * 4);
+    const auto frame_at_title_handoff = live_input_opening.rgba_frame();
+    assert(frame_at_title_handoff);
+    const auto post_handoff_events = live_input_opening.tick(true);
+    assert(post_handoff_events.sounds.empty());
+    assert(post_handoff_events.alternate_resources.empty());
+    assert(!post_handoff_events.title_handoff);
+    assert(!post_handoff_events.transition_requested);
+    assert(live_input_opening.ticks() == 82);
+    assert(live_input_opening.vblank_counter() == 82 * 4);
+    assert(live_input_opening.rgba_frame() == frame_at_title_handoff);
     // The first real $fe render pass receives the exact $32a24+$0b38 stream.
     // $20580's observed opening path sets the original position/table globals
     // and requests eleven glyph writes before its zero-byte return. It is traced

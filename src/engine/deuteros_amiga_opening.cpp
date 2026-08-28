@@ -27,6 +27,11 @@ DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
       random_(transferred_bundle_, load_plan_.main_stage_entry) {}
 
 DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
+    // The exact $0f,$0b38 handoff returns to the bootstrap loader, which
+    // reads the separately hash-verified title stage. Continuing to tick the
+    // opening VM after that original edge would create a mixed, invented
+    // runtime. Keep its final original frame and stop at the title boundary.
+    if (title_handed_off_) return {};
     DeuterosAmigaVmInputs inputs;
     inputs.input_pressed = input_pressed;
     inputs.random_word = [this] { return random_.next(); };
@@ -38,6 +43,7 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     if (!title_stage_session_ && events.alternate_resources.size() == 1
         && events.alternate_resources.front() == 0x0b38) {
         title_stage_session_.emplace(disk_, load_plan_);
+        events.title_handoff = true;
     }
     ++ticks_;
     // $207fe runs independently between scheduler calls, including after an
@@ -56,6 +62,7 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     }
     last_frame_ = compositor_.global_video_frame();
     frame_composed_on_last_tick_ = true;
+    if (events.title_handoff) title_handed_off_ = true;
     return events;
 }
 

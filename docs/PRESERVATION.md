@@ -1840,3 +1840,13 @@ report boundary. The latter has no recovered presentation/runtime chain, so the
 SDL view deliberately does not load Amiga art, audio, or generated Atari state.
 The runtime also does not create its default data directory; it reports a
 missing path until the user supplies original media there or passes `--data`.
+
+At the exact opening event `$0f,$00000b38` (observed at scheduler tick 82 for
+the recovered held input route), the live Amiga session now terminates its
+opening VM. It preserves the final original-backed compositor frame and opens
+only the existing SHA-validated title-stage boundary (ADF `+0x6e000`, length
+`0x6ca00`, RAM `$13000`, entry `$40426`). Later host ticks cannot advance the
+opening VM, VBL random source, compositor, or PCM mixer; SDL clears queued
+preview audio at that edge. The title stage's Exec, graphics-library and custom
+hardware requirements remain unexecuted, so this is not a fabricated title
+screen or a claim that title-stage timing has begun.
