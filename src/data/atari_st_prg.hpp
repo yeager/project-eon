@@ -122,6 +122,19 @@ struct MillenniumAtariConfigEvidence {
     std::uint32_t first_longword_operand = 0;
 };
 
+// A hash-identified filename literal in the supplied Equinox auxiliary
+// payload. This is provenance only: it does not prove that a native routine
+// opens the named file, selects a record, or decodes its contents.
+struct MillenniumAtariAuxiliaryResourceNameEvidence {
+    std::string container_filename;
+    std::uint16_t first_cluster = 0;
+    std::uint32_t size = 0;
+    std::string sha256;
+    std::uint32_t literal_file_offset = 0;
+    std::string literal_filename;
+    std::uint32_t preceding_return_file_offset = 0;
+};
+
 // The initial, directly-addressed control block in the genuine Equinox
 // MILL22A.inf payload.  The file is not a host configuration format: its
 // leading JMP and all reported addresses are original 68000 facts.  This
@@ -393,6 +406,11 @@ struct MillenniumAtariConfigAbsoluteJsrInventory {
 // words; it never treats absence as permission to generate a configuration.
 [[nodiscard]] MillenniumAtariConfigEvidence probe_millennium_atari_config(
     const Fat12Disk& disk);
+
+// Reads the exact FAT12 chain of MILL22B.INF and validates its isolated
+// MILL22E.INF NUL-terminated literal. No call reachability is inferred.
+[[nodiscard]] MillenniumAtariAuxiliaryResourceNameEvidence
+probe_millennium_atari_auxiliary_resource_name(const Fat12Disk& disk);
 
 // Validates the exact initial control path reached by MILL22A.inf's leading
 // JMP on the verified Equinox disk.  It reports literal XBIOS selectors,

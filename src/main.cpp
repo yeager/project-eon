@@ -886,6 +886,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << " (no GEMDOS call)\n";
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
+    const auto auxiliary_resource = eon::probe_millennium_atari_auxiliary_resource_name(disk);
     const auto config_entry = eon::parse_millennium_atari_config_entry(
         disk.read(*disk.find(equinox_config.requested_filename)));
     const auto config_trap_argument_strings = eon::parse_millennium_atari_config_trap_argument_strings(
@@ -917,6 +918,11 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         config_fourth_loop);
     const auto config_jsr_inventory = eon::inventory_millennium_atari_config_absolute_jsrs(
         disk.read(*disk.find(equinox_config.requested_filename)));
+    std::cout << "          auxiliary resource-name evidence: "
+        << auxiliary_resource.container_filename << " cluster " << auxiliary_resource.first_cluster
+        << ", +0x" << std::hex << auxiliary_resource.literal_file_offset << " = "
+        << auxiliary_resource.literal_filename << "; SHA-256 " << auxiliary_resource.sha256 << std::dec
+        << " (literal only; no open, decoder, or presentation claim)\n";
     std::cout << "          MILENIUM.TOS: text " << prg.text_bytes << ", data "
         << prg.data_bytes << ", BSS " << prg.bss_bytes << ", "
         << prg.relocation_count << " relocations (0x" << std::hex

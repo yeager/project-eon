@@ -293,6 +293,37 @@ MillenniumAtariConfigEvidence probe_millennium_atari_config(const Fat12Disk& dis
     return result;
 }
 
+MillenniumAtariAuxiliaryResourceNameEvidence
+probe_millennium_atari_auxiliary_resource_name(const Fat12Disk& disk) {
+    constexpr std::string_view container_filename = "MILL22B.INF";
+    constexpr std::string_view container_hash =
+        "e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9";
+    constexpr std::uint32_t literal_offset = 0x11600;
+    constexpr std::array<std::uint8_t, 12> expected_literal{{
+        'M', 'I', 'L', 'L', '2', '2', 'E', '.', 'I', 'N', 'F', 0,
+    }};
+    constexpr std::array<std::uint8_t, 14> expected_preceding{{
+        0x33, 0xdc, 0x00, 0x01, 0x44, 0xc8, 0x23, 0xcc, 0x00, 0x01,
+        0x44, 0xc4, 0x4e, 0x75,
+    }};
+    const auto* entry = disk.find(container_filename);
+    if (!entry || entry->directory()) {
+        throw std::runtime_error("Millennium Atari ST auxiliary container is absent");
+    }
+    const auto payload = disk.read(*entry);
+    if (to_hex(sha256(payload)) != container_hash || payload.size() != entry->size
+        || literal_offset < expected_preceding.size()
+        || literal_offset > payload.size() || expected_literal.size() > payload.size() - literal_offset
+        || !std::equal(expected_literal.begin(), expected_literal.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(literal_offset))
+        || !std::equal(expected_preceding.begin(), expected_preceding.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(literal_offset - expected_preceding.size()))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST auxiliary resource-name evidence");
+    }
+    return {std::string(container_filename), entry->first_cluster, entry->size,
+        std::string(container_hash), literal_offset, "MILL22E.INF", literal_offset - 2};
+}
+
 MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
     std::span<const std::uint8_t> payload) {
     // The original file starts JMP $2aa88.  Its absolute references at the
