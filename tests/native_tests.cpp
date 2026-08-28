@@ -915,6 +915,9 @@ int main() {
     assert(ega_profile.function_zero_mode_mismatch_return == 0x1ea);
     assert(ega_profile.function_four_input_offset == 0 && ega_profile.function_four_input_mask == 3);
     assert(ega_profile.function_four_state_address == 0x8d);
+    assert(ega_profile.function_thirty_one_address == 0x235);
+    assert(ega_profile.function_thirty_one_state_address == 0x8a);
+    assert(ega_profile.function_thirty_one_return_ah == 0x04);
     assert(mcga_profile.dispatch_table_address == 0x32);
     assert(mcga_profile.function_zero_address == 0x1e6);
     assert(mcga_profile.function_four_address == 0x815);
@@ -923,6 +926,9 @@ int main() {
     assert(mcga_profile.function_zero_mode_mismatch_return == 0x208);
     assert(mcga_profile.function_four_input_offset == 0 && mcga_profile.function_four_input_mask == 3);
     assert(mcga_profile.function_four_state_address == 0xaf);
+    assert(mcga_profile.function_thirty_one_address == 0x24c);
+    assert(mcga_profile.function_thirty_one_state_address == 0xac);
+    assert(mcga_profile.function_thirty_one_return_ah == 0x01);
     assert(title_flow.launcher_title_offset == 0x58f);
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");

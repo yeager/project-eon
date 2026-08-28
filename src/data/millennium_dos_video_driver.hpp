@@ -22,6 +22,9 @@ struct MillenniumDosVideoDriverProfile {
     std::uint16_t function_four_input_offset = 0;
     std::uint8_t function_four_input_mask = 0;
     std::uint16_t function_four_state_address = 0;
+    std::uint16_t function_thirty_one_address = 0;
+    std::uint16_t function_thirty_one_state_address = 0;
+    std::uint8_t function_thirty_one_return_ah = 0;
 };
 
 [[nodiscard]] MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(

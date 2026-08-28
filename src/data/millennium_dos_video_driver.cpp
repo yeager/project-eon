@@ -34,11 +34,14 @@ MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
     if (!has_bytes(bytes, 0, entry)) throw std::runtime_error("Unsupported Millennium DOS video-driver entry");
     const auto function_zero = little16(bytes, dispatch);
     const auto function_four = little16(bytes, dispatch + 8);
+    const auto function_thirty_one = little16(bytes, dispatch + 0x3e);
     const auto expected_zero = static_cast<std::uint16_t>(ega ? 0x1c8 : 0x1e6);
     const auto expected_four = static_cast<std::uint16_t>(ega ? 0xc17 : 0x815);
+    const auto expected_thirty_one = static_cast<std::uint16_t>(ega ? 0x235 : 0x24c);
     const auto mode = static_cast<std::uint8_t>(ega ? 0x0e : 0x13);
     const auto state = static_cast<std::uint16_t>(ega ? 0x8d : 0xaf);
-    if (function_zero != expected_zero || function_four != expected_four) {
+    if (function_zero != expected_zero || function_four != expected_four
+        || function_thirty_one != expected_thirty_one) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver dispatch targets");
     }
     const auto zero_prefix = std::array<std::uint8_t, 35>{
@@ -54,9 +57,13 @@ MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
     constexpr auto mcga_four_prefix = std::to_array<std::uint8_t>({
         0x26, 0x8a, 0x07, 0x25, 0x03, 0x00, 0x86, 0x06,
         0xaf, 0x00, 0xc3});
+    const auto thirty_one_prefix = std::array<std::uint8_t, 6>{
+        0xa0, static_cast<std::uint8_t>(ega ? 0x8a : 0xac), 0x00,
+        0xb4, static_cast<std::uint8_t>(ega ? 0x04 : 0x01), 0xc3};
     if (!has_bytes(bytes, function_zero, zero_prefix)
         || (ega && !has_bytes(bytes, function_four, ega_four_prefix))
-        || (!ega && !has_bytes(bytes, function_four, mcga_four_prefix))) {
+        || (!ega && !has_bytes(bytes, function_four, mcga_four_prefix))
+        || !has_bytes(bytes, function_thirty_one, thirty_one_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver ABI profile");
     }
     return {
@@ -71,6 +78,9 @@ MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
         .function_four_input_offset = 0,
         .function_four_input_mask = 3,
         .function_four_state_address = state,
+        .function_thirty_one_address = function_thirty_one,
+        .function_thirty_one_state_address = static_cast<std::uint16_t>(ega ? 0x8a : 0xac),
+        .function_thirty_one_return_ah = static_cast<std::uint8_t>(ega ? 0x04 : 0x01),
     };
 }
 
