@@ -1044,13 +1044,15 @@ as a presumed menu, fade, or gameplay subsystem.
 Immediately after the previous transition return at `$4077c`, original code
 at `$4077e` clears word `$407e6`, then invokes `$3f7a8`, `$1f9a4`, `$1fe7a`,
 `$3fbf8`, and `$1f238` in its original order while preserving that word on the
-stack. It compares the final returned word with `$001b`; the alternative path
-compares it against `$0020`, `$002e`, and byte `$2c`, uses `subq.b #2,d1` or
-`addq.b #1,d1`, and writes the resulting word back to `$407e6` before returning
-at `$407e4`. Project Eon opcode-validates every listed instruction from the
-raw title stage. This establishes a real post-transition control-state loop,
-but it does not assign names such as “selection”, “menu”, or “start game” to
-the control word, helpers, or literal response values before the original
+stack. Its feedback tail at `$407ba..$407e5` (ADF `+$9b7ba`, 44 bytes SHA-256
+`b4212844a9f0fb4008caad00950e613b70581a5552cacabc253ea0966ed16df3`)
+compares the helper's **low byte** against `$1b`, `$20`, `$2e`, and `$2c`.
+`$1b` returns; `$20` and unmatched bytes loop without a local write; `$2e`
+increments the low byte at `$407e6`; and `$2c` has the net low-byte effect
+`-1`. Project Eon can evaluate that exact local feedback trace with explicitly
+supplied helper response bytes, but neither calls the helper nor writes title
+state. It does not assign names such as “selection”, “menu”, or “start game”
+to the control word, helpers, or literal response values before the original
 subroutines are independently recovered.
 
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the

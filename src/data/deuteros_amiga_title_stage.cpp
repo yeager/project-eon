@@ -737,6 +737,76 @@ DeuterosAmigaTitleZeroResponseLoop evaluate_deuteros_amiga_title_zero_response_l
     throw std::runtime_error("Deuteros title response loop lacks terminating helper response");
 }
 
+DeuterosAmigaTitlePostTransitionResponseLoop
+evaluate_deuteros_amiga_title_post_transition_response_loop(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::span<const std::uint8_t> helper_response_low_bytes) {
+    // $4077e clears the local word, then unresolved calls eventually yield a
+    // low-byte D0 response to the fully local $407ba feedback tail. This
+    // evaluator follows only that tail; it never invokes the helpers.
+    constexpr std::uint32_t entry_address = 0x4077e;
+    constexpr std::uint32_t feedback_tail_address = 0x407ba;
+    constexpr std::uint32_t control_word_address = 0x407e6;
+    constexpr std::uint32_t helper_address = 0x1f238;
+    constexpr std::uint32_t helper_loop_address = 0x4078c;
+    constexpr std::uint32_t return_address = 0x407e4;
+    constexpr std::size_t feedback_tail_bytes = 44;
+    constexpr std::string_view title_stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view feedback_tail_hash =
+        "b4212844a9f0fb4008caad00950e613b70581a5552cacabc253ea0966ed16df3";
+    const auto& stage = plan.title_stage;
+    if (stage.length == 0 || entry_address < stage.destination
+        || feedback_tail_address < stage.destination || control_word_address < stage.destination
+        || feedback_tail_address - stage.destination > stage.length
+        || feedback_tail_bytes > stage.length - (feedback_tail_address - stage.destination)
+        || 2U > stage.length - (control_word_address - stage.destination)) {
+        throw std::runtime_error("Deuteros post-transition response tail lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto tail = stage_bytes.subspan(feedback_tail_address - stage.destination,
+        feedback_tail_bytes);
+    if (to_hex(sha256(stage_bytes)) != title_stage_hash
+        || to_hex(sha256(tail)) != feedback_tail_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-transition response tail");
+    }
+    if (helper_response_low_bytes.empty()) {
+        throw std::runtime_error("Deuteros post-transition response tail needs helper response");
+    }
+    DeuterosAmigaTitlePostTransitionResponseLoop result;
+    result.entry_address = entry_address;
+    result.feedback_tail_address = feedback_tail_address;
+    result.control_word_address = control_word_address;
+    result.helper_address = helper_address;
+    result.return_response = 0x1b;
+    result.loop_response = 0x20;
+    result.increment_response = 0x2e;
+    result.decrement_response = 0x2c;
+    result.helper_loop_address = helper_loop_address;
+    result.return_address = return_address;
+    std::uint8_t control_low_byte = 0;
+    for (std::size_t index = 0; index < helper_response_low_bytes.size(); ++index) {
+        const auto response = helper_response_low_bytes[index];
+        if (response == result.return_response) {
+            if (index + 1 != helper_response_low_bytes.size()) {
+                throw std::runtime_error("Unexpected trailing Deuteros post-transition response");
+            }
+            result.final_control_word = control_low_byte;
+            return result;
+        }
+        if (response == result.increment_response) {
+            ++control_low_byte;
+            result.control_low_byte_writes.push_back(control_low_byte);
+        } else if (response == result.decrement_response) {
+            control_low_byte = static_cast<std::uint8_t>(control_low_byte - 1U);
+            result.control_low_byte_writes.push_back(control_low_byte);
+        }
+        // $20 and every unmatched byte branch back to the unresolved helper
+        // with no local write, so the caller supplies the next response.
+    }
+    throw std::runtime_error("Deuteros post-transition response tail lacks return response");
+}
+
 DeuterosAmigaTitleEntryPrefix execute_deuteros_amiga_title_entry_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t incoming_profile) {

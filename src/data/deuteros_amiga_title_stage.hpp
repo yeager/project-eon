@@ -213,6 +213,26 @@ struct DeuterosAmigaTitleZeroResponseLoop {
     std::uint32_t return_loop_address = 0;
 };
 
+// The hash-locked local response tail after the title transition returns. The
+// unresolved helper's low-byte responses are supplied by the caller; no helper
+// or hardware call is made. The control word starts at zero for this local
+// trace and only its low byte is changed by the original ADDQ/SUBQ paths.
+struct DeuterosAmigaTitlePostTransitionResponseLoop {
+    std::uint32_t entry_address = 0;
+    std::uint32_t feedback_tail_address = 0;
+    std::uint32_t control_word_address = 0;
+    std::uint16_t initial_control_word = 0;
+    std::uint16_t final_control_word = 0;
+    std::uint32_t helper_address = 0;
+    std::uint8_t return_response = 0;
+    std::uint8_t loop_response = 0;
+    std::uint8_t increment_response = 0;
+    std::uint8_t decrement_response = 0;
+    std::vector<std::uint8_t> control_low_byte_writes;
+    std::uint32_t helper_loop_address = 0;
+    std::uint32_t return_address = 0;
+};
+
 // The title entry's local profile-one prefix. A1's controller value is an
 // explicit ABI boundary and is never materialized here.
 struct DeuterosAmigaTitleEntryPrefix {
@@ -252,6 +272,14 @@ evaluate_deuteros_amiga_title_timer_gate(
 // no helper or custom-chip call is emulated.
 [[nodiscard]] DeuterosAmigaTitleZeroResponseLoop
 evaluate_deuteros_amiga_title_zero_response_loop(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::span<const std::uint8_t> helper_response_low_bytes);
+
+// Evaluates the local post-transition response tail only. Every supplied
+// response is the low byte from the unresolved original helper; the sequence
+// must end with the exact return response and cannot claim helper execution.
+[[nodiscard]] DeuterosAmigaTitlePostTransitionResponseLoop
+evaluate_deuteros_amiga_title_post_transition_response_loop(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::span<const std::uint8_t> helper_response_low_bytes);
 
