@@ -648,6 +648,12 @@ rotate; Project Eon models that operand width explicitly.
 
 That track-2 interval has SHA-256
 `2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
+The SDL Atari ST launch path now creates a bounded session for this exact
+Replicants Disk 1: it reads those two original raw ranges in memory, verifies
+both hashes and the first-stage checksum, then records the second-stage
+dispatcher. It stops before `Floprd`, callback/XBIOS behavior, state
+selection, or a display is invented; other protected disks are detected but
+never substituted for this profile.
 At its loaded address `$70000`, it is executable code rather than a resource:
 it configures supervisor stack `$7b000`, application stack `$2478`, then jumps
 directly to `$1ec4`.  Because the preceding copy has now been proven to source
