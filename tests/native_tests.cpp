@@ -29,6 +29,7 @@
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
+#include "engine/millennium_atari_bootstrap_session.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -1546,6 +1547,16 @@ int main() {
     assert(atari_config.first_word == 0x4ef9);
     assert(atari_config.first_longword_operand == 0x2aa88);
     assert(atari_config.sha256 == "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6");
+    const eon::MillenniumAtariBootstrapSession atari_session(
+        atari_disk, atari_disk.read(*atari_executable));
+    assert(atari_session.target().target_address == 0x77000);
+    assert(atari_session.bss_source().original_data_bytes == 0xbc);
+    assert(atari_session.bss_source().bss_zero_bytes == 0x146);
+    assert(atari_session.fopen_boundary().fopen_filename == "MILL22A.inf");
+    assert(atari_session.fopen_boundary().fopen_access_mode == 2);
+    assert(atari_session.fopen_boundary().fopen_function == 0x3d);
+    assert(atari_session.config().present);
+    assert(atari_session.config().size == 7506);
     const auto atari_config_payload = atari_disk.read(*atari_disk.find("MILL22A.inf"));
     const auto atari_config_entry = eon::parse_millennium_atari_config_entry(atari_config_payload);
     assert(atari_config_entry.proven_load_base == 0x2a4de);
