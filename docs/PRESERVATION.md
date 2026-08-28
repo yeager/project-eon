@@ -1121,6 +1121,20 @@ incoming controller pointer from `$206a0` to bootstrap cell `$12ff8`, writes
 respectively long profile values `2`, `4`, or `3` to `$12ffc`, and performs
 `JMP $12800`.
 
+The first of those exits has one additional bounded local transfer before its
+already verified profile-two tail. At `$37f56` (ADF `+$92f56`), the exact
+40-byte prefix hashes to
+`51b8d6875ea6d0c35557c358d4fe22e4cac6cff79ead9df604d213cab1adfe1c`.
+Conditional on its two original calls to `$3880a` and `$204fa` returning, it
+copies exactly `$9392` bytes from loaded title-stage address `$13006` to the
+original runtime address `$66000`, then reaches the still-unexecuted BSR at
+`$37f7a`. The source maps directly to ADF `+$6e006`, remains inside the same
+title-stage interval through `$1c397`, and hashes to
+`2951d0ae6dd01f84c1fb9b6cbb766c15378af1abb9a91fa5ded748d70b3e90eb`.
+Project Eon exposes only a read-only copy trace and those genuine source bytes:
+it does not call either helper or the BSR, write `$66000`, infer a title choice,
+or create replacement data.
+
 `$12800` resets the original stack/Exec state and jumps to bootstrap dispatcher
 `$12a4e`. The original six-entry table at `$12a36` resolves profiles 3 and 4
 directly to `$12b1c`; profile 2 selects `$12b44`, whose sole instruction is

@@ -2546,6 +2546,24 @@ int main() {
             system_disk, load_plan, post_transition_responses);
     assert(mixed_post_transition.final_control_word == 0);
     assert((mixed_post_transition.control_low_byte_writes == std::vector<std::uint8_t>{1, 0}));
+    // The first known title exit conditionally copies a fixed, genuine byte
+    // range before its existing profile-2 tail. This test models only that
+    // copy: neither original helper nor the following BSR is executed.
+    const auto first_title_exit_copy = eon::evaluate_deuteros_amiga_first_title_exit_copy(
+        system_disk, load_plan);
+    assert(first_title_exit_copy.entry_address == 0x37f56);
+    assert((first_title_exit_copy.preceding_helper_addresses
+        == std::array<std::uint32_t, 2>{{0x3880a, 0x204fa}}));
+    assert(first_title_exit_copy.source_address == 0x13006);
+    assert(first_title_exit_copy.source_disk_offset == 0x6e006);
+    assert(first_title_exit_copy.destination_address == 0x66000);
+    assert(first_title_exit_copy.byte_count == 0x9392);
+    assert(first_title_exit_copy.source_sha256
+        == "2951d0ae6dd01f84c1fb9b6cbb766c15378af1abb9a91fa5ded748d70b3e90eb");
+    assert(first_title_exit_copy.copied_bytes.size() == first_title_exit_copy.byte_count);
+    assert(first_title_exit_copy.copied_bytes == std::vector<std::uint8_t>(
+        system_disk.bytes(0x6e006, 0x9392).begin(), system_disk.bytes(0x6e006, 0x9392).end()));
+    assert(first_title_exit_copy.stop_before_subroutine_address == 0x37f7a);
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x9b69a] ^= 0x01;
@@ -2593,6 +2611,32 @@ int main() {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::evaluate_deuteros_amiga_title_post_transition_response_loop(
                 altered_disk, load_plan, immediate_post_transition_return));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x92f56] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::evaluate_deuteros_amiga_first_title_exit_copy(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x6e006] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::evaluate_deuteros_amiga_first_title_exit_copy(
+                altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

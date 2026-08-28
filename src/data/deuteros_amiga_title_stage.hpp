@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -245,6 +246,23 @@ struct DeuterosAmigaTitleEntryPrefix {
     std::uint32_t stop_before_exec_address = 0;
 };
 
+// The first known title-stage exit has a fixed, conditional in-memory byte
+// copy before its already validated bootstrap-profile tail.  The two prior
+// calls and the subsequent BSR remain explicit boundaries: this result is
+// only the original source bytes and transfer provenance, never a write to
+// the original runtime address or an assertion that either helper returned.
+struct DeuterosAmigaFirstTitleExitCopy {
+    std::uint32_t entry_address = 0;
+    std::array<std::uint32_t, 2> preceding_helper_addresses{};
+    std::uint32_t source_address = 0;
+    std::uint32_t source_disk_offset = 0;
+    std::uint32_t destination_address = 0;
+    std::uint32_t byte_count = 0;
+    std::string source_sha256;
+    std::vector<std::uint8_t> copied_bytes;
+    std::uint32_t stop_before_subroutine_address = 0;
+};
+
 // Reads profile-one instructions directly from the original ADF and validates
 // the known mode branch, recurring main-loop cadence, timed display
 // transition, and following raw control-state loop.
@@ -289,5 +307,13 @@ evaluate_deuteros_amiga_title_post_transition_response_loop(
 execute_deuteros_amiga_title_entry_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint16_t incoming_profile);
+
+// Validates and models only the literal byte-copy part of the first title
+// exit. The model reads the supplied ADF in place; it does not invoke either
+// preceding helper, enter the following subroutine, or write the original
+// destination address.
+[[nodiscard]] DeuterosAmigaFirstTitleExitCopy
+evaluate_deuteros_amiga_first_title_exit_copy(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 } // namespace eon
