@@ -872,6 +872,32 @@ MillenniumDosFirstSpecialActionPrefix evaluate_millennium_dos_first_special_acti
     };
 }
 
+MillenniumDosSharedHelperPrefix evaluate_millennium_dos_shared_helper_prefix(
+    const std::span<const std::uint8_t> game_executable, const std::uint16_t caller_ax) {
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::size_t offset = 0x0666 - load_bias;
+    constexpr auto expected = std::to_array<std::uint8_t>({
+        0x1e, 0x56, 0x50, 0x2e, 0x8e, 0x1e, 0x16, 0x01, 0x2e, 0xc6,
+        0x06, 0xc8, 0x05, 0x00, 0xd1, 0xe0, 0x8b, 0xf0, 0xad, 0x8b,
+        0xf0, 0xe8, 0x79, 0xff, 0x58, 0x5e, 0x1f, 0xc3,
+    });
+    constexpr std::string_view executable_hash =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::string_view prefix_hash =
+        "8dc7586f3809a14f3ed6acd601cd42486841adb9d9cb09d3e9b1ed727329e485";
+    if (to_hex(sha256(game_executable)) != executable_hash
+        || !has_bytes(game_executable, offset, expected)) {
+        throw std::runtime_error("Unsupported Millennium DOS shared helper executable");
+    }
+    const auto bytes = game_executable.subspan(offset, expected.size());
+    if (to_hex(sha256(bytes)) != prefix_hash) {
+        throw std::runtime_error("Unsupported Millennium DOS shared helper prefix");
+    }
+    return {0x0666, caller_ax, 0x0116, 0x05c8, 0,
+        static_cast<std::uint16_t>(caller_ax << 1U), 0x0678, 0x067b,
+        near_call_target(0x067e, bytes[22], bytes[23]), std::string(prefix_hash)};
+}
+
 MillenniumDosSecondSpecialActionPrefix evaluate_millennium_dos_second_special_action_prefix(
     const std::span<const std::uint8_t> game_executable,
     const std::uint8_t observed_runtime_byte) {

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -322,6 +323,22 @@ struct MillenniumDosFirstSpecialActionPrefix {
     std::uint16_t helper_address = 0;
 };
 
+// English-DOS-only static prefix shared by action $0b and an F7-owned call.
+// The supplied AX is caller evidence. The native segment/table value and
+// first helper return remain deliberately unresolved.
+struct MillenniumDosSharedHelperPrefix {
+    std::uint16_t entry_address = 0;
+    std::uint16_t caller_ax = 0;
+    std::uint16_t source_segment_cell_address = 0;
+    std::uint16_t scratch_byte_address = 0;
+    std::uint8_t scratch_byte_value = 0;
+    std::uint16_t shifted_ax = 0;
+    std::uint16_t lodsw_address = 0;
+    std::uint16_t first_helper_call_address = 0;
+    std::uint16_t first_helper_address = 0;
+    std::string raw_sha256;
+};
+
 enum class MillenniumDosSecondSpecialActionOutcome {
     blocked_by_runtime_byte,
     helper_boundary,
@@ -494,6 +511,13 @@ evaluate_millennium_dos_eighth_function_key_selected_record_gate(
 evaluate_millennium_dos_first_special_action_prefix(
     std::span<const std::uint8_t> game_executable,
     std::uint8_t observed_runtime_byte);
+
+// Validates the shared helper through its first internal call. It accepts only
+// the hash-identified English executable and never dereferences its native
+// segment/table, invokes the helper, or writes caller state.
+[[nodiscard]] MillenniumDosSharedHelperPrefix
+evaluate_millennium_dos_shared_helper_prefix(
+    std::span<const std::uint8_t> game_executable, std::uint16_t caller_ax);
 
 [[nodiscard]] MillenniumDosSecondSpecialActionPrefix
 evaluate_millennium_dos_second_special_action_prefix(

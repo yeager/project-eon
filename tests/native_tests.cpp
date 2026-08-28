@@ -981,6 +981,22 @@ int main() {
         eon::evaluate_millennium_dos_first_special_action_prefix(*game_executable, 0x5a);
     assert(first_special_action_nonzero.toggled_runtime_byte == 0x5b);
     assert(first_special_action_nonzero.selected_ax_value == 0x018e);
+    const auto shared_helper_from_zero_action = eon::evaluate_millennium_dos_shared_helper_prefix(
+        *game_executable, first_special_action_zero.selected_ax_value);
+    assert(shared_helper_from_zero_action.entry_address == 0x0666);
+    assert(shared_helper_from_zero_action.caller_ax == 0x018f);
+    assert(shared_helper_from_zero_action.source_segment_cell_address == 0x0116);
+    assert(shared_helper_from_zero_action.scratch_byte_address == 0x05c8);
+    assert(shared_helper_from_zero_action.scratch_byte_value == 0);
+    assert(shared_helper_from_zero_action.shifted_ax == 0x031e);
+    assert(shared_helper_from_zero_action.lodsw_address == 0x0678);
+    assert(shared_helper_from_zero_action.first_helper_call_address == 0x067b);
+    assert(shared_helper_from_zero_action.first_helper_address == 0x05f7);
+    assert(shared_helper_from_zero_action.raw_sha256
+        == "8dc7586f3809a14f3ed6acd601cd42486841adb9d9cb09d3e9b1ed727329e485");
+    const auto shared_helper_from_nonzero_action = eon::evaluate_millennium_dos_shared_helper_prefix(
+        *game_executable, first_special_action_nonzero.selected_ax_value);
+    assert(shared_helper_from_nonzero_action.shifted_ax == 0x031c);
     const auto second_special_action_blocked =
         eon::evaluate_millennium_dos_second_special_action_prefix(*game_executable, 1);
     assert(second_special_action_blocked.runtime_byte_address == 0xda3a);
@@ -1002,6 +1018,18 @@ int main() {
         try {
             static_cast<void>(eon::evaluate_millennium_dos_first_special_action_prefix(
                 altered_special_handler, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_shared_helper = *game_executable;
+        altered_shared_helper[0x0666 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_shared_helper_prefix(
+                altered_shared_helper, 0x018f));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
