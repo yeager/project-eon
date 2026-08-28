@@ -209,6 +209,16 @@ def main() -> int:
                     "Deuteros Atari ST state-1 raw-load plan did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_skipped_ascii = (
+                "State-1 skipped ASCII evidence: Disk 1 +0x9d800 BRA.W displacement 0x9c2; "
+                "block +0x9d80a +0x438 (18 printable runs), SHA-256 "
+                "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e"
+            )
+            if expected_skipped_ascii not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Atari ST skipped ASCII evidence did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
             expected_state5 = (
                 "Static vector-5 raw-load plans: Disk 1 +0x55800 +0xb400 "
                 "-> RAM 0xb000 in 10 original reads; SHA-256 "

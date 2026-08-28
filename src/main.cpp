@@ -1283,6 +1283,18 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << state1_plan.requests.size() << " original reads; SHA-256 "
             << eon::to_hex(eon::sha256(state1_bytes))
             << " (not selected or interpreted at runtime)\n";
+        const auto state1_skipped_ascii = eon::parse_deuteros_atari_state1_skipped_ascii_block(
+            state1_bytes, state1_plan);
+        std::cout << "          State-1 skipped ASCII evidence: Disk 1 +0x" << std::hex
+            << state1_plan.source_offset + state1_skipped_ascii.branch_relative_offset
+            << " BRA.W displacement 0x" << static_cast<std::uint16_t>(
+                state1_skipped_ascii.branch_displacement)
+            << "; block +0x" << state1_plan.source_offset
+                + state1_skipped_ascii.ascii_relative_offset
+            << " +0x" << state1_skipped_ascii.ascii_byte_count << std::dec << " ("
+            << state1_skipped_ascii.printable_run_count << " printable runs), SHA-256 "
+            << state1_skipped_ascii.ascii_sha256
+            << " (preservation metadata only; never rendered, translated, or interpreted)\n";
         const auto materialize_raw_range = [&disk1](const auto& plan) {
             std::vector<std::uint8_t> bytes;
             bytes.reserve(plan.byte_count);

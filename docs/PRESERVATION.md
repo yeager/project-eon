@@ -753,6 +753,15 @@ protected-media interval are therefore not promoted to artwork. Project Eon
 does not render the interval or choose state 1 merely because its physical
 span can be calculated.
 
+Within that unselected state-1 span, Disk 1 `+$9d800` (state-1 `+$48000`)
+contains the exact branch encoding `60 00 09 c2` (`BRA.W` with literal
+displacement `$09c2`). A byte-bounded printable block begins at Disk 1
+`+$9d80a` and spans `$438` bytes; it has SHA-256
+`8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e` and 18
+printable runs. This is crack-era raw-media metadata, not recovered original
+game presentation: Project Eon neither displays, translates, parses, nor
+assigns a consumer or control-flow target to it.
+
 The sixth vector (`$1f52`) makes two further static calls to `$70030`.
 `build_deuteros_atari_state5_raw_load_plan` records its first as ten complete
 nine-sector reads from Disk 1 `+$55800` (length `$b400`) to `$b000`, SHA-256
