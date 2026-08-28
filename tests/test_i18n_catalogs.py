@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+import re
 import unittest
 
 
@@ -19,6 +20,12 @@ CATALOGS = {
     "ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja",
     "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN",
 }
+PLACEHOLDER_PREFIX = re.compile(
+    r"^(?:ARABIC|ARABISKA|DEUTSCH|ELLINIKA|ENGLISH|ESPANOL|ESPAGNOL|"
+    r"FRANCAIS|HINDI|ITALIANO|JAPANESE|KOREAN|NEDERLANDS|NORSK|POLSKI|"
+    r"PORTUGUES|RUSSIAN|SVENSKA|TURKCE|UKRAINIAN|CHINESE):\s",
+    re.IGNORECASE,
+)
 
 
 def po_messages(path: Path) -> dict[str, str]:
@@ -67,6 +74,15 @@ class CatalogTests(unittest.TestCase):
                 blank = sorted(key for key in source if not catalog.get(key))
                 self.assertEqual(missing, [])
                 self.assertEqual(blank, [])
+
+    def test_catalogs_do_not_use_language_name_prefixed_english_placeholders(self) -> None:
+        for language in sorted(CATALOGS):
+            with self.subTest(language=language):
+                for message_id, translation in po_messages(PO / f"{language}.po").items():
+                    self.assertIsNone(
+                        PLACEHOLDER_PREFIX.match(translation),
+                        f"{language} leaves a placeholder for {message_id!r}",
+                    )
 
 
 if __name__ == "__main__":
