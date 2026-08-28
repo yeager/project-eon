@@ -39,12 +39,30 @@ class IosPackagingTests(unittest.TestCase):
             app = root / "ProjectEon.app"
             app.mkdir()
             (app / "ProjectEon").touch()
+            for resource in ("Resources/assets/cards/millennium.png",
+                             "Resources/assets/cards/deuteros.png",
+                             "Resources/po/sv.po", "Resources/po/en_GB.po"):
+                path = app / resource
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
             subprocess.run(["bash", str(SCRIPT), str(app), "project-eon.ipa"],
                            cwd=root, check=True)
             ipa = root / "project-eon.ipa"
             self.assertTrue(ipa.is_file())
             listing = subprocess.check_output(["unzip", "-l", str(ipa)], text=True)
             self.assertIn("Payload/ProjectEon.app/ProjectEon", listing)
+            self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/millennium.png", listing)
+            self.assertIn("Payload/ProjectEon.app/Resources/po/sv.po", listing)
+
+    def test_rejects_incomplete_bundle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = root / "ProjectEon.app"
+            app.mkdir()
+            result = subprocess.run(["bash", str(SCRIPT), str(app), str(root / "bad.ipa")],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("incomplete iPad application", result.stderr)
 
     def test_rejects_original_media(self):
         with tempfile.TemporaryDirectory() as temporary:

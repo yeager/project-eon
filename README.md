@@ -271,7 +271,10 @@ with Gitleaks. CI also produces non-published test artifacts: `.deb` and
 `.rpm` packages, separate macOS arm64 and x86_64 app bundles, a Windows Inno
 Setup installer, and an arm64 iPadOS `.ipa`. The iPadOS artifact is unsigned
 for sideload signing with the user's own certificate and provisioning profile.
-Packages contain Project Eon only—never original game media. CI has read-only
+Its packaging step validates the required launcher cards and PO catalogues in
+the final archive before upload. Packages contain Project Eon only—never
+original game media.
+CI has read-only
 repository permission and cannot release, tag, or
 publish. Development pushes go directly to GitHub `main`; Project Eon does not
 create GitHub branches. The Windows installer also does not pre-create its
