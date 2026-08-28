@@ -555,6 +555,138 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     return result;
 }
 
+DeuterosAmigaTitleGraphicsSetupProfile
+parse_deuteros_amiga_title_graphics_setup_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // These are the first and second direct internal calls in the common
+    // title-entry setup. The caller reaches them only after the two earlier
+    // Exec vectors; those vector results remain deliberately outside this
+    // static profile.
+    constexpr std::uint32_t first_entry = 0x1ed80;
+    constexpr std::uint32_t library_name = 0x1ed02;
+    constexpr std::uint32_t following_entry = 0x1f172;
+    constexpr std::uint32_t palette_copy_entry = 0x1eda6;
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view first_hash =
+        "42c96aa502e36711ed274b9ddf4d2d1de53abfebb4ebdf88fa99346d2b03e30b";
+    constexpr std::string_view following_hash =
+        "d6b37bc6431a1fe9145ae9403a5165028ccfd856a6529d1752f824b166807223";
+    constexpr std::string_view palette_hash =
+        "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55";
+    constexpr std::array<std::uint8_t, 17> expected_library_name{{
+        'g', 'r', 'a', 'p', 'h', 'i', 'c', 's', '.', 'l', 'i', 'b', 'r', 'a', 'r', 'y', 0,
+    }};
+    const auto& stage = plan.title_stage;
+    const auto stage_code = [&](std::uint32_t address, std::size_t length) {
+        if (address < stage.destination || address - stage.destination > stage.length
+            || length > stage.length - (address - stage.destination)) {
+            throw std::runtime_error("Deuteros title graphics setup lies outside original stage");
+        }
+        return disk.bytes(stage.disk_offset + address - stage.destination, length);
+    };
+    const auto first = stage_code(first_entry, 118);
+    const auto following = stage_code(palette_copy_entry, 80);
+    const auto wrapper = stage_code(following_entry, 16);
+    const auto name = stage_code(library_name, expected_library_name.size());
+    const auto palette = stage_code(0x1ed24, 40);
+    if (to_hex(sha256(stage_code(stage.destination, stage.length))) != stage_hash
+        || to_hex(sha256(first)) != first_hash
+        || to_hex(sha256(following)) != following_hash
+        || to_hex(sha256(palette)) != palette_hash
+        || !std::equal(expected_library_name.begin(), expected_library_name.end(), name.begin())) {
+        throw std::runtime_error("Unsupported Deuteros title graphics setup");
+    }
+
+    // lea $1ed02,a1; moveq #0,d0; movea.l $4,a6; jsr -$228(a6);
+    // tst.l d0; beq.w $1edf6; move.l d0,$12fec; addq.w #1,$1ed70; rts.
+    require_word(first, 0, 0x43f9);
+    require_long(first, 2, library_name);
+    require_word(first, 6, 0x7000);
+    require_word(first, 8, 0x2c78);
+    require_word(first, 10, 4);
+    require_word(first, 12, 0x4eae);
+    require_word(first, 14, 0xfdd8);
+    require_word(first, 16, 0x4a80);
+    require_word(first, 18, 0x6700);
+    require_word(first, 20, 0x0062);
+    require_word(first, 22, 0x23c0);
+    require_long(first, 24, 0x00012fec);
+    require_word(first, 28, 0x5279);
+    require_long(first, 30, 0x0001ed70);
+    require_word(first, 34, 0x4e75);
+
+    // $1f172 calls the wholly local palette-copy helper, then clears a word.
+    require_word(wrapper, 0, 0x4eb9);
+    require_long(wrapper, 2, palette_copy_entry);
+    require_word(wrapper, 6, 0x33fc);
+    require_word(wrapper, 8, 0);
+    require_long(wrapper, 10, 0x0001f16c);
+    require_word(wrapper, 14, 0x4e75);
+
+    // $1eda6 propagates the external display base, copies the 20 genuine
+    // RGB4 words, and derives a second pointer.  It does not establish the
+    // external base value or make a graphics call itself.
+    require_word(following, 0, 0x2039);
+    require_long(following, 2, 0x00012ff4);
+    require_word(following, 6, 0x23c0);
+    require_long(following, 8, 0x0001f168);
+    require_word(following, 12, 0x23c0);
+    require_long(following, 14, 0x0001f164);
+    require_word(following, 18, 0x49f9);
+    require_long(following, 20, 0x00012ec4);
+    require_word(following, 24, 0x397c);
+    require_word(following, 26, 0x0014);
+    require_word(following, 28, 0x0002);
+    require_word(following, 30, 0x297c);
+    require_long(following, 32, 0x00012ecc);
+    require_word(following, 36, 0x0004);
+    require_word(following, 38, 0x4bf9);
+    require_long(following, 40, 0x00012ecc);
+    require_word(following, 44, 0x247c);
+    require_long(following, 46, 0x0001ed24);
+    require_word(following, 50, 0x343c);
+    require_word(following, 52, 0x0013);
+    require_word(following, 54, 0x3ada);
+    require_word(following, 56, 0x51ca);
+    require_word(following, 58, 0xfffc);
+    require_word(following, 60, 0x2039);
+    require_long(following, 62, 0x0001f168);
+    require_word(following, 66, 0x0680);
+    require_long(following, 68, 0x00007d00);
+    require_word(following, 72, 0x23c0);
+    require_long(following, 74, 0x0001f16e);
+    require_word(following, 78, 0x4e75);
+
+    DeuterosAmigaTitleGraphicsSetupProfile result;
+    result.entry_address = first_entry;
+    result.library_name_address = library_name;
+    result.library_name = "graphics.library";
+    result.exec_base_address = 4;
+    result.exec_vector = -0x228;
+    result.zero_result_loop_address = 0x1edf6;
+    result.nonzero_result_store_address = 0x1ed96;
+    result.nonzero_result_destination_address = 0x12fec;
+    result.first_return_address = 0x1eda2;
+    result.following_entry_address = following_entry;
+    result.palette_copy_entry_address = palette_copy_entry;
+    result.external_display_base_source_address = 0x12ff4;
+    result.external_display_base_destinations = {0x1f168, 0x1f164};
+    result.palette_source_address = 0x1ed24;
+    result.palette_destination_address = 0x12ecc;
+    for (std::size_t index = 0; index < result.palette_words.size(); ++index) {
+        result.palette_words[index] = big16(palette, index * 2U);
+    }
+    result.derived_pointer_source_address = 0x1f168;
+    result.derived_pointer_destination_address = 0x1f16e;
+    result.derived_pointer_addend = 0x7d00;
+    result.following_return_address = 0x1f182;
+    result.first_callee_sha256 = std::string(first_hash);
+    result.following_callee_sha256 = std::string(following_hash);
+    result.palette_sha256 = std::string(palette_hash);
+    return result;
+}
+
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t input_display_word) {

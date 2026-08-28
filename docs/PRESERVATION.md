@@ -1124,6 +1124,27 @@ original `$4069a` dispatch, subject to another original-state check. The strict
 parser validates these operands directly and does not claim their gameplay
 semantics.
 
+The first common internal setup callee is independently hash-locked as a
+caller-connected ABI boundary. `$1ed80..$1edf5` (ADF `+0x79d80`, 118 bytes,
+SHA-256 `42c96aa502e36711ed274b9ddf4d2d1de53abfebb4ebdf88fa99346d2b03e30b`)
+passes the literal NUL-terminated `graphics.library` at `$1ed02`, zero in D0,
+and Exec base `$4` to vector `-$228(A6)`. A zero D0 result takes the original
+self-loop at `$1edf6`; a nonzero result is stored at `$12fec`, the same raw
+cell later supplied to graphics-library vectors. This does not establish the
+vector ABI, the result value, or whether the original call returns.
+
+The next direct setup call at `$1f172` enters local helper `$1eda6` and clears
+word `$1f16c` after it returns. `$1eda6..$1edf5` (ADF `+0x79da6`, 80 bytes,
+SHA-256 `d6b37bc6431a1fe9145ae9403a5165028ccfd856a6529d1752f824b166807223`)
+copies the externally established longword at `$12ff4` to `$1f168` and
+`$1f164`, copies exactly twenty original RGB4 words from `$1ed24` to
+`$12ecc`, then adds `$7d00` to `$1f168` and stores the result at `$1f16e`.
+The 40 source bytes hash to
+`5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55`.
+`DeuterosAmigaTitleGraphicsSetupProfile` reports this provenance only; it does
+not resolve `$12ff4`, write title-stage memory, open a library, or turn those
+palette words into an SDL title screen.
+
 When that counter reaches the verified threshold, the call at `$405b6` enters
 `$4069a`. This transition sets byte `$202c6`, saves and clears word `$202b8`,
 then copies exactly sixteen RGB4 words from `$1ed24` to `$40678`. Each copied
@@ -1687,10 +1708,17 @@ function `$1e` can write a clamped caller byte there at `$0259`; MCGA function
 `$00` writes its derived allocation count to `$00ac` at `$0246`, and function
 `$1e` writes a recomputed count at `$02d0`. Both supplied file bytes are zero,
 but these are conditional driver-internal writes. The recovered `2200AD.EXE`
-startup requests `$1f` only and has no confirmed `$00`/`$1e` caller, installed
-driver segment, or state-establishing title path. Project Eon therefore never
-substitutes the on-disk zero or any calculated value for the unknown runtime
-AL result.
+startup requests `$1f` only and has no confirmed installed driver segment or
+successful state-establishing title path. `TITLES.EXE` does contain a separate
+candidate: its `$1b80..$1ba7` prefix (file `+$1a80`, 40 bytes, SHA-256
+`e6e014d7c03f9efbd7e9bde67686c281cf66acca809b306cc29dfb45d614b535`) prepares
+AX `$0000`, ES=CS and BX `$1ac4`, then calls the shared `$0122` wrapper, whose
+`$0127` is `INT $91`; the two-byte record at `$1ac4` is `01 00` (SHA-256
+`47dc540c94ceb704a23875c11273e16bb0b8a87aed84de911f2133568115f254`). For
+the supplied MCGA driver this can select function `$00`, but BIOS mode and
+possible `INT $92` results, title exit, DOS return, driver lifetime and the
+later `2200AD` call remain unobserved. Project Eon therefore never substitutes
+the on-disk zero or any calculated value for the unknown runtime AL result.
 Function `$00` resolves to `$01c8` (EGA) or `$01e6` (MCGA): each makes a
 literal BIOS mode request through `INT $10`, mode `$0e` at `$01de` or mode
 `$13` at `$01fc`, then has a local zero-`AX` mismatch return. Function `$04`
