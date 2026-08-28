@@ -1280,6 +1280,17 @@ int main() {
     assert(f8_table_preflight.translation_table_address == 0xdb4b);
     assert(f8_table_preflight.translation_index == std::optional<std::uint8_t>{2});
     assert(f8_table_preflight.table_jump_address == 0x7948);
+    const auto f8_table_jump = eon::evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
+        *game_executable, 2);
+    assert(f8_table_jump.entry_address == 0x7948);
+    assert(f8_table_jump.reset_runtime_byte_address == 0xda09);
+    assert(f8_table_jump.selected_runtime_byte_address == 0xda06);
+    assert(f8_table_jump.selected_runtime_byte_value == 2);
+    assert(f8_table_jump.selector_table_address == 0x78f4);
+    assert(f8_table_jump.selected_pointer == 0x7815);
+    assert(f8_table_jump.next_gate_runtime_byte_address == 0x6e2f);
+    assert(f8_table_jump.zero_gate_address == 0x7968);
+    assert(f8_table_jump.nonzero_gate_address == 0x799a);
     {
         auto altered_f8_loop = *game_executable;
         altered_f8_loop[0x7312 - 0x100] ^= 0x01;
@@ -1299,6 +1310,28 @@ int main() {
         try {
             static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_preflight(
                 altered_f8_preflight, 0, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
+                *game_executable, 10));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_f8_table_jump = *game_executable;
+        altered_f8_table_jump[0x78f4 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
+                altered_f8_table_jump, 2));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

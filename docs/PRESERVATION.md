@@ -1701,6 +1701,17 @@ decrements `$da0a`, uses the decremented `AL` as an `XLAT` index through
 native-memory table `$db4b`, then jumps to `$7948`. The table lies beyond the
 COM image, so Project Eon records only its original address and index—never a
 fabricated table byte or jump effect.
+When a caller has independently observed that external XLAT result, the exact
+local `$7948..$7967` prefix is now also hash-locked (32 bytes at file
+`+0x7848`, SHA-256
+`c52d83152fef75a81d8956b76e7c6931ced4de6a579f4233faf8a28c3cdc72c9`).
+It clears `$da09`, writes the explicit translated `AL` to `$da06`, and uses it
+as a bounded index into the ten-word in-image selector table at `$78f4`
+(20 bytes at `+0x77f4`, SHA-256
+`c42e986a183a46d7b4cdf7787766e5f81446b444180e0cf34d9fa5f4b8d50a0d`).
+The resulting original pointer and the `$6e2f` zero/nonzero gate are exposed
+as facts only. No XLAT result is invented, no selected pointer is executed,
+and the following pointer-controlled interpreter remains a boundary.
 After a preflight return, the eight original bytes at `$7312` (file
 `+0x7212`, SHA-256
 `2bf85a49d14034fb5562af6188745810721fd42e495877464d04f69783525a0a`) are

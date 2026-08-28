@@ -253,6 +253,24 @@ struct MillenniumDosEighthFunctionKeyPreflight {
         MillenniumDosEighthFunctionKeyPreflightOutcome::returns;
 };
 
+// The local prefix reached after F8's external XLAT boundary. The translated
+// AL byte is supplied explicitly because $db4b is outside the COM image. This
+// validates only the in-image selector table and the two original runtime-byte
+// writes before the following pointer-controlled interpreter.
+struct MillenniumDosEighthFunctionKeyTableJumpPrefix {
+    std::uint16_t entry_address = 0;
+    std::uint8_t translated_al = 0;
+    std::uint16_t reset_runtime_byte_address = 0;
+    std::uint8_t reset_runtime_byte_value = 0;
+    std::uint16_t selected_runtime_byte_address = 0;
+    std::uint8_t selected_runtime_byte_value = 0;
+    std::uint16_t selector_table_address = 0;
+    std::uint16_t selected_pointer = 0;
+    std::uint16_t next_gate_runtime_byte_address = 0;
+    std::uint16_t nonzero_gate_address = 0;
+    std::uint16_t zero_gate_address = 0;
+};
+
 // Exact, non-semantic trace of table record eight (raw F9 / $43). Its native
 // handler has the established $a19e admission gate, clears two native bytes,
 // selects the observed local mode, and can cycle through the F8 preflight
@@ -387,6 +405,10 @@ evaluate_millennium_dos_eighth_function_key_repeat_loop(
 evaluate_millennium_dos_eighth_function_key_preflight(
     std::span<const std::uint8_t> game_executable,
     std::uint8_t enabled_byte, std::uint8_t counter_byte);
+
+[[nodiscard]] MillenniumDosEighthFunctionKeyTableJumpPrefix
+evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
+    std::span<const std::uint8_t> game_executable, std::uint8_t translated_al);
 
 // Projects the verified, finite sequence of original BIOS palette-register
 // requests into the SDL-facing adapter payload. Callers must still establish
