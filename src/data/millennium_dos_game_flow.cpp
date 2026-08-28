@@ -706,6 +706,46 @@ evaluate_millennium_dos_eighth_function_key_preflight(
     return result;
 }
 
+MillenniumDosEighthFunctionKeyTableJumpPrefix
+evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
+    const std::span<const std::uint8_t> game_executable, const std::uint8_t translated_al) {
+    constexpr std::size_t entry_offset = 0x7948 - 0x100;
+    constexpr std::size_t entry_size = 32;
+    constexpr std::string_view entry_sha256 =
+        "c52d83152fef75a81d8956b76e7c6931ced4de6a579f4233faf8a28c3cdc72c9";
+    constexpr std::size_t table_offset = 0x78f4 - 0x100;
+    constexpr std::size_t table_entry_count = 10;
+    constexpr std::string_view table_sha256 =
+        "c42e986a183a46d7b4cdf7787766e5f81446b444180e0cf34d9fa5f4b8d50a0d";
+    if (translated_al >= table_entry_count || entry_offset > game_executable.size()
+        || entry_size > game_executable.size() - entry_offset || table_offset > game_executable.size()
+        || table_entry_count * 2U > game_executable.size() - table_offset) {
+        throw std::runtime_error("Millennium DOS F8 table-jump prefix lies outside executable");
+    }
+    const auto entry = game_executable.subspan(entry_offset, entry_size);
+    const auto table = game_executable.subspan(table_offset, table_entry_count * 2U);
+    if (to_hex(sha256(entry)) != entry_sha256 || to_hex(sha256(table)) != table_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS F8 table-jump prefix");
+    }
+    const auto pointer_offset = static_cast<std::size_t>(translated_al) * 2U;
+    const auto selected_pointer = static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(table[pointer_offset])
+        | static_cast<std::uint16_t>(static_cast<std::uint16_t>(table[pointer_offset + 1U]) << 8U));
+    return {
+        .entry_address = 0x7948,
+        .translated_al = translated_al,
+        .reset_runtime_byte_address = 0xda09,
+        .reset_runtime_byte_value = 0,
+        .selected_runtime_byte_address = 0xda06,
+        .selected_runtime_byte_value = translated_al,
+        .selector_table_address = 0x78f4,
+        .selected_pointer = selected_pointer,
+        .next_gate_runtime_byte_address = 0x6e2f,
+        .nonzero_gate_address = 0x799a,
+        .zero_gate_address = 0x7968,
+    };
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;
