@@ -1639,6 +1639,21 @@ their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 uses DOS services and loads original libraries. See the
 [DOS analysis](generated/dos-millennium.md).
 
+The English DOS `2200AD.EXE` does have a separately bounded caller-connected
+overlay load for the original `2200GX.EXE` (SHA-256
+`093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb`). The
+literal NUL-terminated name is at `$11c2`; loader `$11ce..$11f6` (file
+`+$10ce`, 41 bytes, SHA-256
+`a8972b74ad9d1dfabe508c42b7fcda0fb45e0d449613449ab8a2763ca8ecff45`) reads
+the original segment cell `$0118` and has static calls `$11d1 → $053a`,
+`$11e4 → $0574`, and `$11ec → $0596`. The caller at `$d335` reaches `$11ce`.
+The independently locked adapter `$6c52..$6c72` (file `+$6b52`, SHA-256
+`b34e5abf8ecd790fce3e7a032d7a7fcacc073d03909e98fd33f9503113e3ad87`) reads
+the same cell, pushes overlay offset zero, executes `RETF` at `$6c68`, and
+has local continuation `$6c69`/return `$6c72`. These are raw loader and
+transfer facts only: Project Eon does not choose a segment value, invoke a
+DOS/private call, run overlay code, or infer a screen/resource order.
+
 The English `2200AD.EXE` COM entry preserves the original segment setup before
 the recovered main loop: loaded `$d2b0` first establishes `DS=CS` and `ES=CS`;
 the following `$d2b4` block establishes `SS=CS`, `SP=$da00`, and makes its
