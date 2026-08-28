@@ -19,6 +19,21 @@ public:
     [[nodiscard]] const DeuterosAtariFirstStageProfile& first_stage() const { return first_stage_; }
     [[nodiscard]] const DeuterosAtariSecondStageProfile& second_stage() const { return second_stage_; }
     [[nodiscard]] const DeuterosAtariDispatchProfile& dispatch() const { return dispatch_; }
+    [[nodiscard]] const DeuterosAtariRawLoadPlan& state0_raw_load_plan() const {
+        return state0_raw_load_plan_;
+    }
+    [[nodiscard]] const DeuterosAtariRawRangeLoadPlan& state1_raw_load_plan() const {
+        return state1_raw_load_plan_;
+    }
+    [[nodiscard]] const DeuterosAtariState5RawLoadPlan& state5_raw_load_plan() const {
+        return state5_raw_load_plan_;
+    }
+    [[nodiscard]] const DeuterosAtariState5ReturnProfile& state5_return() const {
+        return state5_return_;
+    }
+    [[nodiscard]] const DeuterosAtariSupervisorCallbackProfile& supervisor_callback() const {
+        return supervisor_callback_;
+    }
     [[nodiscard]] const std::string& first_stage_sha256() const { return first_stage_sha256_; }
     [[nodiscard]] const std::string& second_stage_sha256() const { return second_stage_sha256_; }
 
@@ -27,6 +42,11 @@ private:
     DeuterosAtariFirstStageProfile first_stage_;
     DeuterosAtariSecondStageProfile second_stage_;
     DeuterosAtariDispatchProfile dispatch_;
+    DeuterosAtariRawLoadPlan state0_raw_load_plan_;
+    DeuterosAtariRawRangeLoadPlan state1_raw_load_plan_;
+    DeuterosAtariState5RawLoadPlan state5_raw_load_plan_;
+    DeuterosAtariState5ReturnProfile state5_return_;
+    DeuterosAtariSupervisorCallbackProfile supervisor_callback_;
     std::string first_stage_sha256_;
     std::string second_stage_sha256_;
 };

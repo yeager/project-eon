@@ -1096,16 +1096,11 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             profile.next_sector, profile.next_sector_count);
         const auto second_profile = eon::parse_deuteros_atari_second_stage(second_stage);
         const auto dispatch = eon::parse_deuteros_atari_dispatch(second_stage);
-        const auto state0_plan = eon::build_deuteros_atari_state0_raw_load_plan(
-            second_profile, dispatch);
-        const auto state1_plan = eon::build_deuteros_atari_state1_raw_load_plan(
-            second_profile, dispatch);
-        const auto state5_plan = eon::build_deuteros_atari_state5_raw_load_plan(
-            second_profile, dispatch);
-        const auto state5_return = eon::parse_deuteros_atari_state5_return(
-            second_stage, second_profile, dispatch);
-        const auto supervisor_callback = eon::parse_deuteros_atari_supervisor_callback(
-            second_stage, second_profile);
+        const auto& state0_plan = live_bootstrap.state0_raw_load_plan();
+        const auto& state1_plan = live_bootstrap.state1_raw_load_plan();
+        const auto& state5_plan = live_bootstrap.state5_raw_load_plan();
+        const auto& state5_return = live_bootstrap.state5_return();
+        const auto& supervisor_callback = live_bootstrap.supervisor_callback();
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
