@@ -1850,3 +1850,16 @@ opening VM, VBL random source, compositor, or PCM mixer; SDL clears queued
 preview audio at that edge. The title stage's Exec, graphics-library and custom
 hardware requirements remain unexecuted, so this is not a fabricated title
 screen or a claim that title-stage timing has begun.
+
+The terminal handoff also executes only the title entry's proven profile-one
+prefix in memory. Bootstrap `$12b0e` (ADF `+0x2f0e`, 14 bytes SHA-256
+`858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd`)
+reloads D0 from `$12a34`, which is profile one on the exact `$0b38` route.
+The title code then writes `$4040e=1` and `$19d52=1`; its `$40426..$40437`
+and `$40448..$4044f` byte spans hash to
+`833374022042225f1bfeeedd56c05d7011168531fa121494cef04174453e5387` and
+`8d15b73f389c05fc214b9440c0a0b77df33782c6400d455cef96f338aa5f1211`.
+The preceding `A1 -> $206a0` transfer remains deliberately unmaterialized:
+its controller pointer is unknown. Execution stops at `$40450`, before its
+first Exec vector; that 16-byte boundary hash is
+`f0c847a4d443e26fc08f6c6864afeca3b33da514f8708f76f2f05314a4c88067`.

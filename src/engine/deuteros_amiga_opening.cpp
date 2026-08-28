@@ -43,6 +43,7 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     if (!title_stage_session_ && events.alternate_resources.size() == 1
         && events.alternate_resources.front() == 0x0b38) {
         title_stage_session_.emplace(disk_, load_plan_);
+        title_entry_prefix_ = execute_deuteros_amiga_title_entry_prefix(disk_, load_plan_, 1);
         events.title_handoff = true;
     }
     ++ticks_;

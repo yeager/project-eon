@@ -737,4 +737,59 @@ DeuterosAmigaTitleZeroResponseLoop evaluate_deuteros_amiga_title_zero_response_l
     throw std::runtime_error("Deuteros title response loop lacks terminating helper response");
 }
 
+DeuterosAmigaTitleEntryPrefix execute_deuteros_amiga_title_entry_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::uint16_t incoming_profile) {
+    if (incoming_profile != 1) {
+        throw std::runtime_error("Unsupported Deuteros title entry profile");
+    }
+    constexpr std::string_view adf_hash =
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
+    constexpr std::array<std::uint8_t, 14> bootstrap_return{{
+        0x22, 0x79, 0x00, 0x01, 0x28, 0x22, 0x30, 0x39,
+        0x00, 0x01, 0x2a, 0x34, 0x4e, 0x75,
+    }};
+    constexpr std::array<std::uint8_t, 18> mode_prefix{{
+        0x23, 0xc9, 0x00, 0x02, 0x06, 0xa0, 0x33, 0xc0,
+        0x00, 0x04, 0x04, 0x0e, 0xb0, 0x3c, 0x00, 0x05,
+        0x66, 0x10,
+    }};
+    constexpr std::array<std::uint8_t, 8> normal_prefix{{
+        0x13, 0xfc, 0x00, 0x01, 0x00, 0x01, 0x9d, 0x52,
+    }};
+    constexpr std::array<std::uint8_t, 16> exec_boundary{{
+        0x2e, 0x7c, 0x00, 0x04, 0x0b, 0x62, 0x2c, 0x78,
+        0x00, 0x04, 0x4e, 0xae, 0xff, 0x6a, 0x20, 0x3c,
+    }};
+    if (to_hex(sha256(disk.bytes(0, AmigaAdf::standard_size))) != adf_hash
+        || plan.bootstrap_loader.destination > 0x12b0e
+        || 0x12b0e - plan.bootstrap_loader.destination > plan.bootstrap_loader.length
+        || bootstrap_return.size() > plan.bootstrap_loader.length
+            - (0x12b0e - plan.bootstrap_loader.destination)
+        || plan.title_stage.destination > 0x40426
+        || 0x40450 - plan.title_stage.destination > plan.title_stage.length
+        || exec_boundary.size() > plan.title_stage.length - (0x40450 - plan.title_stage.destination)) {
+        throw std::runtime_error("Deuteros title entry prefix lies outside original stages");
+    }
+    const auto bootstrap = disk.bytes(plan.bootstrap_loader.disk_offset
+        + 0x12b0e - plan.bootstrap_loader.destination, bootstrap_return.size());
+    const auto mode = disk.bytes(plan.title_stage.disk_offset
+        + 0x40426 - plan.title_stage.destination, mode_prefix.size());
+    const auto normal = disk.bytes(plan.title_stage.disk_offset
+        + 0x40448 - plan.title_stage.destination, normal_prefix.size());
+    const auto exec = disk.bytes(plan.title_stage.disk_offset
+        + 0x40450 - plan.title_stage.destination, exec_boundary.size());
+    if (!std::equal(bootstrap_return.begin(), bootstrap_return.end(), bootstrap.begin())
+        || to_hex(sha256(bootstrap)) != "858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd"
+        || !std::equal(mode_prefix.begin(), mode_prefix.end(), mode.begin())
+        || to_hex(sha256(mode)) != "833374022042225f1bfeeedd56c05d7011168531fa121494cef04174453e5387"
+        || !std::equal(normal_prefix.begin(), normal_prefix.end(), normal.begin())
+        || to_hex(sha256(normal)) != "8d15b73f389c05fc214b9440c0a0b77df33782c6400d455cef96f338aa5f1211"
+        || !std::equal(exec_boundary.begin(), exec_boundary.end(), exec.begin())
+        || to_hex(sha256(exec)) != "f0c847a4d443e26fc08f6c6864afeca3b33da514f8708f76f2f05314a4c88067") {
+        throw std::runtime_error("Unsupported Deuteros title entry prefix");
+    }
+    return {1, 0x206a0, 0x4040e, 1, 0x19d52, 1, 0x40450};
+}
+
 } // namespace eon
