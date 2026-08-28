@@ -182,6 +182,23 @@ struct DeuterosAtariState5RawLoadPlan {
     const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch);
 
+// Both reads in vector 5 cover one contiguous prefix of state 1's separately
+// recovered raw interval. This verifies only that physical-media relationship:
+// it neither selects either runtime vector nor attaches a resource/title/game
+// meaning to the shared bytes.
+struct DeuterosAtariState5State1Prefix {
+    std::size_t source_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+};
+
+[[nodiscard]] DeuterosAtariState5State1Prefix
+validate_deuteros_atari_state5_state1_prefix(
+    const DeuterosAtariRawRangeLoadPlan& state1,
+    const DeuterosAtariState5RawLoadPlan& state5,
+    std::span<const std::uint8_t> state1_bytes,
+    std::span<const std::uint8_t> state5_bytes);
+
 // The sixth vector's second raw-reader return falls through a literal BRA.W
 // to the copied dispatcher's local return tail. This preserves only the
 // original branch and its final MOVE.W/RTS bytes; it does not select vector 5,
