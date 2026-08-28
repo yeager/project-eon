@@ -322,6 +322,27 @@ struct MillenniumDosFirstSpecialActionPrefix {
     std::uint16_t helper_address = 0;
 };
 
+enum class MillenniumDosSecondSpecialActionOutcome {
+    blocked_by_runtime_byte,
+    helper_boundary,
+};
+
+// English DOS action $0c is admitted only when observed byte $da3a is zero.
+// The admitted path sets AX then stops at its first native helper; neither
+// branch invents runtime state or executes original code.
+struct MillenniumDosSecondSpecialActionPrefix {
+    std::uint8_t action = 0;
+    std::uint16_t runtime_byte_address = 0;
+    std::uint8_t observed_runtime_byte = 0;
+    std::uint16_t blocked_loop_address = 0;
+    std::uint16_t handler_address = 0;
+    std::uint16_t selected_ax_value = 0;
+    std::uint16_t helper_call_address = 0;
+    std::uint16_t helper_address = 0;
+    MillenniumDosSecondSpecialActionOutcome outcome =
+        MillenniumDosSecondSpecialActionOutcome::blocked_by_runtime_byte;
+};
+
 // Exact, non-semantic trace of table record eight (raw F9 / $43). Its native
 // handler has the established $a19e admission gate, clears two native bytes,
 // selects the observed local mode, and can cycle through the F8 preflight
@@ -471,6 +492,11 @@ evaluate_millennium_dos_eighth_function_key_selected_record_gate(
 // caller-observed/toggled byte to executable or save media.
 [[nodiscard]] MillenniumDosFirstSpecialActionPrefix
 evaluate_millennium_dos_first_special_action_prefix(
+    std::span<const std::uint8_t> game_executable,
+    std::uint8_t observed_runtime_byte);
+
+[[nodiscard]] MillenniumDosSecondSpecialActionPrefix
+evaluate_millennium_dos_second_special_action_prefix(
     std::span<const std::uint8_t> game_executable,
     std::uint8_t observed_runtime_byte);
 

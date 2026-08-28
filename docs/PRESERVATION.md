@@ -1724,6 +1724,16 @@ toggle to original executable/save media. The supplied Spanish executable
 shares the handler prefix but has no proven matching action dispatch, so this
 English-only route deliberately rejects it.
 
+The next English-only special action `$0c` is likewise bounded. Its admission
+prefix `$d3e8..$d3f6` (15 bytes at `+$d2e8`, SHA-256
+`e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3`)
+reads explicitly observed byte `$da3a`: nonzero returns to `$d3d2`; zero
+matches action `$0c` and calls `$d570`. The seven bytes at `$d570` (file
+`+$d470`, SHA-256
+`f266d52e554a2e85147994b34eb69e7678cd9339fda1b99206c18fc05361232b`)
+load `AX=$000d` and stop at `CALL $6c52`. No native byte is written before
+that call; the evaluator neither invokes it nor assumes its return.
+
 The ninth table record (raw F9 / `$43`) is `30 36 09 1b 38 08 39 73`, with
 handler entry `$7339`. It returns when native runtime word `$a19e` is nonzero.
 Its admitted path clears AX and calls `$d0c9`, clears `$da30`, loads `AL=$02`,

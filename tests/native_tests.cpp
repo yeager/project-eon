@@ -968,6 +968,20 @@ int main() {
         eon::evaluate_millennium_dos_first_special_action_prefix(*game_executable, 0x5a);
     assert(first_special_action_nonzero.toggled_runtime_byte == 0x5b);
     assert(first_special_action_nonzero.selected_ax_value == 0x018e);
+    const auto second_special_action_blocked =
+        eon::evaluate_millennium_dos_second_special_action_prefix(*game_executable, 1);
+    assert(second_special_action_blocked.runtime_byte_address == 0xda3a);
+    assert(second_special_action_blocked.blocked_loop_address == 0xd3d2);
+    assert(second_special_action_blocked.outcome
+        == eon::MillenniumDosSecondSpecialActionOutcome::blocked_by_runtime_byte);
+    const auto second_special_action_admitted =
+        eon::evaluate_millennium_dos_second_special_action_prefix(*game_executable, 0);
+    assert(second_special_action_admitted.handler_address == 0xd570);
+    assert(second_special_action_admitted.selected_ax_value == 0x000d);
+    assert(second_special_action_admitted.helper_call_address == 0xd573);
+    assert(second_special_action_admitted.helper_address == 0x6c52);
+    assert(second_special_action_admitted.outcome
+        == eon::MillenniumDosSecondSpecialActionOutcome::helper_boundary);
     {
         auto altered_special_handler = *game_executable;
         altered_special_handler[0x11a4 - 0x100] ^= 0x01;
