@@ -2395,6 +2395,29 @@ int main() {
     assert(repeated_title_response.final_state_word == 0x0101);
     assert((repeated_title_response.custom_write_words
         == std::vector<std::uint16_t>{0x0f00, 0x0f00}));
+    const std::array<std::uint8_t, 1> immediate_post_transition_return{{0x1b}};
+    const auto immediate_post_transition =
+        eon::evaluate_deuteros_amiga_title_post_transition_response_loop(
+            system_disk, load_plan, immediate_post_transition_return);
+    assert(immediate_post_transition.entry_address == 0x4077e);
+    assert(immediate_post_transition.feedback_tail_address == 0x407ba);
+    assert(immediate_post_transition.control_word_address == 0x407e6);
+    assert(immediate_post_transition.initial_control_word == 0);
+    assert(immediate_post_transition.final_control_word == 0);
+    assert(immediate_post_transition.helper_address == 0x1f238);
+    assert(immediate_post_transition.return_response == 0x1b);
+    assert(immediate_post_transition.loop_response == 0x20);
+    assert(immediate_post_transition.increment_response == 0x2e);
+    assert(immediate_post_transition.decrement_response == 0x2c);
+    assert(immediate_post_transition.control_low_byte_writes.empty());
+    assert(immediate_post_transition.helper_loop_address == 0x4078c);
+    assert(immediate_post_transition.return_address == 0x407e4);
+    const std::array<std::uint8_t, 5> post_transition_responses{{0x2e, 0x2c, 0x20, 0x42, 0x1b}};
+    const auto mixed_post_transition =
+        eon::evaluate_deuteros_amiga_title_post_transition_response_loop(
+            system_disk, load_plan, post_transition_responses);
+    assert(mixed_post_transition.final_control_word == 0);
+    assert((mixed_post_transition.control_low_byte_writes == std::vector<std::uint8_t>{1, 0}));
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x9b69a] ^= 0x01;
@@ -2429,6 +2452,19 @@ int main() {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::evaluate_deuteros_amiga_title_zero_response_loop(
                 altered_disk, load_plan, nonmatching_title_response));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x9b7ba] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::evaluate_deuteros_amiga_title_post_transition_response_loop(
+                altered_disk, load_plan, immediate_post_transition_return));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
