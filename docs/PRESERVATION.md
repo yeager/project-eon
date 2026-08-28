@@ -333,6 +333,13 @@ them to a cache. The alternate supplied crack images alter boot/loader code;
 they remain separately fingerprinted media rather than assumed equivalent
 executables.
 
+When the Amiga Millennium launcher target is selected, Project Eon creates a
+bounded session only for the exact Defjam ADF above. It validates this load
+plan, its shared resident range, and the resident entry directly from the
+original disk bytes, then stops before the transformed first-stage call or
+any AmigaOS behavior. Other recognised Amiga images remain preservation
+evidence but are not silently substituted for Defjam's path.
+
 For a reproducible chain of custody, the parser also reports a SHA-256 for
 each exact raw source range (including the bootstrap). These are fingerprints
 of immutable bytes read directly from the supplied ADF, not hashes of an

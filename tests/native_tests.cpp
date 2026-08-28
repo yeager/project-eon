@@ -3,6 +3,7 @@
 #include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
+#include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
@@ -226,6 +227,11 @@ int main() {
     // unpacking the ADF.
     const eon::AmigaAdf defjam_loader_disk(*defjam_adf);
     const auto defjam_plan = eon::parse_millennium_amiga_load_plan(defjam_loader_disk);
+    const eon::MillenniumAmigaBootstrapSession defjam_session(*defjam_adf);
+    assert(defjam_session.plan().loader_magic == 0xa8d398fb);
+    assert(defjam_session.shared_resident().raw_sha256
+        == "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e");
+    assert(defjam_session.resident_entry().entry_address == 0x68000);
     assert(defjam_plan.bootstrap_loader.disk_offset == 0x400);
     assert(defjam_plan.bootstrap_loader.length == 0x400);
     assert(defjam_plan.bootstrap_loader.destination == 0x70000);
