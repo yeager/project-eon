@@ -1243,12 +1243,12 @@ int main() {
     assert(game_flow.eighth_function_key.preflight_enabled_call_address == 0x7b47);
     assert(game_flow.eighth_function_key.decrement_runtime_byte_address == 0xda0a);
     assert(game_flow.eighth_function_key.depleted_jump_address == 0x7948);
-    assert(game_flow.eighth_function_key.repeated_call_address == 0xcafa);
+    assert(game_flow.eighth_function_key.repeated_call_address == 0x09fa);
     assert(game_flow.eighth_function_key.repeat_shift_register == 3);
     assert(game_session.observe_action(0x42) == std::optional<std::size_t>{7});
     assert(game_session.last_eighth_function_key_trace());
     assert(game_session.last_eighth_function_key_trace()->handler_address == 0x7306);
-    assert(game_session.last_eighth_function_key_trace()->repeated_call_address == 0xcafa);
+    assert(game_session.last_eighth_function_key_trace()->repeated_call_address == 0x09fa);
     // The F8 prefix has no runtime admission branch: it deterministically
     // clears $da30 before its unsupported calls. The unknown initial byte is
     // not manufactured; only the post-write value is reconstructed.
