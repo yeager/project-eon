@@ -266,7 +266,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x7f, 0x91, 0xb0, 0x25, 0xe8, 0xee, 0x91, 0xe8,
         0x0a, 0x96, 0xe8, 0x61, 0xd6, 0xc3});
     // Record seven (raw F8 / $42) enters $7306. It clears native byte $da30,
-    // loads AL=$02, enters $731a, then repeatedly calls $cafa while the carry
+    // loads AL=$02, enters $731a, then repeatedly calls $09fa while the carry
     // result of SHR BL,1 remains set. $731a first reads $da39; when nonzero it
     // calls $7b47 and returns. Its zero path reads/decrements $da0a, applies
     // XLAT through BX=$db4b, then jumps to $7948. Neither runtime byte nor BL
@@ -548,7 +548,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .preflight_enabled_call_address = 0x7b47,
             .decrement_runtime_byte_address = 0xda0a,
             .depleted_jump_address = 0x7948,
-            .repeated_call_address = 0xcafa,
+            // CALL rel16 at $7312 is E8 E5 96. Its next IP is $7315, so the
+            // signed 16-bit displacement resolves modulo 64 KiB to $09fa;
+            // it is not the fictional flat address $cafa.
+            .repeated_call_address = 0x09fa,
             .repeat_shift_register = 3,
         },
         .ninth_function_key = {

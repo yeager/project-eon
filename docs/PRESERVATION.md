@@ -1667,7 +1667,7 @@ handler entry `$7306`. It clears native runtime byte `$da30`, loads `AL=$02`,
 and calls local preflight `$731a`. That preflight reads `$da39`: its nonzero
 path calls `$7b47`; its other path reads `$da0a`, returns if it is zero, or
 decrements it, applies `XLAT` through `BX=$db4b`, and jumps to `$7948`. Back
-in the handler, `$cafa` is called and the following `SHR BL,1` carry branch
+in the handler, `$09fa` is called and the following `SHR BL,1` carry branch
 can repeat that call. F8's `C6 06 30 DA 00` write is the first F-key effect
 that Project Eon reconstructs, because its byte-level semantics are fully
 established and it executes before any runtime-dependent branch or call: its
