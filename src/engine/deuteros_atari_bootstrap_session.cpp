@@ -36,6 +36,15 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     }
     second_stage_ = parse_deuteros_atari_second_stage(second_stage_bytes);
     dispatch_ = parse_deuteros_atari_dispatch(second_stage_bytes);
+    // These are byte-validated static argument paths reached after the
+    // second-stage hand-off. Retaining them in the live session prevents the
+    // launch path from being less evidence-backed than --inspect, while still
+    // not selecting a runtime vector, issuing a raw read, or calling XBIOS.
+    state0_raw_load_plan_ = build_deuteros_atari_state0_raw_load_plan(second_stage_, dispatch_);
+    state1_raw_load_plan_ = build_deuteros_atari_state1_raw_load_plan(second_stage_, dispatch_);
+    state5_raw_load_plan_ = build_deuteros_atari_state5_raw_load_plan(second_stage_, dispatch_);
+    state5_return_ = parse_deuteros_atari_state5_return(second_stage_bytes, second_stage_, dispatch_);
+    supervisor_callback_ = parse_deuteros_atari_supervisor_callback(second_stage_bytes, second_stage_);
 }
 
 } // namespace eon

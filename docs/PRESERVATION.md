@@ -730,6 +730,12 @@ These are preserved instruction/dataflow facts only; they do not authorize
 Project Eon to select vector 5, perform its runtime callbacks, or infer title
 or game semantics for the loaded bytes.
 
+The live `DeuterosAtariBootstrapSession` retains these three static plans,
+the vector-5 return profile, and the XBIOS callback-byte boundary after
+validating the same original second stage. Thus the SDL launch request and
+`--inspect` share one hash-validated provenance record; retaining it does not
+read a selected state, invoke XBIOS, or materialize a title/game surface.
+
 The vector's immediate static continuation is now bounded too. Track-2
 `+$1a2` (Disk 1 `+$49a2`, copied RAM `$1fa2`) is exactly `60 00 ff 70`,
 SHA-256 `4d11113ca2040c3c0d8e9fe7fc7ef2b65175cc580b8a4b81466908ae7c537896`.

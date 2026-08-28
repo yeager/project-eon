@@ -2012,6 +2012,14 @@ int main() {
     assert(deuteros_atari_session.first_stage().next_destination == 0x70000);
     assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
     assert(deuteros_atari_session.dispatch().state0_destination == 0x13200);
+    assert(deuteros_atari_session.state0_raw_load_plan().source_offset == 0x4800);
+    assert(deuteros_atari_session.state0_raw_load_plan().requests.size() == 4);
+    assert(deuteros_atari_session.state1_raw_load_plan().source_offset == 0x55800);
+    assert(deuteros_atari_session.state1_raw_load_plan().requests.size() == 84);
+    assert(deuteros_atari_session.state5_raw_load_plan().first_read.source_offset == 0x55800);
+    assert(deuteros_atari_session.state5_raw_load_plan().second_read.source_offset == 0x60c00);
+    assert(deuteros_atari_session.state5_return().branch_target_offset == 0x114);
+    assert(deuteros_atari_session.supervisor_callback().callback_address == 0x1fa6);
     const auto& deuteros_st_boot = deuteros_disk1.boot_profile();
     assert(deuteros_st_boot.bytes_per_sector == 512);
     assert(deuteros_st_boot.sectors_per_cluster == 2);
