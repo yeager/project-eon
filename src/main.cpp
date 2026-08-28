@@ -303,6 +303,20 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << channel_request_second_callee.return_address << "; SHA-256 "
         << channel_request_second_callee.raw_sha256 << std::dec
         << " (static only; no low-memory/custom-register effects executed)\n";
+    const auto channel_request_following_service =
+        eon::parse_deuteros_amiga_channel_request_following_service(
+            disk, plan, channel_request_continuation);
+    std::cout << "          Channel-request following service: ADF 0x" << std::hex
+        << plan.main_stage.disk_offset + channel_request_following_service.entry_address
+            - plan.main_stage.destination
+        << ", entry 0x" << channel_request_following_service.entry_address
+        << "; execution 0x" << channel_request_following_service.execution_entry_address
+        << ", embedded table 0x" << channel_request_following_service.embedded_table_address
+        << ", descriptors 0x" << channel_request_following_service.descriptor_base_address
+        << " stride 0x" << channel_request_following_service.descriptor_stride
+        << "; RTS 0x" << channel_request_following_service.return_address
+        << "; SHA-256 " << channel_request_following_service.raw_sha256 << std::dec
+        << " (static only; no descriptor, flag, or runtime-cell effects executed)\n";
     const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);

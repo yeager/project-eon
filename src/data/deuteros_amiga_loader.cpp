@@ -570,6 +570,27 @@ parse_deuteros_amiga_channel_request_second_callee(
         0x000f, 0xdff096, 0x224ca, expected_hash};
 }
 
+DeuterosAmigaChannelRequestFollowingService
+parse_deuteros_amiga_channel_request_following_service(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaChannelRequestContinuation& continuation) {
+    constexpr std::uint32_t entry = 0x22a5a;
+    constexpr std::size_t length = 0x130;
+    const auto& stage = plan.main_stage;
+    if (continuation.following_call_target != entry || entry < stage.destination
+        || entry - stage.destination > stage.length
+        || length > stage.length - (entry - stage.destination)) {
+        throw std::runtime_error("Unexpected Deuteros channel-request following service placement");
+    }
+    const auto bytes = disk.bytes(stage.disk_offset + entry - stage.destination, length);
+    constexpr auto expected_hash = "d5fdbdacd004d2cf377ea0dbaefb9d8b308ba23b568cfb3785456622bde49d19";
+    if (to_hex(sha256(bytes)) != expected_hash) {
+        throw std::runtime_error("Unexpected Deuteros channel-request following service");
+    }
+    return {entry, 0x22a30, 0, 0x000f, 0x22ab8, 0x22a6a, 0x22a6e, 0x000e,
+        0x22aaa, 0x32a24, 0x22a6c, {1, 2, 4, 8}, 0x22b88, expected_hash};
+}
+
 std::optional<DeuterosAmigaMainResourceTransfer>
 read_deuteros_amiga_main_resource(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index) {
