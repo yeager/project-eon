@@ -1769,6 +1769,19 @@ toggle to original executable/save media. The supplied Spanish executable
 shares the handler prefix but has no proven matching action dispatch, so this
 English-only route deliberately rejects it.
 
+The shared English helper at `$0666..$0681` is separately bounded at file
+`+$0566`: 28 bytes, `1e 56 50 2e 8e 1e 16 01 2e c6 06 c8 05 00 d1 e0 8b f0
+ad 8b f0 e8 79 ff 58 5e 1f c3`, SHA-256
+`8dc7586f3809a14f3ed6acd601cd42486841adb9d9cb09d3e9b1ed727329e485`.
+It preserves `DS`, `SI`, and `AX`; loads `DS` through native `CS:$0116`;
+writes literal zero to `CS:$05c8`; doubles caller-provided `AX`; reaches
+`LODSW` at `$0678`; and stops at `CALL $05f7` at `$067b`.
+`MillenniumDosSharedHelperPrefix` accepts only the supplied English executable
+(full SHA-256 `427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`).
+It does not invent the segment, dereference the selected table word, invoke
+`$05f7`, assume a return, or commit any instruction's provenance to host or
+original game state.
+
 The next English-only special action `$0c` is likewise bounded. Its admission
 prefix `$d3e8..$d3f6` (15 bytes at `+$d2e8`, SHA-256
 `e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3`)
