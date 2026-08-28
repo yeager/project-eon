@@ -659,6 +659,53 @@ evaluate_millennium_dos_eighth_function_key_repeat_loop(
     throw std::runtime_error("Millennium DOS F8 repeat loop lacks terminating helper return");
 }
 
+MillenniumDosEighthFunctionKeyPreflight
+evaluate_millennium_dos_eighth_function_key_preflight(
+    const std::span<const std::uint8_t> game_executable,
+    const std::uint8_t enabled_byte, const std::uint8_t counter_byte) {
+    constexpr std::size_t preflight_offset = 0x731a - 0x100;
+    constexpr std::size_t preflight_size = 31;
+    constexpr std::string_view preflight_sha256 =
+        "71c2c4189e66104aea08d4f7040e9d6bc873eb6717607eed30cf61ce27f5ac2e";
+    if (preflight_offset > game_executable.size()
+        || preflight_size > game_executable.size() - preflight_offset) {
+        throw std::runtime_error("Millennium DOS F8 preflight lies outside executable");
+    }
+    const auto preflight = game_executable.subspan(preflight_offset, preflight_size);
+    if (to_hex(sha256(preflight)) != preflight_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS F8 preflight");
+    }
+    MillenniumDosEighthFunctionKeyPreflight result;
+    result.entry_address = 0x731a;
+    result.enabled_byte_address = 0xda39;
+    result.enabled_byte_value = enabled_byte;
+    result.helper_address = 0x7b47;
+    result.counter_byte_address = 0xda0a;
+    result.initial_counter_byte = counter_byte;
+    result.translation_table_address = 0xdb4b;
+    result.table_jump_address = 0x7948;
+    if (enabled_byte != 0) {
+        // $7b47 is a native helper. Its return effect is not assumed; the
+        // following RET is recorded only as the local fall-through location.
+        result.return_address = 0x7324;
+        result.outcome = MillenniumDosEighthFunctionKeyPreflightOutcome::helper_boundary;
+        return result;
+    }
+    if (counter_byte == 0) {
+        result.return_address = 0x732c;
+        result.outcome = MillenniumDosEighthFunctionKeyPreflightOutcome::returns;
+        return result;
+    }
+    const auto decremented = static_cast<std::uint8_t>(counter_byte - 1U);
+    result.decremented_counter_byte = decremented;
+    result.translation_index = decremented;
+    // XLAT reads CS:[$db4b + AL], but that native-memory table lies beyond
+    // this COM image. Preserve its address/index and stop before fabricating
+    // a byte or following the $7948 routine.
+    result.outcome = MillenniumDosEighthFunctionKeyPreflightOutcome::table_jump_boundary;
+    return result;
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;

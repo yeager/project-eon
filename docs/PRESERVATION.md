@@ -1677,6 +1677,15 @@ a second F8 therefore records `0 -> 0`. It is not a mutable view of the
 original COM image or a save serializer, and is never exported. The later
 preflight/call path remains deliberately unimplemented because `$da39`,
 `$da0a`, and `BL` have no proven initial state or complete helper semantics.
+The preceding `$731a..$7338` preflight is independently hash-locked (31 bytes
+at file `+0x721a`, SHA-256
+`71c2c4189e66104aea08d4f7040e9d6bc873eb6717607eed30cf61ce27f5ac2e`).
+Its two runtime bytes are explicit evaluator inputs: nonzero `$da39` reaches
+opaque helper `$7b47`; zero `$da39` with zero `$da0a` returns; otherwise it
+decrements `$da0a`, uses the decremented `AL` as an `XLAT` index through
+native-memory table `$db4b`, then jumps to `$7948`. The table lies beyond the
+COM image, so Project Eon records only its original address and index—never a
+fabricated table byte or jump effect.
 After a preflight return, the eight original bytes at `$7312` (file
 `+0x7212`, SHA-256
 `2bf85a49d14034fb5562af6188745810721fd42e495877464d04f69783525a0a`) are

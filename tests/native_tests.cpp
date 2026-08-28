@@ -1258,6 +1258,28 @@ int main() {
     const auto f8_repeated_loop = eon::evaluate_millennium_dos_eighth_function_key_repeat_loop(
         *game_executable, f8_repeated_returns);
     assert((f8_repeated_loop.shifted_bl_values == std::vector<std::uint8_t>{0x00, 0x00}));
+    const auto f8_enabled_preflight = eon::evaluate_millennium_dos_eighth_function_key_preflight(
+        *game_executable, 1, 3);
+    assert(f8_enabled_preflight.entry_address == 0x731a);
+    assert(f8_enabled_preflight.enabled_byte_address == 0xda39);
+    assert(f8_enabled_preflight.helper_address == 0x7b47);
+    assert(f8_enabled_preflight.outcome
+        == eon::MillenniumDosEighthFunctionKeyPreflightOutcome::helper_boundary);
+    assert(f8_enabled_preflight.return_address == 0x7324);
+    assert(!f8_enabled_preflight.decremented_counter_byte);
+    const auto f8_empty_preflight = eon::evaluate_millennium_dos_eighth_function_key_preflight(
+        *game_executable, 0, 0);
+    assert(f8_empty_preflight.outcome
+        == eon::MillenniumDosEighthFunctionKeyPreflightOutcome::returns);
+    assert(f8_empty_preflight.return_address == 0x732c);
+    const auto f8_table_preflight = eon::evaluate_millennium_dos_eighth_function_key_preflight(
+        *game_executable, 0, 3);
+    assert(f8_table_preflight.outcome
+        == eon::MillenniumDosEighthFunctionKeyPreflightOutcome::table_jump_boundary);
+    assert(f8_table_preflight.decremented_counter_byte == std::optional<std::uint8_t>{2});
+    assert(f8_table_preflight.translation_table_address == 0xdb4b);
+    assert(f8_table_preflight.translation_index == std::optional<std::uint8_t>{2});
+    assert(f8_table_preflight.table_jump_address == 0x7948);
     {
         auto altered_f8_loop = *game_executable;
         altered_f8_loop[0x7312 - 0x100] ^= 0x01;
@@ -1265,6 +1287,18 @@ int main() {
         try {
             static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_repeat_loop(
                 altered_f8_loop, f8_single_return));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_f8_preflight = *game_executable;
+        altered_f8_preflight[0x731a - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_preflight(
+                altered_f8_preflight, 0, 0));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

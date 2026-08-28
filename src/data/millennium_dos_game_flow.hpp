@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -227,6 +228,31 @@ struct MillenniumDosEighthFunctionKeyRepeatLoop {
     std::uint8_t final_bl = 0;
 };
 
+enum class MillenniumDosEighthFunctionKeyPreflightOutcome {
+    helper_boundary,
+    returns,
+    table_jump_boundary,
+};
+
+// The literal $731a preflight before F8's repeat loop. Both runtime bytes are
+// explicit inputs; the table at $db4b and every call target remain original
+// memory/code boundaries, never reconstructed host state.
+struct MillenniumDosEighthFunctionKeyPreflight {
+    std::uint16_t entry_address = 0;
+    std::uint16_t enabled_byte_address = 0;
+    std::uint8_t enabled_byte_value = 0;
+    std::uint16_t helper_address = 0;
+    std::uint16_t counter_byte_address = 0;
+    std::uint8_t initial_counter_byte = 0;
+    std::optional<std::uint8_t> decremented_counter_byte;
+    std::uint16_t translation_table_address = 0;
+    std::optional<std::uint8_t> translation_index;
+    std::uint16_t table_jump_address = 0;
+    std::uint16_t return_address = 0;
+    MillenniumDosEighthFunctionKeyPreflightOutcome outcome =
+        MillenniumDosEighthFunctionKeyPreflightOutcome::returns;
+};
+
 // Exact, non-semantic trace of table record eight (raw F9 / $43). Its native
 // handler has the established $a19e admission gate, clears two native bytes,
 // selects the observed local mode, and can cycle through the F8 preflight
@@ -356,6 +382,11 @@ struct MillenniumDosGameFlow {
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     std::span<const std::uint8_t> game_executable,
     std::span<const std::uint8_t> helper_return_bl_values);
+
+[[nodiscard]] MillenniumDosEighthFunctionKeyPreflight
+evaluate_millennium_dos_eighth_function_key_preflight(
+    std::span<const std::uint8_t> game_executable,
+    std::uint8_t enabled_byte, std::uint8_t counter_byte);
 
 // Projects the verified, finite sequence of original BIOS palette-register
 // requests into the SDL-facing adapter payload. Callers must still establish
