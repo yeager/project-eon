@@ -1670,6 +1670,16 @@ int main() {
     assert(spanish_f8_selected_record.record_byte_4 == std::optional<std::uint8_t>{0x84});
     assert(spanish_f8_selected_record.first_helper_address
         == std::optional<std::uint16_t>{0x7924});
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_second_special_action_prefix(
+                disk.read(*executable), 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     // Identical handler bytes alone do not establish Spanish action-$0b
     // reachability: the evaluator requires the English dispatch slice too.
     {
