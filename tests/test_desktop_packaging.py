@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import subprocess
 import unittest
@@ -14,7 +15,11 @@ WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 class DesktopPackagingTests(unittest.TestCase):
     def test_verifier_is_valid_shell_and_rejects_media_extensions(self) -> None:
-        subprocess.run(["bash", "-n", str(VERIFIER)], check=True)
+        # The script itself is exercised by the Linux packaging job. Windows
+        # still checks the preservation contract below, but has no POSIX shell
+        # runtime to parse it with.
+        if os.name != "nt":
+            subprocess.run(["bash", "-n", str(VERIFIER)], check=True)
         source = VERIFIER.read_text(encoding="utf-8")
         for extension in ("zip", "adf", "st", "msa", "stx", "img", "exe", "com"):
             with self.subTest(extension=extension):
