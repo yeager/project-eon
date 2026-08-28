@@ -550,6 +550,9 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " (loader reads " << flow.launcher_private_interrupt_handler_first_program
         << "/" << flow.launcher_private_interrupt_handler_other_program << " to DS:0x"
         << std::hex << flow.launcher_private_interrupt_handler_destination_offset
+        << "; command-tail e/E/m/M scan 0x" << flow.launcher_video_selection_scan_address
+        << " maps selectors 1/2, empty tail calls 0x"
+        << flow.launcher_video_selection_default_detector_address
         << "; numeric segment unmodelled; raw save 0x"
         << flow.launcher_private_interrupt_saved_offset_cell << "/0x"
         << flow.launcher_private_interrupt_saved_segment_cell << ", restore 0x"

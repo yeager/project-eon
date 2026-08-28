@@ -229,6 +229,15 @@ the two D0-dependent gates and their literal branch shape only. It does not
 choose a D0 value, execute either path, or infer a hardware, firmware, or game
 state consequence.
 
+Its complete local routine is now hash-locked through `RTS` at `$2b3a4`:
+`$2b2be..$2b3a5`, file `+0xde0..+0xec7`, 232 bytes, SHA-256
+`85c58759b0cb2f067734fb006aa543fc74926422187506914c823ceaaf9c6cd8`.
+Every path remains local original code, but its branches/copies depend on
+caller-owned D0, A3, A4, A5, A6 and loop registers; it crosses no native
+service boundary and provides no recoverable input or display state. Project
+Eon validates this immutable span and does not execute it or use it as a
+replacement configuration result.
+
 The direct target `0x2b448` is preserved through its complete local setup
 prefix at file `+0xf6a`: it loads `D7=0x0006`, `A5=0x2b428`,
 `A4=0x2b3c8`, `D6=0x000f`, `D5=0x0002`, and `D4=0x0100`. This is only direct
@@ -1604,6 +1613,22 @@ The loaded `ega640.bin` (4,632 bytes, SHA-256
 `mcga.bin` (4,366 bytes, SHA-256
 `bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`) both
 start an `INT 91h` dispatcher that doubles `AX` into their local word table.
+
+The original `MILL.COM` driver choice is now separately byte-locked. Its
+45-byte command-tail scan at loaded `$019d..$01c9` (file `+$009d`, SHA-256
+`157c83c6cdef55dfb7531bceee1759884f68237f445437553d36c12f167d6eba`) reads
+PSP `$0080`: `e`/`E` sets AL `$01`, `m`/`M` sets AL `$02`, and an unrecognised
+token loops. An empty tail calls `$05a1`; its 66-byte detector
+`$0593..$05d4` (file `+$0493`, SHA-256
+`9228c64e003a093dcdebda600fe969e4112079e454834133559c0b52f4cf351c`) makes
+hardware/physical-memory observations and returns `$00`, `$01`, or `$02`.
+The subsequent 48-byte map `$01de..$020d` (file `+$00de`, SHA-256
+`57d768c01d59a98d7a5cc452a871be2fa2c7e20c272e88da82e644635ac57be3`) maps
+AL `$01` to `ega640.bin` at `$0617` and every other value to `mcga.bin` at
+`$05f9`, before the existing load-to-`DS:$0000` / vector-install boundary.
+This proves original input-to-request control flow, not a host policy: Project
+Eon does not read a host command tail as original hardware detection, select a
+driver, or assume the loader/DOS/vector calls succeed.
 Function `$00` resolves to `$01c8` (EGA) or `$01e6` (MCGA): each makes a
 literal BIOS mode request through `INT $10`, mode `$0e` at `$01de` or mode
 `$13` at `$01fc`, then has a local zero-`AX` mismatch return. Function `$04`
@@ -2234,3 +2259,15 @@ reach custom-register literal `$dff000` and setup offsets `$40`, `$42`, `$9a`
 and `$96`. That conditional post-boundary code is recorded solely as raw
 preservation evidence; Project Eon does not cross the Exec ABI or claim a
 visual hardware effect.
+
+The conditional static continuation extends through `$40573` / ADF `+0x9b46c`
+for 264 bytes (SHA-256
+`f96f93da561b1758dd559a93e2fe97b7b6cc11d482dc5de6460c709b8190bc56`) and
+stops before `$40574`. It contains direct-call operands for `$1ed80`,
+`$1f172`, `$1f182`, `$1ef74`, `$206d4`, `$206be`, `$403e6`, `$403f4`,
+`$204c8`, `$389e2`, `$1fb9a`, `$38912`, `$2022a`, `$41bb4`, `$20e18`,
+`$20ba8`, and `$37180`, plus an indirect `JSR (A0)` after `LEA $20cfe,A0`.
+The original mode-cell comparison at `$4040e` statically selects `$36a8c` for
+low word `$0005` and `$1fb9a` otherwise. Calls, returns, cell values, target
+semantics, and display effects are unmodelled; this records no executable
+title-stage path.

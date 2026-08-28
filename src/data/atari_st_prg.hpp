@@ -250,6 +250,17 @@ struct MillenniumAtariConfigThirdJsr {
     std::uint16_t branch_target_branch_opcode = 0;
 };
 
+// The entire local $2b2be routine is hash-locked as static code evidence.
+// Its branches and copies depend on caller-owned registers/pointers, so this
+// does not model an execution result, input, graphics, or native-service ABI.
+struct MillenniumAtariConfigThirdRoutine {
+    std::uint32_t target_address = 0;
+    std::uint32_t target_file_offset = 0;
+    std::uint32_t terminal_return_address = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+};
+
 // The $2b448 direct target has a complete, local register/address setup
 // prefix before its first loop body. These are literal 68000 dataflow facts;
 // Project Eon does not infer what the pointers or counters represent.
@@ -452,6 +463,9 @@ parse_millennium_atari_config_trap_argument_strings(
 // bytes at its taken branch destination. It never chooses a D0 value or
 // executes either side of the branch.
 [[nodiscard]] MillenniumAtariConfigThirdJsr parse_millennium_atari_config_third_jsr(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
+
+[[nodiscard]] MillenniumAtariConfigThirdRoutine parse_millennium_atari_config_third_routine(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
 // Validates the direct $2b448 target's initial register/address setup only.

@@ -561,6 +561,31 @@ MillenniumAtariConfigThirdJsr parse_millennium_atari_config_third_jsr(
         read_be16(payload, branch_target_offset + 4U)};
 }
 
+MillenniumAtariConfigThirdRoutine parse_millennium_atari_config_third_routine(
+    const std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t target_address = 0x2b2be;
+    constexpr std::uint32_t terminal_return_address = 0x2b3a4;
+    constexpr std::size_t target_offset = target_address - load_base;
+    constexpr std::size_t byte_count = terminal_return_address - target_address + 2U;
+    constexpr std::array<std::uint8_t, 2> terminal_return{0x4e, 0x75};
+    const auto has_target = std::find(entry.jsr_targets.begin(), entry.jsr_targets.end(), target_address)
+        != entry.jsr_targets.end();
+    if (entry.proven_load_base != load_base || !has_target
+        || payload.size() < target_offset + byte_count
+        || !std::equal(terminal_return.begin(), terminal_return.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset + byte_count - terminal_return.size()))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST third MILL22A.inf JSR routine");
+    }
+    const auto bytes = payload.subspan(target_offset, byte_count);
+    const auto digest = to_hex(sha256(bytes));
+    if (digest != "85c58759b0cb2f067734fb006aa543fc74926422187506914c823ceaaf9c6cd8") {
+        throw std::runtime_error("Unexpected Millennium Atari ST third MILL22A.inf JSR routine hash");
+    }
+    return {target_address, static_cast<std::uint32_t>(target_offset), terminal_return_address,
+        byte_count, digest};
+}
+
 MillenniumAtariConfigFourthJsr parse_millennium_atari_config_fourth_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
     // The direct $2b448 target starts with six unambiguous immediate/absolute

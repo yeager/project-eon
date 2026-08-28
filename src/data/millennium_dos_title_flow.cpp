@@ -180,6 +180,12 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 12> launcher_private_interrupt_handler_selection{
         0xba, 0x17, 0x06, 0x3c, 0x01, 0x74, 0x19, 0xba, 0xf9,
         0x05, 0xeb, 0x14};
+    constexpr std::array<std::uint8_t, 45> launcher_video_selection_scan{
+        0xbb, 0x80, 0x00, 0x43, 0x80, 0x3f, 0x0d, 0x74, 0x1a,
+        0xb0, 0x01, 0x80, 0x3f, 0x65, 0x74, 0x1d, 0x80, 0x3f,
+        0x45, 0x74, 0x18, 0xb0, 0x02, 0x80, 0x3f, 0x6d, 0x74,
+        0x11, 0x80, 0x3f, 0x4d, 0x74, 0x0c, 0xeb, 0xe0, 0xe8,
+        0xde, 0x03, 0x22, 0xc0, 0x75, 0x03, 0xe9, 0x9f, 0x00};
     constexpr std::array<std::uint8_t, 77> launcher_private_interrupt_handler_loader{
         0xb8, 0x00, 0x3d, 0xcd, 0x21, 0x73, 0x0c, 0x0e, 0x1f,
         0x8b, 0x16, 0xd5, 0x05, 0xb4, 0x09, 0xcd, 0x21, 0xeb,
@@ -271,12 +277,15 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         throw std::runtime_error("Unsupported Millennium DOS private interrupt preservation chain");
     }
     constexpr std::size_t private_interrupt_handler_selection_address = 0x1de;
-    if (!has_bytes(mill_launcher, private_interrupt_handler_selection_address - mill_load_bias,
+    constexpr std::size_t video_selection_scan_address = 0x19d;
+    if (!has_bytes(mill_launcher, video_selection_scan_address - mill_load_bias,
+                   launcher_video_selection_scan)
+        || !has_bytes(mill_launcher, private_interrupt_handler_selection_address - mill_load_bias,
                    launcher_private_interrupt_handler_selection)
         || !has_bytes(mill_launcher, private_interrupt_loader_call_target - mill_load_bias,
                       launcher_private_interrupt_handler_loader)
         || !has_bytes(mill_launcher, 0x0617 - mill_load_bias, ega640_name)
-        || !has_bytes(mill_launcher, 0x03ae - mill_load_bias, mcga_name)) {
+        || !has_bytes(mill_launcher, 0x05f9 - mill_load_bias, mcga_name)) {
         throw std::runtime_error("Unsupported Millennium DOS private interrupt handler loader");
     }
     const auto title_offset = require_unique(mill_launcher, title_name, "launcher title program");
@@ -343,10 +352,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_private_interrupt_handler_rewind_service = 0x42,
         .launcher_private_interrupt_handler_read_service = 0x3f,
         .launcher_private_interrupt_handler_close_service = 0x3e,
+        .launcher_video_selection_scan_address = static_cast<std::uint16_t>(video_selection_scan_address),
+        .launcher_video_selection_default_detector_address = 0x05a1,
+        .launcher_video_selection_map_address = static_cast<std::uint16_t>(private_interrupt_handler_selection_address),
         .launcher_private_interrupt_handler_first_selector = 1,
         .launcher_private_interrupt_handler_first_program_address = 0x0617,
         .launcher_private_interrupt_handler_other_selector = 2,
-        .launcher_private_interrupt_handler_other_program_address = 0x03ae,
+        .launcher_private_interrupt_handler_other_program_address = 0x05f9,
         .launcher_private_interrupt_handler_first_program = "ega640.bin",
         .launcher_private_interrupt_handler_other_program = "mcga.bin",
         .launcher_title_offset = title_offset,
