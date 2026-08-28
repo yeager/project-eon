@@ -213,6 +213,20 @@ struct DeuterosAmigaChannelRequestFirstCallee {
     std::string raw_sha256;
 };
 
+// Second static callee reached by the channel-request continuation. All of
+// its instructions encode low-memory or custom-register writes, so these are
+// provenance facts only and are never applied by Project Eon.
+struct DeuterosAmigaChannelRequestSecondCallee {
+    std::uint32_t entry_address = 0;
+    std::uint32_t copied_longword_source_address = 0;
+    std::uint32_t copied_longword_destination_address = 0;
+    std::array<std::uint32_t, 4> cleared_word_addresses{};
+    std::uint16_t final_word_value = 0;
+    std::uint32_t final_word_address = 0;
+    std::uint32_t return_address = 0;
+    std::string raw_sha256;
+};
+
 // A read-only representation of one completed pass through the main stage's
 // resource loader at $21932. `payload` is copied only into this host-memory
 // value: neither the supplied ADF nor the user's data directory is modified.
@@ -254,6 +268,13 @@ parse_deuteros_amiga_channel_request_continuation(
 // vector invocation, input-port result, or service return.
 [[nodiscard]] DeuterosAmigaChannelRequestFirstCallee
 parse_deuteros_amiga_channel_request_first_callee(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaChannelRequestContinuation& continuation);
+
+// Validates the second static channel-request callee. It reports encodings
+// only; no low-memory/custom-register effects are simulated.
+[[nodiscard]] DeuterosAmigaChannelRequestSecondCallee
+parse_deuteros_amiga_channel_request_second_callee(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const DeuterosAmigaChannelRequestContinuation& continuation);
 

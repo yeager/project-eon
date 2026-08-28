@@ -540,6 +540,36 @@ parse_deuteros_amiga_channel_request_first_callee(
         {0x2231e, 0x22324}, 0x21698, 0x2232a, expected_hash};
 }
 
+DeuterosAmigaChannelRequestSecondCallee
+parse_deuteros_amiga_channel_request_second_callee(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaChannelRequestContinuation& continuation) {
+    constexpr std::uint32_t entry = 0x224a2;
+    constexpr std::size_t length = 42;
+    constexpr std::array<std::uint8_t, length> expected{{
+        0x21, 0xf9, 0x00, 0x02, 0x24, 0xe6, 0x00, 0x6c,
+        0x42, 0x79, 0x00, 0xdf, 0xf0, 0xa8, 0x42, 0x79,
+        0x00, 0xdf, 0xf0, 0xb8, 0x42, 0x79, 0x00, 0xdf,
+        0xf0, 0xc8, 0x42, 0x79, 0x00, 0xdf, 0xf0, 0xd8,
+        0x33, 0xfc, 0x00, 0x0f, 0x00, 0xdf, 0xf0, 0x96,
+        0x4e, 0x75,
+    }};
+    const auto& stage = plan.main_stage;
+    if (continuation.local_call_targets[1] != entry || entry < stage.destination
+        || entry - stage.destination > stage.length
+        || length > stage.length - (entry - stage.destination)) {
+        throw std::runtime_error("Unexpected Deuteros channel-request second callee placement");
+    }
+    const auto bytes = disk.bytes(stage.disk_offset + entry - stage.destination, length);
+    constexpr auto expected_hash = "d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1";
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || to_hex(sha256(bytes)) != expected_hash) {
+        throw std::runtime_error("Unexpected Deuteros channel-request second callee");
+    }
+    return {entry, 0x224e6, 0x006c, {0xdff0a8, 0xdff0b8, 0xdff0c8, 0xdff0d8},
+        0x000f, 0xdff096, 0x224ca, expected_hash};
+}
+
 std::optional<DeuterosAmigaMainResourceTransfer>
 read_deuteros_amiga_main_resource(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index) {

@@ -148,6 +148,16 @@ def main() -> int:
                     "Deuteros Amiga channel-request first callee did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_second_callee = (
+                "Channel-request second callee: ADF 0x7ca2, entry 0x224a2; longword 0x224e6 -> 0x6c; "
+                "clears 0xdff0a8/0xdff0b8/0xdff0c8/0xdff0d8; 0xf -> 0xdff096; RTS 0x224ca; SHA-256 "
+                "d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1"
+            )
+            if expected_second_callee not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Amiga channel-request second callee did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "millennium" and platform == "atari-st":
             expected_auxiliary_resource = "auxiliary resource-name evidence: MILL22B.INF cluster "
             if expected_auxiliary_resource not in inspected.stdout:
