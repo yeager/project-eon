@@ -987,6 +987,17 @@ It encodes a longword transfer `$224e6 → $006c`, four literal word clears at
 encodings; it neither reads `$224e6` nor applies low-memory/custom-register
 writes, names hardware effects, or executes the return.
 
+The following JSR target `$22a5a..$22b89` maps to ADF `+$825a`, is 304 bytes,
+and hashes to `d5fdbdacd004d2cf377ea0dbaefb9d8b308ba23b568cfb3785456622bde49d19`.
+It initializes literal zero at `$22a30`, starts with mask `$000f`, branches
+over embedded bytes at `$22a6a` to `$22ab8`, and ends at RTS `$22b88`.
+Its static descriptor facts include base `$22a6e`, stride `$000e`, source
+record `$22aaa`, payload addend `$32a24`, flag cell `$22a6c`, and encoded flag
+values `1/2/4/8`. `DeuterosAmigaChannelRequestFollowingService` reports those
+facts only: no embedded descriptor, flag, or runtime-cell write is applied.
+The adjacent entry `$22b8a` is deliberately outside this hash range because
+it begins a separate caller-state-dependent path.
+
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
 emits sound `(1,1)` then `(2,2)` and immediately consumes the newly yielded

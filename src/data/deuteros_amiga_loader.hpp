@@ -227,6 +227,26 @@ struct DeuterosAmigaChannelRequestSecondCallee {
     std::string raw_sha256;
 };
 
+// Static, return-bounded service reached after both channel-request callees.
+// It contains embedded descriptor data and writes runtime cells; Project Eon
+// retains the encodings and terminal RTS without applying any write.
+struct DeuterosAmigaChannelRequestFollowingService {
+    std::uint32_t entry_address = 0;
+    std::uint32_t initialized_byte_address = 0;
+    std::uint8_t initialized_byte_value = 0;
+    std::uint16_t initial_mask_value = 0;
+    std::uint32_t execution_entry_address = 0;
+    std::uint32_t embedded_table_address = 0;
+    std::uint32_t descriptor_base_address = 0;
+    std::uint16_t descriptor_stride = 0;
+    std::uint32_t source_record_address = 0;
+    std::uint32_t source_payload_addend = 0;
+    std::uint32_t flag_cell_address = 0;
+    std::array<std::uint8_t, 4> flag_write_values{};
+    std::uint32_t return_address = 0;
+    std::string raw_sha256;
+};
+
 // A read-only representation of one completed pass through the main stage's
 // resource loader at $21932. `payload` is copied only into this host-memory
 // value: neither the supplied ADF nor the user's data directory is modified.
@@ -275,6 +295,13 @@ parse_deuteros_amiga_channel_request_first_callee(
 // only; no low-memory/custom-register effects are simulated.
 [[nodiscard]] DeuterosAmigaChannelRequestSecondCallee
 parse_deuteros_amiga_channel_request_second_callee(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaChannelRequestContinuation& continuation);
+
+// Validates the returned following service through its terminal RTS. The
+// embedded data, branching, descriptor copies and flags remain static facts.
+[[nodiscard]] DeuterosAmigaChannelRequestFollowingService
+parse_deuteros_amiga_channel_request_following_service(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const DeuterosAmigaChannelRequestContinuation& continuation);
 
