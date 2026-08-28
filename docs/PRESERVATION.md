@@ -956,6 +956,17 @@ clean system disk. Its exact control-flow encodings are: zero branch `$21898
 only. It does not select a condition, invoke a service, simulate the input
 port, or assign names to cells and targets.
 
+The first direct BSR target is independently retained as `$2229c..$2232f`,
+ADF `+$7a9c`, 148 bytes, SHA-256
+`d1a162af50f92b60d03b1da4ab186a547e46d145b0599cfbbeff7fb5af324ac1`.
+It encodes a bit-5 test at `$222ac` with zero branch `$222b4 → $2232c`, a
+literal counter `$000f` and DBRA `$222e0 → $222be`, two `-$c0(A6)` ABI calls
+at `$222fc` and `$22312` using A6 from `$12fec`, a subtract-eight test at
+`$2231c`, two `$21698` calls, and `RTS $2232a`. The complete range is
+hash-locked by `DeuterosAmigaChannelRequestFirstCallee`; its custom-register
+poll, state writes, vector calls, service calls, and return-dependent paths
+are never performed or named by the runtime.
+
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
 emits sound `(1,1)` then `(2,2)` and immediately consumes the newly yielded

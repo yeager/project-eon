@@ -137,6 +137,17 @@ def main() -> int:
                 f"{game}/{platform} bounded launcher bootstrap did not match supplied media:\n"
                 f"{inspected.stdout}"
             )
+        if game == "deuteros" and platform == "amiga":
+            expected_callee = (
+                "Channel-request first callee: ADF 0x7a9c, entry 0x2229c; bit 5 branch 0x222b4 -> 0x2232c; "
+                "DBRA 0x222e0 -> 0x222be; vectors 0x222fc/0x22312; final services 0x2231e/0x22324 -> 0x21698; "
+                "SHA-256 d1a162af50f92b60d03b1da4ab186a547e46d145b0599cfbbeff7fb5af324ac1"
+            )
+            if expected_callee not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Amiga channel-request first callee did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "atari-st":
             expected_state1 = (
                 "Static state-1 raw-load plan: Disk 1 +0x55800 +0x5e400 "
