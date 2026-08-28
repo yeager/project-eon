@@ -8,9 +8,10 @@ namespace eon {
 
 // A deliberately narrow reconstruction of the verified TITLES.EXE boundary.
 // The title executable polls DOS INT 21h/AH=06h/DL=FFh and, when a character
-// is available, returns to MILL.COM.  The launcher then executes 2200ad.exe.
-// This class records that exact observable hand-off; it does not claim to
-// emulate TITLES.EXE's transition renderer or the game executable.
+// is available, takes its local exit path. The process exit, MILL.COM return,
+// and 2200ad.exe request all require unmodelled DOS results. This class records
+// only the observed input-availability boundary; it does not emulate the
+// transition renderer, return chain, or game executable.
 class MillenniumDosTitleSession {
 public:
     explicit MillenniumDosTitleSession(MillenniumDosTitleFlow flow);

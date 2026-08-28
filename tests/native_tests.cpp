@@ -851,6 +851,11 @@ int main() {
     assert(title_flow.input_interrupt == 0x21);
     assert(title_flow.input_service == 0x06);
     assert(title_flow.input_parameter == 0xff);
+    assert(title_flow.input_nonzero_exit_address == 0x1c54);
+    assert(title_flow.input_exit_first_call_address == 0x1c54);
+    assert(title_flow.input_exit_first_call_target == 0x1968);
+    assert(title_flow.input_exit_loading_text_address == 0x1884);
+    assert(title_flow.input_exit_loading_text == "    LOADING    2");
     assert(title_flow.exit_code == 0);
     assert(title_flow.launcher_title_program_address == 0x68f);
     assert(title_flow.launcher_game_program_address == 0x69a);

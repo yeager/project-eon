@@ -62,9 +62,20 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0xbe, 0x0c, 0x01, 0x8b, 0x04};
     constexpr std::array<std::uint8_t, 7> input_poll{
         0xb4, 0x06, 0xb2, 0xff, 0xcd, 0x21, 0xc3};
-    constexpr std::array<std::uint8_t, 11> input_branch{
-        0xe8, 0xdf, 0xf0, 0x22, 0xc0, 0x75, 0x25, 0xb8,
-        0x13, 0x00, 0xe8};
+    // All nonzero DOS poll results take this one exit path. The returned AL
+    // is only tested, never decoded as a scan code or a named control. The
+    // path subsequently reaches a private INT 91h wrapper, so it remains
+    // static evidence rather than a host-side loading animation.
+    constexpr std::array<std::uint8_t, 66> input_branch{
+        0xe8, 0xdf, 0xf0, 0x22, 0xc0, 0x75, 0x25, 0xb8, 0x13, 0x00,
+        0xe8, 0xed, 0xe4, 0xe8, 0x60, 0xfc, 0xa1, 0x96, 0x18, 0xd1,
+        0xe0, 0xd1, 0xe0, 0x50, 0xe8, 0xc7, 0xf0, 0x22, 0xc0, 0x75,
+        0x0c, 0xb8, 0x13, 0x00, 0xe8, 0xd5, 0xe4, 0x58, 0x48, 0x75,
+        0xee, 0xeb, 0xcd, 0x58, 0xe8, 0x11, 0xfd, 0xe8, 0x66, 0xf6,
+        0x32, 0xc0, 0x2e, 0xa2, 0x0e, 0x1a, 0x8b, 0x26, 0xa0, 0x1a,
+        0xe8, 0xaf, 0xec, 0xe9, 0xa5, 0xfd};
+    constexpr std::array<std::uint8_t, 16> input_exit_loading_text{
+        ' ', ' ', ' ', ' ', 'L', 'O', 'A', 'D', 'I', 'N', 'G', ' ', ' ', ' ', ' ', '2'};
     constexpr std::array<std::uint8_t, 10> clean_exit{
         0x32, 0xc0, 0x2e, 0xa2, 0x0e, 0x1a, 0x8b, 0x26,
         0xa0, 0x1a};
@@ -82,7 +93,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     if (!has_bytes(titles_executable, title_selection_offset, title_selection)
         || !has_bytes(titles_executable, input_branch_offset, input_branch)
         || !has_bytes(titles_executable, clean_exit_offset, clean_exit)
-        || !has_bytes(titles_executable, dos_exit_offset, dos_exit)) {
+        || !has_bytes(titles_executable, dos_exit_offset, dos_exit)
+        || !has_bytes(titles_executable, 0x1884 - file_to_load_bias, input_exit_loading_text)) {
         throw std::runtime_error("Unsupported Millennium DOS title control flow");
     }
     constexpr std::size_t title_selection_callee_address = 0x1725;
@@ -311,6 +323,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_interrupt = 0x21,
         .input_service = 0x06,
         .input_parameter = 0xff,
+        .input_nonzero_exit_address = 0x1c54,
+        .input_exit_first_call_address = 0x1c54,
+        .input_exit_first_call_target = 0x1968,
+        .input_exit_loading_text_address = 0x1884,
+        .input_exit_loading_text = "    LOADING    2",
         .exit_code = 0,
         .launcher_title_program_address = static_cast<std::uint16_t>(title_offset + mill_load_bias),
         .launcher_game_program_address = static_cast<std::uint16_t>(game_offset + mill_load_bias),
