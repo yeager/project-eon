@@ -1564,13 +1564,22 @@ int main() {
     assert(atari_config_entry.entry_file_offset == 0x5aa);
     assert(atari_config_entry.initial_trap_selector == 0x15);
     assert(atari_config_entry.initial_trap_longword_argument == 0);
-    assert(atari_config_entry.palette_trap_selector == 0x06);
-    assert(atari_config_entry.palette_trap_longword_argument == 0x2a612);
+    assert(atari_config_entry.second_trap_selector == 0x06);
+    assert(atari_config_entry.second_trap_longword_argument == 0x2a612);
     assert((atari_config_entry.jsr_targets == std::vector<std::uint32_t>{
         0x2b55a, 0x2aa68, 0x2aa0c, 0x2b2be, 0x2b448, 0x2aa0c}));
     assert(atari_config_entry.final_pea_address == 0x2ab0a);
     assert(atari_config_entry.final_trap_selector == 0x26);
     assert(atari_config_entry.return_offset == 0x628);
+    const auto atari_trap_argument_strings = eon::parse_millennium_atari_config_trap_argument_strings(
+        atari_config_payload, atari_config_entry);
+    assert(atari_trap_argument_strings.proven_load_base == 0x2a4de);
+    assert(atari_trap_argument_strings.argument_address == 0x2a612);
+    assert(atari_trap_argument_strings.file_offset == 0x134);
+    assert((atari_trap_argument_strings.strings
+        == std::array<std::string, 2>{"MILL22D.INF", "MILL22C.INF"}));
+    assert(atari_trap_argument_strings.sha256
+        == "815bea3862908e01557486cae7d42132853c94348b49b920f9d3e88e14956c51");
     const auto atari_first_jsr = eon::parse_millennium_atari_config_first_jsr(
         atari_config_payload, atari_config_entry);
     assert(atari_first_jsr.proven_load_base == 0x2a4de);
@@ -1725,6 +1734,16 @@ int main() {
         invalid_atari_config_rejected = true;
     }
     assert(invalid_atari_config_rejected);
+    auto invalid_atari_trap_argument_payload = atari_config_payload;
+    invalid_atari_trap_argument_payload[0x134] ^= 0x01;
+    bool invalid_atari_trap_argument_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_config_trap_argument_strings(
+            invalid_atari_trap_argument_payload, atari_config_entry));
+    } catch (const std::runtime_error&) {
+        invalid_atari_trap_argument_rejected = true;
+    }
+    assert(invalid_atari_trap_argument_rejected);
     auto invalid_atari_first_jsr_payload = atari_config_payload;
     invalid_atari_first_jsr_payload[0x107e] ^= 0x01;
     bool invalid_atari_first_jsr_rejected = false;
