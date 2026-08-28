@@ -2676,6 +2676,29 @@ int main() {
         }
         assert(rejected);
     }
+    // The second exit has a separate tail after four unresolved original
+    // calls. It records raw destinations only after their returns are made
+    // explicit; no controller value or jump is reconstructed.
+    const auto second_title_exit_return_tail =
+        eon::evaluate_deuteros_amiga_second_title_exit_return_tail(system_disk, load_plan, true);
+    assert(second_title_exit_return_tail.entry_address == 0x38046);
+    assert((second_title_exit_return_tail.preceding_helper_addresses
+        == std::array<std::uint32_t, 4>{{0x3880a, 0x204fa, 0x37efa, 0x37f9a}}));
+    assert(second_title_exit_return_tail.controller_source_address == 0x206a0);
+    assert(second_title_exit_return_tail.controller_destination_address == 0x12ff8);
+    assert(second_title_exit_return_tail.bootstrap_profile_address == 0x12ffc);
+    assert(second_title_exit_return_tail.bootstrap_profile_value == 4);
+    assert(second_title_exit_return_tail.jump_target_address == 0x12800);
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_deuteros_amiga_second_title_exit_return_tail(
+                system_disk, load_plan, false));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x9b69a] ^= 0x01;
@@ -2684,6 +2707,19 @@ int main() {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::execute_deuteros_amiga_title_transition_prefix(
                 altered_disk, load_plan, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x93046] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::evaluate_deuteros_amiga_second_title_exit_return_tail(
+                altered_disk, load_plan, true));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
