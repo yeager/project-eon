@@ -27,6 +27,11 @@ struct MillenniumDosTitleFlow {
     std::uint8_t input_interrupt = 0;
     std::uint8_t input_service = 0;
     std::uint8_t input_parameter = 0;
+    std::uint16_t input_nonzero_exit_address = 0;
+    std::uint16_t input_exit_first_call_address = 0;
+    std::uint16_t input_exit_first_call_target = 0;
+    std::uint16_t input_exit_loading_text_address = 0;
+    std::string input_exit_loading_text;
     std::uint8_t exit_code = 0;
     // Loaded addresses in the flat MILL.COM image.  These identify only the
     // observed register loads and near-call edges; they do not model EXEC or

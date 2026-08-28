@@ -1535,6 +1535,16 @@ is nonzero. Cleanup writes zero to the process status byte at `$1a0e`, and the
 common exit stub at `$1a12` executes `INT 21h/AH=$4c`. Thus the verified title
 program itself does not execute the game binary: it exits with status zero.
 
+The complete caller range `$1c28..$1c69` (file `+$1b28`, 66 bytes, SHA-256
+`d08916b10f92fe78e643a3335680c341f2347c361cded2419954422c0c37e6dd`) makes
+the input boundary precise. It only performs `AND AL,AL` and sends every
+nonzero result to `$1c54`; it neither stores nor compares a scan code, so no
+key name or control binding is proven. The static exit chain reaches `$1968`
+and embedded bytes at `$1884` spelling `    LOADING    2`, but later glyph work
+calls the private `INT $91` wrapper at `$0122`. No post-key loading frame,
+transition, resource effect, process exit, launcher return, or game startup is
+executed or drawn by Project Eon.
+
 The accompanying clean `MILL.COM` (1,445 bytes, SHA-256
 `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`)
 has a caller-side sequence at loaded `$023d`: it loads `DX=$068f` (the

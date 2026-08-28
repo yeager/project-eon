@@ -3,8 +3,8 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
-#include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
+#include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -1799,6 +1799,8 @@ int main(int argc, char** argv) {
     std::optional<std::uint32_t> deuteros_title_resource;
     std::unique_ptr<eon::DeuterosAtariBootstrapSession> deuteros_atari_session;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
+    // This evidence-only object is intentionally never constructed by the
+    // launcher until a genuine DOS return/startup path is recovered.
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
     const auto menu_platforms_for = [&](const eon::Game game) {
@@ -1808,14 +1810,11 @@ int main(int argc, char** argv) {
         millennium_atari_session = load_millennium_atari_bootstrap(releases, active_platform);
         millennium_amiga_session = load_millennium_amiga_bootstrap(releases, active_platform);
         millennium_title_session.reset();
-        millennium_game_session.reset();
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
-        if (millennium_assets && millennium_assets->title_flow && millennium_assets->game_flow) {
+        if (millennium_assets && millennium_assets->title_flow) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
                 *millennium_assets->title_flow);
-            millennium_game_session = std::make_unique<eon::MillenniumDosGameSession>(
-                *millennium_assets->game_flow);
             millennium_state_page = 0;
         }
     };
@@ -1846,9 +1845,7 @@ int main(int argc, char** argv) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
                 else running = false;
             }
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat
-                && !(screen == Screen::launching && selected == eon::Game::millennium
-                    && millennium_title_session && millennium_title_session->handed_off())) {
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
                 request.presentation = request.presentation == eon::Presentation::original
                     ? eon::Presentation::modern : eon::Presentation::original;
             }
@@ -1856,32 +1853,13 @@ int main(int argc, char** argv) {
                 && screen == Screen::launching && selected == eon::Game::millennium
                 && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1
                 && millennium_title_session) {
-                if (millennium_title_session->handed_off()
-                    && (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT)) {
-                    constexpr std::size_t records_per_page = 8;
-                    constexpr std::size_t page_count =
-                        (eon::MillenniumDosSaveLayout::state_table_count + records_per_page - 1)
-                        / records_per_page;
-                    if (event.key.key == SDLK_LEFT && millennium_state_page > 0) {
-                        --millennium_state_page;
-                    }
-                    if (event.key.key == SDLK_RIGHT && millennium_state_page + 1 < page_count) {
-                        ++millennium_state_page;
-                    }
-                    continue;
-                }
-                if (millennium_title_session->handed_off() && millennium_game_session
-                    && event.key.key >= SDLK_F1 && event.key.key <= SDLK_F10) {
-                    const auto raw_action = static_cast<std::uint8_t>(0x3b
-                        + static_cast<unsigned>(event.key.key - SDLK_F1));
-                    static_cast<void>(millennium_game_session->observe_action(raw_action));
-                    continue;
-                }
                 // TITLES.EXE uses DOS' non-blocking character availability
                 // poll, rather than a game-specific action key.  SDL's key
-                // event supplies that availability signal; the recovered
-                // session alone decides the one-way launcher hand-off.
-                static_cast<void>(millennium_title_session->poll_console(true));
+                // event supplies that availability signal. Its original
+                // process exit and the launcher/DOS return remain unexecuted.
+                if (!millennium_title_session->handed_off()) {
+                    static_cast<void>(millennium_title_session->poll_console(true));
+                }
             }
             if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
                 && screen == Screen::launching && selected == eon::Game::deuteros
@@ -2128,14 +2106,13 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 156, tr("Original data is present and selected."));
             draw_text(renderer, 64, 180, tr("The simulation is incomplete; no synthetic substitute will run."));
             if (selected == eon::Game::millennium && millennium_preview_texture && millennium_assets) {
-                const bool millennium_handed_off = millennium_title_session
-                    && millennium_title_session->handed_off()
-                    && millennium_gx_canvas_texture && millennium_assets->gx_canvas;
-                SDL_Texture* texture = millennium_handed_off ? millennium_gx_canvas_texture
-                                                              : millennium_preview_texture;
-                const auto& image = millennium_handed_off ? *millennium_assets->gx_canvas
-                                                            : millennium_assets->title;
-                if (millennium_handed_off) {
+                // Input availability proves only TITLES.EXE's local exit path.
+                // Neither DOS EXEC return nor 2200AD startup is observed, so
+                // a GX canvas must never replace the original title frame.
+                constexpr bool millennium_game_execution_observed = false;
+                SDL_Texture* texture = millennium_preview_texture;
+                const auto& image = millennium_assets->title;
+                if (millennium_game_execution_observed) {
                     draw_text(renderer, 64, 220,
                         tr("AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"));
                     draw_text(renderer, 64, 238,
@@ -2148,19 +2125,21 @@ int main(int argc, char** argv) {
                             tr("The simulation is incomplete; no synthetic substitute will run."));
                     } else {
                         draw_text(renderer, 64, 220, tr("AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"));
-                        draw_text(renderer, 64, 238,
-                            tr("PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
+                        draw_text(renderer, 64, 238, millennium_title_session
+                                && millennium_title_session->handed_off()
+                            ? tr("The simulation is incomplete; no synthetic substitute will run.")
+                            : tr("PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
                     }
                 }
                 SDL_SetTextureScaleMode(texture,
                     modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
-                const float scale = millennium_handed_off ? 1.65F : 2.0F;
+                const float scale = 2.0F;
                 SDL_FRect preview_bounds{64, 250,
                     static_cast<float>(image.width) * scale,
                     static_cast<float>(image.height) * scale};
                 if (modern) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
-                if (millennium_handed_off) {
+                if (millennium_game_execution_observed) {
                     const auto& save = *millennium_assets->initial_save;
                     constexpr std::size_t records_per_page = 8;
                     const auto first_record = millennium_state_page * records_per_page;

@@ -207,17 +207,14 @@ gameplay resources directly from the hash-identified original archive.
 image and its original 256-entry VGA RGB6 DAC table plus 36-entry logical
 index translation. The SDL launch view shows this user-supplied original title:
 nearest-neighbour in Original mode and linear scaling only in Modern mode.
-When its recovered DOS console poll observes a key, the same launch view follows
-the verified `TITLES.EXE` → `MILL.COM` → `2200ad.exe` boundary and displays the
-in-place `GX.LIB` `IMG00`/`IMG01` canvas. This is intentionally labelled as a
-canvas: Project Eon has not yet inferred the original game's full UI or mutable
-state semantics from those resources.
-
-After that same verified hand-off, the launcher also presents the original
-English DOS `2200SAVE.I` as a read-only evidence panel: its complete SHA-256,
-format version, and the 38 recovered positional four-word records. The panel
-is paged with Left/Right, uses only `+00`, `+04`, `+06`, and `+08` labels from
-the load code, and has no save, export, or inferred simulation action.
+When its recovered DOS console poll observes a key, the launch view records
+only the title executable's local input/exit boundary and keeps displaying the
+original P00 frame. The subsequent `MILL.COM` return, DOS EXEC result,
+`2200ad.exe` startup, GX selection, and save-state initialization are not
+observed, so the launcher does not substitute a GX canvas or a save panel.
+`GX.LIB` and English `2200SAVE.I` remain hash-identified, read-only
+preservation evidence available to the inspection tooling, without inferred UI
+or mutable-state semantics.
 
 The same FAT12 reader is validated against the genuine 819,200-byte Atari ST
 Millennium disk. Nested extraction locates the disk by SHA-256 independently of
