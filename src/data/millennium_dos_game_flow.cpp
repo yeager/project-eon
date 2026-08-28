@@ -814,12 +814,12 @@ evaluate_millennium_dos_eighth_function_key_selected_record_gate(
     if (record[3] == 0) {
         throw std::runtime_error("Unsupported Millennium DOS F8 empty selected record");
     }
-    result.record_header_byte = record[0];
-    result.record_header_word = static_cast<std::uint16_t>(
+    result.record_byte_0 = record[0];
+    result.record_word_1 = static_cast<std::uint16_t>(
         static_cast<std::uint16_t>(record[1])
         | static_cast<std::uint16_t>(static_cast<std::uint16_t>(record[2]) << 8U));
-    result.first_list_count = record[3];
-    result.first_list_byte = record[4];
+    result.record_byte_3 = record[3];
+    result.record_byte_4 = record[4];
     result.first_helper_call_address = 0x797f;
     result.first_helper_address = 0x7924;
     result.outcome = MillenniumDosEighthFunctionKeySelectedRecordOutcome::first_helper_boundary;

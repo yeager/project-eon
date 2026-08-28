@@ -1349,18 +1349,18 @@ int main() {
     assert(f8_selected_record_return.outcome
         == eon::MillenniumDosEighthFunctionKeySelectedRecordOutcome::returns_without_record);
     // A nonzero $6e2f returns before the selected record is dereferenced.
-    assert(!f8_selected_record_return.record_header_byte);
-    assert(!f8_selected_record_return.first_list_byte);
+    assert(!f8_selected_record_return.record_byte_0);
+    assert(!f8_selected_record_return.record_byte_4);
     assert(!f8_selected_record_return.first_helper_address);
     const auto f8_selected_record_boundary =
         eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
             *game_executable, 2, 0);
     assert(f8_selected_record_boundary.selected_pointer == 0x7815);
     assert(f8_selected_record_boundary.zero_gate_address == 0x7968);
-    assert(f8_selected_record_boundary.record_header_byte == std::optional<std::uint8_t>{0x04});
-    assert(f8_selected_record_boundary.record_header_word == std::optional<std::uint16_t>{0x2873});
-    assert(f8_selected_record_boundary.first_list_count == std::optional<std::uint8_t>{1});
-    assert(f8_selected_record_boundary.first_list_byte == std::optional<std::uint8_t>{0x84});
+    assert(f8_selected_record_boundary.record_byte_0 == std::optional<std::uint8_t>{0x04});
+    assert(f8_selected_record_boundary.record_word_1 == std::optional<std::uint16_t>{0x2873});
+    assert(f8_selected_record_boundary.record_byte_3 == std::optional<std::uint8_t>{1});
+    assert(f8_selected_record_boundary.record_byte_4 == std::optional<std::uint8_t>{0x84});
     assert(f8_selected_record_boundary.first_helper_call_address
         == std::optional<std::uint16_t>{0x797f});
     assert(f8_selected_record_boundary.first_helper_address == std::optional<std::uint16_t>{0x7924});
@@ -1370,7 +1370,7 @@ int main() {
         eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
             *game_executable, 9, 0);
     assert(f8_last_selected_record.selected_pointer == 0x7886);
-    assert(f8_last_selected_record.first_list_byte == std::optional<std::uint8_t>{0x0a});
+    assert(f8_last_selected_record.record_byte_4 == std::optional<std::uint8_t>{0x0a});
     {
         bool rejected = false;
         try {
@@ -1624,7 +1624,7 @@ int main() {
         eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
             disk.read(*executable), 2, 0);
     assert(spanish_f8_selected_record.selected_pointer == 0x7815);
-    assert(spanish_f8_selected_record.first_list_byte == std::optional<std::uint8_t>{0x84});
+    assert(spanish_f8_selected_record.record_byte_4 == std::optional<std::uint8_t>{0x84});
     assert(spanish_f8_selected_record.first_helper_address
         == std::optional<std::uint16_t>{0x7924});
     assert(eon::to_hex(eon::sha256(disk.read(*graphics)))
@@ -2654,6 +2654,28 @@ int main() {
     assert(first_title_exit_copy.copied_bytes == std::vector<std::uint8_t>(
         system_disk.bytes(0x6e006, 0x9392).begin(), system_disk.bytes(0x6e006, 0x9392).end()));
     assert(first_title_exit_copy.stop_before_subroutine_address == 0x37f7a);
+    // The next straight-line tail is conditional on the unresolved BSR
+    // returning. It exposes instruction destinations only, never controller
+    // data or a performed bootstrap jump.
+    const auto first_title_exit_return_tail =
+        eon::evaluate_deuteros_amiga_first_title_exit_return_tail(system_disk, load_plan, true);
+    assert(first_title_exit_return_tail.entry_address == 0x37f7e);
+    assert(first_title_exit_return_tail.preceding_subroutine_address == 0x37f7a);
+    assert(first_title_exit_return_tail.controller_source_address == 0x206a0);
+    assert(first_title_exit_return_tail.controller_destination_address == 0x12ff8);
+    assert(first_title_exit_return_tail.bootstrap_profile_address == 0x12ffc);
+    assert(first_title_exit_return_tail.bootstrap_profile_value == 2);
+    assert(first_title_exit_return_tail.jump_target_address == 0x12800);
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_deuteros_amiga_first_title_exit_return_tail(
+                system_disk, load_plan, false));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x9b69a] ^= 0x01;
@@ -2714,6 +2736,19 @@ int main() {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::evaluate_deuteros_amiga_first_title_exit_copy(
                 altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x92f7e] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::evaluate_deuteros_amiga_first_title_exit_return_tail(
+                altered_disk, load_plan, true));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

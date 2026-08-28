@@ -293,10 +293,11 @@ struct MillenniumDosEighthFunctionKeySelectedRecordGate {
     std::uint16_t return_address = 0;
     // These fields remain absent when the nonzero gate returns before the
     // selected original record is dereferenced.
-    std::optional<std::uint8_t> record_header_byte;
-    std::optional<std::uint16_t> record_header_word;
-    std::optional<std::uint8_t> first_list_count;
-    std::optional<std::uint8_t> first_list_byte;
+    // Positional bytes only; their higher-level record format is unrecovered.
+    std::optional<std::uint8_t> record_byte_0;
+    std::optional<std::uint16_t> record_word_1;
+    std::optional<std::uint8_t> record_byte_3;
+    std::optional<std::uint8_t> record_byte_4;
     std::optional<std::uint16_t> first_helper_call_address;
     std::optional<std::uint16_t> first_helper_address;
     MillenniumDosEighthFunctionKeySelectedRecordOutcome outcome =
