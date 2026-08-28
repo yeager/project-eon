@@ -152,9 +152,11 @@ held input signal. It never substitutes placeholder art or invented game behavio
 for undecoded original data.
 
 `--game deuteros --platform amiga` selects that verified Amiga opening. An
-explicit `--platform atari-st` instead remains at the verified protected-media
-boot boundary: it never falls back to Amiga artwork, audio, or a synthetic ST
-session while Atari presentation/runtime parity remains unrecovered.
+explicit `--platform atari-st` creates the bounded Replicants Disk 1 raw boot
+session: it verifies the two original boot-stage ranges in memory and stops
+before XBIOS/callback behavior or state selection. It never falls back to
+Amiga artwork, audio, or a synthetic ST session while Atari presentation/runtime
+parity remains unrecovered.
 
 The launcher follows the same broad structure as OpenCaptive: a native SDL3
 start menu, separate game cards, direct CLI game selection, a platform-neutral
@@ -215,7 +217,9 @@ the verified Defjam ADF boot chain loads a 1 KiB first stage and then two
 authentic raw disk ranges (`0x24200`/`0x6e000` to `0x41000`, and
 `0x16400`/`0x2c000` to `0x68000`). Project Eon validates this original 68000
 request sequence directly from the in-place ADF; it does not invent files or
-unpack the ranges.
+unpack the ranges. Selecting Millennium Amiga creates this hash-locked bounded
+session and validates its resident entry, but stops before the original
+transformed-stage call rather than inferring an Amiga game loop.
 
 Deuteros' clean Amiga system and data disks are also opened natively as ADF.
 Geometry, boot identifiers, carry-around checksums and arbitrary sectors are
