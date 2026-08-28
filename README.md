@@ -95,6 +95,12 @@ game's hash-verified original platforms. The selected platform is carried into
 the launch request: the menu never substitutes a different platform's media.
 Enter, Space, or a card click starts the selected original release.
 
+Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right
+selects a card, D-pad Up/Down chooses a platform, and South/A or Start launches
+the selection. During the recovered Deuteros Amiga opening, hold South/A for
+the same verified physical input signal as Space/Enter; it is not mapped to any
+invented title or gameplay action.
+
 ### Language
 
 The launcher UI is translated through the portable gettext-style catalogs in
