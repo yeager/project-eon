@@ -598,6 +598,8 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         *game, gx_overlay_load);
     const auto gx_overlay_dispatcher = eon::parse_millennium_dos_gx_overlay_dispatcher_evidence(
         *gx_overlay, gx_overlay_adapter);
+    const auto gx_overlay_selector = eon::parse_millennium_dos_gx_overlay_selector_evidence(
+        *game, *gx_overlay, gx_overlay_adapter, gx_overlay_dispatcher);
     std::cout << "          2200AD.EXE startup: entry 0x" << std::hex
         << game_flow.entry_address << ", SS=CS, SP=0x" << game_flow.startup_stack_pointer
         << ", first CALL 0x" << game_flow.startup_first_call_address
@@ -646,6 +648,18 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << gx_overlay_dispatcher.far_return_offset << "; SHA-256 "
         << gx_overlay_dispatcher.dispatch_sha256 << std::dec
         << " (static only; no selector, handler, return, or display executed)\n";
+    std::cout << "          2200GX selector prefix: 2200AD 0x" << std::hex
+        << gx_overlay_selector.caller_entry_address << " reads 0x"
+        << gx_overlay_selector.selector_source_address << "; 0x3/0x4/0x2/default -> AX 0x"
+        << gx_overlay_selector.overlay_targets[0] << "/0x"
+        << gx_overlay_selector.overlay_targets[1] << "/0x"
+        << gx_overlay_selector.overlay_targets[2] << "/0x"
+        << gx_overlay_selector.overlay_targets[3] << ", stores DX at 0x"
+        << gx_overlay_selector.dx_storage_address << ", CALL 0x"
+        << gx_overlay_selector.adapter_call_address << " -> 0x"
+        << gx_overlay_selector.adapter_target << "; SHA-256 "
+        << gx_overlay_selector.caller_sha256 << std::dec
+        << " (static only; no selector value, records, returns, resources, or display executed)\n";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto initial_save = eon::extract_asset_by_sha256(release.path, initial_save_sha256);

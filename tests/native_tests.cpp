@@ -969,6 +969,17 @@ int main() {
     assert(gx_overlay_dispatcher.observed_selector_targets[0x0f] == 0x009f);
     assert(gx_overlay_dispatcher.observed_selector_targets[0x12] == 0x0097);
     assert(gx_overlay_dispatcher.observed_selector_targets[0x14] == 0x00a7);
+    const auto gx_overlay_selector = eon::parse_millennium_dos_gx_overlay_selector_evidence(
+        *game_executable, *gx_overlay, gx_overlay_adapter, gx_overlay_dispatcher);
+    assert(gx_overlay_selector.caller_entry_address == 0xd343);
+    assert(gx_overlay_selector.selector_source_address == 0xda05);
+    assert((gx_overlay_selector.matching_selector_values
+        == std::array<std::uint8_t, 3>{{0x03, 0x04, 0x02}}));
+    assert((gx_overlay_selector.overlay_targets
+        == std::array<std::uint16_t, 4>{{0x000e, 0x0012, 0x0014, 0x000f}}));
+    assert(gx_overlay_selector.dx_storage_address == 0x4b6e);
+    assert(gx_overlay_selector.adapter_call_address == 0xd373);
+    assert(gx_overlay_selector.adapter_target == 0x6c52);
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game_executable);
     assert(game_flow.entry_address == 0xd2b0);
     assert(game_flow.startup_address == 0xd2b4);
