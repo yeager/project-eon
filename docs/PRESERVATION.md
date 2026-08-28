@@ -1283,6 +1283,19 @@ The original instructions name controller source `$206a0`, bootstrap cell
 only those instruction destinations and the literal profile: it does not read
 or materialize the controller longword and does not execute the jump.
 
+The BSR target itself is retained as static provenance, without treating its
+calls as executable behavior. `$37f9a..$38031` (ADF `+$92f9a`, 152 bytes,
+SHA-256 `b076611efd33354e311dc9f64b57454e31cddd69c0749a05034f0d828a5b36c1`)
+loads literal D1/D7/D0 values `$12800`/`$2c00`/`$0600`, then calls `$208c0`.
+It writes word `$000a` and long `$1ef48` at offsets `$1c`/`$28` from `$1eefa`,
+and makes raw Exec-vector calls with A1 equal to `$1eefa`, `$1eefa`, `$1eed8`,
+`$2063e`, and `$20676` at vectors `-$1ce`, `-$1c2`, `-$168`, `-$1c2`, and
+`-$168`. A longword comparison `$20698` versus `$2069c` selects the unequal
+path at `$38014`; all paths return at `$38030`. The parser records only these
+instruction operands and branch addresses. It neither calls `$208c0` or Exec,
+reads the compared state, assigns a purpose to any work area, nor asserts that
+the BSR returns.
+
 The analogous second exit is independently bounded after its four preceding
 calls. Only when a caller explicitly reports returns from `$3880a`, `$204fa`,
 `$37efa`, and `$37f9a` does Project Eon inspect the following 28 bytes at
@@ -2129,6 +2142,14 @@ reader preserves all 41 labels and their exact byte offsets, from `Inner
 System` through `Asteroids `. It does not trim the original trailing spaces or
 invent a mapping from those labels to mutable simulation records: the loaded
 file proves this immutable display table, not the full game-state layout.
+
+`2200AD.EXE` also contains a hash-locked static request for this exact file:
+CALL `$d332 → $101a`, source name `$100d` (`2200AD4.BIN`, 12 bytes,
+SHA-256 `91032791cbe9e4cfaa88d2f3d9d4882e58dd66ccfbc8a0c457af21dfcefd63ae`).
+The 39-byte loader `$101a..$1040` (SHA-256
+`d81719b0293c15ad5edbc5c816feb0c44e78abdde749473e5b5795848e4c86cb`)
+uses original DOS open/read/close wrappers. DOS results, the destination
+segment/buffer, and all returns remain unmodelled preservation boundaries.
 
 The same data file begins with a verified 435-entry, 16-bit static-text
 pointer table ending at `$0365`. It maps to 434 distinct raw records in the

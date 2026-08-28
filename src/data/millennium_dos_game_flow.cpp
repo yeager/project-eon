@@ -983,6 +983,36 @@ MillenniumDosGxOverlayLoadEvidence parse_millennium_dos_gx_overlay_load_evidence
         caller_address, near_call_target(0xd338, caller[1], caller[2]), loader_sha256};
 }
 
+MillenniumDosStaticDataLoadEvidence parse_millennium_dos_static_data_load_evidence(
+    const std::span<const std::uint8_t> game_executable) {
+    constexpr std::size_t load_bias = 0x100;
+    constexpr auto game_sha256 = "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t name_address = 0x100d;
+    constexpr auto name = std::to_array<std::uint8_t>({0x32,0x32,0x30,0x30,0x41,0x44,0x34,0x2e,0x42,0x49,0x4e,0x00});
+    constexpr std::uint16_t loader_address = 0x101a;
+    constexpr auto loader = std::to_array<std::uint8_t>({
+        0xba,0x0d,0x10,0xe8,0x1a,0xf5,0x73,0x03,0xe9,0x82,0xf5,0xb9,0xff,0xff,0x8e,0x1e,
+        0x16,0x01,0x33,0xd2,0xe8,0x43,0xf5,0x73,0x03,0xe9,0x71,0xf5,0xe8,0x5d,0xf5,0x0e,
+        0x1f,0x73,0x03,0xe9,0x67,0xf5,0xc3});
+    constexpr std::uint16_t caller_address = 0xd332;
+    constexpr auto caller = std::to_array<std::uint8_t>({0xe8,0xe5,0x3c});
+    constexpr auto caller_sha256 = "f8b1e2bed8701d623133bbe3d5d24e133a2e78ee068a7f335fb43289bffaf286";
+    constexpr auto loader_sha256 = "d81719b0293c15ad5edbc5c816feb0c44e78abdde749473e5b5795848e4c86cb";
+    constexpr auto name_sha256 = "91032791cbe9e4cfaa88d2f3d9d4882e58dd66ccfbc8a0c457af21dfcefd63ae";
+    const auto offset = [](const std::uint16_t address) { return static_cast<std::size_t>(address) - load_bias; };
+    if (to_hex(sha256(game_executable)) != game_sha256
+        || !has_bytes(game_executable, offset(name_address), name)
+        || !has_bytes(game_executable, offset(loader_address), loader)
+        || !has_bytes(game_executable, offset(caller_address), caller)
+        || to_hex(sha256(game_executable.subspan(offset(name_address), name.size()))) != name_sha256
+        || to_hex(sha256(game_executable.subspan(offset(loader_address), loader.size()))) != loader_sha256
+        || to_hex(sha256(game_executable.subspan(offset(caller_address), caller.size()))) != caller_sha256) {
+        throw std::runtime_error("Unexpected Millennium DOS static-data load evidence");
+    }
+    return {name_address, loader_address, caller_address, near_call_target(0xd335, caller[1], caller[2]),
+        0x101d, 0x102e, 0x1036, 0x1040, caller_sha256, loader_sha256, name_sha256};
+}
+
 MillenniumDosGxOverlayAdapterEvidence parse_millennium_dos_gx_overlay_adapter_evidence(
     const std::span<const std::uint8_t> game_executable,
     const MillenniumDosGxOverlayLoadEvidence& loader) {
