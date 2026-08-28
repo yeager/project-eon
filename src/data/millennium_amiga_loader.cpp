@@ -727,6 +727,36 @@ parse_millennium_amiga_resident_negative_d3_terminal(
     return {entry, 0x2800, entry + 4, 0x2800, entry + 8};
 }
 
+MillenniumAmigaResidentPostNegativeD3Terminal
+parse_millennium_amiga_resident_post_negative_d3_terminal(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentNegativeD3Terminal& terminal) {
+    constexpr std::uint32_t entry = 0x685fe;
+    constexpr std::array<std::uint8_t, 28> expected{{
+        0x42, 0x40, 0x13, 0xc0, 0x00, 0x07, 0xb3, 0xb5,
+        0x13, 0xc0, 0x00, 0x07, 0xb3, 0xbc, 0x30, 0x01,
+        0x32, 0x02, 0x4a, 0x40, 0x66, 0x02, 0x4e, 0x75,
+        0x6a, 0x02, 0x4e, 0x75,
+    }};
+    constexpr auto expected_hash = "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc";
+    if (terminal.entry_address != 0x685f4 || terminal.return_address != entry - 2
+        || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga post-negative-D3 terminal placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga post-negative-D3 terminal is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || to_hex(sha256(bytes)) != expected_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga post-negative-D3 terminal");
+    }
+    return {entry, {0x7b3b5, 0x7b3bc}, entry + 14, entry + 16, entry + 18,
+        entry + 20, entry + 24, entry + 22, entry + 24, entry + 28, entry + 26,
+        expected_hash};
+}
+
 MillenniumAmigaResidentIndependentZeroTargetBoundary
 parse_millennium_amiga_resident_independent_zero_target_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
