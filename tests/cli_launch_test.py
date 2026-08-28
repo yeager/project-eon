@@ -98,6 +98,25 @@ def main() -> int:
             if f" / {label} / " in line), None)
         if platform is None:
             raise SystemExit(f"Could not parse inspected platform for {archive}:\n{line}")
+        expected_bootstrap = {
+            ("millennium", "amiga"): (
+                "bounded launcher bootstrap: resident entry 0x68000, raw resident SHA-256 "
+                "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e"
+            ),
+            ("millennium", "atari-st"): (
+                "bounded launcher bootstrap: target 0x77000, Fopen boundary MILL22A.inf"
+            ),
+            ("deuteros", "atari-st"): (
+                "bounded launcher bootstrap: first/second raw stages SHA-256 "
+                "dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168/"
+                "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7"
+            ),
+        }.get((game, platform))
+        if expected_bootstrap and expected_bootstrap not in inspected.stdout:
+            raise SystemExit(
+                f"{game}/{platform} bounded launcher bootstrap did not match supplied media:\n"
+                f"{inspected.stdout}"
+            )
         if game == "deuteros" and platform == "atari-st":
             expected_state1 = (
                 "Static state-1 raw-load plan: Disk 1 +0x55800 +0x5e400 "
