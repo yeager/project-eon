@@ -271,6 +271,38 @@ struct MillenniumDosEighthFunctionKeyTableJumpPrefix {
     std::uint16_t zero_gate_address = 0;
 };
 
+// The pointer-controlled portion of F8's $7948 routine has one safe local
+// branch before it touches a selected record.  A nonzero $6e2f returns; a
+// zero value reads the selected record and reaches the first native helper.
+// The supplied gate value is an observation, not reconstructed runtime
+// state.  No helper is called and no native byte is written by this trace.
+enum class MillenniumDosEighthFunctionKeySelectedRecordOutcome {
+    returns_without_record,
+    first_helper_boundary,
+};
+
+struct MillenniumDosEighthFunctionKeySelectedRecordGate {
+    std::uint16_t entry_address = 0;
+    std::uint8_t translated_al = 0;
+    std::uint16_t selector_table_address = 0;
+    std::uint16_t selected_pointer = 0;
+    std::uint16_t gate_runtime_byte_address = 0;
+    std::uint8_t gate_runtime_byte_value = 0;
+    std::uint16_t zero_gate_address = 0;
+    std::uint16_t nonzero_gate_address = 0;
+    std::uint16_t return_address = 0;
+    // These fields remain absent when the nonzero gate returns before the
+    // selected original record is dereferenced.
+    std::optional<std::uint8_t> record_header_byte;
+    std::optional<std::uint16_t> record_header_word;
+    std::optional<std::uint8_t> first_list_count;
+    std::optional<std::uint8_t> first_list_byte;
+    std::optional<std::uint16_t> first_helper_call_address;
+    std::optional<std::uint16_t> first_helper_address;
+    MillenniumDosEighthFunctionKeySelectedRecordOutcome outcome =
+        MillenniumDosEighthFunctionKeySelectedRecordOutcome::returns_without_record;
+};
+
 // Exact, non-semantic trace of table record eight (raw F9 / $43). Its native
 // handler has the established $a19e admission gate, clears two native bytes,
 // selects the observed local mode, and can cycle through the F8 preflight
@@ -409,6 +441,11 @@ evaluate_millennium_dos_eighth_function_key_preflight(
 [[nodiscard]] MillenniumDosEighthFunctionKeyTableJumpPrefix
 evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
     std::span<const std::uint8_t> game_executable, std::uint8_t translated_al);
+
+[[nodiscard]] MillenniumDosEighthFunctionKeySelectedRecordGate
+evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+    std::span<const std::uint8_t> game_executable, std::uint8_t translated_al,
+    std::uint8_t gate_runtime_byte);
 
 // Projects the verified, finite sequence of original BIOS palette-register
 // requests into the SDL-facing adapter payload. Callers must still establish

@@ -1726,6 +1726,27 @@ as a bounded index into the ten-word in-image selector table at `$78f4`
 The resulting original pointer and the `$6e2f` zero/nonzero gate are exposed
 as facts only. No XLAT result is invented, no selected pointer is executed,
 and the following pointer-controlled interpreter remains a boundary.
+The first local branch in that interpreter is now separately hash-locked
+without crossing a native call. Its `$7948..$799b` bytes (84 bytes at file
+`+0x7848`, SHA-256
+`99267e09fea1f7d3227b49b3c80a2eacf6673df542bb063da7c54ce87df8a666`),
+the ten-word selector at `$78f4` (the hash above), and the selected-record
+bank `$77f8..$788f` (152 bytes at `+0x76f8`, SHA-256
+`53315644dbe9478d9e8b919d3958cf64cac95260fd3f89b600d92275f97e089c`)
+show the following bounded control flow. An explicitly observed nonzero byte
+at `$6e2f` branches to `$799a`, restores DS, and returns at `$799b` before any
+selected record byte is read. An explicitly observed zero byte selects one of
+the ten original pointers, reads its first byte and following word as local
+register facts, then reads the record's byte `+3` as a first-list count. All
+ten supplied records have a nonzero count; their first list byte reaches the
+opaque `CALL $7924` at `$797f`. For example, selected index `$02` identifies
+pointer `$7815` and raw prefix `04 73 28 01 84`, reaching that boundary with
+the first list byte `$84`. The byte/word fields are not assigned gameplay
+semantics, `$7924` is never invoked, no return from it is assumed, and no
+later record bytes, calls, runtime writes, saves, or original media are
+executed or changed. The same three hashes are present in the supplied
+Spanish FAT12 `2200AD.EXE`; this proves only the narrow shared byte path, not
+the unrecovered Spanish executable ABI.
 After a preflight return, the eight original bytes at `$7312` (file
 `+0x7212`, SHA-256
 `2bf85a49d14034fb5562af6188745810721fd42e495877464d04f69783525a0a`) are

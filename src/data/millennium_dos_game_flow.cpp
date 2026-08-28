@@ -746,6 +746,86 @@ evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
     };
 }
 
+MillenniumDosEighthFunctionKeySelectedRecordGate
+evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+    const std::span<const std::uint8_t> game_executable, const std::uint8_t translated_al,
+    const std::uint8_t gate_runtime_byte) {
+    constexpr std::size_t interpreter_offset = 0x7948 - 0x100;
+    constexpr std::size_t interpreter_size = 84;
+    constexpr std::string_view interpreter_sha256 =
+        "99267e09fea1f7d3227b49b3c80a2eacf6673df542bb063da7c54ce87df8a666";
+    constexpr std::size_t table_offset = 0x78f4 - 0x100;
+    constexpr std::size_t table_entry_count = 10;
+    constexpr std::string_view table_sha256 =
+        "c42e986a183a46d7b4cdf7787766e5f81446b444180e0cf34d9fa5f4b8d50a0d";
+    constexpr std::size_t record_bank_offset = 0x77f8 - 0x100;
+    constexpr std::size_t record_bank_size = 152;
+    constexpr std::string_view record_bank_sha256 =
+        "53315644dbe9478d9e8b919d3958cf64cac95260fd3f89b600d92275f97e089c";
+    if (translated_al >= table_entry_count || interpreter_offset > game_executable.size()
+        || interpreter_size > game_executable.size() - interpreter_offset
+        || table_offset > game_executable.size()
+        || table_entry_count * 2U > game_executable.size() - table_offset
+        || record_bank_offset > game_executable.size()
+        || record_bank_size > game_executable.size() - record_bank_offset) {
+        throw std::runtime_error("Millennium DOS F8 selected-record gate lies outside executable");
+    }
+    const auto interpreter = game_executable.subspan(interpreter_offset, interpreter_size);
+    const auto table = game_executable.subspan(table_offset, table_entry_count * 2U);
+    const auto record_bank = game_executable.subspan(record_bank_offset, record_bank_size);
+    if (to_hex(sha256(interpreter)) != interpreter_sha256
+        || to_hex(sha256(table)) != table_sha256
+        || to_hex(sha256(record_bank)) != record_bank_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS F8 selected-record gate");
+    }
+    const auto pointer_offset = static_cast<std::size_t>(translated_al) * 2U;
+    const auto selected_pointer = static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(table[pointer_offset])
+        | static_cast<std::uint16_t>(static_cast<std::uint16_t>(table[pointer_offset + 1U]) << 8U));
+    MillenniumDosEighthFunctionKeySelectedRecordGate result;
+    result.entry_address = 0x7961;
+    result.translated_al = translated_al;
+    result.selector_table_address = 0x78f4;
+    result.selected_pointer = selected_pointer;
+    result.gate_runtime_byte_address = 0x6e2f;
+    result.gate_runtime_byte_value = gate_runtime_byte;
+    result.zero_gate_address = 0x7968;
+    result.nonzero_gate_address = 0x799a;
+    result.return_address = 0x799b;
+    if (gate_runtime_byte != 0) {
+        // JNE $799a; POP DS; RET.  The selected pointer has already been
+        // loaded from the original table, but no byte at that pointer is read.
+        return result;
+    }
+    constexpr std::size_t record_prefix_size = 5;
+    if (selected_pointer < 0x77f8 || selected_pointer > 0x788b) {
+        throw std::runtime_error("Millennium DOS F8 selected record outside verified bank");
+    }
+    const auto selected_offset = static_cast<std::size_t>(selected_pointer - 0x100);
+    if (selected_offset > game_executable.size()
+        || record_prefix_size > game_executable.size() - selected_offset) {
+        throw std::runtime_error("Millennium DOS F8 selected record truncated");
+    }
+    const auto record = game_executable.subspan(selected_offset, record_prefix_size);
+    // $7968 loads byte zero and the following word as local register facts.
+    // $7974 then loads byte three as the loop count.  All hash-accepted
+    // selected records have a nonzero count, so $797f reaches $7924 after
+    // loading the first list byte.  Stop at that native ABI boundary.
+    if (record[3] == 0) {
+        throw std::runtime_error("Unsupported Millennium DOS F8 empty selected record");
+    }
+    result.record_header_byte = record[0];
+    result.record_header_word = static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(record[1])
+        | static_cast<std::uint16_t>(static_cast<std::uint16_t>(record[2]) << 8U));
+    result.first_list_count = record[3];
+    result.first_list_byte = record[4];
+    result.first_helper_call_address = 0x797f;
+    result.first_helper_address = 0x7924;
+    result.outcome = MillenniumDosEighthFunctionKeySelectedRecordOutcome::first_helper_boundary;
+    return result;
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;
