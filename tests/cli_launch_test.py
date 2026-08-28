@@ -161,6 +161,16 @@ def main() -> int:
                     "Millennium DOS GX overlay evidence did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_gx_dispatcher = (
+                "2200GX.EXE dispatcher: entry +0x0, table +0x15; selector 0xe/0xf/0x12/0x14 "
+                "-> 0x90/0x9f/0x97/0xa7; near RET then far RETF +0x14; SHA-256 "
+                "f4d657fcbdda23d7f0fdf2bbf48405d0a04e8b8149df064607f49042525fbd55"
+            )
+            if expected_gx_dispatcher not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium DOS GX dispatcher evidence did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "amiga":
             expected_callee = (
                 "Channel-request first callee: ADF 0x7a9c, entry 0x2229c; bit 5 branch 0x222b4 -> 0x2232c; "

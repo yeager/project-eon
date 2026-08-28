@@ -517,6 +517,15 @@ struct MillenniumDosGxOverlayAdapterEvidence {
     std::string raw_sha256;
 };
 
+struct MillenniumDosGxOverlayDispatcherEvidence {
+    std::uint16_t entry_offset = 0;
+    std::uint16_t far_return_offset = 0;
+    std::uint16_t table_offset = 0;
+    std::array<std::uint16_t, 21> observed_selector_targets{};
+    std::string dispatch_sha256;
+    std::string table_sha256;
+};
+
 [[nodiscard]] MillenniumDosGxOverlayLoadEvidence
 parse_millennium_dos_gx_overlay_load_evidence(
     std::span<const std::uint8_t> game_executable,
@@ -525,6 +534,10 @@ parse_millennium_dos_gx_overlay_load_evidence(
 parse_millennium_dos_gx_overlay_adapter_evidence(
     std::span<const std::uint8_t> game_executable,
     const MillenniumDosGxOverlayLoadEvidence& loader);
+[[nodiscard]] MillenniumDosGxOverlayDispatcherEvidence
+parse_millennium_dos_gx_overlay_dispatcher_evidence(
+    std::span<const std::uint8_t> gx_overlay_executable,
+    const MillenniumDosGxOverlayAdapterEvidence& adapter);
 
 [[nodiscard]] MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(

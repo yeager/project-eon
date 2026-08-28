@@ -999,6 +999,38 @@ MillenniumDosGxOverlayAdapterEvidence parse_millennium_dos_gx_overlay_adapter_ev
     return {entry, 0x0118, 0x0000, 0x6c68, 0x6c69, 0x6c72, expected_sha256};
 }
 
+MillenniumDosGxOverlayDispatcherEvidence parse_millennium_dos_gx_overlay_dispatcher_evidence(
+    const std::span<const std::uint8_t> gx_overlay_executable,
+    const MillenniumDosGxOverlayAdapterEvidence& adapter) {
+    constexpr auto overlay_sha256 =
+        "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
+    constexpr std::array<std::uint8_t, 20> dispatch{{
+        0x32, 0xe4, 0x0e, 0x07, 0x0e, 0x1f, 0xbe, 0x15, 0x00, 0xd1,
+        0xe0, 0x01, 0xc6, 0xad, 0xbe, 0x14, 0x00, 0x56, 0x50, 0xc3}};
+    constexpr std::array<std::uint8_t, 42> table{{
+        0x0c,0x08,0x26,0x25,0x57,0x25,0x8a,0x25,0x73,0x25,0x13,0x2e,
+        0xa1,0x25,0x14,0x25,0x8f,0x25,0x19,0x26,0x35,0x26,0x60,0x26,
+        0x8b,0x26,0xd0,0x08,0x90,0x00,0x9f,0x00,0x98,0x25,0x3f,0x31,
+        0x97,0x00,0x72,0x31,0xa7,0x00}};
+    constexpr auto dispatch_sha256 =
+        "f4d657fcbdda23d7f0fdf2bbf48405d0a04e8b8149df064607f49042525fbd55";
+    constexpr auto table_sha256 =
+        "4d04568e05378787921012654fe9c157419ce7c07f9943b51135258f32a06df3";
+    if (adapter.overlay_entry_offset != 0 || adapter.far_transfer_address != 0x6c68
+        || to_hex(sha256(gx_overlay_executable)) != overlay_sha256
+        || !has_bytes(gx_overlay_executable, 0, dispatch)
+        || gx_overlay_executable.size() <= 0x14 || gx_overlay_executable[0x14] != 0xcb
+        || !has_bytes(gx_overlay_executable, 0x15, table)
+        || to_hex(sha256(gx_overlay_executable.subspan(0, dispatch.size()))) != dispatch_sha256
+        || to_hex(sha256(gx_overlay_executable.subspan(0x15, table.size()))) != table_sha256) {
+        throw std::runtime_error("Unexpected Millennium DOS GX overlay dispatcher evidence");
+    }
+    return {0, 0x14, 0x15,
+        {0x080c,0x2526,0x2557,0x258a,0x2573,0x2e13,0x25a1,0x2514,0x258f,0x2619,
+         0x2635,0x2660,0x268b,0x08d0,0x0090,0x009f,0x2598,0x313f,0x0097,0x3172,0x00a7},
+        dispatch_sha256, table_sha256};
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;
