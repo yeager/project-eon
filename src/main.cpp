@@ -564,8 +564,13 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
     const auto image = eon::extract_asset_by_sha256(release.path, loader_adf_sha256);
     if (!image) return;
+    const eon::MillenniumAmigaBootstrapSession live_bootstrap(*image);
     const eon::AmigaAdf disk(*image);
     const auto plan = eon::parse_millennium_amiga_load_plan(disk);
+    std::cout << "          bounded launcher bootstrap: resident entry 0x" << std::hex
+        << live_bootstrap.resident_entry().entry_address << ", raw resident SHA-256 "
+        << live_bootstrap.shared_resident().raw_sha256 << std::dec
+        << " (no transformed-stage call)\n";
     const auto resident = eon::parse_millennium_amiga_resident_entry(disk, plan);
     const auto splitter = eon::parse_millennium_amiga_resident_word_splitter(disk, plan);
     const auto helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
@@ -809,6 +814,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto* executable = disk.find("MILENIUM.TOS");
     if (!executable) throw std::runtime_error("Verified Millennium Atari ST disk has no MILENIUM.TOS");
     const auto executable_bytes = disk.read(*executable);
+    const eon::MillenniumAtariBootstrapSession live_bootstrap(disk, executable_bytes);
     const auto prg = eon::parse_atari_st_prg(executable_bytes);
     const auto bootstrap = eon::parse_millennium_atari_bootstrap(executable_bytes, prg);
     const auto bss_entry = eon::parse_millennium_atari_bss_entry(executable_bytes, prg, bootstrap);
@@ -816,6 +822,10 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         executable_bytes, prg, bootstrap, bss_entry);
     const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
     const auto trap_entry = eon::parse_millennium_atari_trap_entry(bss_source, target);
+    std::cout << "          bounded launcher bootstrap: target 0x" << std::hex
+        << live_bootstrap.target().target_address << ", Fopen boundary "
+        << live_bootstrap.fopen_boundary().fopen_filename << std::dec
+        << " (no GEMDOS call)\n";
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
     const auto config_entry = eon::parse_millennium_atari_config_entry(
@@ -1066,6 +1076,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
     const auto disk1_image = eon::extract_asset_by_sha256(release.path, replicants_disk1_sha256);
     const auto disk2_image = eon::extract_asset_by_sha256(release.path, disk2_sha256);
     if (!disk1_image || !disk2_image) return;
+    const eon::DeuterosAtariBootstrapSession live_bootstrap(*disk1_image);
     const eon::DeuterosAtariDisk disk1(*disk1_image);
     const eon::DeuterosAtariDisk disk2(*disk2_image);
     const auto& stage = disk1.boot_profile();
@@ -1073,6 +1084,10 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
     std::cout << "          protected ST media: " << stage.total_sectors << " sectors, "
         << stage.sectors_per_track << " sectors/track, boot checksum 0x" << std::hex
         << stage.boot_checksum << std::dec << "; FAT root intentionally unavailable\n";
+    std::cout << "          bounded launcher bootstrap: first/second raw stages SHA-256 "
+        << live_bootstrap.first_stage_sha256() << "/"
+        << live_bootstrap.second_stage_sha256()
+        << " (no XBIOS, callback, or state selection)\n";
     if (stage.has_recovered_first_stage) {
         const auto first_stage = disk1.read_sectors(stage.first_stage_track, stage.first_stage_side,
             stage.first_stage_sector, stage.first_stage_sector_count);
