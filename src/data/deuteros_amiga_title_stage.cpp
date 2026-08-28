@@ -862,4 +862,63 @@ DeuterosAmigaTitleEntryPrefix execute_deuteros_amiga_title_entry_prefix(
     return {1, 0x206a0, 0x4040e, 1, 0x19d52, 1, 0x40450};
 }
 
+DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // $37f56 reaches this copy only if the two preceding original calls
+    // return. Preserve that condition as an ABI boundary; the bytes below are
+    // the complete local MOVE.B/DBRA transfer through the following BSR.
+    constexpr std::uint32_t entry_address = 0x37f56;
+    constexpr std::uint32_t source_address = 0x13006;
+    constexpr std::uint32_t destination_address = 0x66000;
+    constexpr std::uint32_t byte_count = 0x9392;
+    constexpr std::uint32_t stop_before_subroutine_address = 0x37f7a;
+    constexpr std::string_view title_stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::array<std::uint8_t, 40> copy_prefix_bytes{{
+        0x4e, 0xb9, 0x00, 0x03, 0x88, 0x0a,
+        0x4e, 0xb9, 0x00, 0x02, 0x04, 0xfa,
+        0x41, 0xf9, 0x00, 0x06, 0x60, 0x00,
+        0x22, 0x7c, 0x00, 0x01, 0x30, 0x06,
+        0x30, 0x3c, 0x93, 0x92,
+        0x53, 0x40,
+        0x10, 0xd9,
+        0x51, 0xc8, 0xff, 0xfc,
+        0x61, 0x00, 0x00, 0x1e,
+    }};
+    constexpr std::string_view copy_prefix_hash =
+        "51b8d6875ea6d0c35557c358d4fe22e4cac6cff79ead9df604d213cab1adfe1c";
+    constexpr std::string_view source_hash =
+        "2951d0ae6dd01f84c1fb9b6cbb766c15378af1abb9a91fa5ded748d70b3e90eb";
+    const auto& stage = plan.title_stage;
+    if (stage.length == 0 || entry_address < stage.destination
+        || source_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || source_address - stage.destination > stage.length
+        || copy_prefix_bytes.size() > stage.length - (entry_address - stage.destination)
+        || byte_count > stage.length - (source_address - stage.destination)) {
+        throw std::runtime_error("Deuteros first title exit copy lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto copy_prefix = stage_bytes.subspan(
+        entry_address - stage.destination, copy_prefix_bytes.size());
+    const auto source = stage_bytes.subspan(source_address - stage.destination, byte_count);
+    if (to_hex(sha256(stage_bytes)) != title_stage_hash
+        || !std::equal(copy_prefix_bytes.begin(), copy_prefix_bytes.end(), copy_prefix.begin())
+        || to_hex(sha256(copy_prefix)) != copy_prefix_hash
+        || to_hex(sha256(source)) != source_hash) {
+        throw std::runtime_error("Unsupported Deuteros first title exit copy");
+    }
+    DeuterosAmigaFirstTitleExitCopy result;
+    result.entry_address = entry_address;
+    result.preceding_helper_addresses = {0x3880a, 0x204fa};
+    result.source_address = source_address;
+    result.source_disk_offset = stage.disk_offset + source_address - stage.destination;
+    result.destination_address = destination_address;
+    result.byte_count = byte_count;
+    result.source_sha256 = std::string(source_hash);
+    result.copied_bytes.assign(source.begin(), source.end());
+    result.stop_before_subroutine_address = stop_before_subroutine_address;
+    return result;
+}
+
 } // namespace eon
