@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -132,12 +133,23 @@ struct MillenniumAtariConfigEntry {
     std::uint32_t entry_file_offset = 0;
     std::uint16_t initial_trap_selector = 0;
     std::uint32_t initial_trap_longword_argument = 0;
-    std::uint16_t palette_trap_selector = 0;
-    std::uint32_t palette_trap_longword_argument = 0;
+    std::uint16_t second_trap_selector = 0;
+    std::uint32_t second_trap_longword_argument = 0;
     std::vector<std::uint32_t> jsr_targets;
     std::uint32_t final_pea_address = 0;
     std::uint16_t final_trap_selector = 0;
     std::uint32_t return_offset = 0;
+};
+
+// The second literal TRAP #14 argument in the verified entry block. Its
+// bytes are two NUL-terminated filenames; the service and their consumer are
+// intentionally not inferred.
+struct MillenniumAtariConfigTrapArgumentStrings {
+    std::uint32_t proven_load_base = 0;
+    std::uint32_t argument_address = 0;
+    std::uint32_t file_offset = 0;
+    std::array<std::string, 2> strings;
+    std::string sha256;
 };
 
 // The first direct JSR destination in the verified MILL22A.inf entry block.
@@ -388,6 +400,13 @@ struct MillenniumAtariConfigAbsoluteJsrInventory {
 // service is emulated, no file is unpacked and no supplied media is changed.
 [[nodiscard]] MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
     std::span<const std::uint8_t> payload);
+
+// Validates the exact byte range referenced by the entry's second literal
+// TRAP argument. This is preservation evidence only: it does not invoke a
+// service, open either filename, or advance the config control path.
+[[nodiscard]] MillenniumAtariConfigTrapArgumentStrings
+parse_millennium_atari_config_trap_argument_strings(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
 // Validates the exact first JSR destination referenced by the verified entry
 // block. It does not invoke it, infer the dynamic-bit instruction's inputs,

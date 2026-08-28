@@ -338,13 +338,43 @@ MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
     result.entry_file_offset = static_cast<std::uint32_t>(entry_offset);
     result.initial_trap_selector = 0x15;
     result.initial_trap_longword_argument = 0;
-    result.palette_trap_selector = 0x06;
-    result.palette_trap_longword_argument = 0x2a612;
+    result.second_trap_selector = 0x06;
+    result.second_trap_longword_argument = 0x2a612;
     result.jsr_targets.assign(jsr_targets.begin(), jsr_targets.end());
     result.final_pea_address = load_base + 0x62c;
     result.final_trap_selector = 0x26;
     result.return_offset = static_cast<std::uint32_t>(entry_offset + entry_bytes.size() - 2U);
     return result;
+}
+
+MillenniumAtariConfigTrapArgumentStrings parse_millennium_atari_config_trap_argument_strings(
+    const std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
+    // The entry's second literal TRAP argument is $2a612. At the established
+    // $2a4de load base this is file +$134, where the original contiguous
+    // bytes contain exactly two NUL-terminated strings. Their use is unknown.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t argument_address = 0x2a612;
+    constexpr std::size_t argument_offset = argument_address - load_base;
+    constexpr auto argument_bytes = std::to_array<std::uint8_t>({
+        'M', 'I', 'L', 'L', '2', '2', 'D', '.', 'I', 'N', 'F', 0x00,
+        'M', 'I', 'L', 'L', '2', '2', 'C', '.', 'I', 'N', 'F', 0x00,
+    });
+    constexpr std::string_view expected_sha256 =
+        "815bea3862908e01557486cae7d42132853c94348b49b920f9d3e88e14956c51";
+    if (entry.proven_load_base != load_base || entry.second_trap_selector != 0x06
+        || entry.second_trap_longword_argument != argument_address
+        || payload.size() < argument_offset + argument_bytes.size()
+        || !std::equal(argument_bytes.begin(), argument_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(argument_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST MILL22A.inf literal TRAP argument");
+    }
+    const auto bytes = payload.subspan(argument_offset, argument_bytes.size());
+    const auto hash = to_hex(sha256(bytes));
+    if (hash != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST MILL22A.inf literal TRAP argument hash");
+    }
+    return {load_base, argument_address, static_cast<std::uint32_t>(argument_offset),
+        {"MILL22D.INF", "MILL22C.INF"}, hash};
 }
 
 MillenniumAtariConfigFirstJsr parse_millennium_atari_config_first_jsr(

@@ -818,6 +818,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
     const auto config_entry = eon::parse_millennium_atari_config_entry(
         disk.read(*disk.find(equinox_config.requested_filename)));
+    const auto config_trap_argument_strings = eon::parse_millennium_atari_config_trap_argument_strings(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_first_jsr = eon::parse_millennium_atari_config_first_jsr(
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_second_jsr = eon::parse_millennium_atari_config_second_jsr(
@@ -896,12 +898,19 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << " to file +0x" << config_entry.entry_file_offset << "; TRAP #14 selectors 0x"
         << config_entry.initial_trap_selector << " (longword 0x"
         << config_entry.initial_trap_longword_argument << ") and 0x"
-        << config_entry.palette_trap_selector << " (longword 0x"
-        << config_entry.palette_trap_longword_argument << "); JSRs";
+        << config_entry.second_trap_selector << " (longword 0x"
+        << config_entry.second_trap_longword_argument << "); JSRs";
     for (const auto address : config_entry.jsr_targets) std::cout << " 0x" << address;
     std::cout << "; PEA 0x" << config_entry.final_pea_address << ", TRAP #14 selector 0x"
         << config_entry.final_trap_selector << ", RTS +0x" << config_entry.return_offset
         << std::dec << " (validated only; no TOS/XBIOS calls or config execution)\n";
+    std::cout << "          second literal TRAP argument: 0x" << std::hex
+        << config_trap_argument_strings.argument_address << " (file +0x"
+        << config_trap_argument_strings.file_offset << ") = "
+        << config_trap_argument_strings.strings[0] << ", "
+        << config_trap_argument_strings.strings[1] << "; SHA-256 "
+        << config_trap_argument_strings.sha256 << std::dec
+        << " (bytes only; no service or file access)\n";
     std::cout << "          MILL22A.inf first JSR target: 0x" << std::hex
         << config_first_jsr.target_address << " is file +0x" << config_first_jsr.target_file_offset
         << "; leading opcode 0x" << config_first_jsr.leading_opcode << ", then MOVEM.L opcode 0x"

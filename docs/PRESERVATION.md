@@ -165,6 +165,15 @@ sequence in the original FAT chain and reports the control facts. It does not
 name or emulate trap effects, execute the JSRs, synthesize a configuration,
 or write any disk data.
 
+The second literal `TRAP #14` argument is not a palette and no service meaning
+is assigned to it. At runtime address `0x2a612` (file `+0x134`) the exact 24
+original bytes have SHA-256
+`815bea3862908e01557486cae7d42132853c94348b49b920f9d3e88e14956c51` and form
+two NUL-terminated strings: `MILL22D.INF` and `MILL22C.INF`. Project Eon
+validates and reports those bytes as a bounded preservation fact only; it does
+not open either name, invoke the trap, or presume the following JSR is
+reachable because both preceding XBIOS return values are unrecovered.
+
 The first of those literal JSRs is also bounded against the genuine file
 chain. Address `0x2b55a` maps to file offset `0x107c`; its eight verified
 bytes are `03 5a 4c df 7f ff 4e 75`. Project Eon retains the first word
