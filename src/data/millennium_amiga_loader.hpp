@@ -222,6 +222,12 @@ struct MillenniumAmigaResidentIndependentEntryGate {
     std::uint32_t flag_zero_branch_address = 0;
     std::uint32_t flag_zero_target = 0;
 };
+struct MillenniumAmigaResidentNegativeD3Continuation {
+    std::uint32_t entry_address = 0;
+    std::uint32_t external_jump_address = 0;
+    std::uint32_t external_jump_target = 0;
+    std::uint32_t return_address = 0;
+};
 
 struct MillenniumAmigaResidentIndependentZeroTargetBoundary {
     std::uint32_t entry_address = 0;
@@ -413,6 +419,10 @@ parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
 [[nodiscard]] MillenniumAmigaResidentIndependentEntryGate
 parse_millennium_amiga_resident_independent_entry_gate(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
+[[nodiscard]] MillenniumAmigaResidentNegativeD3Continuation
+parse_millennium_amiga_resident_negative_d3_continuation(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentEntryGate& gate);
 
 // Validates only the first compare/conditional-branch pair at the independent
 // entry's fixed-flag-zero target. It does not interpret the comparison.
