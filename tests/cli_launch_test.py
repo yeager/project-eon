@@ -168,6 +168,17 @@ def main() -> int:
                     "Deuteros Amiga channel-request following service did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_adjacent_entry = (
+                "Channel-request adjacent entry: ADF 0x838a, entry 0x22b8a; test 0x22a30, "
+                "zero 0x22b90 -> 0x22b94, early RTS 0x22b92; descriptors 0x22a6e stride 0xe; "
+                "final RTS 0x22be8; SHA-256 "
+                "10ed8be15c107dbb56ca98eb8d17ffd2bce3910dd169d67ba058447c9031b1ff"
+            )
+            if expected_adjacent_entry not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Amiga channel-request adjacent entry did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "millennium" and platform == "atari-st":
             expected_auxiliary_resource = "auxiliary resource-name evidence: MILL22B.INF cluster "
             if expected_auxiliary_resource not in inspected.stdout:

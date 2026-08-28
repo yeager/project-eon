@@ -998,6 +998,15 @@ facts only: no embedded descriptor, flag, or runtime-cell write is applied.
 The adjacent entry `$22b8a` is deliberately outside this hash range because
 it begins a separate caller-state-dependent path.
 
+That adjacent entry `$22b8a..$22be9` maps to ADF `+$838a`, is 96 bytes, and
+hashes to `10ed8be15c107dbb56ca98eb8d17ffd2bce3910dd169d67ba058447c9031b1ff`.
+It tests `$22a30`, branches `$22b90 → $22b94` or returns at `$22b92`, then
+encodes four conditional copies at `$22bb2/$22bc2/$22bd2/$22be2` and final
+RTS `$22be8`. Its multiplication literal `$000e`, pointer cell `$22aa6`,
+descriptor base `$22a6e`, field offset `$000a`, and stride `$000e` are raw
+facts only. No caller register, pointer, branch, read, or write is supplied,
+dereferenced, or executed by Project Eon.
+
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
 emits sound `(1,1)` then `(2,2)` and immediately consumes the newly yielded

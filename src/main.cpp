@@ -317,6 +317,22 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << "; RTS 0x" << channel_request_following_service.return_address
         << "; SHA-256 " << channel_request_following_service.raw_sha256 << std::dec
         << " (static only; no descriptor, flag, or runtime-cell effects executed)\n";
+    const auto channel_request_adjacent_entry =
+        eon::parse_deuteros_amiga_channel_request_adjacent_entry(
+            disk, plan, channel_request_following_service);
+    std::cout << "          Channel-request adjacent entry: ADF 0x" << std::hex
+        << plan.main_stage.disk_offset + channel_request_adjacent_entry.entry_address
+            - plan.main_stage.destination
+        << ", entry 0x" << channel_request_adjacent_entry.entry_address
+        << "; test 0x" << channel_request_adjacent_entry.tested_byte_address
+        << ", zero 0x" << channel_request_adjacent_entry.zero_branch_address
+        << " -> 0x" << channel_request_adjacent_entry.zero_branch_target
+        << ", early RTS 0x" << channel_request_adjacent_entry.early_return_address
+        << "; descriptors 0x" << channel_request_adjacent_entry.descriptor_base_address
+        << " stride 0x" << channel_request_adjacent_entry.descriptor_stride
+        << "; final RTS 0x" << channel_request_adjacent_entry.final_return_address
+        << "; SHA-256 " << channel_request_adjacent_entry.raw_sha256 << std::dec
+        << " (static only; no caller state, pointers, branches, or copies executed)\n";
     const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);
