@@ -273,10 +273,8 @@ Setup installer, and an arm64 iPadOS `.ipa`. The iPadOS artifact is unsigned
 for sideload signing with the user's own certificate and provisioning profile.
 Its packaging step validates the required launcher cards and PO catalogues in
 the final archive before upload. Packages contain Project Eon only—never
-original game media.
-CI has read-only
-repository permission and cannot release, tag, or
-publish. Development pushes go directly to GitHub `main`; Project Eon does not
+original game media. CI has read-only repository permission and cannot release,
+tag, or publish. Development pushes go directly to GitHub `main`; Project Eon does not
 create GitHub branches. The Windows installer also does not pre-create its
 `data` path: a missing default directory remains a read-only runtime boundary.
 Releases are made only when the maintainer explicitly requests one.
