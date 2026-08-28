@@ -340,6 +340,32 @@ DeuterosAtariState5RawLoadPlan build_deuteros_atari_state5_raw_load_plan(
     };
 }
 
+DeuterosAtariState5State1Prefix validate_deuteros_atari_state5_state1_prefix(
+    const DeuterosAtariRawRangeLoadPlan& state1,
+    const DeuterosAtariState5RawLoadPlan& state5,
+    const std::span<const std::uint8_t> state1_bytes,
+    const std::span<const std::uint8_t> state5_bytes) {
+    constexpr std::string_view state1_sha256 =
+        "0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47";
+    constexpr std::string_view prefix_sha256 =
+        "ed55ad2a893a87af9f11d269faa6358420c47ed6beb1fee7a177e9beaed1e77c";
+    const auto first_end = state5.first_read.source_offset + state5.first_read.byte_count;
+    const auto second_end = state5.second_read.source_offset + state5.second_read.byte_count;
+    if (first_end < state5.first_read.source_offset || second_end < state5.second_read.source_offset
+        || state1.source_offset != state5.first_read.source_offset
+        || first_end != state5.second_read.source_offset
+        || second_end > state1.source_offset + state1.byte_count
+        || state1_bytes.size() != state1.byte_count
+        || state5_bytes.size() != state5.first_read.byte_count + state5.second_read.byte_count
+        || state5_bytes.size() > state1_bytes.size()
+        || !std::equal(state5_bytes.begin(), state5_bytes.end(), state1_bytes.begin())
+        || to_hex(sha256(state1_bytes)) != state1_sha256
+        || to_hex(sha256(state5_bytes)) != prefix_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-5/state-1 raw prefix");
+    }
+    return {state1.source_offset, state5_bytes.size(), std::string(prefix_sha256)};
+}
+
 DeuterosAtariState5ReturnProfile parse_deuteros_atari_state5_return(
     std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch) {

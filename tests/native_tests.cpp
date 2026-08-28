@@ -2239,6 +2239,29 @@ int main() {
         == "9659b21315e5c0528020be0b41eb75d57428f41b3b632fabfebe16d34038d298");
     assert(eon::to_hex(eon::sha256(materialize_atari_plan(deuteros_state5_plan.second_read)))
         == "6b3e27702649ac201c4ecf92ad54f40656fd4d8633fadf5790014da34ce03ac6");
+    auto deuteros_state5_bytes = materialize_atari_plan(deuteros_state5_plan.first_read);
+    const auto deuteros_state5_second_bytes = materialize_atari_plan(deuteros_state5_plan.second_read);
+    deuteros_state5_bytes.insert(deuteros_state5_bytes.end(), deuteros_state5_second_bytes.begin(),
+        deuteros_state5_second_bytes.end());
+    const auto deuteros_state5_state1_prefix = eon::validate_deuteros_atari_state5_state1_prefix(
+        deuteros_state1_plan, deuteros_state5_plan, deuteros_state1_bytes, deuteros_state5_bytes);
+    assert(deuteros_state5_state1_prefix.source_offset == 0x55800);
+    assert(deuteros_state5_state1_prefix.byte_count == 0x57c00);
+    assert(deuteros_state5_state1_prefix.sha256
+        == "ed55ad2a893a87af9f11d269faa6358420c47ed6beb1fee7a177e9beaed1e77c");
+    {
+        auto altered_state5_bytes = deuteros_state5_bytes;
+        altered_state5_bytes[0] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::validate_deuteros_atari_state5_state1_prefix(
+                deuteros_state1_plan, deuteros_state5_plan, deuteros_state1_bytes,
+                altered_state5_bytes));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(deuteros_second_stage_profile.raw_read_routine_offset == 0x60);
     assert(deuteros_second_stage_profile.raw_read_max_sector_count == 9);
     assert(deuteros_second_stage_profile.side_switch_track == 0x50);

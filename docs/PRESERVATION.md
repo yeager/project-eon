@@ -730,6 +730,15 @@ These are preserved instruction/dataflow facts only; they do not authorize
 Project Eon to select vector 5, perform its runtime callbacks, or infer title
 or game semantics for the loaded bytes.
 
+The two vector-5 reads are physically contiguous (`+$55800..+$60c00` then
+`+$60c00..+$ad400`) and together form the first `$57c00` bytes of the separate
+state-1 interval. `validate_deuteros_atari_state5_state1_prefix` compares the
+two in-memory spans directly and locks their shared prefix to SHA-256
+`ed55ad2a893a87af9f11d269faa6358420c47ed6beb1fee7a177e9beaed1e77c`, while
+also retaining state 1's full independent hash. This is a media-geometry and
+byte-identity fact only: overlapping physical reads do not prove vector
+selection, load success, ownership, resource type, or any title/game meaning.
+
 The live `DeuterosAtariBootstrapSession` retains these three static plans,
 the vector-5 return profile, and the XBIOS callback-byte boundary after
 validating the same original second stage. Thus the SDL launch request and
