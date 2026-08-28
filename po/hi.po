@@ -91,3 +91,33 @@ msgid "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
 msgstr "मूल शीर्षक हस्तांतरण: संसाधन 0x"
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "मूल $20580 स्ट्रीम: +0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "आधुनिक ग्राफ़िक्स सेटिंग्स"
+
+msgid "F10: CLOSE"
+msgstr "F10: बंद करें"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "बायाँ/दायाँ: बदलें"
+
+msgid "SMOOTH SCALING"
+msgstr "मुलायम स्केलिंग"
+
+msgid "SCANLINES"
+msgstr "स्कैनलाइनें"
+
+msgid "MODERN FRAME"
+msgstr "आधुनिक फ़्रेम"
+
+msgid "ON"
+msgstr "चालू"
+
+msgid "OFF"
+msgstr "बंद"
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "सेटिंग्स केवल SDL रेंडरिंग पर लागू होती हैं।"
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "ऊपर/नीचे: चुनें   बायाँ/दायाँ: बदलें   F10: बंद करें"

@@ -68,6 +68,15 @@ struct PreviewAnimation {
     std::vector<std::vector<std::uint8_t>> rgba_frames;
 };
 
+// Modern options are renderer state only. They are deliberately independent
+// from original input, media, simulation state and save bytes.
+struct ModernGraphicsSettings {
+    bool smooth_scaling = true;
+    bool scanlines = false;
+    bool frame = true;
+    int focused_option = 0;
+};
+
 // These data products come from the same verified English DOS archive. The
 // title is launchable; GX remains read-only inspection evidence because the
 // console poll proves neither the DOS return nor 2200AD startup.
@@ -124,6 +133,41 @@ void draw_modern_surface_frame(SDL_Renderer* renderer, const SDL_FRect& bounds) 
     SDL_SetRenderDrawColor(renderer, 39, 202, 213, 235);
     SDL_RenderRect(renderer, &shadow);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+void draw_scanlines(SDL_Renderer* renderer, const SDL_FRect& bounds) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 56);
+    for (float y = bounds.y + 1; y < bounds.y + bounds.h; y += 2) {
+        SDL_RenderLine(renderer, bounds.x, y, bounds.x + bounds.w, y);
+    }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+void draw_modern_graphics_popup(SDL_Renderer* renderer,
+    const ModernGraphicsSettings& settings) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 3, 10, 20, 240);
+    SDL_FRect panel{356, 174, 568, 338};
+    SDL_RenderFillRect(renderer, &panel);
+    SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
+    SDL_RenderRect(renderer, &panel);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    draw_text(renderer, 390, 206, "MODERN GRAPHICS SETTINGS");
+    draw_text(renderer, 390, 244, "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE");
+    constexpr std::array<const char*, 3> names{{"SMOOTH SCALING", "SCANLINES", "MODERN FRAME"}};
+    const std::array<bool, 3> values{{settings.smooth_scaling, settings.scanlines, settings.frame}};
+    for (std::size_t index = 0; index < names.size(); ++index) {
+        SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(settings.focused_option)
+                ? 255 : 205, index == static_cast<std::size_t>(settings.focused_option) ? 195 : 225,
+            index == static_cast<std::size_t>(settings.focused_option) ? 80 : 235, 255);
+        draw_text(renderer, 410, 288.0F + static_cast<float>(index) * 42.0F,
+            std::string(index == static_cast<std::size_t>(settings.focused_option) ? "> " : "  ") + names[index]);
+        draw_text(renderer, 710, 288.0F + static_cast<float>(index) * 42.0F,
+            values[index] ? "ON" : "OFF");
+    }
+    SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+    draw_text(renderer, 390, 438, "SETTINGS APPLY TO SDL RENDERING ONLY.");
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -1831,12 +1875,17 @@ int main(int argc, char** argv) {
     }
     if (screen == Screen::launching && selected == eon::Game::deuteros) start_deuteros();
     bool show_scanner = false;
+    bool show_modern_graphics_settings = false;
+    ModernGraphicsSettings modern_graphics_settings;
     bool running = true;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) running = false;
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE
+                && show_modern_graphics_settings) {
+                show_modern_graphics_settings = false;
+            } else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
                 else running = false;
             }
@@ -1849,9 +1898,31 @@ int main(int argc, char** argv) {
                 request.presentation = request.presentation == eon::Presentation::original
                     ? eon::Presentation::modern : eon::Presentation::original;
             }
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
+                // F10 is consumed by Project Eon's renderer chrome, never by
+                // original DOS/Amiga input. It is available now and remains
+                // the future in-game modern-presentation entry point.
+                request.presentation = eon::Presentation::modern;
+                show_modern_graphics_settings = !show_modern_graphics_settings;
+            }
+            if (event.type == SDL_EVENT_KEY_DOWN && show_modern_graphics_settings && !event.key.repeat) {
+                if (event.key.key == SDLK_UP) {
+                    modern_graphics_settings.focused_option =
+                        (modern_graphics_settings.focused_option + 2) % 3;
+                } else if (event.key.key == SDLK_DOWN) {
+                    modern_graphics_settings.focused_option =
+                        (modern_graphics_settings.focused_option + 1) % 3;
+                } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
+                    switch (modern_graphics_settings.focused_option) {
+                    case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
+                    case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
+                    default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+                    }
+                }
+            }
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
                 && screen == Screen::launching && selected == eon::Game::millennium
-                && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1
+                && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1 && event.key.key != SDLK_F10
                 && millennium_title_session) {
                 // TITLES.EXE uses DOS' non-blocking character availability
                 // poll, rather than a game-specific action key.  SDL's key
@@ -1879,11 +1950,11 @@ int main(int argc, char** argv) {
                 // manufacture a title or gameplay action.
                 deuteros_input_pressed = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
             }
-            if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
+            if (!show_modern_graphics_settings && screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) {
                 show_scanner = !show_scanner;
             }
-            if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN) {
+            if (!show_modern_graphics_settings && screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) focused = 1 - focused;
                 if (!request.platform
                     && (event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
@@ -2134,13 +2205,15 @@ int main(int argc, char** argv) {
                     }
                 }
                 SDL_SetTextureScaleMode(texture,
-                    modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
+                    modern && modern_graphics_settings.smooth_scaling
+                        ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 const float scale = 2.0F;
                 SDL_FRect preview_bounds{64, 250,
                     static_cast<float>(image.width) * scale,
                     static_cast<float>(image.height) * scale};
-                if (modern) draw_modern_surface_frame(renderer, preview_bounds);
+                if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
+                if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
                 if (millennium_game_execution_observed) {
                     const auto& save = *millennium_assets->initial_save;
                     constexpr std::size_t records_per_page = 8;
@@ -2361,20 +2434,23 @@ int main(int argc, char** argv) {
                         + " - " + std::to_string(trace->glyph_codes.size()));
                 }
                 SDL_SetTextureScaleMode(preview_texture,
-                    modern ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
+                    modern && modern_graphics_settings.smooth_scaling
+                        ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 // Keep the original pixels intact while allowing the extra
                 // provenance boundary to remain visible after title handoff.
                 const float scale = title_stage ? 1.75F : 2.0F;
                 SDL_FRect preview_bounds{64, title_stage ? 350.0F : deuteros_title_resource ? 306.0F : 274.0F,
                     static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
                     static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
-                if (modern) draw_modern_surface_frame(renderer, preview_bounds);
+                if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
+                if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
                 draw_text(renderer, 64, 580, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else {
                 draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             }
         }
+        if (show_modern_graphics_settings) draw_modern_graphics_popup(renderer, modern_graphics_settings);
         SDL_RenderPresent(renderer);
     }
 

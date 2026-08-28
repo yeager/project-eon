@@ -129,3 +129,33 @@ msgstr "원본 타이틀 인계: 리소스 0x"
 
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "원본 $20580 스트림: +0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "현대 그래픽 설정"
+
+msgid "F10: CLOSE"
+msgstr "F10: 닫기"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "왼쪽/오른쪽: 변경"
+
+msgid "SMOOTH SCALING"
+msgstr "부드러운 크기 조절"
+
+msgid "SCANLINES"
+msgstr "스캔라인"
+
+msgid "MODERN FRAME"
+msgstr "현대 프레임"
+
+msgid "ON"
+msgstr "켜기"
+
+msgid "OFF"
+msgstr "끄기"
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "설정은 SDL 렌더링에만 적용됩니다."
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "위/아래: 선택   왼쪽/오른쪽: 변경   F10: 닫기"

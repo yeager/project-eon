@@ -1856,6 +1856,11 @@ DOS return nor `2200AD.EXE` startup. No host action invokes a handler, mutates
 documented but are not host-bound until their input production and state
 prerequisites are recovered.
 
+Project Eon's **host** F10 opens a modern SDL graphics popup with smooth
+scaling, scanline, and renderer-frame toggles. It is explicitly consumed before
+the title availability poll and is not an original F10 action: it changes only
+host rendering and never original pixels, game logic, runtime state, or saves.
+
 The first table record (raw F1 / `$3b`) is now traced further without assigning
 it a game-menu name. Its eight original bytes are
 `00 06 09 1b 30 00 9a 6f`, so its handler entry is `$6f9a`. That handler clears

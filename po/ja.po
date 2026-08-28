@@ -91,3 +91,33 @@ msgid "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
 msgstr "オリジナルのタイトル引き継ぎ: リソース 0x"
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "オリジナルの $20580 ストリーム: +0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "モダン グラフィック設定"
+
+msgid "F10: CLOSE"
+msgstr "F10: 閉じる"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "左/右: 変更"
+
+msgid "SMOOTH SCALING"
+msgstr "スムーズスケーリング"
+
+msgid "SCANLINES"
+msgstr "走査線"
+
+msgid "MODERN FRAME"
+msgstr "モダンフレーム"
+
+msgid "ON"
+msgstr "オン"
+
+msgid "OFF"
+msgstr "オフ"
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "設定は SDL レンダリングにのみ適用されます。"
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "上/下: 選択   左/右: 変更   F10: 閉じる"

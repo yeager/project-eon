@@ -129,3 +129,33 @@ msgstr "原始标题交接：资源 0x"
 
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "原始 $20580 流：+0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "现代图形设置"
+
+msgid "F10: CLOSE"
+msgstr "F10：关闭"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "左/右：更改"
+
+msgid "SMOOTH SCALING"
+msgstr "平滑缩放"
+
+msgid "SCANLINES"
+msgstr "扫描线"
+
+msgid "MODERN FRAME"
+msgstr "现代边框"
+
+msgid "ON"
+msgstr "开"
+
+msgid "OFF"
+msgstr "关"
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "设置仅应用于 SDL 渲染。"
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "上/下：选择   左/右：更改   F10：关闭"

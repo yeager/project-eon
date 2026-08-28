@@ -129,3 +129,33 @@ msgstr "ОРИГІНАЛЬНА ПЕРЕДАЧА ТИТУЛУ: РЕСУРС 0x"
 
 msgid "ORIGINAL $20580 STREAM: +0x"
 msgstr "ОРИГІНАЛЬНИЙ ПОТІК $20580: +0x"
+
+msgid "MODERN GRAPHICS SETTINGS"
+msgstr "СУЧАСНІ НАЛАШТУВАННЯ ГРАФІКИ"
+
+msgid "F10: CLOSE"
+msgstr "F10: ЗАКРИТИ"
+
+msgid "LEFT/RIGHT: CHANGE"
+msgstr "ЛІВОРУЧ/ПРАВОРУЧ: ЗМІНИТИ"
+
+msgid "SMOOTH SCALING"
+msgstr "ПЛАВНЕ МАСШТАБУВАННЯ"
+
+msgid "SCANLINES"
+msgstr "РЯДКИ РОЗГОРТКИ"
+
+msgid "MODERN FRAME"
+msgstr "СУЧАСНА РАМКА"
+
+msgid "ON"
+msgstr "УВІМК."
+
+msgid "OFF"
+msgstr "ВИМК."
+
+msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
+msgstr "НАЛАШТУВАННЯ ЗАСТОСОВУЮТЬСЯ ЛИШЕ ДО РЕНДЕРИНГУ SDL."
+
+msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr "ВГОРУ/ВНИЗ: ВИБРАТИ   ЛІВОРУЧ/ПРАВОРУЧ: ЗМІНИТИ   F10: ЗАКРИТИ"
