@@ -263,6 +263,19 @@ struct DeuterosAmigaFirstTitleExitCopy {
     std::uint32_t stop_before_subroutine_address = 0;
 };
 
+// The first exit's bootstrap tail is reachable only when its preceding BSR
+// returns.  It records instruction-level destinations, never the controller
+// longword itself and never an executed JMP.
+struct DeuterosAmigaFirstTitleExitReturnTail {
+    std::uint32_t entry_address = 0;
+    std::uint32_t preceding_subroutine_address = 0;
+    std::uint32_t controller_source_address = 0;
+    std::uint32_t controller_destination_address = 0;
+    std::uint32_t bootstrap_profile_address = 0;
+    std::uint32_t bootstrap_profile_value = 0;
+    std::uint32_t jump_target_address = 0;
+};
+
 // Reads profile-one instructions directly from the original ADF and validates
 // the known mode branch, recurring main-loop cadence, timed display
 // transition, and following raw control-state loop.
@@ -315,5 +328,14 @@ execute_deuteros_amiga_title_entry_prefix(
 [[nodiscard]] DeuterosAmigaFirstTitleExitCopy
 evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// Validates the first exit's local return continuation. `subroutine_returned`
+// is an explicit ABI boundary for the unresolved BSR at $37f7a. The result
+// contains only raw source/destination facts; it neither reads controller
+// data nor jumps to the bootstrap target.
+[[nodiscard]] DeuterosAmigaFirstTitleExitReturnTail
+evaluate_deuteros_amiga_first_title_exit_return_tail(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    bool subroutine_returned);
 
 } // namespace eon

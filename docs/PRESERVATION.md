@@ -1135,6 +1135,15 @@ Project Eon exposes only a read-only copy trace and those genuine source bytes:
 it does not call either helper or the BSR, write `$66000`, infer a title choice,
 or create replacement data.
 
+The BSR's return continuation is a separate explicit ABI boundary. Only when a
+caller supplies that `$37f7a` returned does Project Eon inspect its following
+28-byte tail at `$37f7e` (ADF `+$92f7e`), SHA-256
+`bacc75771f84068878d031ad87b0708c08911e85b605436c29d8d4c1faa2884c`.
+The original instructions name controller source `$206a0`, bootstrap cell
+`$12ff8`, profile-two cell `$12ffc`, and `JMP $12800`. The evaluator exposes
+only those instruction destinations and the literal profile: it does not read
+or materialize the controller longword and does not execute the jump.
+
 `$12800` resets the original stack/Exec state and jumps to bootstrap dispatcher
 `$12a4e`. The original six-entry table at `$12a36` resolves profiles 3 and 4
 directly to `$12b1c`; profile 2 selects `$12b44`, whose sole instruction is
