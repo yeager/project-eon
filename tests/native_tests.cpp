@@ -1337,6 +1337,86 @@ int main() {
         }
         assert(rejected);
     }
+    const auto f8_selected_record_return =
+        eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+            *game_executable, 2, 1);
+    assert(f8_selected_record_return.entry_address == 0x7961);
+    assert(f8_selected_record_return.selected_pointer == 0x7815);
+    assert(f8_selected_record_return.gate_runtime_byte_address == 0x6e2f);
+    assert(f8_selected_record_return.gate_runtime_byte_value == 1);
+    assert(f8_selected_record_return.nonzero_gate_address == 0x799a);
+    assert(f8_selected_record_return.return_address == 0x799b);
+    assert(f8_selected_record_return.outcome
+        == eon::MillenniumDosEighthFunctionKeySelectedRecordOutcome::returns_without_record);
+    // A nonzero $6e2f returns before the selected record is dereferenced.
+    assert(!f8_selected_record_return.record_header_byte);
+    assert(!f8_selected_record_return.first_list_byte);
+    assert(!f8_selected_record_return.first_helper_address);
+    const auto f8_selected_record_boundary =
+        eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+            *game_executable, 2, 0);
+    assert(f8_selected_record_boundary.selected_pointer == 0x7815);
+    assert(f8_selected_record_boundary.zero_gate_address == 0x7968);
+    assert(f8_selected_record_boundary.record_header_byte == std::optional<std::uint8_t>{0x04});
+    assert(f8_selected_record_boundary.record_header_word == std::optional<std::uint16_t>{0x2873});
+    assert(f8_selected_record_boundary.first_list_count == std::optional<std::uint8_t>{1});
+    assert(f8_selected_record_boundary.first_list_byte == std::optional<std::uint8_t>{0x84});
+    assert(f8_selected_record_boundary.first_helper_call_address
+        == std::optional<std::uint16_t>{0x797f});
+    assert(f8_selected_record_boundary.first_helper_address == std::optional<std::uint16_t>{0x7924});
+    assert(f8_selected_record_boundary.outcome
+        == eon::MillenniumDosEighthFunctionKeySelectedRecordOutcome::first_helper_boundary);
+    const auto f8_last_selected_record =
+        eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+            *game_executable, 9, 0);
+    assert(f8_last_selected_record.selected_pointer == 0x7886);
+    assert(f8_last_selected_record.first_list_byte == std::optional<std::uint8_t>{0x0a});
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+                *game_executable, 10, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_f8_record_table = *game_executable;
+        altered_f8_record_table[0x78f4 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+                altered_f8_record_table, 2, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_f8_record_bank = *game_executable;
+        altered_f8_record_bank[0x77f8 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+                altered_f8_record_bank, 2, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_f8_record_interpreter = *game_executable;
+        altered_f8_record_interpreter[0x797f - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+                altered_f8_record_interpreter, 2, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(game_session.observe_action(0x42) == std::optional<std::size_t>{7});
     assert(game_session.last_eighth_function_key_trace());
     assert(game_session.last_eighth_function_key_trace()->handler_address == 0x7306);
@@ -1537,6 +1617,16 @@ int main() {
     assert(spanish_static_data && spanish_static_data->size == 13'254);
     assert(eon::to_hex(eon::sha256(disk.read(*executable)))
         == "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6");
+    // The complete Spanish executable ABI remains a separate preservation
+    // boundary, but its F8 selected-record gate bytes are independently
+    // accepted from the genuine FAT12 file in place.
+    const auto spanish_f8_selected_record =
+        eon::evaluate_millennium_dos_eighth_function_key_selected_record_gate(
+            disk.read(*executable), 2, 0);
+    assert(spanish_f8_selected_record.selected_pointer == 0x7815);
+    assert(spanish_f8_selected_record.first_list_byte == std::optional<std::uint8_t>{0x84});
+    assert(spanish_f8_selected_record.first_helper_address
+        == std::optional<std::uint16_t>{0x7924});
     assert(eon::to_hex(eon::sha256(disk.read(*graphics)))
         == "e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767");
     const eon::MillenniumDosLib spanish_title_lib(disk.read(*spanish_title));
