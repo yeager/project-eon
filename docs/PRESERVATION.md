@@ -2172,17 +2172,11 @@ post-stream index table selects entries from the `IMG00` DAC. Project Eon
 decodes this pair in memory and retains the remaining resource-table bytes as
 opaque rather than inventing UI or state meaning. Exact offsets, sizes and
 pixel hashes are in [the GX canvas evidence](generated/millennium-dos-gx-canvas.md).
-The SDL runtime reaches this resource only after the independently verified
-`TITLES.EXE` non-blocking console-poll boundary has handed control back to
-`MILL.COM`, which selects `2200ad.exe`. It preserves the resource as a canvas
-and does not assign synthetic gameplay or interface meaning to its pixels.
-
-At that identical verified boundary, SDL also opens `2200SAVE.I` through
-`MillenniumDosSaveSession`. Its panel shows the archive-verified SHA-256,
-fixed version word, and a paged listing of all 38 recovered four-word state
-records under their literal `+00`, `+04`, `+06`, and `+08` positions. The
-session is a private in-memory byte copy with no setters, save/export command,
-or inferred state names; navigating the panel never mutates original media.
+GX and `2200SAVE.I` are inspection-only preservation evidence. The verified
+`TITLES.EXE` poll establishes neither a process exit nor a DOS return to
+`MILL.COM`, let alone `2200ad.exe` startup, GX selection, or save-state
+initialization. The SDL launcher therefore keeps the original P00 title frame
+at this boundary and neither draws the GX canvas nor opens a save panel.
 
 `TITLE.LIB` entry `P00` is the first genuine title image: extent `$000006` to
 `$002941`, 10,555 bytes. Its codec-2 record declares 320×200 indexed pixels,
