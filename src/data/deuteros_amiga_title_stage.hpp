@@ -181,6 +181,21 @@ struct DeuterosAmigaTitleTransitionPrefix {
     std::uint16_t graphics_word_count = 0;
 };
 
+// The complete local conditional branch immediately before $4069a. Counter
+// reset is conditional on the original transition returning, so the evaluator
+// reports that fact but never mutates caller state.
+struct DeuterosAmigaTitleTimerGate {
+    std::uint32_t entry_address = 0;
+    std::uint32_t elapsed_counter_address = 0;
+    std::uint32_t elapsed_threshold = 0;
+    std::uint32_t inhibit_word_address = 0;
+    std::uint16_t inhibit_word_value = 0;
+    std::uint32_t skipped_target_address = 0;
+    std::uint32_t transition_address = 0;
+    bool dispatches_transition = false;
+    bool counter_reset_after_transition_return = false;
+};
+
 // Reads profile-one instructions directly from the original ADF and validates
 // the known mode branch, recurring main-loop cadence, timed display
 // transition, and following raw control-state loop.
@@ -194,5 +209,13 @@ struct DeuterosAmigaTitleTransitionPrefix {
 execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint16_t input_display_word);
+
+// Evaluates just the original unsigned threshold/inhibit branch. It does not
+// update the original counter or call $4069a; that call has an unresolved
+// graphics-library boundary.
+[[nodiscard]] DeuterosAmigaTitleTimerGate
+evaluate_deuteros_amiga_title_timer_gate(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::uint32_t elapsed_counter, std::uint16_t inhibit_word);
 
 } // namespace eon
