@@ -194,7 +194,9 @@ logical translation (its final RGBA frame is separately hash-locked). The
 Spanish `2200AD4.BIN` celestial display table starts at its observed `$03db`
 offset and is exposed byte-for-byte, including `Tierra ` and `Asteroides `.
 `--verify-data millennium` reports these FAT12-derived facts without copying
-or unpacking the disk. `MILL.BAT` is only an original instruction file; the
+or unpacking the disk. The live original `MILL.BAT` is preserved as
+read-only launcher documentation (the `IBM`, `IBM e`, `IBM m`, `TANDY`, and
+`EGA320` choices); it does not establish gameplay controls. The
 Spanish `IBM.COM` separately provides a hash-verified static request chain for
 its own `TITLES.EXE` followed by `2200AD.EXE`. DOS call results, return values
 and both target ABIs remain unexecuted, so Project Eon does not infer a

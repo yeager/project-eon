@@ -488,9 +488,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         const auto* title_entry = disk.find("TITLE.LIB");
         const auto* static_entry = disk.find("2200AD4.BIN");
         const auto* ibm_entry = disk.find("IBM.COM");
+        const auto* manual_entry = disk.find("MILL.BAT");
         const auto* titles_entry = disk.find("TITLES.EXE");
         const auto* game_entry = disk.find("2200AD.EXE");
-        if (!title_entry || !static_entry || !ibm_entry || !titles_entry || !game_entry) {
+        if (!title_entry || !static_entry || !ibm_entry || !manual_entry || !titles_entry || !game_entry) {
             throw std::runtime_error("Verified Spanish Millennium media missing title data");
         }
         const eon::MillenniumDosLib title_lib(disk.read(*title_entry));
@@ -500,12 +501,16 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
         const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
         const auto game_data = eon::parse_millennium_dos_game_data(disk.read(*static_entry));
+        const auto launch_manual = eon::parse_millennium_dos_spanish_launch_manual(
+            disk.read(*manual_entry));
         std::cout << "          Spanish FAT12: " << disk.root_entries().size()
             << " root files; TITLE.LIB P00 " << bitmap.width << 'x' << bitmap.height
             << ", RGB6 DAC entries 256, logical translation "
             << palette.logical_to_dac.size() << '\n';
         std::cout << "          Spanish 2200AD4.BIN: " << game_data.celestial_labels.size()
             << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
+        std::cout << "          Spanish MILL.BAT: " << launch_manual.original_text.size()
+            << " original launcher-documentation bytes (SHA-256 " << launch_manual.sha256 << ")\n";
         const auto ibm_handoff = eon::parse_millennium_dos_spanish_ibm_handoff_evidence(
             disk.read(*ibm_entry), disk.read(*titles_entry), disk.read(*game_entry));
         std::cout << "          Spanish IBM.COM handoff: caller 0x" << std::hex
