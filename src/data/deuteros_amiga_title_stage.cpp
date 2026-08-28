@@ -996,4 +996,39 @@ DeuterosAmigaSecondTitleExitReturnTail evaluate_deuteros_amiga_second_title_exit
         0x12ff8, 0x12ffc, 4, 0x12800};
 }
 
+DeuterosAmigaThirdTitleExitReturnTail evaluate_deuteros_amiga_third_title_exit_return_tail(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const bool preceding_calls_returned) {
+    if (!preceding_calls_returned) {
+        throw std::runtime_error("Deuteros third title exit calls did not return");
+    }
+    constexpr std::uint32_t entry_address = 0x38076;
+    constexpr std::string_view title_stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::array<std::uint8_t, 28> return_tail_bytes{{
+        0x20, 0x39, 0x00, 0x02, 0x06, 0xa0,
+        0x23, 0xc0, 0x00, 0x01, 0x2f, 0xf8,
+        0x23, 0xfc, 0x00, 0x00, 0x00, 0x03, 0x00, 0x01, 0x2f, 0xfc,
+        0x4e, 0xf9, 0x00, 0x01, 0x28, 0x00,
+    }};
+    constexpr std::string_view return_tail_hash =
+        "25c2f6bf241a863d0b16359553dfae9a82953dfbc25035db71634a0b369df217";
+    const auto& stage = plan.title_stage;
+    if (stage.length == 0 || entry_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || return_tail_bytes.size() > stage.length - (entry_address - stage.destination)) {
+        throw std::runtime_error("Deuteros third title exit return tail lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto return_tail = stage_bytes.subspan(
+        entry_address - stage.destination, return_tail_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != title_stage_hash
+        || !std::equal(return_tail_bytes.begin(), return_tail_bytes.end(), return_tail.begin())
+        || to_hex(sha256(return_tail)) != return_tail_hash) {
+        throw std::runtime_error("Unsupported Deuteros third title exit return tail");
+    }
+    return {entry_address, {0x3880a, 0x204fa, 0x37efa, 0x37f9a}, 0x206a0,
+        0x12ff8, 0x12ffc, 3, 0x12800};
+}
+
 } // namespace eon

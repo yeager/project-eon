@@ -1154,6 +1154,17 @@ literal profile-four value at `$12ffc`, and `JMP $12800`. The evaluator does
 not invoke any predecessor, read controller data, manufacture a return, or
 execute the jump.
 
+The third exit has its own 48-byte predecessor chain at `$38062..$38091`
+(ADF `+$93062`, SHA-256
+`e3b5d4b2448f33178f748a9a235c270c45e2c83e2b0ba9f4bd8e41ab3ee2fb80`). Its
+four calls are `$3880a`, `$204fa`, `$37efa`, and `$37f9a`; their return is
+again an explicit caller-provided boundary. Only then does the evaluator
+inspect the distinct 28-byte tail `$38076..$38091` (ADF `+$93076`, SHA-256
+`25c2f6bf241a863d0b16359553dfae9a82953dfbc25035db71634a0b369df217`). It
+records the same raw controller source/destination operands, literal profile
+three at `$12ffc`, and `JMP $12800`, without executing calls, reading the
+controller longword, or taking the jump.
+
 `$12800` resets the original stack/Exec state and jumps to bootstrap dispatcher
 `$12a4e`. The original six-entry table at `$12a36` resolves profiles 3 and 4
 directly to `$12b1c`; profile 2 selects `$12b44`, whose sole instruction is

@@ -2740,6 +2740,29 @@ int main() {
         }
         assert(rejected);
     }
+    // Third profile tail: the preceding four original calls are still an ABI
+    // boundary, while the verified return continuation is distinct from the
+    // profile-four exit above.
+    const auto third_title_exit_return_tail =
+        eon::evaluate_deuteros_amiga_third_title_exit_return_tail(system_disk, load_plan, true);
+    assert(third_title_exit_return_tail.entry_address == 0x38076);
+    assert((third_title_exit_return_tail.preceding_helper_addresses
+        == std::array<std::uint32_t, 4>{{0x3880a, 0x204fa, 0x37efa, 0x37f9a}}));
+    assert(third_title_exit_return_tail.controller_source_address == 0x206a0);
+    assert(third_title_exit_return_tail.controller_destination_address == 0x12ff8);
+    assert(third_title_exit_return_tail.bootstrap_profile_address == 0x12ffc);
+    assert(third_title_exit_return_tail.bootstrap_profile_value == 3);
+    assert(third_title_exit_return_tail.jump_target_address == 0x12800);
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_deuteros_amiga_third_title_exit_return_tail(
+                system_disk, load_plan, false));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x9b69a] ^= 0x01;

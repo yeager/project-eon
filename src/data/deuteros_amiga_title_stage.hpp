@@ -290,6 +290,20 @@ struct DeuterosAmigaSecondTitleExitReturnTail {
     std::uint32_t jump_target_address = 0;
 };
 
+// The third known title exit has a distinct, independently hash-locked tail.
+// Its four original predecessors remain caller-supplied return boundaries;
+// this type reports only the following instruction operands and final jump
+// target without reading/writing original runtime memory.
+struct DeuterosAmigaThirdTitleExitReturnTail {
+    std::uint32_t entry_address = 0;
+    std::array<std::uint32_t, 4> preceding_helper_addresses{};
+    std::uint32_t controller_source_address = 0;
+    std::uint32_t controller_destination_address = 0;
+    std::uint32_t bootstrap_profile_address = 0;
+    std::uint32_t bootstrap_profile_value = 0;
+    std::uint32_t jump_target_address = 0;
+};
+
 // Reads profile-one instructions directly from the original ADF and validates
 // the known mode branch, recurring main-loop cadence, timed display
 // transition, and following raw control-state loop.
@@ -357,6 +371,13 @@ evaluate_deuteros_amiga_first_title_exit_return_tail(
 // or substituted runtime state.
 [[nodiscard]] DeuterosAmigaSecondTitleExitReturnTail
 evaluate_deuteros_amiga_second_title_exit_return_tail(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    bool preceding_calls_returned);
+
+// `preceding_calls_returned` covers the four calls directly before $38076;
+// it is an explicit observation, never a fabricated title-stage result.
+[[nodiscard]] DeuterosAmigaThirdTitleExitReturnTail
+evaluate_deuteros_amiga_third_title_exit_return_tail(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     bool preceding_calls_returned);
 
