@@ -213,6 +213,18 @@ struct DeuterosAmigaTitleZeroResponseLoop {
     std::uint32_t return_loop_address = 0;
 };
 
+// The title entry's local profile-one prefix. A1's controller value is an
+// explicit ABI boundary and is never materialized here.
+struct DeuterosAmigaTitleEntryPrefix {
+    std::uint16_t incoming_profile = 0;
+    std::uint32_t controller_transfer_address = 0;
+    std::uint32_t mode_word_address = 0;
+    std::uint16_t mode_word_value = 0;
+    std::uint32_t normal_mode_byte_address = 0;
+    std::uint8_t normal_mode_byte_value = 0;
+    std::uint32_t stop_before_exec_address = 0;
+};
+
 // Reads profile-one instructions directly from the original ADF and validates
 // the known mode branch, recurring main-loop cadence, timed display
 // transition, and following raw control-state loop.
@@ -242,5 +254,12 @@ evaluate_deuteros_amiga_title_timer_gate(
 evaluate_deuteros_amiga_title_zero_response_loop(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::span<const std::uint8_t> helper_response_low_bytes);
+
+// Validates the bootstrap D0=1 route and returns only its local title-entry
+// writes. Other profiles and the controller pointer are rejected/bounded.
+[[nodiscard]] DeuterosAmigaTitleEntryPrefix
+execute_deuteros_amiga_title_entry_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::uint16_t incoming_profile);
 
 } // namespace eon

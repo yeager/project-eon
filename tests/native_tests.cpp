@@ -2832,6 +2832,38 @@ int main() {
     assert(live_title_stage->stage().entry_address == 0x40426);
     assert(live_title_stage->original_sha256()
         == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
+    const auto& live_title_entry = live_input_opening.title_entry_prefix();
+    assert(live_title_entry);
+    assert(live_title_entry->incoming_profile == 1);
+    assert(live_title_entry->controller_transfer_address == 0x206a0);
+    assert(live_title_entry->mode_word_address == 0x4040e);
+    assert(live_title_entry->mode_word_value == 1);
+    assert(live_title_entry->normal_mode_byte_address == 0x19d52);
+    assert(live_title_entry->normal_mode_byte_value == 1);
+    assert(live_title_entry->stop_before_exec_address == 0x40450);
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::execute_deuteros_amiga_title_entry_prefix(
+                system_disk, load_plan, 2));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_entry_disk = *amiga_disk1;
+        altered_title_entry_disk[0x2f0e] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_entry_disk));
+            static_cast<void>(eon::execute_deuteros_amiga_title_entry_prefix(
+                altered_disk, load_plan, 1));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(live_input_opening.title_handed_off());
     assert(live_input_opening.ticks() == 82);
     assert(live_input_opening.vblank_counter() == 82 * 4);
