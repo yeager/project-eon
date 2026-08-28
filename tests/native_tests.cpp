@@ -3265,6 +3265,37 @@ int main() {
         rejected_altered_channel_request_following_service = true;
     }
     assert(rejected_altered_channel_request_following_service);
+    const auto channel_request_adjacent_entry = eon::parse_deuteros_amiga_channel_request_adjacent_entry(
+        system_disk, load_plan, channel_request_following_service);
+    assert(channel_request_adjacent_entry.entry_address == 0x22b8a);
+    assert(channel_request_adjacent_entry.tested_byte_address == 0x22a30);
+    assert(channel_request_adjacent_entry.zero_branch_address == 0x22b90);
+    assert(channel_request_adjacent_entry.zero_branch_target == 0x22b94);
+    assert(channel_request_adjacent_entry.early_return_address == 0x22b92);
+    assert(channel_request_adjacent_entry.multiply_immediate == 0x000e);
+    assert(channel_request_adjacent_entry.pointer_cell_address == 0x22aa6);
+    assert(channel_request_adjacent_entry.negative_branch_address == 0x22ba2);
+    assert(channel_request_adjacent_entry.negative_branch_target == 0x22ba8);
+    assert(channel_request_adjacent_entry.descriptor_base_address == 0x22a6e);
+    assert(channel_request_adjacent_entry.copy_field_offset == 0x000a);
+    assert(channel_request_adjacent_entry.descriptor_stride == 0x000e);
+    assert(channel_request_adjacent_entry.final_return_address == 0x22be8);
+    assert(channel_request_adjacent_entry.raw_sha256
+        == "10ed8be15c107dbb56ca98eb8d17ffd2bce3910dd169d67ba058447c9031b1ff");
+    auto altered_channel_request_adjacent_entry_system_adf = *amiga_disk1;
+    altered_channel_request_adjacent_entry_system_adf[0x838a] ^= 0x01;
+    bool rejected_altered_channel_request_adjacent_entry = false;
+    try {
+        const eon::AmigaAdf altered_disk(altered_channel_request_adjacent_entry_system_adf);
+        const auto altered_plan = eon::parse_deuteros_amiga_load_plan(altered_disk);
+        const auto altered_continuation = eon::parse_deuteros_amiga_channel_request_continuation(
+            altered_disk, altered_plan);
+        const auto altered_service = eon::parse_deuteros_amiga_channel_request_following_service(
+            altered_disk, altered_plan, altered_continuation);
+        static_cast<void>(eon::parse_deuteros_amiga_channel_request_adjacent_entry(
+            altered_disk, altered_plan, altered_service));
+    } catch (const std::runtime_error&) { rejected_altered_channel_request_adjacent_entry = true; }
+    assert(rejected_altered_channel_request_adjacent_entry);
 
     const auto first_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[0]);

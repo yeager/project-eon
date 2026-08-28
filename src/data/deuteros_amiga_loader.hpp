@@ -247,6 +247,29 @@ struct DeuterosAmigaChannelRequestFollowingService {
     std::string raw_sha256;
 };
 
+// Adjacent caller-state-dependent entry after the following service's RTS.
+// Its pointer reads and conditional copies are raw encodings only.
+struct DeuterosAmigaChannelRequestAdjacentEntry {
+    std::uint32_t entry_address = 0;
+    std::uint32_t tested_byte_address = 0;
+    std::uint32_t zero_branch_address = 0;
+    std::uint32_t zero_branch_target = 0;
+    std::uint32_t early_return_address = 0;
+    std::uint16_t multiply_immediate = 0;
+    std::uint32_t pointer_cell_address = 0;
+    std::uint32_t negative_branch_address = 0;
+    std::uint32_t negative_branch_target = 0;
+    std::uint32_t descriptor_base_address = 0;
+    std::uint16_t copy_field_offset = 0;
+    std::uint16_t descriptor_stride = 0;
+    std::array<std::uint32_t, 4> shift_addresses{};
+    std::array<std::uint32_t, 4> carry_clear_branch_addresses{};
+    std::array<std::uint32_t, 4> carry_clear_branch_targets{};
+    std::array<std::uint32_t, 4> copy_instruction_addresses{};
+    std::uint32_t final_return_address = 0;
+    std::string raw_sha256;
+};
+
 // A read-only representation of one completed pass through the main stage's
 // resource loader at $21932. `payload` is copied only into this host-memory
 // value: neither the supplied ADF nor the user's data directory is modified.
@@ -304,6 +327,11 @@ parse_deuteros_amiga_channel_request_second_callee(
 parse_deuteros_amiga_channel_request_following_service(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const DeuterosAmigaChannelRequestContinuation& continuation);
+
+[[nodiscard]] DeuterosAmigaChannelRequestAdjacentEntry
+parse_deuteros_amiga_channel_request_adjacent_entry(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaChannelRequestFollowingService& service);
 
 // Models one exact, successful loader pass in memory. A zero probe is the
 // original retry path, so it returns std::nullopt instead of inventing a
