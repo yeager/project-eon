@@ -1771,6 +1771,11 @@ int main(int argc, char** argv) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
                 else running = false;
             }
+            if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
+                && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
+                if (screen == Screen::launching && !request.game) screen = Screen::menu;
+                else running = false;
+            }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat
                 && !(screen == Screen::launching && selected == eon::Game::millennium
                     && millennium_title_session && millennium_title_session->handed_off())) {
@@ -1817,6 +1822,15 @@ int main(int argc, char** argv) {
                 if (event.type == SDL_EVENT_KEY_DOWN) deuteros_input_pressed = true;
                 if (event.type == SDL_EVENT_KEY_UP) deuteros_input_pressed = false;
             }
+            if ((event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
+                    || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP)
+                && screen == Screen::launching && selected == eon::Game::deuteros
+                && event.gbutton.button == SDL_GAMEPAD_BUTTON_SOUTH) {
+                // The sole gamepad route into the recovered Amiga opening is
+                // the same physical held signal as Space/Enter. It does not
+                // manufacture a title or gameplay action.
+                deuteros_input_pressed = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+            }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) {
                 show_scanner = !show_scanner;
@@ -1841,6 +1855,39 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
+                    const auto game = cards[static_cast<std::size_t>(focused)].game;
+                    if (eon::release_available(releases, game, active_platform)) {
+                        selected = game;
+                        screen = Screen::launching;
+                        if (selected == eon::Game::millennium) start_millennium_title();
+                        if (selected == eon::Game::deuteros) start_deuteros();
+                    }
+                }
+            }
+            if (screen == Screen::menu && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+                const auto button = event.gbutton.button;
+                if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
+                    || button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+                    focused = 1 - focused;
+                }
+                if (!request.platform && (button == SDL_GAMEPAD_BUTTON_DPAD_UP
+                    || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN)) {
+                    const auto game = cards[static_cast<std::size_t>(focused)].game;
+                    const auto platforms = menu_platforms_for(game);
+                    if (!platforms.empty()) {
+                        const auto current = std::find(platforms.begin(), platforms.end(), active_platform);
+                        const auto index = current == platforms.end()
+                            ? 0U : static_cast<unsigned>(std::distance(platforms.begin(), current));
+                        const auto next = button == SDL_GAMEPAD_BUTTON_DPAD_UP
+                            ? (index + platforms.size() - 1U) % platforms.size()
+                            : (index + 1U) % platforms.size();
+                        if (!active_platform || *active_platform != platforms[next]) {
+                            active_platform = platforms[next];
+                            discard_millennium_assets();
+                        }
+                    }
+                }
+                if (button == SDL_GAMEPAD_BUTTON_SOUTH || button == SDL_GAMEPAD_BUTTON_START) {
                     const auto game = cards[static_cast<std::size_t>(focused)].game;
                     if (eon::release_available(releases, game, active_platform)) {
                         selected = game;
