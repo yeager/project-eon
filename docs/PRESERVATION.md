@@ -436,6 +436,13 @@ linearly to ADF `+$16998`, is 100 bytes, and hashes to
 six supplied Amiga variants. Its parser reports only the external `JMP $7bcf8`
 at `$685ee` and the separately encoded `RTS` at `$685fc`; runtime-dependent
 cells, conditional outcomes, and the external jump are not executed or named.
+The local alternate terminal tail is separately locked at `$685f4..$685fd`
+(ADF `+$169f4`): its ten original bytes are `06 42 28 00 06 43 28 00 4e 75`
+with SHA-256 `5b120eaef941ac336d22e4f76adaeefd8c1d6795d105685f048074edd49c3a6c`.
+`MillenniumAmigaResidentNegativeD3Terminal` records the two encoded `$2800`
+immediates at `$685f4` and `$685f8` and the `RTS` at `$685fc`. It neither
+evaluates the two predecessor predicates nor assigns runtime meaning to their
+register effects.
 
 At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
 $68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control

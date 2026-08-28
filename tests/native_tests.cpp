@@ -413,6 +413,13 @@ int main() {
     assert(defjam_negative_d3.external_jump_address == 0x685ee);
     assert(defjam_negative_d3.external_jump_target == 0x7bcf8);
     assert(defjam_negative_d3.return_address == 0x685fc);
+    const auto defjam_negative_d3_terminal = eon::parse_millennium_amiga_resident_negative_d3_terminal(
+        defjam_loader_disk, defjam_plan, defjam_negative_d3);
+    assert(defjam_negative_d3_terminal.entry_address == 0x685f4);
+    assert(defjam_negative_d3_terminal.first_add_immediate == 0x2800);
+    assert(defjam_negative_d3_terminal.second_add_address == 0x685f8);
+    assert(defjam_negative_d3_terminal.second_add_immediate == 0x2800);
+    assert(defjam_negative_d3_terminal.return_address == 0x685fc);
     const auto defjam_independent_zero_target =
         eon::parse_millennium_amiga_resident_independent_zero_target_boundary(
             defjam_loader_disk, defjam_plan, defjam_independent_entry);

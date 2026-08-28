@@ -229,6 +229,17 @@ struct MillenniumAmigaResidentNegativeD3Continuation {
     std::uint32_t return_address = 0;
 };
 
+// The two branch-only tail instructions of the negative-D3 continuation.
+// This records their encoded immediate words and terminal RTS, not their
+// runtime predicates or register effects.
+struct MillenniumAmigaResidentNegativeD3Terminal {
+    std::uint32_t entry_address = 0;
+    std::uint16_t first_add_immediate = 0;
+    std::uint32_t second_add_address = 0;
+    std::uint16_t second_add_immediate = 0;
+    std::uint32_t return_address = 0;
+};
+
 struct MillenniumAmigaResidentIndependentZeroTargetBoundary {
     std::uint32_t entry_address = 0;
     std::uint16_t compare_immediate = 0;
@@ -423,6 +434,12 @@ parse_millennium_amiga_resident_independent_entry_gate(
 parse_millennium_amiga_resident_negative_d3_continuation(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentIndependentEntryGate& gate);
+// Validates the local terminal tail reachable only through unresolved
+// negative-D3 continuation predicates. It does not select or execute a path.
+[[nodiscard]] MillenniumAmigaResidentNegativeD3Terminal
+parse_millennium_amiga_resident_negative_d3_terminal(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentNegativeD3Continuation& continuation);
 
 // Validates only the first compare/conditional-branch pair at the independent
 // entry's fixed-flag-zero target. It does not interpret the comparison.
