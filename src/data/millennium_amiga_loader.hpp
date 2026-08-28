@@ -29,8 +29,8 @@ struct MillenniumAmigaLoadPlan {
     std::uint32_t loader_magic = 0;
 };
 
-// Several supplied Amiga variants differ in their bootstrap and transformed
-// first stage but share this literal resident raw range. It is independently
+// Several supplied Amiga variants differ in their bootstrap and opaque
+// first-stage raw representation but share this literal resident raw range. It is independently
 // hash-validated so callers can preserve common evidence without treating a
 // Defjam-specific load plan as proof for another release.
 struct MillenniumAmigaSharedResidentLayout {
@@ -42,8 +42,8 @@ struct MillenniumAmigaSharedResidentLayout {
 
 // The resident range begins with a small 68000 entry gate.  It calls into the
 // first loaded RAM stage and commits its returned word to a fixed location.
-// This describes only the literal gate; the called stage is transformed by
-// the preceding loader and is intentionally not guessed from raw disk bytes.
+// This describes only the literal gate; the mapping from the preceding raw
+// stage invocation is unknown and intentionally not guessed from disk bytes.
 struct MillenniumAmigaResidentEntry {
     std::uint32_t entry_address = 0;
     std::uint32_t initializer_address = 0;
@@ -343,13 +343,13 @@ parse_millennium_amiga_shared_resident_layout(std::span<const std::uint8_t> imag
 
 // Decode the exact first resident instructions after the verified raw-loader
 // handoff. This is a read-only control-flow profile, not a decoder for the
-// transformed first-stage RAM image.
+// opaque first-stage RAM representation.
 [[nodiscard]] MillenniumAmigaResidentEntry parse_millennium_amiga_resident_entry(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
 
 // Validates the next, independent resident subroutine after the entry gate.
 // It is a read-only byte profile of the supplied raw ADF; no transformed first
-// stage, disk extraction, or 68000 execution is involved.
+// stage mapping, disk extraction, or 68000 execution is involved.
 [[nodiscard]] MillenniumAmigaResidentWordSplitter parse_millennium_amiga_resident_word_splitter(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
 
