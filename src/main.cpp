@@ -249,6 +249,23 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << main_entry.channel_request_loop_test_address << " and nonzero branch 0x"
         << main_entry.channel_request_loop_branch_address << " -> 0x"
         << main_entry.channel_request_continuation_address << std::dec << '\n';
+    const auto channel_request_continuation =
+        eon::parse_deuteros_amiga_channel_request_continuation(disk, plan);
+    std::cout << "          Channel-request static continuation: ADF 0x" << std::hex
+        << plan.main_stage.disk_offset + channel_request_continuation.entry_address
+            - plan.main_stage.destination
+        << ", entry 0x" << channel_request_continuation.entry_address
+        << "; BSR 0x" << channel_request_continuation.local_call_addresses[0] << " -> 0x"
+        << channel_request_continuation.local_call_targets[0] << ", 0x"
+        << channel_request_continuation.local_call_addresses[1] << " -> 0x"
+        << channel_request_continuation.local_call_targets[1] << "; bit " << std::dec
+        << static_cast<unsigned>(channel_request_continuation.input_test_bit) << " loop 0x"
+        << std::hex << channel_request_continuation.input_zero_branch_address << " -> 0x"
+        << channel_request_continuation.input_zero_branch_target << "; final 0x"
+        << channel_request_continuation.final_branch_address << " -> 0x"
+        << channel_request_continuation.final_branch_target << std::dec << "; SHA-256 "
+        << channel_request_continuation.raw_sha256
+        << " (static only; no condition, call, or input-port execution)\n";
     const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);

@@ -121,6 +121,11 @@ def main() -> int:
             ("millennium", "atari-st"): (
                 "bounded launcher bootstrap: target 0x77000, Fopen boundary MILL22A.inf"
             ),
+            ("deuteros", "amiga"): (
+                "Channel-request static continuation: ADF 0x7092, entry 0x21892; BSR 0x2189a -> 0x2229c, "
+                "0x2189e -> 0x224a2; bit 6 loop 0x218c6 -> 0x218be; final 0x218c8 -> 0x217f6; SHA-256 "
+                "120fba90e0b4fa9e96d8a6cf95fbac512d67d7daa42c3776ce0d3066b3f02ee9"
+            ),
             ("deuteros", "atari-st"): (
                 "bounded launcher bootstrap: first/second raw stages SHA-256 "
                 "dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168/"
