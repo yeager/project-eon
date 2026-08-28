@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <vector>
 
 namespace eon {
 
@@ -213,6 +214,19 @@ struct MillenniumDosEighthFunctionKeyTrace {
     std::uint16_t repeat_shift_register = 0;
 };
 
+// A hash-locked evaluation of F8's small loop after the original preflight
+// routine has returned. The $09fa helper remains an ABI boundary, so callers
+// must provide its observed BL returns explicitly. This never calls native
+// code, writes executable/save media, or invents preflight state.
+struct MillenniumDosEighthFunctionKeyRepeatLoop {
+    std::uint16_t call_address = 0;
+    std::uint16_t helper_address = 0;
+    std::uint16_t shift_address = 0;
+    std::uint16_t return_address = 0;
+    std::vector<std::uint8_t> shifted_bl_values;
+    std::uint8_t final_bl = 0;
+};
+
 // Exact, non-semantic trace of table record eight (raw F9 / $43). Its native
 // handler has the established $a19e admission gate, clears two native bytes,
 // selects the observed local mode, and can cycle through the F8 preflight
@@ -337,6 +351,11 @@ struct MillenniumDosGameFlow {
 
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
     std::span<const std::uint8_t> game_executable);
+
+[[nodiscard]] MillenniumDosEighthFunctionKeyRepeatLoop
+evaluate_millennium_dos_eighth_function_key_repeat_loop(
+    std::span<const std::uint8_t> game_executable,
+    std::span<const std::uint8_t> helper_return_bl_values);
 
 // Projects the verified, finite sequence of original BIOS palette-register
 // requests into the SDL-facing adapter payload. Callers must still establish

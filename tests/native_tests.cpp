@@ -1245,6 +1245,31 @@ int main() {
     assert(game_flow.eighth_function_key.depleted_jump_address == 0x7948);
     assert(game_flow.eighth_function_key.repeated_call_address == 0x09fa);
     assert(game_flow.eighth_function_key.repeat_shift_register == 3);
+    const std::array<std::uint8_t, 1> f8_single_return{{0x04}};
+    const auto f8_single_loop = eon::evaluate_millennium_dos_eighth_function_key_repeat_loop(
+        *game_executable, f8_single_return);
+    assert(f8_single_loop.call_address == 0x7312);
+    assert(f8_single_loop.helper_address == 0x09fa);
+    assert(f8_single_loop.shift_address == 0x7315);
+    assert(f8_single_loop.return_address == 0x7319);
+    assert((f8_single_loop.shifted_bl_values == std::vector<std::uint8_t>{0x02}));
+    assert(f8_single_loop.final_bl == 0x02);
+    const std::array<std::uint8_t, 2> f8_repeated_returns{{0x01, 0x00}};
+    const auto f8_repeated_loop = eon::evaluate_millennium_dos_eighth_function_key_repeat_loop(
+        *game_executable, f8_repeated_returns);
+    assert((f8_repeated_loop.shifted_bl_values == std::vector<std::uint8_t>{0x00, 0x00}));
+    {
+        auto altered_f8_loop = *game_executable;
+        altered_f8_loop[0x7312 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_eighth_function_key_repeat_loop(
+                altered_f8_loop, f8_single_return));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(game_session.observe_action(0x42) == std::optional<std::size_t>{7});
     assert(game_session.last_eighth_function_key_trace());
     assert(game_session.last_eighth_function_key_trace()->handler_address == 0x7306);
