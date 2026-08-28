@@ -68,11 +68,9 @@ struct PreviewAnimation {
     std::vector<std::vector<std::uint8_t>> rgba_frames;
 };
 
-// These three data products are deliberately kept together: the title image,
-// title executable hand-off, and GX canvas all come from the same verified
-// English DOS archive.  The canvas becomes visible only after the executable's
-// recovered console-poll hand-off; this is a presentation boundary, not a
-// claim that IMG01 names or implements the full game UI.
+// These data products come from the same verified English DOS archive. The
+// title is launchable; GX remains read-only inspection evidence because the
+// console poll proves neither the DOS return nor 2200AD startup.
 struct MillenniumDosLaunchAssets {
     PreviewAnimation title;
     std::string language;
@@ -134,8 +132,10 @@ bool inside(const SDL_FRect& rectangle, float x, float y) {
 }
 
 SDL_Texture* load_card(SDL_Renderer* renderer, const char* filename) {
-    const std::array<std::filesystem::path, 3> candidates{{
-        std::filesystem::path(SDL_GetBasePath()) / "assets" / "cards" / filename,
+    const auto base = std::filesystem::path(SDL_GetBasePath());
+    const std::array<std::filesystem::path, 4> candidates{{
+        base / "assets" / "cards" / filename,
+        base / "Resources" / "assets" / "cards" / filename,
         std::filesystem::path(EON_ASSET_DIR) / "cards" / filename,
         std::filesystem::path("assets") / "cards" / filename,
     }};
@@ -724,7 +724,7 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     std::cout << "          bounded launcher bootstrap: resident entry 0x" << std::hex
         << live_bootstrap.resident_entry().entry_address << ", raw resident SHA-256 "
         << live_bootstrap.shared_resident().raw_sha256 << std::dec
-        << " (no transformed-stage call)\n";
+        << " (no opaque raw-stage invocation)\n";
     const auto resident = eon::parse_millennium_amiga_resident_entry(disk, plan);
     const auto splitter = eon::parse_millennium_amiga_resident_word_splitter(disk, plan);
     const auto helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
@@ -2060,8 +2060,10 @@ int main(int argc, char** argv) {
                 SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(focused) ? 255 : 130,
                     index == static_cast<std::size_t>(focused) ? 195 : 150, 80, 255);
                 SDL_RenderRect(renderer, &card.bounds);
-                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, tr(card.title));
-                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, tr(card.subtitle));
+                // Official game titles are immutable product identifiers, not
+                // launcher prose; all surrounding UI remains translated.
+                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, card.title);
+                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, card.subtitle);
                 const auto available = eon::release_available(releases, card.game, std::nullopt);
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
                     available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
@@ -2335,7 +2337,8 @@ int main(int argc, char** argv) {
                     handoff << std::hex << *deuteros_title_resource;
                     draw_text(renderer, 64, 268, tr("ORIGINAL TITLE HANDOFF: RESOURCE 0x")
                         + handoff.str()
-                        + " -> STAGE ENTRY 0x40426 (REIMPLEMENTATION IN PROGRESS)");
+                        + "; "
+                        + tr("TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"));
                 }
                 const auto& title_stage = deuteros_opening->title_stage_session();
                 if (title_stage) {

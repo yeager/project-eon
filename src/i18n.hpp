@@ -24,8 +24,8 @@ private:
     std::unordered_map<std::string, std::string> messages_;
 };
 
-// Turns BCP-47/POSIX spellings such as sv_SE.UTF-8 into the PO filename stem
-// "sv". An unsupported or empty locale falls back to English source text.
+// Turns BCP-47/POSIX spellings such as en-GB.UTF-8 into the PO filename stem
+// "en_GB", retaining a supplied regional catalog before generic fallback.
 [[nodiscard]] std::string normalize_language(std::string_view language);
 [[nodiscard]] std::string language_from_environment();
 

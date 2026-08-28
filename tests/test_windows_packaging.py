@@ -21,6 +21,10 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertNotIn('DestDir: "{app}\\data', source)
         self.assertNotIn('Source: "{#StagingDir}\\data', source)
 
+    def test_installer_stages_libpng_for_sdl_image(self) -> None:
+        source = INSTALLER.read_text(encoding="utf-8")
+        self.assertIn('Source: "{#StagingDir}\\libpng*.dll"', source)
+
 
 if __name__ == "__main__":
     unittest.main()
