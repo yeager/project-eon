@@ -50,6 +50,10 @@ struct DeuterosAmigaVmEvents {
     // Expose the exact stored value to the session layer; it is not a decoded
     // gameplay label or a request to fabricate a replacement resource.
     std::vector<std::uint32_t> alternate_resources;
+    // The opening session marks only the verified $0f,$00000b38 resource as
+    // its terminal bootstrap handoff. The raw channel VM itself intentionally
+    // does not attach a stage meaning to arbitrary $0f operands.
+    bool title_handoff = false;
     bool transition_requested = false;
 };
 

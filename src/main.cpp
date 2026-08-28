@@ -1666,6 +1666,15 @@ int main(int argc, char** argv) {
                     // stage, not given an invented title/menu interpretation.
                     deuteros_title_resource = events.alternate_resources.front();
                 }
+                if (events.title_handoff) {
+                    // The original opening returns to bootstrap here. Drop
+                    // any host-side preview PCM rather than letting it play
+                    // under the unexecuted title stage.
+                    if (deuteros_audio_stream) {
+                        static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
+                    }
+                    deuteros_paula.reset();
+                }
                 deuteros_last_tick += scheduler_period_ms;
                 ++tick_count;
             }

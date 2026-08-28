@@ -26,6 +26,8 @@ public:
     [[nodiscard]] std::optional<std::vector<std::uint8_t>> rgba_frame() const;
     [[nodiscard]] bool frame_composed_on_last_tick() const { return frame_composed_on_last_tick_; }
     [[nodiscard]] std::uint64_t ticks() const { return ticks_; }
+    [[nodiscard]] std::uint32_t vblank_counter() const { return random_.vblank_counter(); }
+    [[nodiscard]] bool title_handed_off() const { return title_handed_off_; }
     [[nodiscard]] const DeuterosAmigaBootstrapProfile& title_handoff_profile() const {
         return load_plan_.title_handoff_profile;
     }
@@ -50,6 +52,7 @@ private:
     std::optional<DeuterosAmigaFrame> last_frame_;
     std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace_;
     std::optional<DeuterosAmigaTitleStageSession> title_stage_session_;
+    bool title_handed_off_ = false;
     bool frame_composed_on_last_tick_ = false;
     std::uint64_t ticks_ = 0;
 };
