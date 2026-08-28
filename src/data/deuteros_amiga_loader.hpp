@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -159,6 +160,32 @@ struct DeuterosAmigaLoadPlan {
     AmigaLoadStage title_stage;
 };
 
+// Static facts from the nonzero arm of the main loop's verified channel-request
+// edge. This never chooses an arm, invokes a service, or simulates its input
+// port; it preserves only byte-addressed control-flow evidence.
+struct DeuterosAmigaChannelRequestContinuation {
+    std::uint32_t entry_address = 0;
+    std::uint32_t first_longword_address = 0;
+    std::uint32_t first_zero_branch_address = 0;
+    std::uint32_t first_zero_branch_target = 0;
+    std::array<std::uint32_t, 2> local_call_addresses{};
+    std::array<std::uint32_t, 2> local_call_targets{};
+    std::uint32_t following_call_address = 0;
+    std::uint32_t following_call_target = 0;
+    std::uint32_t repeated_longword_address = 0;
+    std::uint32_t equal_branch_address = 0;
+    std::uint32_t equal_branch_target = 0;
+    std::uint32_t later_call_address = 0;
+    std::uint32_t later_call_target = 0;
+    std::uint32_t input_test_address = 0;
+    std::uint8_t input_test_bit = 0;
+    std::uint32_t input_zero_branch_address = 0;
+    std::uint32_t input_zero_branch_target = 0;
+    std::uint32_t final_branch_address = 0;
+    std::uint32_t final_branch_target = 0;
+    std::string raw_sha256;
+};
+
 // A read-only representation of one completed pass through the main stage's
 // resource loader at $21932. `payload` is copied only into this host-memory
 // value: neither the supplied ADF nor the user's data directory is modified.
@@ -189,6 +216,12 @@ struct DeuterosAmigaResourceConsumerSample {
 // Decode load constants from the genuine 68000 instructions. Every expected
 // opcode is checked before its immediate value is accepted.
 [[nodiscard]] DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk);
+
+// Hash-validates the raw main-stage continuation reached by the channel-request
+// branch. It reports static bytes only and never executes the recorded calls.
+[[nodiscard]] DeuterosAmigaChannelRequestContinuation
+parse_deuteros_amiga_channel_request_continuation(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Models one exact, successful loader pass in memory. A zero probe is the
 // original retry path, so it returns std::nullopt instead of inventing a

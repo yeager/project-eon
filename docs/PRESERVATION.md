@@ -944,6 +944,18 @@ and `$00`, rather than `$10`. Consequently Project Eon does not synthesize a
 channel state or expose a user input that would request this unproven later
 continuation.
 
+That continuation is separately preserved as raw static evidence. Main stage
+`$21892..$218cb` maps to ADF `+$7092`, is 58 bytes, and hashes to
+`120fba90e0b4fa9e96d8a6cf95fbac512d67d7daa42c3776ce0d3066b3f02ee9` on the
+clean system disk. Its exact control-flow encodings are: zero branch `$21898
+→ $218a2`; two local BSRs `$2189a → $2229c` and `$2189e → $224a2`; JSR
+`$218a2 → $22a5a`; an equality loop `$218b6 → $218ae` after reads from
+`$2079e`; JSR `$218b8 → $208ba`; bit-6 test at `$218be` with zero loop
+`$218c6 → $218be`; and final branch `$218c8 → $217f6`.
+`DeuterosAmigaChannelRequestContinuation` reports these byte-addressed facts
+only. It does not select a condition, invoke a service, simulate the input
+port, or assign names to cells and targets.
+
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
 emits sound `(1,1)` then `(2,2)` and immediately consumes the newly yielded

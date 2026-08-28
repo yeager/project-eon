@@ -1,5 +1,7 @@
 #include "data/deuteros_amiga_loader.hpp"
+#include "data/sha256.hpp"
 
+#include <algorithm>
 #include <span>
 #include <string>
 #include <stdexcept>
@@ -463,6 +465,40 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     const AmigaLoadStage title_stage{title_handoff_profile.disk_offset,
         title_handoff_profile.length, title_handoff_profile.destination, title_entry};
     return {loader, main_stage, main_stage_entry, resource_offsets, title_handoff_profile, title_stage};
+}
+
+DeuterosAmigaChannelRequestContinuation
+parse_deuteros_amiga_channel_request_continuation(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t entry = 0x21892;
+    constexpr std::size_t length = 58;
+    constexpr std::array<std::uint8_t, length> expected{{
+        0x20, 0x39, 0x00, 0x02, 0x12, 0x6a, 0x67, 0x08,
+        0x61, 0x00, 0x0a, 0x00, 0x61, 0x00, 0x0c, 0x02,
+        0x4e, 0xb9, 0x00, 0x02, 0x2a, 0x5a, 0x20, 0x39,
+        0x00, 0x02, 0x07, 0x9e, 0x22, 0x39, 0x00, 0x02,
+        0x07, 0x9e, 0xb0, 0x81, 0x67, 0xf6, 0x4e, 0xb9,
+        0x00, 0x02, 0x08, 0xba, 0x08, 0x39, 0x00, 0x06,
+        0x00, 0xbf, 0xe0, 0x01, 0x67, 0xf6, 0x60, 0x00,
+        0xff, 0x2c,
+    }};
+    const auto& stage = plan.main_stage;
+    if (plan.main_stage_entry.channel_request_continuation_address != entry
+        || entry < stage.destination || entry - stage.destination > stage.length
+        || length > stage.length - (entry - stage.destination)) {
+        throw std::runtime_error("Unexpected Deuteros channel-request continuation placement");
+    }
+    const auto disk_offset = stage.disk_offset + entry - stage.destination;
+    const auto bytes = disk.bytes(disk_offset, length);
+    constexpr auto expected_hash = "120fba90e0b4fa9e96d8a6cf95fbac512d67d7daa42c3776ce0d3066b3f02ee9";
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
+        || to_hex(sha256(bytes)) != expected_hash) {
+        throw std::runtime_error("Unexpected Deuteros channel-request continuation");
+    }
+    return {entry, 0x2126a, 0x21898, 0x218a2,
+        {0x2189a, 0x2189e}, {0x2229c, 0x224a2}, 0x218a2, 0x22a5a,
+        0x2079e, 0x218b6, 0x218ae, 0x218b8, 0x208ba,
+        0x218be, 6, 0x218c6, 0x218be, 0x218c8, 0x217f6, expected_hash};
 }
 
 std::optional<DeuterosAmigaMainResourceTransfer>
