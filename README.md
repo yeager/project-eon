@@ -226,8 +226,8 @@ authentic raw disk ranges (`0x24200`/`0x6e000` to `0x41000`, and
 `0x16400`/`0x2c000` to `0x68000`). Project Eon validates this original 68000
 request sequence directly from the in-place ADF; it does not invent files or
 unpack the ranges. Selecting Millennium Amiga creates this hash-locked bounded
-session and validates its resident entry, but stops before the original
-transformed-stage call rather than inferring an Amiga game loop.
+session and validates its resident entry, but stops before the original opaque
+raw-stage invocation rather than inferring an Amiga game loop.
 
 Deuteros' clean Amiga system and data disks are also opened natively as ADF.
 Geometry, boot identifiers, carry-around checksums and arbitrary sectors are

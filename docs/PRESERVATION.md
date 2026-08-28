@@ -335,7 +335,8 @@ destination `$68000`, SHA-256
 `parse_millennium_amiga_shared_resident_layout` validates that exact range
 directly from each original image—even the shorter Defjam `[u]` image, whose
 complete resident interval remains present. This permits platform evidence to
-be shared without claiming its divergent bootstrap or transformed first stage
+be shared without claiming its divergent bootstrap or opaque first-stage raw
+representation
 is equivalent to Defjam's loader, and without executing, unpacking, or
 substituting any variant.
 
@@ -356,7 +357,7 @@ executables.
 When the Amiga Millennium launcher target is selected, Project Eon creates a
 bounded session only for the exact Defjam ADF above. It validates this load
 plan, its shared resident range, and the resident entry directly from the
-original disk bytes, then stops before the transformed first-stage call or
+original disk bytes, then stops before the opaque first-stage invocation or
 any AmigaOS behavior. Other recognised Amiga images remain preservation
 evidence but are not silently substituted for Defjam's path.
 
@@ -365,7 +366,7 @@ each exact raw source range (including the bootstrap). These are fingerprints
 of immutable bytes read directly from the supplied ADF, not hashes of an
 unpacked representation. The command-line verifier exposes them so a future
 analysis can identify the exact input range before making any claim about the
-transformed RAM image.
+runtime representation at that RAM address.
 
 The raw Defjam first-stage source itself has shared AmigaOS/input text anchors:
 within the `0x6e000` source span (SHA-256
@@ -378,18 +379,28 @@ within the `0x6e000` source span (SHA-256
 `ee84336cbf4665bcd2bc48d054c024a20e4c5faaaf26cd5fdcc78e6b8f3931c9`) also
 contain table-like keyboard characters. These are source-only facts: nearby
 absolute references in the raw bytes do not map to the source's nominal
-`$41000 + offset` address. Without the preceding transform's output mapping,
+`$41000 + offset` address. Without an output mapping for the opaque invocation,
 they establish no entry point, scan-code mapping, input behavior, graphics
 resource, or display mode and are never used by the SDL runtime.
 
 The destination `0x68000` begins with a separate, directly verifiable resident
 entry gate: `JSR $787d4`, test byte `d3`, conditionally OR `0x0100` into `d0`,
 then store the resulting word at `0x7b75a` and return. The call target lies
-inside the first RAM stage (`0x41000..0xaefff`), but that stage has already
-been transformed by its preceding loader call; its corresponding raw disk
-bytes are not treated as an executable or an inferred compression format.
+inside the first RAM stage (`0x41000..0xaefff`), but the mapping from its
+preceding raw stage invocation to runtime bytes is unknown; its corresponding
+raw disk bytes are not treated as an executable or an inferred compression format.
 `MillenniumAmigaResidentEntry` therefore records only the literal gate and
 fails closed if any opcode, target range, or return instruction differs.
+
+The Defjam boot window ADF `+$6a0..+$717` (120 bytes, SHA-256
+`7f5a6cc8b273e8c3f15dc24d62812fe5daa3aba64720760c17c7c040d20ce49b`) proves
+the exact request `$24200`, length `$1600 × $50 = $6e000`, destination
+`$41000`, followed directly by `JSR (A3)` with `A3=$41000`. It contains no
+caller-connected copy, XOR, decrunch, table, or bitstream loop. The raw source
+hashes to `5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a`
+and begins `18 c2 fc ff`; its F-line word precludes treating it as direct raw
+68000 code. Project Eon therefore records an opaque raw-stage invocation, not
+a proven transform algorithm or source-to-output mapping.
 
 The next complete resident subroutine starts at `0x68016`. It takes three
 successive words beginning at `A1+0x36`; for each, original `LSL`, `ROXL`, and
@@ -1528,6 +1539,23 @@ The `$013c` target is anchored for 16 bytes through its terminal `RET` at
 `$014b`; no operation or return effect is inferred.
 transition routine at `$1941` starts with `CX=$25` and `DX=$0170`, so the
 verified title transition contains 37 steps with that original stride.
+
+The title/resource chain is now byte-locked through that transition. Main
+`$1c14..$1c1f` (file `+$1b14`, SHA-256
+`056142489c8d70d88640c5dd0dea385fd4a3d561efe95cb57625773840ca1327`) sets
+index zero, calls `$1725`, then `$1004` and `$1941`. `$1725..$1767` (67 bytes,
+SHA-256 `37ec3f970f81219815bf524c6db54a12a0961d7e7452c3e2527fe422401339d9`)
+reaches the 333-byte codec-2 reader `$1390..$14dc` (SHA-256
+`c4e0a56ba09831d80112d3f630e070886a66b70a62251ae90e89f98281a94b52`) for
+P00, then private `INT $91` wrapper `$0122`. The 39-byte `$1941..$1967`
+transition (SHA-256
+`f22c9595e6b1c590877b354721e6102d8107c5d6c7336b2d3491cfcaf3f8a627`)
+advances original runtime offsets by 368 and requests P01 through P25. Those
+37 records occupy `TITLE.LIB` `$2941..$4813` (7,890 bytes, SHA-256
+`f0ecbfd374b1c6122b407b29a6fe4a872a45a0a21e9ef6584e74829e06b5514d`), but
+write only to runtime buffers. Their segment setup, private-driver effects,
+composition, color handling and host-visible transfer are unrecovered; Project
+Eon does not draw an inferred transition.
 
 The main title loop polls DOS `INT 21h`, `AH=$06`, `DL=$ff` through helper
 `$0d0a`; at `$1c28` it branches out of the loop only after the returned `AL`
