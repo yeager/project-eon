@@ -14,6 +14,17 @@ bool has_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
             + static_cast<std::ptrdiff_t>(offset));
 }
 
+// 8086 near CALL displacements are signed 16-bit values added to the next
+// instruction pointer.  The resulting IP wraps at 64 KiB; do not promote it
+// to a made-up flat address while documenting a COM image.
+std::uint16_t near_call_target(const std::uint16_t next_ip,
+    const std::uint8_t low, const std::uint8_t high) {
+    const auto encoded = static_cast<std::uint16_t>(low)
+        | (static_cast<std::uint16_t>(high) << 8U);
+    const auto displacement = static_cast<std::int16_t>(encoded);
+    return static_cast<std::uint16_t>(static_cast<std::int32_t>(next_ip) + displacement);
+}
+
 } // namespace
 
 MillenniumDosGameFlow parse_millennium_dos_game_flow(
@@ -548,10 +559,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .preflight_enabled_call_address = 0x7b47,
             .decrement_runtime_byte_address = 0xda0a,
             .depleted_jump_address = 0x7948,
-            // CALL rel16 at $7312 is E8 E5 96. Its next IP is $7315, so the
-            // signed 16-bit displacement resolves modulo 64 KiB to $09fa;
-            // it is not the fictional flat address $cafa.
-            .repeated_call_address = 0x09fa,
+            // CALL rel16 at $7312 is read from the accepted original handler
+            // bytes. Its next IP is $7315, so the signed displacement resolves
+            // modulo 64 KiB to $09fa rather than a fictional flat address.
+            .repeated_call_address = near_call_target(0x7315, f8_handler[13], f8_handler[14]),
             .repeat_shift_register = 3,
         },
         .ninth_function_key = {
