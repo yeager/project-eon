@@ -951,6 +951,35 @@ int main() {
     assert(game_flow.main_loop_address == 0xd3d2);
     assert(game_flow.action_poll_address == 0x10f05);
     assert(game_flow.special_action_0 == 0x0b && game_flow.special_action_1 == 0x0c);
+    // Action $0b is English-DOS-only dispatch evidence. Its handler changes
+    // one explicitly observed native byte before stopping at helper $0666.
+    const auto first_special_action_zero =
+        eon::evaluate_millennium_dos_first_special_action_prefix(*game_executable, 0);
+    assert(first_special_action_zero.action == 0x0b);
+    assert(first_special_action_zero.dispatch_branch_address == 0xd3e6);
+    assert(first_special_action_zero.dispatch_call_address == 0xd40e);
+    assert(first_special_action_zero.handler_address == 0x11a4);
+    assert(first_special_action_zero.runtime_byte_address == 0x07f9);
+    assert(first_special_action_zero.toggled_runtime_byte == 1);
+    assert(first_special_action_zero.selected_ax_value == 0x018f);
+    assert(first_special_action_zero.helper_call_address == 0x11b7);
+    assert(first_special_action_zero.helper_address == 0x0666);
+    const auto first_special_action_nonzero =
+        eon::evaluate_millennium_dos_first_special_action_prefix(*game_executable, 0x5a);
+    assert(first_special_action_nonzero.toggled_runtime_byte == 0x5b);
+    assert(first_special_action_nonzero.selected_ax_value == 0x018e);
+    {
+        auto altered_special_handler = *game_executable;
+        altered_special_handler[0x11a4 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_first_special_action_prefix(
+                altered_special_handler, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(game_flow.function_key_first_action == 0x3b && game_flow.function_key_count == 10);
     assert(game_flow.function_key_table_address == 0x2fbf);
     assert(game_flow.function_key_table_stride == 8);
@@ -1627,6 +1656,18 @@ int main() {
     assert(spanish_f8_selected_record.record_byte_4 == std::optional<std::uint8_t>{0x84});
     assert(spanish_f8_selected_record.first_helper_address
         == std::optional<std::uint16_t>{0x7924});
+    // Identical handler bytes alone do not establish Spanish action-$0b
+    // reachability: the evaluator requires the English dispatch slice too.
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_millennium_dos_first_special_action_prefix(
+                disk.read(*executable), 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(eon::to_hex(eon::sha256(disk.read(*graphics)))
         == "e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767");
     const eon::MillenniumDosLib spanish_title_lib(disk.read(*spanish_title));

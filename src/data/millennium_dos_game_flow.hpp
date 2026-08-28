@@ -304,6 +304,24 @@ struct MillenniumDosEighthFunctionKeySelectedRecordGate {
         MillenniumDosEighthFunctionKeySelectedRecordOutcome::returns_without_record;
 };
 
+// The English DOS main loop routes action $0b to a short local prefix that
+// toggles one observed runtime byte before its first unresolved helper. The
+// input is caller-observed native state; the result describes that exact
+// prefix and must not be treated as an emulated helper result. Spanish has
+// matching handler bytes but an unproven dispatch route, so it is rejected.
+struct MillenniumDosFirstSpecialActionPrefix {
+    std::uint8_t action = 0;
+    std::uint16_t dispatch_branch_address = 0;
+    std::uint16_t dispatch_call_address = 0;
+    std::uint16_t handler_address = 0;
+    std::uint16_t runtime_byte_address = 0;
+    std::uint8_t observed_runtime_byte = 0;
+    std::uint8_t toggled_runtime_byte = 0;
+    std::uint16_t selected_ax_value = 0;
+    std::uint16_t helper_call_address = 0;
+    std::uint16_t helper_address = 0;
+};
+
 // Exact, non-semantic trace of table record eight (raw F9 / $43). Its native
 // handler has the established $a19e admission gate, clears two native bytes,
 // selects the observed local mode, and can cycle through the F8 preflight
@@ -447,6 +465,14 @@ evaluate_millennium_dos_eighth_function_key_table_jump_prefix(
 evaluate_millennium_dos_eighth_function_key_selected_record_gate(
     std::span<const std::uint8_t> game_executable, std::uint8_t translated_al,
     std::uint8_t gate_runtime_byte);
+
+// Validates only the English DOS action-$0b dispatch and handler prefix. It
+// stops at $0666 and never invokes the original helper or persists the
+// caller-observed/toggled byte to executable or save media.
+[[nodiscard]] MillenniumDosFirstSpecialActionPrefix
+evaluate_millennium_dos_first_special_action_prefix(
+    std::span<const std::uint8_t> game_executable,
+    std::uint8_t observed_runtime_byte);
 
 // Projects the verified, finite sequence of original BIOS palette-register
 // requests into the SDL-facing adapter payload. Callers must still establish

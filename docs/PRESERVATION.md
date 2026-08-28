@@ -1698,6 +1698,21 @@ semantics. Project Eon surfaces the immutable F7 gate in its SDL evidence
 panel; it never supplies the guard/runtime words, executes the helpers, or
 writes original game media or saves.
 
+The English DOS main-loop's first special action is separately bounded. Its
+action `$0b` comparison/dispatch slice at `$d3e2` (43 bytes at file
+`+$d2e2`, SHA-256
+`1e4e43aad1a2507aa7f85189022063db0f0cb481d267ef79789a447c3e184d62`)
+branches to `CALL $11a4` at `$d40e`. The handler prefix `$11a4..$11b9` (22
+bytes at `+$10a4`, SHA-256
+`2cd76e49776b940065ecb01418394984a9e03a6d6a6fc161c218f450faac1ed5`)
+reads explicitly observed native byte `$07f9`, chooses AX `$018f` only when
+that byte is zero (otherwise `$018e`), XORs the byte with one, and reaches
+opaque `CALL $0666`. The evaluator reports that prefix only: it does not
+invent an initial byte, invoke `$0666`, assume its return, or persist the
+toggle to original executable/save media. The supplied Spanish executable
+shares the handler prefix but has no proven matching action dispatch, so this
+English-only route deliberately rejects it.
+
 The ninth table record (raw F9 / `$43`) is `30 36 09 1b 38 08 39 73`, with
 handler entry `$7339`. It returns when native runtime word `$a19e` is nonzero.
 Its admitted path clears AX and calls `$d0c9`, clears `$da30`, loads `AL=$02`,
