@@ -6,7 +6,7 @@ namespace eon {
 
 MillenniumDosGameSession::MillenniumDosGameSession(MillenniumDosGameFlow flow)
     : flow_(flow) {
-    if (flow_.action_poll_address != 0x10f05 || flow_.function_key_count != 10
+    if (flow_.action_poll_address != 0x0f05 || flow_.function_key_count != 10
         || flow_.function_key_table_stride != 8 || flow_.function_key_dispatch_address != 0x76f0
         || flow_.eighth_function_key.handler_address != 0x7306
         || flow_.eighth_function_key.reset_runtime_byte_address != 0xda30

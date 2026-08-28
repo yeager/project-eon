@@ -33,7 +33,7 @@ std::uint16_t near_call_target(const std::uint16_t next_ip,
 MillenniumDosGameFlow parse_millennium_dos_game_flow(
     const std::span<const std::uint8_t> game_executable) {
     // 2200AD.EXE is a flat COM-style image loaded at 0x100.  Its startup
-    // reaches this loop after initialization; it repeatedly calls 0x10f05,
+    // reaches this loop after initialization; it repeatedly calls 0x0f05,
     // tests AL, treats 0x0b/0x0c separately, then converts 0x3b..0x44 to a
     // zero-based eight-byte dispatch-table index passed to 0x76f0.
     constexpr std::size_t load_bias = 0x100;
@@ -45,6 +45,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t startup_equal_followup_offset = 0x044e - load_bias;
     constexpr std::size_t startup_other_followup_offset = 0x0466 - load_bias;
     constexpr std::size_t loop_offset = 0xd3d2 - load_bias;
+    constexpr std::size_t action_poll_offset = 0x0f05 - load_bias;
     constexpr std::size_t f1_table_offset = 0x2fbf - load_bias;
     constexpr std::size_t f1_handler_offset = 0x6f9a - load_bias;
     constexpr std::size_t f1_setup_offset = 0x771d - load_bias;
@@ -133,6 +134,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x3c, 0x0c, 0x75, 0x05, 0xe8, 0x79, 0x01, 0x33, 0xc0,
         0x2c, 0x3b, 0x3c, 0x0a, 0x73, 0xd3, 0xbe, 0xbf, 0x2f,
         0x32, 0xe4, 0xc0, 0xe0, 0x03, 0x01, 0xc6, 0xe8, 0xe4, 0xa2});
+    constexpr auto action_poll = std::to_array<std::uint8_t>({
+        0xb4, 0x06, 0xb2, 0xff, 0xcd, 0x21, 0xc3});
     // Table record 0 contains its non-semantic rectangle followed by the
     // handler entry. The F1 handler clears AX, calls the common display
     // selector at $d0c9, then calls the setup block below. That setup has an
@@ -354,6 +357,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         throw std::runtime_error("Unsupported Millennium DOS startup selector paths");
     }
     if (!has_bytes(game_executable, loop_offset, loop)
+        || !has_bytes(game_executable, action_poll_offset, action_poll)
         || !has_bytes(game_executable, f1_table_offset, f1_table)
         || !has_bytes(game_executable, f1_handler_offset, f1_handler)
         || !has_bytes(game_executable, f1_setup_offset, f1_setup)
@@ -424,7 +428,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         .startup_other_followup_video_subfunction = 0x00,
         .startup_nonzero_dx_branch_address = 0xd44b,
         .main_loop_address = 0xd3d2,
-        .action_poll_address = 0x10f05,
+        .action_poll_address = 0x0f05,
         .special_action_0 = 0x0b,
         .special_action_1 = 0x0c,
         .function_key_first_action = 0x3b,

@@ -27,6 +27,12 @@ class IosPackagingTests(unittest.TestCase):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertIn('install(TARGETS project-eon BUNDLE DESTINATION ".")', cmake)
 
+    def test_ios_resource_locations_match_runtime_lookups(self):
+        main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+        i18n = (ROOT / "src" / "i18n.cpp").read_text(encoding="utf-8")
+        self.assertIn('base / "Resources" / "assets" / "cards"', main)
+        self.assertIn('executable_directory / "Resources" / "po"', i18n)
+
     def test_creates_payload_with_relative_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)

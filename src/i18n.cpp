@@ -42,14 +42,20 @@ void store_entry(std::unordered_map<std::string, std::string>& messages,
 std::string normalize_language(std::string_view language) {
     const auto end = language.find_first_of(".@");
     language = language.substr(0, end);
-    const auto separator = language.find_first_of("_-");
-    language = language.substr(0, separator);
     std::string normalized;
+    bool separator_seen = false;
     for (const unsigned char character : language) {
+        if (character == '_' || character == '-') {
+            if (normalized.empty() || separator_seen) return {};
+            normalized.push_back('_');
+            separator_seen = true;
+            continue;
+        }
         if (!std::isalpha(character)) return {};
-        normalized.push_back(static_cast<char>(std::tolower(character)));
+        normalized.push_back(separator_seen ? static_cast<char>(std::toupper(character))
+                                            : static_cast<char>(std::tolower(character)));
     }
-    return normalized;
+    return !normalized.empty() && normalized.back() != '_' ? normalized : std::string{};
 }
 
 std::string language_from_environment() {
@@ -128,15 +134,22 @@ Translator Translator::from_language(
         roots.push_back(executable_directory / "po");
         roots.push_back(executable_directory / ".." / "share" / "project-eon" / "po");
         roots.push_back(executable_directory / ".." / "Resources" / "po");
+        roots.push_back(executable_directory / "Resources" / "po");
     }
     // The catalog set intentionally contains region-specific Portuguese and
     // Chinese translations. The launcher accepts generic POSIX/BCP-47 input
     // too, so resolve those language families to their supplied catalog.
-    const auto catalog_name = normalized == "pt" ? "pt_BR"
-        : normalized == "zh" ? "zh_CN" : normalized;
+    std::vector<std::string> catalog_names{normalized};
+    const auto separator = normalized.find('_');
+    const auto base = normalized.substr(0, separator);
+    if (base == "pt") catalog_names.push_back("pt_BR");
+    else if (base == "zh") catalog_names.push_back("zh_CN");
+    else if (separator != std::string::npos) catalog_names.push_back(base);
     for (const auto& root : roots) {
-        auto translator = from_po_file(root / (catalog_name + ".po"));
-        if (!translator.empty()) return translator;
+        for (const auto& catalog_name : catalog_names) {
+            auto translator = from_po_file(root / (catalog_name + ".po"));
+            if (!translator.empty()) return translator;
+        }
     }
     return {};
 }
