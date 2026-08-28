@@ -50,6 +50,18 @@ def main() -> int:
 
     before = media_snapshot(data_directory)
     environment = os.environ | {"SDL_VIDEODRIVER": "dummy"}
+    # Keep the explicit spelling usable for scripts and package integrations;
+    # it must select the same original data directory without creating or
+    # transforming anything.
+    data_dir_inspection = subprocess.run(
+        (str(executable), "--data-dir", str(data_directory), "--inspect"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if data_dir_inspection.returncode != 0 or "VERIFIED  " not in data_dir_inspection.stdout:
+        raise SystemExit(
+            "--data-dir did not inspect the supplied original media:\n"
+            f"{data_dir_inspection.stderr}"
+        )
     starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
     for presentation in ("original", "modern"):
         for game, platform in (
