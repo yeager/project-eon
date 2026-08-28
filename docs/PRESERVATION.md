@@ -1144,6 +1144,16 @@ The original instructions name controller source `$206a0`, bootstrap cell
 only those instruction destinations and the literal profile: it does not read
 or materialize the controller longword and does not execute the jump.
 
+The analogous second exit is independently bounded after its four preceding
+calls. Only when a caller explicitly reports returns from `$3880a`, `$204fa`,
+`$37efa`, and `$37f9a` does Project Eon inspect the following 28 bytes at
+`$38046` (ADF `+$93046`), SHA-256
+`cf80103d5a580dc1e59f1090169c769a66a5d34c1112f14456e00713f1d078da`.
+Those instructions name controller source `$206a0`, bootstrap cell `$12ff8`,
+literal profile-four value at `$12ffc`, and `JMP $12800`. The evaluator does
+not invoke any predecessor, read controller data, manufacture a return, or
+execute the jump.
+
 `$12800` resets the original stack/Exec state and jumps to bootstrap dispatcher
 `$12a4e`. The original six-entry table at `$12a36` resolves profiles 3 and 4
 directly to `$12b1c`; profile 2 selects `$12b44`, whose sole instruction is
