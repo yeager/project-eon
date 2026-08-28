@@ -862,6 +862,35 @@ DeuterosAmigaTitleEntryPrefix execute_deuteros_amiga_title_entry_prefix(
     return {1, 0x206a0, 0x4040e, 1, 0x19d52, 1, 0x40450};
 }
 
+DeuterosAmigaTitleEntryModeFivePrefix execute_deuteros_amiga_title_entry_mode_five_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::uint16_t incoming_profile) {
+    if (static_cast<std::uint8_t>(incoming_profile) != 5) {
+        throw std::runtime_error("Unsupported Deuteros title entry low byte");
+    }
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::array<std::uint8_t, 16> mode_five{{
+        0x13, 0xc0, 0x00, 0x03, 0x71, 0x7e, 0x33, 0xfc,
+        0x01, 0x01, 0x00, 0x03, 0x80, 0x92, 0x60, 0x08,
+    }};
+    const auto& stage = plan.title_stage;
+    constexpr std::uint32_t entry = 0x40438;
+    if (entry < stage.destination || entry - stage.destination > stage.length
+        || mode_five.size() > stage.length - (entry - stage.destination)) {
+        throw std::runtime_error("Deuteros mode-five title prefix lies outside original stage");
+    }
+    const auto bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto prefix = bytes.subspan(entry - stage.destination, mode_five.size());
+    if (to_hex(sha256(bytes)) != stage_hash
+        || !std::equal(mode_five.begin(), mode_five.end(), prefix.begin())
+        || to_hex(sha256(prefix)) != "c4f5b0fa571dc0c932e9bb3df9f48e4c4336840d49ae2368e69fffa8c05c87a7") {
+        throw std::runtime_error("Unsupported Deuteros mode-five title prefix");
+    }
+    return {incoming_profile, 0x206a0, 0x4040e, incoming_profile, 0x3717e,
+        static_cast<std::uint8_t>(incoming_profile), 0x38092, 0x0101, 0x40450};
+}
+
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     // $37f56 reaches this copy only if the two preceding original calls
