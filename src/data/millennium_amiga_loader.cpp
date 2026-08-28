@@ -663,7 +663,7 @@ parse_millennium_amiga_resident_independent_entry_gate(
     constexpr std::array<std::uint8_t, 18> expected{{
         0x48, 0xe7, 0xf0, 0x04,             // movem.l d0-d3/a5,-(sp)
         0x4a, 0x43,                         // tst.w d3
-        0x6b, 0x00, 0x00, 0x86,             // bmi.w $68594
+        0x6b, 0x00, 0x00, 0x86,             // bmi.w $68598
         0x4a, 0x39, 0x00, 0x07, 0xb1, 0x42, // tst.b $7b142
         0x67, 0x30,                         // beq.s $68546
     }};
@@ -707,9 +707,9 @@ parse_millennium_amiga_resident_negative_d3_terminal(
     const MillenniumAmigaResidentNegativeD3Continuation& continuation) {
     constexpr std::uint32_t entry = 0x685f4;
     constexpr std::array<std::uint8_t, 10> expected{{
-        0x06, 0x42, 0x28, 0x00, // addi.w #$2800,d2
-        0x06, 0x43, 0x28, 0x00, // addi.w #$2800,d3
-        0x4e, 0x75,             // rts
+        0x06, 0x42, 0x28, 0x00, // first encoded immediate word instruction
+        0x06, 0x43, 0x28, 0x00, // second encoded immediate word instruction
+        0x4e, 0x75,             // terminal rts
     }};
     if (continuation.entry_address != 0x68598 || continuation.return_address != entry + 8
         || entry < plan.resident_stage.destination) {
