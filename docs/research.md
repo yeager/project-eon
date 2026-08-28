@@ -161,17 +161,17 @@ launcher. `MILL.COM` installs private interrupt handlers including `INT 91h`,
 `92h`, and `95h`; the game modules call these as a loader/runtime API.
 
 `2200AD.EXE` starts with segment-register setup and a near jump from file offset
-`0x0004` to `0xd1b0` (loaded address `0xd2b0`). Its entry routine establishes a
-stack, uses DOS `INT 21h` memory services, selects a text/graphics mode, loads
-`2200AD4.BIN`, `GX.LIB`, and `LAST.LIB`, then enters the UI loop. Literal names
-for bases, asteroid analysis actions, save slots, and time units occur in this
-module and provide anchors for code cross-references.
+`0x0004` to `0xd1b0` (loaded address `0xd2b0`). Its static entry bytes establish
+a stack and contain calls for DOS services, video setup and original resource
+requests. Their external returns and the subsequent UI loop are not yet
+observed. Literal names for bases, asteroid analysis actions, save slots, and
+time units occur in this module and provide anchors for code cross-references.
 
 The distribution also contains Creative Voice (`.VOC`) effects,
 driver/resource binaries, and `GX.LIB`/`LAST.LIB`. This split is useful:
 executable cross-references can reveal record widths and indexes in the resource
-libraries. Run `tools/analyze_dos.py` with Capstone installed to regenerate an
-entry-point report from an extracted copy.
+libraries. Analysis uses the repository's bounded in-place archive readers; it
+does not require or authorize an extracted game-data copy.
 
 The first directly parsed gameplay-static component is the 41-item
 celestial-label sequence in genuine English `2200AD4.BIN`, beginning at
@@ -196,10 +196,46 @@ ledger.
 
 The DOS title executable and launcher now have a bounded, byte-validated
 handoff model. `TITLES.EXE` selects resource zero, enters a 37-step
-transition, polls `INT 21h/AH=06/DL=ff`, then exits zero on nonzero returned
-input. `MILL.COM` invokes `TITLES.EXE` and then `2200ad.exe` through its DOS
-EXEC wrapper. The parser records those concrete values without assigning
-unproven semantics to the transition drawing code.
+transition, polls `INT 21h/AH=06/DL=ff`, then reaches a private interrupt and
+an external termination boundary after nonzero input. `MILL.COM` has ordered
+DOS EXEC requests for `TITLES.EXE` and conditionally `2200ad.exe`; child
+completion and returned AL remain unknown. The parser records those concrete
+values without assigning unproven semantics to the transition drawing code.
+
+## Reference-execution protocol
+
+An observed DOS startup trace must use a trace-capable emulator with a read-only
+archive-backed or in-memory DOS filesystem. It must not be produced by
+extracting, copying, or modifying the user-supplied ZIP media. The record must
+identify emulator and configuration versions/hashes, the original archive
+SHA-256, command tail, input timeline, CPU control-flow events, DOS/BIOS/private
+interrupt events, and file operations. A separately acquired original read-only
+disk image is acceptable where its identity is independently hash-locked.
+
+The current development host has DOSBox 0.74 only. It mounts local directories
+or disk images but not the supplied deflated DOS ZIP, and has no trace debugger.
+No dynamic trace is claimed from that tool: driver installation, BIOS results,
+private-vector lifetime, DOS EXEC return/status, and `2200AD` startup remain
+explicit boundaries until the above protocol can be met.
+
+### Deuteros Amiga title-stage protocol
+
+The first title-stage hard ABI boundary is `$40450`. Its vectors are
+`exec.library` `SuperState` (`-$96`) and `UserState` (`-$9c`); later code opens
+`graphics.library` through `OpenLibrary` (`-$228`) and has a `LoadRGB4`
+(`-$c0`) call shape. A later `-$1a4` graphics vector is `ChangeSprite`, not
+evidence of display creation. The supplied ADFs contain none of the required
+Kickstart/graphics implementations, library bases, ViewPort/ColorMap/VSprite
+objects, or the bootstrap-established longword at `$12ff4`.
+
+A future trace must therefore include user-supplied legal Kickstart/Workbench
+media, ROM SHA-256 and version, emulator/configuration identity, Exec base,
+privilege-transition result, `OpenLibrary` result, `$12ff4..$12ffb`, initial
+memory writes, graphics call arguments and affected structures, and custom-chip
+register writes. A transcript replay may be implemented only against that
+hash-locked input; unknown ROM/version or missing cells must be rejected. No
+synthetic library handle, pointer, palette target, controller or return value
+is permitted.
 
 ## Completion criteria
 
