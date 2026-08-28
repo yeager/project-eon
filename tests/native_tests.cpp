@@ -1778,6 +1778,35 @@ int main() {
     assert(atari_executable && atari_executable->size == 49'269);
     assert(eon::to_hex(eon::sha256(atari_disk.read(*atari_data)))
         == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
+    const auto* atari_auxiliary_entry = atari_disk.find("MILL22B.INF");
+    assert(atari_auxiliary_entry);
+    const auto atari_auxiliary_resource = eon::probe_millennium_atari_auxiliary_resource_name(atari_disk);
+    assert(atari_auxiliary_resource.container_filename == "MILL22B.INF");
+    assert(atari_auxiliary_resource.first_cluster == atari_auxiliary_entry->first_cluster);
+    assert(atari_auxiliary_resource.size == 84'720);
+    assert(atari_auxiliary_resource.sha256
+        == "e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9");
+    assert(atari_auxiliary_resource.literal_file_offset == 0x11600);
+    assert(atari_auxiliary_resource.literal_filename == "MILL22E.INF");
+    assert(atari_auxiliary_resource.preceding_return_file_offset == 0x115fe);
+    {
+        auto altered_atari_image = *atari_image;
+        constexpr std::array<std::uint8_t, 11> auxiliary_name{{
+            'M', 'I', 'L', 'L', '2', '2', 'B', ' ', 'I', 'N', 'F',
+        }};
+        const auto name = std::search(altered_atari_image.begin(), altered_atari_image.end(),
+            auxiliary_name.begin(), auxiliary_name.end());
+        assert(name != altered_atari_image.end());
+        *name ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::Fat12Disk altered_disk(altered_atari_image);
+            static_cast<void>(eon::probe_millennium_atari_auxiliary_resource_name(altered_disk));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto atari_prg = eon::parse_atari_st_prg(atari_disk.read(*atari_executable));
     assert(atari_prg.text_bytes == 4'446);
     assert(atari_prg.data_bytes == 44'564);

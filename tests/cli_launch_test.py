@@ -148,6 +148,13 @@ def main() -> int:
                     "Deuteros Amiga channel-request first callee did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+        if game == "millennium" and platform == "atari-st":
+            expected_auxiliary_resource = "auxiliary resource-name evidence: MILL22B.INF cluster "
+            if expected_auxiliary_resource not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Atari ST auxiliary resource-name evidence did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "atari-st":
             expected_state1 = (
                 "Static state-1 raw-load plan: Disk 1 +0x55800 +0x5e400 "

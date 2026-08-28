@@ -48,6 +48,7 @@ dumps are preferred as semantic baselines.
 | Millennium Spanish `GX.LIB` | 311,420 | `e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767` |
 | Millennium Atari ST Equinox disk | 819,200 | `3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7` |
 | Millennium Atari ST `DATA12.BIN` | 932 | `6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda` |
+| Millennium Atari ST `MILL22B.INF` | 84,720 | `e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9` |
 | Millennium Atari ST `MILENIUM.TOS` | 49,269 | `4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686` |
 
 ## Verified format knowledge
@@ -62,6 +63,16 @@ dumps are preferred as semantic baselines.
   block 880 is game code/data rather than a normal AmigaDOS root directory.
 
 ### Millennium Atari ST relocation evidence
+
+The Equinox FAT12 `MILL22B.INF` chain is separately hash-identified (84,720
+bytes, SHA-256 `e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9`).
+At file `+$11600` it has the isolated NUL-terminated literal `MILL22E.INF`;
+the immediately preceding 14 bytes end in `RTS` at `+$115fe` and hash-lock the
+literal's local provenance. This is not evidence that any routine opens
+`MILL22E.INF`, chooses one of its records, or decodes graphics. Project Eon
+records the name only through its original FAT chain and does not render its
+packed contents until a loader ABI, codec bounds, palette association, and
+planar layout are independently recovered.
 
 ### Millennium DOS `LAST.LIB` screen evidence
 
