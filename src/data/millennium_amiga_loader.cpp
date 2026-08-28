@@ -681,6 +681,26 @@ parse_millennium_amiga_resident_independent_entry_gate(
     return {entry, 0x6850e, 0x68598, 0x68512, 0x7b142, 0x68518, 0x6854a};
 }
 
+MillenniumAmigaResidentNegativeD3Continuation
+parse_millennium_amiga_resident_negative_d3_continuation(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentEntryGate& gate) {
+    constexpr std::uint32_t entry = 0x68598;
+    constexpr std::size_t size = 100;
+    if (gate.negative_d3_target != entry || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga negative-D3 continuation placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || size > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga negative-D3 continuation is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, size);
+    if (to_hex(sha256(bytes)) != "716e8bf1db5d7cad89a0074cf6fe7cc6a0a66d73379814bac181a5f6c4a9e500") {
+        throw std::runtime_error("Unexpected Millennium Amiga negative-D3 continuation");
+    }
+    return {entry, 0x685ee, 0x7bcf8, 0x685fc};
+}
+
 MillenniumAmigaResidentIndependentZeroTargetBoundary
 parse_millennium_amiga_resident_independent_zero_target_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
