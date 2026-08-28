@@ -81,6 +81,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0xa0, 0x1a};
     constexpr std::array<std::uint8_t, 8> dos_exit{
         0x2e, 0xa0, 0x0e, 0x1a, 0xb4, 0x4c, 0xcd, 0x21};
+    constexpr std::array<std::uint8_t, 40> title_driver_setup{
+        0x0e,0x1f,0x0e,0x07,0x8c,0xc8,0x8e,0xd0,0xb8,0x00,0xda,0x89,0xc4,
+        0xb8,0x00,0x00,0x0e,0x07,0xbb,0xc4,0x1a,0xe8,0x8a,0xe5,0x2e,0xa3,
+        0x9c,0x1a,0x88,0xe0,0x2e,0xa2,0xaa,0x1a,0xa2,0x07,0x01,0x89,0x26,0xa0};
+    constexpr std::array<std::uint8_t, 13> private_wrapper{
+        0x1e,0x56,0x57,0x55,0x06,0xcd,0x91,0x07,0x5d,0x5f,0x5e,0x1f,0xc3};
+    constexpr std::array<std::uint8_t, 2> title_driver_record{0x01,0x00};
 
     if (!has_bytes(titles_executable, 0, entry_jump)) {
         throw std::runtime_error("Unsupported Millennium DOS title entry");
@@ -94,6 +101,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         || !has_bytes(titles_executable, input_branch_offset, input_branch)
         || !has_bytes(titles_executable, clean_exit_offset, clean_exit)
         || !has_bytes(titles_executable, dos_exit_offset, dos_exit)
+        || !has_bytes(titles_executable, 0x1b80 - file_to_load_bias, title_driver_setup)
+        || !has_bytes(titles_executable, 0x0122 - file_to_load_bias, private_wrapper)
+        || !has_bytes(titles_executable, 0x1ac4 - file_to_load_bias, title_driver_record)
         || !has_bytes(titles_executable, 0x1884 - file_to_load_bias, input_exit_loading_text)) {
         throw std::runtime_error("Unsupported Millennium DOS title control flow");
     }
@@ -170,6 +180,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 10> launcher_pre_title_callee_join_branch{
         0xb8, 0x08, 0x25, 0xcd, 0x21, 0x58, 0x22, 0xc0,
         0x74, 0x14};
+    constexpr std::array<std::uint8_t, 48> launcher_exec_helper{
+        0x8c,0xc8,0x89,0x06,0x7e,0x06,0x89,0x06,0x82,0x06,0x89,0x06,0x86,0x06,
+        0x8e,0xc0,0xbb,0x7a,0x06,0x89,0x26,0xf7,0x05,0xb8,0x00,0x4b,0xcd,0x21,
+        0x8c,0xc9,0x8e,0xd1,0x2e,0x8b,0x26,0xf7,0x05,0x8e,0xd9,0x8e,0xc1,0x72,
+        0x05,0xb4,0x4d,0xcd,0x21,0xc3};
+    constexpr std::array<std::uint8_t, 14> launcher_exec_param_block{
+        0x00,0x00,0x88,0x06,0x00,0x00,0x5c,0x00,0x00,0x00,0x5c,0x00,0x00,0x00};
     // The raw private-vector installation is preceded by a local loader call.
     // The call's DOS effects are intentionally not evaluated: this byte range
     // establishes only the direct call target and the literal DX=0 / AX=$2591
@@ -235,6 +252,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     if (title_call_target < mill_load_bias
         || !has_bytes(mill_launcher, title_call_target - mill_load_bias, launcher_common_routine)) {
         throw std::runtime_error("Unsupported Millennium DOS launcher common routine");
+    }
+    if (!has_bytes(mill_launcher, 0x031c - mill_load_bias, launcher_exec_helper)
+        || !has_bytes(mill_launcher, 0x067a - mill_load_bias, launcher_exec_param_block)) {
+        throw std::runtime_error("Unsupported Millennium DOS launcher EXEC boundary");
     }
     constexpr std::size_t common_branch_target = 0x34c;
     if (!has_bytes(mill_launcher, common_branch_target - mill_load_bias,
@@ -329,6 +350,14 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_exit_loading_text_address = 0x1884,
         .input_exit_loading_text = "    LOADING    2",
         .exit_code = 0,
+        .title_private_interrupt_wrapper_address = 0x0122,
+        .title_private_interrupt_record_address = 0x1ac4,
+        .title_private_interrupt_function = 0,
+        .title_private_interrupt_result_word_address = 0x1a9c,
+        .title_private_interrupt_result_low_byte_address = 0x1aaa,
+        .title_private_interrupt_result_high_byte_address = 0x0107,
+        .title_private_interrupt_equal_branch_target = 0x1ac6,
+        .title_private_interrupt_other_branch_target = 0x1ada,
         .launcher_title_program_address = static_cast<std::uint16_t>(title_offset + mill_load_bias),
         .launcher_game_program_address = static_cast<std::uint16_t>(game_offset + mill_load_bias),
         .launcher_title_call_address = static_cast<std::uint16_t>(title_call_address),
@@ -338,6 +367,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .launcher_common_branch_target = common_branch_target,
         .launcher_common_fallthrough_return = 0x34b,
         .launcher_common_branch_target_static_boundary = 0x35a,
+        .launcher_exec_helper_address = 0x031c,
+        .launcher_exec_param_block_address = 0x067a,
+        .launcher_exec_saved_stack_address = 0x05f7,
+        .launcher_exec_interrupt_site = 0x0337,
+        .launcher_exec_result_interrupt_site = 0x0348,
+        .launcher_exec_carry_branch_address = 0x0345,
+        .launcher_exec_noncarry_return_address = 0x034b,
         .launcher_pre_title_gate_address = 0x215,
         .launcher_pre_title_gate_target = 0x21a,
         .launcher_pre_title_call_address = 0x231,

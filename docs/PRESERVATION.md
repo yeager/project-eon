@@ -1715,13 +1715,43 @@ candidate: its `$1b80..$1ba7` prefix (file `+$1a80`, 40 bytes, SHA-256
 AX `$0000`, ES=CS and BX `$1ac4`, then calls the shared `$0122` wrapper, whose
 `$0127` is `INT $91`; the two-byte record at `$1ac4` is `01 00` (SHA-256
 `47dc540c94ceb704a23875c11273e16bb0b8a87aed84de911f2133568115f254`). For
-the supplied MCGA driver this can select function `$00`, but BIOS mode and
-possible `INT $92` results, title exit, DOS return, driver lifetime and the
-later `2200AD` call remain unobserved. Project Eon therefore never substitutes
+the supplied MCGA driver this can select function `$00`; that function reaches
+only the `INT $10` boundaries described below, not `INT $92`. `INT $92` occurs
+in other MCGA dispatch functions and is not reached by this record. BIOS mode
+results, title exit, DOS return, driver lifetime and the later `2200AD` call
+remain unobserved. Project Eon therefore never substitutes
 the on-disk zero or any calculated value for the unknown runtime AL result.
-Function `$00` resolves to `$01c8` (EGA) or `$01e6` (MCGA): each makes a
-literal BIOS mode request through `INT $10`, mode `$0e` at `$01de` or mode
-`$13` at `$01fc`, then has a local zero-`AX` mismatch return. Function `$04`
+
+The parent-side ordering is separately hash-locked as one startup model.
+`MILL.COM` calls a common helper first for `TITLES.EXE`, then conditionally for
+`2200ad.exe`; its caller `$023d..$0252` is 22 bytes with SHA-256
+`829b3d096d593d1ff4f1028eb05af1ccf8ca0b8ead98a5edcb523dba4cd725cf`.
+The helper `$031c..$034b` (48 bytes, SHA-256
+`62cee56837e015eecc218906046c1e1c19a7ad9ba87e6580f99674eac0976b58`) fills
+the three segment fields of immutable parameter block `$067a..$0687` (14 bytes,
+SHA-256 `e2b2aa089d2c6a23b14055f3721c6b53836268070c2a727d2d7fa1a75461869b`),
+saves parent SP at `$05f7`, invokes DOS EXEC `AX=$4b00` at `$0337`, restores
+the parent context, then branches on carry. Only the noncarry route asks DOS
+for child termination status at `$0348` before returning. Thus ordering, ABI
+operands, and restoration are evidence; child completion, AL, title exit,
+vector survival, and `2200AD` execution are deliberately unknown.
+Function `$00` resolves to `$01c8` (EGA) or `$01e6` (MCGA). The supplied MCGA
+function-$00 body `$01e6..$0209` (36 bytes, SHA-256
+`fb21e417ebf59d096edf515db6258423a2e304ce513b125a075e15f0a23723e8`) first
+reads `ES:[BX]` into CL and clears CH, but its complete verified local body
+does not branch on that caller byte. It compares code-local `$00ae` with
+`$ff`: only that sentinel path requests BIOS current-mode information at
+`$01f5` and stores the externally returned AL back to `$00ae`; either path
+then requests mode `$13` at `$01fc`, requests current-mode information again
+at `$0201`, compares its external AL result with `$13`, and returns that
+unmodified external register state at `$020a` on equality or a locally zeroed
+AX at `$0208` on mismatch. The `JNE` cache bypass lands at `$01fa`. EGA has
+the same instruction layout at `$01c8`: local `$008c`, query `$01d7`, bypass
+`$01dc`, set mode `$0e` at `$01de`, verify `$01e3`, match return `$01ec`, and
+mismatch return `$01ea`. These are only static BIOS boundaries: Project Eon
+does not assign either BIOS result, assert that the on-disk `$ff` is the
+runtime cache state, or use the caller's title record to select a mode.
+Function `$04`
 resolves to `$0c17` / `$0815`, reads the input byte at `ES:BX`, masks it with
 `$03`, and updates only its code-local byte (`$008d` / `$00af`) before `RET`.
 Function `$1f`, which the `2200AD.EXE` startup wrapper requests at `$d2c5`,
