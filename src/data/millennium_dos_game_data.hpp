@@ -46,6 +46,15 @@ struct MillenniumDosStaticTextCatalog {
     std::vector<MillenniumDosStaticTextRecord> records;
 };
 
+// The supplied Spanish FAT12 release contains the only live standalone
+// launcher documentation in the recognised corpus: MILL.BAT. Its text is
+// preserved verbatim after identity validation; it establishes command-tail
+// launch choices, not gameplay controls or host-side driver policy.
+struct MillenniumDosLaunchManual {
+    std::string sha256;
+    std::string original_text;
+};
+
 // The save/load routines in the verified English 2200AD.EXE transfer this
 // four-word subset in columns, not as a packed file record.  The executable
 // reconstructs each element at a 28-byte stride in its runtime table.  Names
@@ -85,6 +94,9 @@ struct MillenniumDosSaveLayout {
 // meaning; callers can only inspect bytes read from supplied media.
 [[nodiscard]] MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
     std::span<const std::uint8_t> static_data);
+
+[[nodiscard]] MillenniumDosLaunchManual parse_millennium_dos_spanish_launch_manual(
+    std::span<const std::uint8_t> mill_bat);
 
 // Parses the exact, read-only save serialization established by the English
 // DOS executable's load path.  It does not infer game rules nor mutate or

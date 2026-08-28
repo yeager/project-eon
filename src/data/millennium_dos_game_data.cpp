@@ -1,4 +1,5 @@
 #include "data/millennium_dos_game_data.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -85,6 +86,16 @@ MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
                 static_data.begin() + static_cast<std::ptrdiff_t>(next)}});
     }
     return result;
+}
+
+MillenniumDosLaunchManual parse_millennium_dos_spanish_launch_manual(
+    const std::span<const std::uint8_t> mill_bat) {
+    constexpr auto expected_sha256 =
+        "1fbb8246d496a6b3a35759a917ef7ae7ba36487de73104f2df81f5a1f8d9f474";
+    if (mill_bat.size() != 437 || to_hex(sha256(mill_bat)) != expected_sha256) {
+        throw std::runtime_error("Unsupported Millennium Spanish launch manual");
+    }
+    return {expected_sha256, {reinterpret_cast<const char*>(mill_bat.data()), mill_bat.size()}};
 }
 
 MillenniumDosSaveLayout parse_millennium_dos_save_layout(

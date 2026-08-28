@@ -2171,8 +2171,14 @@ substituting an English one.
 Spanish `2200AD4.BIN` has its 41 NUL-terminated celestial labels at `$03db`,
 not the English `$03d2`; Project Eon reads the media bytes at the observed
 layout and preserves labels such as `Tierra ` and `Asteroides ` unchanged.
-`MILL.BAT` contains only original usage instructions. The actual Spanish
-launcher evidence is `IBM.COM` (1,587 bytes, SHA-256
+The live FAT12 `MILL.BAT` is the only standalone launcher documentation in the
+recognised corpus: 437 bytes at first disk offset `$2c400`, SHA-256
+`1fbb8246d496a6b3a35759a917ef7ae7ba36487de73104f2df81f5a1f8d9f474`. Its
+verbatim original text describes `IBM`, `IBM e`, `IBM m`, `TANDY`, and `EGA320`
+launch choices, corroborating the byte-validated driver request chain but not
+any gameplay control. Two apparent `README` directory-like records at raw
+`$38240` and `$3bc40` are allocation slack, not live FAT12 entries, and are
+explicitly excluded. The actual Spanish launcher evidence is `IBM.COM` (1,587 bytes, SHA-256
 `84b7d158c770117aeaa07cb5ea2e7ed4a6bcc288d6b352d82569ff4d97b2fda9`). Its
 hash-locked caller `$023d..$0252` first loads literal `TITLES.EXE` from
 `$071d`, calls local `$0339`, then conditionally reaches the second literal

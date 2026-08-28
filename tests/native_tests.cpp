@@ -1805,10 +1805,16 @@ int main() {
     const auto* graphics = disk.find("GX.LIB");
     const auto* spanish_title = disk.find("TITLE.LIB");
     const auto* spanish_static_data = disk.find("2200AD4.BIN");
-    assert(executable && ibm && spanish_titles && executable->size == 54'566);
+    const auto* spanish_manual = disk.find("MILL.BAT");
+    assert(executable && ibm && spanish_titles && spanish_manual && executable->size == 54'566);
     assert(graphics && graphics->size == 311'420);
     assert(spanish_title && spanish_title->size == 18'998);
     assert(spanish_static_data && spanish_static_data->size == 13'254);
+    const auto spanish_launch_manual = eon::parse_millennium_dos_spanish_launch_manual(
+        disk.read(*spanish_manual));
+    assert(spanish_launch_manual.original_text.size() == 437);
+    assert(spanish_launch_manual.original_text.find("IBM e") != std::string::npos);
+    assert(spanish_launch_manual.original_text.find("IBM m") != std::string::npos);
     assert(eon::to_hex(eon::sha256(disk.read(*executable)))
         == "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6");
     const auto spanish_ibm_handoff = eon::parse_millennium_dos_spanish_ibm_handoff_evidence(
