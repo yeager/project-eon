@@ -1,8 +1,11 @@
 #include "data/millennium_dos_game_flow.hpp"
 
+#include "data/sha256.hpp"
+
 #include <algorithm>
 #include <array>
 #include <stdexcept>
+#include <string_view>
 
 namespace eon {
 namespace {
@@ -611,6 +614,49 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .final_call_address = 0x4111,
         },
     };
+}
+
+MillenniumDosEighthFunctionKeyRepeatLoop
+evaluate_millennium_dos_eighth_function_key_repeat_loop(
+    const std::span<const std::uint8_t> game_executable,
+    const std::span<const std::uint8_t> helper_return_bl_values) {
+    // F8 reaches this only if its earlier $731a preflight returns. The exact
+    // local tail is CALL $09fa; SHR BL,1; JC $7312; RET. $09fa itself remains
+    // opaque, hence the caller-provided return bytes.
+    constexpr std::size_t loop_offset = 0x7312 - 0x100;
+    constexpr std::size_t loop_size = 8;
+    constexpr std::string_view loop_sha256 =
+        "2bf85a49d14034fb5562af6188745810721fd42e495877464d04f69783525a0a";
+    if (loop_offset > game_executable.size() || loop_size > game_executable.size() - loop_offset) {
+        throw std::runtime_error("Millennium DOS F8 repeat loop lies outside executable");
+    }
+    const auto loop = game_executable.subspan(loop_offset, loop_size);
+    if (to_hex(sha256(loop)) != loop_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS F8 repeat loop");
+    }
+    if (helper_return_bl_values.empty()) {
+        throw std::runtime_error("Millennium DOS F8 repeat loop needs helper return");
+    }
+    MillenniumDosEighthFunctionKeyRepeatLoop result;
+    result.call_address = 0x7312;
+    result.helper_address = 0x09fa;
+    result.shift_address = 0x7315;
+    result.return_address = 0x7319;
+    for (std::size_t index = 0; index < helper_return_bl_values.size(); ++index) {
+        const auto returned_bl = helper_return_bl_values[index];
+        const auto shifted_bl = static_cast<std::uint8_t>(returned_bl >> 1U);
+        result.shifted_bl_values.push_back(shifted_bl);
+        // JC observes the bit shifted out of BL. A clear carry reaches RET;
+        // a set carry returns to the same original CALL instruction.
+        if ((returned_bl & 1U) == 0) {
+            if (index + 1 != helper_return_bl_values.size()) {
+                throw std::runtime_error("Unexpected trailing Millennium DOS F8 helper return");
+            }
+            result.final_bl = shifted_bl;
+            return result;
+        }
+    }
+    throw std::runtime_error("Millennium DOS F8 repeat loop lacks terminating helper return");
 }
 
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>

@@ -1677,6 +1677,14 @@ a second F8 therefore records `0 -> 0`. It is not a mutable view of the
 original COM image or a save serializer, and is never exported. The later
 preflight/call path remains deliberately unimplemented because `$da39`,
 `$da0a`, and `BL` have no proven initial state or complete helper semantics.
+After a preflight return, the eight original bytes at `$7312` (file
+`+0x7212`, SHA-256
+`2bf85a49d14034fb5562af6188745810721fd42e495877464d04f69783525a0a`) are
+also modeled as a bounded local trace: `CALL $09fa`, `SHR BL,1`, `JC $7312`,
+`RET`. The evaluator requires explicit low-byte `BL` returns from the opaque
+`$09fa` helper, records each shift, repeats only when the shifted-out bit is
+one, and rejects an unterminated sequence. It does not call `$09fa`, invent a
+preflight result, or write original runtime/save media.
 
 The tenth table record (raw F10 / `$44`) is `36 3c 09 1b 39 09 84 73`, with
 handler entry `$7384`. It returns when native runtime word `$a19e` is nonzero.
