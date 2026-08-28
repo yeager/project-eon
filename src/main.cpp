@@ -443,7 +443,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         const eon::Fat12Disk disk(*image);
         const auto* title_entry = disk.find("TITLE.LIB");
         const auto* static_entry = disk.find("2200AD4.BIN");
-        if (!title_entry || !static_entry) {
+        const auto* ibm_entry = disk.find("IBM.COM");
+        const auto* titles_entry = disk.find("TITLES.EXE");
+        const auto* game_entry = disk.find("2200AD.EXE");
+        if (!title_entry || !static_entry || !ibm_entry || !titles_entry || !game_entry) {
             throw std::runtime_error("Verified Spanish Millennium media missing title data");
         }
         const eon::MillenniumDosLib title_lib(disk.read(*title_entry));
@@ -459,6 +462,17 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << palette.logical_to_dac.size() << '\n';
         std::cout << "          Spanish 2200AD4.BIN: " << game_data.celestial_labels.size()
             << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
+        const auto ibm_handoff = eon::parse_millennium_dos_spanish_ibm_handoff_evidence(
+            disk.read(*ibm_entry), disk.read(*titles_entry), disk.read(*game_entry));
+        std::cout << "          Spanish IBM.COM handoff: caller 0x" << std::hex
+            << ibm_handoff.caller_entry_address << " names 0x" << ibm_handoff.title_name_address
+            << "/0x" << ibm_handoff.game_name_address << "; calls 0x"
+            << ibm_handoff.first_call_address << "/0x" << ibm_handoff.second_call_address
+            << " -> 0x" << ibm_handoff.callee_address << "; JNE 0x"
+            << ibm_handoff.first_nonzero_branch_address << "/0x"
+            << ibm_handoff.second_nonzero_branch_address << "; SHA-256 "
+            << ibm_handoff.ibm_sha256 << std::dec
+            << " (static only; no DOS call, result, title, or game ABI executed)\n";
         return;
     }
     constexpr auto title_lib_sha256 =
@@ -2109,7 +2123,7 @@ int main(int argc, char** argv) {
                         draw_text(renderer, 64, 220,
                             tr("AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC"));
                         draw_text(renderer, 64, 238,
-                            tr("EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED"));
+                            tr("The simulation is incomplete; no synthetic substitute will run."));
                     } else {
                         draw_text(renderer, 64, 220, tr("AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"));
                         draw_text(renderer, 64, 238,

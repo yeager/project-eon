@@ -539,6 +539,33 @@ parse_millennium_dos_gx_overlay_dispatcher_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
     const MillenniumDosGxOverlayAdapterEvidence& adapter);
 
+// The Spanish FAT12 edition reaches its own TITLES.EXE and 2200AD.EXE through
+// IBM.COM, not the English MILL.COM path. This records only original names,
+// hashes and direct local control flow; DOS execution, AL results and either
+// target program's ABI remain unmodelled.
+struct MillenniumDosSpanishIbmHandoffEvidence {
+    std::string ibm_sha256;
+    std::string titles_sha256;
+    std::string game_sha256;
+    std::uint16_t caller_entry_address = 0;
+    std::uint16_t title_name_address = 0;
+    std::uint16_t game_name_address = 0;
+    std::uint16_t first_call_address = 0;
+    std::uint16_t second_call_address = 0;
+    std::uint16_t callee_address = 0;
+    std::uint16_t first_nonzero_branch_address = 0;
+    std::uint16_t second_nonzero_branch_address = 0;
+    std::uint16_t callee_return_address = 0;
+    std::string caller_sha256;
+    std::string callee_sha256;
+};
+
+[[nodiscard]] MillenniumDosSpanishIbmHandoffEvidence
+parse_millennium_dos_spanish_ibm_handoff_evidence(
+    std::span<const std::uint8_t> ibm_executable,
+    std::span<const std::uint8_t> titles_executable,
+    std::span<const std::uint8_t> game_executable);
+
 [[nodiscard]] MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     std::span<const std::uint8_t> game_executable,

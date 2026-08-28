@@ -194,9 +194,11 @@ logical translation (its final RGBA frame is separately hash-locked). The
 Spanish `2200AD4.BIN` celestial display table starts at its observed `$03db`
 offset and is exposed byte-for-byte, including `Tierra ` and `Asteroides `.
 `--verify-data millennium` reports these FAT12-derived facts without copying
-or unpacking the disk. The Spanish title-to-game launcher boundary remains
-unmodelled: this release supplies a batch launcher rather than the verified
-English `MILL.COM` flow, so Project Eon does not infer a replacement hand-off.
+or unpacking the disk. `MILL.BAT` is only an original instruction file; the
+Spanish `IBM.COM` separately provides a hash-verified static request chain for
+its own `TITLES.EXE` followed by `2200AD.EXE`. DOS call results, return values
+and both target ABIs remain unexecuted, so Project Eon does not infer a
+replacement hand-off or substitute the English state.
 
 The English DOS `TITLE.LIB` and `GX.LIB` are also parsed natively through their
 verified banked resource directory, exposing 38 title resources and 180
