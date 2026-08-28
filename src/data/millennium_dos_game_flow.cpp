@@ -1031,6 +1031,53 @@ MillenniumDosGxOverlayDispatcherEvidence parse_millennium_dos_gx_overlay_dispatc
         dispatch_sha256, table_sha256};
 }
 
+MillenniumDosSpanishIbmHandoffEvidence parse_millennium_dos_spanish_ibm_handoff_evidence(
+    const std::span<const std::uint8_t> ibm_executable,
+    const std::span<const std::uint8_t> titles_executable,
+    const std::span<const std::uint8_t> game_executable) {
+    constexpr auto ibm_sha256 =
+        "84b7d158c770117aeaa07cb5ea2e7ed4a6bcc288d6b352d82569ff4d97b2fda9";
+    constexpr auto titles_sha256 =
+        "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7";
+    constexpr auto game_sha256 =
+        "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6";
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t caller_address = 0x023d;
+    constexpr auto caller = std::to_array<std::uint8_t>({
+        0xba,0x1d,0x07,0xe8,0xf6,0x00,0x22,0xc0,0x75,0x19,0x0e,0x1f,
+        0xba,0x28,0x07,0xe8,0xea,0x00,0x22,0xc0,0x75,0x0d});
+    constexpr auto caller_sha256 =
+        "6e1cf860908aa88e9427efac371439744c1a10f5bb5fcc7d9588a7f18085cbb7";
+    constexpr std::uint16_t names_address = 0x071d;
+    constexpr auto names = std::to_array<std::uint8_t>({
+        0x54,0x49,0x54,0x4c,0x45,0x53,0x2e,0x45,0x58,0x45,0x00,
+        0x32,0x32,0x30,0x30,0x61,0x64,0x2e,0x65,0x78,0x65,0x00});
+    constexpr std::uint16_t callee_address = 0x0339;
+    constexpr auto callee = std::to_array<std::uint8_t>({
+        0x8c,0xc8,0x89,0x06,0x0c,0x07,0x89,0x06,0x10,0x07,0x89,0x06,
+        0x14,0x07,0x8e,0xc0,0xbb,0x08,0x07,0x89,0x26,0x84,0x06,0xb8,
+        0x00,0x4b,0xcd,0x21,0x8c,0xc9,0x8e,0xd1,0x2e,0x8b,0x26,0x84,
+        0x06,0x8e,0xd9,0x8e,0xc1,0x72,0x05,0xb4,0x4d,0xcd,0x21,0xc3});
+    constexpr auto callee_sha256 =
+        "c2f5b915a0fbbc7a25d8a3f4c0e5fcc97eb197d44048eaff53e2046eb6e7c32c";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (to_hex(sha256(ibm_executable)) != ibm_sha256
+        || to_hex(sha256(titles_executable)) != titles_sha256
+        || to_hex(sha256(game_executable)) != game_sha256
+        || !has_bytes(ibm_executable, offset(caller_address), caller)
+        || !has_bytes(ibm_executable, offset(names_address), names)
+        || !has_bytes(ibm_executable, offset(callee_address), callee)
+        || to_hex(sha256(ibm_executable.subspan(offset(caller_address), caller.size()))) != caller_sha256
+        || to_hex(sha256(ibm_executable.subspan(offset(callee_address), callee.size()))) != callee_sha256) {
+        throw std::runtime_error("Unexpected Millennium Spanish IBM.COM handoff evidence");
+    }
+    return {ibm_sha256, titles_sha256, game_sha256, caller_address, 0x071d, 0x0728,
+        0x0240, 0x024c, callee_address, 0x0245, 0x0251, 0x0368,
+        caller_sha256, callee_sha256};
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;

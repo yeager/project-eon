@@ -1739,15 +1739,26 @@ int main() {
     assert(disk.sectors_per_cluster() == 2);
     assert(disk.root_entries().size() == 39);
     const auto* executable = disk.find("2200AD.EXE");
+    const auto* ibm = disk.find("IBM.COM");
+    const auto* spanish_titles = disk.find("TITLES.EXE");
     const auto* graphics = disk.find("GX.LIB");
     const auto* spanish_title = disk.find("TITLE.LIB");
     const auto* spanish_static_data = disk.find("2200AD4.BIN");
-    assert(executable && executable->size == 54'566);
+    assert(executable && ibm && spanish_titles && executable->size == 54'566);
     assert(graphics && graphics->size == 311'420);
     assert(spanish_title && spanish_title->size == 18'998);
     assert(spanish_static_data && spanish_static_data->size == 13'254);
     assert(eon::to_hex(eon::sha256(disk.read(*executable)))
         == "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6");
+    const auto spanish_ibm_handoff = eon::parse_millennium_dos_spanish_ibm_handoff_evidence(
+        disk.read(*ibm), disk.read(*spanish_titles), disk.read(*executable));
+    assert(spanish_ibm_handoff.caller_entry_address == 0x023d);
+    assert(spanish_ibm_handoff.title_name_address == 0x071d);
+    assert(spanish_ibm_handoff.game_name_address == 0x0728);
+    assert(spanish_ibm_handoff.first_call_address == 0x0240);
+    assert(spanish_ibm_handoff.second_call_address == 0x024c);
+    assert(spanish_ibm_handoff.callee_address == 0x0339);
+    assert(spanish_ibm_handoff.callee_return_address == 0x0368);
     // The complete Spanish executable ABI remains a separate preservation
     // boundary, but its F8 selected-record gate bytes are independently
     // accepted from the genuine FAT12 file in place.

@@ -1986,9 +1986,20 @@ substituting an English one.
 Spanish `2200AD4.BIN` has its 41 NUL-terminated celestial labels at `$03db`,
 not the English `$03d2`; Project Eon reads the media bytes at the observed
 layout and preserves labels such as `Tierra ` and `Asteroides ` unchanged.
-The floppy has `MILL.BAT`, not the verified English `MILL.COM` launcher, so
-the title-to-game control boundary is deliberately not claimed for this
-release.
+`MILL.BAT` contains only original usage instructions. The actual Spanish
+launcher evidence is `IBM.COM` (1,587 bytes, SHA-256
+`84b7d158c770117aeaa07cb5ea2e7ed4a6bcc288d6b352d82569ff4d97b2fda9`). Its
+hash-locked caller `$023d..$0252` first loads literal `TITLES.EXE` from
+`$071d`, calls local `$0339`, then conditionally reaches the second literal
+`2200ad.exe` at `$0728` and calls that same local callee. The 48-byte callee
+`$0339..$0368` has SHA-256
+`c2f5b915a0fbbc7a25d8a3f4c0e5fcc97eb197d44048eaff53e2046eb6e7c32c`; the
+Spanish FAT12 targets are independently hash-identified as `TITLES.EXE`
+`02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7` and
+`2200AD.EXE` `9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6`.
+This is a genuine caller-connected title-to-game request chain, not a DOS
+execution model: Project Eon does not invoke `$0339`, choose an AL result,
+assume a return, or run either target's unrecovered ABI.
 
 The English DOS `TITLE.LIB` (18,907 bytes, SHA-256
 `6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678`)

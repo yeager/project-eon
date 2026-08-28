@@ -171,6 +171,17 @@ def main() -> int:
                     "Millennium DOS GX dispatcher evidence did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+        if game == "millennium" and platform == "dos" and language == "Spanish":
+            expected_spanish_ibm = (
+                "Spanish IBM.COM handoff: caller 0x23d names 0x71d/0x728; calls 0x240/0x24c "
+                "-> 0x339; JNE 0x245/0x251; SHA-256 "
+                "84b7d158c770117aeaa07cb5ea2e7ed4a6bcc288d6b352d82569ff4d97b2fda9"
+            )
+            if expected_spanish_ibm not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Spanish DOS IBM.COM handoff did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "amiga":
             expected_callee = (
                 "Channel-request first callee: ADF 0x7a9c, entry 0x2229c; bit 5 branch 0x222b4 -> 0x2232c; "
