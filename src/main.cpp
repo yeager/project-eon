@@ -5,6 +5,7 @@
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
+#include "engine/millennium_atari_bootstrap_session.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
@@ -1319,6 +1320,31 @@ std::unique_ptr<eon::DeuterosAmigaOpening> load_deuteros_opening(
     }
 }
 
+std::unique_ptr<eon::MillenniumAtariBootstrapSession> load_millennium_atari_bootstrap(
+    const std::vector<eon::ReleaseArchive>& releases,
+    std::optional<eon::Platform> requested_platform) {
+    if (requested_platform != eon::Platform::atari_st) return {};
+    constexpr auto equinox_disk_sha256 =
+        "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
+    const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
+        return candidate.game == eon::Game::millennium
+            && candidate.platform == eon::Platform::atari_st;
+    });
+    if (release == releases.end()) return {};
+    try {
+        const auto image = eon::extract_asset_by_sha256(release->path, equinox_disk_sha256);
+        if (!image) return {};
+        const eon::Fat12Disk disk(*image);
+        const auto* executable = disk.find("MILENIUM.TOS");
+        if (!executable) return {};
+        return std::make_unique<eon::MillenniumAtariBootstrapSession>(
+            disk, disk.read(*executable));
+    } catch (const std::exception& error) {
+        std::cerr << "Unable to start Millennium Atari ST bootstrap: " << error.what() << '\n';
+        return {};
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -1452,12 +1478,14 @@ int main(int argc, char** argv) {
     };
     SDL_Texture* millennium_preview_texture = nullptr;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
+    std::unique_ptr<eon::MillenniumAtariBootstrapSession> millennium_atari_session;
     const auto discard_millennium_assets = [&] {
         if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
         if (millennium_gx_canvas_texture) SDL_DestroyTexture(millennium_gx_canvas_texture);
         millennium_preview_texture = nullptr;
         millennium_gx_canvas_texture = nullptr;
         millennium_assets.reset();
+        millennium_atari_session.reset();
     };
     const auto create_millennium_textures = [&] {
         if (!millennium_assets || millennium_preview_texture) return;
@@ -1501,6 +1529,10 @@ int main(int argc, char** argv) {
         return eon::available_platforms(releases, game);
     };
     const auto start_millennium_title = [&] {
+        millennium_atari_session = load_millennium_atari_bootstrap(releases, active_platform);
+        millennium_title_session.reset();
+        millennium_game_session.reset();
+        if (active_platform == eon::Platform::atari_st) return;
         load_millennium_assets_if_available();
         if (millennium_assets && millennium_assets->title_flow && millennium_assets->game_flow) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(

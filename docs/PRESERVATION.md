@@ -149,6 +149,9 @@ in-memory copies from `MILENIUM.TOS`, materializing the original 514-byte
 target at `$77000`, then reaches the literal `Fopen` request above. It resolves
 the same read-only FAT12 entry and stops before `TRAP #1`: no host file handle,
 D0 result, config execution, or Atari display state is fabricated.
+The SDL launcher creates this bounded session only for the exact identified
+Equinox image when the Atari ST Millennium card or CLI target is selected; it
+does not reuse the DOS title flow for that platform.
 
 The Equinox payload's first JMP is now traced through its first proven control
 block. Its absolute references establish an observed load base of `0x2a4de`,
