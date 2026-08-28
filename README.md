@@ -255,6 +255,8 @@ See [docs/research.md](docs/research.md) for the reverse-engineering method and
 current findings. The hash ledger, evidence levels, reproduction procedure,
 and contribution rules live in the
 [preservation record](docs/PRESERVATION.md).
+The release-by-release distinction between data support, bounded startup and
+playable parity is maintained in the [parity matrix](docs/PARITY.md).
 
 ## Continuous integration and Git policy
 
