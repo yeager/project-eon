@@ -1915,142 +1915,144 @@ int main(int argc, char** argv) {
                     constexpr std::size_t records_per_page = 8;
                     const auto first_record = millennium_state_page * records_per_page;
                     std::ostringstream heading;
-                    heading << "2200SAVE.I READ-ONLY  SHA-256 " << save.sha256()
-                            << "  VERSION 0x" << std::hex << save.layout().version << std::dec;
+                    // This is a diagnostic view of original bytes, rather
+                    // than game prose. Keep its variable part notation-only:
+                    // it must not leak untranslated English into the launcher.
+                    heading << "2200SAVE.I  SHA-256 " << save.sha256()
+                            << "  v0x" << std::hex << save.layout().version << std::dec;
                     draw_text(renderer, 610, 270, heading.str());
                     draw_text(renderer, 610, 290,
                         tr("RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"));
                     if (millennium_game_session) {
                         std::ostringstream dispatch;
-                        dispatch << "ORIGINAL ACTION LOOP: F1-F10 -> TABLE INDEX ";
+                        dispatch << "F1-F10 -> [";
                         if (const auto index = millennium_game_session->last_function_key_index()) {
-                            dispatch << *index << " (8-BYTE RECORD; HANDLER NOT YET EMULATED)";
+                            dispatch << *index << "]  (8 B)";
                         } else {
-                            dispatch << "--  (PRESS F1-F10 TO OBSERVE DISPATCH)";
+                            dispatch << "--]";
                         }
                         draw_text(renderer, 610, 310, dispatch.str());
                     }
                     if (millennium_game_session) {
                         if (const auto trace = millennium_game_session->last_first_function_key_trace()) {
                             std::ostringstream f1;
-                            f1 << "F1 ORIGINAL TRACE: HANDLER $" << std::hex << trace->handler_address
-                               << " -> CALL $" << trace->display_selector_call_address
-                               << " -> SETUP $" << trace->setup_entry_address
-                               << " (RETURN REQUIRED); SELECTOR $" << trace->selector_address
-                               << "=0 -> RECORD $" << trace->selected_record_address << "  (BYTE +02=$"
+                            f1 << "F1: $" << std::hex << trace->handler_address
+                               << " -> $" << trace->display_selector_call_address
+                               << " -> $" << trace->setup_entry_address
+                               << " (RET); $" << trace->selector_address
+                               << "=0 -> $" << trace->selected_record_address << "  (+02=$"
                                << static_cast<unsigned>(trace->selected_record_byte_2) << ')';
                             draw_text(renderer, 610, 326, f1.str());
                         }
                         if (const auto trace = millennium_game_session->last_second_function_key_trace()) {
                             std::ostringstream f2;
-                            f2 << "F2 ORIGINAL GATE: [$" << std::hex
+                            f2 << "F2: [$" << std::hex
                                << trace->availability_address << "] >= $"
                                << static_cast<unsigned>(trace->minimum_availability)
-                               << " -> HANDLER $" << trace->handler_address
-                               << " -> LIST $" << trace->first_record_address
+                               << " -> $" << trace->handler_address
+                               << " -> $" << trace->first_record_address
                                << " +$" << trace->record_stride;
                             draw_text(renderer, 610, 342, f2.str());
                         }
                         if (const auto trace = millennium_game_session->last_third_function_key_trace()) {
                             std::ostringstream f3;
-                            f3 << "F3 ORIGINAL GATES: [$" << std::hex
+                            f3 << "F3: [$" << std::hex
                                << trace->initialization_guard_address << "] == 0; [$"
-                               << trace->availability_address << "] != 0 -> HANDLER $"
-                               << trace->handler_address << " -> CALLBACK $"
+                               << trace->availability_address << "] != 0 -> $"
+                               << trace->handler_address << " -> $"
                                << trace->callback_address;
                             draw_text(renderer, 610, 358, f3.str());
                         }
                         if (const auto trace = millennium_game_session->last_fourth_function_key_trace()) {
                             std::ostringstream f4;
-                            f4 << "F4 ORIGINAL GATE: [$" << std::hex
-                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
-                               << trace->handler_address << " -> COMMON $"
+                            f4 << "F4: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> $"
+                               << trace->handler_address << " -> $"
                                << trace->common_routine_address << " -> [$"
                                << trace->first_runtime_byte_address << "]=$"
                                << static_cast<unsigned>(trace->first_runtime_byte_value)
-                               << " AFTER CALL $" << trace->first_call_address
-                               << " (NO OVERLAY; GUARD CLEAR SITE $"
-                               << trace->initialization_guard_clear_address << ')';
+                               << " ; $" << trace->first_call_address
+                               << " ; [$"
+                               << trace->initialization_guard_clear_address << ']';
                             draw_text(renderer, 610, 374, f4.str());
                         }
                         if (const auto trace = millennium_game_session->last_fifth_function_key_trace()) {
                             std::ostringstream f5;
-                            f5 << "F5 ORIGINAL TRACE: HANDLER $" << std::hex << trace->handler_address
+                            f5 << "F5: $" << std::hex << trace->handler_address
                                << " -> AL=$" << static_cast<unsigned>(trace->transfer_al_value)
-                               << " -> NO STORE -> CALL $" << trace->first_call_address
-                               << " -> CALL $" << trace->first_call_initial_nested_call_address
-                               << " (BOUNDARY); THEN $"
+                               << " -> $" << trace->first_call_address
+                               << " -> $" << trace->first_call_initial_nested_call_address
+                               << " ; $"
                                << trace->second_call_address << ",$" << trace->third_call_address
                                << ",$" << trace->fourth_call_address;
                             draw_text(renderer, 610, 390, f5.str());
                         }
                         if (const auto trace = millennium_game_session->last_sixth_function_key_trace()) {
                             std::ostringstream f6;
-                            f6 << "F6 ORIGINAL GATE: [$" << std::hex
-                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                            f6 << "F6: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> $"
                                << trace->handler_address << " -> [$"
                                << trace->first_byte_address << "]=$"
                                << static_cast<unsigned>(trace->first_byte_value)
                                << "; [$" << trace->second_byte_address << "]=$"
                                << static_cast<unsigned>(trace->second_byte_value)
-                               << " -> POLL $" << trace->wait_call_address;
+                               << " -> $" << trace->wait_call_address;
                             draw_text(renderer, 610, 390, f6.str());
                         }
                         if (const auto trace = millennium_game_session->last_seventh_function_key_trace()) {
                             std::ostringstream f7;
-                            f7 << "F7 ORIGINAL GATE: [$" << std::hex
-                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                            f7 << "F7: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> $"
                                << trace->handler_address << " -> [$"
                                << trace->first_runtime_word_address << "],[$"
                                << trace->second_runtime_word_address << "],[$"
-                               << trace->third_runtime_word_address << "] -> CALL $"
+                               << trace->third_runtime_word_address << "] -> $"
                                << trace->terminal_call_address;
                             draw_text(renderer, 610, 390, f7.str());
                         }
                         if (const auto trace = millennium_game_session->last_eighth_function_key_trace()) {
                             std::ostringstream f8;
-                            f8 << "F8 VERIFIED EFFECT: HANDLER $" << std::hex << trace->handler_address
+                            f8 << "F8: $" << std::hex << trace->handler_address
                                << " -> [$" << trace->reset_runtime_byte_address << "]=$"
                                << static_cast<unsigned>(trace->reset_runtime_byte_value)
-                               << " -> PREFLIGHT $" << trace->local_preflight_address
-                               << " -> REPEAT CALL $" << trace->repeated_call_address
+                               << " -> $" << trace->local_preflight_address
+                               << " -> $" << trace->repeated_call_address
                                << " (SHR BL,1 CARRY)";
                             draw_text(renderer, 610, 390, f8.str());
                             if (const auto effect = millennium_game_session->last_runtime_byte_effect()) {
                                 std::ostringstream effect_text;
-                                effect_text << "REIMPLEMENTED PREFIX ONLY: [$" << std::hex
-                                            << effect->address << "] ";
+                                effect_text << "[$" << std::hex << effect->address << "] ";
                                 if (effect->previous) {
                                     effect_text << '$' << static_cast<unsigned>(*effect->previous);
                                 } else {
-                                    effect_text << "UNKNOWN";
+                                    effect_text << "?";
                                 }
                                 effect_text << " -> $" << static_cast<unsigned>(effect->value)
-                                            << "; NO SAVE WRITE, NO NATIVE CALL";
+                                            << " ; !W, !C";
                                 draw_text(renderer, 610, 406, effect_text.str());
                             }
                         }
                         if (const auto trace = millennium_game_session->last_ninth_function_key_trace()) {
                             std::ostringstream f9;
-                            f9 << "F9 ORIGINAL GATE: [$" << std::hex
-                               << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                            f9 << "F9: [$" << std::hex
+                               << trace->initialization_guard_address << "] == 0 -> $"
                                << trace->handler_address << " -> [$"
                                << trace->first_reset_runtime_byte_address << "]=$"
                                << static_cast<unsigned>(trace->first_reset_runtime_byte_value)
                                << " -> [$" << trace->limit_runtime_byte_address << "] < $"
                                << static_cast<unsigned>(trace->limit_value)
-                               << " -> PREFLIGHT $" << trace->local_preflight_address;
+                               << " -> $" << trace->local_preflight_address;
                             draw_text(renderer, 610, 390, f9.str());
                         }
                         if (const auto trace = millennium_game_session->last_tenth_function_key_trace()) {
                             std::ostringstream f10;
-                            f10 << "F10 ORIGINAL GATE: [$" << std::hex
-                                << trace->initialization_guard_address << "] == 0 -> HANDLER $"
+                            f10 << "F10: [$" << std::hex
+                                << trace->initialization_guard_address << "] == 0 -> $"
                                 << trace->handler_address << " -> [$"
                                 << trace->limit_runtime_byte_address << "] < $"
                                 << static_cast<unsigned>(trace->limit_value)
-                                << " -> PREFLIGHT $" << trace->local_preflight_address
-                                << " -> POLL $" << trace->wait_call_address;
+                                << " -> $" << trace->local_preflight_address
+                                << " -> $" << trace->wait_call_address;
                             draw_text(renderer, 610, 390, f10.str());
                         }
                     }
@@ -2067,10 +2069,10 @@ int main(int argc, char** argv) {
                             line.str());
                     }
                     std::ostringstream pager;
-                    pager << "PAGE " << (millennium_state_page + 1) << "/"
+                    pager << "P " << (millennium_state_page + 1) << "/"
                           << ((eon::MillenniumDosSaveLayout::state_table_count + records_per_page - 1)
                               / records_per_page)
-                          << "  LEFT/RIGHT: TABLE PAGE";
+                          << "  <- / ->";
                     draw_text(renderer, 610, 496, pager.str());
                 }
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
@@ -2110,9 +2112,9 @@ int main(int argc, char** argv) {
                 if (title_stage) {
                     std::ostringstream provenance;
                     provenance << tr("AUTHENTIC TITLE STAGE READY") << ": ADF +0x" << std::hex
-                               << title_stage->stage().disk_offset << " length 0x"
+                               << title_stage->stage().disk_offset << "; 0x"
                                << title_stage->stage().length << " -> RAM 0x"
-                               << title_stage->stage().destination << ", entry 0x"
+                               << title_stage->stage().destination << "; 0x"
                                << title_stage->stage().entry_address;
                     draw_text(renderer, 64, 284, provenance.str());
                     draw_text(renderer, 64, 298,

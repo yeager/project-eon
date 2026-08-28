@@ -84,6 +84,21 @@ class CatalogTests(unittest.TestCase):
                         f"{language} leaves a placeholder for {message_id!r}",
                     )
 
+    def test_variable_evidence_panel_uses_language_neutral_notation(self) -> None:
+        """Addresses and bytes may vary, but launcher wording must use PO text."""
+        source = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+        panel_start = source.index('            draw_text(renderer, 64, 56, tr("LAUNCH REQUEST ACCEPTED"));')
+        panel_end = source.index("        SDL_RenderPresent(renderer);", panel_start)
+        panel = source[panel_start:panel_end]
+        dynamic_english = {
+            "ORIGINAL ACTION LOOP:", "HANDLER $", "REIMPLEMENTED PREFIX ONLY:",
+            "NO SAVE WRITE, NO NATIVE CALL", "LEFT/RIGHT: TABLE PAGE",
+            " length 0x", ", entry 0x",
+        }
+        for phrase in dynamic_english:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, panel)
+
 
 if __name__ == "__main__":
     unittest.main()
