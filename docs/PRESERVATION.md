@@ -144,6 +144,12 @@ no FAT12 pathname namespace to substitute. Project Eon reads a present entry
 only through its original cluster chain in memory, and never creates, changes,
 or falls back to a synthetic `.inf` file.
 
+The live Millennium Atari bootstrap session executes only the two proven
+in-memory copies from `MILENIUM.TOS`, materializing the original 514-byte
+target at `$77000`, then reaches the literal `Fopen` request above. It resolves
+the same read-only FAT12 entry and stops before `TRAP #1`: no host file handle,
+D0 result, config execution, or Atari display state is fabricated.
+
 The Equinox payload's first JMP is now traced through its first proven control
 block. Its absolute references establish an observed load base of `0x2a4de`,
 which resolves the target `0x2aa88` to file offset `0x5aa`. At that offset the
