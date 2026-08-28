@@ -985,6 +985,20 @@ resuming the normal loop. This is a verified reset/gate relationship only:
 Project Eon does not assign gameplay meaning to `$22d34` or synthesize either
 state value at run time.
 
+Both timer skips converge at `$405c6` (ADF `+0x9b5c6`), whose ten bytes hash
+to `68ccbd8edf32800e43fe55c47356e162896b8500b01d2e9fd461191ba1760736` and
+test byte `$1bf36` before branching to `$40638`. The clean original state word
+at ADF `+0x76f36` is zero (SHA-256
+`96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7`). The
+zero branch's 60-byte response loop at `$40638` / ADF `+0x9b638` hashes to
+`b47192ea229873ef1ae47f841d044393bfd3e7e1a7fc0ca92308a555c2eb84d0`.
+It calls `$1f238`, treating its low-byte return as an explicit ABI input; a
+non-`$43` response returns to `$40574`. A `$43` response XORs `$1bf36` with
+`$0101`, and the verified clean-state route emits literal `$0f00` writes to
+`$dff180` before further helper responses. Project Eon records this as a
+hash-locked machine-write trace only: it neither calls the helper nor writes
+the custom chip, and it leaves the unrecovered nonzero-state route unmodeled.
+
 The same `$4069a` routine has a bounded, verified return phase. It reads and
 compares words at `$1ffc8`, `$1ffce`, and `$1ffd4`; on its original branch it
 supplies `$12e12`, `$1ffda`, and `$1ffe6` to vector `-$1a4` and stores the last

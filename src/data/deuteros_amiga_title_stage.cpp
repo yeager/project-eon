@@ -662,4 +662,79 @@ DeuterosAmigaTitleTimerGate evaluate_deuteros_amiga_title_timer_gate(
     return result;
 }
 
+DeuterosAmigaTitleZeroResponseLoop evaluate_deuteros_amiga_title_zero_response_loop(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::span<const std::uint8_t> helper_response_low_bytes) {
+    const auto& stage = plan.title_stage;
+    constexpr std::uint32_t entry_address = 0x405c6;
+    constexpr std::uint32_t response_loop_address = 0x40638;
+    constexpr std::uint32_t state_word_address = 0x1bf36;
+    constexpr std::uint32_t helper_address = 0x1f238;
+    constexpr std::uint32_t custom_address = 0xdff180;
+    constexpr std::uint32_t return_loop_address = 0x40574;
+    constexpr std::string_view title_stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::array<std::uint8_t, 10> common_gate_bytes{{
+        0x4a, 0x39, 0x00, 0x01, 0xbf, 0x36, 0x67, 0x00, 0x00, 0x6a,
+    }};
+    constexpr std::string_view common_gate_hash =
+        "68ccbd8edf32800e43fe55c47356e162896b8500b01d2e9fd461191ba1760736";
+    constexpr std::string_view response_loop_hash =
+        "b47192ea229873ef1ae47f841d044393bfd3e7e1a7fc0ca92308a555c2eb84d0";
+    constexpr std::string_view initial_state_hash =
+        "96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7";
+    if (stage.length == 0 || entry_address < stage.destination
+        || response_loop_address < stage.destination || state_word_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || common_gate_bytes.size() > stage.length - (entry_address - stage.destination)
+        || 60U > stage.length - (response_loop_address - stage.destination)
+        || 2U > stage.length - (state_word_address - stage.destination)) {
+        throw std::runtime_error("Deuteros title response loop lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto common_gate = stage_bytes.subspan(
+        entry_address - stage.destination, common_gate_bytes.size());
+    const auto response_loop = stage_bytes.subspan(response_loop_address - stage.destination, 60);
+    const auto initial_state = stage_bytes.subspan(state_word_address - stage.destination, 2);
+    if (to_hex(sha256(stage_bytes)) != title_stage_hash
+        || !std::equal(common_gate_bytes.begin(), common_gate_bytes.end(), common_gate.begin())
+        || to_hex(sha256(common_gate)) != common_gate_hash
+        || to_hex(sha256(response_loop)) != response_loop_hash
+        || to_hex(sha256(initial_state)) != initial_state_hash
+        || big16(initial_state, 0) != 0) {
+        throw std::runtime_error("Unsupported Deuteros title zero response loop");
+    }
+    if (helper_response_low_bytes.empty()) {
+        throw std::runtime_error("Deuteros title response loop needs original helper response");
+    }
+    DeuterosAmigaTitleZeroResponseLoop result;
+    result.entry_address = entry_address;
+    result.state_word_address = state_word_address;
+    result.initial_state_word = 0;
+    result.final_state_word = 0;
+    result.helper_address = helper_address;
+    result.response_match_value = 0x43;
+    result.custom_address = custom_address;
+    result.return_loop_address = return_loop_address;
+    if (helper_response_low_bytes.front() != result.response_match_value) {
+        if (helper_response_low_bytes.size() != 1) {
+            throw std::runtime_error("Unexpected extra Deuteros title helper response");
+        }
+        return result;
+    }
+    result.final_state_word ^= 0x0101;
+    for (std::size_t index = 1; index < helper_response_low_bytes.size(); ++index) {
+        // Starting from the validated zero route, EOR.W #$0101 makes the
+        // state nonzero and the original chooses this literal custom word.
+        result.custom_write_words.push_back(0x0f00);
+        if (helper_response_low_bytes[index] == result.response_match_value) {
+            if (index + 1 != helper_response_low_bytes.size()) {
+                throw std::runtime_error("Unexpected trailing Deuteros title helper response");
+            }
+            return result;
+        }
+    }
+    throw std::runtime_error("Deuteros title response loop lacks terminating helper response");
+}
+
 } // namespace eon
