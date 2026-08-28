@@ -617,6 +617,12 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto separate_byte_gate_fallthrough =
         eon::parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
             disk, plan, separate_byte_gate_convergence);
+    const auto independent_entry =
+        eon::parse_millennium_amiga_resident_independent_entry_gate(disk, plan);
+    const auto negative_d3 = eon::parse_millennium_amiga_resident_negative_d3_continuation(
+        disk, plan, independent_entry);
+    const auto negative_d3_terminal = eon::parse_millennium_amiga_resident_negative_d3_terminal(
+        disk, plan, negative_d3);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -803,6 +809,22 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << separate_byte_gate_fallthrough.other_path_branch_address << " -> 0x"
         << separate_byte_gate_fallthrough.other_path_branch_target << std::dec
         << " (static only, no register/branch execution)\n";
+    std::cout << "          independent resident gate: entry 0x" << std::hex
+        << independent_entry.entry_address << "; negative-D3 branch 0x"
+        << independent_entry.negative_d3_branch_address << " -> 0x"
+        << independent_entry.negative_d3_target << "; fixed-byte test 0x"
+        << independent_entry.flag_test_address << " at 0x" << independent_entry.flag_address
+        << ", zero branch 0x" << independent_entry.flag_zero_branch_address << " -> 0x"
+        << independent_entry.flag_zero_target << std::dec
+        << " (static only, no flag/branch execution)\n"
+        << "          negative-D3 continuation: entry 0x" << std::hex
+        << negative_d3.entry_address << "; external JMP 0x"
+        << negative_d3.external_jump_address << " -> 0x" << negative_d3.external_jump_target
+        << "; terminal tail 0x" << negative_d3_terminal.entry_address
+        << " has immediates 0x" << negative_d3_terminal.first_add_immediate << ", 0x"
+        << negative_d3_terminal.second_add_immediate << " and RTS 0x"
+        << negative_d3_terminal.return_address << std::dec
+        << " (validated raw bytes only; no predicates, target, or effects executed)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
