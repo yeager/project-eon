@@ -969,6 +969,13 @@ int main() {
     assert(gx_overlay_load.third_call_target == 0x0596);
     assert(gx_overlay_load.caller_call_address == 0xd335);
     assert(gx_overlay_load.caller_target == 0x11ce);
+    const auto static_data_load = eon::parse_millennium_dos_static_data_load_evidence(*game_executable);
+    assert(static_data_load.source_name_address == 0x100d);
+    assert(static_data_load.loader_entry_address == 0x101a);
+    assert(static_data_load.caller_call_address == 0xd332 && static_data_load.caller_target == 0x101a);
+    assert(static_data_load.open_call_address == 0x101d);
+    assert(static_data_load.read_call_address == 0x102e);
+    assert(static_data_load.close_call_address == 0x1036);
     const auto gx_overlay_adapter = eon::parse_millennium_dos_gx_overlay_adapter_evidence(
         *game_executable, gx_overlay_load);
     assert(gx_overlay_adapter.entry_address == 0x6c52);
@@ -2915,6 +2922,26 @@ int main() {
     assert(first_title_exit_return_tail.bootstrap_profile_address == 0x12ffc);
     assert(first_title_exit_return_tail.bootstrap_profile_value == 2);
     assert(first_title_exit_return_tail.jump_target_address == 0x12800);
+    const auto first_title_exit_subroutine =
+        eon::parse_deuteros_amiga_first_title_exit_subroutine_profile(system_disk, load_plan);
+    assert(first_title_exit_subroutine.entry_address == 0x37f9a);
+    assert(first_title_exit_subroutine.initial_d1_value == 0x12800);
+    assert(first_title_exit_subroutine.initial_d7_value == 0x2c00);
+    assert(first_title_exit_subroutine.initial_d0_value == 0x600);
+    assert(first_title_exit_subroutine.initial_service_address == 0x208c0);
+    assert(first_title_exit_subroutine.first_work_address == 0x1eefa);
+    assert(first_title_exit_subroutine.first_work_word_offset == 0x1c);
+    assert(first_title_exit_subroutine.first_work_word_value == 0x000a);
+    assert(first_title_exit_subroutine.first_work_long_offset == 0x28);
+    assert(first_title_exit_subroutine.first_work_long_value == 0x1ef48);
+    assert((first_title_exit_subroutine.exec_argument_addresses
+        == std::array<std::uint32_t, 5>{{0x1eefa, 0x1eefa, 0x1eed8, 0x2063e, 0x20676}}));
+    assert((first_title_exit_subroutine.exec_vectors
+        == std::array<std::int16_t, 5>{{-0x1ce, -0x1c2, -0x168, -0x1c2, -0x168}}));
+    assert(first_title_exit_subroutine.compare_first_address == 0x20698);
+    assert(first_title_exit_subroutine.compare_second_address == 0x2069c);
+    assert(first_title_exit_subroutine.unequal_branch_address == 0x38014);
+    assert(first_title_exit_subroutine.return_address == 0x38030);
     {
         bool rejected = false;
         try {

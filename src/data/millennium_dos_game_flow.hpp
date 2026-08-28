@@ -507,6 +507,23 @@ struct MillenniumDosGxOverlayLoadEvidence {
     std::string loader_sha256;
 };
 
+// Hash-locked static request for 2200AD4.BIN during the same original DOS
+// startup. This records only encoded open/read/close control flow: the DOS
+// handle/result, DS source buffer and call returns remain external boundaries.
+struct MillenniumDosStaticDataLoadEvidence {
+    std::uint16_t source_name_address = 0;
+    std::uint16_t loader_entry_address = 0;
+    std::uint16_t caller_call_address = 0;
+    std::uint16_t caller_target = 0;
+    std::uint16_t open_call_address = 0;
+    std::uint16_t read_call_address = 0;
+    std::uint16_t close_call_address = 0;
+    std::uint16_t loader_return_address = 0;
+    std::string caller_sha256;
+    std::string loader_sha256;
+    std::string source_name_sha256;
+};
+
 struct MillenniumDosGxOverlayAdapterEvidence {
     std::uint16_t entry_address = 0;
     std::uint16_t overlay_segment_cell_address = 0;
@@ -544,6 +561,9 @@ struct MillenniumDosGxOverlaySelectorEvidence {
 parse_millennium_dos_gx_overlay_load_evidence(
     std::span<const std::uint8_t> game_executable,
     std::span<const std::uint8_t> gx_overlay_executable);
+[[nodiscard]] MillenniumDosStaticDataLoadEvidence
+parse_millennium_dos_static_data_load_evidence(
+    std::span<const std::uint8_t> game_executable);
 [[nodiscard]] MillenniumDosGxOverlayAdapterEvidence
 parse_millennium_dos_gx_overlay_adapter_evidence(
     std::span<const std::uint8_t> game_executable,

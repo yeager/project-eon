@@ -290,6 +290,29 @@ struct DeuterosAmigaFirstTitleExitReturnTail {
     std::uint32_t jump_target_address = 0;
 };
 
+// The BSR immediately before the first exit's profile-two tail has a complete
+// in-stage implementation. This is a static instruction profile only: its
+// initial service call and every Exec vector call remain external ABI
+// boundaries, and the two compared longwords are not assigned a role.
+struct DeuterosAmigaFirstTitleExitSubroutineProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t initial_d1_value = 0;
+    std::uint32_t initial_d7_value = 0;
+    std::uint32_t initial_d0_value = 0;
+    std::uint32_t initial_service_address = 0;
+    std::uint32_t first_work_address = 0;
+    std::uint16_t first_work_word_offset = 0;
+    std::uint16_t first_work_word_value = 0;
+    std::uint16_t first_work_long_offset = 0;
+    std::uint32_t first_work_long_value = 0;
+    std::array<std::uint32_t, 5> exec_argument_addresses{};
+    std::array<std::int16_t, 5> exec_vectors{};
+    std::uint32_t compare_first_address = 0;
+    std::uint32_t compare_second_address = 0;
+    std::uint32_t unequal_branch_address = 0;
+    std::uint32_t return_address = 0;
+};
+
 // The second known title exit reaches its bootstrap tail only after four
 // original calls return. This preserves the straight-line instruction facts
 // after those calls, without entering a helper, reading the controller
@@ -384,6 +407,13 @@ evaluate_deuteros_amiga_first_title_exit_copy(
 evaluate_deuteros_amiga_first_title_exit_return_tail(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     bool subroutine_returned);
+
+// Validates the complete original BSR target at $37f9a as a static profile.
+// It neither invokes its initial service/Exec calls nor reads compared runtime
+// cells; the conditional branch remains a recorded raw control-flow fact.
+[[nodiscard]] DeuterosAmigaFirstTitleExitSubroutineProfile
+parse_deuteros_amiga_first_title_exit_subroutine_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // `preceding_calls_returned` is an explicit boundary covering the four calls
 // immediately before this tail. It must not be inferred from a title choice
