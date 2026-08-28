@@ -430,6 +430,13 @@ whose zero branch at `$68518` reaches `$6854a`. This is recorded by
 evidence only; neither branch target nor the flag's gameplay meaning is
 inferred.
 
+The negative target is independently hash-locked: `$68598..$685fb` maps
+linearly to ADF `+$16998`, is 100 bytes, and hashes to
+`716e8bf1db5d7cad89a0074cf6fe7cc6a0a66d73379814bac181a5f6c4a9e500` in all
+six supplied Amiga variants. Its parser reports only the external `JMP $7bcf8`
+at `$685ee` and the separately encoded `RTS` at `$685fc`; runtime-dependent
+cells, conditional outcomes, and the external jump are not executed or named.
+
 At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
 $68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control
 flow only; no register, path, target, or continuation meaning is inferred.
