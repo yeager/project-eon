@@ -2422,6 +2422,27 @@ int main() {
     assert(deuteros_state1_bytes.size() == deuteros_state1_plan.byte_count);
     assert(eon::to_hex(eon::sha256(deuteros_state1_bytes))
         == "0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47");
+    const auto deuteros_state1_skipped_ascii = eon::parse_deuteros_atari_state1_skipped_ascii_block(
+        deuteros_state1_bytes, deuteros_state1_plan);
+    assert(deuteros_state1_skipped_ascii.branch_relative_offset == 0x48000);
+    assert(deuteros_state1_skipped_ascii.branch_displacement == 0x09c2);
+    assert(deuteros_state1_skipped_ascii.ascii_relative_offset == 0x4800a);
+    assert(deuteros_state1_skipped_ascii.ascii_byte_count == 0x438);
+    assert(deuteros_state1_skipped_ascii.printable_run_count == 18);
+    assert(deuteros_state1_skipped_ascii.ascii_sha256
+        == "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e");
+    {
+        auto altered_state1 = deuteros_state1_bytes;
+        altered_state1[0x4800a] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_state1_skipped_ascii_block(
+                altered_state1, deuteros_state1_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(deuteros_dispatch.state5_first_destination == 0xb000);
     assert(deuteros_dispatch.state5_first_byte_count == 0xb400);
     assert(deuteros_dispatch.state5_first_reader_argument == 0x55800);

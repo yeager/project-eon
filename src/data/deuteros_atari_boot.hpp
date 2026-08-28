@@ -256,6 +256,22 @@ struct DeuterosAtariState0DuplicateStagePrefix {
 parse_deuteros_atari_state0_duplicate_stage_prefix(std::span<const std::uint8_t> state0_bytes,
     std::span<const std::uint8_t> second_stage_bytes);
 
+// A byte-bounded printable block in the state-1 raw media is preceded by an
+// unconditional BRA.W encoding. It is preservation metadata, not original UI
+// text: it is never rendered, translated, or assigned a runtime consumer.
+struct DeuterosAtariState1SkippedAsciiBlock {
+    std::size_t branch_relative_offset = 0;
+    std::int16_t branch_displacement = 0;
+    std::size_t ascii_relative_offset = 0;
+    std::size_t ascii_byte_count = 0;
+    std::size_t printable_run_count = 0;
+    std::string ascii_sha256;
+};
+
+[[nodiscard]] DeuterosAtariState1SkippedAsciiBlock
+parse_deuteros_atari_state1_skipped_ascii_block(
+    std::span<const std::uint8_t> state1_bytes, const DeuterosAtariRawRangeLoadPlan& state1);
+
 class DeuterosAtariDisk {
 public:
     static constexpr std::size_t standard_size = 737'280;

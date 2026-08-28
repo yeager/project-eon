@@ -451,4 +451,30 @@ parse_deuteros_atari_state0_duplicate_stage_prefix(const std::span<const std::ui
     return {stage_size, to_hex(sha256(second_stage_bytes)), 0, stage.direct_entry_source_offset};
 }
 
+DeuterosAtariState1SkippedAsciiBlock
+parse_deuteros_atari_state1_skipped_ascii_block(
+    const std::span<const std::uint8_t> state1_bytes,
+    const DeuterosAtariRawRangeLoadPlan& state1) {
+    constexpr std::size_t branch_relative_offset = 0x48000;
+    constexpr std::array<std::uint8_t, 4> branch{{0x60, 0x00, 0x09, 0xc2}};
+    constexpr std::size_t ascii_relative_offset = 0x4800a;
+    constexpr std::size_t ascii_byte_count = 0x438;
+    constexpr auto ascii_sha256 =
+        "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e";
+    if (state1.source_offset != 0x55800 || state1.destination != 0xb000
+        || state1.byte_count != 0x5e400 || state1_bytes.size() != state1.byte_count
+        || ascii_relative_offset > state1_bytes.size()
+        || ascii_byte_count > state1_bytes.size() - ascii_relative_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 skipped ASCII placement");
+    }
+    require_bytes(state1_bytes, branch_relative_offset, branch,
+        "Unexpected Deuteros Atari ST state-1 skip branch");
+    const auto ascii = state1_bytes.subspan(ascii_relative_offset, ascii_byte_count);
+    if (to_hex(sha256(ascii)) != ascii_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 skipped ASCII block");
+    }
+    return {branch_relative_offset, 0x09c2, ascii_relative_offset, ascii_byte_count, 18,
+        ascii_sha256};
+}
+
 } // namespace eon
