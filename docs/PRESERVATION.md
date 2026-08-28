@@ -1654,6 +1654,16 @@ has local continuation `$6c69`/return `$6c72`. These are raw loader and
 transfer facts only: Project Eon does not choose a segment value, invoke a
 DOS/private call, run overlay code, or infer a screen/resource order.
 
+The overlay's actual entry dispatcher is separately locked at `2200GX.EXE`
+`+$0000..+$0013` (20 bytes, SHA-256
+`f4d657fcbdda23d7f0fdf2bbf48405d0a04e8b8149df064607f49042525fbd55`). It
+clears AH, uses AL to index the original 21-word table at `+$0015..+$003e`
+(SHA-256 `4d04568e05378787921012654fe9c157419ce7c07f9943b51135258f32a06df3`),
+and near-returns to the `RETF` at `+$0014`. The caller-connected observed
+selectors `$0e/$0f/$12/$14` map to original overlay offsets
+`$0090/$009f/$0097/$00a7`. No selector policy, handler return, overlay state,
+resource, or display effect is inferred or executed.
+
 The English `2200AD.EXE` COM entry preserves the original segment setup before
 the recovered main loop: loaded `$d2b0` first establishes `DS=CS` and `ES=CS`;
 the following `$d2b4` block establishes `SS=CS`, `SP=$da00`, and makes its

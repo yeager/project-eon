@@ -960,6 +960,15 @@ int main() {
     assert(gx_overlay_adapter.far_transfer_address == 0x6c68);
     assert(gx_overlay_adapter.continuation_address == 0x6c69);
     assert(gx_overlay_adapter.return_address == 0x6c72);
+    const auto gx_overlay_dispatcher = eon::parse_millennium_dos_gx_overlay_dispatcher_evidence(
+        *gx_overlay, gx_overlay_adapter);
+    assert(gx_overlay_dispatcher.entry_offset == 0);
+    assert(gx_overlay_dispatcher.far_return_offset == 0x14);
+    assert(gx_overlay_dispatcher.table_offset == 0x15);
+    assert(gx_overlay_dispatcher.observed_selector_targets[0x0e] == 0x0090);
+    assert(gx_overlay_dispatcher.observed_selector_targets[0x0f] == 0x009f);
+    assert(gx_overlay_dispatcher.observed_selector_targets[0x12] == 0x0097);
+    assert(gx_overlay_dispatcher.observed_selector_targets[0x14] == 0x00a7);
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game_executable);
     assert(game_flow.entry_address == 0xd2b0);
     assert(game_flow.startup_address == 0xd2b4);
