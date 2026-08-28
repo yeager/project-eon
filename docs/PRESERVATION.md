@@ -1664,6 +1664,19 @@ selectors `$0e/$0f/$12/$14` map to original overlay offsets
 `$0090/$009f/$0097/$00a7`. No selector policy, handler return, overlay state,
 resource, or display effect is inferred or executed.
 
+There is a caller-connected selector prefix immediately before the adapter:
+`2200AD.EXE` `$d343..$d375` (file `+$d243`, 51 bytes, SHA-256
+`571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091`) reads
+the still-unmodelled byte `$da05`. Values `$03/$04/$02` select AX
+`$000e/$0012/$0014`; every other value selects `$000f`. The corresponding
+literal DX values are stored at `$4b6e`, then `$d373` calls the adapter at
+`$6c52`. The four overlay entries converge in a 94-byte local prefix at
+`+$0090` (SHA-256
+`8d412472415d513482b5c70198bb1aa04fa0d25798dd5f4b40b262151c489736`) that
+only copies in-overlay record words and returns. No selector value, record,
+return, asset reference, video instruction, resource, or display effect is
+provided, inferred, or executed.
+
 The English `2200AD.EXE` COM entry preserves the original segment setup before
 the recovered main loop: loaded `$d2b0` first establishes `DS=CS` and `ES=CS`;
 the following `$d2b4` block establishes `SS=CS`, `SP=$da00`, and makes its

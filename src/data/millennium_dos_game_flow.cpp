@@ -1031,6 +1031,41 @@ MillenniumDosGxOverlayDispatcherEvidence parse_millennium_dos_gx_overlay_dispatc
         dispatch_sha256, table_sha256};
 }
 
+MillenniumDosGxOverlaySelectorEvidence parse_millennium_dos_gx_overlay_selector_evidence(
+    const std::span<const std::uint8_t> game_executable,
+    const std::span<const std::uint8_t> gx_overlay_executable,
+    const MillenniumDosGxOverlayAdapterEvidence& adapter,
+    const MillenniumDosGxOverlayDispatcherEvidence& dispatcher) {
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t caller_address = 0xd343;
+    constexpr auto caller = std::to_array<std::uint8_t>({
+        0xba,0x28,0x00,0xb8,0x0e,0x00,0x8a,0x0e,0x05,0xda,0x80,0xf9,0x03,0x74,0x1c,
+        0xba,0x50,0x00,0xb8,0x12,0x00,0x80,0xf9,0x04,0x74,0x11,0xba,0xa0,0x00,0xb8,
+        0x14,0x00,0x80,0xf9,0x02,0x74,0x06,0xba,0x40,0x01,0xb8,0x0f,0x00,0x2e,0x89,
+        0x16,0x6e,0x4b,0xe8,0xdc,0x98});
+    constexpr auto caller_sha256 =
+        "571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091";
+    constexpr std::size_t overlay_offset = 0x90;
+    constexpr std::size_t overlay_length = 94;
+    constexpr auto overlay_sha256 =
+        "8d412472415d513482b5c70198bb1aa04fa0d25798dd5f4b40b262151c489736";
+    if (adapter.entry_address != 0x6c52 || dispatcher.observed_selector_targets[0x0e] != 0x0090
+        || dispatcher.observed_selector_targets[0x0f] != 0x009f
+        || dispatcher.observed_selector_targets[0x12] != 0x0097
+        || dispatcher.observed_selector_targets[0x14] != 0x00a7
+        || !has_bytes(game_executable, static_cast<std::size_t>(caller_address) - load_bias, caller)
+        || to_hex(sha256(game_executable.subspan(static_cast<std::size_t>(caller_address) - load_bias,
+            caller.size()))) != caller_sha256
+        || overlay_offset > gx_overlay_executable.size()
+        || overlay_length > gx_overlay_executable.size() - overlay_offset
+        || to_hex(sha256(gx_overlay_executable.subspan(overlay_offset, overlay_length))) != overlay_sha256) {
+        throw std::runtime_error("Unexpected Millennium DOS GX overlay selector evidence");
+    }
+    return {caller_address, 0xda05, {0x03,0x04,0x02}, {0x0028,0x0050,0x00a0,0x0140},
+        {0x000e,0x0012,0x0014,0x000f}, {0x0070,0x0080,0x0088,0x0078},
+        0x4b6e, 0xd373, 0x6c52, caller_sha256, overlay_sha256};
+}
+
 MillenniumDosSpanishIbmHandoffEvidence parse_millennium_dos_spanish_ibm_handoff_evidence(
     const std::span<const std::uint8_t> ibm_executable,
     const std::span<const std::uint8_t> titles_executable,

@@ -171,6 +171,16 @@ def main() -> int:
                     "Millennium DOS GX dispatcher evidence did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_gx_selector = (
+                "2200GX selector prefix: 2200AD 0xd343 reads 0xda05; 0x3/0x4/0x2/default "
+                "-> AX 0xe/0x12/0x14/0xf, stores DX at 0x4b6e, CALL 0xd373 -> 0x6c52; SHA-256 "
+                "571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091"
+            )
+            if expected_gx_selector not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium DOS GX selector evidence did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "millennium" and platform == "dos" and language == "Spanish":
             expected_spanish_ibm = (
                 "Spanish IBM.COM handoff: caller 0x23d names 0x71d/0x728; calls 0x240/0x24c "

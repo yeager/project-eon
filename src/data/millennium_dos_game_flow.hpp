@@ -526,6 +526,20 @@ struct MillenniumDosGxOverlayDispatcherEvidence {
     std::string table_sha256;
 };
 
+struct MillenniumDosGxOverlaySelectorEvidence {
+    std::uint16_t caller_entry_address = 0;
+    std::uint16_t selector_source_address = 0;
+    std::array<std::uint8_t, 3> matching_selector_values{};
+    std::array<std::uint16_t, 4> dx_values{};
+    std::array<std::uint16_t, 4> overlay_targets{};
+    std::array<std::uint16_t, 4> overlay_record_offsets{};
+    std::uint16_t dx_storage_address = 0;
+    std::uint16_t adapter_call_address = 0;
+    std::uint16_t adapter_target = 0;
+    std::string caller_sha256;
+    std::string overlay_prefix_sha256;
+};
+
 [[nodiscard]] MillenniumDosGxOverlayLoadEvidence
 parse_millennium_dos_gx_overlay_load_evidence(
     std::span<const std::uint8_t> game_executable,
@@ -538,6 +552,12 @@ parse_millennium_dos_gx_overlay_adapter_evidence(
 parse_millennium_dos_gx_overlay_dispatcher_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
     const MillenniumDosGxOverlayAdapterEvidence& adapter);
+[[nodiscard]] MillenniumDosGxOverlaySelectorEvidence
+parse_millennium_dos_gx_overlay_selector_evidence(
+    std::span<const std::uint8_t> game_executable,
+    std::span<const std::uint8_t> gx_overlay_executable,
+    const MillenniumDosGxOverlayAdapterEvidence& adapter,
+    const MillenniumDosGxOverlayDispatcherEvidence& dispatcher);
 
 // The Spanish FAT12 edition reaches its own TITLES.EXE and 2200AD.EXE through
 // IBM.COM, not the English MILL.COM path. This records only original names,
