@@ -3342,6 +3342,19 @@ int main() {
     assert(mode_five_entry.literal_word_value == 0x0101);
     assert(mode_five_entry.stop_before_exec_address == 0x40450);
     {
+        auto altered_mode_five_disk = *amiga_disk1;
+        altered_mode_five_disk[0x9b438] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_mode_five_disk));
+            static_cast<void>(eon::execute_deuteros_amiga_title_entry_mode_five_prefix(
+                altered_disk, load_plan, 5));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
         bool rejected = false;
         try {
             static_cast<void>(eon::execute_deuteros_amiga_title_entry_prefix(
