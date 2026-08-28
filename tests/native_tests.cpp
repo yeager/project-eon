@@ -2332,6 +2332,24 @@ int main() {
         system_disk, load_plan, 0xffffffffU, 0);
     assert(title_transition.dispatches_transition);
     assert(title_transition.counter_reset_after_transition_return);
+    const std::array<std::uint8_t, 1> nonmatching_title_response{{0x42}};
+    const auto ordinary_title_response = eon::evaluate_deuteros_amiga_title_zero_response_loop(
+        system_disk, load_plan, nonmatching_title_response);
+    assert(ordinary_title_response.entry_address == 0x405c6);
+    assert(ordinary_title_response.state_word_address == 0x1bf36);
+    assert(ordinary_title_response.initial_state_word == 0);
+    assert(ordinary_title_response.final_state_word == 0);
+    assert(ordinary_title_response.helper_address == 0x1f238);
+    assert(ordinary_title_response.response_match_value == 0x43);
+    assert(ordinary_title_response.custom_address == 0xdff180);
+    assert(ordinary_title_response.custom_write_words.empty());
+    assert(ordinary_title_response.return_loop_address == 0x40574);
+    const std::array<std::uint8_t, 3> matching_title_responses{{0x43, 0x42, 0x43}};
+    const auto repeated_title_response = eon::evaluate_deuteros_amiga_title_zero_response_loop(
+        system_disk, load_plan, matching_title_responses);
+    assert(repeated_title_response.final_state_word == 0x0101);
+    assert((repeated_title_response.custom_write_words
+        == std::vector<std::uint16_t>{0x0f00, 0x0f00}));
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x9b69a] ^= 0x01;
@@ -2353,6 +2371,19 @@ int main() {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::evaluate_deuteros_amiga_title_timer_gate(
                 altered_disk, load_plan, 0, 0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x9b5c6] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::evaluate_deuteros_amiga_title_zero_response_loop(
+                altered_disk, load_plan, nonmatching_title_response));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

@@ -4,6 +4,8 @@
 
 #include <array>
 #include <cstdint>
+#include <span>
+#include <vector>
 
 namespace eon {
 
@@ -196,6 +198,21 @@ struct DeuterosAmigaTitleTimerGate {
     bool counter_reset_after_transition_return = false;
 };
 
+// The common $1bf36-zero response route following the timer gate. $1f238 is
+// an external helper, so its low-byte responses are supplied explicitly. The
+// non-zero $1bf36 route remains outside this intentionally narrow model.
+struct DeuterosAmigaTitleZeroResponseLoop {
+    std::uint32_t entry_address = 0;
+    std::uint32_t state_word_address = 0;
+    std::uint16_t initial_state_word = 0;
+    std::uint16_t final_state_word = 0;
+    std::uint32_t helper_address = 0;
+    std::uint8_t response_match_value = 0;
+    std::uint32_t custom_address = 0;
+    std::vector<std::uint16_t> custom_write_words;
+    std::uint32_t return_loop_address = 0;
+};
+
 // Reads profile-one instructions directly from the original ADF and validates
 // the known mode branch, recurring main-loop cadence, timed display
 // transition, and following raw control-state loop.
@@ -217,5 +234,13 @@ execute_deuteros_amiga_title_transition_prefix(
 evaluate_deuteros_amiga_title_timer_gate(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint32_t elapsed_counter, std::uint16_t inhibit_word);
+
+// Evaluates only the original clean-stage zero-state response loop. The
+// supplied bytes are the low bytes returned by the external $1f238 helper;
+// no helper or custom-chip call is emulated.
+[[nodiscard]] DeuterosAmigaTitleZeroResponseLoop
+evaluate_deuteros_amiga_title_zero_response_loop(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::span<const std::uint8_t> helper_response_low_bytes);
 
 } // namespace eon
