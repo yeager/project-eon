@@ -3206,6 +3206,32 @@ int main() {
         rejected_altered_channel_request_callee = true;
     }
     assert(rejected_altered_channel_request_callee);
+    const auto channel_request_second_callee = eon::parse_deuteros_amiga_channel_request_second_callee(
+        system_disk, load_plan, channel_request_continuation);
+    assert(channel_request_second_callee.entry_address == 0x224a2);
+    assert(channel_request_second_callee.copied_longword_source_address == 0x224e6);
+    assert(channel_request_second_callee.copied_longword_destination_address == 0x006c);
+    assert((channel_request_second_callee.cleared_word_addresses
+        == std::array<std::uint32_t, 4>{0xdff0a8, 0xdff0b8, 0xdff0c8, 0xdff0d8}));
+    assert(channel_request_second_callee.final_word_value == 0x000f);
+    assert(channel_request_second_callee.final_word_address == 0xdff096);
+    assert(channel_request_second_callee.return_address == 0x224ca);
+    assert(channel_request_second_callee.raw_sha256
+        == "d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1");
+    auto altered_channel_request_second_callee_system_adf = *amiga_disk1;
+    altered_channel_request_second_callee_system_adf[0x7ca2] ^= 0x01;
+    bool rejected_altered_channel_request_second_callee = false;
+    try {
+        const eon::AmigaAdf altered_disk(altered_channel_request_second_callee_system_adf);
+        const auto altered_plan = eon::parse_deuteros_amiga_load_plan(altered_disk);
+        const auto altered_continuation = eon::parse_deuteros_amiga_channel_request_continuation(
+            altered_disk, altered_plan);
+        static_cast<void>(eon::parse_deuteros_amiga_channel_request_second_callee(
+            altered_disk, altered_plan, altered_continuation));
+    } catch (const std::runtime_error&) {
+        rejected_altered_channel_request_second_callee = true;
+    }
+    assert(rejected_altered_channel_request_second_callee);
 
     const auto first_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[0]);

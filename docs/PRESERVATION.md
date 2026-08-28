@@ -978,6 +978,15 @@ hash-locked by `DeuterosAmigaChannelRequestFirstCallee`; its custom-register
 poll, state writes, vector calls, service calls, and return-dependent paths
 are never performed or named by the runtime.
 
+The second direct BSR target is separately hash-locked at `$224a2..$224cb`
+(ADF `+$7ca2`): 42 bytes, SHA-256
+`d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1`.
+It encodes a longword transfer `$224e6 → $006c`, four literal word clears at
+`$dff0a8/$dff0b8/$dff0c8/$dff0d8`, a literal `$000f` at `$dff096`, and RTS
+`$224ca`. `DeuterosAmigaChannelRequestSecondCallee` retains only those raw
+encodings; it neither reads `$224e6` nor applies low-memory/custom-register
+writes, names hardware effects, or executes the return.
+
 The opening program provides tick anchors from genuine data. Tick 1 only
 decrements initial waits. Tick 2 selects palette 1, enables the input gate, and
 emits sound `(1,1)` then `(2,2)` and immediately consumes the newly yielded

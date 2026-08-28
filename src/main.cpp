@@ -285,6 +285,24 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << channel_request_first_callee.final_service_target << "; SHA-256 "
         << channel_request_first_callee.raw_sha256 << std::dec
         << " (static only; no polls, writes, vectors, calls, or returns executed)\n";
+    const auto channel_request_second_callee =
+        eon::parse_deuteros_amiga_channel_request_second_callee(
+            disk, plan, channel_request_continuation);
+    std::cout << "          Channel-request second callee: ADF 0x" << std::hex
+        << plan.main_stage.disk_offset + channel_request_second_callee.entry_address
+            - plan.main_stage.destination
+        << ", entry 0x" << channel_request_second_callee.entry_address
+        << "; longword 0x" << channel_request_second_callee.copied_longword_source_address
+        << " -> 0x" << channel_request_second_callee.copied_longword_destination_address
+        << "; clears 0x" << channel_request_second_callee.cleared_word_addresses[0]
+        << "/0x" << channel_request_second_callee.cleared_word_addresses[1] << "/0x"
+        << channel_request_second_callee.cleared_word_addresses[2] << "/0x"
+        << channel_request_second_callee.cleared_word_addresses[3] << "; 0x"
+        << channel_request_second_callee.final_word_value << " -> 0x"
+        << channel_request_second_callee.final_word_address << "; RTS 0x"
+        << channel_request_second_callee.return_address << "; SHA-256 "
+        << channel_request_second_callee.raw_sha256 << std::dec
+        << " (static only; no low-memory/custom-register effects executed)\n";
     const auto opening_bundle = eon::parse_deuteros_amiga_bundle(
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);
