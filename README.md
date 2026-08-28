@@ -9,8 +9,10 @@ science-fiction strategy games **Millennium 2.2: Return to Earth** (1989) and
 | [![Project Eon Millennium 2.2 card](assets/cards/millennium.png)](assets/cards/millennium.png) | [![Project Eon Deuteros card](assets/cards/deuteros.png)](assets/cards/deuteros.png) |
 
 The goal is to make both games fully playable from legally obtained original
-game data while preserving their rules and atmosphere. One deterministic game
-simulation powers two interchangeable presentation modes:
+game data while preserving their rules and atmosphere. The target architecture
+is one deterministic game simulation with two interchangeable presentation
+modes; recovered paths are added only when original media evidence supports
+them:
 
 - **Original** — authentic artwork, sound, layout, timing and behaviour.
 - **Modern** — high-resolution graphics, scalable UI, modern input and
@@ -59,9 +61,9 @@ DOS / Amiga / Atari ST data
             │
       platform importers
             │
-   canonical assets + state
+ canonical assets + recovered state
             │
-    deterministic simulation
+ deterministic simulation (as recovered)
        ┌────┴────┐
  original UI   modern UI
 ```
