@@ -260,6 +260,39 @@ struct DeuterosAmigaTitleEntryModeFivePrefix {
     std::uint32_t stop_before_exec_address = 0;
 };
 
+// The first common internal setup callee opens the literal
+// `graphics.library` name through an Exec vector.  Its return is an explicit
+// ABI input: zero enters the original self-loop and any nonzero longword is
+// stored for later graphics vectors.  The following direct callee has a
+// wholly local 20-word palette copy, but its display-memory base remains an
+// externally initialized pointer cell.  This profile records those exact
+// facts without opening a library, allocating memory, or drawing a screen.
+struct DeuterosAmigaTitleGraphicsSetupProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t library_name_address = 0;
+    std::string library_name;
+    std::uint32_t exec_base_address = 0;
+    std::int16_t exec_vector = 0;
+    std::uint32_t zero_result_loop_address = 0;
+    std::uint32_t nonzero_result_store_address = 0;
+    std::uint32_t nonzero_result_destination_address = 0;
+    std::uint32_t first_return_address = 0;
+    std::uint32_t following_entry_address = 0;
+    std::uint32_t palette_copy_entry_address = 0;
+    std::uint32_t external_display_base_source_address = 0;
+    std::array<std::uint32_t, 2> external_display_base_destinations{};
+    std::uint32_t palette_source_address = 0;
+    std::uint32_t palette_destination_address = 0;
+    std::array<std::uint16_t, 20> palette_words{};
+    std::uint32_t derived_pointer_source_address = 0;
+    std::uint32_t derived_pointer_destination_address = 0;
+    std::uint32_t derived_pointer_addend = 0;
+    std::uint32_t following_return_address = 0;
+    std::string first_callee_sha256;
+    std::string following_callee_sha256;
+    std::string palette_sha256;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -390,6 +423,12 @@ execute_deuteros_amiga_title_entry_prefix(
 execute_deuteros_amiga_title_entry_mode_five_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint16_t incoming_profile);
+
+// Parses the two caller-connected common setup callees without
+// executing their Exec vector or resolving either external pointer cell.
+[[nodiscard]] DeuterosAmigaTitleGraphicsSetupProfile
+parse_deuteros_amiga_title_graphics_setup_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Validates and models only the literal byte-copy part of the first title
 // exit. The model reads the supplied ADF in place; it does not invoke either

@@ -3221,6 +3221,50 @@ int main() {
     assert(title_stage.initialization_normal_call_address == 0x1fb9a);
     assert(title_stage.title_exit_resolved_profile == 0);
     assert(title_stage.title_exit_main_stage_entry_address == 0x21734);
+    const auto title_graphics_setup = eon::parse_deuteros_amiga_title_graphics_setup_profile(
+        system_disk, load_plan);
+    assert(title_graphics_setup.entry_address == 0x1ed80);
+    assert(title_graphics_setup.library_name_address == 0x1ed02);
+    assert(title_graphics_setup.library_name == "graphics.library");
+    assert(title_graphics_setup.exec_base_address == 4);
+    assert(title_graphics_setup.exec_vector == -0x228);
+    assert(title_graphics_setup.zero_result_loop_address == 0x1edf6);
+    assert(title_graphics_setup.nonzero_result_store_address == 0x1ed96);
+    assert(title_graphics_setup.nonzero_result_destination_address == 0x12fec);
+    assert(title_graphics_setup.first_return_address == 0x1eda2);
+    assert(title_graphics_setup.following_entry_address == 0x1f172);
+    assert(title_graphics_setup.palette_copy_entry_address == 0x1eda6);
+    assert(title_graphics_setup.external_display_base_source_address == 0x12ff4);
+    assert((title_graphics_setup.external_display_base_destinations
+        == std::array<std::uint32_t, 2>{{0x1f168, 0x1f164}}));
+    assert(title_graphics_setup.palette_source_address == 0x1ed24);
+    assert(title_graphics_setup.palette_destination_address == 0x12ecc);
+    assert(title_graphics_setup.palette_words.front() == 0x0000);
+    assert(title_graphics_setup.palette_words[1] == 0x09a7);
+    assert(title_graphics_setup.palette_words.back() == 0x0cc0);
+    assert(title_graphics_setup.derived_pointer_source_address == 0x1f168);
+    assert(title_graphics_setup.derived_pointer_destination_address == 0x1f16e);
+    assert(title_graphics_setup.derived_pointer_addend == 0x7d00);
+    assert(title_graphics_setup.following_return_address == 0x1f182);
+    assert(title_graphics_setup.first_callee_sha256
+        == "42c96aa502e36711ed274b9ddf4d2d1de53abfebb4ebdf88fa99346d2b03e30b");
+    assert(title_graphics_setup.following_callee_sha256
+        == "d6b37bc6431a1fe9145ae9403a5165028ccfd856a6529d1752f824b166807223");
+    assert(title_graphics_setup.palette_sha256
+        == "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55");
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x79d80] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_graphics_setup_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
         0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
 
