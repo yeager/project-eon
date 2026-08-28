@@ -872,6 +872,47 @@ MillenniumDosFirstSpecialActionPrefix evaluate_millennium_dos_first_special_acti
     };
 }
 
+MillenniumDosSecondSpecialActionPrefix evaluate_millennium_dos_second_special_action_prefix(
+    const std::span<const std::uint8_t> game_executable,
+    const std::uint8_t observed_runtime_byte) {
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::size_t dispatch_offset = 0xd3e8 - load_bias;
+    constexpr std::size_t handler_offset = 0xd570 - load_bias;
+    constexpr auto dispatch_bytes = std::to_array<std::uint8_t>({
+        0x8a, 0x0e, 0x3a, 0xda, 0x22, 0xc9, 0x75, 0xe2, 0x3c, 0x0c,
+        0x75, 0x05, 0xe8, 0x79, 0x01,
+    });
+    constexpr auto handler_bytes = std::to_array<std::uint8_t>({
+        0xb8, 0x0d, 0x00, 0xe8, 0xdc, 0x96, 0xc3,
+    });
+    constexpr std::string_view dispatch_hash =
+        "e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3";
+    constexpr std::string_view handler_hash =
+        "f266d52e554a2e85147994b34eb69e7678cd9339fda1b99206c18fc05361232b";
+    if (!has_bytes(game_executable, dispatch_offset, dispatch_bytes)
+        || !has_bytes(game_executable, handler_offset, handler_bytes)) {
+        throw std::runtime_error("Unsupported Millennium DOS second special-action prefix");
+    }
+    const auto dispatch = game_executable.subspan(dispatch_offset, dispatch_bytes.size());
+    const auto handler = game_executable.subspan(handler_offset, handler_bytes.size());
+    if (to_hex(sha256(dispatch)) != dispatch_hash || to_hex(sha256(handler)) != handler_hash) {
+        throw std::runtime_error("Unsupported Millennium DOS second special-action hashes");
+    }
+    MillenniumDosSecondSpecialActionPrefix result;
+    result.action = 0x0c;
+    result.runtime_byte_address = 0xda3a;
+    result.observed_runtime_byte = observed_runtime_byte;
+    result.blocked_loop_address = 0xd3d2;
+    result.handler_address = 0xd570;
+    result.selected_ax_value = 0x000d;
+    result.helper_call_address = 0xd573;
+    result.helper_address = near_call_target(0xd576, handler[4], handler[5]);
+    if (observed_runtime_byte == 0) {
+        result.outcome = MillenniumDosSecondSpecialActionOutcome::helper_boundary;
+    }
+    return result;
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;
