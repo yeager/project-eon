@@ -108,7 +108,7 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
 
     // This is a caller-side fact only.  MILL.COM loads DX with each adjacent
     // program string, makes two near calls to the same local target, and
-    // tests AX between them.  We deliberately do not assign a meaning to
+    // tests AL between them.  We deliberately do not assign a meaning to
     // the target or to either post-call status test.
     constexpr std::array<std::uint8_t, 22> launcher_call_chain{
         0xba, 0x8f, 0x06, 0xe8, 0xd9, 0x00, 0x22, 0xc0,
@@ -131,7 +131,7 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0x21, 0xb8, 0x0a, 0x4c, 0xcd, 0x21};
     // This static caller-side range is immediately before the DX=0x68f
     // setup.  It records a post-call JE and the later local near call without
-    // claiming either call's return behavior or assigning meaning to AX.
+    // claiming either call's return behavior or assigning meaning to AL.
     constexpr std::array<std::uint8_t, 45> launcher_pre_title_chain{
         0xe8, 0xfe, 0x02, 0x22, 0xc0, 0x74, 0x03, 0x05,
         0x02, 0x00, 0x8b, 0xd8, 0x04, 0x30, 0xbe, 0x88,

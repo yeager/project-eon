@@ -1539,12 +1539,12 @@ The accompanying clean `MILL.COM` (1,445 bytes, SHA-256
 `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`)
 has a caller-side sequence at loaded `$023d`: it loads `DX=$068f` (the
 NUL-terminated `TITLES.EXE` string at file `$58f`) and near-calls `$031c`
-from `$0240`; after the explicit `AND AX,AX` / conditional branch bytes, it
+from `$0240`; after the explicit `AND AL,AL` / conditional branch bytes, it
 loads `DX=$069a` (the adjacent `2200ad.exe` string at file `$59a`) and makes
 the same direct near call from `$024c`. This is the exact DOS title-to-game
 hand-off used by the native parser. It establishes only literal dataflow and
 control edges: Project Eon does not assign a DOS/EXEC meaning to `$031c`, the
-post-call `AX` tests, or either callee return.
+post-call `AL` tests, or either callee return.
 
 The directly called local bytes at `$031c..$034d` are separately anchored by
 the parser. Their first local branch is the literal `JC +$05` at `$0345`:
@@ -1629,6 +1629,17 @@ AL `$01` to `ega640.bin` at `$0617` and every other value to `mcga.bin` at
 This proves original input-to-request control flow, not a host policy: Project
 Eon does not read a host command tail as original hardware detection, select a
 driver, or assume the loader/DOS/vector calls succeed.
+
+The `$1f` query's low byte is also not a fixed profile constant. EGA function
+`$00` writes its derived allocation count to local `$008a` at `$022f`, and
+function `$1e` can write a clamped caller byte there at `$0259`; MCGA function
+`$00` writes its derived allocation count to `$00ac` at `$0246`, and function
+`$1e` writes a recomputed count at `$02d0`. Both supplied file bytes are zero,
+but these are conditional driver-internal writes. The recovered `2200AD.EXE`
+startup requests `$1f` only and has no confirmed `$00`/`$1e` caller, installed
+driver segment, or state-establishing title path. Project Eon therefore never
+substitutes the on-disk zero or any calculated value for the unknown runtime
+AL result.
 Function `$00` resolves to `$01c8` (EGA) or `$01e6` (MCGA): each makes a
 literal BIOS mode request through `INT $10`, mode `$0e` at `$01de` or mode
 `$13` at `$01fc`, then has a local zero-`AX` mismatch return. Function `$04`
