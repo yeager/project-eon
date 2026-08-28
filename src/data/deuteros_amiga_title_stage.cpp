@@ -618,4 +618,48 @@ DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefi
     return result;
 }
 
+DeuterosAmigaTitleTimerGate evaluate_deuteros_amiga_title_timer_gate(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::uint32_t elapsed_counter, const std::uint16_t inhibit_word) {
+    const auto& stage = plan.title_stage;
+    constexpr std::uint32_t entry_address = 0x4059e;
+    constexpr std::uint32_t skipped_target_address = 0x405c6;
+    constexpr std::uint32_t transition_address = 0x4069a;
+    constexpr std::string_view title_stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::array<std::uint8_t, 40> gate_bytes{{
+        0x20, 0x39, 0x00, 0x04, 0x04, 0x10, 0xb0, 0xbc,
+        0x00, 0x00, 0xea, 0x60, 0x65, 0x1a, 0x0c, 0x79,
+        0x00, 0x11, 0x00, 0x02, 0x2d, 0x34, 0x67, 0x10,
+        0x4e, 0xb9, 0x00, 0x04, 0x06, 0x9a, 0x23, 0xfc,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x04, 0x10,
+    }};
+    constexpr std::string_view gate_hash =
+        "47c56a2ad892d973cc967bca2a8c3b34338ffbdbff3b1b57ecef63cc6d8d7200";
+    if (stage.length == 0 || entry_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || gate_bytes.size() > stage.length - (entry_address - stage.destination)) {
+        throw std::runtime_error("Deuteros title timer gate lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto gate = stage_bytes.subspan(entry_address - stage.destination, gate_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != title_stage_hash
+        || !std::equal(gate_bytes.begin(), gate_bytes.end(), gate.begin())
+        || to_hex(sha256(gate)) != gate_hash) {
+        throw std::runtime_error("Unsupported Deuteros title timer gate");
+    }
+    DeuterosAmigaTitleTimerGate result;
+    result.entry_address = entry_address;
+    result.elapsed_counter_address = 0x40410;
+    result.elapsed_threshold = 0xea60;
+    result.inhibit_word_address = 0x22d34;
+    result.inhibit_word_value = 0x0011;
+    result.skipped_target_address = skipped_target_address;
+    result.transition_address = transition_address;
+    result.dispatches_transition = elapsed_counter >= result.elapsed_threshold
+        && inhibit_word != result.inhibit_word_value;
+    result.counter_reset_after_transition_return = result.dispatches_transition;
+    return result;
+}
+
 } // namespace eon
