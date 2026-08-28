@@ -137,6 +137,18 @@ def main() -> int:
                 f"{game}/{platform} bounded launcher bootstrap did not match supplied media:\n"
                 f"{inspected.stdout}"
             )
+        if game == "millennium" and platform == "amiga":
+            expected_post_negative_d3 = (
+                "post-negative-D3 terminal: entry 0x685fe; byte stores 0x7b3b5/0x7b3bc; "
+                "BNE 0x68612 -> 0x68616, zero RTS 0x68614; BPL 0x68616 -> boundary 0x6861a, "
+                "negative RTS 0x68618; SHA-256 "
+                "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc"
+            )
+            if expected_post_negative_d3 not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Amiga post-negative-D3 terminal did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "amiga":
             expected_callee = (
                 "Channel-request first callee: ADF 0x7a9c, entry 0x2229c; bit 5 branch 0x222b4 -> 0x2232c; "

@@ -240,6 +240,23 @@ struct MillenniumAmigaResidentNegativeD3Terminal {
     std::uint32_t return_address = 0;
 };
 
+// A complete local sequence immediately after the negative-D3 terminal.
+// The first BPL target is intentionally left as a raw stopping boundary.
+struct MillenniumAmigaResidentPostNegativeD3Terminal {
+    std::uint32_t entry_address = 0;
+    std::array<std::uint32_t, 2> absolute_byte_store_addresses{};
+    std::uint32_t copied_d1_address = 0;
+    std::uint32_t copied_d2_address = 0;
+    std::uint32_t d0_test_address = 0;
+    std::uint32_t nonzero_branch_address = 0;
+    std::uint32_t nonzero_branch_target = 0;
+    std::uint32_t zero_return_address = 0;
+    std::uint32_t nonnegative_branch_address = 0;
+    std::uint32_t nonnegative_branch_target = 0;
+    std::uint32_t negative_return_address = 0;
+    std::string raw_sha256;
+};
+
 struct MillenniumAmigaResidentIndependentZeroTargetBoundary {
     std::uint32_t entry_address = 0;
     std::uint16_t compare_immediate = 0;
@@ -440,6 +457,13 @@ parse_millennium_amiga_resident_negative_d3_continuation(
 parse_millennium_amiga_resident_negative_d3_terminal(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentNegativeD3Continuation& continuation);
+// Validates the complete local sequence after the negative-D3 terminal. It
+// records encodings and two local returns only; no register, cell, or branch
+// result is interpreted, and the $6861a continuation stays a hard boundary.
+[[nodiscard]] MillenniumAmigaResidentPostNegativeD3Terminal
+parse_millennium_amiga_resident_post_negative_d3_terminal(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentNegativeD3Terminal& terminal);
 
 // Validates only the first compare/conditional-branch pair at the independent
 // entry's fixed-flag-zero target. It does not interpret the comparison.

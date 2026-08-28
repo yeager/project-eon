@@ -707,6 +707,8 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         disk, plan, independent_entry);
     const auto negative_d3_terminal = eon::parse_millennium_amiga_resident_negative_d3_terminal(
         disk, plan, negative_d3);
+    const auto post_negative_d3 = eon::parse_millennium_amiga_resident_post_negative_d3_terminal(
+        disk, plan, negative_d3_terminal);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -908,7 +910,19 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << " has immediates 0x" << negative_d3_terminal.first_add_immediate << ", 0x"
         << negative_d3_terminal.second_add_immediate << " and RTS 0x"
         << negative_d3_terminal.return_address << std::dec
-        << " (validated raw bytes only; no predicates, target, or effects executed)\n";
+        << " (validated raw bytes only; no predicates, target, or effects executed)\n"
+        << "          post-negative-D3 terminal: entry 0x" << std::hex
+        << post_negative_d3.entry_address << "; byte stores 0x"
+        << post_negative_d3.absolute_byte_store_addresses[0] << "/0x"
+        << post_negative_d3.absolute_byte_store_addresses[1] << "; BNE 0x"
+        << post_negative_d3.nonzero_branch_address << " -> 0x"
+        << post_negative_d3.nonzero_branch_target << ", zero RTS 0x"
+        << post_negative_d3.zero_return_address << "; BPL 0x"
+        << post_negative_d3.nonnegative_branch_address << " -> boundary 0x"
+        << post_negative_d3.nonnegative_branch_target << ", negative RTS 0x"
+        << post_negative_d3.negative_return_address << "; SHA-256 "
+        << post_negative_d3.raw_sha256 << std::dec
+        << " (static only; no registers, stores, predicates, or continuation executed)\n";
 }
 
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {

@@ -420,6 +420,21 @@ int main() {
     assert(defjam_negative_d3_terminal.second_add_address == 0x685f8);
     assert(defjam_negative_d3_terminal.second_add_immediate == 0x2800);
     assert(defjam_negative_d3_terminal.return_address == 0x685fc);
+    const auto defjam_post_negative_d3 =
+        eon::parse_millennium_amiga_resident_post_negative_d3_terminal(
+            defjam_loader_disk, defjam_plan, defjam_negative_d3_terminal);
+    assert(defjam_post_negative_d3.entry_address == 0x685fe);
+    assert((defjam_post_negative_d3.absolute_byte_store_addresses
+        == std::array<std::uint32_t, 2>{{0x7b3b5, 0x7b3bc}}));
+    assert(defjam_post_negative_d3.d0_test_address == 0x68610);
+    assert(defjam_post_negative_d3.nonzero_branch_address == 0x68612);
+    assert(defjam_post_negative_d3.nonzero_branch_target == 0x68616);
+    assert(defjam_post_negative_d3.zero_return_address == 0x68614);
+    assert(defjam_post_negative_d3.nonnegative_branch_address == 0x68616);
+    assert(defjam_post_negative_d3.nonnegative_branch_target == 0x6861a);
+    assert(defjam_post_negative_d3.negative_return_address == 0x68618);
+    assert(defjam_post_negative_d3.raw_sha256
+        == "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc");
     const auto defjam_independent_zero_target =
         eon::parse_millennium_amiga_resident_independent_zero_target_boundary(
             defjam_loader_disk, defjam_plan, defjam_independent_entry);

@@ -455,6 +455,16 @@ immediates at `$685f4` and `$685f8` and the `RTS` at `$685fc`. It neither
 evaluates the two predecessor predicates nor assigns runtime meaning to their
 register effects.
 
+The adjacent complete local sequence `$685fe..$68619` maps to ADF `+$169fe`,
+is 28 bytes, and has SHA-256
+`a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc` across
+all six supplied Amiga variants. It encodes two absolute byte stores to
+`$7b3b5/$7b3bc`, copies D1/D2, tests D0, then records `BNE.S $68612 →
+$68616` with the zero `RTS` at `$68614`. The target encodes `BPL.S $68616 →
+$6861a` and the alternate `RTS` at `$68618`. `$6861a` remains the strict
+continuation boundary. Project Eon does not choose either predicate, assign
+meaning to registers or absolute cells, perform stores, or follow that target.
+
 At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
 $68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control
 flow only; no register, path, target, or continuation meaning is inferred.
