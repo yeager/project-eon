@@ -77,55 +77,55 @@ msgid "ORIGINAL TITLE STAGE SHA-256: "
 msgstr "SHA-256 ОРИГИНАЛЬНОГО ЭТАПА ТИТУЛЬНОГО ЭКРАНА: "
 
 msgid "AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"
-msgstr "РУССКИЙ: AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"
+msgstr "АУТЕНТИЧНАЯ ПЕРЕДАЧА DOS — TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"
 
 msgid "ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE"
-msgstr "РУССКИЙ: ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE"
+msgstr "ОРИГИНАЛЬНОЕ ПОЛОТНО GX + ПОЗИЦИОННАЯ ТАБЛИЦА 2200SAVE.I ТОЛЬКО ДЛЯ ЧТЕНИЯ"
 
 msgid "AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC"
-msgstr "РУССКИЙ: AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC"
+msgstr "АУТЕНТИЧНЫЙ ИСПАНСКИЙ ТИТУЛ DOS — FAT12 TITLE.LIB P00 + VGA RGB6 DAC"
 
 msgid "EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED"
-msgstr "РУССКИЙ: EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED"
+msgstr "ПЕРЕДАЧА ИСПОЛНЯЕМОГО ФАЙЛА ЕЩЁ НЕ ВОССТАНОВЛЕНА; АНГЛИЙСКОЕ СОСТОЯНИЕ НЕ ПОДСТАВЛЯЕТСЯ"
 
 msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
-msgstr "РУССКИЙ: AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
+msgstr "АУТЕНТИЧНЫЙ ТИТУЛ DOS — ИНДЕКСЫ P00 + VGA RGB6 DAC"
 
 msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
-msgstr "РУССКИЙ: PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr "НАЖМИТЕ ЛЮБУЮ КЛАВИШУ: ОРИГИНАЛЬНАЯ ПЕРЕДАЧА ТИТУЛА INT 21h/AH=06h"
 
 msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
-msgstr "РУССКИЙ: RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
+msgstr "ТОЛЬКО ВОССТАНОВЛЕННЫЕ ПОЗИЦИОННЫЕ СЛОВА; НИКАКОЙ ВЫВЕДЕННОЙ СЕМАНТИКИ ИГРЫ"
 
 msgid "VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION"
-msgstr "РУССКИЙ: VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION"
+msgstr "ПРОВЕРЕННЫЕ РОДНЫЕ ДАННЫЕ MILLENNIUM — БЕЗ ПОДМЕНЫ РЕСУРСАМИ DOS"
 
 msgid "INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED."
-msgstr "РУССКИЙ: INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED."
+msgstr "ИНТЕРАКТИВНЫЙ СЦЕНАРИЙ AMIGA/ATARI ST ЕЩЁ НЕ ВОССТАНОВЛЕН."
 
 msgid "NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."
-msgstr "РУССКИЙ: NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."
+msgstr "ДЛЯ ЭТОЙ ПЛАТФОРМЫ НЕ БУДУТ ЗАПУСКАТЬСЯ ИСКУССТВЕННЫЕ ЭКРАН ИЛИ СОСТОЯНИЕ."
 
 msgid "VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY"
-msgstr "РУССКИЙ: VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY"
+msgstr "ПРОВЕРЕННЫЕ НОСИТЕЛИ DEUTEROS ATARI ST — ТОЛЬКО ЗАЩИЩЁННАЯ ЦЕПОЧКА ЗАГРУЗКИ"
 
 msgid "INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED."
-msgstr "РУССКИЙ: INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED."
+msgstr "ИНТЕРАКТИВНОЕ ПРЕДСТАВЛЕНИЕ ATARI ST ЕЩЁ НЕ ВОССТАНОВЛЕНО."
 
 msgid "NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM."
-msgstr "РУССКИЙ: NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM."
+msgstr "ДЛЯ ЭТОЙ ПЛАТФОРМЫ НЕ БУДУТ ЗАПУСКАТЬСЯ НИ ПРЕДПРОСМОТР AMIGA, НИ ИСКУССТВЕННОЕ СОСТОЯНИЕ."
 
 msgid "AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"
-msgstr "РУССКИЙ: AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"
+msgstr "АУТЕНТИЧНОЕ НАЧАЛО AMIGA — ОРИГИНАЛЬНАЯ ПРОГРАММА КАНАЛА + ПАЛИТРА"
 
 msgid "HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"
-msgstr "РУССКИЙ: HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"
+msgstr "УДЕРЖИВАЙТЕ SPACE / ENTER: ОРИГИНАЛЬНЫЙ ВХОДНОЙ СИГНАЛ"
 
 msgid "PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"
-msgstr "РУССКИЙ: PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"
+msgstr "PAULA: ОРИГИНАЛЬНЫЙ PCM + ПЕРИОД + ГРОМКОСТЬ (ПЕРВЫЙ ПРОХОД DMA)"
 
 msgid "ORIGINAL TITLE HANDOFF: RESOURCE 0x"
-msgstr "РУССКИЙ: ORIGINAL TITLE HANDOFF: RESOURCE 0x"
+msgstr "ОРИГИНАЛЬНАЯ ПЕРЕДАЧА ТИТУЛА: РЕСУРС 0x"
 
 msgid "ORIGINAL $20580 STREAM: +0x"
-msgstr "РУССКИЙ: ORIGINAL $20580 STREAM: +0x"
+msgstr "ОРИГИНАЛЬНЫЙ ПОТОК $20580: +0x"
