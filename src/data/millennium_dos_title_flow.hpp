@@ -85,6 +85,12 @@ struct MillenniumDosTitleFlow {
     std::uint8_t launcher_private_interrupt_handler_rewind_service = 0;
     std::uint8_t launcher_private_interrupt_handler_read_service = 0;
     std::uint8_t launcher_private_interrupt_handler_close_service = 0;
+    // The original command-tail scanner maps e/E to selector 1 and m/M to
+    // selector 2. An empty tail reaches the hardware-dependent detector;
+    // neither source is a host-side driver-selection policy.
+    std::uint16_t launcher_video_selection_scan_address = 0;
+    std::uint16_t launcher_video_selection_default_detector_address = 0;
+    std::uint16_t launcher_video_selection_map_address = 0;
     std::uint8_t launcher_private_interrupt_handler_first_selector = 0;
     std::uint16_t launcher_private_interrupt_handler_first_program_address = 0;
     std::uint8_t launcher_private_interrupt_handler_other_selector = 0;

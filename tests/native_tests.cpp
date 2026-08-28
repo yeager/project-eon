@@ -892,11 +892,14 @@ int main() {
     assert(title_flow.launcher_private_interrupt_handler_rewind_service == 0x42);
     assert(title_flow.launcher_private_interrupt_handler_read_service == 0x3f);
     assert(title_flow.launcher_private_interrupt_handler_close_service == 0x3e);
+    assert(title_flow.launcher_video_selection_scan_address == 0x19d);
+    assert(title_flow.launcher_video_selection_default_detector_address == 0x5a1);
+    assert(title_flow.launcher_video_selection_map_address == 0x1de);
     assert(title_flow.launcher_private_interrupt_handler_first_selector == 1);
     assert(title_flow.launcher_private_interrupt_handler_first_program_address == 0x617);
     assert(title_flow.launcher_private_interrupt_handler_first_program == "ega640.bin");
     assert(title_flow.launcher_private_interrupt_handler_other_selector == 2);
-    assert(title_flow.launcher_private_interrupt_handler_other_program_address == 0x3ae);
+    assert(title_flow.launcher_private_interrupt_handler_other_program_address == 0x5f9);
     assert(title_flow.launcher_private_interrupt_handler_other_program == "mcga.bin");
     const auto ega640 = eon::extract_asset_by_sha256(english_dos->path,
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a");
@@ -2044,6 +2047,14 @@ int main() {
     assert(atari_third_jsr.branch_target_opcode == 0x0802);
     assert(atari_third_jsr.branch_target_immediate == 0x0006);
     assert(atari_third_jsr.branch_target_branch_opcode == 0x6700);
+    const auto atari_third_routine = eon::parse_millennium_atari_config_third_routine(
+        atari_config_payload, atari_config_entry);
+    assert(atari_third_routine.target_address == 0x2b2be);
+    assert(atari_third_routine.target_file_offset == 0xde0);
+    assert(atari_third_routine.terminal_return_address == 0x2b3a4);
+    assert(atari_third_routine.byte_count == 232);
+    assert(atari_third_routine.sha256
+        == "85c58759b0cb2f067734fb006aa543fc74926422187506914c823ceaaf9c6cd8");
     const auto atari_fourth_jsr = eon::parse_millennium_atari_config_fourth_jsr(
         atari_config_payload, atari_config_entry);
     assert(atari_fourth_jsr.proven_load_base == 0x2a4de);
