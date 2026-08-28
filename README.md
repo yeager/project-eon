@@ -267,8 +267,9 @@ for sideload signing with the user's own certificate and provisioning profile.
 Packages contain Project Eon only—never original game media. CI has read-only
 repository permission and cannot release, tag, or
 publish. Development pushes go directly to GitHub `main`; Project Eon does not
-create GitHub branches. Releases are made only when the maintainer explicitly
-requests one.
+create GitHub branches. The Windows installer also does not pre-create its
+`data` path: a missing default directory remains a read-only runtime boundary.
+Releases are made only when the maintainer explicitly requests one.
 
 ## Repository
 

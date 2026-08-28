@@ -1873,6 +1873,9 @@ report boundary. The latter has no recovered presentation/runtime chain, so the
 SDL view deliberately does not load Amiga art, audio, or generated Atari state.
 The runtime also does not create its default data directory; it reports a
 missing path until the user supplies original media there or passes `--data`.
+The Windows Inno Setup installer follows the same rule: it installs only
+Project Eon and its own runtime resources, and does not pre-create
+`<install-directory>\\data`.
 
 At the exact opening event `$0f,$00000b38` (observed at scheduler tick 82 for
 the recovered held input route), the live Amiga session now terminates its
