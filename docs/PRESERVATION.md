@@ -2227,6 +2227,18 @@ Project Eon preserves pointer order and raw record boundaries without assigning
 meaning to the native control bytes. The exact cross-edition evidence is in
 [the static-text report](generated/millennium-dos-static-text.md).
 
+Five parallel English/Spanish pointer records preserve genuine control-related
+**text** without proving a host binding: indices 271 (`left button / space` /
+`boton / espacio`), 350 (`press space bar to continue...` / `pulsa espacio para
+continuar..`), 390 (`press left button to continue...` / `pulsa el boton
+izquierdo para seguir`), 398 (`MOUSE MODE` / `MODO RATON`), and 399
+(`KEYBOARD MODE` / `MODO TECLADO`). The English source spans are `$12a7`,
+`$1d88`, `$2aef`, `$2bcd`, and `$2be3`; their Spanish counterparts come from
+the independently validated FAT12 `2200AD4.BIN`. These literals are available
+to inspection as original data only. No caller-connected code proves which
+input selects a mode or continues a prompt, so Project Eon does not convert
+them into SDL mappings or a reconstructed keyboard reference.
+
 ### Millennium DOS GX canvas
 
 The first two `GX.LIB` entries establish a separate authentic bitmap path.
