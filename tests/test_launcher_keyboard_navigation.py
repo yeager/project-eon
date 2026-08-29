@@ -20,6 +20,15 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("if (!eon::release_available(releases, game, platform)) return false;", SOURCE)
         self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
 
+    def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
+        # If a game has only Amiga/Atari media, selecting its game card must
+        # not leave Enter/South-A focused on the disabled DOS card.
+        sync = SOURCE.index("const auto focus_active_platform_card")
+        game_focus = SOURCE.index("const auto focus_menu_card")
+        self.assertLess(sync, game_focus)
+        self.assertIn("focus_active_platform_card();", SOURCE[game_focus:game_focus + 900])
+        self.assertIn("std::distance(platform_cards.begin(), card)", SOURCE)
+
     def test_all_launcher_card_labels_and_dynamic_selection_names_are_translated(self) -> None:
         # The launcher owns its card labels and selection panel. Original
         # in-game strings are deliberately out of scope and remain media data.

@@ -149,8 +149,9 @@ the recovered Deuteros Amiga opening, hold South/A for
 the same verified physical input signal as Space/Enter; it is not mapped to any
 invented title or gameplay action.
 
-Press F1 to switch the renderer between Original and Modern presentation. F10
-opens Modern graphics settings; Up/Down and Left/Right (or the gamepad D-pad)
+The profile card fixes Original or Modern before a game starts; F1 deliberately
+does not switch an active session. F10 opens Modern graphics settings only for
+a Modern or Custom launch; Up/Down and Left/Right (or the gamepad D-pad)
 select and change its renderer-only options, while Escape or gamepad Back
 closes the panel. Resolution presets control the SDL window only. Aspect-ratio
 presets are Original 4:3 (the default), Square Pixels 8:5, and Widescreen

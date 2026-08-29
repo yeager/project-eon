@@ -31,6 +31,9 @@ public:
     [[nodiscard]] const DeuterosAmigaBootstrapProfile& title_handoff_profile() const {
         return load_plan_.title_handoff_profile;
     }
+    [[nodiscard]] const DeuterosAmigaTitleHandoffRoute& title_handoff_route() const {
+        return title_handoff_route_;
+    }
     [[nodiscard]] const DeuterosAmigaSoundBank& sound_bank() const { return sound_bank_; }
     [[nodiscard]] const std::optional<DeuterosAmigaAlternateRendererTrace>& alternate_renderer_trace() const {
         return alternate_renderer_trace_;
@@ -42,6 +45,7 @@ public:
 private:
     AmigaAdf disk_;
     DeuterosAmigaLoadPlan load_plan_;
+    DeuterosAmigaTitleHandoffRoute title_handoff_route_;
     DeuterosAmigaMainResourceTransfer transferred_bundle_;
     DeuterosAmigaBundle bundle_;
     DeuterosAmigaSoundBank sound_bank_;

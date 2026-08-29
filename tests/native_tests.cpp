@@ -5563,6 +5563,15 @@ int main() {
     assert(load_plan.title_handoff_profile.disk_offset == 0x6e000);
     assert(load_plan.title_handoff_profile.length == 0x6ca00);
     assert(load_plan.title_handoff_profile.destination == 0x13000);
+    const auto title_handoff_route = eon::parse_deuteros_amiga_title_handoff_route(
+        system_disk, load_plan);
+    assert(title_handoff_route.resource_command_disk_offset == 0x1c28a);
+    assert(title_handoff_route.resource_relative_offset == 0x0b38);
+    assert(title_handoff_route.resource_runtime_address == 0x3355c);
+    assert(title_handoff_route.bootstrap_profile_return_cell == 0x12ffc);
+    assert(title_handoff_route.bootstrap_profile_value == 1);
+    assert(title_handoff_route.command_sha256
+        == "9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41");
     // Profile one is a raw title/game stage, not an archive to unpack.  Its
     // on-disk JMP vector enters the loaded interval at this exact address.
     assert(load_plan.title_stage.disk_offset == 0x6e000);
@@ -7192,6 +7201,8 @@ int main() {
     // scripted preview path. Holding the recovered input signal reaches the
     // same verified handoff tick and raw resource pointer.
     eon::DeuterosAmigaOpening live_input_opening(*amiga_disk1);
+    assert(live_input_opening.title_handoff_route().resource_relative_offset == 0x0b38);
+    assert(live_input_opening.title_handoff_route().bootstrap_profile_value == 1);
     std::optional<std::uint32_t> live_input_alternate;
     for (std::size_t tick = 1; tick <= 96; ++tick) {
         const auto events = live_input_opening.tick(true);

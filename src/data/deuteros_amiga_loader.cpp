@@ -467,6 +467,39 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     return {loader, main_stage, main_stage_entry, resource_offsets, title_handoff_profile, title_stage};
 }
 
+DeuterosAmigaTitleHandoffRoute parse_deuteros_amiga_title_handoff_route(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // This is the exact $0f long-operand command reached by the recovered
+    // opening input path.  Keep its on-disk location, its raw resource value,
+    // and the main-stage bootstrap return facts together: a matching number
+    // elsewhere in a bundle must not become a title handoff.
+    constexpr std::uint32_t command_relative_offset = 0x0a8a;
+    constexpr std::array<std::uint8_t, 6> expected{{0x00, 0x0f, 0x00, 0x00, 0x0b, 0x38}};
+    constexpr std::string_view expected_hash =
+        "9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41";
+    constexpr std::uint32_t expected_payload_base = 0x32a24;
+    constexpr std::uint32_t expected_return_cell = 0x12ffc;
+    constexpr std::uint16_t expected_profile = 1;
+    const auto source = plan.resource_disk_offsets[0];
+    if (source > AmigaAdf::standard_size || command_relative_offset > AmigaAdf::standard_size - source
+        || expected.size() > AmigaAdf::standard_size - source - command_relative_offset
+        || plan.main_stage_entry.resource_payload_address != expected_payload_base
+        || plan.main_stage_entry.bootstrap_profile_return_cell != expected_return_cell
+        || plan.main_stage_entry.first_exit_profile_value != expected_profile
+        || plan.title_handoff_profile.disk_offset != plan.title_stage.disk_offset
+        || plan.title_handoff_profile.length != plan.title_stage.length
+        || plan.title_handoff_profile.destination != plan.title_stage.destination) {
+        throw std::runtime_error("Unexpected Deuteros title-handoff route");
+    }
+    const auto bytes = disk.bytes(source + command_relative_offset, expected.size());
+    const auto hash = to_hex(sha256(bytes));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash) {
+        throw std::runtime_error("Unexpected Deuteros title-handoff command");
+    }
+    return {source + command_relative_offset, 0x0b38,
+        expected_payload_base + 0x0b38, expected_return_cell, expected_profile, hash};
+}
+
 DeuterosAmigaChannelRequestContinuation
 parse_deuteros_amiga_channel_request_continuation(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {

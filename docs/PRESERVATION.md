@@ -1907,6 +1907,13 @@ the two direct pre-Exec stores as an immutable sparse state record:
 hash-validated entry instructions, not a title-stage RAM image: the incoming
 controller longword is still unavailable, no other title RAM is initialized,
 and neither the source ADF nor a host-side Amiga memory map is changed.
+`DeuterosAmigaTitleHandoffRoute` additionally binds that live event to the
+six original command bytes at ADF `+$1c28a` (`00 0f 00 00 0b 38`, SHA-256
+`9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41`) and
+to the verified main-stage return cell `$12ffc` with profile value one. Its
+resulting original pointer is `$32a24 + $0b38 = $3355c`. This is a narrow
+caller-to-session admission check: another `$0f` event, an equal operand in
+another bundle, or altered command bytes cannot open the title stage.
 For mode five it copies the byte to `$3717e` and writes `$0101` to `$38092`;
 every other path writes byte one to `$19d52`. The shared prefix is now
 opcode-validated through `$40574`: it installs stack `$40b62`, loads Exec base
