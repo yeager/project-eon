@@ -1071,6 +1071,20 @@ int main() {
         assert((eon::available_release_languages(multilingual_menu_releases,
             eon::Game::millennium, eon::Platform::dos)
             == std::vector<std::string>{"en", "es"}));
+        assert(eon::platform_card_status(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::dos)
+            == eon::PlatformCardStatus::release_selection_required);
+        assert(eon::platform_card_selectable(eon::PlatformCardStatus::release_selection_required));
+        assert(!eon::platform_card_startable(eon::PlatformCardStatus::release_selection_required));
+        assert(eon::platform_card_status(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::atari_st)
+            == eon::PlatformCardStatus::unavailable);
+        assert(!eon::platform_card_selectable(eon::PlatformCardStatus::unavailable));
+        assert(!eon::platform_card_startable(eon::PlatformCardStatus::unavailable));
+        assert(eon::platform_card_status(menu_releases,
+            eon::Game::deuteros, eon::Platform::atari_st)
+            == eon::PlatformCardStatus::ready);
+        assert(eon::platform_card_startable(eon::PlatformCardStatus::ready));
         assert(!eon::select_available_release_language(multilingual_menu_releases,
             eon::Game::millennium, eon::Platform::dos, std::nullopt));
         assert(eon::select_available_release_language(multilingual_menu_releases,
@@ -2692,6 +2706,11 @@ int main() {
     assert(title_session.poll_console(true));
     assert(title_session.handed_off());
     assert(!title_session.poll_console(true));
+    // Revisiting the title constructs a new one-shot session; an observed
+    // hand-off from an earlier visit cannot leak into it.
+    eon::MillenniumDosTitleSession restarted_title_session(title_flow);
+    assert(!restarted_title_session.handed_off());
+    assert(restarted_title_session.poll_console(true));
     const auto game_executable = eon::extract_asset_by_sha256(english_dos->path,
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57");
     const auto gx_overlay = eon::extract_asset_by_sha256(english_dos->path,

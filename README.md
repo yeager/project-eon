@@ -288,6 +288,11 @@ parity remains unrecovered.
 The launcher follows the same broad structure as OpenCaptive: a native SDL3
 start menu, separate game cards, direct CLI game selection, a platform-neutral
 data layer and distinct engine/render/audio modules as those systems mature.
+Platform cards are admission gates, not filename guesses: only a hash-verified
+release enables one. Missing or unrecognised media stays disabled, while a
+platform containing multiple verified original editions requires an explicit
+release card before a presentation profile can launch it. This applies equally
+to Atari ST media; the launcher never substitutes an Amiga or DOS release.
 The two menu cards are newly generated Project Eon artwork inspired by the
 games' broad lunar-recovery and orbital-expansion themes. They contain no
 extracted game assets and are never used inside Original mode.

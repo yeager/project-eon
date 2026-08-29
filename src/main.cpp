@@ -3250,10 +3250,21 @@ int main(int argc, char** argv) {
         // the game card can have been focused while scanning was incomplete.
         focus_active_platform_card();
     };
+    const auto stop_millennium_title = [&] {
+        // This is host lifecycle cleanup only. It neither sends an additional
+        // DOS availability result nor modifies original title/game data.
+        if (millennium_title_text_input_active) SDL_StopTextInput(window);
+        millennium_title_text_input_active = false;
+        millennium_title_session.reset();
+    };
     const auto start_millennium_title = [&] {
+        // A title session is intentionally one-shot after its observed
+        // character-availability hand-off. Returning from the launcher or
+        // selecting the title again starts a fresh original boundary, and
+        // must not retain an IME/virtual keyboard from the previous visit.
+        stop_millennium_title();
         millennium_atari_session = load_millennium_atari_bootstrap(releases, active_platform);
         millennium_amiga_session = load_millennium_amiga_bootstrap(releases, active_platform);
-        millennium_title_session.reset();
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
         if (millennium_assets && millennium_assets->title_flow) {
@@ -3275,10 +3286,7 @@ int main(int argc, char** argv) {
         }
     };
     const auto start_deuteros = [&] {
-        if (millennium_title_text_input_active) {
-            SDL_StopTextInput(window);
-            millennium_title_text_input_active = false;
-        }
+        stop_millennium_title();
         deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform);
         deuteros_opening = load_deuteros_opening(releases, active_platform);
         create_deuteros_opening_texture();
@@ -3288,7 +3296,9 @@ int main(int argc, char** argv) {
     };
     const auto launch_menu_selection = [&] {
         const auto game = cards[static_cast<std::size_t>(focused)].game;
-        if (!eon::release_available(releases, game, active_platform)) return;
+        if (!active_platform || !active_release_language
+            || !eon::platform_card_startable(
+                eon::platform_card_status(releases, game, *active_platform))) return;
         selected = game;
         screen = Screen::launching;
         if (selected == eon::Game::millennium) start_millennium_title();
@@ -3298,7 +3308,8 @@ int main(int argc, char** argv) {
         focused_platform_card = std::clamp(index, 0, static_cast<int>(platform_cards.size() - 1U));
         const auto platform = platform_cards[static_cast<std::size_t>(focused_platform_card)].platform;
         const auto game = cards[static_cast<std::size_t>(focused)].game;
-        if (!eon::release_available(releases, game, platform)) return false;
+        const auto status = eon::platform_card_status(releases, game, platform);
+        if (!eon::platform_card_selectable(status)) return false;
         if (!active_platform || *active_platform != platform) {
             active_platform = platform;
             active_release_language.reset();
@@ -3425,7 +3436,10 @@ int main(int argc, char** argv) {
                 continue;
             }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
-                if (screen == Screen::launching && !request.game) screen = Screen::menu;
+                if (screen == Screen::launching && !request.game) {
+                    stop_millennium_title();
+                    screen = Screen::menu;
+                }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
                     launcher_page = launcher_page == LauncherPage::profiles
                         ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
@@ -3440,7 +3454,10 @@ int main(int argc, char** argv) {
             }
             if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                 && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
-                if (screen == Screen::launching && !request.game) screen = Screen::menu;
+                if (screen == Screen::launching && !request.game) {
+                    stop_millennium_title();
+                    screen = Screen::menu;
+                }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
                     launcher_page = launcher_page == LauncherPage::profiles
                         ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
@@ -3619,13 +3636,18 @@ int main(int argc, char** argv) {
             deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && deuteros_opening) {
+            && deuteros_opening && !deuteros_opening->title_handed_off()) {
             constexpr std::uint64_t scheduler_period_ms = 20;
             constexpr std::size_t maximum_catch_up_ticks = 4;
             const auto now = SDL_GetTicks();
             std::size_t tick_count = 0;
             while (now - deuteros_last_tick >= scheduler_period_ms
-                && tick_count < maximum_catch_up_ticks) {
+                && tick_count < maximum_catch_up_ticks
+                // The handoff tick has already composed its final verified
+                // opening frame.  The next original instructions cross the
+                // unrecovered Exec/graphics boundary, so do not turn later
+                // host catch-up iterations into no-op pseudo-emulation.
+                && !deuteros_opening->title_handed_off()) {
                 const auto events = deuteros_opening->tick(deuteros_input_pressed);
                 if (deuteros_paula) {
                     for (const auto& sound : events.sounds) {
@@ -3716,19 +3738,21 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 64, 108, tr("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME"));
                 for (std::size_t index = 0; index < platform_cards.size(); ++index) {
                     auto& card = platform_cards[index];
-                    const bool available = eon::release_available(releases, game, card.platform);
+                    const auto status = eon::platform_card_status(releases, game, card.platform);
+                    const bool selectable = eon::platform_card_selectable(status);
                     if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
                     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-                    if (!available) {
+                    if (!selectable) {
                         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 155);
                         SDL_RenderFillRect(renderer, &card.bounds);
                     }
                     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-                    draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_platform_card), available);
+                    draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_platform_card), selectable);
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46,
                         tr(card.title));
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
-                        available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
+                        status == eon::PlatformCardStatus::release_selection_required
+                        ? tr("RELEASE SELECTION REQUIRED") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }
             } else if (launcher_page == LauncherPage::releases) {

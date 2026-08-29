@@ -238,3 +238,6 @@ msgid "SPANISH"
 msgstr "西班牙语"
 msgid "RELEASE IDENTITY IS FIXED AT LAUNCH"
 msgstr "版本身份会在启动时固定"
+
+msgid "RELEASE SELECTION REQUIRED"
+msgstr "需要选择版本"

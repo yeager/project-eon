@@ -238,3 +238,6 @@ msgid "SPANISH"
 msgstr "ИСПАНСКИЙ"
 msgid "RELEASE IDENTITY IS FIXED AT LAUNCH"
 msgstr "ИДЕНТИЧНОСТЬ ИЗДАНИЯ ФИКСИРУЕТСЯ ПРИ ЗАПУСКЕ"
+
+msgid "RELEASE SELECTION REQUIRED"
+msgstr "ТРЕБУЕТСЯ ВЫБОР ИЗДАНИЯ"
