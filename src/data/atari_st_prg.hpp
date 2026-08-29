@@ -142,6 +142,21 @@ struct MillenniumAtariConfigEvidence {
     std::uint32_t first_longword_operand = 0;
 };
 
+// Complete read-only FAT12 inventory of the verified Equinox one-disk image.
+// Each digest is calculated from the original cluster chain. An entry's
+// presence does not establish that the game opens, decodes, presents, or
+// mutates that file.
+struct MillenniumAtariRootFileEvidence {
+    std::string name;
+    std::uint16_t first_cluster = 0;
+    std::uint32_t size = 0;
+    std::string sha256;
+};
+
+struct MillenniumAtariRootInventory {
+    std::vector<MillenniumAtariRootFileEvidence> files;
+};
+
 // A hash-identified filename literal in the supplied Equinox auxiliary
 // payload. This is provenance only: it does not prove that a native routine
 // opens the named file, selects a record, or decodes its contents.
@@ -436,6 +451,12 @@ struct MillenniumAtariConfigAbsoluteJsrInventory {
 // reads the exact FAT chain in memory to preserve its hash and leading machine
 // words; it never treats absence as permission to generate a configuration.
 [[nodiscard]] MillenniumAtariConfigEvidence probe_millennium_atari_config(
+    const Fat12Disk& disk);
+
+// Validates the complete 13-file regular-root inventory of the exact Equinox
+// filesystem. It follows only original FAT chains in memory and fails closed
+// on any renamed, added, missing, relocated, resized, or byte-altered file.
+[[nodiscard]] MillenniumAtariRootInventory inventory_millennium_atari_equinox_root(
     const Fat12Disk& disk);
 
 // Reads the exact FAT12 chain of MILL22B.INF and validates its isolated

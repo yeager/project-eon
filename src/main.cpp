@@ -434,6 +434,20 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << post_exec_pointer_seed.literal_value << " to cell 0x"
         << post_exec_pointer_seed.destination_address
         << " (prior ABI returns unmodelled)" << std::dec << '\n';
+    const auto post_exec_state_init =
+        eon::parse_deuteros_amiga_title_post_exec_state_init_profile(disk, plan);
+    std::cout << "          Conditional post-Exec local state init: call 0x" << std::hex
+        << post_exec_state_init.caller_address << " -> 0x"
+        << post_exec_state_init.entry_address << "; words 0x"
+        << post_exec_state_init.cleared_word_value << "/0x"
+        << post_exec_state_init.initial_word_value << " -> 0x"
+        << post_exec_state_init.cleared_word_address << "/0x"
+        << post_exec_state_init.initial_word_address << ", long 0x"
+        << post_exec_state_init.initial_long_value << " -> 0x"
+        << post_exec_state_init.initial_long_address << ", word 0x"
+        << post_exec_state_init.copied_word_source_address << " -> 0x"
+        << post_exec_state_init.copied_word_destination_address
+        << " (prior ABI returns unmodelled)" << std::dec << '\n';
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec
@@ -1156,6 +1170,24 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << " (static only; no registers, stores, predicates, or continuation executed)\n";
 }
 
+void report_millennium_atari_root_inventory(const eon::MillenniumAtariRootInventory& inventory) {
+    // Keep the complete raw filesystem listing in a small separate function.
+    // Besides making the provenance report easier to audit, this avoids
+    // stressing compiler optimisation of the already deliberately detailed
+    // Atari bootstrap report below.
+    if (inventory.files.empty()) throw std::runtime_error("Verified Millennium Atari ST root is empty");
+    std::cout << "          Equinox FAT12 root: " << inventory.files.size()
+        << " original regular files; first " << inventory.files.front().name
+        << " SHA-256 " << inventory.files.front().sha256 << ", final "
+        << inventory.files.back().name << " SHA-256 "
+        << inventory.files.back().sha256
+        << " (complete read-only inventory; no file access or format semantics inferred)\n";
+    for (const auto& file : inventory.files) {
+        std::cout << "            " << file.name << " cluster " << file.first_cluster
+            << ", " << file.size << " bytes, SHA-256 " << file.sha256 << '\n';
+    }
+}
+
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     constexpr auto equinox_disk_sha256 =
         "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
@@ -1180,6 +1212,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << " (no GEMDOS call)\n";
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
+    const auto& root_inventory = live_bootstrap.root_inventory();
     const auto auxiliary_resource = eon::probe_millennium_atari_auxiliary_resource_name(disk);
     const auto config_entry = eon::parse_millennium_atari_config_entry(
         disk.read(*disk.find(equinox_config.requested_filename)));
@@ -1270,6 +1303,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
             << equinox_config.first_longword_operand << std::dec;
     }
     std::cout << " (metadata only; never generated or written)\n";
+    report_millennium_atari_root_inventory(root_inventory);
     std::cout << "          MILL22A.inf entry: JMP 0x" << std::hex << config_entry.entry_address
         << " resolves from proven load base 0x" << config_entry.proven_load_base
         << " to file +0x" << config_entry.entry_file_offset << "; TRAP #14 selectors 0x"

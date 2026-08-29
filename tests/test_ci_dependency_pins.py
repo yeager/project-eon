@@ -59,6 +59,8 @@ class CiDependencyPinTests(unittest.TestCase):
             with self.subTest(manifest=manifest):
                 self.assertIn(manifest, WORKFLOW)
         self.assertEqual(WORKFLOW.count("packaging/write-artifact-manifest.py"), 4)
+        self.assertEqual(WORKFLOW.count("packaging/verify-artifact-manifest.py"), 4)
+        self.assertEqual(WORKFLOW.count("--require-exact-directory"), 4)
 
 
 if __name__ == "__main__":

@@ -23,6 +23,9 @@ public:
     [[nodiscard]] const MillenniumAtariFopenFallthrough& fopen_fallthrough() const {
         return fopen_fallthrough_;
     }
+    [[nodiscard]] const MillenniumAtariRootInventory& root_inventory() const {
+        return root_inventory_;
+    }
     [[nodiscard]] const MillenniumAtariConfigEvidence& config() const { return config_; }
 
 private:
@@ -32,6 +35,7 @@ private:
     MillenniumAtariMaterializedTarget target_;
     MillenniumAtariTrapEntry trap_;
     MillenniumAtariFopenFallthrough fopen_fallthrough_;
+    MillenniumAtariRootInventory root_inventory_;
     MillenniumAtariConfigEvidence config_;
 };
 

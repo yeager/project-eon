@@ -97,6 +97,38 @@ void assert_deuteros_atari_post_callback_callees(const std::vector<std::uint8_t>
     assert(rejected);
 }
 
+void assert_deuteros_amiga_post_exec_state_init(const std::vector<std::uint8_t>& system_adf,
+    const eon::AmigaAdf& disk, const eon::DeuterosAmigaLoadPlan& plan) {
+    const auto profile = eon::parse_deuteros_amiga_title_post_exec_state_init_profile(disk, plan);
+    assert(profile.caller_address == 0x403fa);
+    assert(profile.entry_address == 0x20510);
+    assert(profile.cleared_word_address == 0x202c4);
+    assert(profile.cleared_word_value == 0);
+    assert(profile.initial_word_address == 0x2027e);
+    assert(profile.initial_word_value == 0xf690);
+    assert(profile.initial_long_address == 0x20280);
+    assert(profile.initial_long_value == 1);
+    assert(profile.copied_word_source_address == 0x20276);
+    assert(profile.copied_word_destination_address == 0x2027c);
+    assert(profile.return_address == 0x20536);
+    assert(profile.caller_sha256
+        == "f31dc5923e4b39eb1726fc9b05ac7f56c0209f5d60c9499b979ebfc7c08a58a2");
+    assert(profile.routine_sha256
+        == "60ee2fcb4a18f62cd2066aba2429e760a64f14cd3f07f3cfe8467972030008bc");
+    for (const auto disk_offset : {0x9b3faU, 0x7c510U}) {
+        auto altered = system_adf;
+        altered[disk_offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_state_init_profile(
+                eon::AmigaAdf(std::move(altered)), plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+}
+
 } // namespace
 
 int main() {
@@ -2477,6 +2509,38 @@ int main() {
     assert(atari_executable && atari_executable->size == 49'269);
     assert(eon::to_hex(eon::sha256(atari_disk.read(*atari_data)))
         == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
+    const auto atari_root_inventory = eon::inventory_millennium_atari_equinox_root(atari_disk);
+    assert(atari_root_inventory.files.size() == 13);
+    assert(atari_root_inventory.files.front().name == "DESKTOP.INF");
+    assert(atari_root_inventory.files.front().first_cluster == 2);
+    assert(atari_root_inventory.files.front().size == 555);
+    assert(atari_root_inventory.files.front().sha256
+        == "ce2aa85b442be281f25c22456c0d081d01b51108e96716bba9f867b7e791ab19");
+    assert(atari_root_inventory.files[5].name == "MILL22E.INF");
+    assert(atari_root_inventory.files[5].first_cluster == 122);
+    assert(atari_root_inventory.files[5].size == 302'892);
+    assert(atari_root_inventory.files[5].sha256
+        == "9aeb6aafceab228521725ffe687cd3d95406d7f272bca77f855ebb600664b2af");
+    assert(atari_root_inventory.files.back().name == "MILENIUM.TOS");
+    assert(atari_root_inventory.files.back().first_cluster == 540);
+    assert(atari_root_inventory.files.back().size == 49'269);
+    assert(atari_root_inventory.files.back().sha256
+        == "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686");
+    {
+        auto altered_atari_image = *atari_image;
+        // DATA12.BIN starts at FAT12 cluster 442: first data byte is $2400
+        // and each cluster is two 512-byte sectors. The original file is
+        // shorter than one cluster, so this alters only that supplied file.
+        altered_atari_image[0x2400 + (442 - 2) * 1024] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::Fat12Disk altered_disk(altered_atari_image);
+            static_cast<void>(eon::inventory_millennium_atari_equinox_root(altered_disk));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto atari_physical_dump = eon::extract_asset_by_sha256(atari_release->path,
         "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd");
     assert(atari_physical_dump && atari_physical_dump->size() == 423'696);
@@ -2621,6 +2685,10 @@ int main() {
     assert(atari_session.fopen_boundary().fopen_function == 0x3d);
     assert(atari_session.fopen_fallthrough().fread_function == 0x3f);
     assert(atari_session.fopen_fallthrough().fread_buffer_address == 0x2a500);
+    assert(atari_session.root_inventory().files.size() == 13);
+    assert(atari_session.root_inventory().files[11].name == "DATA12.BIN");
+    assert(atari_session.root_inventory().files[11].sha256
+        == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
     assert(atari_session.config().present);
     assert(atari_session.config().size == 7506);
     const auto atari_config_payload = atari_disk.read(*atari_disk.find("MILL22A.inf"));
@@ -3956,6 +4024,7 @@ int main() {
         == "2a90f1020af64bd1a6f7f6e7e7503bea4133a2a569bba55987f6edb23442cec3");
     assert(post_exec_graphics_vector.routine_sha256
         == "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f");
+    assert_deuteros_amiga_post_exec_state_init(*amiga_disk1, system_disk, load_plan);
     {
         auto altered_pointer_seed_disk = *amiga_disk1;
         altered_pointer_seed_disk[0x9b4c2] ^= 0x01;

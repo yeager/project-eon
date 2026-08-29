@@ -248,6 +248,38 @@ no FAT12 pathname namespace to substitute. Project Eon reads a present entry
 only through its original cluster chain in memory, and never creates, changes,
 or falls back to a synthetic `.inf` file.
 
+The same exact Equinox FAT12 root is now retained as a 13-file,
+cluster-addressed inventory. `DESKTOP.INF` is cluster 2, 555 bytes, SHA-256
+`ce2aa85b442be281f25c22456c0d081d01b51108e96716bba9f867b7e791ab19`;
+`MILL22A.INF` through `MILL22F.INF` occupy their original root records; the
+four 7,313-byte `2200SAVE.*` files, `DATA12.BIN` at cluster 442 (932 bytes,
+SHA-256 `6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda`),
+and `MILENIUM.TOS` at cluster 540 (49,269 bytes, SHA-256
+`4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686`)
+complete it. `MILL22E.INF` remains an opaque 302,892-byte original cluster
+chain (cluster 122, SHA-256
+`9aeb6aafceab228521725ffe687cd3d95406d7f272bca77f855ebb600664b2af`).
+The inventory verifies each original FAT chain and digest before exposing it
+to the bounded Atari bootstrap session. It establishes neither load order nor
+file semantics: no `.INF`, save, data, or desktop file is opened, decoded,
+written, or substituted because it appears in this evidence table.
+
+| Original FAT12 entry | First cluster | Bytes | SHA-256 |
+| --- | ---: | ---: | --- |
+| `DESKTOP.INF` | 2 | 555 | `ce2aa85b442be281f25c22456c0d081d01b51108e96716bba9f867b7e791ab19` |
+| `MILL22A.INF` | 3 | 7,506 | `74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6` |
+| `MILL22B.INF` | 11 | 84,720 | `e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9` |
+| `MILL22C.INF` | 94 | 9,597 | `a28a49eea33a14210193bbe6e36abf95700ac6789681bf1a9eac5d09a0999055` |
+| `MILL22D.INF` | 104 | 18,428 | `de0a95d3e4659a305b3e55b3417a7648127b41866de0a0ca344a81c66979dbc0` |
+| `MILL22E.INF` | 122 | 302,892 | `9aeb6aafceab228521725ffe687cd3d95406d7f272bca77f855ebb600664b2af` |
+| `MILL22F.INF` | 418 | 22,123 | `26ef995a9c6a43647e7905477168980159d1426d90f901d4f4c32f7cf13e455e` |
+| `2200SAVE.I` | 440 | 7,313 | `b0b91572a7cc8ca0b7b112a8ce09bcf0c6645c6b32df836ae8c2eb27d86c333a` |
+| `2200SAVE.II` | 448 | 7,313 | `fa11ee72b3ca009d8a5d6cece8ff3f95b01b29ed53106e2d3730c9a545400065` |
+| `2200SAVE.III` | 456 | 7,313 | `54519e0eebfe3f3a38b04e4b372caf67476148c135dafbfe8d0a4bcae601eae2` |
+| `2200SAVE.IV` | 464 | 7,313 | `8c1709bb7aba3adc2e6538867383229c4d6a285d29a78fb431970d0d926ffbd2` |
+| `DATA12.BIN` | 442 | 932 | `6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda` |
+| `MILENIUM.TOS` | 540 | 49,269 | `4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686` |
+
 The nonnegative fall-through after the self-loop is also byte-verified, but
 is not executed. At reconstructed target `+$1a`, 26 original bytes have
 SHA-256 `663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0`.
@@ -2735,6 +2767,14 @@ basename, byte length, and SHA-256. It is a transport-verification ledger only:
 it neither signs nor publishes a release, includes no workspace path, and never
 opens or embeds user-supplied game media.
 
+Before upload, CI validates each generated ledger independently with
+`packaging/verify-artifact-manifest.py`. The verifier accepts only the exact
+schema, a full lower-case source revision, uniquely sorted safe basenames,
+non-symlink regular artifacts, exact byte lengths, and SHA-256 values. Its CI
+mode also rejects unrecorded entries in the upload directory. This makes
+the ledger a checked boundary rather than a write-only claim; the same command
+can verify a downloaded artifact directory without unpacking it.
+
 ## Evidence levels
 
 - **Verified bytes:** hashes, sizes, checksums, geometry, and fields asserted by
@@ -2909,3 +2949,16 @@ it assigns `$1ed24` to A1, `$12e12` to A0, literal D0 `$14`, and A6 from
 hash-locks the caller and routine, including return `$403e6`, but does not
 call the graphics-library vector, establish its ABI or return, or name any
 visual/title effect.
+
+The next batch edge at `$403fa..$403ff` / ADF `+0x9b3fa` hashes to
+`f31dc5923e4b39eb1726fc9b05ac7f56c0209f5d60c9499b979ebfc7c08a58a2` and
+targets `$20510`. Its complete 38-byte local routine `$20510..$20535` /
+ADF `+0x7c510` hashes to
+`60ee2fcb4a18f62cd2066aba2429e760a64f14cd3f07f3cfe8467972030008bc`. It is
+four straight-line operands followed by RTS: word literals `$0000` and
+`$f690` target `$202c4` and `$2027e`, long literal `$00000001` targets
+`$20280`, then the word at `$20276` is copied to `$2027c`; the return is
+`$20536`. `DeuterosAmigaTitlePostExecStateInitProfile` records this exact
+byte provenance. It does not perform those writes or infer their meanings:
+reaching this second batch call still requires the preceding graphics vector
+and every earlier unresolved original call to return.
