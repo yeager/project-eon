@@ -19,6 +19,9 @@ public:
     [[nodiscard]] const DeuterosAtariFirstStageProfile& first_stage() const { return first_stage_; }
     [[nodiscard]] const DeuterosAtariSecondStageProfile& second_stage() const { return second_stage_; }
     [[nodiscard]] const DeuterosAtariDispatchProfile& dispatch() const { return dispatch_; }
+    [[nodiscard]] const DeuterosAtariState1ServiceBoundary& state1_service_boundary() const {
+        return state1_service_boundary_;
+    }
     [[nodiscard]] const DeuterosAtariRawLoadPlan& state0_raw_load_plan() const {
         return state0_raw_load_plan_;
     }
@@ -75,6 +78,7 @@ private:
     DeuterosAtariFirstStageProfile first_stage_;
     DeuterosAtariSecondStageProfile second_stage_;
     DeuterosAtariDispatchProfile dispatch_;
+    DeuterosAtariState1ServiceBoundary state1_service_boundary_;
     DeuterosAtariRawLoadPlan state0_raw_load_plan_;
     DeuterosAtariRawRangeLoadPlan state1_raw_load_plan_;
     DeuterosAtariState5RawLoadPlan state5_raw_load_plan_;

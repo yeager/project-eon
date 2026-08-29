@@ -112,9 +112,13 @@ invented title or gameplay action.
 Press F1 to switch the renderer between Original and Modern presentation. F10
 opens Modern graphics settings; Up/Down and Left/Right (or the gamepad D-pad)
 select and change its renderer-only options, while Escape or gamepad Back
-closes the panel. The panel is input-modal: it consumes all other keyboard and
-gamepad controls, so no launcher command or recovered original-game signal can
-be sent behind it. These controls never become original-game input mappings.
+closes the panel. Resolution presets control the SDL window only. Aspect-ratio
+presets are Original 4:3 (the default), Square Pixels 8:5, and Widescreen
+16:9. The renderer fits and centres its viewport within the available region;
+it never crops a recovered frame or independently stretches width and height.
+The panel is input-modal: it consumes all other keyboard and gamepad controls,
+so no launcher command or recovered original-game signal can be sent behind
+it. These controls never become original-game input mappings.
 
 ### Language
 

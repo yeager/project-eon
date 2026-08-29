@@ -3,6 +3,17 @@ msgstr ""
 "Language: fr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "OUTPUT RESOLUTION"
+msgstr "RÉSOLUTION DE SORTIE"
+msgid "ASPECT RATIO"
+msgstr "FORMAT D'IMAGE"
+msgid "ORIGINAL 4:3"
+msgstr "ORIGINAL 4:3"
+msgid "SQUARE PIXELS 8:5"
+msgstr "PIXELS CARRÉS 8:5"
+msgid "WIDESCREEN 16:9"
+msgstr "ÉCRAN LARGE 16:9"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 

@@ -4,6 +4,17 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "OUTPUT RESOLUTION"
+msgstr "출력 해상도"
+msgid "ASPECT RATIO"
+msgstr "화면비"
+msgid "ORIGINAL 4:3"
+msgstr "원본 4:3"
+msgid "SQUARE PIXELS 8:5"
+msgstr "정사각형 픽셀 8:5"
+msgid "WIDESCREEN 16:9"
+msgstr "와이드스크린 16:9"
+
 msgid "PROJECT EON"
 msgstr "프로젝트 이온"
 

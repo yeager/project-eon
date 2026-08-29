@@ -271,6 +271,45 @@ DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     return result;
 }
 
+DeuterosAtariState1ServiceBoundary parse_deuteros_atari_state1_service_boundary(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch) {
+    // This is the complete second direct-vector body, from its literal XBIOS
+    // arguments through RTS. The trap is an explicit ABI boundary, but the
+    // following D1/D0/D2 loads are static, caller-connected evidence for the
+    // existing state-1 raw-load plan.
+    constexpr std::size_t callee_offset = 0x12e;
+    constexpr auto callee_bytes = std::to_array<std::uint8_t>({
+        0x2f, 0x3c, 0x00, 0x00, 0x26, 0x30,
+        0x3f, 0x3c, 0x00, 0x26,
+        0x4e, 0x4e, 0x5c, 0x8f,
+        0x22, 0x3c, 0x00, 0x00, 0xb0, 0x00,
+        0x20, 0x3c, 0x00, 0x05, 0xe4, 0x00,
+        0x24, 0x3c, 0x00, 0x00, 0x00, 0x4c, 0x4e, 0x75,
+    });
+    constexpr std::string_view callee_sha256 =
+        "0bc76b22089d008e4ce90d63216c75acbe0786b0a06127fbd66ef0dc252949ac";
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || dispatch.vector_addresses[1] != 0x1f2eU
+        || dispatch.state1_destination != 0xb000U || dispatch.state1_byte_count != 0x5e400U
+        || dispatch.state1_linear_sector != 0x4cU) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 service topology");
+    }
+    require_bytes(bytes, callee_offset, callee_bytes,
+        "Unexpected Deuteros Atari ST state-1 service boundary");
+    const auto window = bytes.subspan(callee_offset, callee_bytes.size());
+    if (to_hex(sha256(window)) != callee_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 service hash");
+    }
+    // The literal pushes occupy six bytes. ADDQ.L #6,A7 therefore restores
+    // only that caller-side stack layout; it is not evidence of a TRAP result.
+    return {callee_offset, callee_bytes.size(), std::string(callee_sha256),
+        be16(window, 0), be32(window, 2), be16(window, 6), be16(window, 8),
+        be16(window, 10), be16(window, 12), 6U, be16(window, 14), be32(window, 16),
+        be16(window, 20), be32(window, 22), be16(window, 26), be32(window, 28),
+        be16(window, 32)};
+}
+
 DeuterosAtariRawLoadPlan build_deuteros_atari_state0_raw_load_plan(
     const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariDispatchProfile& dispatch) {

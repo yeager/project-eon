@@ -121,3 +121,14 @@ msgstr "ΟΙ ΡΥΘΜΙΣΕΙΣ ΕΦΑΡΜΟΖΟΝΤΑΙ ΜΟΝΟ ΣΤΗΝ ΑΠ�
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
 msgstr "ΠΑΝΩ/ΚΑΤΩ: ΕΠΙΛΟΓΗ   ΑΡΙΣΤΕΡΑ/ΔΕΞΙΑ: ΑΛΛΑΓΗ   F10: ΚΛΕΙΣΙΜΟ"
+
+msgid "OUTPUT RESOLUTION"
+msgstr "ΑΝΑΛΥΣΗ ΕΞΟΔΟΥ"
+msgid "ASPECT RATIO"
+msgstr "ΛΟΓΟΣ ΔΙΑΣΤΑΣΕΩΝ"
+msgid "ORIGINAL 4:3"
+msgstr "ΑΡΧΙΚΟ 4:3"
+msgid "SQUARE PIXELS 8:5"
+msgstr "ΤΕΤΡΑΓΩΝΑ ΕΙΚΟΝΟΣΤΟΙΧΕΙΑ 8:5"
+msgid "WIDESCREEN 16:9"
+msgstr "ΕΥΡΕΙΑ ΟΘΟΝΗ 16:9"

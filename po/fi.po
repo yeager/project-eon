@@ -3,6 +3,17 @@ msgstr ""
 "Language: fi\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "OUTPUT RESOLUTION"
+msgstr "ULOSTULOTARKKUUS"
+msgid "ASPECT RATIO"
+msgstr "KUVASUHDE"
+msgid "ORIGINAL 4:3"
+msgstr "ALKUPERÄINEN 4:3"
+msgid "SQUARE PIXELS 8:5"
+msgstr "NELIÖPIKSELIT 8:5"
+msgid "WIDESCREEN 16:9"
+msgstr "LAAJAKUVA 16:9"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 

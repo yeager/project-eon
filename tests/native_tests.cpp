@@ -416,6 +416,42 @@ void assert_deuteros_atari_state_selection_continuation(const std::vector<std::u
     assert(rejected);
 }
 
+void assert_deuteros_atari_state1_service_boundary(const std::vector<std::uint8_t>& second_stage,
+    const eon::DeuterosAtariSecondStageProfile& stage,
+    const eon::DeuterosAtariDispatchProfile& dispatch) {
+    const auto boundary = eon::parse_deuteros_atari_state1_service_boundary(
+        second_stage, stage, dispatch);
+    assert(boundary.callee_offset == 0x12e);
+    assert(boundary.callee_byte_count == 34);
+    assert(boundary.callee_sha256
+        == "0bc76b22089d008e4ce90d63216c75acbe0786b0a06127fbd66ef0dc252949ac");
+    assert(boundary.longword_push_opcode == 0x2f3c);
+    assert(boundary.longword_argument == 0x2630);
+    assert(boundary.selector_push_opcode == 0x3f3c);
+    assert(boundary.xbios_selector == 0x26);
+    assert(boundary.trap_opcode == 0x4e4e);
+    assert(boundary.stack_cleanup_opcode == 0x5c8f);
+    assert(boundary.stack_cleanup_bytes == 6);
+    assert(boundary.destination_load_opcode == 0x223c);
+    assert(boundary.destination == 0xb000);
+    assert(boundary.byte_count_load_opcode == 0x203c);
+    assert(boundary.byte_count == 0x5e400);
+    assert(boundary.linear_sector_load_opcode == 0x243c);
+    assert(boundary.linear_sector == 0x4c);
+    assert(boundary.return_opcode == 0x4e75);
+
+    auto altered_second_stage = second_stage;
+    altered_second_stage[0x12e] ^= 0x01;
+    bool rejected = false;
+    try {
+        static_cast<void>(eon::parse_deuteros_atari_state1_service_boundary(
+            altered_second_stage, stage, dispatch));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
 void assert_deuteros_amiga_post_exec_state_init(const std::vector<std::uint8_t>& system_adf,
     const eon::AmigaAdf& disk, const eon::DeuterosAmigaLoadPlan& plan) {
     const auto profile = eon::parse_deuteros_amiga_title_post_exec_state_init_profile(disk, plan);
@@ -4158,6 +4194,7 @@ int main() {
     assert(deuteros_atari_session.state_selection_layout().source_longword_address == 0x25fc);
     assert(deuteros_atari_session.state_selection_continuation().raw_reader_wrapper_target_offset == 0x30);
     assert(deuteros_atari_session.dispatch().state0_destination == 0x13200);
+    assert(deuteros_atari_session.state1_service_boundary().xbios_selector == 0x26);
     assert(deuteros_atari_session.state0_raw_load_plan().source_offset == 0x4800);
     assert(deuteros_atari_session.state0_raw_load_plan().requests.size() == 4);
     assert(deuteros_atari_session.state1_raw_load_plan().source_offset == 0x55800);
@@ -4276,6 +4313,8 @@ int main() {
     assert(deuteros_dispatch.state1_destination == 0xb000);
     assert(deuteros_dispatch.state1_byte_count == 0x5e400);
     assert(deuteros_dispatch.state1_linear_sector == 0x4c);
+    assert_deuteros_atari_state1_service_boundary(deuteros_second_stage,
+        deuteros_second_stage_profile, deuteros_dispatch);
     const auto deuteros_state1_plan = eon::build_deuteros_atari_state1_raw_load_plan(
         deuteros_second_stage_profile, deuteros_dispatch);
     assert(deuteros_state1_plan.destination == 0xb000);

@@ -127,6 +127,35 @@ struct DeuterosAtariDispatchProfile {
 [[nodiscard]] DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     std::span<const std::uint8_t> bytes);
 
+// The second direct dispatch vector has a local, fully encoded continuation:
+// it makes one XBIOS TRAP #14 request, cleans its six argument bytes, then
+// returns the raw-reader arguments used by the separately bounded state-1
+// plan. This records caller-connected machine-code facts only. It does not
+// invoke XBIOS, choose state 1, or interpret the loaded interval.
+struct DeuterosAtariState1ServiceBoundary {
+    std::size_t callee_offset = 0;
+    std::size_t callee_byte_count = 0;
+    std::string callee_sha256;
+    std::uint16_t longword_push_opcode = 0;
+    std::uint32_t longword_argument = 0;
+    std::uint16_t selector_push_opcode = 0;
+    std::uint16_t xbios_selector = 0;
+    std::uint16_t trap_opcode = 0;
+    std::uint16_t stack_cleanup_opcode = 0;
+    std::uint8_t stack_cleanup_bytes = 0;
+    std::uint16_t destination_load_opcode = 0;
+    std::uint32_t destination = 0;
+    std::uint16_t byte_count_load_opcode = 0;
+    std::uint32_t byte_count = 0;
+    std::uint16_t linear_sector_load_opcode = 0;
+    std::uint32_t linear_sector = 0;
+    std::uint16_t return_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariState1ServiceBoundary parse_deuteros_atari_state1_service_boundary(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch);
+
 // The first dispatch vector provides a wholly static raw-load request. This
 // plan preserves that request as four original nine-sector reads; it neither
 // selects a runtime state nor interprets the resulting bytes as a title/game

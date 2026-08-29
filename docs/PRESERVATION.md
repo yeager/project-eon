@@ -1070,6 +1070,18 @@ protected-media interval are therefore not promoted to artwork. Project Eon
 does not render the interval or choose state 1 merely because its physical
 span can be calculated.
 
+The second direct table body at track-2 `+$12e..+$14f` gives that state-1
+plan a caller-connected boundary. Its complete 34 original bytes are
+SHA-256 `0bc76b22089d008e4ce90d63216c75acbe0786b0a06127fbd66ef0dc252949ac`.
+They push literal longword `$00002630`, then word `$0026`, and reach `TRAP
+#14`; `ADDQ.L #6,A7` follows the trap. The remaining literal instructions
+load `$b000`, `$5e400`, and `$4c` into the same raw-loader argument registers
+recorded by the state-1 plan, then `RTS`. The byte count and six-byte cleanup
+are instruction-layout facts, not a claim about the XBIOS selector, its
+return, state selection, game semantics, or a successful read. The live
+bounded Atari session and `--inspect` retain this hash-validated provenance
+record without invoking the trap or materializing its state-1 media.
+
 Within that unselected state-1 span, Disk 1 `+$9d800` (state-1 `+$48000`)
 contains the exact branch encoding `60 00 09 c2` (`BRA.W` with literal
 displacement `$09c2`). A byte-bounded printable block begins at Disk 1
