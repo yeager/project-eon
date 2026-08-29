@@ -87,6 +87,17 @@ int main() {
         const auto conflict = eon::parse_command_line(4, conflicting_args);
         assert(!conflict.request);
 
+        const std::vector<eon::ReleaseArchive> menu_releases{
+            {eon::Game::millennium, eon::Platform::dos, "en", {}, {}},
+            {eon::Game::deuteros, eon::Platform::amiga, "en", {}, {}},
+            {eon::Game::deuteros, eon::Platform::atari_st, "en", {}, {}},
+        };
+        assert(eon::select_available_platform(
+            menu_releases, eon::Game::millennium, eon::Platform::dos) == eon::Platform::dos);
+        assert(eon::select_available_platform(
+            menu_releases, eon::Game::deuteros, eon::Platform::dos) == eon::Platform::amiga);
+        assert(!eon::select_available_platform({}, eon::Game::deuteros, eon::Platform::amiga));
+
         assert(eon::normalize_language("sv_SE.UTF-8") == "sv_SE");
         assert(eon::normalize_language("pt-BR") == "pt_BR");
         assert(eon::normalize_language("C") == "c");
@@ -967,6 +978,9 @@ int main() {
     assert(title_flow.input_exit_helper_driver_record_table_first_cell_address == 0x1351);
     assert(title_flow.input_exit_helper_decoded_height_cell_address == 0x1357);
     assert(title_flow.input_exit_helper_decoded_width_cell_address == 0x1359);
+    assert(title_flow.title_buffer_setup_address == 0x135e);
+    assert(title_flow.title_buffer_source_offset_cell_address == 0x1341);
+    assert(title_flow.title_buffer_source_segment_cell_address == 0x1343);
     assert(title_flow.exit_code == 0);
     assert(title_flow.launcher_title_program_address == 0x68f);
     assert(title_flow.launcher_game_program_address == 0x69a);

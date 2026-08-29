@@ -38,6 +38,11 @@ struct ParseResult {
 // to another release.
 [[nodiscard]] std::vector<Platform> available_platforms(
     const std::vector<ReleaseArchive>& releases, Game game);
+// Retain a choice only when it belongs to the newly focused game. Otherwise
+// choose that game's first hash-verified platform; no platform means no start.
+[[nodiscard]] std::optional<Platform> select_available_platform(
+    const std::vector<ReleaseArchive>& releases, Game game,
+    std::optional<Platform> current);
 
 // The recovered Deuteros SDL opening is backed only by the clean Amiga ADF.
 // An omitted platform may select that verified preview from the menu, while

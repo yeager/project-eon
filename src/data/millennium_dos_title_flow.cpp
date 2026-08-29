@@ -121,6 +121,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0x1c, 0x00, 0x7c, 0x00, 0x2e, 0x00, 0x7c, 0x00};
     constexpr std::array<std::uint8_t, 4> input_exit_helper_position_table_last{
         0x18, 0x01, 0x7c, 0x00};
+    constexpr std::array<std::uint8_t, 34> title_buffer_setup{
+        0x0e, 0x1f, 0x0e, 0x07, 0x2e, 0xc5, 0x36, 0x0c, 0x01,
+        0x2e, 0xa0, 0x07, 0x01, 0x3c, 0x01, 0x74, 0x05, 0x2e,
+        0xc5, 0x36, 0x10, 0x01, 0x8b, 0xc6, 0x2e, 0xa3, 0x41,
+        0x13, 0x8c, 0xd8, 0x2e, 0xa3, 0x43, 0x13};
     constexpr std::array<std::uint8_t, 10> clean_exit{
         0x32, 0xc0, 0x2e, 0xa2, 0x0e, 0x1a, 0x8b, 0x26,
         0xa0, 0x1a};
@@ -157,7 +162,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         || !has_bytes(titles_executable, 0x1712 - file_to_load_bias, input_exit_helper_patch_offset_builder)
         || !has_bytes(titles_executable, 0x174a - file_to_load_bias, input_exit_helper_position_dispatch)
         || !has_bytes(titles_executable, 0x1768 - file_to_load_bias, input_exit_helper_position_table_first)
-        || !has_bytes(titles_executable, 0x17a0 - file_to_load_bias, input_exit_helper_position_table_last)) {
+        || !has_bytes(titles_executable, 0x17a0 - file_to_load_bias, input_exit_helper_position_table_last)
+        || !has_bytes(titles_executable, 0x135e - file_to_load_bias, title_buffer_setup)) {
         throw std::runtime_error("Unsupported Millennium DOS title control flow");
     }
     constexpr std::size_t title_selection_callee_address = 0x1725;
@@ -429,6 +435,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_exit_helper_driver_record_table_first_cell_address = 0x1351,
         .input_exit_helper_decoded_height_cell_address = 0x1357,
         .input_exit_helper_decoded_width_cell_address = 0x1359,
+        .title_buffer_setup_address = 0x135e,
+        .title_buffer_source_offset_cell_address = 0x1341,
+        .title_buffer_source_segment_cell_address = 0x1343,
         .exit_code = 0,
         .title_private_interrupt_wrapper_address = 0x0122,
         .title_private_interrupt_record_address = 0x1ac4,

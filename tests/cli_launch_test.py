@@ -111,6 +111,18 @@ def main() -> int:
             "unavailable inspect filter did not fail without platform substitution:\n"
             f"{unavailable_filter.stdout}\n{unavailable_filter.stderr}"
         )
+    unavailable_start = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "deuteros", "--platform", "dos"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (unavailable_start.returncode != 4
+            or "Requested original release is not present for the selected platform."
+                not in unavailable_start.stderr
+            or "no platform fallback was selected." not in unavailable_start.stderr):
+        raise SystemExit(
+            "unavailable direct launch did not explain its no-fallback boundary:\n"
+            f"{unavailable_start.stdout}\n{unavailable_start.stderr}"
+        )
     starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
     for presentation in ("original", "modern"):
         for game, platform in (

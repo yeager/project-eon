@@ -1,6 +1,7 @@
 #include "launcher.hpp"
 #include "i18n.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <string_view>
 
@@ -116,6 +117,17 @@ std::vector<Platform> available_platforms(
         if (release_available(releases, game, platform)) platforms.push_back(platform);
     }
     return platforms;
+}
+
+std::optional<Platform> select_available_platform(
+    const std::vector<ReleaseArchive>& releases, const Game game,
+    const std::optional<Platform> current) {
+    const auto platforms = available_platforms(releases, game);
+    if (platforms.empty()) return std::nullopt;
+    if (current && std::find(platforms.begin(), platforms.end(), *current) != platforms.end()) {
+        return current;
+    }
+    return platforms.front();
 }
 
 bool deuteros_amiga_opening_supported(std::optional<Platform> platform) {
