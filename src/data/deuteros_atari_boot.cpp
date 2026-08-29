@@ -131,6 +131,58 @@ DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image) : image_(s
     }
 }
 
+DeuterosAtariKillerBootHandoff parse_deuteros_atari_killer_boot_handoff(
+    const std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile) {
+    // This is the source instruction block which makes the copy visible to
+    // the machine: the DBF executes ten MOVE.L transfers, then JMP $12.w.
+    // The target is inside that copied $f0..$117 source span once relocated
+    // to RAM $8.  It is intentionally not treated as a host reset or game
+    // bootstrap; the preceding copied JMP (A0) instead depends on RAM $4.
+    constexpr std::size_t setup_offset = 0xd8;
+    constexpr auto setup_bytes = std::to_array<std::uint8_t>({
+        0x46, 0xfc, 0x27, 0x00, 0x43, 0xf8, 0x00, 0x08,
+        0x41, 0xfa, 0x00, 0x0e, 0x7e, 0x09, 0x22, 0xd8,
+        0x51, 0xcf, 0xff, 0xfc, 0x4e, 0xf8, 0x00, 0x12,
+    });
+    constexpr std::string_view setup_sha256 =
+        "1ce81773d11374cac65ce69742a475e0731cbc8798f7c7bd374c04a2d2a7d150";
+    constexpr std::size_t source_offset = 0xf0;
+    constexpr std::size_t byte_count = 40;
+    constexpr std::string_view relocated_sha256 =
+        "21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d";
+    constexpr std::uint32_t destination = 0x8;
+    constexpr std::uint32_t continuation_address = 0x12;
+    constexpr std::size_t continuation_relocated_offset = 10;
+    constexpr std::size_t vector_jump_relocated_offset = 8;
+    if (boot_sector.size() != 512U || !profile.killer_boot_signature
+        || !profile.has_killer_boot_vector_setup || !profile.has_killer_boot_continuation_profile
+        || profile.boot_branch_target != 0x22U || profile.killer_boot_entry_offset != 0x30U
+        || profile.killer_boot_vector_source_offset != source_offset
+        || profile.killer_boot_vector_destination != destination
+        || profile.killer_boot_vector_longword_count != 10U
+        || profile.killer_boot_continuation != continuation_address
+        || profile.killer_boot_relocated_byte_count != byte_count
+        || profile.killer_boot_relocated_sha256 != relocated_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT handoff topology");
+    }
+    if (!starts_with(boot_sector, setup_offset, setup_bytes)) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT handoff setup");
+    }
+    const auto setup = boot_sector.subspan(setup_offset, setup_bytes.size());
+    const auto relocated = boot_sector.subspan(source_offset, byte_count);
+    if (to_hex(sha256(setup)) != setup_sha256 || to_hex(sha256(relocated)) != relocated_sha256
+        || be16(relocated, continuation_relocated_offset) != 0x41faU
+        || be16(relocated, vector_jump_relocated_offset) != 0x4ed0U
+        || be16(relocated, vector_jump_relocated_offset - 2U) != 0x0004U) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT handoff bytes");
+    }
+    return {setup_offset, setup_bytes.size(), std::string(setup_sha256), source_offset, byte_count,
+        destination, std::string(relocated_sha256), continuation_address,
+        continuation_relocated_offset, be16(relocated, continuation_relocated_offset),
+        vector_jump_relocated_offset, be16(relocated, vector_jump_relocated_offset),
+        be16(relocated, vector_jump_relocated_offset - 2U)};
+}
+
 std::vector<std::uint8_t> DeuterosAtariDisk::read_sectors(
     std::uint16_t track, std::uint8_t side, std::uint8_t first_sector,
     std::uint16_t sector_count) const {

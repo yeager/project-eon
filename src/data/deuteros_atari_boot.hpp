@@ -54,6 +54,31 @@ struct DeuterosAtariBootProfile {
     std::size_t first_stage_length = 0;
 };
 
+// Disk 2's KILLER_BOOT setup contains a complete, direct relocation edge:
+// it copies forty original boot bytes to RAM $8, then jumps to the relocated
+// continuation at $12.  The copied span also contains a separate indirect
+// JMP through the original reset-vector cell at $4.  This profile records
+// those literal, caller-connected facts without reading that cell, choosing
+// an entry point, or assigning a game/protection meaning to either path.
+struct DeuterosAtariKillerBootHandoff {
+    std::size_t setup_offset = 0;
+    std::size_t setup_byte_count = 0;
+    std::string setup_sha256;
+    std::size_t source_offset = 0;
+    std::size_t byte_count = 0;
+    std::uint32_t destination = 0;
+    std::string relocated_sha256;
+    std::uint32_t continuation_address = 0;
+    std::size_t continuation_relocated_offset = 0;
+    std::uint16_t continuation_first_opcode = 0;
+    std::size_t vector_jump_relocated_offset = 0;
+    std::uint16_t vector_jump_opcode = 0;
+    std::uint16_t vector_jump_pointer_address = 0;
+};
+
+[[nodiscard]] DeuterosAtariKillerBootHandoff parse_deuteros_atari_killer_boot_handoff(
+    std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile);
+
 // This is the control-flow boundary within the verified Disk 1 raw stage.
 // Field names describe instructions and physical media only; it is not yet a
 // claim about the original game's title or simulation.

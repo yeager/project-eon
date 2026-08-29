@@ -210,6 +210,17 @@ def main() -> int:
                     "Millennium Amiga post-negative-D3 terminal did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_post_negative_d3_continuation = (
+                "post-negative-D3 continuation: entry 0x6861a (disk 0x16a1a, 54 bytes); "
+                "BCC 0x68636 -> 0x6863a, BCS 0x68642 -> 0x68650, BMI 0x68644 -> 0x68694; "
+                "terminal JMP 0x6864a -> 0x7bef0; SHA-256 "
+                "d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce"
+            )
+            if expected_post_negative_d3_continuation not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Amiga post-negative-D3 continuation did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "millennium" and platform == "dos" and language == "English":
             expected_gx_overlay = (
                 "2200GX.EXE overlay evidence: name 0x11c2, loader 0x11ce reads segment cell 0x118; "
@@ -365,6 +376,18 @@ def main() -> int:
             if expected_state5 not in inspected.stdout:
                 raise SystemExit(
                     "Deuteros Atari ST vector-5 raw-load plan did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
+            expected_killer_handoff = (
+                "Disk 2 KILLER_BOOT handoff: setup +0xd8 +0x18 copies boot +0xf0 +0x28 -> RAM 0x8; "
+                "JMP 0x12 enters relocated +0xa opcode 0x41fa; copied vector +0x8 is JMP (A0) through RAM $4; "
+                "setup/relocated SHA-256 "
+                "1ce81773d11374cac65ce69742a475e0731cbc8798f7c7bd374c04a2d2a7d150/"
+                "21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d"
+            )
+            if expected_killer_handoff not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Atari ST KILLER_BOOT handoff did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
         archive_starts.append((

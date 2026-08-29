@@ -1194,6 +1194,38 @@ int main() {
     assert(defjam_post_negative_d3.negative_return_address == 0x68618);
     assert(defjam_post_negative_d3.raw_sha256
         == "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc");
+    const auto defjam_post_negative_d3_continuation =
+        eon::parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
+            defjam_loader_disk, defjam_plan, defjam_post_negative_d3);
+    assert(defjam_post_negative_d3_continuation.entry_address == 0x6861a);
+    assert((defjam_post_negative_d3_continuation.add_immediates
+        == std::array<std::uint16_t, 3>{{0x2800, 0x2800, 0x2800}}));
+    assert(defjam_post_negative_d3_continuation.range_base_immediate == 0x7d00);
+    assert(defjam_post_negative_d3_continuation.compare_branch_address == 0x68636);
+    assert(defjam_post_negative_d3_continuation.compare_branch_target == 0x6863a);
+    assert(defjam_post_negative_d3_continuation.low_range_branch_address == 0x68642);
+    assert(defjam_post_negative_d3_continuation.low_range_branch_target == 0x68650);
+    assert(defjam_post_negative_d3_continuation.negative_range_branch_address == 0x68644);
+    assert(defjam_post_negative_d3_continuation.negative_range_branch_target == 0x68694);
+    assert(defjam_post_negative_d3_continuation.terminal_jump_address == 0x6864a);
+    assert(defjam_post_negative_d3_continuation.terminal_jump_target == 0x7bef0);
+    assert(defjam_post_negative_d3_continuation.raw_disk_offset == 0x16a1a);
+    assert(defjam_post_negative_d3_continuation.byte_count == 54);
+    assert(defjam_post_negative_d3_continuation.raw_sha256
+        == "d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce");
+    {
+        auto altered = *defjam_adf;
+        altered[0x16a1a] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(
+                eon::parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
+                    eon::AmigaAdf(std::move(altered)), defjam_plan, defjam_post_negative_d3));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto defjam_independent_zero_target =
         eon::parse_millennium_amiga_resident_independent_zero_target_boundary(
             defjam_loader_disk, defjam_plan, defjam_independent_entry);
@@ -4603,6 +4635,34 @@ int main() {
     assert(deuteros_disk2.boot_profile().killer_boot_clear_start == 0x30);
     assert(deuteros_disk2.boot_profile().killer_boot_clear_stride == 0x20);
     assert(deuteros_disk2.boot_profile().killer_boot_clear_longword_count == 8);
+    const auto deuteros_disk2_boot = deuteros_disk2.read_sectors(0, 0, 1, 1);
+    const auto deuteros_killer_handoff = eon::parse_deuteros_atari_killer_boot_handoff(
+        deuteros_disk2_boot, deuteros_disk2.boot_profile());
+    assert(deuteros_killer_handoff.setup_offset == 0xd8);
+    assert(deuteros_killer_handoff.setup_byte_count == 24);
+    assert(deuteros_killer_handoff.setup_sha256
+        == "1ce81773d11374cac65ce69742a475e0731cbc8798f7c7bd374c04a2d2a7d150");
+    assert(deuteros_killer_handoff.source_offset == 0xf0);
+    assert(deuteros_killer_handoff.byte_count == 40);
+    assert(deuteros_killer_handoff.destination == 0x8);
+    assert(deuteros_killer_handoff.continuation_address == 0x12);
+    assert(deuteros_killer_handoff.continuation_relocated_offset == 10);
+    assert(deuteros_killer_handoff.continuation_first_opcode == 0x41fa);
+    assert(deuteros_killer_handoff.vector_jump_relocated_offset == 8);
+    assert(deuteros_killer_handoff.vector_jump_opcode == 0x4ed0);
+    assert(deuteros_killer_handoff.vector_jump_pointer_address == 0x4);
+    {
+        auto altered_boot = deuteros_disk2_boot;
+        altered_boot[0xd8] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_killer_boot_handoff(
+                altered_boot, deuteros_disk2.boot_profile()));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_disk2 = *deuteros_st_disk2;
         altered_disk2[0xf0 + 39] ^= 0x01;
