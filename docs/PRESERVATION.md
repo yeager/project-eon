@@ -3964,6 +3964,18 @@ Project Eon preserves pointer order and raw record boundaries without assigning
 meaning to the native control bytes. The exact cross-edition evidence is in
 [the static-text report](generated/millennium-dos-static-text.md).
 
+`MillenniumDosStaticDataEvidence` now admits this diagnostic only for the two
+complete, hash-recognised `2200AD4.BIN` leaves: English (12,494 bytes,
+SHA-256 `1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d`)
+and Spanish (13,254 bytes, SHA-256
+`8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31`). Both
+have 435 pointers and 434 raw record extents; their real celestial-table
+sources remain separately located at `$03d2` and `$03db`. Inspection reports
+the exact per-edition topology anchors plus the five
+hash-locked original control-text records for each edition as provenance only.
+It neither binds their printable literals to SDL input nor reads a catalog as
+mutable state, UI layout, or a DOS runtime result.
+
 Five parallel English/Spanish pointer records preserve genuine control-related
 **text** without proving a host binding: indices 271 (`left button / space` /
 `boton / espacio`), 350 (`press space bar to continue...` / `pulsa espacio para

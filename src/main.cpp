@@ -21,6 +21,7 @@
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "data/deuteros_atari_boot.hpp"
 #include "data/fat12.hpp"
+#include "data/millennium_control_text.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_game_flow.hpp"
@@ -1016,7 +1017,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         const auto resource = title_lib.read(*p00);
         const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
         const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
-        const auto game_data = eon::parse_millennium_dos_game_data(disk.read(*static_entry));
+        const auto static_data = disk.read(*static_entry);
+        const auto game_data = eon::parse_millennium_dos_game_data(static_data);
+        const auto static_evidence = eon::parse_millennium_dos_static_data_evidence(static_data);
+        const auto control_text = eon::parse_millennium_dos_control_text_evidence(static_data);
         const auto launch_manual = eon::parse_millennium_dos_spanish_launch_manual(
             disk.read(*manual_entry));
         std::cout << "          Spanish FAT12: " << disk.root_entries().size()
@@ -1024,7 +1028,24 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << ", RGB6 DAC entries 256, logical translation "
             << palette.logical_to_dac.size() << '\n';
         std::cout << "          Spanish 2200AD4.BIN: " << game_data.celestial_labels.size()
-            << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
+            << " original celestial labels at 0x" << std::hex
+            << static_evidence.celestial_table_offset << std::dec << " ("
+            << game_data.celestial_labels[4].text << ")\n";
+        std::cout << "          Spanish 2200AD4.BIN static text: " << static_evidence.pointer_count
+            << " original pointers to " << static_evidence.raw_record_count
+            << " raw records; source SHA-256 " << static_evidence.source_sha256 << " (read-only)\n";
+        std::cout << "          Spanish static-text topology anchors:";
+        for (const auto& anchor : static_evidence.topology_anchors) {
+            std::cout << " " << anchor.table_index << "->0x" << std::hex
+                << anchor.target_offset << std::dec;
+        }
+        std::cout << " (original pointer table only)\n";
+        std::cout << "          Spanish control-text provenance: pointers";
+        for (const auto& literal : control_text.literals) {
+            std::cout << " 0x" << std::hex << literal.record_offset << "/0x"
+                << literal.literal_offset << std::dec << " (" << literal.record_sha256 << ")";
+        }
+        std::cout << " (original text only; no host control binding)\n";
         std::cout << "          Spanish MILL.BAT: " << launch_manual.original_text.size()
             << " original launcher-documentation bytes (SHA-256 " << launch_manual.sha256 << ")\n";
         const auto ibm_handoff = eon::parse_millennium_dos_spanish_ibm_handoff_evidence(
@@ -1240,12 +1261,27 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto static_data = eon::extract_verified_release_asset(release, static_data_sha256);
     if (!static_data) throw std::runtime_error("Verified Millennium static game data missing");
     const auto game_data = eon::parse_millennium_dos_game_data(*static_data);
-    const auto text_catalog = eon::parse_millennium_dos_static_text_catalog(*static_data);
+    const auto static_evidence = eon::parse_millennium_dos_static_data_evidence(*static_data);
+    const auto control_text = eon::parse_millennium_dos_control_text_evidence(*static_data);
     std::cout << "          2200AD4.BIN: " << game_data.celestial_labels.size()
-        << " original celestial labels (" << game_data.celestial_labels[4].text << ")\n";
-    std::cout << "          2200AD4.BIN static text: " << text_catalog.pointers.size()
-        << " original pointers to " << text_catalog.records.size()
-        << " raw records (read-only)\n";
+        << " original celestial labels at 0x" << std::hex
+        << static_evidence.celestial_table_offset << std::dec << " ("
+        << game_data.celestial_labels[4].text << ")\n";
+    std::cout << "          2200AD4.BIN static text: " << static_evidence.pointer_count
+        << " original pointers to " << static_evidence.raw_record_count
+        << " raw records; source SHA-256 " << static_evidence.source_sha256 << " (read-only)\n";
+    std::cout << "          Static-text topology anchors:";
+    for (const auto& anchor : static_evidence.topology_anchors) {
+        std::cout << " " << anchor.table_index << "->0x" << std::hex
+            << anchor.target_offset << std::dec;
+    }
+    std::cout << " (original pointer table only)\n";
+    std::cout << "          Control-text provenance: pointers";
+    for (const auto& literal : control_text.literals) {
+        std::cout << " 0x" << std::hex << literal.record_offset << "/0x"
+            << literal.literal_offset << std::dec << " (" << literal.record_sha256 << ")";
+    }
+    std::cout << " (original text only; no host control binding)\n";
     constexpr auto game_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     const auto game = eon::extract_verified_release_asset(release, game_sha256);

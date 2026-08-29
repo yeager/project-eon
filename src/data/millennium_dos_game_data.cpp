@@ -5,6 +5,8 @@
 #include <array>
 #include <set>
 #include <stdexcept>
+#include <string_view>
+#include <utility>
 
 namespace eon {
 namespace {
@@ -84,6 +86,49 @@ MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
         result.records.push_back({.source_offset = *it,
             .bytes = {static_data.begin() + static_cast<std::ptrdiff_t>(*it),
                 static_data.begin() + static_cast<std::ptrdiff_t>(next)}});
+    }
+    return result;
+}
+
+MillenniumDosStaticDataEvidence parse_millennium_dos_static_data_evidence(
+    const std::span<const std::uint8_t> static_data) {
+    // The generic catalog parser intentionally permits a bounded table shape
+    // so it can describe each verified edition. This admission profile is
+    // stricter: it makes an inspection report about known original bytes, not
+    // a claim that another similarly shaped file is game data.
+    constexpr std::string_view english_sha256 =
+        "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
+    constexpr std::string_view spanish_sha256 =
+        "8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31";
+    const auto source_sha256 = to_hex(sha256(static_data));
+    const bool english = static_data.size() == 12'494 && source_sha256 == english_sha256;
+    const bool spanish = static_data.size() == 13'254 && source_sha256 == spanish_sha256;
+    if (!english && !spanish) {
+        throw std::runtime_error("Unsupported Millennium DOS static-data evidence source");
+    }
+
+    const auto game_data = parse_millennium_dos_game_data(static_data);
+    const auto catalog = parse_millennium_dos_static_text_catalog(static_data);
+    constexpr std::array<std::size_t, 5> anchor_indices{{
+        0, 2, 251, 252, 401,
+    }};
+    if (game_data.celestial_table_offset != (english ? 0x03d2U : 0x03dbU)) {
+        throw std::runtime_error("Unsupported Millennium DOS static-data celestial-table offset");
+    }
+    if (game_data.celestial_labels.size() != celestial_label_count
+        || catalog.pointers.size() != MillenniumDosStaticTextCatalog::pointer_count) {
+        throw std::runtime_error("Unsupported Millennium DOS static-data evidence topology");
+    }
+    MillenniumDosStaticDataEvidence result;
+    result.source_sha256 = source_sha256;
+    result.source_size = static_data.size();
+    result.celestial_table_offset = game_data.celestial_table_offset;
+    result.celestial_label_count = game_data.celestial_labels.size();
+    result.pointer_count = catalog.pointers.size();
+    result.raw_record_count = catalog.records.size();
+    for (std::size_t slot = 0; slot < anchor_indices.size(); ++slot) {
+        const auto index = anchor_indices[slot];
+        result.topology_anchors[slot] = catalog.pointers[index];
     }
     return result;
 }
