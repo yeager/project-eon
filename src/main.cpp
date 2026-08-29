@@ -64,10 +64,11 @@ namespace {
 
 enum class Screen { menu, launching };
 // The launcher deliberately separates the three choices into pages.  A game
-// card cannot accidentally start whichever platform happened to be selected:
-// the platform page records an explicit, hash-verified choice first, then the
-// profile page records Original, Modern, or a user-tuned Modern launch.
-enum class LauncherPage { games, platforms, profiles };
+// card cannot accidentally start whichever platform happened to be selected.
+// Where a platform has multiple original-language releases, a separate
+// release card records that identity before the profile page records Original,
+// Modern, or a user-tuned Modern launch.
+enum class LauncherPage { games, platforms, releases, profiles };
 
 const eon::Translator* active_translator = nullptr;
 std::unique_ptr<eon::UnicodeTextRenderer> active_text_renderer;
@@ -87,6 +88,11 @@ struct PlatformCard {
     const char* filename;
     SDL_FRect bounds;
     SDL_Texture* texture = nullptr;
+};
+
+struct ReleaseLanguageCard {
+    std::string language;
+    SDL_FRect bounds;
 };
 
 enum class ProfileChoice { original, modern, custom };
@@ -2397,15 +2403,18 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
             && candidate.language == "es";
     });
-    if (requested_release_language && *requested_release_language != "en"
-        && *requested_release_language != "es") return std::nullopt;
+    // A caller reaches this loader only after the CLI or a release card has
+    // fixed a language identity.  Refusing an omitted identity prevents the
+    // old English-first convenience path from becoming a silent edition
+    // fallback when both DOS releases are present.
+    if (!requested_release_language || (*requested_release_language != "en"
+        && *requested_release_language != "es")) return std::nullopt;
     if (release == releases.end() && spanish_release == releases.end()) return std::nullopt;
     try {
         // A requested original language is a media identity, not a UI
         // translation preference.  It selects only that hash-verified
         // edition and never falls back across editions.
-        const bool use_spanish = requested_release_language
-            ? *requested_release_language == "es" : release == releases.end();
+        const bool use_spanish = *requested_release_language == "es";
         if (use_spanish) {
             if (spanish_release == releases.end()) return std::nullopt;
             // The Spanish edition is an original FAT12 floppy. Its P00
@@ -2778,6 +2787,15 @@ int main(int argc, char** argv) {
             return 4;
         }
     }
+    if (request.game && !request.release_language) {
+        const auto languages = eon::available_release_languages(
+            releases, *request.game, *request.platform);
+        if (languages.size() > 1) {
+            std::cerr << "The selected game and platform have multiple verified original-language releases. "
+                         "Pass --release-language to select one explicitly; no edition fallback was selected.\n";
+            return 4;
+        }
+    }
     if (request.game && !eon::release_available(releases, *request.game, request.platform)) {
         std::cerr << "Requested original release is not present for the selected platform. "
                      "Use --inspect to list hash-recognised releases; no platform fallback was selected.\n";
@@ -2786,8 +2804,13 @@ int main(int argc, char** argv) {
     // A CLI platform request is fixed.  The start menu can otherwise choose
     // among the hash-verified platform releases it has actually discovered.
     std::optional<eon::Platform> active_platform = request.platform;
+    std::optional<std::string> active_release_language = request.release_language;
+    if (request.game && active_platform && !active_release_language) {
+        active_release_language = eon::select_available_release_language(
+            releases, *request.game, *active_platform, std::nullopt);
+    }
     auto millennium_assets = load_millennium_launch_assets(releases, active_platform,
-        request.release_language);
+        active_release_language);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -2938,7 +2961,7 @@ int main(int argc, char** argv) {
     const auto load_millennium_assets_if_available = [&] {
         if (!millennium_assets) {
             millennium_assets = load_millennium_launch_assets(releases, active_platform,
-                request.release_language);
+                active_release_language);
             create_millennium_textures();
         }
         if (!millennium_assets || millennium_assets->language != "en"
@@ -2979,6 +3002,7 @@ int main(int argc, char** argv) {
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     int focused = 0;
     int focused_platform_card = 0;
+    int focused_release_card = 0;
     int focused_profile_card = 0;
     bool custom_profile_ready = false;
     bool show_scanner = false;
@@ -3004,6 +3028,21 @@ int main(int argc, char** argv) {
             focused_platform_card = static_cast<int>(std::distance(platform_cards.begin(), card));
         }
     };
+    const auto release_language_cards = [&] {
+        std::vector<ReleaseLanguageCard> cards_for_platform;
+        if (!active_platform) return cards_for_platform;
+        const auto languages = eon::available_release_languages(releases,
+            cards[static_cast<std::size_t>(focused)].game, *active_platform);
+        const float width = languages.size() == 1 ? 552.0F
+            : (languages.size() == 2 ? 552.0F : 352.0F);
+        const float first_x = languages.size() == 1 ? 364.0F : 64.0F;
+        const float stride = languages.size() == 2 ? 600.0F : 400.0F;
+        for (std::size_t index = 0; index < languages.size(); ++index) {
+            cards_for_platform.push_back({languages[index],
+                {first_x + static_cast<float>(index) * stride, 188, width, 308}});
+        }
+        return cards_for_platform;
+    };
     const auto focus_menu_card = [&](const int next_focus) {
         focused = next_focus;
         if (request.platform) return;
@@ -3011,6 +3050,7 @@ int main(int argc, char** argv) {
             releases, cards[static_cast<std::size_t>(focused)].game, active_platform);
         if (next_platform != active_platform) {
             active_platform = next_platform;
+            active_release_language.reset();
             discard_millennium_assets();
         }
         // This is also needed when the active platform happens not to change:
@@ -3056,9 +3096,28 @@ int main(int argc, char** argv) {
         if (!eon::release_available(releases, game, platform)) return false;
         if (!active_platform || *active_platform != platform) {
             active_platform = platform;
+            active_release_language.reset();
             discard_millennium_assets();
         }
+        const auto languages = eon::available_release_languages(releases, game, platform);
+        active_release_language = eon::select_available_release_language(
+            releases, game, platform, active_release_language);
+        focused_release_card = 0;
+        return !languages.empty();
+    };
+    const auto choose_release_language_card = [&](const int index) {
+        const auto language_cards = release_language_cards();
+        if (index < 0 || static_cast<std::size_t>(index) >= language_cards.size()) return false;
+        focused_release_card = index;
+        active_release_language = language_cards[static_cast<std::size_t>(index)].language;
+        discard_millennium_assets();
         return true;
+    };
+    const auto advance_after_platform_selection = [&] {
+        // A platform can have one immutable edition or several. Do not let
+        // the profile cards start the latter until its release-language card
+        // has recorded a choice.
+        launcher_page = active_release_language ? LauncherPage::profiles : LauncherPage::releases;
     };
     const auto choose_profile_card = [&](const ProfileChoice choice) {
         if (choice == ProfileChoice::custom) {
@@ -3164,7 +3223,9 @@ int main(int argc, char** argv) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
                     launcher_page = launcher_page == LauncherPage::profiles
-                        ? LauncherPage::platforms : LauncherPage::games;
+                        ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
+                        : launcher_page == LauncherPage::releases ? LauncherPage::platforms
+                        : LauncherPage::games;
                 }
                 else running = false;
                 // Escape is a single navigation action. Do not let this same
@@ -3177,7 +3238,9 @@ int main(int argc, char** argv) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
                     launcher_page = launcher_page == LauncherPage::profiles
-                        ? LauncherPage::platforms : LauncherPage::games;
+                        ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
+                        : launcher_page == LauncherPage::releases ? LauncherPage::platforms
+                        : LauncherPage::games;
                 } else running = false;
                 // Keep Back equivalent to Escape and consume it before the
                 // game/menu controls can reinterpret the input.
@@ -3226,7 +3289,9 @@ int main(int argc, char** argv) {
                 const bool next = event.key.key == SDLK_RIGHT || event.key.key == SDLK_DOWN;
                 if (event.key.key == SDLK_ESCAPE && launcher_page != LauncherPage::games) {
                     launcher_page = launcher_page == LauncherPage::profiles
-                        ? LauncherPage::platforms : LauncherPage::games;
+                        ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
+                        : launcher_page == LauncherPage::releases ? LauncherPage::platforms
+                        : LauncherPage::games;
                 } else if (launcher_page == LauncherPage::games) {
                     if (previous || next) focus_menu_card(next ? 1 - focused : 1 - focused);
                     else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
@@ -3238,7 +3303,22 @@ int main(int argc, char** argv) {
                     } else if (event.key.key == SDLK_HOME) focused_platform_card = 0;
                     else if (event.key.key == SDLK_END) focused_platform_card = 2;
                     else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        if (choose_platform_card(focused_platform_card)) launcher_page = LauncherPage::profiles;
+                        if (choose_platform_card(focused_platform_card)) advance_after_platform_selection();
+                    }
+                } else if (launcher_page == LauncherPage::releases) {
+                    const auto language_cards = release_language_cards();
+                    if (language_cards.empty()) {
+                        launcher_page = LauncherPage::platforms;
+                    } else if (previous || next) {
+                        const auto count = static_cast<int>(language_cards.size());
+                        focused_release_card = (focused_release_card + (previous ? count - 1 : 1)) % count;
+                    } else if (event.key.key == SDLK_HOME) focused_release_card = 0;
+                    else if (event.key.key == SDLK_END) {
+                        focused_release_card = static_cast<int>(language_cards.size() - 1U);
+                    } else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
+                        if (choose_release_language_card(focused_release_card)) {
+                            launcher_page = LauncherPage::profiles;
+                        }
                     }
                 } else {
                     if (previous || next) {
@@ -3257,15 +3337,25 @@ int main(int argc, char** argv) {
                 if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT || button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                     if (launcher_page == LauncherPage::games) focus_menu_card(1 - focused);
                     else if (launcher_page == LauncherPage::platforms) focused_platform_card = (focused_platform_card + 2) % 3;
+                    else if (launcher_page == LauncherPage::releases) {
+                        const auto count = static_cast<int>(release_language_cards().size());
+                        if (count > 0) focused_release_card = (focused_release_card + count - 1) % count;
+                    }
                     else { focused_profile_card = (focused_profile_card + 2) % 3; custom_profile_ready = false; }
                 } else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                     if (launcher_page == LauncherPage::games) focus_menu_card(1 - focused);
                     else if (launcher_page == LauncherPage::platforms) focused_platform_card = (focused_platform_card + 1) % 3;
+                    else if (launcher_page == LauncherPage::releases) {
+                        const auto count = static_cast<int>(release_language_cards().size());
+                        if (count > 0) focused_release_card = (focused_release_card + 1) % count;
+                    }
                     else { focused_profile_card = (focused_profile_card + 1) % 3; custom_profile_ready = false; }
                 } else if (button == SDL_GAMEPAD_BUTTON_SOUTH || button == SDL_GAMEPAD_BUTTON_START) {
                     if (launcher_page == LauncherPage::games) launcher_page = LauncherPage::platforms;
                     else if (launcher_page == LauncherPage::platforms) {
-                        if (choose_platform_card(focused_platform_card)) launcher_page = LauncherPage::profiles;
+                        if (choose_platform_card(focused_platform_card)) advance_after_platform_selection();
+                    } else if (launcher_page == LauncherPage::releases) {
+                        if (choose_release_language_card(focused_release_card)) launcher_page = LauncherPage::profiles;
                     } else if (focused_profile_card == 2 && custom_profile_ready) launch_menu_selection();
                     else choose_profile_card(profile_cards[static_cast<std::size_t>(focused_profile_card)].choice);
                 }
@@ -3283,7 +3373,15 @@ int main(int argc, char** argv) {
                 } else if (launcher_page == LauncherPage::platforms) {
                     for (std::size_t index = 0; index < platform_cards.size(); ++index) {
                         if (inside(platform_cards[index].bounds, x, y)
-                            && choose_platform_card(static_cast<int>(index))) launcher_page = LauncherPage::profiles;
+                            && choose_platform_card(static_cast<int>(index))) advance_after_platform_selection();
+                    }
+                } else if (launcher_page == LauncherPage::releases) {
+                    const auto language_cards = release_language_cards();
+                    for (std::size_t index = 0; index < language_cards.size(); ++index) {
+                        if (inside(language_cards[index].bounds, x, y)
+                            && choose_release_language_card(static_cast<int>(index))) {
+                            launcher_page = LauncherPage::profiles;
+                        }
                     }
                 } else {
                     for (std::size_t index = 0; index < profile_cards.size(); ++index) {
@@ -3424,6 +3522,22 @@ int main(int argc, char** argv) {
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
                         available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
+                }
+            } else if (launcher_page == LauncherPage::releases) {
+                const auto language_cards = release_language_cards();
+                draw_text(renderer, 64, 82, tr("SELECT AN ORIGINAL RELEASE"));
+                draw_text(renderer, 64, 108, tr("CHOOSE A LANGUAGE; NO EDITION FALLBACK IS USED"));
+                for (std::size_t index = 0; index < language_cards.size(); ++index) {
+                    const auto& card = language_cards[index];
+                    SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
+                    SDL_RenderFillRect(renderer, &card.bounds);
+                    draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_release_card), true);
+                    const auto label = card.language == "es" ? tr("SPANISH") : tr("ENGLISH");
+                    draw_text(renderer, card.bounds.x + 24, card.bounds.y + 116, label);
+                    draw_text(renderer, card.bounds.x + 24, card.bounds.y + 150,
+                        tr("VERIFIED ORIGINAL DATA"));
+                    draw_text(renderer, card.bounds.x + 24, card.bounds.y + 184,
+                        tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
                 }
             } else {
                 draw_text(renderer, 64, 82, tr("SELECT A PRESENTATION PROFILE"));

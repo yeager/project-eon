@@ -62,6 +62,14 @@ struct ParseResult {
 // to another release.
 [[nodiscard]] std::vector<Platform> available_platforms(
     const std::vector<ReleaseArchive>& releases, Game game);
+// Languages are part of a release identity, rather than a UI preference.
+// Keep their order deterministic so a card focus can never select an
+// arbitrary archive occurrence.
+[[nodiscard]] std::vector<std::string> available_release_languages(
+    const std::vector<ReleaseArchive>& releases, Game game, Platform platform);
+[[nodiscard]] std::optional<std::string> select_available_release_language(
+    const std::vector<ReleaseArchive>& releases, Game game, Platform platform,
+    const std::optional<std::string>& current);
 // Retain a choice only when it belongs to the newly focused game. Otherwise
 // choose that game's first hash-verified platform; no platform means no start.
 [[nodiscard]] std::optional<Platform> select_available_platform(

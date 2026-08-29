@@ -216,6 +216,32 @@ std::vector<Platform> available_platforms(
     return platforms;
 }
 
+std::vector<std::string> available_release_languages(
+    const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform) {
+    std::vector<std::string> languages;
+    for (const auto& release : releases) {
+        if (release.game != game || release.platform != platform) continue;
+        if (std::find(languages.begin(), languages.end(), release.language) == languages.end()) {
+            languages.push_back(release.language);
+        }
+    }
+    std::sort(languages.begin(), languages.end());
+    return languages;
+}
+
+std::optional<std::string> select_available_release_language(
+    const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform,
+    const std::optional<std::string>& current) {
+    const auto languages = available_release_languages(releases, game, platform);
+    if (languages.empty()) return std::nullopt;
+    if (current && std::find(languages.begin(), languages.end(), *current) != languages.end()) {
+        return current;
+    }
+    // Selecting one release is safe only when there is exactly one matching
+    // language.  More than one must be exposed as distinct launcher cards.
+    return languages.size() == 1 ? std::optional<std::string>{languages.front()} : std::nullopt;
+}
+
 std::optional<Platform> select_available_platform(
     const std::vector<ReleaseArchive>& releases, const Game game,
     const std::optional<Platform> current) {

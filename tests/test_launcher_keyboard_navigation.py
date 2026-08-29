@@ -7,12 +7,22 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
-    def test_menu_has_three_explicit_card_pages(self) -> None:
-        self.assertIn("enum class LauncherPage { games, platforms, profiles }", SOURCE)
+    def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
+        self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", SOURCE)
         self.assertIn("std::array<PlatformCard, 3>", SOURCE)
         self.assertIn("std::array<ProfileCard, 3>", SOURCE)
         self.assertIn("LauncherPage::platforms", SOURCE)
+        self.assertIn("LauncherPage::releases", SOURCE)
         self.assertIn("LauncherPage::profiles", SOURCE)
+
+    def test_multilingual_platforms_require_a_release_card_before_profiles(self) -> None:
+        self.assertIn("available_release_languages", SOURCE)
+        self.assertIn("select_available_release_language", SOURCE)
+        self.assertIn("SELECT AN ORIGINAL RELEASE", SOURCE)
+        self.assertIn("CHOOSE A LANGUAGE; NO EDITION FALLBACK IS USED", SOURCE)
+        self.assertIn("RELEASE IDENTITY IS FIXED AT LAUNCH", SOURCE)
+        self.assertIn("advance_after_platform_selection", SOURCE)
+        self.assertIn("LauncherPage::releases", SOURCE[SOURCE.index("advance_after_platform_selection"):])
 
     def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
         self.assertIn("eon::release_available(releases, game, card.platform)", SOURCE)
@@ -59,11 +69,12 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("Presentation is chosen by the profile card before launch.", SOURCE[f1:f1 + 500])
 
     def test_back_navigation_consumes_one_event_and_moves_one_card_page(self) -> None:
-        # A single Escape/Back from profiles must land on platforms, rather
-        # than falling through to the menu handler and skipping to games.
+        # A single Escape/Back moves exactly one page and never falls through
+        # to the menu handler. Multilingual profiles return to the release
+        # card first; a single-language platform returns to platforms.
         self.assertIn("Escape is a single navigation action", SOURCE)
         self.assertIn("Keep Back equivalent to Escape", SOURCE)
-        self.assertGreaterEqual(SOURCE.count("launcher_page == LauncherPage::profiles\n                        ? LauncherPage::platforms : LauncherPage::games"), 2)
+        self.assertGreaterEqual(SOURCE.count("release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms"), 2)
 
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:
         modal = SOURCE.index("if (show_modern_graphics_settings) {")

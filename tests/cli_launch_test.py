@@ -361,6 +361,18 @@ def main() -> int:
             "ambiguous direct launch did not stop before selecting a platform:\n"
             f"{ambiguous_start.stdout}\n{ambiguous_start.stderr}"
         )
+    ambiguous_edition_start = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium", "--platform", "dos"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (ambiguous_edition_start.returncode != 4
+            or "multiple verified original-language releases" not in ambiguous_edition_start.stderr
+            or "no edition fallback was selected" not in ambiguous_edition_start.stderr
+            or "SDL_Init" in ambiguous_edition_start.stderr):
+        raise SystemExit(
+            "ambiguous direct launch did not stop before selecting a release language:\n"
+            f"{ambiguous_edition_start.stdout}\n{ambiguous_edition_start.stderr}"
+        )
     starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
     for presentation in ("original", "modern"):
         for game, platform in (
@@ -370,10 +382,11 @@ def main() -> int:
             ("deuteros", "amiga"),
             ("deuteros", "atari-st"),
         ):
+            language = ("--release-language", "en") if (game, platform) == ("millennium", "dos") else ()
             starts.append((
                 f"{game}/{platform}/{presentation}",
                 (str(executable), "--data", str(data_directory), "--game", game,
-                    "--platform", platform, "--presentation", presentation),
+                    "--platform", platform, *language, "--presentation", presentation),
             ))
     for name, command in starts:
         try:

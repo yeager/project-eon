@@ -69,39 +69,50 @@ Capture timestamps are validated as real Gregorian UTC instants (including
 leap years), not merely strings shaped like timestamps. They establish a
 capture boundary and ordering only; they do not establish emulation timing.
 
-### v2 adapter manifest addition
+### v2 adapter registry and source identity
 
-A v2 manifest has the same required records plus this one exact record:
+A v2 manifest has all v1 records, changes `format` to exactly
+`project-eon-reference-trace-v2`, and adds exactly one `adapter` record.  It
+does **not** have a common "v1 plus one field" shape: the two adapters that
+observe a disk subrange additionally require both `source_media_sha256` and
+`source_stage_sha256`.  Unknown, omitted, or surplus records are rejected, so
+capture tooling must choose the row below before it writes a manifest.
 
-| Key | Rule |
-| --- | --- |
-| `format` | Exactly `project-eon-reference-trace-v2`. |
-| `adapter` | Exactly one registered adapter described below. |
+| Adapter | Required original release (`game`/`platform`/`language`, bytes, SHA-256) | Additional required manifest fields | Bounded observation scope |
+| --- | --- | --- | --- |
+| `millennium-dos-en-startup-v1` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Clean English DOS startup sites only. |
+| `deuteros-atari-st-boot-v1` | `deuteros`/`atari-st`/`en`, 3021682, `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `source_media_sha256=aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`; `source_stage_sha256=2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7` | Replicants Disk 1 and its copied second-stage interval. |
+| `millennium-amiga-en-defjam-bootstrap-v1` | `millennium`/`amiga`/`en`, 2558009, `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | None | Two caller-side Defjam bootstrap handoffs. |
+| `deuteros-amiga-en-title-stage-v1` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` | Clean system ADF and `ADF +0x6e000`, 0x6ca00-byte title stage. |
 
-The existing DOS adapter is accepted only for the clean English Millennium DOS
-outer release `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
-It is deliberately not transferable to the Spanish DOS release, a filename
-match, a modified executable, or another platform. A v1 manifest has no
-`adapter` record; unknown or omitted records remain rejected in both versions.
+This table is a capture-admission registry, not an equivalence class.  An
+archive with the same filename, a direct one-disk container that exposes an
+identical leaf, a Spanish DOS release, a modified dump, or another platform
+does not satisfy a row unless it is listed with its own full identity.  A v1
+manifest has no `adapter` record.  The documentation table is regression
+checked against the accepted adapter identifiers and release manifest so it
+cannot silently lose a current source boundary.
 
-`deuteros-atari-st-boot-v1` is accepted only for the English Deuteros Atari
-ST outer archive `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653`.
-Its v2 manifest adds `source_media_sha256`, exactly
-`aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`, and
-`source_stage_sha256`, exactly
-`2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
-This binds the report to the documented Replicants Disk 1 and copied
-second-stage interval; it is not transferable to another Atari image,
-development disk, repacked archive, or similarly named file.
+### Capture retention and review procedure
 
-`deuteros-amiga-en-title-stage-v1` is accepted only for the English Deuteros
-Amiga outer archive `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`.
-Its v2 manifest adds `source_media_sha256`, exactly
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`, for the
-clean system ADF, and `source_stage_sha256`, exactly
-`48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03`, for its
-`ADF +0x6e000`, `0x6ca00`-byte title stage. This binds evidence only; it does
-not make the title stage executable or transfer a trace into runtime.
+The trace pair is intentionally insufficient on its own to reproduce an
+observation.  A recorder should retain, outside this repository and subject to
+the rights of the media owner, the original archive, emulator binary,
+configuration, complete command tail, input timeline, and raw recorder output
+whose hashes are declared by the manifest.  Record the exact UTC interval
+before post-processing.  Then create the LF-only event file, calculate its
+byte count and SHA-256, and write the manifest with the exact adapter row
+above.  Do not edit event ordering, normalize an observed result, or replace a
+source archive after calculating its identity.
+
+An independent reviewer first supplies the same owned archive under `--data`,
+then validates the pair with the explicit game and platform command shown at
+the end of this document.  They compare the three opaque capture fingerprints
+and retain the CLI report with the capture.  A successful report proves only
+that the declared capture is structurally valid and bound to the stated
+original bytes; it does not prove emulator correctness, timing, service ABI,
+or gameplay behaviour.  The event file and its private preimages are never
+copied into an Eon data directory or treated as runtime input.
 
 ## Event stream (v1)
 
@@ -128,6 +139,7 @@ the operation.
 | --- | --- |
 | `interrupt` | `image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000` |
 | `interrupt` | `image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4` |
+| `interrupt` | `image=2200ad.exe pc=0x0124 int=0x91 ax=0x001f es=cs bx=0xd19e` |
 | `interrupt` | `image=titles.exe pc=0x0d0a int=0x21 ah=0x06 dl=0xff` |
 | `interrupt` | `image=titles.exe pc=0x1a12 int=0x21 ax=0x4c00` |
 | `file` | `image=mill.com pc=0x02cf op=driver-load path=ega640.bin` or `path=mcga.bin` |

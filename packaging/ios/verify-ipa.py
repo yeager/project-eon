@@ -133,6 +133,43 @@ def validate_arm64_macho(raw: bytes) -> None:
     if command_count == 0 or commands_size == 0 or commands_size > len(raw) - 32:
         fail("IPA arm64 Mach-O has an invalid load-command region")
 
+    # The IPA intentionally has no Frameworks directory: CMake builds SDL
+    # and its dependencies statically for iPadOS.  Check the actual Mach-O
+    # dependency commands as well as the archive paths, so a binary cannot
+    # hide an @rpath or @loader_path dependency that would only fail after a
+    # sideload.  System iPadOS frameworks and libraries remain valid.
+    dylib_commands = {0x0C, 0x18, 0x1F, 0x20, 0x23}
+    command_offset = 32
+    command_end = command_offset + commands_size
+    for _ in range(command_count):
+        if command_offset + 8 > command_end:
+            fail("IPA arm64 Mach-O load commands are truncated")
+        command = int.from_bytes(raw[command_offset:command_offset + 4], "little")
+        command_size = int.from_bytes(raw[command_offset + 4:command_offset + 8], "little")
+        if command_size < 8 or command_offset + command_size > command_end:
+            fail("IPA arm64 Mach-O has an invalid load command size")
+        if command in dylib_commands:
+            # struct dylib_command contains cmd/cmdsize and a dylib whose
+            # name offset is relative to the start of this command.
+            if command_size < 24:
+                fail("IPA arm64 Mach-O has a truncated dynamic-library command")
+            name_offset = int.from_bytes(raw[command_offset + 8:command_offset + 12], "little")
+            if name_offset < 24 or name_offset >= command_size:
+                fail("IPA arm64 Mach-O has an invalid dynamic-library name offset")
+            name_end = raw.find(b"\0", command_offset + name_offset,
+                                command_offset + command_size)
+            if name_end < 0:
+                fail("IPA arm64 Mach-O dynamic-library name is unterminated")
+            try:
+                library = raw[command_offset + name_offset:name_end].decode("utf-8", "strict")
+            except UnicodeDecodeError as error:
+                fail(f"IPA arm64 Mach-O dynamic-library name is invalid UTF-8: {error}")
+            if not library.startswith(("/System/Library/", "/usr/lib/")):
+                fail("IPA arm64 Mach-O references a non-system dynamic library: " + library)
+        command_offset += command_size
+    if command_offset != command_end:
+        fail("IPA arm64 Mach-O load-command sizes do not match the header")
+
 
 def verify(ipa: str) -> None:
     try:

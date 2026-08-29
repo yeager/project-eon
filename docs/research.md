@@ -219,9 +219,11 @@ private-vector lifetime, DOS EXEC return/status, and `2200AD` startup remain
 explicit boundaries until the above protocol can be met.
 
 Project Eon's external trace admission format is specified in
-[`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md). Its first version
-verifies a trace's hash, capture provenance and exact recognised source release
-only; it does not replay events or manufacture a platform-service result.
+[`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md). Generic v1 verifies
+only a trace's hash, capture provenance and exact recognised source release.
+The narrowly declared v2 adapters additionally validate literal, hash-pinned
+observation sites for their own listed release; neither form replays events or
+manufactures a platform-service result.
 
 `--inspect` repeats release-specific collection prerequisites without turning
 them into an execution request. The Spanish Millennium report requires a trace
