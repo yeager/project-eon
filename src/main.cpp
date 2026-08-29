@@ -103,6 +103,11 @@ struct MillenniumDosLaunchAssets {
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
     const auto translated = active_translator ? active_translator->translate(text) : std::string_view(text);
     const std::string localized(translated);
+    // SDL_RenderDebugText is deliberately retained only as the current
+    // development renderer. SDL3 documents it as ASCII-only, so this path is
+    // not evidence that non-ASCII launcher catalogs are presentable. Do not
+    // replace localized UTF-8 with transliterations or synthetic text: a
+    // packageable Unicode font renderer is required for that next step.
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
@@ -1078,6 +1083,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         executable_bytes, prg, bootstrap, bss_entry);
     const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
     const auto trap_entry = eon::parse_millennium_atari_trap_entry(bss_source, target);
+    const auto fopen_fallthrough = eon::parse_millennium_atari_fopen_fallthrough(target, trap_entry);
     std::cout << "          bounded launcher bootstrap: target 0x" << std::hex
         << live_bootstrap.target().target_address << ", Fopen boundary "
         << live_bootstrap.fopen_boundary().fopen_filename << std::dec
@@ -1157,6 +1163,13 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << "; Fopen negative D0 loops at +0x" << std::hex
         << trap_entry.fopen_result_negative_branch_target_offset << std::dec
         << " (reported only; no GEMDOS emulation)\n"
+        << "          Fopen fall-through: target +0x" << std::hex << fopen_fallthrough.entry_offset
+        << "; selector 0x" << fopen_fallthrough.fread_function << " reads D0 handle, 0x"
+        << fopen_fallthrough.fread_byte_count << " bytes to 0x"
+        << fopen_fallthrough.fread_buffer_address << " via TRAP #1 +0x"
+        << fopen_fallthrough.fread_trap_offset << "; stack cleanup 0x"
+        << fopen_fallthrough.stack_cleanup_bytes << "; SHA-256 " << fopen_fallthrough.sha256
+        << std::dec << " (static call boundary only; no Fopen/Fread result or data is modeled)\n"
         << "          requested config " << equinox_config.requested_filename << ": "
         << (equinox_config.present ? "present" : "absent") << " in Equinox FAT12 root ("
         << equinox_config.root_entry_count << " live entries)";

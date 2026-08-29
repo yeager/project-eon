@@ -114,6 +114,25 @@ class CatalogTests(unittest.TestCase):
                 message_ids = po_message_ids(PO / f"{language}.po")
                 self.assertEqual(len(message_ids), len(set(message_ids)))
 
+    def test_debug_renderer_unicode_boundary_is_explicit(self) -> None:
+        """SDL's debug font cannot be mistaken for packaged Unicode support.
+
+        SDL3 documents SDL_RenderDebugText as ASCII-only. The shipped Arabic,
+        Japanese, and Simplified-Chinese launcher catalogs are genuine UTF-8
+        UI translations, so retaining that renderer must remain an explicit
+        limitation until a portable, bundled font pipeline is introduced.
+        """
+        source = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+        self.assertIn("SDL_RenderDebugText", source)
+        for language in ("ar", "ja", "zh_CN"):
+            with self.subTest(language=language):
+                translations = po_messages(PO / f"{language}.po").values()
+                self.assertTrue(any(any(ord(character) > 0x7F for character in text)
+                                    for text in translations))
+        documentation = (PO / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Unicode-rendering boundary", documentation)
+        self.assertIn("SDL_RenderDebugText", documentation)
+
     def test_variable_evidence_panel_uses_language_neutral_notation(self) -> None:
         """Addresses and bytes may vary, but launcher wording must use PO text."""
         source = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")

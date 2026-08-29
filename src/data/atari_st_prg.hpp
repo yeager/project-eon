@@ -106,6 +106,26 @@ struct MillenniumAtariTrapEntry {
     std::uint32_t fopen_result_negative_branch_target_offset = 0;
 };
 
+// The static fall-through after the Fopen negative-result loop prepares one
+// further documented GEMDOS interface. This is a byte-level call boundary;
+// neither Fopen's D0 result nor the following Fread service is invoked.
+struct MillenniumAtariFopenFallthrough {
+    std::uint32_t target_address = 0;
+    std::size_t entry_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::uint32_t fread_buffer_address = 0;
+    std::uint32_t fread_byte_count = 0;
+    std::uint16_t handle_push_opcode = 0;
+    std::uint16_t fread_function = 0;
+    std::size_t fread_trap_offset = 0;
+    std::uint16_t stack_cleanup_opcode = 0;
+    std::uint32_t stack_cleanup_bytes = 0;
+};
+
+[[nodiscard]] MillenniumAtariFopenFallthrough parse_millennium_atari_fopen_fallthrough(
+    const MillenniumAtariMaterializedTarget& target, const MillenniumAtariTrapEntry& trap);
+
 // Evidence for the exact configuration filename requested by the recovered
 // Fopen boundary.  The profile retains only filesystem facts, a whole-payload
 // hash and the literal leading instruction word(s); it never projects the
