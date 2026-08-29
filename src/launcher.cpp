@@ -75,7 +75,7 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>]\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --game millennium|deuteros\n"
         "               [--platform dos|amiga|atari-st]\n"
-        "               [--presentation original|modern]\n\n"
+        "               [--presentation original|modern] [--modern-pack <pack.eonmodern>]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
         "               [--language <language>]\n\n"
@@ -121,6 +121,8 @@ ParseResult parse_command_line(int argc, char** argv) {
             request.reference_trace = std::filesystem::path(value);
         } else if (argument == "--modern-packs") {
             request.modern_pack_root = std::filesystem::path(value);
+        } else if (argument == "--modern-pack") {
+            request.modern_pack_manifest = std::filesystem::path(value);
         } else if (argument == "--platform") {
             request.platform = parse_platform(value);
             if (!request.platform) return {{}, "Unknown platform: " + std::string(value), false};
@@ -151,6 +153,10 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.modern_pack_root && !request.inspect_data) {
         return {{}, "--modern-packs requires --inspect; it is diagnostics-only and never selects a renderer pack", false};
+    }
+    if (request.modern_pack_manifest && (request.inspect_data || request.presentation != Presentation::modern
+        || !request.game || !request.platform)) {
+        return {{}, "--modern-pack requires --game, --platform, and --presentation modern; it cannot be used with --inspect", false};
     }
     if (request.reference_trace) {
         if (request.data_directory_is_default) {

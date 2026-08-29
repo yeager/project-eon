@@ -2818,15 +2818,22 @@ int main(int argc, char** argv) {
     };
     SDL_Texture* millennium_preview_texture = nullptr;
     SDL_Texture* millennium_modern_preview_texture = nullptr;
+    SDL_Texture* millennium_external_modern_texture = nullptr;
+    std::optional<eon::ModernAssetPackPngSurface> millennium_external_modern_surface;
+    bool millennium_external_modern_attempted = false;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
     std::unique_ptr<eon::MillenniumAtariBootstrapSession> millennium_atari_session;
     std::unique_ptr<eon::MillenniumAmigaBootstrapSession> millennium_amiga_session;
     const auto discard_millennium_assets = [&] {
         if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
         if (millennium_modern_preview_texture) SDL_DestroyTexture(millennium_modern_preview_texture);
+        if (millennium_external_modern_texture) SDL_DestroyTexture(millennium_external_modern_texture);
         if (millennium_gx_canvas_texture) SDL_DestroyTexture(millennium_gx_canvas_texture);
         millennium_preview_texture = nullptr;
         millennium_modern_preview_texture = nullptr;
+        millennium_external_modern_texture = nullptr;
+        millennium_external_modern_surface.reset();
+        millennium_external_modern_attempted = false;
         millennium_gx_canvas_texture = nullptr;
         millennium_assets.reset();
         millennium_atari_session.reset();
@@ -2852,6 +2859,7 @@ int main(int argc, char** argv) {
         }
     };
     const auto millennium_texture_for = [&](const bool reconstruct) {
+        if (millennium_external_modern_texture) return millennium_external_modern_texture;
         if (!millennium_assets || !millennium_preview_texture || !reconstruct) {
             return millennium_preview_texture;
         }
@@ -2877,9 +2885,40 @@ int main(int argc, char** argv) {
     // verified DOS resources to the empty pre-scan release list: load them
     // only when the scanner has actually found the selected original media.
     const auto load_millennium_assets_if_available = [&] {
-        if (millennium_assets) return;
-        millennium_assets = load_millennium_launch_assets(releases, active_platform);
-        create_millennium_textures();
+        if (!millennium_assets) {
+            millennium_assets = load_millennium_launch_assets(releases, active_platform);
+            create_millennium_textures();
+        }
+        if (!millennium_assets || millennium_external_modern_attempted || !request.modern_pack_manifest
+            || request.presentation != eon::Presentation::modern
+            || active_platform != eon::Platform::dos) return;
+        millennium_external_modern_attempted = true;
+        const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
+            return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
+                && candidate.language == "en";
+        });
+        if (release == releases.end()) return;
+        try {
+            millennium_external_modern_surface = eon::load_millennium_dos_title_modern_surface(
+                *request.modern_pack_manifest, release->sha256);
+            const auto& surface = *millennium_external_modern_surface;
+            SDL_IOStream* stream = SDL_IOFromConstMem(surface.png.data(), surface.png.size());
+            if (!stream) throw std::runtime_error("Unable to open Modern title PNG bytes: " + std::string(SDL_GetError()));
+            SDL_Surface* image = IMG_Load_IO(stream, true);
+            if (!image) throw std::runtime_error("Unable to decode Modern title PNG: " + std::string(SDL_GetError()));
+            if (image->w != static_cast<int>(surface.width) || image->h != static_cast<int>(surface.height)) {
+                SDL_DestroySurface(image);
+                throw std::runtime_error("Modern title PNG dimensions changed during decode");
+            }
+            millennium_external_modern_texture = SDL_CreateTextureFromSurface(renderer, image);
+            SDL_DestroySurface(image);
+            if (!millennium_external_modern_texture) {
+                throw std::runtime_error("Unable to upload Modern title PNG: " + std::string(SDL_GetError()));
+            }
+        } catch (const std::exception& error) {
+            millennium_external_modern_surface.reset();
+            std::cerr << "Modern title pack not used: " << error.what() << '\n';
+        }
     };
 
     Screen screen = request.game ? Screen::launching : Screen::menu;
@@ -3342,6 +3381,10 @@ int main(int argc, char** argv) {
                 constexpr bool millennium_game_execution_observed = false;
                 SDL_Texture* texture = millennium_texture_for(
                     modern && modern_graphics_settings.pixel_reconstruction);
+                if (modern && millennium_external_modern_texture && millennium_external_modern_surface) {
+                    draw_text(renderer, 64, 202, tr("MODERN TITLE PACK: ")
+                        + millennium_external_modern_surface->pack_id + " (640x400 RGBA PNG)");
+                }
                 if (millennium_game_execution_observed) {
                     draw_text(renderer, 64, 220,
                         tr("AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"));
@@ -3642,6 +3685,7 @@ int main(int argc, char** argv) {
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
     SDL_DestroyTexture(millennium_preview_texture);
     SDL_DestroyTexture(millennium_modern_preview_texture);
+    SDL_DestroyTexture(millennium_external_modern_texture);
     SDL_DestroyTexture(millennium_gx_canvas_texture);
     SDL_DestroyTexture(preview_texture);
     SDL_DestroyTexture(modern_preview_texture);

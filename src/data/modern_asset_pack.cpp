@@ -4,8 +4,10 @@
 #include "data/sha256.hpp"
 
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <set>
 #include <string_view>
@@ -120,6 +122,22 @@ ModernAssetPackValidation rejected(const std::filesystem::path& path, std::strin
     result.manifest_path = path;
     result.error = std::move(error);
     return result;
+}
+
+std::uint32_t big32(const std::vector<std::uint8_t>& bytes, const std::size_t offset) {
+    if (offset > bytes.size() || bytes.size() - offset < 4U) throw std::runtime_error("Truncated Modern PNG field");
+    return static_cast<std::uint32_t>(bytes[offset]) << 24U
+        | static_cast<std::uint32_t>(bytes[offset + 1]) << 16U
+        | static_cast<std::uint32_t>(bytes[offset + 2]) << 8U | bytes[offset + 3];
+}
+
+bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes) {
+    constexpr std::array<std::uint8_t, 8> signature{{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}};
+    return bytes.size() >= 33U && std::equal(signature.begin(), signature.end(), bytes.begin())
+        && big32(bytes, 8) == 13U && bytes[12] == 'I' && bytes[13] == 'H'
+        && bytes[14] == 'D' && bytes[15] == 'R' && big32(bytes, 16) == 640U
+        && big32(bytes, 20) == 400U && bytes[24] == 8U && bytes[25] == 6U
+        && bytes[26] == 0U && bytes[27] == 0U && bytes[28] == 0U;
 }
 
 } // namespace
@@ -255,6 +273,48 @@ std::vector<ModernAssetPackValidation> discover_modern_asset_packs(const std::fi
     results.reserve(manifests.size());
     for (const auto& manifest : manifests) results.push_back(validate_modern_asset_pack(manifest));
     return results;
+}
+
+ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
+    const std::filesystem::path& manifest_path, const std::string_view source_release_sha256) {
+    constexpr std::string_view target_id = "millennium.dos.title.png-640x400";
+    constexpr std::uint32_t width = 640;
+    constexpr std::uint32_t height = 400;
+    constexpr std::uintmax_t maximum_png_size = 8U * 1024U * 1024U;
+    const auto validation = validate_modern_asset_pack(manifest_path);
+    if (!validation.accepted()) throw std::runtime_error("Modern title pack rejected: " + validation.error);
+    const auto& pack = validation.pack;
+    if (pack.game != Game::millennium || pack.platform != Platform::dos
+        || pack.source_release_sha256 != source_release_sha256) {
+        throw std::runtime_error("Modern title pack does not match selected Millennium DOS release");
+    }
+    const auto asset = std::find_if(pack.assets.begin(), pack.assets.end(), [target_id](const auto& candidate) {
+        return candidate.id == target_id;
+    });
+    if (asset == pack.assets.end()) {
+        throw std::runtime_error("Modern title pack has no supported 640x400 RGBA PNG title asset");
+    }
+    if (asset->size == 0 || asset->size > maximum_png_size) {
+        throw std::runtime_error("Modern title PNG asset is empty or exceeds its 8 MiB renderer limit");
+    }
+    // Rehash exactly the bytes that will be uploaded as a transient texture.
+    // This closes the normal admission-to-render change window without a cache
+    // or any write to supplied game media.
+    std::ifstream stream(asset->path, std::ios::binary);
+    if (!stream) throw std::runtime_error("Unable to read Modern title RGBA asset");
+    std::vector<std::uint8_t> png((std::istreambuf_iterator<char>(stream)), {});
+    // A byte-count and SHA-256 comparison bind the actual buffer. `eofbit` is
+    // not a reliable completeness signal for every istreambuf_iterator
+    // implementation, whereas `badbit` records a genuine I/O failure.
+    if (stream.bad()) throw std::runtime_error("Unable to read Modern title PNG asset");
+    if (png.size() != asset->size) throw std::runtime_error("Modern title PNG asset size changed after validation");
+    if (to_hex(sha256(png)) != asset->sha256) {
+        throw std::runtime_error("Modern title PNG asset hash changed after validation");
+    }
+    if (!millennium_title_png_layout(png)) {
+        throw std::runtime_error("Modern title asset is not a 640x400 RGBA PNG");
+    }
+    return {pack.id, pack.provenance, width, height, std::move(png)};
 }
 
 } // namespace eon

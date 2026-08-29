@@ -17,6 +17,9 @@ msgstr "ワイドスクリーン 16:9"
 msgid "PROJECT EON"
 msgstr "プロジェクト・イオン"
 
+msgid "MODERN TITLE PACK: "
+msgstr "MODERN TITLE PACK: "
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ゲームを選択   |   上下: プラットフォーム   |   D: データを検査   |   F1: オリジナル / モダン   |   ESC: 終了"
 msgid "VERIFIED ORIGINAL DATA"
