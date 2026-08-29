@@ -218,13 +218,20 @@ hash-identified English DOS ZIP as a PhysFS source without changing the
 archive (SHA-256 `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`
 before and after), but that outer archive layout does **not** expose
 `MILL.COM` as an executable DOS file: DOSBox-X reports `Bad command or
-filename`. This validates only the read-only mount environment, not a game
-launch. The binary does offer debugger, `INT 21h`, and DOS file-I/O logging,
-but those can produce admissible observations only after an independently
-hash-locked, non-mutating external read-only DOS filesystem is supplied.
-No CPU records, service returns, driver writes, BIOS results, private-vector
-lifetime, DOS EXEC status, or `2200AD` startup result have been retained.
-They remain explicit boundaries until the above protocol is met.
+filename`. This validates only the direct-archive mount environment, not a
+game launch.
+
+An external, portable Archivemount/FUSE read-only view of the same archive
+does expose the original files without extracting or copying them. Through
+that view, a time-limited DOSBox-X run executed `MILL.COM`, loaded its original
+`MCGA.BIN`, installed its observed `INT 91h` vector, and reached DOS console
+input. This is a coarse emulator log, not an Eon reference trace: it has no
+program-counter records, register/flag returns, private-driver writes, or
+controlled original input timeline. It neither proves title/game execution
+nor authorizes an Eon runtime transition. The binary does offer debugger,
+`INT 21h`, and DOS file-I/O logging; admissible observations require the full
+protocol above and the resulting external evidence must be independently
+reviewed before it can extend an adapter.
 
 Project Eon's external trace admission format is specified in
 [`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md). Generic v1 verifies

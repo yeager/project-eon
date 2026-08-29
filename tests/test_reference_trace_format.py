@@ -116,7 +116,14 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         research = (ROOT / "docs" / "research.md").read_text(encoding="utf-8")
         self.assertIn("does **not** expose\n`MILL.COM` as an executable DOS file", research)
         self.assertIn("`Bad command or\nfilename`", research)
-        self.assertIn("not a game\nlaunch", research)
+        self.assertIn("not a\ngame launch", research)
+
+    def test_read_only_fuse_observation_is_not_promoted_to_runtime_evidence(self):
+        research = (ROOT / "docs" / "research.md").read_text(encoding="utf-8")
+        self.assertIn("Archivemount/FUSE read-only view", research)
+        self.assertIn("without extracting or copying", research)
+        self.assertIn("not an Eon reference trace", research)
+        self.assertIn("nor authorizes an Eon runtime transition", research)
 
 
 if __name__ == "__main__":
