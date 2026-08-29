@@ -882,6 +882,12 @@ int main() {
     assert(title_flow.input_exit_first_call_target == 0x1968);
     assert(title_flow.input_exit_loading_text_address == 0x1884);
     assert(title_flow.input_exit_loading_text == "    LOADING    2");
+    assert(title_flow.input_exit_private_driver_entry_address == 0x1968);
+    assert(title_flow.input_exit_private_driver_loop_address == 0x1931);
+    assert(title_flow.input_exit_private_driver_wrapper_address == 0x0122);
+    assert(title_flow.input_exit_private_driver_function == 0x13);
+    assert(title_flow.input_exit_private_driver_call_count == 5);
+    assert(title_flow.input_exit_private_driver_helper_address == 0x1917);
     assert(title_flow.exit_code == 0);
     assert(title_flow.launcher_title_program_address == 0x68f);
     assert(title_flow.launcher_game_program_address == 0x69a);
@@ -3362,6 +3368,27 @@ int main() {
     assert(title_display_clear.return_address == 0x1f194);
     assert(title_display_clear.sha256
         == "9b02afb723e201cacb93d18d87613dee0f56369707867989209a41d9430ec5f3");
+    // The contiguous byte combiner remains static: its input registers and
+    // its graphics-setup pointer cell are intentionally not materialized.
+    const auto title_byte_combine =
+        eon::parse_deuteros_amiga_title_four_pass_byte_combine_profile(system_disk, load_plan);
+    assert(title_byte_combine.entry_address == 0x1f196);
+    assert(title_byte_combine.first_coordinate_minimum == 0x40);
+    assert(title_byte_combine.first_coordinate_limit == 0x138);
+    assert(title_byte_combine.second_coordinate_minimum == 0x24);
+    assert(title_byte_combine.second_coordinate_limit == 0x70);
+    assert(title_byte_combine.first_coordinate_origin == 0x40);
+    assert(title_byte_combine.second_coordinate_origin == 0x24);
+    assert(title_byte_combine.second_coordinate_stride == 0x28);
+    assert(title_byte_combine.source_table_address == 0x1f8ec);
+    assert(title_byte_combine.source_table_selector_mask == 0x000f);
+    assert(title_byte_combine.source_table_selector_shift == 3);
+    assert(title_byte_combine.destination_pointer_address == 0x1f168);
+    assert(title_byte_combine.pass_stride == 0x1f40);
+    assert(title_byte_combine.pass_count == 4);
+    assert(title_byte_combine.return_address == 0x1f22e);
+    assert(title_byte_combine.sha256
+        == "31fc346d9d2647001899a2e939482aa97bd8bc94221ae81384787997928bb42b");
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x79d80] ^= 0x01;
@@ -3382,6 +3409,19 @@ int main() {
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::parse_deuteros_amiga_title_display_clear_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x7a196] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_four_pass_byte_combine_profile(
                 altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;

@@ -309,6 +309,29 @@ struct DeuterosAmigaTitleDisplayClearProfile {
     std::string sha256;
 };
 
+// The next contiguous local routine is a bounded four-pass byte combiner. It
+// rejects coordinate values outside its literal unsigned ranges, derives a
+// bit from the low nibble of D0, and reads/writes through the same externally
+// established `$1f168` pointer.  This is not a renderer or a display model.
+struct DeuterosAmigaTitleFourPassByteCombineProfile {
+    std::uint32_t entry_address = 0;
+    std::uint16_t first_coordinate_minimum = 0;
+    std::uint16_t first_coordinate_limit = 0;
+    std::uint16_t second_coordinate_minimum = 0;
+    std::uint16_t second_coordinate_limit = 0;
+    std::uint16_t first_coordinate_origin = 0;
+    std::uint16_t second_coordinate_origin = 0;
+    std::uint16_t second_coordinate_stride = 0;
+    std::uint32_t source_table_address = 0;
+    std::uint16_t source_table_selector_mask = 0;
+    std::uint8_t source_table_selector_shift = 0;
+    std::uint32_t destination_pointer_address = 0;
+    std::uint32_t pass_stride = 0;
+    std::uint8_t pass_count = 0;
+    std::uint32_t return_address = 0;
+    std::string sha256;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -450,6 +473,13 @@ parse_deuteros_amiga_title_graphics_setup_profile(
 // It does not resolve `$1f168` or perform any of the encoded writes.
 [[nodiscard]] DeuterosAmigaTitleDisplayClearProfile
 parse_deuteros_amiga_title_display_clear_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// Parses the contiguous local `$1f196` byte-combine routine. It records its
+// gates and operands, but does not provide D0/D2/D3, resolve `$1f168`, or
+// perform reads/writes through that pointer.
+[[nodiscard]] DeuterosAmigaTitleFourPassByteCombineProfile
+parse_deuteros_amiga_title_four_pass_byte_combine_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Validates and models only the literal byte-copy part of the first title

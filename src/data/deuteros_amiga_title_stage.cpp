@@ -738,6 +738,109 @@ parse_deuteros_amiga_title_display_clear_profile(
     return result;
 }
 
+DeuterosAmigaTitleFourPassByteCombineProfile
+parse_deuteros_amiga_title_four_pass_byte_combine_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t entry_address = 0x1f196;
+    constexpr std::size_t code_length = 154;
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view code_hash =
+        "31fc346d9d2647001899a2e939482aa97bd8bc94221ae81384787997928bb42b";
+    const auto& stage = plan.title_stage;
+    if (stage.length == 0 || entry_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || code_length > stage.length - (entry_address - stage.destination)) {
+        throw std::runtime_error("Deuteros title byte combiner lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto code = stage_bytes.subspan(entry_address - stage.destination, code_length);
+    if (to_hex(sha256(stage_bytes)) != stage_hash || to_hex(sha256(code)) != code_hash) {
+        throw std::runtime_error("Unsupported Deuteros title byte combiner");
+    }
+
+    // D2 must be in [$40,$138); D3 must be in [$24,$70). The accepted
+    // coordinates are translated before the table/byte operations below.
+    require_word(code, 0, 0xb47c);
+    require_word(code, 2, 0x0138);
+    require_word(code, 4, 0x6502);
+    require_word(code, 6, 0x4e75);
+    require_word(code, 8, 0xb47c);
+    require_word(code, 10, 0x0040);
+    require_word(code, 12, 0x65f8);
+    require_word(code, 14, 0xb67c);
+    require_word(code, 16, 0x0024);
+    require_word(code, 18, 0x65f2);
+    require_word(code, 20, 0xb67c);
+    require_word(code, 22, 0x0070);
+    require_word(code, 24, 0x64ec);
+    require_word(code, 26, 0x0442);
+    require_word(code, 28, 0x0040);
+    require_word(code, 30, 0x0443);
+    require_word(code, 32, 0x0024);
+    require_word(code, 34, 0x48e7);
+    require_word(code, 36, 0x00c0);
+    require_word(code, 38, 0x43f9);
+    require_long(code, 40, 0x0001f8ec);
+    require_word(code, 44, 0x0240);
+    require_word(code, 46, 0x000f);
+    require_word(code, 48, 0xe748);
+    require_word(code, 50, 0xd2c0);
+    require_word(code, 52, 0x3202);
+    require_word(code, 54, 0x0241);
+    require_word(code, 56, 0x0007);
+    require_word(code, 58, 0x7007);
+    require_word(code, 60, 0x9001);
+    require_word(code, 62, 0xe64a);
+    require_word(code, 64, 0xc6fc);
+    require_word(code, 66, 0x0028);
+    require_word(code, 68, 0xd483);
+    require_word(code, 70, 0x2079);
+    require_long(code, 72, 0x0001f168);
+    require_word(code, 76, 0xd1c2);
+    require_word(code, 78, 0x7201);
+    require_word(code, 80, 0xe129);
+
+    // Four copies of the original byte combine are separated by the literal
+    // $1f40 advance. This parser records the repeated encodings rather than
+    // reading either table/pointer or supplying any input registers.
+    for (std::size_t pass = 0; pass < 4; ++pass) {
+        const auto offset = static_cast<std::size_t>(82) + pass * 18U;
+        require_word(code, offset, 0x3419);
+        require_word(code, offset + 2, 0xc401);
+        require_word(code, offset + 4, 0x1610);
+        require_word(code, offset + 6, 0x0183);
+        require_word(code, offset + 8, 0x8602);
+        require_word(code, offset + 10, 0x1083);
+        if (pass < 3) {
+            require_word(code, offset + 12, 0xd1fc);
+            require_long(code, offset + 14, 0x00001f40);
+        }
+    }
+    require_word(code, 148, 0x4cdf);
+    require_word(code, 150, 0x0300);
+    require_word(code, 152, 0x4e75);
+
+    DeuterosAmigaTitleFourPassByteCombineProfile result;
+    result.entry_address = entry_address;
+    result.first_coordinate_minimum = 0x40;
+    result.first_coordinate_limit = 0x138;
+    result.second_coordinate_minimum = 0x24;
+    result.second_coordinate_limit = 0x70;
+    result.first_coordinate_origin = 0x40;
+    result.second_coordinate_origin = 0x24;
+    result.second_coordinate_stride = 0x28;
+    result.source_table_address = 0x1f8ec;
+    result.source_table_selector_mask = 0x000f;
+    result.source_table_selector_shift = 3;
+    result.destination_pointer_address = 0x1f168;
+    result.pass_stride = 0x1f40;
+    result.pass_count = 4;
+    result.return_address = 0x1f22e;
+    result.sha256 = std::string(code_hash);
+    return result;
+}
+
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t input_display_word) {

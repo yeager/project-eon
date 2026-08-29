@@ -1203,6 +1203,20 @@ hash, but does not resolve `$1f168`, allocate or clear host memory, name the
 target a screen, or treat the preceding graphics-library call as having
 returned.
 
+The next contiguous routine `$1f196..$1f22f` (ADF `+$7a196`, 154 bytes,
+SHA-256 `31fc346d9d2647001899a2e939482aa97bd8bc94221ae81384787997928bb42b`)
+is separately hash-locked as `DeuterosAmigaTitleFourPassByteCombineProfile`.
+It returns unless unsigned D2 is in `$0040..$0137` and D3 is in
+`$0024..$006f`; accepted values have `$40` and `$24` subtracted, respectively.
+The low nibble of D0 selects an eight-byte record from `$1f8ec`; the routine
+uses a D3 stride of `$28`, then reads its base from the same unresolved
+`$1f168` cell. It derives one bit and performs four identical byte-combine
+passes separated by `$1f40`, finally restoring A0/A1 and returning at
+`$1f22e`. This establishes exact local gates, table/pointer operands, and
+four-pass shape only. Project Eon supplies no D0/D2/D3 values, does not read
+the table or unresolved base, performs no byte writes, and does not call the
+routine a renderer or infer a UI/control effect.
+
 When that counter reaches the verified threshold, the call at `$405b6` enters
 `$4069a`. This transition sets byte `$202c6`, saves and clears word `$202b8`,
 then copies exactly sixteen RGB4 words from `$1ed24` to `$40678`. Each copied
@@ -1667,8 +1681,11 @@ The complete caller range `$1c28..$1c69` (file `+$1b28`, 66 bytes, SHA-256
 the input boundary precise. It only performs `AND AL,AL` and sends every
 nonzero result to `$1c54`; it neither stores nor compares a scan code, so no
 key name or control binding is proven. The static exit chain reaches `$1968`
-and embedded bytes at `$1884` spelling `    LOADING    2`, but later glyph work
-calls the private `INT $91` wrapper at `$0122`. No post-key loading frame,
+and embedded bytes at `$1884` spelling `    LOADING    2`. `$1968` loads AX=5
+and calls `$1931`; that local loop runs five times, loading AX=`$0013`, calling
+the private `INT $91` wrapper `$0122`, then helper `$1917`. This establishes a
+caller-connected private-driver boundary only: ABI, helper effect, destination,
+composition and BIOS-visible output remain unknown. No post-key loading frame,
 transition, resource effect, process exit, launcher return, or game startup is
 executed or drawn by Project Eon.
 

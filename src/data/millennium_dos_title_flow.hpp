@@ -32,6 +32,13 @@ struct MillenniumDosTitleFlow {
     std::uint16_t input_exit_first_call_target = 0;
     std::uint16_t input_exit_loading_text_address = 0;
     std::string input_exit_loading_text;
+    // Static post-poll private-driver boundary; ABI and visible effects remain unknown.
+    std::uint16_t input_exit_private_driver_entry_address = 0;
+    std::uint16_t input_exit_private_driver_loop_address = 0;
+    std::uint16_t input_exit_private_driver_wrapper_address = 0;
+    std::uint16_t input_exit_private_driver_function = 0;
+    std::uint16_t input_exit_private_driver_call_count = 0;
+    std::uint16_t input_exit_private_driver_helper_address = 0;
     std::uint8_t exit_code = 0;
     // The title entry makes a direct function-$00 request through the already
     // installed private INT 91h vector. These fields are byte-level operands;
