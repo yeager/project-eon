@@ -3092,11 +3092,21 @@ int main(int argc, char** argv) {
                         ? LauncherPage::platforms : LauncherPage::games;
                 }
                 else running = false;
+                // Escape is a single navigation action. Do not let this same
+                // event reach the menu key handler below and skip two card
+                // pages (profiles -> games) in one press.
+                continue;
             }
             if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                 && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
-                else running = false;
+                else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
+                    launcher_page = launcher_page == LauncherPage::profiles
+                        ? LauncherPage::platforms : LauncherPage::games;
+                } else running = false;
+                // Keep Back equivalent to Escape and consume it before the
+                // game/menu controls can reinterpret the input.
+                continue;
             }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
                 request.presentation = request.presentation == eon::Presentation::original

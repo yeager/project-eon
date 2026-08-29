@@ -7004,6 +7004,12 @@ int main() {
     assert(live_input_opening.vblank_counter() == 82 * 4);
     const auto frame_at_title_handoff = live_input_opening.rgba_frame();
     assert(frame_at_title_handoff);
+    // This is the caller-connected live result of the input channel's
+    // verified $0f -> $fe -> $20580 route.  It protects the final original
+    // 320x200 compositor surface at the title handoff, including its bounded
+    // `please wait` glyph writes, from being silently replaced by a host UI.
+    assert(eon::to_hex(eon::sha256(*frame_at_title_handoff))
+        == "61eed88676355d0a136c943ffaa37396ba5220b7ea751b8cab6d0b125b3dd4c9");
     const auto post_handoff_events = live_input_opening.tick(true);
     assert(post_handoff_events.sounds.empty());
     assert(post_handoff_events.alternate_resources.empty());
