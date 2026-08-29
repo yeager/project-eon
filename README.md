@@ -172,8 +172,10 @@ host font or transliterates a translation. See [the localization rendering
 contract](po/README.md#unicode-rendering).
 
 By default, Project Eon reads user-supplied media from `~/.projecteon` on
-Linux/macOS and `<install directory>\data` on Windows. `--data` (or the
-explicit alias `--data-dir`) selects a
+Linux/macOS and `<install directory>\data` on Windows. On iPadOS, use the
+Files-visible `Documents/ProjectEon` folder exposed by the sideloaded app;
+the IPA itself deliberately contains no game media. `--data` (or the explicit
+alias `--data-dir`) selects a
 different directory or one original archive, for example a preservation
 collection in `Hämtningar`.
 Archives and disk images are read in place: Project Eon never creates the data
@@ -387,7 +389,9 @@ Its packaging step independently validates the final IPA archive before upload:
 the archive must contain the expected arm64 Mach-O and iPad `Info.plist`, the
 required launcher cards, fonts and PO catalogues, and no links, path escapes or
 possible game media. Packages contain Project Eon only—never original game
-media. CI has read-only repository permission and cannot release,
+media. The iPad app enables Files sharing and opens user documents in place, so
+place owned original archives or disk images in `Documents/ProjectEon` after
+sideloading; do not add them to the IPA. CI has read-only repository permission and cannot release,
 tag, or publish. Development pushes go directly to GitHub `main`; Project Eon does not
 create GitHub branches. The Windows installer also does not pre-create its
 `data` path: a missing default directory remains a read-only runtime boundary.

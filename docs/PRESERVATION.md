@@ -323,7 +323,15 @@ or mouse action nor attempts to execute the protected physical media.
 
 The same Disk 1 container now has a read-only, hash-bound STX sector index.
 Its 80 track records expose 800 identified sectors without producing a flat
-disk image.  Direct original spans are T0/H0/S1 at container `$c0` (512 bytes,
+disk image. Its direct BPB is internally consistent with that physical view:
+512-byte sectors, two sectors per cluster, one head, ten sectors per track,
+800 sectors, two five-sector mirrored FATs, and a 112-entry root. The root is
+therefore read directly from logical sectors 11 through 17 through the STX
+CHS map; both FAT copies compare equal and six live 8.3 records have bounded,
+acyclic cluster chains (`EXEC.TOS`, `MILL22A.INF` through `MILL22D.INF`, and
+`DESKTOP.INF`). `AtariStStxFat12Root` retains only this sector-backed metadata:
+it neither flattens the STX container nor extracts a file or claims a boot or
+program handoff. Direct original spans are T0/H0/S1 at container `$c0` (512 bytes,
 SHA-256 `d0601ec6e1bbea0d5f4d5ba37130148e6670225b6337d001f4d4e6b8fc45fd08`)
 and T1/H0/S9 at `$1570` (512 bytes, SHA-256
 `096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad`).
@@ -3657,6 +3665,10 @@ missing path until the user supplies original media there or passes `--data`.
 The Windows Inno Setup installer follows the same rule: it installs only
 Project Eon and its own runtime resources, and does not pre-create
 `<install-directory>\\data`.
+The unsigned iPadOS IPA is equally media-free: its Files-enabled default is
+`Documents/ProjectEon`, an app Documents location reached without copying or
+unpacking a selected archive. The runtime does not create that directory; it
+only reads user-supplied media in place after the user provides it.
 
 At the exact opening event `$0f,$00000b38` (observed at scheduler tick 82 for
 the recovered held input route), the live Amiga session now terminates its

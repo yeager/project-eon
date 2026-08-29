@@ -18,6 +18,8 @@ LAUNCHER = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")
 MAIN = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
 INNO = (ROOT / "packaging" / "windows" / "project-eon.iss").read_text(encoding="utf-8")
+README = (ROOT / "README.md").read_text(encoding="utf-8")
+PRESERVATION = (ROOT / "docs" / "PRESERVATION.md").read_text(encoding="utf-8")
 
 
 class RuntimeLayoutTests(unittest.TestCase):
@@ -26,6 +28,9 @@ class RuntimeLayoutTests(unittest.TestCase):
         self.assertIn('std::filesystem::path(home) / ".projecteon"', LAUNCHER)
         self.assertNotIn("create_directories", LAUNCHER)
         self.assertIn("Without --data/--data-dir, game data is read from ~/.projecteon", LAUNCHER)
+        self.assertIn('std::filesystem::path(home) / "Documents" / "ProjectEon"', LAUNCHER)
+        self.assertIn("Documents/ProjectEon", README)
+        self.assertIn("Documents/ProjectEon", PRESERVATION)
 
     def test_linux_install_layout_matches_runtime_search_order(self) -> None:
         self.assertIn('install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', CMAKE)
