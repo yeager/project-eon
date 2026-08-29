@@ -1152,6 +1152,45 @@ MillenniumDosSpanishIbmHandoffEvidence parse_millennium_dos_spanish_ibm_handoff_
         caller_sha256, callee_sha256};
 }
 
+MillenniumDosSpanishGameStartupEvidence
+parse_millennium_dos_spanish_game_startup_evidence(const std::span<const std::uint8_t> game_executable) {
+    // This COM image's entry preserves DS/ES, then its near jump lands at
+    // $d2cd. The startup establishes SS=CS/SP=$da00, prepares AX=$001f and
+    // ES:BX=CS:$d1bb, and calls the private wrapper at the wrapped IP $0124.
+    // Its returned AL is compared with $01, selecting one of two local calls.
+    // No private interrupt or return value is executed or supplied here.
+    constexpr std::string_view executable_sha256 =
+        "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6";
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t startup_entry_address = 0xd2cd;
+    constexpr std::size_t startup_offset = startup_entry_address - load_bias;
+    constexpr auto entry = std::to_array<std::uint8_t>({0x0e, 0x1f, 0x0e, 0x07, 0xe9, 0xc6, 0xd1});
+    constexpr auto startup = std::to_array<std::uint8_t>({
+        0x0e, 0x1f, 0x0e, 0x07, 0x8c, 0xc8, 0x8e, 0xd0, 0xb8, 0x00,
+        0xda, 0x89, 0xc4, 0xb8, 0x1f, 0x00, 0x0e, 0x07, 0xbb, 0xbb,
+        0xd1, 0xe8, 0x3f, 0x2e, 0x2e, 0xa3, 0x4a, 0xd1, 0x88, 0xe0,
+        0x2e, 0xa2, 0x68, 0x43, 0xa2, 0x05, 0xda, 0x89, 0x26, 0x4e,
+        0xd1, 0x3c, 0x01, 0x75, 0x05, 0xe8, 0xc1, 0xfe, 0xeb, 0x03,
+        0xe8, 0xd0, 0xfe, 0x52, 0x0e, 0x1f, 0xe8, 0x0f, 0xff, 0xa3,
+        0x4a, 0xd1, 0x23, 0xd2, 0x74, 0x03, 0xe9, 0xd1, 0x01, 0x2e,
+    });
+    constexpr std::string_view startup_sha256 =
+        "acbfcacc4cfac948944e42181f2fe0dfec11b9ab2c9b79b8aff79d958c5469c6";
+    if (game_executable.size() != 54'566 || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, 0, entry)
+        || !has_bytes(game_executable, startup_offset, startup)
+        || near_call_target(0x0107, entry[5], entry[6]) != startup_entry_address
+        || near_call_target(0xd2e5, startup[22], startup[23]) != 0x0124
+        || near_call_target(0xd2fd, startup[46], startup[47]) != 0xd1be
+        || near_call_target(0xd305, startup[51], startup[52]) != 0xd1d5
+        || to_hex(sha256(game_executable.subspan(startup_offset, startup.size()))) != startup_sha256) {
+        throw std::runtime_error("Unexpected Millennium Spanish DOS game startup evidence");
+    }
+    return {std::string(executable_sha256), startup_entry_address, startup_entry_address,
+        startup.size(), std::string(startup_sha256), 0xda00, 0x001f, 0xd1bb,
+        0xd2e2, 0x0124, 0xd14a, 0xd2f6, 0x01, 0xd2fa, 0xd1be, 0xd302, 0xd1d5};
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;

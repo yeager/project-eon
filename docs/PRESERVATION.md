@@ -2438,6 +2438,17 @@ own bytes retain entry `$1b80`, private wrapper `$0122`, and post-title
 This locks shared machine-code facts without substituting English resources,
 drivers, ABI effects, or frames.
 
+Spanish `2200AD.EXE` has a separately recovered COM startup prefix, not an
+English substitute. Its entry preserves `DS=CS` and `ES=CS`, then jumps to
+`$d2cd`. The next 70 original bytes are SHA-256
+`acbfcacc4cfac948944e42181f2fe0dfec11b9ab2c9b79b8aff79d958c5469c6`: they
+set `SS=CS`, `SP=$da00`, prepare `AX=$001f` and `ES:BX=CS:$d1bb`, then call
+the wrapped private entry `$0124`. If that original call returns, its AL is
+compared with `$01`: the equal route calls `$d1be`, while the other route
+calls `$d1d5`. The original word store at `$d14a` is recorded as a code
+operand only. Project Eon supplies neither the private return nor AL, takes
+neither branch, and creates no Spanish game state or English fallback.
+
 The Spanish FAT12 image also supplies its own `EGA640.BIN` (4,630 bytes,
 SHA-256 `ef031b0b6e720ab2dafc1eb6373ddb76e0ff15f7b59ac785265c5136be153daf`)
 and `MCGA.BIN` (4,346 bytes, SHA-256

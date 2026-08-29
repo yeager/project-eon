@@ -2013,6 +2013,39 @@ int main() {
     assert(spanish_ibm_handoff.carry_branch_target_address == 0x0369);
     assert(spanish_ibm_handoff.child_status_ah == 0x4d);
     assert(spanish_ibm_handoff.child_status_interrupt == 0x21);
+    const auto spanish_game_startup = eon::parse_millennium_dos_spanish_game_startup_evidence(
+        disk.read(*executable));
+    assert(spanish_game_startup.executable_sha256
+        == "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6");
+    assert(spanish_game_startup.entry_jump_target_address == 0xd2cd);
+    assert(spanish_game_startup.startup_entry_address == 0xd2cd);
+    assert(spanish_game_startup.startup_byte_count == 70);
+    assert(spanish_game_startup.startup_sha256
+        == "acbfcacc4cfac948944e42181f2fe0dfec11b9ab2c9b79b8aff79d958c5469c6");
+    assert(spanish_game_startup.stack_pointer == 0xda00);
+    assert(spanish_game_startup.private_function == 0x001f);
+    assert(spanish_game_startup.private_record_address == 0xd1bb);
+    assert(spanish_game_startup.private_call_address == 0xd2e2);
+    assert(spanish_game_startup.private_wrapper_address == 0x0124);
+    assert(spanish_game_startup.private_result_word_address == 0xd14a);
+    assert(spanish_game_startup.result_compare_address == 0xd2f6);
+    assert(spanish_game_startup.compared_al_value == 1);
+    assert(spanish_game_startup.equal_call_address == 0xd2fa);
+    assert(spanish_game_startup.equal_call_target_address == 0xd1be);
+    assert(spanish_game_startup.other_call_address == 0xd302);
+    assert(spanish_game_startup.other_call_target_address == 0xd1d5);
+    {
+        auto altered_spanish_game = disk.read(*executable);
+        altered_spanish_game[0xd1cd] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_spanish_game_startup_evidence(
+                altered_spanish_game));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     // The complete Spanish executable ABI remains a separate preservation
     // boundary, but its F8 selected-record gate bytes are independently
     // accepted from the genuine FAT12 file in place.
