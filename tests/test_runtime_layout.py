@@ -29,21 +29,27 @@ class RuntimeLayoutTests(unittest.TestCase):
 
     def test_linux_install_layout_matches_runtime_search_order(self) -> None:
         self.assertIn('install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', CMAKE)
+        self.assertIn('install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', CMAKE)
         self.assertIn('install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")', CMAKE)
         self.assertIn('executable_directory / "po"', I18N)
         self.assertIn('executable_directory / ".." / "share" / "project-eon" / "po"', I18N)
         self.assertIn('base / "assets" / "cards"', MAIN)
+        self.assertIn('base / "assets" / "fonts"', MAIN)
 
     def test_apple_bundle_layout_matches_runtime_search_order(self) -> None:
         self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/assets/cards"', CMAKE)
+        self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/assets/fonts"', CMAKE)
         self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/po"', CMAKE)
         self.assertIn('base / "Resources" / "assets" / "cards"', MAIN)
+        self.assertIn('base / "Resources" / "assets" / "fonts"', MAIN)
         self.assertIn('executable_directory / ".." / "Resources" / "po"', I18N)
         self.assertIn('executable_directory / "Resources" / "po"', I18N)
         self.assertIn('mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/Resources/po"', WORKFLOW)
 
     def test_windows_stage_matches_runtime_search_order_without_data_directory(self) -> None:
         self.assertIn('Copy-Item po/*.po dist/po/', WORKFLOW)
+        self.assertIn('Copy-Item $sdlTtf.FullName dist/SDL3_ttf.dll', WORKFLOW)
+        self.assertIn('Source: "{#StagingDir}\\SDL3_ttf.dll"', INNO)
         self.assertIn('Source: "{#StagingDir}\\po\\*"; DestDir: "{app}\\po"', INNO)
         self.assertNotIn('DestDir: "{app}\\data', INNO)
 

@@ -11,6 +11,8 @@ SCRIPT = ROOT / "packaging" / "ios" / "package-ipa.sh"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 CATALOGS = ("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl",
             "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
+FONTS = ("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanagari-Regular.ttf",
+         "NotoSansJP-Regular.otf", "NotoSansKR-Regular.otf", "NotoSansSC-Regular.otf", "OFL-1.1.txt")
 
 
 @unittest.skipUnless(os.name != "nt" and shutil.which("bash") and shutil.which("unzip"),
@@ -43,6 +45,7 @@ class IosPackagingTests(unittest.TestCase):
             (app / "ProjectEon").touch()
             for resource in ("Resources/assets/cards/millennium.png",
                              "Resources/assets/cards/deuteros.png",
+                             *(f"Resources/assets/fonts/{font}" for font in FONTS),
                              *(f"Resources/po/{catalog}.po" for catalog in CATALOGS)):
                 path = app / resource
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,6 +57,7 @@ class IosPackagingTests(unittest.TestCase):
             listing = subprocess.check_output(["unzip", "-l", str(ipa)], text=True)
             self.assertIn("Payload/ProjectEon.app/ProjectEon", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/millennium.png", listing)
+            self.assertIn("Payload/ProjectEon.app/Resources/assets/fonts/NotoSansSC-Regular.otf", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/sv.po", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/zh_CN.po", listing)
 

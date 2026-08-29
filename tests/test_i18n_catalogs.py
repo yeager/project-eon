@@ -114,14 +114,8 @@ class CatalogTests(unittest.TestCase):
                 message_ids = po_message_ids(PO / f"{language}.po")
                 self.assertEqual(len(message_ids), len(set(message_ids)))
 
-    def test_debug_renderer_unicode_boundary_is_explicit(self) -> None:
-        """SDL's debug font cannot be mistaken for packaged Unicode support.
-
-        SDL3 documents SDL_RenderDebugText as ASCII-only. The shipped Arabic,
-        Japanese, and Simplified-Chinese launcher catalogs are genuine UTF-8
-        UI translations, so retaining that renderer must remain an explicit
-        limitation until a portable, bundled font pipeline is introduced.
-        """
+    def test_unicode_renderer_replaces_debug_renderer_for_shipped_catalogs(self) -> None:
+        """All non-ASCII catalogs must use the bundled renderer, not host fonts."""
         source = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
         self.assertIn("SDL_RenderDebugText", source)
         for language in ("ar", "ja", "zh_CN"):
@@ -130,14 +124,15 @@ class CatalogTests(unittest.TestCase):
                 self.assertTrue(any(any(ord(character) > 0x7F for character in text)
                                     for text in translations))
         documentation = (PO / "README.md").read_text(encoding="utf-8")
-        self.assertIn("Unicode-rendering boundary", documentation)
-        self.assertIn("SDL_RenderDebugText", documentation)
+        self.assertIn("Unicode rendering", documentation)
+        self.assertIn("SDL_ttf", documentation)
+        self.assertIn("bundled Noto fallback chain", documentation)
 
     def test_unicode_renderer_plan_covers_every_shipped_catalog(self) -> None:
-        """A future bundled-font renderer must not drop a catalog by accident."""
+        """The bundled renderer must not drop a catalog by accident."""
         plan = (ROOT / "docs" / "UNICODE_RENDERING.md").read_text(encoding="utf-8")
         self.assertIn("release-3.2.2", plan)
-        self.assertIn("SDLTTF_HARFBUZZ=ON", plan)
+        self.assertIn("SDLTTF_HARFBUZZ", plan)
         self.assertIn("SDL3_ttf::SDL3_ttf", plan)
         self.assertIn("OFL-1.1", plan)
         for language in sorted(CATALOGS):

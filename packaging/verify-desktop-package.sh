@@ -24,6 +24,17 @@ for package in "$@"; do
       exit 1
     fi
   done
+  # Unicode launcher rendering is entirely bundle-backed.  Verify every
+  # reviewed Noto file and its OFL license so installation cannot silently
+  # fall back to a workstation font for an otherwise shipped locale.
+  for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
+      NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
+      NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do
+    if ! printf '%s\n' "$contents" | grep -Fq "assets/fonts/$font"; then
+      echo "$package lacks required launcher font resource: $font" >&2
+      exit 1
+    fi
+  done
   # Every shipped UI language must remain usable after installation. Keep the
   # list explicit and aligned with CMake/iPadOS packaging rather than treating
   # one catalog as proof that a partial localization bundle is acceptable.
