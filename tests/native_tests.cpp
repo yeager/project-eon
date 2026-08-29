@@ -33,6 +33,7 @@
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
+#include "data/modern_pixel_reconstruction.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -526,6 +527,37 @@ void assert_deuteros_amiga_post_exec_third_service(const std::vector<std::uint8_
 } // namespace
 
 int main() {
+    // Modern Scale2x is a renderer-only, in-memory reconstruction. This
+    // asymmetric pattern proves it is not merely a texture filtering mode and
+    // that it cannot write through its input span.
+    std::vector<std::uint8_t> reconstruction_source(3U * 3U * 4U, 0);
+    for (std::size_t pixel = 0; pixel < 9; ++pixel) reconstruction_source[pixel * 4U + 3U] = 255;
+    const auto set_reconstruction_pixel = [&](const std::size_t x, const std::size_t y,
+                                               const std::array<std::uint8_t, 4>& rgba) {
+        std::copy(rgba.begin(), rgba.end(), reconstruction_source.begin() + (y * 3U + x) * 4U);
+    };
+    // Around E (1,1): B and D agree while F and H differ. Scale2x therefore
+    // chooses D for E0 rather than retaining E in every output position.
+    set_reconstruction_pixel(1, 0, {255, 0, 0, 255});
+    set_reconstruction_pixel(0, 1, {255, 0, 0, 255});
+    set_reconstruction_pixel(1, 1, {0, 0, 0, 255});
+    set_reconstruction_pixel(2, 1, {0, 0, 255, 255});
+    set_reconstruction_pixel(1, 2, {0, 255, 0, 255});
+    const auto source_copy = reconstruction_source;
+    const auto reconstructed = eon::reconstruct_rgba_scale2x(reconstruction_source, 3, 3);
+    assert(reconstructed.width == 6 && reconstructed.height == 6);
+    assert(reconstructed.rgba.size() == 144);
+    assert(reconstruction_source == source_copy);
+    const std::array<std::uint8_t, 4> expected_edge_pixel{{255, 0, 0, 255}};
+    assert(std::equal(expected_edge_pixel.begin(), expected_edge_pixel.end(),
+        reconstructed.rgba.begin() + (2U * 6U + 2U) * 4U));
+    bool malformed_reconstruction_rejected = false;
+    try {
+        static_cast<void>(eon::reconstruct_rgba_scale2x(reconstruction_source, 2, 3));
+    } catch (const std::runtime_error&) {
+        malformed_reconstruction_rejected = true;
+    }
+    assert(malformed_reconstruction_rejected);
     {
         char program[] = "project-eon";
         char* args[] = {program};

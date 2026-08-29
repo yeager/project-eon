@@ -31,6 +31,7 @@
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
+#include "data/modern_pixel_reconstruction.hpp"
 #include "data/sha256.hpp"
 #include "data/reference_trace.hpp"
 #include "data/recovery_map.hpp"
@@ -103,6 +104,10 @@ struct PreviewAnimation {
 // from original input, media, simulation state and save bytes.
 struct ModernGraphicsSettings {
     bool smooth_scaling = true;
+    // Reconstruct an edge-aware 2x renderer texture from a decoded original
+    // surface. The source vector is retained unchanged and the result exists
+    // only in process memory; Original never takes this path.
+    bool pixel_reconstruction = true;
     bool scanlines = false;
     bool frame = true;
     // The selected output mode controls only the SDL window.  Original frame
@@ -169,9 +174,10 @@ void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
-// Modern presentation is deliberately a renderer-only treatment. It frames
-// the same decoded original surfaces with scalable SDL primitives; it neither
-// substitutes an asset nor changes an input, simulation, or saved-state byte.
+// Modern presentation is deliberately renderer-only. It frames original
+// decoded surfaces and may derive a transient, opt-in in-memory Scale2x
+// texture from them; it neither changes an input, simulation, save byte, nor
+// writes or substitutes supplied media.
 void draw_modern_chrome(SDL_Renderer* renderer) {
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 9, 28, 48, 235);
@@ -253,13 +259,14 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     draw_text(renderer, 390, 174, "MODERN GRAPHICS SETTINGS");
     draw_text(renderer, 390, 212, "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE");
-    constexpr std::array<const char*, 5> names{{
-        "OUTPUT RESOLUTION", "ASPECT RATIO", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
+    constexpr std::array<const char*, 6> names{{
+        "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
     }};
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::string, 5> values{{
+    const std::array<std::string, 6> values{{
         std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
         display_aspect_names.at(settings.aspect_ratio_index),
+        settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)",
         settings.smooth_scaling ? "ON" : "OFF",
         settings.scanlines ? "ON" : "OFF",
         settings.frame ? "ON" : "OFF",
@@ -273,7 +280,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         draw_text(renderer, 690, 256.0F + static_cast<float>(index) * 42.0F, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 504, "SETTINGS APPLY TO SDL RENDERING ONLY.");
+    draw_text(renderer, 390, 546, "SETTINGS APPLY TO SDL RENDERING ONLY.");
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -2560,6 +2567,10 @@ int main(int argc, char** argv) {
     std::unique_ptr<eon::DeuterosAmigaPaulaMixer> deuteros_paula;
     SDL_AudioStream* deuteros_audio_stream = nullptr;
     SDL_Texture* preview_texture = nullptr;
+    // These transient textures are derived from decoded original pixels only.
+    // They have no on-disk representation and are selected exclusively by
+    // Modern at render time.
+    SDL_Texture* modern_preview_texture = nullptr;
     const auto create_deuteros_opening_texture = [&] {
         if (!deuteros_opening || preview_texture) return;
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -2588,13 +2599,16 @@ int main(int argc, char** argv) {
         }
     };
     SDL_Texture* millennium_preview_texture = nullptr;
+    SDL_Texture* millennium_modern_preview_texture = nullptr;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
     std::unique_ptr<eon::MillenniumAtariBootstrapSession> millennium_atari_session;
     std::unique_ptr<eon::MillenniumAmigaBootstrapSession> millennium_amiga_session;
     const auto discard_millennium_assets = [&] {
         if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
+        if (millennium_modern_preview_texture) SDL_DestroyTexture(millennium_modern_preview_texture);
         if (millennium_gx_canvas_texture) SDL_DestroyTexture(millennium_gx_canvas_texture);
         millennium_preview_texture = nullptr;
+        millennium_modern_preview_texture = nullptr;
         millennium_gx_canvas_texture = nullptr;
         millennium_assets.reset();
         millennium_atari_session.reset();
@@ -2618,6 +2632,27 @@ int main(int argc, char** argv) {
                     millennium_assets->gx_canvas->width * 4);
             }
         }
+    };
+    const auto millennium_texture_for = [&](const bool reconstruct) {
+        if (!millennium_assets || !millennium_preview_texture || !reconstruct) {
+            return millennium_preview_texture;
+        }
+        if (!millennium_modern_preview_texture) {
+            const auto& title = millennium_assets->title;
+            if (title.rgba_frames.empty()) return millennium_preview_texture;
+            const auto enhanced = eon::reconstruct_rgba_scale2x(
+                title.rgba_frames.front(), title.width, title.height);
+            millennium_modern_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                SDL_TEXTUREACCESS_STATIC, enhanced.width, enhanced.height);
+            if (!millennium_modern_preview_texture || !SDL_UpdateTexture(
+                    millennium_modern_preview_texture, nullptr, enhanced.rgba.data(), enhanced.width * 4)) {
+                std::cerr << "Unable to upload transient Modern Millennium texture: " << SDL_GetError() << '\n';
+                SDL_DestroyTexture(millennium_modern_preview_texture);
+                millennium_modern_preview_texture = nullptr;
+                return millennium_preview_texture;
+            }
+        }
+        return millennium_modern_preview_texture;
     };
     create_millennium_textures();
     // Menu scanning is deliberately incremental.  Do not lock Millennium's
@@ -2734,8 +2769,9 @@ int main(int argc, char** argv) {
         switch (modern_graphics_settings.focused_option) {
         case 0: cycle_output_resolution(direction); break;
         case 1: cycle_aspect_ratio(direction); break;
-        case 2: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
-        case 3: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
+        case 2: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction; break;
+        case 3: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
+        case 4: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
         default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
         }
     };
@@ -2766,10 +2802,10 @@ int main(int argc, char** argv) {
                             && focused_profile_card == 2) custom_profile_ready = true;
                     } else if (event.key.key == SDLK_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 4) % 5;
+                            (modern_graphics_settings.focused_option + 5) % 6;
                     } else if (event.key.key == SDLK_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 5;
+                            (modern_graphics_settings.focused_option + 1) % 6;
                     } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
                         change_modern_graphics_option(event.key.key == SDLK_LEFT ? -1 : 1);
                     }
@@ -2780,10 +2816,10 @@ int main(int argc, char** argv) {
                             && focused_profile_card == 2) custom_profile_ready = true;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 4) % 5;
+                            (modern_graphics_settings.focused_option + 5) % 6;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 5;
+                            (modern_graphics_settings.focused_option + 1) % 6;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
                         || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
                         change_modern_graphics_option(
@@ -3083,7 +3119,8 @@ int main(int argc, char** argv) {
                 // Neither DOS EXEC return nor 2200AD startup is observed, so
                 // a GX canvas must never replace the original title frame.
                 constexpr bool millennium_game_execution_observed = false;
-                SDL_Texture* texture = millennium_preview_texture;
+                SDL_Texture* texture = millennium_texture_for(
+                    modern && modern_graphics_settings.pixel_reconstruction);
                 if (millennium_game_execution_observed) {
                     draw_text(renderer, 64, 220,
                         tr("AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"));
@@ -3330,7 +3367,23 @@ int main(int argc, char** argv) {
                             return stream.str(); }()
                         + " - " + std::to_string(trace->glyph_codes.size()));
                 }
-                SDL_SetTextureScaleMode(preview_texture,
+                SDL_Texture* texture = preview_texture;
+                if (modern && modern_graphics_settings.pixel_reconstruction && frame) {
+                    const auto enhanced = eon::reconstruct_rgba_scale2x(*frame,
+                        eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height);
+                    if (!modern_preview_texture) {
+                        modern_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                            SDL_TEXTUREACCESS_STREAMING, enhanced.width, enhanced.height);
+                    }
+                    if (modern_preview_texture && SDL_UpdateTexture(modern_preview_texture, nullptr,
+                            enhanced.rgba.data(), enhanced.width * 4)) {
+                        texture = modern_preview_texture;
+                    } else if (modern_preview_texture) {
+                        std::cerr << "Unable to update transient Modern Deuteros texture: "
+                                  << SDL_GetError() << '\n';
+                    }
+                }
+                SDL_SetTextureScaleMode(texture,
                     modern && modern_graphics_settings.smooth_scaling
                         ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 // Keep the original pixels intact while allowing the extra
@@ -3339,7 +3392,7 @@ int main(int argc, char** argv) {
                     title_stage ? 350.0F : deuteros_title_resource ? 306.0F : 274.0F,
                     576, title_stage ? 350.0F : 400.0F, modern_graphics_settings);
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
-                SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
+                SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
                 draw_text(renderer, 64, 580, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else {
@@ -3352,8 +3405,10 @@ int main(int argc, char** argv) {
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
     SDL_DestroyTexture(millennium_preview_texture);
+    SDL_DestroyTexture(millennium_modern_preview_texture);
     SDL_DestroyTexture(millennium_gx_canvas_texture);
     SDL_DestroyTexture(preview_texture);
+    SDL_DestroyTexture(modern_preview_texture);
     SDL_DestroyAudioStream(deuteros_audio_stream);
     active_text_renderer.reset();
     SDL_DestroyRenderer(renderer);

@@ -153,6 +153,15 @@ msgstr "左/右：更改"
 msgid "SMOOTH SCALING"
 msgstr "平滑缩放"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "像素重建"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X（仅内存）"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "关闭（原始像素）"
+
 msgid "SCANLINES"
 msgstr "扫描线"
 
