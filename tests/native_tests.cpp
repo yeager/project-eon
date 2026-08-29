@@ -7049,6 +7049,10 @@ int main() {
     assert(paired_local_route.clear_bit_branch_target == 0x41c32);
     assert(paired_local_route.high_block_return_address == 0x41f30);
     assert(paired_local_route.sha256[3] == "765489ec36d727a326bfae44e34918cb85070d4ed3ef959cdcba9c41a102dd7e");
+    const auto service_route = eon::parse_deuteros_amiga_title_post_exec_service_route_profile(system_disk, load_plan);
+    assert(service_route.caller_address == 0x4052c && service_route.entry_address == 0x20e18);
+    assert((service_route.external_call_targets == std::array<std::uint32_t, 3>{{0x1fb9a, 0x1ff08, 0x22bca}}));
+    assert(service_route.nested_return_address == 0x20bf0 && service_route.continuation_target == 0x20bf2);
     const auto post_exec_tail_flag_gate =
         eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(system_disk, load_plan);
     assert(post_exec_tail_flag_gate.entry_address == 0x40616);
