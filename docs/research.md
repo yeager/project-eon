@@ -212,11 +212,15 @@ SHA-256, command tail, input timeline, CPU control-flow events, DOS/BIOS/private
 interrupt events, and file operations. A separately acquired original read-only
 disk image is acceptable where its identity is independently hash-locked.
 
-The current development host has DOSBox 0.74 only. It mounts local directories
-or disk images but not the supplied deflated DOS ZIP, and has no trace debugger.
-No dynamic trace is claimed from that tool: driver installation, BIOS results,
-private-vector lifetime, DOS EXEC return/status, and `2200AD` startup remain
-explicit boundaries until the above protocol can be met.
+The development workstation has also been checked with a portable DOSBox-X
+2026.01.02 installation kept outside this repository. It can mount the
+hash-identified English DOS ZIP directly, so a time-limited headless launch
+check was made without unpacking or changing the archive (SHA-256
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`
+before and after). That is a launch-environment check, not a dynamic trace:
+no CPU records, service returns, driver writes, BIOS results, private-vector
+lifetime, DOS EXEC status, or `2200AD` startup result were retained. They
+remain explicit boundaries until the above protocol is met.
 
 Project Eon's external trace admission format is specified in
 [`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md). Generic v1 verifies
