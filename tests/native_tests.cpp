@@ -44,6 +44,7 @@
 #include "data/modern_asset_pack.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
+#include "engine/millennium_dos_gx_startup_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "data/sha256.hpp"
@@ -3452,6 +3453,24 @@ int main() {
     assert(gx_startup_four.selected_source_record_offset == 0x0088);
     assert((gx_startup_four.overlay_writes[4]
         == eon::MillenniumDosGxOverlayStartupWrite{0x006d, 1, 1}));
+    eon::MillenniumDosGxStartupSession gx_session(*game_executable, *gx_overlay);
+    assert(gx_session.state() == eon::MillenniumDosGxStartupSessionState::awaiting_private_return);
+    bool rejected_gx_mode_before_private_return = false;
+    try { gx_session.observe_mode_byte(3); } catch (const std::runtime_error&) { rejected_gx_mode_before_private_return = true; }
+    assert(rejected_gx_mode_before_private_return);
+    gx_session.observe_private_return(0);
+    gx_session.observe_mode_byte(3);
+    assert(gx_session.evaluation()->selected_ax == 0x0012);
+    assert(!gx_session.overlay_byte(0x65));
+    gx_session.observe_adapter_return();
+    assert(gx_session.state() == eon::MillenniumDosGxStartupSessionState::returned_to_caller);
+    assert(gx_session.evaluation()->boundary_address == 0xd376);
+    assert(gx_session.overlay_byte(0x65) == 0x8f);
+    assert(gx_session.overlay_byte(0x66) == 0x1b);
+    assert(gx_session.overlay_byte(0x6d) == 2);
+    bool rejected_gx_repeat_adapter_return = false;
+    try { gx_session.observe_adapter_return(); } catch (const std::runtime_error&) { rejected_gx_repeat_adapter_return = true; }
+    assert(rejected_gx_repeat_adapter_return);
     {
         auto altered_startup_allocation = *game_executable;
         altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;
