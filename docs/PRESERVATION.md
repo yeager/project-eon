@@ -37,6 +37,15 @@ enablement, affected state, save compatibility, evidence basis (if it claims
 to reproduce an original behaviour), and test coverage. A Modern feature must
 never silently become active in Original.
 
+Modern graphics may go beyond post-processing filters. They may perform
+asset-aware upscaling, regenerate sprite or scene presentation, or select a
+separately installed, lawful high-resolution art layer. The active rendering
+path and its inputs must be visible in the UI and diagnosable. Any
+media-derived output is transient renderer state unless a separately
+versioned, user-controlled cache contract is added; it must never be written
+into, beside, or in place of supplied game media. Project Eon does not commit,
+package, or redistribute original pixels or unlicensed derivatives.
+
 Both modes read supplied media in place. Neither mode may modify, replace,
 unpack, redistribute, or use an original asset as a writable runtime cache.
 Modern must not alter an original save file; any future Eon-native save or

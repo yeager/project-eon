@@ -23,9 +23,11 @@ never claim parity or invent behaviour that evidence does not support.
   substituting another platform or language.
 - The SDL3 app must start from CLI and the card menu. Original mode uses
   recovered pixels and is the preservation contract. Modern mode may add
-  explicitly labelled opt-in graphics, input, accessibility, and
+  explicitly labelled opt-in graphics (including regenerated or upscaled
+  renderer-side assets, not merely filters), input, accessibility, and
   evidence-documented gameplay improvements, but must not mutate or replace
   original asset bytes or original save files, and must never affect Original.
+  Do not commit/package commercial original pixels or unlicensed derivatives.
 - Default media locations are `~/.projecteon` on Linux/macOS and
   `<install-directory>/data` on Windows. Looking up a missing default path
   must not create it.

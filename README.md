@@ -32,7 +32,7 @@ converting state; later Modern features must document their state contract.
 | --- | --- | --- |
 | Purpose | Reproduce proven original behaviour | Opt-in host-side improvements |
 | Logic | Recovered baseline only | Baseline plus individually documented, enabled improvements |
-| Graphics and input | Recovered presentation and controls | May add rendering, input, accessibility, and quality-of-life options |
+| Graphics and input | Recovered presentation and controls | May add rendering, regenerated/upscaled art, input, accessibility, and quality-of-life options |
 | Original media and saves | Read in place; never changed | The same; no alteration or replacement |
 | Compatibility claim | Preservation evidence and reference captures | Each improvement states its scope and compatibility boundary |
 
@@ -41,6 +41,14 @@ including the kind of graphics, camera, input, accessibility, and diagnostics
 work found in contemporary recompilation projects. Such work is never evidence
 for the original game: it must be opt-in, identified in the UI and
 documentation, and must not weaken Original-mode verification.
+
+Modern graphics are not limited to scaling filters. They may use
+asset-aware reconstruction, high-resolution redraws, regenerated sprites, and
+other replacement presentation derived from the player's verified original
+media. These renderer-side derivatives are generated or loaded separately at
+runtime, are visibly identified as Modern, and never overwrite, cache inside,
+or replace the original archive. Project Eon will not distribute unlicensed
+original assets or derivative asset packs.
 
 ## Original game data
 
