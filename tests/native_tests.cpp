@@ -973,6 +973,17 @@ int main() {
             "event\t3 30 open-library-return site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=0x00012fec result_sr=0x2000\n"
             "event\t4 40 graphics-return site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
             diagnostics, trace_error));
+        // A graphics return cannot be reassigned across a later outstanding
+        // custom-register call merely because each individual record is
+        // otherwise well formed.
+        assert(!eon::validate_deuteros_amiga_title_bridge_reference_events(
+            "event\t1 10 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x0096 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t2 20 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x009c result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t3 30 open-library-return site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=0x00012fec result_sr=0x2000\n"
+            "event\t4 40 graphics-call site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0\n"
+            "event\t5 50 custom-register-call site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff\n"
+            "event\t6 60 graphics-return site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
+            diagnostics, trace_error));
     }
     assert_modern_asset_pack_admission();
     // Modern Scale2x is a renderer-only, in-memory reconstruction. This
