@@ -1872,7 +1872,8 @@ the runtime still reads this source ADF range in place and does not unpack it.
 When—and only when—the live opening VM reaches that exact `$0f` handoff with
 raw operand `$0b38`, `DeuterosAmigaTitleStageSession` now opens the same ADF
 interval read-only. The session validates the existing title-stage opcode
-profile, exposes only disk provenance (`+0x6e000`, length `0x6ca00`,
+profile and binds the caller-proven bootstrap profile one to its exact local
+entry-prefix result, exposing only disk provenance (`+0x6e000`, length `0x6ca00`,
 destination `$13000`, entry `$40426`) and hash-validates whole-stage SHA-256
 `48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` for the
 verified clean system ADF; altered stage bytes fail closed. It never creates a title bitmap, inferred registers,

@@ -38,9 +38,6 @@ public:
     [[nodiscard]] const std::optional<DeuterosAmigaTitleStageSession>& title_stage_session() const {
         return title_stage_session_;
     }
-    [[nodiscard]] const std::optional<DeuterosAmigaTitleEntryPrefix>& title_entry_prefix() const {
-        return title_entry_prefix_;
-    }
 
 private:
     AmigaAdf disk_;
@@ -55,7 +52,6 @@ private:
     std::optional<DeuterosAmigaFrame> last_frame_;
     std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace_;
     std::optional<DeuterosAmigaTitleStageSession> title_stage_session_;
-    std::optional<DeuterosAmigaTitleEntryPrefix> title_entry_prefix_;
     bool title_handed_off_ = false;
     bool frame_composed_on_last_tick_ = false;
     std::uint64_t ticks_ = 0;

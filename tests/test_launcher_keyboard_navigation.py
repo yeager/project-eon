@@ -37,6 +37,18 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("custom_profile_ready", SOURCE)
         self.assertIn("CUSTOM SETTINGS READY", SOURCE)
 
+    def test_runtime_shortcuts_do_not_promote_original_to_modern(self) -> None:
+        # Original/Modern is decided by the profile cards before launch. F10
+        # remains the settings route for Modern/Custom, but must never turn an
+        # Original session into a different presentation behind the user's
+        # back; F1 is intentionally inert for the same reason.
+        f10 = SOURCE.index("event.key.key == SDLK_F10")
+        f10_guard = SOURCE.index(
+            "if (request.presentation != eon::Presentation::modern) continue;", f10)
+        f1 = SOURCE.index("event.key.key == SDLK_F1 && !event.key.repeat")
+        self.assertLess(f10, f10_guard)
+        self.assertIn("Presentation is chosen by the profile card before launch.", SOURCE[f1:f1 + 500])
+
     def test_back_navigation_consumes_one_event_and_moves_one_card_page(self) -> None:
         # A single Escape/Back from profiles must land on platforms, rather
         # than falling through to the menu handler and skipping to games.

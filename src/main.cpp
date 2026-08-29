@@ -3072,9 +3072,12 @@ int main(int argc, char** argv) {
             if (event.type == SDL_EVENT_QUIT) running = false;
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
                 // F10 is consumed by Project Eon's renderer chrome, never by
-                // original DOS/Amiga input. It is available now and remains
-                // the future in-game Modern-presentation entry point.
-                request.presentation = eon::Presentation::modern;
+                // original DOS/Amiga input.  It deliberately does not switch
+                // an already-started Original launch into Modern: selecting
+                // Original is a preservation contract, not a provisional
+                // default that a runtime key may silently replace.  Modern
+                // and Custom launches retain the in-game settings popup.
+                if (request.presentation != eon::Presentation::modern) continue;
                 show_modern_graphics_settings = !show_modern_graphics_settings;
                 if (!show_modern_graphics_settings && screen == Screen::menu
                     && launcher_page == LauncherPage::profiles
@@ -3142,8 +3145,10 @@ int main(int argc, char** argv) {
                 continue;
             }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
-                request.presentation = request.presentation == eon::Presentation::original
-                    ? eon::Presentation::modern : eon::Presentation::original;
+                // Presentation is chosen by the profile card before launch.
+                // Keep this historical shortcut inert so it cannot violate
+                // an Original session's immutable renderer contract.
+                continue;
             }
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
                 && screen == Screen::launching && selected == eon::Game::millennium

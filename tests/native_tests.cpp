@@ -5475,7 +5475,7 @@ int main() {
     assert(load_plan.title_stage.length == 0x6ca00);
     assert(load_plan.title_stage.destination == 0x13000);
     assert(load_plan.title_stage.entry_address == 0x40426);
-    const eon::DeuterosAmigaTitleStageSession title_stage_session(system_disk, load_plan);
+    const eon::DeuterosAmigaTitleStageSession title_stage_session(system_disk, load_plan, 1);
     assert(title_stage_session.stage().disk_offset == 0x6e000);
     assert(title_stage_session.stage().length == 0x6ca00);
     assert(title_stage_session.stage().destination == 0x13000);
@@ -5483,6 +5483,17 @@ int main() {
     assert(title_stage_session.original_bytes().size() == 0x6ca00);
     assert(title_stage_session.original_sha256()
         == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
+    assert(title_stage_session.entry_prefix().incoming_profile == 1);
+    assert(title_stage_session.entry_prefix().stop_before_exec_address == 0x40450);
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::DeuterosAmigaTitleStageSession(system_disk, load_plan, 2));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     // The timer-gated $4069a route has a wholly local prefix before its first
     // graphics.library vector. It transforms the real title RGB4 words in
     // memory only; this test does not imply that the timer gate or vector has
@@ -7104,15 +7115,14 @@ int main() {
     assert(live_title_stage->stage().entry_address == 0x40426);
     assert(live_title_stage->original_sha256()
         == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
-    const auto& live_title_entry = live_input_opening.title_entry_prefix();
-    assert(live_title_entry);
-    assert(live_title_entry->incoming_profile == 1);
-    assert(live_title_entry->controller_transfer_address == 0x206a0);
-    assert(live_title_entry->mode_word_address == 0x4040e);
-    assert(live_title_entry->mode_word_value == 1);
-    assert(live_title_entry->normal_mode_byte_address == 0x19d52);
-    assert(live_title_entry->normal_mode_byte_value == 1);
-    assert(live_title_entry->stop_before_exec_address == 0x40450);
+    const auto& live_title_entry = live_title_stage->entry_prefix();
+    assert(live_title_entry.incoming_profile == 1);
+    assert(live_title_entry.controller_transfer_address == 0x206a0);
+    assert(live_title_entry.mode_word_address == 0x4040e);
+    assert(live_title_entry.mode_word_value == 1);
+    assert(live_title_entry.normal_mode_byte_address == 0x19d52);
+    assert(live_title_entry.normal_mode_byte_value == 1);
+    assert(live_title_entry.stop_before_exec_address == 0x40450);
     const auto mode_five_entry = eon::execute_deuteros_amiga_title_entry_mode_five_prefix(
         system_disk, load_plan, 0x0105);
     assert(mode_five_entry.mode_word_value == 0x0105);
