@@ -20,7 +20,6 @@ import shutil
 import stat
 import sys
 import tempfile
-from typing import BinaryIO
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,12 +35,24 @@ COMMON_METADATA = {
     "config_sha256", "command_tail_sha256", "input_timeline_sha256",
 }
 V2_ADAPTERS = {
-    "millennium-dos-en-startup-v1": {"game": "millennium", "platform": "dos", "language": "en"},
+    "millennium-dos-en-startup-v1": {
+        "game": "millennium", "platform": "dos", "language": "en",
+        "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        "size": 328383,
+    },
     "deuteros-atari-st-boot-v1": {"game": "deuteros", "platform": "atari_st", "language": "en",
+                                   "sha256": "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+                                   "size": 3021682,
                                    "source_media_sha256": "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee",
                                    "source_stage_sha256": "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7"},
-    "millennium-amiga-en-defjam-bootstrap-v1": {"game": "millennium", "platform": "amiga", "language": "en"},
+    "millennium-amiga-en-defjam-bootstrap-v1": {
+        "game": "millennium", "platform": "amiga", "language": "en",
+        "sha256": "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
+        "size": 2558009,
+    },
     "deuteros-amiga-en-title-stage-v1": {"game": "deuteros", "platform": "amiga", "language": "en",
+                                           "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+                                           "size": 4066771,
                                            "source_media_sha256": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
                                            "source_stage_sha256": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
 }
@@ -87,6 +98,42 @@ def hash_fd(fd: int) -> tuple[str, int, os.stat_result]:
     return digest.hexdigest(), size, os.fstat(fd)
 
 
+def same_file_identity(first: os.stat_result, second: os.stat_result) -> bool:
+    return (first.st_dev, first.st_ino, first.st_size) == (second.st_dev, second.st_ino, second.st_size)
+
+
+def open_checked_input(path: Path, label: str, maximum: int) -> tuple[int, os.stat_result]:
+    initial = require_absolute_regular_file(path, label, maximum)
+    fd = secure_open(path)
+    try:
+        opened = os.fstat(fd)
+        if (not stat.S_ISREG(opened.st_mode) or opened.st_size > maximum
+                or not same_file_identity(initial, opened)):
+            raise EvidenceError(f"{label} changed while it was opened")
+        return fd, opened
+    except Exception:
+        os.close(fd)
+        raise
+
+
+def read_checked_input(path: Path, label: str, maximum: int) -> bytes:
+    fd, initial = open_checked_input(path, label, maximum)
+    try:
+        chunks: list[bytes] = []
+        remaining = initial.st_size
+        while remaining:
+            chunk = os.read(fd, min(1024 * 1024, remaining))
+            if not chunk:
+                raise EvidenceError(f"Unable to read complete {label}")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(fd, 1) or not same_file_identity(initial, os.fstat(fd)):
+            raise EvidenceError(f"{label} changed while it was read")
+        return b"".join(chunks)
+    finally:
+        os.close(fd)
+
+
 def is_sha256(value: str) -> bool:
     return len(value) == 64 and set(value) <= SHA256_HEX
 
@@ -105,8 +152,7 @@ def valid_ascii(value: str) -> bool:
 
 
 def parse_metadata(path: Path) -> dict[str, str]:
-    require_absolute_regular_file(path, "metadata", MAX_METADATA_SIZE)
-    data = path.read_bytes()
+    data = read_checked_input(path, "metadata", MAX_METADATA_SIZE)
     if not data or not data.endswith(b"\n") or b"\r" in data:
         raise EvidenceError("metadata must be non-empty LF-terminated key<TAB>value records")
     try:
@@ -147,6 +193,10 @@ def validate_metadata(fields: dict[str, str], release: dict[str, object]) -> Non
         if adapter in {"deuteros-atari-st-boot-v1", "deuteros-amiga-en-title-stage-v1"}:
             expected |= {"source_media_sha256", "source_stage_sha256"}
         for key, expected_value in V2_ADAPTERS[adapter].items():
+            if key in {"sha256", "size"}:
+                if release.get(key) != expected_value:
+                    raise EvidenceError(f"adapter does not match its exact source {key}")
+                continue
             if fields.get(key) != expected_value:
                 raise EvidenceError(f"adapter does not match its exact {key}")
     else:
@@ -178,12 +228,11 @@ def reject_output_path(source: Path, event: Path, metadata: Path, output: Path) 
         raise EvidenceError("output directory must not name an input file")
 
 
-def copy_event(input_path: Path, output_path: Path) -> tuple[str, int]:
+def copy_event(input_fd: int, expected: os.stat_result, output_path: Path) -> tuple[str, int]:
     digest = hashlib.sha256()
     total = 0
-    fd = secure_open(input_path)
     try:
-        with os.fdopen(fd, "rb", closefd=False) as source, output_path.open("xb") as destination:
+        with os.fdopen(input_fd, "rb", closefd=False) as source, output_path.open("xb") as destination:
             while True:
                 chunk = source.read(1024 * 1024)
                 if not chunk:
@@ -196,9 +245,11 @@ def copy_event(input_path: Path, output_path: Path) -> tuple[str, int]:
             destination.flush()
             os.fsync(destination.fileno())
     finally:
-        os.close(fd)
+        os.lseek(input_fd, 0, os.SEEK_SET)
     if total == 0:
         raise EvidenceError("event stream must not be empty")
+    if total != expected.st_size or not same_file_identity(expected, os.fstat(input_fd)):
+        raise EvidenceError("event stream changed while it was copied")
     return digest.hexdigest(), total
 
 
@@ -217,25 +268,33 @@ def assemble(args: argparse.Namespace) -> Path:
     output = Path(args.output)
     source_initial = require_absolute_regular_file(source, "source release")
     event_initial = require_absolute_regular_file(events, "event stream", MAX_EVENT_SIZE)
-    require_absolute_regular_file(metadata, "metadata", MAX_METADATA_SIZE)
     if (source_initial.st_dev, source_initial.st_ino) == (event_initial.st_dev, event_initial.st_ino):
         raise EvidenceError("event stream must not be the original source release")
     reject_output_path(source, events, metadata, output)
     source_fd = secure_open(source)
+    event_fd = -1
     try:
         source_hash, source_size, source_before = hash_fd(source_fd)
-        if (source_initial.st_dev, source_initial.st_ino, source_initial.st_size) != (source_before.st_dev, source_before.st_ino, source_before.st_size):
+        if not stat.S_ISREG(source_before.st_mode) or not same_file_identity(source_initial, source_before):
             raise EvidenceError("source release changed while it was opened")
         release = release_identity(source_hash, source_size)
         fields = parse_metadata(metadata)
         validate_metadata(fields, release)
+        event_fd, opened_event = open_checked_input(events, "event stream", MAX_EVENT_SIZE)
+        if not same_file_identity(event_initial, opened_event):
+            raise EvidenceError("event stream changed while it was opened")
+        tool_fd = secure_open(Path(__file__).resolve())
+        try:
+            tool_hash, _, _ = hash_fd(tool_fd)
+        finally:
+            os.close(tool_fd)
         staging_parent = output.parent
         if not staging_parent.is_dir() or staging_parent.is_symlink():
             raise EvidenceError("output parent must be an existing non-symlink directory")
         staging = Path(tempfile.mkdtemp(prefix=".eon-trace-", dir=staging_parent))
         try:
             os.chmod(staging, 0o700)
-            event_hash, event_size = copy_event(events, staging / "events.eontrace")
+            event_hash, event_size = copy_event(event_fd, opened_event, staging / "events.eontrace")
             source_after_hash, source_after_size, source_after = hash_fd(source_fd)
             if (source_hash, source_size, source_before.st_dev, source_before.st_ino) != (
                 source_after_hash, source_after_size, source_after.st_dev, source_after.st_ino):
@@ -263,8 +322,7 @@ def assemble(args: argparse.Namespace) -> Path:
                                    "device": source_before.st_dev, "inode": source_before.st_ino},
                 "event": {"path": "events.eontrace", "sha256": event_hash, "size": event_size},
                 "manifest": {"path": "manifest.eontrace", "sha256": hashlib.sha256(manifest_text.encode()).hexdigest()},
-                "tool": {"path": str(Path(__file__).resolve()),
-                         "sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},
+                "tool": {"path": str(Path(__file__).resolve()), "sha256": tool_hash},
             }
             write_text_atomic(staging / "receipt.json", json.dumps(receipt, sort_keys=True, indent=2) + "\n")
             staging.replace(output)
@@ -272,6 +330,8 @@ def assemble(args: argparse.Namespace) -> Path:
             shutil.rmtree(staging, ignore_errors=True)
             raise
     finally:
+        if event_fd >= 0:
+            os.close(event_fd)
         os.close(source_fd)
     return output
 

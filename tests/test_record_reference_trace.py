@@ -7,6 +7,8 @@ media, or retain an event stream fixture in the repository.
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -57,7 +59,25 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 platform="amiga"), encoding="utf-8")
             with self.assertRaises(TOOL.EvidenceError):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
-                    "game": "millennium", "platform": "amiga", "language": "en"})
+                "game": "millennium", "platform": "amiga", "language": "en"})
+
+    def test_v2_adapter_requires_its_exact_outer_release_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.tsv"
+            path.write_text(metadata_lines(
+                format="project-eon-reference-trace-v2",
+                adapter="millennium-dos-en-startup-v1"), encoding="utf-8")
+            with self.assertRaisesRegex(TOOL.EvidenceError, "exact source sha256"):
+                TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
+                    "sha256": "0" * 64, "size": 328383, "game": "millennium",
+                    "platform": "dos", "language": "en"})
+
+    def test_metadata_read_is_bounded_after_secure_open(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.tsv"
+            path.write_bytes(b"x" * (TOOL.MAX_METADATA_SIZE + 1))
+            with self.assertRaisesRegex(TOOL.EvidenceError, "exceeds"):
+                TOOL.parse_metadata(path.resolve())
 
     def test_assembly_uses_new_directory_and_keeps_source_unchanged(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -86,6 +106,9 @@ class RecordReferenceTraceTests(unittest.TestCase):
             self.assertTrue((output / "manifest.eontrace").read_text(encoding="utf-8").endswith("\n"))
             self.assertIn('"status": "assembled-not-admitted"',
                           (output / "receipt.json").read_text(encoding="utf-8"))
+            receipt = json.loads((output / "receipt.json").read_text(encoding="utf-8"))
+            self.assertEqual(receipt["tool"]["sha256"],
+                             hashlib.sha256((ROOT / "tools" / "record_reference_trace.py").read_bytes()).hexdigest())
 
     def test_rejects_symlink_and_existing_output(self):
         with tempfile.TemporaryDirectory() as directory:
