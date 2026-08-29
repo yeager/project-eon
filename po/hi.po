@@ -200,3 +200,6 @@ msgid "SPANISH"
 msgstr "स्पैनिश"
 msgid "RELEASE IDENTITY IS FIXED AT LAUNCH"
 msgstr "संस्करण की पहचान शुरू होने पर निश्चित होती है"
+
+msgid "RELEASE SELECTION REQUIRED"
+msgstr "रिलीज़ चयन आवश्यक"

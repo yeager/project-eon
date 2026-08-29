@@ -25,10 +25,16 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("LauncherPage::releases", SOURCE[SOURCE.index("advance_after_platform_selection"):])
 
     def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
-        self.assertIn("eon::release_available(releases, game, card.platform)", SOURCE)
+        self.assertIn("eon::platform_card_status(releases, game, card.platform)", SOURCE)
+        self.assertIn("eon::platform_card_selectable(status)", SOURCE)
         self.assertIn("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME", SOURCE)
-        self.assertIn("if (!eon::release_available(releases, game, platform)) return false;", SOURCE)
+        self.assertIn("if (!eon::platform_card_selectable(status)) return false;", SOURCE)
+        self.assertIn("RELEASE SELECTION REQUIRED", SOURCE)
         self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
+
+    def test_ambiguous_or_missing_platform_cards_cannot_start_a_game(self) -> None:
+        self.assertIn("eon::platform_card_startable", SOURCE)
+        self.assertIn("!active_platform || !active_release_language", SOURCE)
 
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
         # If a game has only Amiga/Atari media, selecting its game card must
@@ -97,6 +103,19 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("event.text.text && event.text.text[0] != '\\0'", SOURCE[text_event:title_poll])
         self.assertNotIn("event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat",
             SOURCE[text_event:title_poll])
+
+    def test_back_or_restart_ends_the_host_title_input_session(self) -> None:
+        # A launcher visit is a distinct one-shot DOS title boundary. Going
+        # back must dismiss host text input (including a mobile virtual
+        # keyboard), and a later start must create a fresh session instead of
+        # retaining the former hand-off state.
+        stop = SOURCE.index("const auto stop_millennium_title")
+        start = SOURCE.index("const auto start_millennium_title")
+        self.assertLess(stop, start)
+        self.assertIn("SDL_StopTextInput(window)", SOURCE[stop:start])
+        self.assertIn("millennium_title_session.reset();", SOURCE[stop:start])
+        self.assertIn("stop_millennium_title();\n                    screen = Screen::menu;", SOURCE)
+        self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])
 
 
 if __name__ == "__main__":

@@ -59,6 +59,15 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("reconstruct_rgba_scale2x(*frame", SOURCE)
         self.assertNotIn("deuteros_modern_preview_source_tick = source_tick;\n                }", SOURCE)
 
+    def test_deuteros_title_handoff_stops_host_vm_scheduling(self) -> None:
+        """The retained frame is presentation evidence, never a fake title VM."""
+        scheduler = SOURCE.index("constexpr std::uint64_t scheduler_period_ms = 20")
+        renderer = SOURCE.index("const auto source_tick = deuteros_opening->ticks()", scheduler)
+        scheduler_block = SOURCE[scheduler:renderer]
+        self.assertIn("&& !deuteros_opening->title_handed_off())", scheduler_block)
+        self.assertIn("unrecovered Exec/graphics boundary", scheduler_block)
+        self.assertIn("SDL_ClearAudioStream(deuteros_audio_stream)", scheduler_block)
+
     def test_popup_is_modal_for_gamepad_navigation(self) -> None:
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_UP", SOURCE)
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_DOWN", SOURCE)

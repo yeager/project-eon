@@ -200,3 +200,6 @@ msgid "SPANISH"
 msgstr "ΙΣΠΑΝΙΚΑ"
 msgid "RELEASE IDENTITY IS FIXED AT LAUNCH"
 msgstr "Η ΤΑΥΤΟΤΗΤΑ ΤΗΣ ΕΚΔΟΣΗΣ ΚΛΕΙΔΩΝΕΙ ΣΤΗΝ ΕΚΚΙΝΗΣΗ"
+
+msgid "RELEASE SELECTION REQUIRED"
+msgstr "ΑΠΑΙΤΕΙΤΑΙ ΕΠΙΛΟΓΗ ΕΚΔΟΣΗΣ"

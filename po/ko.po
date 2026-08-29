@@ -238,3 +238,6 @@ msgid "SPANISH"
 msgstr "스페인어"
 msgid "RELEASE IDENTITY IS FIXED AT LAUNCH"
 msgstr "판본 식별 정보는 실행 시 고정됩니다"
+
+msgid "RELEASE SELECTION REQUIRED"
+msgstr "릴리스 선택 필요"

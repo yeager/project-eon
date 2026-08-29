@@ -30,6 +30,10 @@ msgid "ORIGINAL DATA NOT FOUND"
 msgstr ""
 
 #: src/main.cpp
+msgid "RELEASE SELECTION REQUIRED"
+msgstr ""
+
+#: src/main.cpp
 msgid "SCANNING ORIGINAL DATA..."
 msgstr ""
 

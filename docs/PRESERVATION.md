@@ -2622,6 +2622,18 @@ at the unresolved Exec ABI boundary. It is a regression identity for the
 recovered opening render route, not evidence of a reconstructed title screen
 or menu.
 
+The host scheduler treats that handoff as terminal as well: after the one
+caller-connected handoff tick, it performs no later opening-VM catch-up calls
+and clears queued opening PCM before disabling the Paula renderer. SDL may
+continue to present the hash-regressed final opening frame, but it never
+advances an invented title-stage clock. In **Original**, that frame is sampled
+with nearest-neighbour scaling. In **Modern**, only the opt-in, memory-only
+renderer transforms (such as Scale2x, smoothing, scanlines, frame, output
+resolution, and aspect ratio) may affect that same recovered frame; they
+cannot alter the ADF bytes, its SHA-256 identity, the title-stage palette
+provenance strip, or resume execution beyond the unrecovered boundary. The
+palette strip represents raw RGB4 setup words, not a generated title image.
+
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone
 selects `$20fb2` masked drawing where palette index 0 is transparent; an
@@ -2708,6 +2720,10 @@ SDL text input only while the verified title boundary is active and sends an
 availability observation only for non-empty UTF-8 text input—never for a raw
 physical key event. It does not decode, preserve, or assign meaning to that
 text, and stops text input immediately after the one original title hand-off.
+Leaving an interactive launcher title visit also stops host text input and
+discards that one-shot session. A later visit constructs a new boundary from
+the same verified title profile; no observed hand-off, host text state, or
+original media state is carried across visits.
 The static exit chain reaches `$1968`
 and embedded bytes at `$1884` spelling `    LOADING    2`. `$1968` loads AX=5
 and calls `$1931`; that local loop runs five times, loading AX=`$0013`, calling
@@ -3655,6 +3671,18 @@ this FAT12 edition. It never maps a Spanish UI locale onto English media or
 falls back to English if the Spanish hash is absent. When both DOS editions
 are installed, the card menu presents an explicit original-release card and
 does not select either language until the user makes that choice.
+
+### Launcher platform-card admission
+
+Platform cards are driven only by the scanner's hash-verified
+`ReleaseArchive` identities. A platform with no such identity is visibly
+unavailable and cannot advance or launch. A platform with more than one
+verified original language is marked **release selection required**: entering
+the card may reveal those immutable release cards, but the profile page and
+launch action remain unavailable until one identity is selected. A card is
+directly startable only when it has exactly one verified language identity.
+This keeps an unrecognised, incomplete, or ambiguous real-media candidate
+from becoming an implicit Atari ST (or other platform) fallback.
 
 The same selector is strict for read-only provenance inspection: `--inspect
 --game millennium --platform dos --release-language es` reports only the

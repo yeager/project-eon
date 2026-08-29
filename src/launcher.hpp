@@ -64,6 +64,18 @@ struct ParseResult {
     const std::vector<ReleaseArchive>& releases,
     Game game,
     std::optional<Platform> platform);
+
+// A platform card is an admission decision, not merely a claim that files
+// resembling a release were found.  The scanner supplies only hash-verified
+// ReleaseArchive entries here.  A card with several verified language
+// identities may be entered to choose one, but it must never start a game
+// until that choice is recorded.
+enum class PlatformCardStatus { unavailable, release_selection_required, ready };
+
+[[nodiscard]] PlatformCardStatus platform_card_status(
+    const std::vector<ReleaseArchive>& releases, Game game, Platform platform);
+[[nodiscard]] bool platform_card_selectable(PlatformCardStatus status);
+[[nodiscard]] bool platform_card_startable(PlatformCardStatus status);
 // Ordered, hash-verified platforms that can be selected for one game. This is
 // shared by the start menu and tests so a UI choice cannot silently fall back
 // to another release.

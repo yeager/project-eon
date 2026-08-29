@@ -217,6 +217,22 @@ bool release_available(
     return false;
 }
 
+PlatformCardStatus platform_card_status(
+    const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform) {
+    const auto languages = available_release_languages(releases, game, platform);
+    if (languages.empty()) return PlatformCardStatus::unavailable;
+    return languages.size() == 1 ? PlatformCardStatus::ready
+                                 : PlatformCardStatus::release_selection_required;
+}
+
+bool platform_card_selectable(const PlatformCardStatus status) {
+    return status != PlatformCardStatus::unavailable;
+}
+
+bool platform_card_startable(const PlatformCardStatus status) {
+    return status == PlatformCardStatus::ready;
+}
+
 std::vector<Platform> available_platforms(
     const std::vector<ReleaseArchive>& releases, const Game game) {
     std::vector<Platform> platforms;
