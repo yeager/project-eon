@@ -382,8 +382,13 @@ void report_platform_admission(const std::vector<eon::ReleaseArchive>& releases)
             const auto languages = eon::available_release_languages(releases, game, platform);
             const char* admission = status == eon::PlatformCardStatus::ready
                 ? "READY" : "RELEASE SELECTION REQUIRED";
+            // Admission says whether the card can proceed. Coverage is a
+            // separate preservation fact: Atari's verified route is a
+            // bootstrap, never a synonym for complete native runtime parity.
+            const char* coverage = platform == eon::Platform::atari_st
+                ? "BOOTSTRAP ONLY" : "RECOVERED PATH";
             std::cout << "PLATFORM ADMISSION  " << eon::name(game) << " / "
-                << eon::name(platform) << " / " << admission << " / "
+                << eon::name(platform) << " / " << admission << " / " << coverage << " / "
                 << languages.size() << " verified original "
                 << (languages.size() == 1 ? "language" : "languages") << '\n';
         }
@@ -4125,6 +4130,31 @@ int main(int argc, char** argv) {
                     tr("INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED."));
                 draw_text(renderer, 64, 268,
                     tr("NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."));
+                if (*active_platform == eon::Platform::amiga && millennium_amiga_session) {
+                    // These are source-range and caller-side handoff facts
+                    // from the same hash-validated session. They make the
+                    // native Amiga boundary inspectable, but do not decode
+                    // the opaque first stage or manufacture a screen.
+                    const auto& plan = millennium_amiga_session->plan();
+                    const auto& handoff = millennium_amiga_session->opaque_invocation_boundary();
+                    const auto& resident = millennium_amiga_session->resident_entry();
+                    std::ostringstream ranges;
+                    ranges << "ADF+0x" << std::hex << plan.first_stage.disk_offset
+                           << "/0x" << plan.first_stage.length << " -> RAM 0x"
+                           << plan.first_stage.destination << "; ADF+0x"
+                           << plan.resident_stage.disk_offset << "/0x"
+                           << plan.resident_stage.length << " -> RAM 0x"
+                           << plan.resident_stage.destination;
+                    draw_text(renderer, 64, 292, ranges.str());
+                    std::ostringstream entry;
+                    entry << "A3: 0x" << handoff.first_stage_invocation_address << " -> 0x"
+                          << handoff.first_stage_target << "; 0x"
+                          << handoff.resident_stage_jump_address << " -> 0x"
+                          << handoff.resident_stage_target << "; entry 0x"
+                          << resident.entry_address << " -> 0x" << resident.initializer_address
+                          << "; [0x" << resident.result_word_address << "]";
+                    draw_text(renderer, 64, 308, entry.str());
+                }
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::deuteros && active_platform
                 && *active_platform == eon::Platform::atari_st) {

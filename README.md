@@ -263,6 +263,8 @@ language can reach the profile cards; `RELEASE SELECTION REQUIRED` means the
 media is verified but an exact original edition must be chosen first. The rows
 are derived only after the full report rehashes every release, and are an
 audit of launcher availability—not native Atari ST execution or API emulation.
+Their separate coverage field says `BOOTSTRAP ONLY` for Atari ST and
+`RECOVERED PATH` elsewhere, so admission is never presented as a parity claim.
 Each verified Atari report also has a release-specific `ATARI LAUNCH BOUNDARY`:
 Millennium stops before its GEMDOS `Fopen` result and later launcher control
 flow, while Deuteros stops before protected XBIOS/callback behavior and state
