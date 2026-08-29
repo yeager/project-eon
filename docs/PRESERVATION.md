@@ -337,8 +337,10 @@ and T1/H0/S9 at `$1570` (512 bytes, SHA-256
 `096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad`).
 The latter contains the literal `MILL22B.inf` at sector-relative `$be`.
 These are physical-container provenance facts only: Project Eon performs no
-STX flattening, filesystem traversal, boot interpretation, or executable
-handoff from them.
+STX flattening, file-payload extraction, boot interpretation, or executable
+handoff from them. The sector-backed root/FAT chain validation above is a
+read-only metadata traversal, not a claim that the container has been turned
+into a flat filesystem image.
 
 ### Millennium Atari ST relocation evidence
 

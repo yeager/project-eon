@@ -63,7 +63,8 @@ saves, or supplied media. See `docs/MODERN_ASSET_PACK_FORMAT.md`.
 
 Project Eon does not distribute commercial game files. Players provide their
 own disk images or installed data. The importer fingerprints files and decodes
-platform-specific containers into one canonical resource model.
+only bounded, hash-identified resources from platform-specific containers;
+physical media such as STX remain in their original container form.
 
 | Game | DOS | Amiga | Atari ST |
 | --- | :---: | :---: | :---: |
