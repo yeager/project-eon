@@ -147,6 +147,26 @@ DeuterosAtariMediaEvidence inspect_deuteros_atari_media(
     result.image_size = image.size();
     if (image.size() != DeuterosAtariDisk::standard_size) return result;
     result.standard_protected_geometry = true;
+    const auto branch = be16(image, 0);
+    if ((branch & 0xff00U) != 0x6000U
+        || static_cast<std::uint16_t>(2U + (branch & 0x00ffU)) >= 512U) {
+        result.boot_envelope_status = DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_branch;
+        return result;
+    }
+    result.boot_branch_target = static_cast<std::uint16_t>(2U + (branch & 0x00ffU));
+    if (le16(image, 11) != 512U || image[13] != 2U || le16(image, 19) != 1440U
+        || le16(image, 24) != 9U || le16(image, 26) != 2U) {
+        result.boot_envelope_status = DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_bpb;
+        return result;
+    }
+    std::uint32_t checksum = 0;
+    for (std::size_t offset = 0; offset < 512; offset += 2) checksum += be16(image, offset);
+    result.boot_checksum = static_cast<std::uint16_t>(checksum);
+    if (result.boot_checksum != 0x1234U) {
+        result.boot_envelope_status = DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_checksum;
+        return result;
+    }
+    result.boot_envelope_status = DeuterosAtariMediaEvidence::BootEnvelopeStatus::valid;
     try {
         const DeuterosAtariDisk disk(std::vector<std::uint8_t>(image.begin(), image.end()));
         const auto& profile = disk.boot_profile();
@@ -156,8 +176,9 @@ DeuterosAtariMediaEvidence inspect_deuteros_atari_media(
         result.recovered_replicants_first_stage = profile.has_recovered_first_stage;
         result.killer_boot_signature = profile.killer_boot_signature;
     } catch (const std::runtime_error&) {
-        // Keep an unsupported 720 KiB variant as an explicit scanner result;
-        // it must never borrow another variant's boot profile.
+        // The preflight envelope is deliberately retained, but a later strict
+        // profile failure never borrows another variant's boot behaviour.
+        result.valid_boot_profile = false;
     }
     return result;
 }

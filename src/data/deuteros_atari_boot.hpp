@@ -770,7 +770,16 @@ private:
 // request. This lets the launcher diagnose every verified variant without
 // substituting the one Replicants chain used for deeper recovery.
 struct DeuterosAtariMediaEvidence {
+    enum class BootEnvelopeStatus {
+        nonstandard_geometry,
+        invalid_branch,
+        invalid_bpb,
+        invalid_checksum,
+        valid,
+    };
+
     std::size_t image_size = 0;
+    BootEnvelopeStatus boot_envelope_status = BootEnvelopeStatus::nonstandard_geometry;
     bool standard_protected_geometry = false;
     bool valid_boot_profile = false;
     std::uint16_t boot_checksum = 0;

@@ -42,6 +42,9 @@ public:
     // source address, exposed only as original palette evidence. This is not
     // a decoded title screen and does not cross graphics.library.
     [[nodiscard]] std::array<RgbColor, 16> transition_palette_evidence() const;
+    // All twenty RGB4 words copied by the separately verified local graphics
+    // setup routine. They are source-data evidence only, never a screen.
+    [[nodiscard]] std::array<RgbColor, 20> graphics_setup_palette_evidence() const;
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
 
 private:

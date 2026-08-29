@@ -1059,7 +1059,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     std::cout << "          TITLE.LIB P01-P25: " << transition.patches.size()
         << " decoded " << transition.patches.front().bitmap.width << 'x'
         << transition.patches.front().bitmap.height
-        << " patches (static order only; no timing, composition, or frame claimed)\n";
+        << " patches; record bank +0x" << std::hex << transition.source_bank_offset
+        << "+0x" << transition.source_bank_size << " SHA-256 "
+        << transition.source_bank_sha256 << std::dec
+        << " (static order/provenance only; no timing, composition, or frame claimed)\n";
     const auto ega640 = eon::extract_verified_release_asset(release,
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a");
     const auto mcga = eon::extract_verified_release_asset(release,
@@ -2220,6 +2223,9 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
     std::size_t replicants_boot_count = 0;
     std::size_t killer_boot_count = 0;
     std::size_t nonstandard_leaf_count = 0;
+    std::size_t invalid_branch_count = 0;
+    std::size_t invalid_bpb_count = 0;
+    std::size_t invalid_checksum_count = 0;
     for (const auto& asset : eon::inventory_verified_release(release)) {
         if (asset.kind != eon::AssetKind::atari_st_disk) continue;
         ++atari_leaf_count;
@@ -2231,6 +2237,20 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             continue;
         }
         ++protected_geometry_count;
+        switch (evidence.boot_envelope_status) {
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_branch:
+            ++invalid_branch_count;
+            break;
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_bpb:
+            ++invalid_bpb_count;
+            break;
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_checksum:
+            ++invalid_checksum_count;
+            break;
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::nonstandard_geometry:
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::valid:
+            break;
+        }
         if (!evidence.valid_boot_profile) continue;
         ++valid_boot_profile_count;
         if (evidence.recovered_replicants_first_stage) ++replicants_boot_count;
@@ -2240,8 +2260,9 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         << protected_geometry_count << " 720 KiB candidates, " << valid_boot_profile_count
         << " valid checksum/BPB boot profiles, " << replicants_boot_count
         << " Replicants first-stage shapes, " << killer_boot_count << " KILLER_BOOT markers, "
-        << nonstandard_leaf_count
-        << " nonstandard leaves (read-only classification; no profile substitution, FAT namespace, XBIOS, or execution)\n";
+        << nonstandard_leaf_count << " nonstandard leaves; invalid envelope branch/BPB/checksum "
+        << invalid_branch_count << "/" << invalid_bpb_count << "/" << invalid_checksum_count
+        << " (read-only classification; no profile substitution, FAT namespace, XBIOS, or execution)\n";
     std::cout << "          bounded launcher bootstrap: first/second raw stages SHA-256 "
         << live_bootstrap.first_stage_sha256() << "/"
         << live_bootstrap.second_stage_sha256()
@@ -4024,11 +4045,11 @@ int main(int argc, char** argv) {
                         tr("TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"));
                     draw_text(renderer, 64, 312,
                         tr("ORIGINAL TITLE STAGE SHA-256: ") + title_stage->original_sha256());
-                    const auto palette = title_stage->transition_palette_evidence();
+                    const auto palette = title_stage->graphics_setup_palette_evidence();
                     for (std::size_t index = 0; index < palette.size(); ++index) {
                         const auto& color = palette[index];
                         SDL_SetRenderDrawColor(renderer, color.red, color.green, color.blue, 255);
-                        const SDL_FRect swatch{560.0F + static_cast<float>(index) * 16.0F,
+                        const SDL_FRect swatch{520.0F + static_cast<float>(index) * 14.0F,
                             326.0F, 14.0F, 14.0F};
                         SDL_RenderFillRect(renderer, &swatch);
                         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
