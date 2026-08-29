@@ -764,4 +764,22 @@ private:
     DeuterosAtariBootProfile profile_;
 };
 
+// A release-neutral, read-only classification of one supplied Atari ST leaf.
+// It deliberately recognises only the protected-media boot envelope; it does
+// not interpret root bytes as files, execute the branch, or make an XBIOS
+// request. This lets the launcher diagnose every verified variant without
+// substituting the one Replicants chain used for deeper recovery.
+struct DeuterosAtariMediaEvidence {
+    std::size_t image_size = 0;
+    bool standard_protected_geometry = false;
+    bool valid_boot_profile = false;
+    std::uint16_t boot_checksum = 0;
+    std::uint16_t boot_branch_target = 0;
+    bool recovered_replicants_first_stage = false;
+    bool killer_boot_signature = false;
+};
+
+[[nodiscard]] DeuterosAtariMediaEvidence inspect_deuteros_atari_media(
+    std::span<const std::uint8_t> image);
+
 } // namespace eon

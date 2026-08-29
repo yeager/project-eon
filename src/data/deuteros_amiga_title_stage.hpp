@@ -782,6 +782,23 @@ struct DeuterosAmigaTitleResponseQueueProfile {
     std::string sha256;
 };
 
+// Controlled original-memory inputs for one nonempty response-queue pass.
+// The extra trailing byte is required because the original DBRA loop copies
+// bytes 1..20 down into positions 0..19.
+struct DeuterosAmigaTitleResponseQueueInput {
+    std::uint16_t pending_count = 0;
+    std::array<std::uint8_t, 21> bytes{};
+};
+
+// Read-only result of that one locally complete dequeue/shift operation. It
+// does not model the zero-count polling loop or write original title RAM.
+struct DeuterosAmigaTitleResponseQueueResult {
+    std::uint8_t response_low_byte = 0;
+    std::uint16_t pending_count_after = 0;
+    std::array<std::uint8_t, 21> shifted_bytes{};
+    std::uint32_t return_address = 0;
+};
+
 // Hash-locked facts from the original title callback registration and its
 // locally visible event-one/event-two routes. These record only descriptor
 // operands and caller-owned A0 offsets seen in instructions; they do not
@@ -1048,6 +1065,14 @@ parse_deuteros_amiga_title_four_pass_byte_combine_profile(
 [[nodiscard]] DeuterosAmigaTitleResponseQueueProfile
 parse_deuteros_amiga_title_response_queue_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// Models one nonempty pass after the original pending-word poll. The caller
+// explicitly supplies the original queue state; zero is rejected because the
+// original code then spins pending an unrecovered concurrent writer.
+[[nodiscard]] DeuterosAmigaTitleResponseQueueResult
+evaluate_deuteros_amiga_title_response_queue_once(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    DeuterosAmigaTitleResponseQueueInput input);
 
 [[nodiscard]] DeuterosAmigaTitleCallbackRegistrationProfile
 parse_deuteros_amiga_title_callback_registration_profile(

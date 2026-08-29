@@ -916,6 +916,25 @@ parse_deuteros_amiga_title_response_queue_profile(
     return result;
 }
 
+DeuterosAmigaTitleResponseQueueResult
+evaluate_deuteros_amiga_title_response_queue_once(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    DeuterosAmigaTitleResponseQueueInput input) {
+    const auto profile = parse_deuteros_amiga_title_response_queue_profile(disk, plan);
+    if (input.pending_count == 0) {
+        throw std::runtime_error("Deuteros title response queue is empty and would enter its polling boundary");
+    }
+    DeuterosAmigaTitleResponseQueueResult result;
+    result.response_low_byte = input.bytes[0];
+    result.pending_count_after = static_cast<std::uint16_t>(input.pending_count - 1U);
+    result.shifted_bytes = input.bytes;
+    for (std::size_t index = 0; index < profile.shift_byte_count; ++index) {
+        result.shifted_bytes[index] = input.bytes[index + 1U];
+    }
+    result.return_address = profile.return_address;
+    return result;
+}
+
 DeuterosAmigaTitleCallbackRegistrationProfile
 parse_deuteros_amiga_title_callback_registration_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {

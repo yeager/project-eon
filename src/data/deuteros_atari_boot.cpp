@@ -141,6 +141,27 @@ DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image) : image_(s
     }
 }
 
+DeuterosAtariMediaEvidence inspect_deuteros_atari_media(
+    const std::span<const std::uint8_t> image) {
+    DeuterosAtariMediaEvidence result;
+    result.image_size = image.size();
+    if (image.size() != DeuterosAtariDisk::standard_size) return result;
+    result.standard_protected_geometry = true;
+    try {
+        const DeuterosAtariDisk disk(std::vector<std::uint8_t>(image.begin(), image.end()));
+        const auto& profile = disk.boot_profile();
+        result.valid_boot_profile = true;
+        result.boot_checksum = profile.boot_checksum;
+        result.boot_branch_target = profile.boot_branch_target;
+        result.recovered_replicants_first_stage = profile.has_recovered_first_stage;
+        result.killer_boot_signature = profile.killer_boot_signature;
+    } catch (const std::runtime_error&) {
+        // Keep an unsupported 720 KiB variant as an explicit scanner result;
+        // it must never borrow another variant's boot profile.
+    }
+    return result;
+}
+
 DeuterosAtariKillerBootHandoff parse_deuteros_atari_killer_boot_handoff(
     const std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile) {
     // This is the source instruction block which makes the copy visible to

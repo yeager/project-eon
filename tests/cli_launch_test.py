@@ -680,6 +680,16 @@ def main() -> int:
                     f"{inspected.stdout}"
                 )
         if game == "deuteros" and platform == "atari-st":
+            expected_variant_census = (
+                "protected-media variant census: 11 supplied ST leaves, 10 720 KiB candidates, "
+                "9 valid checksum/BPB boot profiles, 3 Replicants first-stage shapes, "
+                "2 KILLER_BOOT markers, 1 nonstandard leaves"
+            )
+            if expected_variant_census not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Atari ST protected-media variant census did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
             expected_state1 = (
                 "Static state-1 raw-load plan: Disk 1 +0x55800 +0x5e400 "
                 "-> RAM 0xb000 in 84 original reads; SHA-256 "
