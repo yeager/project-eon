@@ -20,6 +20,12 @@ msgstr "プロジェクト・イオン"
 msgid "MODERN TITLE PACK: "
 msgstr "MODERN TITLE PACK: "
 
+msgid "MODERN ASSET PACK"
+msgstr "モダンアセットパック"
+
+msgid "CHOOSE…"
+msgstr "選択…"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ゲームを選択   |   上下: プラットフォーム   |   D: データを検査   |   F1: オリジナル / モダン   |   ESC: 終了"
 msgid "VERIFIED ORIGINAL DATA"

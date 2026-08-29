@@ -10,6 +10,12 @@ msgstr "PROJECT EON"
 msgid "MODERN TITLE PACK: "
 msgstr "MODERN TITELPAKET: "
 
+msgid "MODERN ASSET PACK"
+msgstr "MODERNT RESURSPAKET"
+
+msgid "CHOOSE…"
+msgstr "VÄLJ…"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VÄLJ SPEL   |   UPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERN   |   ESC: AVSLUTA"
 

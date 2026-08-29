@@ -43,6 +43,7 @@
 #include "platform/game_data.hpp"
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_dialog.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3_image/SDL_image.h>
 
@@ -53,6 +54,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <sstream>
 #include <span>
@@ -63,6 +65,34 @@
 #include <vector>
 
 namespace {
+
+// SDL's native file-dialog callback may run after the initiating UI event and
+// on another thread. Keep its mailbox alive for the process lifetime: the
+// callback does no renderer, media, or filesystem work, and a late OS
+// callback cannot dereference a destroyed launcher object during shutdown.
+struct ModernPackDialogMailbox {
+    std::mutex mutex;
+    std::optional<std::filesystem::path> pending_selection;
+    bool dialog_open = false;
+};
+
+ModernPackDialogMailbox& modern_pack_dialog_mailbox() {
+    static auto* mailbox = new ModernPackDialogMailbox;
+    return *mailbox;
+}
+
+void SDLCALL receive_modern_pack_dialog_selection(void* userdata,
+    const char* const* filelist, int) {
+    auto& mailbox = *static_cast<ModernPackDialogMailbox*>(userdata);
+    std::lock_guard lock(mailbox.mutex);
+    // One explicit manifest is the whole UI contract. A filter is only a
+    // convenience supplied to the native dialog; its result remains untrusted
+    // until the existing strict manifest/release/PNG validators consume it.
+    if (filelist && filelist[0] && !filelist[1]) {
+        mailbox.pending_selection = std::filesystem::path(filelist[0]);
+    }
+    mailbox.dialog_open = false;
+}
 
 [[nodiscard]] std::vector<std::uint8_t> read_save_for_inspection(
     const std::filesystem::path& path) {
@@ -241,7 +271,7 @@ constexpr std::array<const char*, 3> display_aspect_names{{
 // These renderer-space bounds are shared by drawing and touch handling.  A
 // Custom profile must remain usable on an iPad even when no hardware F10 key
 // is attached; they are Eon's own chrome, never a game input surface.
-constexpr SDL_FRect modern_graphics_popup_bounds{356, 142, 568, 430};
+constexpr SDL_FRect modern_graphics_popup_bounds{356, 112, 568, 520};
 constexpr float modern_graphics_option_first_baseline = 272.0F;
 constexpr float modern_graphics_option_stride = 42.0F;
 
@@ -438,7 +468,8 @@ SDL_FRect aspect_viewport(const float x, const float y, const float maximum_widt
 // settings are a visible opt-in control surface: every label and state name
 // must be supplied by the selected PO catalogue before it reaches the renderer.
 void draw_modern_graphics_popup(SDL_Renderer* renderer,
-    const ModernGraphicsSettings& settings, const eon::Translator& translator) {
+    const ModernGraphicsSettings& settings, const bool modern_pack_selected,
+    const eon::Translator& translator) {
     const auto tr = [&translator](const std::string_view message) {
         return std::string(translator.translate(message));
     };
@@ -451,17 +482,19 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN GRAPHICS SETTINGS"));
     draw_text(renderer, 390, 212, tr("UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"));
     draw_text(renderer, 390, 232, tr("TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"));
-    constexpr std::array<const char*, 6> names{{
+    constexpr std::array<const char*, 7> names{{
         "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
+        "MODERN ASSET PACK",
     }};
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::string, 6> values{{
+    const std::array<std::string, 7> values{{
         std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
         tr(display_aspect_names.at(settings.aspect_ratio_index)),
         tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)"),
         tr(settings.smooth_scaling ? "ON" : "OFF"),
         tr(settings.scanlines ? "ON" : "OFF"),
         tr(settings.frame ? "ON" : "OFF"),
+        tr(modern_pack_selected ? "ON" : "CHOOSE…"),
     }};
     for (std::size_t index = 0; index < names.size(); ++index) {
         SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(settings.focused_option)
@@ -474,7 +507,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
             + static_cast<float>(index) * modern_graphics_option_stride, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 546, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
+    draw_text(renderer, 390, 588, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -3130,6 +3163,11 @@ int main(int argc, char** argv) {
     }
     auto millennium_assets = load_millennium_launch_assets(releases, active_platform,
         active_release_language);
+    // The command-line path is an initial explicit selection, not a mutable
+    // request object. Custom's native picker may replace this session-local
+    // candidate before launch; neither route has a default pack location.
+    std::optional<std::filesystem::path> selected_modern_pack_manifest =
+        request.modern_pack_manifest;
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -3229,7 +3267,7 @@ int main(int argc, char** argv) {
     const auto load_deuteros_external_modern_sequence = [&] {
         if (deuteros_external_modern_attempted) return;
         deuteros_external_modern_attempted = true;
-        if (!deuteros_opening || !request.modern_pack_manifest
+        if (!deuteros_opening || !selected_modern_pack_manifest
             || request.presentation != eon::Presentation::modern
             || active_platform != eon::Platform::amiga || !active_release_language
             || *active_release_language != "en") return;
@@ -3240,7 +3278,7 @@ int main(int argc, char** argv) {
         if (release == releases.end()) return;
         try {
             deuteros_external_modern_sequence = eon::load_deuteros_amiga_held_opening_modern_sequence(
-                *request.modern_pack_manifest, release->sha256);
+                *selected_modern_pack_manifest, release->sha256);
         } catch (const std::exception& error) {
             std::cerr << "Modern Deuteros opening pack not used: " << error.what() << '\n';
             deuteros_external_modern_sequence.reset();
@@ -3369,7 +3407,7 @@ int main(int argc, char** argv) {
             create_millennium_textures();
         }
         if (!millennium_assets || millennium_assets->language != "en"
-            || millennium_external_modern_attempted || !request.modern_pack_manifest
+            || millennium_external_modern_attempted || !selected_modern_pack_manifest
             || request.presentation != eon::Presentation::modern
             || active_platform != eon::Platform::dos) return;
         millennium_external_modern_attempted = true;
@@ -3380,7 +3418,7 @@ int main(int argc, char** argv) {
         if (release == releases.end()) return;
         try {
             millennium_external_modern_surface = eon::load_millennium_dos_title_modern_surface(
-                *request.modern_pack_manifest, release->sha256);
+                *selected_modern_pack_manifest, release->sha256);
             const auto& surface = *millennium_external_modern_surface;
             SDL_IOStream* stream = SDL_IOFromConstMem(surface.png.data(), surface.png.size());
             if (!stream) throw std::runtime_error("Unable to open Modern title PNG bytes: " + std::string(SDL_GetError()));
@@ -3613,6 +3651,24 @@ int main(int argc, char** argv) {
     ModernGraphicsSettings modern_graphics_settings;
     modern_graphics_settings.output_resolution_index = output_resolution_index_for(request.display);
     modern_graphics_settings.aspect_ratio_index = request.display.aspect_ratio_index;
+    const auto open_modern_pack_dialog = [&] {
+        // Changing an art candidate is allowed only before Custom launches a
+        // session. Once a recovered VM/title session is active, its external
+        // presentation is fixed for that session just like the CLI route.
+        if (screen != Screen::menu || launcher_page != LauncherPage::profiles
+            || focused_profile_card != 2 || custom_profile_ready) return;
+        auto& mailbox = modern_pack_dialog_mailbox();
+        {
+            std::lock_guard lock(mailbox.mutex);
+            if (mailbox.dialog_open) return;
+            mailbox.dialog_open = true;
+        }
+        static const SDL_DialogFileFilter filters[] = {{"Modern asset pack", "eonmodern"}};
+        // A null initial location deliberately avoids default-directory
+        // lookup, creation, persistence, or background pack discovery.
+        SDL_ShowOpenFileDialog(receive_modern_pack_dialog_selection, &mailbox, window,
+            filters, 1, nullptr, false);
+    };
     const auto cycle_output_resolution = [&](const int direction) {
         const auto count = output_resolutions.size();
         const auto current = modern_graphics_settings.output_resolution_index;
@@ -3634,7 +3690,8 @@ int main(int argc, char** argv) {
         case 2: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction; break;
         case 3: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
         case 4: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
-        default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+        case 5: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+        default: open_modern_pack_dialog(); break;
         }
     };
     const auto close_modern_graphics_settings = [&] {
@@ -3644,6 +3701,20 @@ int main(int argc, char** argv) {
     };
     bool running = true;
     while (running) {
+        // SDL may call the dialog callback on another thread. Consume its
+        // one explicit candidate only while the same unlaunched Custom modal
+        // remains active; a late callback can never alter an active session.
+        {
+            auto& mailbox = modern_pack_dialog_mailbox();
+            std::lock_guard lock(mailbox.mutex);
+            if (mailbox.pending_selection) {
+                if (screen == Screen::menu && launcher_page == LauncherPage::profiles
+                    && focused_profile_card == 2 && !custom_profile_ready) {
+                    selected_modern_pack_manifest = std::move(*mailbox.pending_selection);
+                }
+                mailbox.pending_selection.reset();
+            }
+        }
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) running = false;
@@ -3671,10 +3742,10 @@ int main(int argc, char** argv) {
                         close_modern_graphics_settings();
                     } else if (event.key.key == SDLK_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 5) % 6;
+                            (modern_graphics_settings.focused_option + 6) % 7;
                     } else if (event.key.key == SDLK_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 6;
+                            (modern_graphics_settings.focused_option + 1) % 7;
                     } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
                         change_modern_graphics_option(event.key.key == SDLK_LEFT ? -1 : 1);
                     }
@@ -3683,10 +3754,10 @@ int main(int argc, char** argv) {
                         close_modern_graphics_settings();
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 5) % 6;
+                            (modern_graphics_settings.focused_option + 6) % 7;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 6;
+                            (modern_graphics_settings.focused_option + 1) % 7;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
                         || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
                         change_modern_graphics_option(
@@ -3711,7 +3782,7 @@ int main(int argc, char** argv) {
                         const auto first_row_top = modern_graphics_option_first_baseline - 22.0F;
                         const auto row = static_cast<int>((y - first_row_top)
                             / modern_graphics_option_stride);
-                        if (row >= 0 && row < 6) {
+                        if (row >= 0 && row < 7) {
                             modern_graphics_settings.focused_option = row;
                             change_modern_graphics_option(1);
                         }
@@ -4455,7 +4526,10 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             }
         }
-        if (show_modern_graphics_settings) draw_modern_graphics_popup(renderer, modern_graphics_settings, translator);
+        if (show_modern_graphics_settings) {
+            draw_modern_graphics_popup(renderer, modern_graphics_settings,
+                selected_modern_pack_manifest.has_value(), translator);
+        }
         SDL_RenderPresent(renderer);
     }
 
