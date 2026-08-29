@@ -898,6 +898,15 @@ SHA-256 `1f8bdb0e61454fef9acb0dc3abcf7bfed2621828937380b415ab85d4f57ef143`:
 these literal operations but does not emulate XBIOS, supply a callback frame,
 or infer what frame or return path that ABI would establish.
 
+The 20 original bytes immediately after that `TRAP #14`, at track-2 `+$de`,
+are SHA-256 `ed326a1d22a28ce5646b242c947c5120cb0855d6d05080e35ce398d48d459f56`.
+They read longword `$25f4`, compare it with literal `$00071100`, then use
+`BEQ.S +8` to join at `+$f2`; the not-equal route contains `BSR.W +$714`
+and `BSR.W +$1032`, resolving from their extension words to `+$800` and
+`+$1122`. This is deliberately recorded as a post-service control gate, not
+as an XBIOS or callback return value: the read is a distinct RAM location and
+neither its provenance nor either subroutine's effect has been recovered.
+
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its
@@ -1276,14 +1285,18 @@ non-`$43` response returns to `$40574`. A `$43` response XORs `$1bf36` with
 hash-locked machine-write trace only: it neither calls the helper nor writes
 the custom chip, and it leaves the unrecovered nonzero-state route unmodeled.
 
-The same `$4069a` routine has a bounded, verified return phase. It reads and
-compares words at `$1ffc8`, `$1ffce`, and `$1ffd4`; on its original branch it
-supplies `$12e12`, `$1ffda`, and `$1ffe6` to vector `-$1a4` and stores the last
-address in `$2008e`. It subsequently clears `$202c6`, invokes `-$c0` with
-`$12e12`, `$1ed24`, and count 16, restores the saved `$202b8` word from the
-stack, and returns at `$4077c`. The parser opcode-validates every fact here;
-the addresses are preserved as raw machine-state boundaries rather than named
-as a presumed menu, fade, or gameplay subsystem.
+The same `$4069a` routine has a bounded, verified two-call return phase. Its
+first `-$1a4` setup supplies `$12e12`, `$1ffda`, and `$20056`, then stores the
+third address in `$2008e`. On return it snapshots words `$1ffc8`, `$1ffce`,
+and `$1ffd4`; while all three still compare equal, the original tight branch
+loops at `$4071a`. The bytes do not identify a concurrent writer or permit
+Project Eon to provide one. When a comparison differs, the second `-$1a4`
+setup instead supplies `$12e12`, `$1ffda`, and `$1ffe6` and again stores its
+third address in `$2008e`. The routine subsequently clears `$202c6`, invokes
+`-$c0` with `$12e12`, `$1ed24`, and count 16, restores the saved `$202b8` word
+from the stack, and returns at `$4077c`. The parser opcode-validates every
+fact here; the addresses are preserved as raw machine-state boundaries rather
+than named as a presumed menu, fade, or gameplay subsystem.
 
 ### Deuteros Amiga post-transition control loop
 

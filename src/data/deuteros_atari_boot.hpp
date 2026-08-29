@@ -242,6 +242,34 @@ struct DeuterosAtariSupervisorCallbackProfile {
 [[nodiscard]] DeuterosAtariSupervisorCallbackProfile parse_deuteros_atari_supervisor_callback(
     std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage);
 
+// The copied dispatcher has a byte-proven continuation immediately following
+// the callback's TRAP #14. It reads a distinct RAM longword, compares it to a
+// literal, and conditionally skips two local BSR.Ws. This does not establish
+// a TRAP result, callback frame, or either subroutine's effect.
+struct DeuterosAtariSupervisorCallbackContinuation {
+    std::size_t continuation_offset = 0;
+    std::size_t continuation_bytes = 0;
+    std::string continuation_sha256;
+    std::uint16_t ram_read_opcode = 0;
+    std::uint16_t ram_word_address = 0;
+    std::uint16_t compare_opcode = 0;
+    std::uint32_t compare_immediate = 0;
+    std::uint16_t branch_opcode = 0;
+    std::int8_t branch_displacement = 0;
+    std::size_t branch_target_offset = 0;
+    std::uint16_t first_bsr_opcode = 0;
+    std::int16_t first_bsr_displacement = 0;
+    std::size_t first_bsr_target_offset = 0;
+    std::uint16_t second_bsr_opcode = 0;
+    std::int16_t second_bsr_displacement = 0;
+    std::size_t second_bsr_target_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariSupervisorCallbackContinuation
+parse_deuteros_atari_supervisor_callback_continuation(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariSupervisorCallbackProfile& callback);
+
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is
 // known to enter the duplicate at its `$13200` load address.
