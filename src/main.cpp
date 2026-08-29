@@ -1659,6 +1659,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)));
     const auto config_load_address_boundary = eon::parse_millennium_atari_fread_config_load_address_boundary(
         fread_config_transfer, disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
+    const auto fread_mapped_config_prelude = eon::parse_millennium_atari_fread_mapped_config_prelude(
+        fread_config_transfer, disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_trap_argument_strings = eon::parse_millennium_atari_config_trap_argument_strings(
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_first_jsr = eon::parse_millennium_atari_config_first_jsr(
@@ -1803,6 +1805,16 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_load_address_boundary.independent_entry_offset_delta << "; SHA-256 "
         << config_load_address_boundary.payload_initial_jump_sha256 << std::dec
         << "; unresolved native load-address boundary, no mapping or execution inferred)\n";
+    std::cout << "          conditional Fread-mapped config prelude: 0x" << std::hex
+        << fread_mapped_config_prelude.mapped_entry_address << " = file +0x"
+        << fread_mapped_config_prelude.mapped_entry_file_offset << " (" << std::dec
+        << fread_mapped_config_prelude.byte_count << " bytes; SHA-256 "
+        << fread_mapped_config_prelude.sha256 << "), branch -> 0x" << std::hex
+        << fread_mapped_config_prelude.conditional_branch_target_address << ", converged JSR 0x"
+        << fread_mapped_config_prelude.converged_jsr_address << " -> 0x"
+        << fread_mapped_config_prelude.converged_jsr_target_address << ", fall-through 0x"
+        << fread_mapped_config_prelude.continuation_address << std::dec
+        << " (conditional bytes only; no GEMDOS return, branch, JSR, or platform state supplied)\n";
     std::cout << "          second literal TRAP argument: 0x" << std::hex
         << config_trap_argument_strings.argument_address << " (file +0x"
         << config_trap_argument_strings.file_offset << ") = "

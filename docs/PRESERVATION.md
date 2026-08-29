@@ -226,9 +226,11 @@ The generic external reference-trace validator remains v1 provenance and
 ordering evidence. Its optional v2 `millennium-dos-en-startup-v1` adapter is
 the first deliberately narrow semantic schema: it accepts only the clean
 English DOS outer archive and only declared observations of the already
-byte-locked `MILL.COM`/`TITLES.EXE` startup sites. The accepted set is the
+byte-locked `MILL.COM`/`TITLES.EXE`/`2200AD.EXE` startup sites. The accepted set is the
 `MILL.COM` raw `INT 21h` vector request at `$0209`, title wrapper `INT 91h` at
-`$0127`, title input poll and exit sites, the `$02cf` video-driver-load
+`$0127`, the `2200AD.EXE` entry's first private-wrapper `INT 91h` at `$0124`
+with its literal `AX=$001f`, `ES=CS`, and `BX=$d19e` setup, title input poll
+and exit sites, the `$02cf` video-driver-load
 boundary, and `$0337` DOS EXEC request for `TITLES.EXE` or `2200AD.EXE`.
 
 The adapter validates literal image names, loaded addresses, operands and
@@ -521,6 +523,19 @@ longword argument, then `TRAP #14` with selector `0x06` and longword
 sequence in the original FAT chain and reports the control facts. It does not
 name or emulate trap effects, execute the JSRs, synthesize a configuration,
 or write any disk data.
+
+The preceding loader bytes independently name an Fread destination of `$2a500`
+and then encode `JSR $2a500`; neither GEMDOS call is invoked by Project Eon.
+Conditionally, if that native Fread returned with original file byte zero at
+the literal destination, the supplied leading `JMP $2aa88` maps to file
+`+$588`, rather than the separately bounded `+$5aa` candidate block. The
+intervening 34-byte original prefix `$2aa88..$2aaa9` (file `+$588..+$5a9`,
+SHA-256 `dede20eddbd8015da1d1a4f2f5e53424c2bc2195bff238d830ea24c9f522ea59`)
+has an SR-dependent branch to `$2aaa4`; both local paths converge at `JSR
+$2a51c`, and its return site falls through to `$2aaaa` / file `+$5aa`.
+This establishes a conditional byte/address relationship only. Project Eon
+does not make Fread return, choose the SR branch, execute the JSR, write its
+memory operands, or infer display, input, or firmware effects.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
 is assigned to it. At runtime address `0x2a612` (file `+0x134`) the exact 24

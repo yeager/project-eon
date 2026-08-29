@@ -62,6 +62,12 @@ bool schema_matches(const std::string_view type,
                    {"int", "0x21"}, {"ax", "0x2591"}, {"dx", "0x0000"}})
             || fields_equal(fields, {{"image", "titles.exe"}, {"pc", "0x0127"},
                    {"int", "0x91"}, {"ax", "0x0000"}, {"es", "cs"}, {"bx", "0x1ac4"}})
+            // 2200AD.EXE is a flat COM-style image. Its byte-locked entry
+            // loads these registers immediately before its first call reaches
+            // the same private wrapper at $0124. This still says nothing
+            // about the interrupt's ABI, result, or whether it returns.
+            || fields_equal(fields, {{"image", "2200ad.exe"}, {"pc", "0x0124"},
+                   {"int", "0x91"}, {"ax", "0x001f"}, {"es", "cs"}, {"bx", "0xd19e"}})
             || fields_equal(fields, {{"image", "titles.exe"}, {"pc", "0x0d0a"},
                    {"int", "0x21"}, {"ah", "0x06"}, {"dl", "0xff"}})
             || fields_equal(fields, {{"image", "titles.exe"}, {"pc", "0x1a12"},
