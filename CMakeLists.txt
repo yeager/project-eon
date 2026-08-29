@@ -123,6 +123,7 @@ add_executable(project-eon
     src/data/millennium_dos_gameplay_screen.cpp
     src/data/millennium_dos_last_screen.cpp
     src/data/millennium_save_comparison.cpp
+    src/data/modern_asset_pack.cpp
     src/data/modern_pixel_reconstruction.cpp
     src/data/millennium_dos_lib.cpp
     src/data/millennium_dos_title_flow.cpp
@@ -130,6 +131,7 @@ add_executable(project-eon
     src/data/millennium_dos_title_transition.cpp
     src/data/millennium_dos_video_driver.cpp
     src/data/millennium_dos_sound_driver.cpp
+    src/data/millennium_dos_reference_trace.cpp
     src/data/millennium_amiga_loader.cpp
     src/data/reference_trace.cpp
     src/data/recovery_map.cpp
@@ -267,6 +269,7 @@ if(BUILD_TESTING)
         src/data/millennium_dos_gameplay_screen.cpp
         src/data/millennium_dos_last_screen.cpp
         src/data/millennium_save_comparison.cpp
+        src/data/modern_asset_pack.cpp
         src/data/modern_pixel_reconstruction.cpp
         src/data/millennium_dos_lib.cpp
         src/data/millennium_dos_title_flow.cpp
@@ -274,6 +277,7 @@ if(BUILD_TESTING)
         src/data/millennium_dos_title_transition.cpp
         src/data/millennium_dos_video_driver.cpp
         src/data/millennium_dos_sound_driver.cpp
+        src/data/millennium_dos_reference_trace.cpp
         src/data/millennium_amiga_loader.cpp
         src/data/reference_trace.cpp
         src/data/recovery_map.cpp

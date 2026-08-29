@@ -34,7 +34,9 @@
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
+#include "data/millennium_dos_reference_trace.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
+#include "data/modern_asset_pack.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -46,6 +48,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
@@ -525,9 +528,76 @@ void assert_deuteros_amiga_post_exec_third_service(const std::vector<std::uint8_
     }
 }
 
+void assert_modern_asset_pack_admission() {
+    const auto nonce = std::to_string(
+        std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    const auto root = std::filesystem::temp_directory_path() / ("project-eon-modern-pack-" + nonce);
+    const auto pack_root = root / "independent-title";
+    const auto textures = pack_root / "textures";
+    std::filesystem::create_directories(textures);
+    const auto asset = textures / "title.rgba";
+    {
+        std::ofstream output(asset, std::ios::binary);
+        output << "abc";
+    }
+    {
+        std::ofstream output(pack_root / "pack.eonmodern", std::ios::binary);
+        output << "schema\tproject-eon.modern-asset-pack/v1\n"
+               << "id\tindependent-title\n"
+               << "version\t1.0.0\n"
+               << "license\tCC0-1.0\n"
+               << "provenance\tindependently-created\n"
+               << "game\tmillennium\n"
+               << "platform\tdos\n"
+               << "source_release_sha256\te6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123\n"
+               << "asset\tmillennium.dos.title textures/title.rgba 3 "
+                  "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\n";
+    }
+    const auto discovered = eon::discover_modern_asset_packs(root);
+    assert(discovered.size() == 1);
+    assert(discovered.front().accepted());
+    assert(discovered.front().pack.id == "independent-title");
+    assert(discovered.front().pack.assets.size() == 1);
+    assert(discovered.front().pack.assets.front().path == asset);
+
+    // A pack remains inadmissible when declared bytes change after discovery.
+    {
+        std::ofstream output(asset, std::ios::binary | std::ios::trunc);
+        output << "abd";
+    }
+    const auto changed = eon::validate_modern_asset_pack(pack_root / "pack.eonmodern");
+    assert(!changed.accepted());
+    assert(!changed.error.empty());
+    std::filesystem::remove_all(root);
+}
+
 } // namespace
 
 int main() {
+    // These synthetic strings exercise only the strict external-record
+    // grammar. They are not game data or a capture fixture and never invoke
+    // a DOS service, alter media, or advance a game session.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 10 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000\n"
+            "event\t2 20 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin\n"
+            "event\t3 30 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=titles.exe\n"
+            "event\t4 40 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n";
+        eon::MillenniumDosEnglishReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_millennium_dos_english_reference_events(
+            valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 4 && diagnostics.interrupt_count == 2
+            && diagnostics.file_count == 1 && diagnostics.exec_count == 1);
+        assert(!eon::validate_millennium_dos_english_reference_events(
+            "event\t1 10 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0001\n",
+            diagnostics, trace_error));
+        assert(!eon::validate_millennium_dos_english_reference_events(
+            "event\t1 10 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=titles.exe\n"
+            "event\t1 20 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=2200ad.exe\n",
+            diagnostics, trace_error));
+    }
+    assert_modern_asset_pack_admission();
     // Modern Scale2x is a renderer-only, in-memory reconstruction. This
     // asymmetric pattern proves it is not merely a texture filtering mode and
     // that it cannot write through its input span.

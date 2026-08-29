@@ -1,5 +1,6 @@
 #include "data/reference_trace.hpp"
 
+#include "data/millennium_dos_reference_trace.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -253,6 +254,49 @@ bool validate_events(const std::filesystem::path& path, const std::uintmax_t exp
     return true;
 }
 
+bool validate_millennium_dos_english_events(const std::filesystem::path& path,
+                                             const std::uintmax_t expected_size,
+                                             const std::string_view expected_sha256,
+                                             MillenniumDosEnglishReferenceTraceDiagnostics& diagnostics,
+                                             std::string& error) {
+    std::uintmax_t observed_size = 0;
+    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
+    if (observed_size != expected_size) {
+        error = "Reference trace events size does not match its manifest";
+        return false;
+    }
+    try {
+        if (to_hex(sha256_file(path)) != expected_sha256) {
+            error = "Reference trace events SHA-256 does not match its manifest";
+            return false;
+        }
+    } catch (const std::exception&) {
+        error = "Unable to hash reference trace events";
+        return false;
+    }
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) {
+        error = "Unable to read reference trace events";
+        return false;
+    }
+    std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    if (!stream.eof()) {
+        error = "Unable to read reference trace events";
+        return false;
+    }
+    if (!validate_millennium_dos_english_reference_events(contents, diagnostics, error)) return false;
+    try {
+        if (to_hex(sha256_file(path)) != expected_sha256) {
+            error = "Reference trace events changed while it was being validated";
+            return false;
+        }
+    } catch (const std::exception&) {
+        error = "Unable to rehash reference trace events";
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 ReferenceTraceValidation validate_reference_trace(
@@ -266,18 +310,29 @@ ReferenceTraceValidation validate_reference_trace(
     std::map<std::string, std::string> fields;
     std::string error;
     if (!parse_key_value_file(manifest_path, maximum_manifest_size, fields, error)) return {{}, error};
-    constexpr std::array required_fields{
+    constexpr std::array v1_required_fields{
         "format", "event_file", "event_size", "event_sha256", "game", "platform", "language",
         "source_release_sha256", "source_release_size", "capture_start_utc", "capture_end_utc",
         "emulator_name", "emulator_version", "emulator_sha256", "config_sha256",
         "command_tail_sha256", "input_timeline_sha256"};
-    if (fields.size() != required_fields.size()) {
+    constexpr std::array v2_required_fields{
+        "format", "adapter", "event_file", "event_size", "event_sha256", "game", "platform", "language",
+        "source_release_sha256", "source_release_size", "capture_start_utc", "capture_end_utc",
+        "emulator_name", "emulator_version", "emulator_sha256", "config_sha256",
+        "command_tail_sha256", "input_timeline_sha256"};
+    const bool v1 = fields.contains("format") && fields.at("format") == "project-eon-reference-trace-v1";
+    const auto manifest_has_exact_fields = [&fields](const auto& required) {
+        if (fields.size() != required.size()) return false;
+        return std::all_of(required.begin(), required.end(), [&fields](const auto field) {
+            return fields.contains(field);
+        });
+    };
+    if (!(v1 ? manifest_has_exact_fields(v1_required_fields)
+             : manifest_has_exact_fields(v2_required_fields))) {
         return {{}, "Reference trace manifest has unknown or missing fields"};
     }
-    for (const auto field : required_fields) {
-        if (!fields.contains(field)) return {{}, "Reference trace manifest has unknown or missing fields"};
-    }
-    if (fields.at("format") != "project-eon-reference-trace-v1"
+    if ((!v1 && (fields.at("format") != "project-eon-reference-trace-v2"
+            || fields.at("adapter") != "millennium-dos-en-startup-v1"))
         || !basename_only(fields.at("event_file"))
         || !lowercase_sha256(fields.at("event_sha256"))
         || !lowercase_sha256(fields.at("source_release_sha256"))
@@ -288,7 +343,7 @@ ReferenceTraceValidation validate_reference_trace(
         || !utc_timestamp(fields.at("capture_start_utc"))
         || !utc_timestamp(fields.at("capture_end_utc"))
         || fields.at("capture_end_utc") < fields.at("capture_start_utc")) {
-        return {{}, "Reference trace manifest has invalid v1 values"};
+        return {{}, "Reference trace manifest has invalid versioned values"};
     }
     const auto game = game_from_trace(fields.at("game"));
     const auto platform = platform_from_trace(fields.at("platform"));
@@ -313,6 +368,11 @@ ReferenceTraceValidation validate_reference_trace(
     if (source == releases.end()) {
         return {{}, "Reference trace source release is not a recognised supplied archive"};
     }
+    if (!v1 && (source->game != Game::millennium || source->platform != Platform::dos
+            || source->language != "en"
+            || source->sha256 != "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123")) {
+        return {{}, "Reference trace adapter does not match the clean English Millennium DOS release"};
+    }
     try {
         if (to_hex(sha256_file(source->path)) != source->sha256) {
             return {{}, "Reference trace source release changed after the provenance scan"};
@@ -326,13 +386,20 @@ ReferenceTraceValidation validate_reference_trace(
         return {{}, "Reference trace events must be a distinct .eontrace sibling"};
     }
     std::size_t event_count = 0;
-    if (!validate_events(events_path, event_size, fields.at("event_sha256"), event_count, error)) {
+    MillenniumDosEnglishReferenceTraceDiagnostics diagnostics;
+    const bool events_valid = v1
+        ? validate_events(events_path, event_size, fields.at("event_sha256"), event_count, error)
+        : validate_millennium_dos_english_events(events_path, event_size, fields.at("event_sha256"),
+            diagnostics, error);
+    if (!events_valid) {
         return {{}, error};
     }
+    if (!v1) event_count = diagnostics.event_count;
     return {ReferenceTrace{manifest_path, events_path, *source,
         fields.at("capture_start_utc"), fields.at("capture_end_utc"), fields.at("emulator_name"),
-        fields.at("emulator_version"), fields.at("emulator_sha256"), event_count, event_size,
-        fields.at("event_sha256")}, {}};
+        fields.at("emulator_version"), fields.at("emulator_sha256"), fields.at("format"),
+        v1 ? "" : fields.at("adapter"), event_count, event_size, fields.at("event_sha256"),
+        diagnostics.interrupt_count, diagnostics.file_count, diagnostics.exec_count}, {}};
 }
 
 } // namespace eon

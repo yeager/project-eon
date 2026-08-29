@@ -46,6 +46,26 @@ versioned, user-controlled cache contract is added; it must never be written
 into, beside, or in place of supplied game media. Project Eon does not commit,
 package, or redistribute original pixels or unlicensed derivatives.
 
+### External Modern asset-pack admission
+
+`modern_asset_pack` implements a read-only, opt-in admission boundary for a
+future separately installed high-resolution art layer. It discovers only
+direct children of a user-selected root and validates `pack.eonmodern` without
+creating a directory, following a symlink, traversing recursively, unpacking
+an archive, or selecting any asset for rendering. The manifest binds one
+declared game/platform to one exact compiled release SHA-256 and binds every
+external asset to a safe relative path, byte count, and SHA-256. Thus an
+unrelated file, a path traversal, a changed file, or an asset for another
+edition cannot become a Modern substitute merely by name.
+
+The two permitted provenance declarations are `independently-created` and
+`licensed-derivative`; they record the provider's legal claim, not a legal
+finding by Eon. No packs are shipped or accepted as proof of original
+behaviour. V1 reports admission eligibility only—there is no decode, texture,
+asset mapping, save access, or game-logic hook. The precise syntax and future
+integration requirements are recorded in
+[`MODERN_ASSET_PACK_FORMAT.md`](MODERN_ASSET_PACK_FORMAT.md).
+
 ### Transient Scale2x pixel reconstruction (Modern)
 
 The current Modern path provides a deterministic, edge-aware RGBA **Scale2x**
@@ -190,6 +210,25 @@ The map is evidence-neutral between Project Eon's modes. Original mode uses it
 only to identify proven source boundaries. Opt-in Modern presentation may
 display the same diagnostics, but gains no authority to alter original media,
 saves, or recovered game logic from a map entry.
+
+### English Millennium DOS reference-trace adapter
+
+The generic external reference-trace validator remains v1 provenance and
+ordering evidence. Its optional v2 `millennium-dos-en-startup-v1` adapter is
+the first deliberately narrow semantic schema: it accepts only the clean
+English DOS outer archive and only declared observations of the already
+byte-locked `MILL.COM`/`TITLES.EXE` startup sites. The accepted set is the
+`MILL.COM` raw `INT 21h` vector request at `$0209`, title wrapper `INT 91h` at
+`$0127`, title input poll and exit sites, the `$02cf` video-driver-load
+boundary, and `$0337` DOS EXEC request for `TITLES.EXE` or `2200AD.EXE`.
+
+The adapter validates literal image names, loaded addresses, operands and
+declared target names only after the normal external event-file hash and full
+outer-release rehash. It reports counts as diagnostics. It never invokes an
+interrupt, opens/loads a driver, selects a driver, performs EXEC, supplies a
+result/carry flag/register, replays a trace, or changes original media, saves,
+or runtime state. This keeps recorded observation useful for preservation
+without promoting an external capture into an emulator or synthetic game path.
 
 ### Stable evidence anchors
 
