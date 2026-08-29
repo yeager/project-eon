@@ -2190,6 +2190,60 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
         std::string(caller_hash), std::string(routine_hash)};
 }
 
+DeuterosAmigaTitlePostExecTailFlagGateCopyCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_flag_gate_copy_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // `$40638` and `$40662` both contain the same absolute JSR to `$1f238`.
+    // Bind each caller independently and retain the full local routine through
+    // RTS.  Its branch and its move/DBRA delay loop depend wholly on original RAM.
+    constexpr std::array<std::uint32_t, 2> caller_addresses{{0x40638, 0x40662}};
+    constexpr std::uint32_t entry_address = 0x1f238;
+    constexpr std::array<std::uint8_t, 6> caller_bytes{{
+        0x4e, 0xb9, 0x00, 0x01, 0xf2, 0x38,
+    }};
+    constexpr std::array<std::uint8_t, 34> routine_bytes{{
+        0x30, 0x39, 0x00, 0x01, 0xee, 0xd6, 0x67, 0x18,
+        0x20, 0x7c, 0x00, 0x01, 0xee, 0xc0, 0x22, 0x48,
+        0x10, 0x18, 0x72, 0x13, 0x12, 0xd8, 0x51, 0xc9,
+        0xff, 0xfc, 0x53, 0x79, 0x00, 0x01, 0xee, 0xd6,
+        0x4e, 0x75,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash =
+        "88e2b3531aa5cb582d1ed1a672f9a524c89cbdf572c7a7d77c8cc7f4e6db695d";
+    constexpr std::string_view routine_hash =
+        "9c0ffcff9d88feedca2b8079b14f5a32fb51dac94bee60e1c477c746e7c6c4f0";
+    const auto& stage = plan.title_stage;
+    const auto contains = [&stage](std::uint32_t address, std::size_t length) {
+        return address >= stage.destination && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (stage.length == 0 || !contains(caller_addresses[0], caller_bytes.size())
+        || !contains(caller_addresses[1], caller_bytes.size())
+        || !contains(entry_address, routine_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec tail flag-gate copy callee lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto first_caller = stage_bytes.subspan(caller_addresses[0] - stage.destination, caller_bytes.size());
+    const auto second_caller = stage_bytes.subspan(caller_addresses[1] - stage.destination, caller_bytes.size());
+    const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(caller_bytes.begin(), caller_bytes.end(), first_caller.begin())
+        || !std::equal(caller_bytes.begin(), caller_bytes.end(), second_caller.begin())
+        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || to_hex(sha256(first_caller)) != caller_hash
+        || to_hex(sha256(second_caller)) != caller_hash
+        || to_hex(sha256(routine)) != routine_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec tail flag-gate copy-callee profile");
+    }
+    return {caller_addresses, {{caller_addresses[0] + 6U, caller_addresses[1] + 6U}},
+        entry_address, 0x1eed6, entry_address + 26U, 0x1eec0, 0x1eec0,
+        1, 0x13, entry_address + 20U, entry_address + 22U, entry_address + 22U,
+        entry_address + 26U, entry_address + 34U,
+        std::string(caller_hash), std::string(routine_hash)};
+}
+
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     // $37f56 reaches this copy only if the two preceding original calls

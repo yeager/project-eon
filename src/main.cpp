@@ -107,6 +107,14 @@ constexpr std::array<const char*, 3> display_aspect_names{{
     "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",
 }};
 
+std::size_t output_resolution_index_for(const eon::DisplayPreferences& display) {
+    for (std::size_t index = 0; index < output_resolutions.size(); ++index) {
+        if (output_resolutions[index].width == display.width
+            && output_resolutions[index].height == display.height) return index;
+    }
+    throw std::runtime_error("Unsupported validated display resolution");
+}
+
 // These data products come from the same verified English DOS archive. The
 // title is launchable; GX remains read-only inspection evidence because the
 // console poll proves neither the DOS return nor 2200AD startup.
@@ -594,6 +602,20 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << post_exec_tail_flag_gate_first_callee.first_loop_word_address
         << ", RTS 0x" << post_exec_tail_flag_gate_first_callee.terminal_return_address
         << " (cell values and loop execution unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_flag_gate_copy_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_copy_callee_profile(disk, plan);
+    std::cout << "          Flag-gate copy callee: JSR 0x" << std::hex
+        << post_exec_tail_flag_gate_copy_callee.caller_addresses[0] << "/0x"
+        << post_exec_tail_flag_gate_copy_callee.caller_addresses[1] << " -> 0x"
+        << post_exec_tail_flag_gate_copy_callee.entry_address << "; 0x"
+        << post_exec_tail_flag_gate_copy_callee.transferred_byte_count << " byte 0x"
+        << post_exec_tail_flag_gate_copy_callee.source_address << " -> 0x"
+        << post_exec_tail_flag_gate_copy_callee.destination_address << ", D1 loop 0x"
+        << static_cast<unsigned>(post_exec_tail_flag_gate_copy_callee.delay_loop_counter)
+        << ", gate 0x"
+        << post_exec_tail_flag_gate_copy_callee.gate_word_address << ", RTS 0x"
+        << post_exec_tail_flag_gate_copy_callee.terminal_return_address
+        << " (cell values, transfer, loop, and increment unmodelled)" << std::dec << '\n';
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec
@@ -937,6 +959,9 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         *gx_overlay, gx_overlay_adapter);
     const auto gx_overlay_selector = eon::parse_millennium_dos_gx_overlay_selector_evidence(
         *game, *gx_overlay, gx_overlay_adapter, gx_overlay_dispatcher);
+    const auto gx_overlay_startup_records =
+        eon::parse_millennium_dos_gx_overlay_startup_record_evidence(
+            *gx_overlay, gx_overlay_selector);
     std::cout << "          2200AD.EXE startup: entry 0x" << std::hex
         << game_flow.entry_address << ", SS=CS, SP=0x" << game_flow.startup_stack_pointer
         << ", first CALL 0x" << game_flow.startup_first_call_address
@@ -1104,6 +1129,20 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << gx_overlay_selector.adapter_target << "; SHA-256 "
         << gx_overlay_selector.caller_sha256 << std::dec
         << " (static only; no selector value, records, returns, resources, or display executed)\n";
+    std::cout << "          2200GX startup records: entries +0x" << std::hex
+        << gx_overlay_startup_records.entry_offsets[0] << "/+0x"
+        << gx_overlay_startup_records.entry_offsets[1] << "/+0x"
+        << gx_overlay_startup_records.entry_offsets[2] << "/+0x"
+        << gx_overlay_startup_records.entry_offsets[3] << " select original records +0x"
+        << gx_overlay_startup_records.source_record_offsets[0] << "/+0x"
+        << gx_overlay_startup_records.source_record_offsets[1] << "/+0x"
+        << gx_overlay_startup_records.source_record_offsets[2] << "/+0x"
+        << gx_overlay_startup_records.source_record_offsets[3] << "; shared +0x"
+        << gx_overlay_startup_records.shared_copy_entry_offset << " copies " << std::dec
+        << static_cast<unsigned>(gx_overlay_startup_records.copy_word_count)
+        << " words to +0x" << std::hex << gx_overlay_startup_records.copy_destination_offset
+        << "; SHA-256 " << gx_overlay_startup_records.entry_span_sha256 << std::dec
+        << " (raw startup provenance only; no record meaning, state, or display inferred)\n";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto initial_save = eon::extract_verified_release_asset(release, initial_save_sha256);
@@ -2384,7 +2423,8 @@ int main(int argc, char** argv) {
     }
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
-    if (!SDL_CreateWindowAndRenderer("Project Eon", 1280, 720, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("Project Eon", request.display.width, request.display.height,
+            SDL_WINDOW_RESIZABLE, &window, &renderer)) {
         std::cerr << "SDL_CreateWindowAndRenderer failed: " << SDL_GetError() << '\n';
         SDL_Quit();
         return 1;
@@ -2563,6 +2603,8 @@ int main(int argc, char** argv) {
     bool show_scanner = false;
     bool show_modern_graphics_settings = false;
     ModernGraphicsSettings modern_graphics_settings;
+    modern_graphics_settings.output_resolution_index = output_resolution_index_for(request.display);
+    modern_graphics_settings.aspect_ratio_index = request.display.aspect_ratio_index;
     const auto cycle_output_resolution = [&](const int direction) {
         const auto count = output_resolutions.size();
         const auto current = modern_graphics_settings.output_resolution_index;

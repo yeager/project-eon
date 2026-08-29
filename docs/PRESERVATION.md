@@ -2953,6 +2953,28 @@ control-flow targets only. Project Eon presents this immutable F10 trace; it
 does not provide native guard bytes, execute calls, run the polling loop, or
 write original archives, saves, or executable media.
 
+### Millennium DOS GX startup-record boundary
+
+The original English `2200GX.EXE` contains a further bounded continuation of
+the already validated `2200AD.EXE` startup selector. The four genuine overlay
+entries `+$0090`, `+$0097`, `+$009f`, and `+$00a7` select source records at
+`+$0070`, `+$0080`, `+$0078`, and `+$0088`, respectively. The exact 94-byte
+entry span `+$0090..+$00ed` has SHA-256
+`8d412472415d513482b5c70198bb1aa04fa0d25798dd5f4b40b262151c489736`; its
+four contiguous eight-byte source records have SHA-256
+`1b92e08f514f6b6dee4683550e2d9363d39e6ed0375ac9c9e2b652754326965f`.
+
+All four paths converge at `+$00b2`. The original code copies four words from
+the selected source to `+$0065`, stores the low byte of the final copied word
+at `+$006d`, then updates words at `+$00f4`, `+$00f0`, and `+$00f2` through
+the encoded wrap masks before storing literal `$47ea` at `+$005c` and
+returning. `MillenniumDosGxOverlayStartupRecordEvidence` accepts only the
+full supplied GX executable and the independently hash-identified caller
+selector. It reports raw source bytes and instruction operands only: none of
+the records is named as a screen, layout, state format, or rendering command;
+no startup selector, source record, returned call, memory state, resource, or
+display is executed or reconstructed by Project Eon.
+
 ### Millennium Spanish DOS floppy evidence
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
@@ -3534,3 +3556,19 @@ backedge reach terminal RTS `$1f418`. The caller continuation is `$40638`.
 `DeuterosAmigaTitlePostExecTailFlagGateFirstCalleeProfile` hash-locks the
 caller and every byte of that routine. Project Eon supplies no cell values,
 does not enter either polling loop, and does not assume a return.
+
+The flag gate's two remaining direct calls are separately caller-connected.
+Both `$40638..$4063d` and `$40662..$40667` / ADF `+$9b638` and `+$9b662`
+encode the identical `JSR $1f238` and each six-byte caller hashes to
+`88e2b3531aa5cb582d1ed1a672f9a524c89cbdf572c7a7d77c8cc7f4e6db695d`.
+Their continuations are `$4063e` and `$40668`. The complete local target
+`$1f238..$1f259` / ADF `+$7a238` is 34 bytes and hashes to
+`9c0ffcff9d88feedca2b8079b14f5a32fb51dac94bee60e1c477c746e7c6c4f0`.
+It reads word `$1eed6`; its zero branch reaches the increment at `$1f252`.
+The nonzero path sets both A0 and A1 to `$1eec0`, executes one `MOVE.B
+(A0)+,(A1)+` at `$1f24c`, loads D1 with `$13`, then `DBRA`s from `$1f24e`
+back to that same DBRA instruction before incrementing `$1eed6` and returning
+through `$1f258`. `DeuterosAmigaTitlePostExecTailFlagGateCopyCalleeProfile`
+hash-locks the callers and routine without supplying the gate value, reading
+or writing those cells, executing the transfer or delay loop, choosing its
+branch, or assuming a return.
