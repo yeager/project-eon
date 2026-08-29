@@ -2196,6 +2196,34 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
     std::cout << "          protected ST media: " << stage.total_sectors << " sectors, "
         << stage.sectors_per_track << " sectors/track, boot checksum 0x" << std::hex
         << stage.boot_checksum << std::dec << "; FAT root intentionally unavailable\n";
+    std::size_t atari_leaf_count = 0;
+    std::size_t protected_geometry_count = 0;
+    std::size_t valid_boot_profile_count = 0;
+    std::size_t replicants_boot_count = 0;
+    std::size_t killer_boot_count = 0;
+    std::size_t nonstandard_leaf_count = 0;
+    for (const auto& asset : eon::inventory_verified_release(release)) {
+        if (asset.kind != eon::AssetKind::atari_st_disk) continue;
+        ++atari_leaf_count;
+        const auto candidate = eon::extract_verified_release_asset(release, asset.sha256);
+        if (!candidate) throw std::runtime_error("Verified Deuteros Atari ST asset disappeared during scan");
+        const auto evidence = eon::inspect_deuteros_atari_media(*candidate);
+        if (!evidence.standard_protected_geometry) {
+            ++nonstandard_leaf_count;
+            continue;
+        }
+        ++protected_geometry_count;
+        if (!evidence.valid_boot_profile) continue;
+        ++valid_boot_profile_count;
+        if (evidence.recovered_replicants_first_stage) ++replicants_boot_count;
+        if (evidence.killer_boot_signature) ++killer_boot_count;
+    }
+    std::cout << "          protected-media variant census: " << atari_leaf_count << " supplied ST leaves, "
+        << protected_geometry_count << " 720 KiB candidates, " << valid_boot_profile_count
+        << " valid checksum/BPB boot profiles, " << replicants_boot_count
+        << " Replicants first-stage shapes, " << killer_boot_count << " KILLER_BOOT markers, "
+        << nonstandard_leaf_count
+        << " nonstandard leaves (read-only classification; no profile substitution, FAT namespace, XBIOS, or execution)\n";
     std::cout << "          bounded launcher bootstrap: first/second raw stages SHA-256 "
         << live_bootstrap.first_stage_sha256() << "/"
         << live_bootstrap.second_stage_sha256()
@@ -2528,7 +2556,14 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
             const auto* title_entry = disk.find("TITLE.LIB");
             const auto* titles_entry = disk.find("TITLES.EXE");
             if (!title_entry || !titles_entry) return std::nullopt;
-            const eon::MillenniumDosLib title_lib(disk.read(*title_entry));
+            // Bind the Spanish P00 surface to its own TITLES.EXE selection
+            // bytes before renderer decoding. This is title provenance only:
+            // it does not execute the codec/transition/private-driver chain.
+            auto title_library_bytes = disk.read(*title_entry);
+            const auto titles_bytes = disk.read(*titles_entry);
+            static_cast<void>(eon::parse_millennium_dos_spanish_title_presentation_evidence(
+                titles_bytes, title_library_bytes));
+            const eon::MillenniumDosLib title_lib(std::move(title_library_bytes));
             const auto* p00 = title_lib.find("P00");
             if (!p00) return std::nullopt;
             const auto resource = title_lib.read(*p00);
@@ -2541,7 +2576,7 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
                 .gx_canvas = std::nullopt,
                 .title_flow = std::nullopt,
                 .spanish_title_boundary = eon::parse_millennium_dos_spanish_title_boundary(
-                    disk.read(*titles_entry)),
+                    titles_bytes),
                 .game_flow = std::nullopt,
                 .ega_video_driver = std::nullopt,
                 .mcga_video_driver = std::nullopt,

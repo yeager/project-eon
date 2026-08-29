@@ -5481,6 +5481,36 @@ int main() {
         return release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st;
     });
     assert(deuteros_atari != releases.end());
+    std::size_t deuteros_atari_leaf_count = 0;
+    std::size_t deuteros_atari_protected_geometry_count = 0;
+    std::size_t deuteros_atari_valid_boot_profile_count = 0;
+    std::size_t deuteros_atari_replicants_boot_count = 0;
+    std::size_t deuteros_atari_killer_boot_count = 0;
+    std::size_t deuteros_atari_nonstandard_leaf_count = 0;
+    for (const auto& asset : eon::inventory_verified_release(*deuteros_atari)) {
+        if (asset.kind != eon::AssetKind::atari_st_disk) continue;
+        ++deuteros_atari_leaf_count;
+        const auto image = eon::extract_verified_release_asset(*deuteros_atari, asset.sha256);
+        assert(image);
+        const auto evidence = eon::inspect_deuteros_atari_media(*image);
+        assert(evidence.image_size == image->size());
+        if (!evidence.standard_protected_geometry) {
+            ++deuteros_atari_nonstandard_leaf_count;
+            continue;
+        }
+        ++deuteros_atari_protected_geometry_count;
+        if (!evidence.valid_boot_profile) continue;
+        ++deuteros_atari_valid_boot_profile_count;
+        assert(evidence.boot_checksum == 0x1234);
+        if (evidence.recovered_replicants_first_stage) ++deuteros_atari_replicants_boot_count;
+        if (evidence.killer_boot_signature) ++deuteros_atari_killer_boot_count;
+    }
+    assert(deuteros_atari_leaf_count == 11);
+    assert(deuteros_atari_protected_geometry_count == 10);
+    assert(deuteros_atari_valid_boot_profile_count == 9);
+    assert(deuteros_atari_replicants_boot_count == 3);
+    assert(deuteros_atari_killer_boot_count == 2);
+    assert(deuteros_atari_nonstandard_leaf_count == 1);
     const auto deuteros_st_disk1 = eon::extract_asset_by_sha256(deuteros_atari->path,
         "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee");
     const auto deuteros_st_disk2 = eon::extract_asset_by_sha256(deuteros_atari->path,
@@ -7151,6 +7181,27 @@ int main() {
     assert(title_response_queue.shift_byte_count == 0x14);
     assert(title_response_queue.sha256
         == "ed2794b7bb16f17ca9690b367c9465c75ff52838356bf6b46d9744cb16da1054");
+    eon::DeuterosAmigaTitleResponseQueueInput response_queue_input;
+    response_queue_input.pending_count = 2;
+    for (std::size_t index = 0; index < response_queue_input.bytes.size(); ++index) {
+        response_queue_input.bytes[index] = static_cast<std::uint8_t>(index + 0x20U);
+    }
+    const auto response_queue_once = eon::evaluate_deuteros_amiga_title_response_queue_once(
+        system_disk, load_plan, response_queue_input);
+    assert(response_queue_once.response_low_byte == 0x20);
+    assert(response_queue_once.pending_count_after == 1);
+    assert(response_queue_once.shifted_bytes[0] == 0x21);
+    assert(response_queue_once.shifted_bytes[19] == 0x34);
+    assert(response_queue_once.shifted_bytes[20] == 0x34);
+    assert(response_queue_once.return_address == 0x1f258);
+    bool response_queue_empty_rejected = false;
+    try {
+        static_cast<void>(eon::evaluate_deuteros_amiga_title_response_queue_once(
+            system_disk, load_plan, {}));
+    } catch (const std::runtime_error&) {
+        response_queue_empty_rejected = true;
+    }
+    assert(response_queue_empty_rejected);
     const auto title_callback =
         eon::parse_deuteros_amiga_title_callback_registration_profile(system_disk, load_plan);
     assert(title_callback.registration_entry_address == 0x1ef74);

@@ -1326,6 +1326,15 @@ boot sector retains a 720 KiB BPB (512-byte sectors, two heads, nine sectors
 per track), its FAT root area is overwritten by loader/data bytes.  Project
 Eon therefore must not present this medium as a valid FAT12 filesystem.
 
+The release-wide scanner classifies every supplied Atari leaf before selecting
+the single hash-bound recovery chain. The present archive has 11 Atari leaves:
+10 are 720 KiB protected-media candidates; nine have the exact checksum/BPB
+boot envelope; three contain the Replicants first-stage shape; two contain a
+`KILLER_BOOT` marker; and one is nonstandard geometry. These are census facts,
+not editions to merge: Eon never borrows a first stage, marker, boot branch,
+or raw resource from one variant when launching another. The scanner does not
+interpret a FAT namespace, execute a branch, invoke XBIOS, or load a sector.
+
 Both verified evidence disks retain the Atari boot-sector word checksum of
 `0x1234`.  Replicants Disk 1
 (`aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`)
@@ -2182,6 +2191,15 @@ call sites include the known `$40638` and `$407b4` title response paths.
 `DeuterosAmigaTitleResponseQueueProfile` hash-locks this exact wait/shift
 shape. It does not supply the pending-word value, read or return a byte, model
 concurrency, or make any writes to the original in-stage byte region.
+
+For a nonempty, explicitly supplied original-memory snapshot,
+`evaluate_deuteros_amiga_title_response_queue_once` now models the local half
+of that path: it returns byte zero, copies original snapshot bytes 1 through
+20 down to positions 0 through 19, and reports `pending - 1` as a new trace
+value. It rejects zero pending count because the original then loops while an
+unrecovered concurrent writer may change the word. The helper does not call a
+callback, decide how a frame was produced, write title memory, or bind either
+result to host presentation/input.
 
 Static backtracking identifies a producer for that same byte region but also
 the next hard input boundary. During title setup, `$1ef74` places callback
