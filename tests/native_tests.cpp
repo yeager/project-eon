@@ -87,6 +87,16 @@ int main() {
         char* conflicting_args[] = {program, inspect_option, verify_option, millennium};
         const auto conflict = eon::parse_command_line(4, conflicting_args);
         assert(!conflict.request);
+        char trace_option[] = "--reference-trace";
+        char trace_manifest[] = "capture.eontrace";
+        char amiga[] = "amiga";
+        char* trace_args[] = {program, data_option, custom_path, game_option, millennium,
+            platform_option, amiga, trace_option, trace_manifest};
+        const auto trace = eon::parse_command_line(9, trace_args);
+        assert(trace.request && trace.request->reference_trace == "capture.eontrace");
+        char* trace_without_platform[] = {program, data_option, custom_path, game_option, millennium,
+            trace_option, trace_manifest};
+        assert(!eon::parse_command_line(7, trace_without_platform).request);
 
         const std::vector<eon::ReleaseArchive> menu_releases{
             {eon::Game::millennium, eon::Platform::dos, "en", {}, {}},

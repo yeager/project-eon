@@ -47,6 +47,8 @@ std::string usage() {
         "               [--presentation original|modern]\n\n"
         "               [--language <language>]\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --verify-data millennium|deuteros\n\n"
+        "  project-eon --data <directory-or-archive> --game millennium|deuteros\n"
+        "               --platform dos|amiga|atari-st --reference-trace <manifest.eontrace>\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
         "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n\n"
         "Without --data/--data-dir, game data is read from ~/.projecteon on Linux/macOS\n"
@@ -76,6 +78,8 @@ ParseResult parse_command_line(int argc, char** argv) {
         } else if (argument == "--verify-data") {
             request.verify_game = parse_game(value);
             if (!request.verify_game) return {{}, "Unknown game: " + std::string(value), false};
+        } else if (argument == "--reference-trace") {
+            request.reference_trace = std::filesystem::path(value);
         } else if (argument == "--platform") {
             request.platform = parse_platform(value);
             if (!request.platform) return {{}, "Unknown platform: " + std::string(value), false};
@@ -95,6 +99,17 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.verify_game && request.inspect_data) {
         return {{}, "--verify-data and --inspect cannot be combined", false};
+    }
+    if (request.reference_trace) {
+        if (request.data_directory_is_default) {
+            return {{}, "--reference-trace requires an explicit --data or --data-dir path", false};
+        }
+        if (!request.game || !request.platform) {
+            return {{}, "--reference-trace requires both --game and --platform", false};
+        }
+        if (request.verify_game || request.inspect_data) {
+            return {{}, "--reference-trace cannot be combined with --verify-data or --inspect", false};
+        }
     }
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
     return {request, {}, false};
