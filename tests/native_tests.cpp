@@ -3964,6 +3964,16 @@ int main() {
         == "096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad");
     assert(std::equal(stx_loader.begin() + 0xbe, stx_loader.begin() + 0xc9,
         "MILL22B.inf"));
+    const eon::AtariStStxFat12Root stx_root(atari_stx);
+    assert(stx_root.bytes_per_sector() == 512);
+    assert(stx_root.sectors_per_cluster() == 2);
+    assert(stx_root.total_sectors() == 800);
+    assert(stx_root.root_start_lba() == 11 && stx_root.root_sector_count() == 7);
+    assert(stx_root.entries().size() == 6);
+    assert(stx_root.entries()[0].name == "EXEC.TOS" && stx_root.entries()[0].first_cluster == 2
+        && stx_root.entries()[0].size == 221);
+    assert(stx_root.entries()[2].name == "MILL22B.INF" && stx_root.entries()[2].first_cluster == 11
+        && stx_root.entries()[2].size == 84'720);
     auto invalid_stx_header = *atari_physical_dump;
     invalid_stx_header[0] = 0;
     bool invalid_stx_header_rejected = false;

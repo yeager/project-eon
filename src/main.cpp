@@ -1702,6 +1702,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << " (no GEMDOS call)\n";
     if (const auto physical_disk = eon::extract_verified_release_asset(release, disk1_stx_sha256)) {
         const eon::AtariStStxPhysicalDisk stx(*physical_disk);
+        const eon::AtariStStxFat12Root stx_root(stx);
         const auto boot = stx.sector(0, 0, 1);
         const auto loader = stx.sector(1, 0, 9);
         const auto boot_location = std::find_if(stx.sectors().begin(), stx.sectors().end(),
@@ -1723,8 +1724,10 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
             << "; T1/H0/S9 +0x" << std::hex << loader_location->payload_offset
             << ", " << std::dec << loader.size() << " bytes, SHA-256 "
             << eon::to_hex(eon::sha256(loader)) << "; literal +0xbe MILL22B.inf"
-            << " (direct STX sector spans only; no flattened image, filesystem traversal,"
-            << " boot semantics, or executable handoff)\n";
+            << "; BPB-backed root LBA " << std::dec << stx_root.root_start_lba() << ".."
+            << (stx_root.root_start_lba() + stx_root.root_sector_count() - 1U) << " has "
+            << stx_root.entries().size() << " direct-sector entries"
+            << " (no flattened image, file extraction, boot semantics, or executable handoff)\n";
     }
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
