@@ -76,6 +76,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('bash packaging/macos/verify-dylib-closure.sh "$APP"', workflow)
         self.assertIn("resolve_rpath_reference", workflow)
         self.assertIn("brew --prefix sdl3", workflow)
+        self.assertIn("own_install_name=$(otool -D", workflow)
 
     def test_macos_closure_verifier_resolves_rpath_and_rejects_homebrew(self) -> None:
         # Linux CI cannot execute Apple's inspection tools.  Model their small,

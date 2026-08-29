@@ -294,7 +294,16 @@ jobs:
             # then rewrite only the in-bundle copy.  This matters for a
             # dependency that was expressed through @loader_path by Homebrew.
             local source_binary="${2:-$1}"
+            # `otool -L` prints a dylib's own install name as its first
+            # dependency-looking row.  It is not a load dependency; trying to
+            # resolve it recursively made the bundle step reject SDL3_image
+            # while looking for the library it was already copying.
+            local own_install_name
+            own_install_name=$(otool -D "$source_binary" 2>/dev/null | sed -n '2p' || true)
             otool -L "$source_binary" | awk 'NR>1{print $1}' | while read -r ref; do
+              if [ -n "$own_install_name" ] && [ "$ref" = "$own_install_name" ]; then
+                continue
+              fi
               local install_name="$ref"
               case "$ref" in
                 /usr/lib/*|/System/*|@executable_path/*) continue ;;
