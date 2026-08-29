@@ -2354,6 +2354,14 @@ bits. The verified `$1e0f` display offset is byte 15 of scanline 192, so the ele
 those writes to its existing in-memory four-plane-equivalent frame; it does
 not create a font, artwork, or source-media output. Any other command class,
 global layout, or out-of-plane write is rejected as a preservation boundary.
+At the caller-connected tick-82 title handoff, the resulting original-derived
+320×200 RGBA compositor surface hashes to
+`61eed88676355d0a136c943ffaa37396ba5220b7ea751b8cab6d0b125b3dd4c9`.
+The native test obtains that value from the supplied hash-verified clean ADF;
+it covers the final frame that SDL preserves when title-stage execution stops
+at the unresolved Exec ABI boundary. It is a regression identity for the
+recovered opening render route, not evidence of a reconstructed title screen
+or menu.
 
 The compositor draws channels in ascending order into a persistent four-plane
 display. X is measured in 16-pixel words and Y in scanlines. Bit 15 alone

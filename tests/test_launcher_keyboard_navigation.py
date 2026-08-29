@@ -37,6 +37,13 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("custom_profile_ready", SOURCE)
         self.assertIn("CUSTOM SETTINGS READY", SOURCE)
 
+    def test_back_navigation_consumes_one_event_and_moves_one_card_page(self) -> None:
+        # A single Escape/Back from profiles must land on platforms, rather
+        # than falling through to the menu handler and skipping to games.
+        self.assertIn("Escape is a single navigation action", SOURCE)
+        self.assertIn("Keep Back equivalent to Escape", SOURCE)
+        self.assertGreaterEqual(SOURCE.count("launcher_page == LauncherPage::profiles\n                        ? LauncherPage::platforms : LauncherPage::games"), 2)
+
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:
         modal = SOURCE.index("if (show_modern_graphics_settings) {")
         modal_continue = SOURCE.index("                continue;", modal)
