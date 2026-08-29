@@ -60,6 +60,27 @@ def po_messages(path: Path) -> dict[str, str]:
     return messages
 
 
+def po_message_ids(path: Path) -> list[str]:
+    """Return IDs in source order so duplicate UI keys cannot hide in a dict."""
+    message_ids: list[str] = []
+    message_id: str | None = None
+    field: str | None = None
+    for raw in path.read_text(encoding="utf-8").splitlines() + [""]:
+        line = raw.strip()
+        if not line:
+            if message_id:
+                message_ids.append(message_id)
+            message_id = field = None
+        elif line.startswith("msgid "):
+            if message_id:
+                message_ids.append(message_id)
+            message_id = ast.literal_eval(line[6:])
+            field = "id"
+        elif line.startswith('"') and field == "id":
+            message_id = (message_id or "") + ast.literal_eval(line)
+    return message_ids
+
+
 class CatalogTests(unittest.TestCase):
     def test_exactly_twenty_shipped_catalogs(self) -> None:
         self.assertEqual({path.stem for path in PO.glob("*.po")}, CATALOGS)
@@ -83,6 +104,15 @@ class CatalogTests(unittest.TestCase):
                         PLACEHOLDER_PREFIX.match(translation),
                         f"{language} leaves a placeholder for {message_id!r}",
                     )
+
+    def test_catalog_headers_and_keys_are_structurally_unambiguous(self) -> None:
+        for language in sorted(CATALOGS):
+            with self.subTest(language=language):
+                source = (PO / f"{language}.po").read_text(encoding="utf-8")
+                self.assertIn('"Content-Type: text/plain; charset=UTF-8\\n"', source)
+                self.assertIn(f'"Language: {language}\\n"', source)
+                message_ids = po_message_ids(PO / f"{language}.po")
+                self.assertEqual(len(message_ids), len(set(message_ids)))
 
     def test_variable_evidence_panel_uses_language_neutral_notation(self) -> None:
         """Addresses and bytes may vary, but launcher wording must use PO text."""

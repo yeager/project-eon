@@ -1329,6 +1329,18 @@ registration service, or a real input device. Project Eon consequently leaves
 title input and response production unimplemented rather than inventing a
 keyboard, mouse, or host event mapping.
 
+`DeuterosAmigaTitleCallbackRegistrationProfile` now hash-locks both the
+registration body (`$1ef74..$1f051`, ADF `+$79f74`, 222 bytes, SHA-256
+`f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27`) and
+the callback. Direct instructions establish request `$1eefa + $1c = 9`,
+`$1eefa + $28 = $1ef48`, descriptor `$1ef48 + $12 = $1f056`, and the call to
+Exec base `$4`, vector `-$1ce`. The callback's producer route begins only for
+the byte-one comparison at caller-owned `A0 + $4`; its direct bounds are word
+`A0 + $6 < $50` and pending word `$1eed6 < $14`, after which it indexes
+`$1ee20` and writes `$1eec0 + [$1eed6]`. These are an ABI-shaped data path,
+not proof of the request type, callback event names, input device, or any
+runtime value supplied by Exec.
+
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
 raw title image masks `D0` to `$0000ffff`, performs original unsigned divides
 by `$0064` and `$000a` (with the two intervening original subroutine calls),
@@ -1748,6 +1760,13 @@ and `MCGA.BIN` (target `$0905`), AX=`$0013` loads DX=`$03da`, repeatedly reads
 the VGA status port until bit `$08` is clear, then repeatedly reads until bit
 `$08` is set, and returns. Project Eon records this read-only vertical-retrace
 wait but does not perform host port I/O or infer that it produces a frame.
+
+The same supplied driver dispatch tables connect `$1712`'s AX=`$0006` request
+to EGA640 `$08a6` and MCGA `$0705`. Both begin by clamping the ES:BX record's
+word at `+$10` against `320 - word[+$08]`, then return if the resulting height
+is non-positive. The ES:BX record, source/destination pointers, branch
+outcomes and all writes remain unmodelled, so this is a verified entry-side
+clipping boundary, not a host blit.
 
 The accompanying clean `MILL.COM` (1,445 bytes, SHA-256
 `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`)
