@@ -572,6 +572,68 @@ void assert_modern_asset_pack_admission() {
     const auto changed = eon::validate_modern_asset_pack(pack_root / "pack.eonmodern");
     assert(!changed.accepted());
     assert(!changed.error.empty());
+    // External grammar bytes only: the runtime target must have the exact
+    // hash-bound ID, release identity and 640x400 RGBA PNG IHDR. SDL_image
+    // later decodes these rehashed in-memory bytes; this native test has no
+    // SDL decoder dependency.
+    const auto render_root = root / "render-title";
+    std::filesystem::create_directories(render_root);
+    const auto png = render_root / "title.png";
+    const std::vector<std::uint8_t> png_bytes{
+        0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a,
+        0, 0, 0, 13, 'I', 'H', 'D', 'R', 0, 0, 2, 128, 0, 0, 1, 144,
+        8, 6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82,
+    };
+    {
+        std::ofstream output(png, std::ios::binary);
+        output.write(reinterpret_cast<const char*>(png_bytes.data()),
+            static_cast<std::streamsize>(png_bytes.size()));
+    }
+    const auto release_hash = "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
+    const auto write_render_manifest = [&](const std::string_view asset_id, const std::string_view hash) {
+        std::ofstream output(render_root / "pack.eonmodern", std::ios::binary | std::ios::trunc);
+        output << "schema\tproject-eon.modern-asset-pack/v1\nid\trender-title\nversion\t1\n"
+               << "license\tCC0-1.0\nprovenance\tindependently-created\ngame\tmillennium\nplatform\tdos\n"
+               << "source_release_sha256\t" << release_hash << "\nasset\t" << asset_id
+               << " title.png " << png_bytes.size() << ' ' << hash << '\n';
+    };
+    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(png_bytes)));
+    const auto surface = eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash);
+    assert(surface.pack_id == "render-title" && surface.width == 640 && surface.height == 400
+        && surface.png == png_bytes);
+    bool wrong_release_rejected = false;
+    try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+    } catch (const std::runtime_error&) { wrong_release_rejected = true; }
+    assert(wrong_release_rejected);
+    write_render_manifest("millennium.dos.title.not-supported", eon::to_hex(eon::sha256(png_bytes)));
+    bool wrong_id_rejected = false;
+    try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash));
+    } catch (const std::runtime_error&) { wrong_id_rejected = true; }
+    assert(wrong_id_rejected);
+    write_render_manifest("millennium.dos.title.png-640x400",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    bool wrong_hash_rejected = false;
+    try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash));
+    } catch (const std::runtime_error&) { wrong_hash_rejected = true; }
+    assert(wrong_hash_rejected);
+    auto malformed_png = png_bytes;
+    malformed_png[19] = 1; // Width 65,537 instead of 640.
+    {
+        std::ofstream output(png, std::ios::binary | std::ios::trunc);
+        output.write(reinterpret_cast<const char*>(malformed_png.data()),
+            static_cast<std::streamsize>(malformed_png.size()));
+    }
+    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(malformed_png)));
+    bool malformed_rejected = false;
+    try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash));
+    } catch (const std::runtime_error&) { malformed_rejected = true; }
+    assert(malformed_rejected);
     // A non-symlink final file is insufficient when an intermediate component
     // points outside the selected pack directory.
     const auto external = root / "outside";
@@ -739,9 +801,24 @@ int main() {
             && *modern_packs.request->modern_pack_root == pack_root);
         char* modern_pack_without_inspect_args[] = {program, modern_packs_option, pack_root};
         assert(!eon::parse_command_line(3, modern_pack_without_inspect_args).request);
-        char game_option[] = "--game";
+        char modern_pack_option[] = "--modern-pack";
+        char modern_manifest[] = "explicit/pack.eonmodern";
+        char presentation_option[] = "--presentation";
+        char modern[] = "modern";
         char platform_option[] = "--platform";
         char dos[] = "dos";
+        char game_option[] = "--game";
+        char* selected_modern_pack_args[] = {program, game_option, millennium, platform_option, dos,
+            presentation_option, modern, modern_pack_option, modern_manifest};
+        const auto selected_modern_pack = eon::parse_command_line(9, selected_modern_pack_args);
+        assert(selected_modern_pack.request && selected_modern_pack.request->modern_pack_manifest
+            && *selected_modern_pack.request->modern_pack_manifest == modern_manifest);
+        char* modern_pack_missing_presentation[] = {program, game_option, millennium, platform_option, dos,
+            modern_pack_option, modern_manifest};
+        assert(!eon::parse_command_line(7, modern_pack_missing_presentation).request);
+        char* modern_pack_with_inspect[] = {program, inspect_option, game_option, millennium, platform_option, dos,
+            presentation_option, modern, modern_pack_option, modern_manifest};
+        assert(!eon::parse_command_line(10, modern_pack_with_inspect).request);
         char* targeted_inspect_args[] = {
             program, inspect_option, game_option, millennium, platform_option, dos};
         const auto targeted_inspect = eon::parse_command_line(6, targeted_inspect_args);

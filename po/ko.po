@@ -18,6 +18,9 @@ msgstr "와이드스크린 16:9"
 msgid "PROJECT EON"
 msgstr "프로젝트 이온"
 
+msgid "MODERN TITLE PACK: "
+msgstr "MODERN TITLE PACK: "
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "게임 선택   |   위/아래: 플랫폼   |   D: 데이터 검사   |   F1: 원본 / 현대식   |   ESC: 종료"
 

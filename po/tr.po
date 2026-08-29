@@ -18,6 +18,9 @@ msgstr "GENİŞ EKRAN 16:9"
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 
+msgid "MODERN TITLE PACK: "
+msgstr "MODERN TITLE PACK: "
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "OYUN SEÇ   |   YUKARI/AŞAĞI: PLATFORM   |   D: VERİ TARAMA   |   F1: ÖZGÜN / MODERN   |   ESC: ÇIK"
 

@@ -70,14 +70,37 @@ limited to 256 MiB. Duplicate asset IDs and paths reject the full pack. Every
 declared file must be a non-symlink regular file whose byte length and
 SHA-256 match the manifest at validation time.
 
+## Current renderer mapping
+
+The only v1 runtime target is deliberately fixed and opt-in:
+
+```text
+asset	millennium.dos.title.png-640x400 title.png <size> <sha256>
+```
+
+It is eligible only for the English Millennium DOS release selected by the
+launch and only with `--game millennium --platform dos --presentation modern
+--modern-pack /absolute/or/explicit/pack.eonmodern`. The file must be a
+non-empty RGBA PNG, exactly 640×400 pixels (IHDR bit depth 8, colour type 6),
+and no more than 8 MiB. After normal manifest admission, Eon reads the file
+again, hashes the exact in-memory bytes, validates the constrained PNG header,
+and asks SDL_image to decode those bytes from memory. SDL_image failure or a
+post-decode dimension mismatch rejects the external surface. It is displayed
+only as the Modern replacement for the recovered English P00 title; Original
+always uses the recovered original pixels.
+
+This mapping does not infer original behavior, alter game logic, save data, or
+original media. It creates no cache or extracted output. Other asset IDs remain
+admission-only metadata until separately documented and implemented.
+
 ## Preservation and runtime boundary
 
-Admission has no rendering hook in v1. A validated pack is only an immutable
+Apart from the constrained title mapping above, admission is only an immutable
 description of external bytes eligible for a future explicit Modern selection.
 It cannot override Original presentation, replace an archive leaf, affect
-recovered simulation or input, or read/write an original save. A future
+recovered simulation or input, or read/write an original save. Any future
 renderer integration must retain the exact release binding, visibly identify
-the active pack, revalidate bytes before use, document any target mapping, and
+the active pack, revalidate bytes before use, document its target mapping, and
 keep all derived pixels in transient renderer memory unless a separate,
 versioned cache contract is approved.
 

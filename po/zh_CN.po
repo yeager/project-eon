@@ -18,6 +18,9 @@ msgstr "宽屏 16:9"
 msgid "PROJECT EON"
 msgstr "伊恩计划"
 
+msgid "MODERN TITLE PACK: "
+msgstr "MODERN TITLE PACK: "
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "选择游戏   |   上/下：平台   |   D：扫描数据   |   F1：原版 / 现代   |   ESC：退出"
 

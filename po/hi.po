@@ -17,6 +17,9 @@ msgstr "वाइडस्क्रीन 16:9"
 msgid "PROJECT EON"
 msgstr "प्रोजेक्ट इऑन"
 
+msgid "MODERN TITLE PACK: "
+msgstr "MODERN TITLE PACK: "
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "गेम चुनें   |   ऊपर/नीचे: प्लेटफ़ॉर्म   |   D: डेटा जाँच   |   F1: मूल / आधुनिक   |   ESC: बाहर निकलें"
 msgid "VERIFIED ORIGINAL DATA"

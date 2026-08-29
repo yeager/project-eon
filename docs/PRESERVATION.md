@@ -61,9 +61,14 @@ edition cannot become a Modern substitute merely by name.
 The two permitted provenance declarations are `independently-created` and
 `licensed-derivative`; they record the provider's legal claim, not a legal
 finding by Eon. No packs are shipped or accepted as proof of original
-behaviour. V1 reports admission eligibility only—there is no decode, texture,
-asset mapping, save access, or game-logic hook. The precise syntax and future
-integration requirements are recorded in
+behaviour. V1 has one deliberately narrow renderer mapping: an explicitly
+selected pack may provide `millennium.dos.title.png-640x400` for the English
+Millennium DOS P00 title only. It must be a bounded (at most 8 MiB), exact
+640x400, 8-bit RGBA PNG and remains Modern-only. Eon revalidates the manifest,
+release binding and file hash immediately before decoding the in-memory bytes
+with SDL_image, then uploads only a transient texture. No pack can affect
+saves, input, simulation, Original rendering, or original media. The precise
+syntax and integration requirements are recorded in
 [`MODERN_ASSET_PACK_FORMAT.md`](MODERN_ASSET_PACK_FORMAT.md).
 
 The explicit `--inspect --modern-packs <root>` diagnostic performs that
@@ -73,7 +78,11 @@ identity also occurs among those reverified reports; otherwise it is reported
 as rejected for this invocation. The root must already be a non-symlink
 directory and is never defaulted, created, scanned recursively, or selected
 as a renderer input. `--modern-packs` without `--inspect` is a command-line
-error, which prevents a pack scan from masquerading as a game launch.
+error, which prevents a pack scan from masquerading as a game launch. The
+separate `--modern-pack <pack.eonmodern>` launch option requires explicit
+`--game millennium --platform dos --presentation modern`; it never has a
+default path and falls back to Eon's normal Modern Scale2x surface if its
+selected external PNG is rejected or cannot be decoded.
 
 ### Transient Scale2x pixel reconstruction (Modern)
 

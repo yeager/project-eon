@@ -6,6 +6,9 @@ msgstr ""
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 
+msgid "MODERN TITLE PACK: "
+msgstr "MODERN TITLE PACK: "
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgid "VERIFIED ORIGINAL DATA"

@@ -18,6 +18,9 @@ msgstr "PANORAMA 16:9"
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 
+msgid "MODERN TITLE PACK: "
+msgstr "MODERN TITLE PACK: "
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "WYBIERZ GRĘ   |   GÓRA/DÓŁ: PLATFORMA   |   D: SKAN DANYCH   |   F1: ORYGINALNY / NOWOCZESNY   |   ESC: WYJDŹ"
 

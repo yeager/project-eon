@@ -29,8 +29,11 @@ struct LaunchRequest {
     std::optional<Game> verify_game;
     std::optional<std::filesystem::path> reference_trace;
     // Explicit diagnostics-only root for separately installed Modern packs.
-    // There is deliberately no default lookup and no selection state here.
+    // There is deliberately no default lookup.
     std::optional<std::filesystem::path> modern_pack_root;
+    // Explicit Modern renderer selection, revalidated against the selected
+    // original release before the external bytes are used.
+    std::optional<std::filesystem::path> modern_pack_manifest;
     bool inspect_data = false;
     std::optional<Platform> platform;
     Presentation presentation = Presentation::original;
