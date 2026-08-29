@@ -5,6 +5,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# iPadOS IPAs are self-contained application bundles. Build all dependencies
+# fetched below statically for that target; package-ipa.sh deliberately never
+# invents or omits a Frameworks directory. Desktop targets retain their shared
+# SDL runtime libraries for the existing DEB/RPM/Windows/macOS packagers.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "" FORCE)
+endif()
+
 find_package(SDL3 CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 include(FetchContent)
@@ -20,10 +29,12 @@ if(NOT SDL3_image_FOUND)
     set(SDLIMAGE_TIF OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_WEBP OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_XCF OFF CACHE BOOL "" FORCE)
-    # Project Eon loads its launcher cards through SDL_image at run time.  Be
-    # explicit about producing its shared library so desktop packagers can
-    # stage the DLL/dylib beside the executable.
-    set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+    # Project Eon loads its launcher cards through SDL_image at run time. Be
+    # explicit about desktop shared libraries so their packagers can stage
+    # them, while iPadOS retains its self-contained static application.
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+    endif()
     # CI supplies zlib as an installed dependency. The release tarball does
     # not include SDL_image's vendored third-party source tree, so never ask
     # CMake to use it as a fallback.
