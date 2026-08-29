@@ -76,6 +76,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0xe8, 0xaf, 0xec, 0xe9, 0xa5, 0xfd};
     constexpr std::array<std::uint8_t, 16> input_exit_loading_text{
         ' ', ' ', ' ', ' ', 'L', 'O', 'A', 'D', 'I', 'N', 'G', ' ', ' ', ' ', ' ', '2'};
+    constexpr std::array<std::uint8_t, 7> input_exit_private_driver_entry{
+        0xb8, 0x05, 0x00, 0xe8, 0xc3, 0xff, 0x0e};
+    constexpr std::array<std::uint8_t, 16> input_exit_private_driver_loop{
+        0x89, 0xc1, 0x51, 0xb8, 0x13, 0x00, 0xe8, 0xe8,
+        0xe7, 0xe8, 0xda, 0xff, 0x59, 0xe2, 0xf3, 0xc3};
     constexpr std::array<std::uint8_t, 10> clean_exit{
         0x32, 0xc0, 0x2e, 0xa2, 0x0e, 0x1a, 0x8b, 0x26,
         0xa0, 0x1a};
@@ -104,7 +109,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         || !has_bytes(titles_executable, 0x1b80 - file_to_load_bias, title_driver_setup)
         || !has_bytes(titles_executable, 0x0122 - file_to_load_bias, private_wrapper)
         || !has_bytes(titles_executable, 0x1ac4 - file_to_load_bias, title_driver_record)
-        || !has_bytes(titles_executable, 0x1884 - file_to_load_bias, input_exit_loading_text)) {
+        || !has_bytes(titles_executable, 0x1884 - file_to_load_bias, input_exit_loading_text)
+        || !has_bytes(titles_executable, 0x1968 - file_to_load_bias, input_exit_private_driver_entry)
+        || !has_bytes(titles_executable, 0x1931 - file_to_load_bias, input_exit_private_driver_loop)) {
         throw std::runtime_error("Unsupported Millennium DOS title control flow");
     }
     constexpr std::size_t title_selection_callee_address = 0x1725;
@@ -349,6 +356,12 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_exit_first_call_target = 0x1968,
         .input_exit_loading_text_address = 0x1884,
         .input_exit_loading_text = "    LOADING    2",
+        .input_exit_private_driver_entry_address = 0x1968,
+        .input_exit_private_driver_loop_address = 0x1931,
+        .input_exit_private_driver_wrapper_address = 0x0122,
+        .input_exit_private_driver_function = 0x0013,
+        .input_exit_private_driver_call_count = 5,
+        .input_exit_private_driver_helper_address = 0x1917,
         .exit_code = 0,
         .title_private_interrupt_wrapper_address = 0x0122,
         .title_private_interrupt_record_address = 0x1ac4,
