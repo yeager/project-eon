@@ -527,6 +527,20 @@ def main() -> int:
                     "Millennium Atari ST auxiliary resource-name evidence did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_stx = (
+                "physical Disk 1 STX: SHA-256 "
+                "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd; "
+                "80 track records, 800 identified sectors; T0/H0/S1 +0xc0, 512 bytes, SHA-256 "
+                "d0601ec6e1bbea0d5f4d5ba37130148e6670225b6337d001f4d4e6b8fc45fd08; "
+                "T1/H0/S9 +0x1570, 512 bytes, SHA-256 "
+                "096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad; "
+                "literal +0xbe MILL22B.inf"
+            )
+            if expected_stx not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Atari ST physical STX provenance did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "atari-st":
             expected_state1 = (
                 "Static state-1 raw-load plan: Disk 1 +0x55800 +0x5e400 "

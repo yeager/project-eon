@@ -52,6 +52,8 @@ class DesktopPackagingTests(unittest.TestCase):
 
     def test_ci_validates_macos_archive_and_windows_runtime_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('built_architectures=$(lipo -archs "$APP/Contents/MacOS/ProjectEon")', workflow)
+        self.assertIn('macOS bundle architecture mismatch: expected ${{ matrix.arch }}', workflow)
         self.assertIn('unzip -t "project-eon-macos-${{ matrix.arch }}.zip"', workflow)
         self.assertIn('cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"', workflow)
         self.assertIn('Copy-Item assets/fonts dist/assets/fonts -Recurse', workflow)
