@@ -2461,6 +2461,20 @@ and compares it with `$02`; only its equal route stores `$b800` at `$0107`.
 The two follow-up routines, private return values, and predicates are still
 unrecovered. Thus neither branch becomes a presentation or simulation path.
 
+The follow-ups are distinct Spanish byte evidence. `$044e..$0455` is eight
+bytes, SHA-256 `38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f`:
+it writes literal `$01` to `$da05` then returns. `$0466..$047c` is 23 bytes,
+SHA-256 `b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779`.
+It initializes `CX` to 16 before a local `LOOP` back edge over the in-image
+table `$0456..$0465`
+(`00 01 02 03 04 05 06 07 38 39 3a 3b 3c 3d 3e 3f`, SHA-256
+`ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a`), makes
+`INT $10` request with `AX=$1000`, increments `BL`, and returns. The external
+interrupt's register effects are unrecovered, so the initial `CX` value does
+not establish a runtime request count. This is a static palette-request trace,
+not proof of the startup branch or authorization for a host palette mutation
+or screen.
+
 The Spanish FAT12 image also supplies its own `EGA640.BIN` (4,630 bytes,
 SHA-256 `ef031b0b6e720ab2dafc1eb6373ddb76e0ff15f7b59ac785265c5136be153daf`)
 and `MCGA.BIN` (4,346 bytes, SHA-256

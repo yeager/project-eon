@@ -1238,6 +1238,55 @@ parse_millennium_dos_spanish_game_startup_callees(
         0xd1da, 0x0124, 0xd1dd, 0x0466, 0xda05, 0x02, 0x0107, 0xd1ed};
 }
 
+MillenniumDosSpanishGameStartupFollowups
+parse_millennium_dos_spanish_game_startup_followups(
+    const std::span<const std::uint8_t> game_executable,
+    const MillenniumDosSpanishGameStartupCallees& callees) {
+    // $044e is local and ends in RET. $0466 initializes CX=$10, reads its
+    // in-image table, requests BIOS AX=$1000, increments BL, and has a local
+    // LOOP back edge. The BIOS call's register effects remain external, so
+    // CX=$10 is an initial value rather than a claimed runtime iteration
+    // count. The loop is evidence, not a host palette operation.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t equal_entry = 0x044e;
+    constexpr std::uint16_t palette_entry = 0x0466;
+    constexpr auto equal = std::to_array<std::uint8_t>({0xb0, 0x01, 0x2e, 0x88, 0x06, 0x05, 0xda, 0xc3});
+    constexpr auto palette = std::to_array<std::uint8_t>({
+        0x0e, 0x1f, 0xbe, 0x56, 0x04, 0xb9, 0x10, 0x00, 0x32, 0xdb,
+        0xac, 0x8a, 0xf8, 0xb8, 0x00, 0x10, 0xcd, 0x10, 0xfe, 0xc3,
+        0xe2, 0xf4, 0xc3,
+    });
+    constexpr std::array<std::uint8_t, 16> palette_table{
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+    };
+    constexpr std::string_view equal_sha256 =
+        "38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f";
+    constexpr std::string_view palette_sha256 =
+        "b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779";
+    constexpr std::string_view palette_table_sha256 =
+        "ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    constexpr std::string_view executable_sha256 =
+        "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6";
+    if (to_hex(sha256(game_executable)) != executable_sha256
+        || callees.equal_followup_target_address != equal_entry
+        || callees.other_followup_target_address != palette_entry
+        || !has_bytes(game_executable, offset(equal_entry), equal)
+        || !has_bytes(game_executable, offset(0x0456), palette_table)
+        || !has_bytes(game_executable, offset(palette_entry), palette)
+        || to_hex(sha256(game_executable.subspan(offset(equal_entry), equal.size()))) != equal_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0x0456), palette_table.size()))) != palette_table_sha256
+        || to_hex(sha256(game_executable.subspan(offset(palette_entry), palette.size()))) != palette_sha256) {
+        throw std::runtime_error("Unexpected Millennium Spanish DOS startup follow-ups");
+    }
+    return {equal_entry, equal.size(), std::string(equal_sha256), 0x01, 0xda05, 0x0455,
+        palette_entry, palette.size(), std::string(palette_sha256), 0x0456, palette_table,
+        std::string(palette_table_sha256), 16, 0x10, 0x1000, 0x047c};
+}
+
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
 millennium_dos_startup_ega_palette_register_writes(const MillenniumDosGameFlow& flow) {
     constexpr std::uint8_t bios_video_interrupt = 0x10;
