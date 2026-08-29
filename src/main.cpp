@@ -2592,6 +2592,14 @@ int main(int argc, char** argv) {
     // They have no on-disk representation and are selected exclusively by
     // Modern at render time.
     SDL_Texture* modern_preview_texture = nullptr;
+    // The opening VM advances at a verified 20 ms cadence. Retain its
+    // decoded frame only until that cadence produces a new source frame, so
+    // presentation refreshes never repeatedly colorize or reconstruct the
+    // same original pixels. This remains renderer-only process memory.
+    std::optional<std::vector<std::uint8_t>> deuteros_preview_rgba;
+    std::optional<std::uint64_t> deuteros_preview_source_tick;
+    std::optional<std::uint64_t> deuteros_modern_preview_attempted_tick;
+    std::optional<std::uint64_t> deuteros_modern_preview_source_tick;
     const auto create_deuteros_opening_texture = [&] {
         if (!deuteros_opening || preview_texture) return;
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -3357,9 +3365,16 @@ int main(int argc, char** argv) {
                     tr("NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM."));
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
-                const auto frame = deuteros_opening->rgba_frame();
-                if (frame) SDL_UpdateTexture(preview_texture, nullptr, frame->data(),
-                    eon::DeuterosAmigaFrame::width * 4);
+                const auto source_tick = deuteros_opening->ticks();
+                if (!deuteros_preview_source_tick || *deuteros_preview_source_tick != source_tick) {
+                    deuteros_preview_rgba = deuteros_opening->rgba_frame();
+                    deuteros_preview_source_tick = source_tick;
+                    if (deuteros_preview_rgba) {
+                        SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview_rgba->data(),
+                            eon::DeuterosAmigaFrame::width * 4);
+                    }
+                }
+                const auto& frame = deuteros_preview_rgba;
                 draw_text(renderer, 64, 220, tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"));
                 draw_text(renderer, 64, 238, tr("HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"));
                 draw_text(renderer, 64, 252, tr("PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"));
@@ -3392,7 +3407,9 @@ int main(int argc, char** argv) {
                         + " - " + std::to_string(trace->glyph_codes.size()));
                 }
                 SDL_Texture* texture = preview_texture;
-                if (modern && modern_graphics_settings.pixel_reconstruction && frame) {
+                if (modern && modern_graphics_settings.pixel_reconstruction && frame
+                    && (!deuteros_modern_preview_attempted_tick
+                        || *deuteros_modern_preview_attempted_tick != source_tick)) {
                     const auto enhanced = eon::reconstruct_rgba_scale2x(*frame,
                         eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height);
                     if (!modern_preview_texture) {
@@ -3401,11 +3418,17 @@ int main(int argc, char** argv) {
                     }
                     if (modern_preview_texture && SDL_UpdateTexture(modern_preview_texture, nullptr,
                             enhanced.rgba.data(), enhanced.width * 4)) {
-                        texture = modern_preview_texture;
+                        deuteros_modern_preview_source_tick = source_tick;
                     } else if (modern_preview_texture) {
                         std::cerr << "Unable to update transient Modern Deuteros texture: "
                                   << SDL_GetError() << '\n';
                     }
+                    deuteros_modern_preview_attempted_tick = source_tick;
+                }
+                if (modern && modern_graphics_settings.pixel_reconstruction && modern_preview_texture
+                    && deuteros_modern_preview_source_tick
+                    && *deuteros_modern_preview_source_tick == source_tick) {
+                    texture = modern_preview_texture;
                 }
                 SDL_SetTextureScaleMode(texture,
                     modern && modern_graphics_settings.smooth_scaling

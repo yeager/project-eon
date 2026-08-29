@@ -26,6 +26,18 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("draw_scanlines", SOURCE)
         self.assertIn("draw_modern_surface_frame", SOURCE)
 
+    def test_deuteros_modern_reconstruction_is_cached_per_verified_vm_tick(self) -> None:
+        # The host may present several times between 20 ms opening-VM ticks.
+        # Reusing the transient source/Scale2x texture avoids regenerating
+        # pixels from the same original frame without introducing a disk cache.
+        self.assertIn("deuteros_preview_source_tick", SOURCE)
+        self.assertIn("deuteros_modern_preview_attempted_tick", SOURCE)
+        self.assertIn("deuteros_modern_preview_source_tick", SOURCE)
+        self.assertIn("deuteros_opening->ticks()", SOURCE)
+        self.assertIn("deuteros_opening->rgba_frame()", SOURCE)
+        self.assertIn("reconstruct_rgba_scale2x(*frame", SOURCE)
+        self.assertNotIn("deuteros_modern_preview_source_tick = source_tick;\n                }", SOURCE)
+
     def test_popup_is_modal_for_gamepad_navigation(self) -> None:
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_UP", SOURCE)
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_DOWN", SOURCE)
