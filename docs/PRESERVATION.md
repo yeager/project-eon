@@ -2694,6 +2694,21 @@ scaling, scanline, and renderer-frame toggles. It is explicitly consumed before
 the title availability poll and is not an original F10 action: it changes only
 host rendering and never original pixels, game logic, runtime state, or saves.
 
+`MillenniumDosGameSession` can now retain a non-owning view of the authenticated
+English `2200AD.EXE` specifically for offline/runtime-trace observation of the
+two special actions. It does not make this path reachable from SDL: the title
+return, action poll and native prerequisites are still unrecovered. Given an
+explicitly observed native byte, raw `$0b` is revalidated against the exact
+dispatcher and `$11a4` handler before recording the one unconditional prefix
+write `$07f9 := observed XOR $01`; it stops at its first native helper `$0666`.
+The supplied observation, rather than a prior Project Eon trace, is retained as
+the pre-write value. Raw `$0c` similarly revalidates its dispatcher and `$d570`
+handler, reports whether explicitly observed `$da3a` blocks it or reaches
+helper `$6c52`, and records no write. The session owns no game bytes, copies no
+media, performs no native call, and never maps these raw action values to SDL
+keys. Any altered executable or session without the original byte view is
+rejected before an action trace is exposed.
+
 The first table record (raw F1 / `$3b`) is now traced further without assigning
 it a game-menu name. Its eight original bytes are
 `00 06 09 1b 30 00 9a 6f`, so its handler entry is `$6f9a`. That handler clears
@@ -3494,3 +3509,16 @@ exit branch has raw target `$40576`. The profile stops before padding at
 `$40674`. It never reads cells, takes branches, follows calls/jumps, writes
 the custom-chip address, or attributes hardware/game semantics to these
 bytes.
+
+The flag gate's first direct call is independently caller-connected at
+`$40632..$40637` / ADF `+$9b632`: `JSR $1f3f8`, SHA-256
+`c3998d07f8e89408b9332ae19f449256087b1eb8843256751c03e52700cbbec4`.
+Its complete local target `$1f3f8..$1f419` / ADF `+$7a3f8` is 34 bytes with
+SHA-256 `101f4026b51a3c0bef3758f4244fffd3fe12c93d76e37b44d0728295b5e27aa6`.
+It tests byte `$1ee16`; the zero branch reaches RTS `$1f400`. Otherwise it
+reads word `$1ffd4`, applies raw immediate byte mask `$03`, and has a BNE
+backedge to `$1f402`; a second `$1ffd4` read, one-bit word shift, and BCC
+backedge reach terminal RTS `$1f418`. The caller continuation is `$40638`.
+`DeuterosAmigaTitlePostExecTailFlagGateFirstCalleeProfile` hash-locks the
+caller and every byte of that routine. Project Eon supplies no cell values,
+does not enter either polling loop, and does not assume a return.

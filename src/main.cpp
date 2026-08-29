@@ -541,6 +541,15 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << post_exec_tail_flag_gate.direct_call_targets[2] << ", stop 0x"
         << post_exec_tail_flag_gate.stop_after_address
         << " (all results and writes unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_flag_gate_first_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(disk, plan);
+    std::cout << "          Flag-gate first callee: JSR 0x" << std::hex
+        << post_exec_tail_flag_gate_first_callee.caller_address << " -> 0x"
+        << post_exec_tail_flag_gate_first_callee.entry_address << "; byte 0x"
+        << post_exec_tail_flag_gate_first_callee.tested_byte_address << ", word 0x"
+        << post_exec_tail_flag_gate_first_callee.first_loop_word_address
+        << ", RTS 0x" << post_exec_tail_flag_gate_first_callee.terminal_return_address
+        << " (cell values and loop execution unmodelled)" << std::dec << '\n';
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec

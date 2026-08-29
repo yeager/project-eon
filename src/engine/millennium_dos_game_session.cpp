@@ -1,6 +1,7 @@
 #include "engine/millennium_dos_game_session.hpp"
 
 #include <stdexcept>
+#include <utility>
 
 namespace eon {
 
@@ -15,9 +16,21 @@ MillenniumDosGameSession::MillenniumDosGameSession(MillenniumDosGameFlow flow)
     }
 }
 
-std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::uint8_t action) {
+MillenniumDosGameSession::MillenniumDosGameSession(MillenniumDosGameFlow flow,
+    const std::span<const std::uint8_t> game_executable)
+    : MillenniumDosGameSession(std::move(flow)) {
+    if (game_executable.empty()) {
+        throw std::runtime_error("Millennium DOS special-action observation needs original executable");
+    }
+    game_executable_ = game_executable;
+}
+
+void MillenniumDosGameSession::clear_last_observation() {
     last_function_key_index_.reset();
     last_special_action_.reset();
+    last_first_special_action_trace_.reset();
+    last_second_special_action_trace_.reset();
+    last_special_runtime_byte_effect_.reset();
     last_first_function_key_trace_.reset();
     last_second_function_key_trace_.reset();
     last_third_function_key_trace_.reset();
@@ -29,6 +42,50 @@ std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::u
     last_ninth_function_key_trace_.reset();
     last_tenth_function_key_trace_.reset();
     last_runtime_byte_effect_.reset();
+}
+
+MillenniumDosFirstSpecialActionPrefix MillenniumDosGameSession::observe_first_special_action(
+    const std::uint8_t observed_runtime_byte) {
+    if (game_executable_.empty()) {
+        throw std::runtime_error("Millennium DOS special-action observation needs original executable");
+    }
+    clear_last_observation();
+    const auto trace = evaluate_millennium_dos_first_special_action_prefix(
+        game_executable_, observed_runtime_byte);
+    if (trace.action != flow_.special_action_0 || trace.runtime_byte_address != 0x07f9) {
+        throw std::runtime_error("Unsupported Millennium DOS first special-action profile");
+    }
+    last_special_action_ = trace.action;
+    last_special_runtime_byte_effect_ = MillenniumDosRuntimeByteEffect{
+        .address = trace.runtime_byte_address,
+        // This is the explicitly supplied native observation. Do not reuse a
+        // previous host reconstruction as the actual pre-write value.
+        .previous = observed_runtime_byte,
+        .value = trace.toggled_runtime_byte,
+    };
+    reconstructed_07f9_ = trace.toggled_runtime_byte;
+    last_first_special_action_trace_ = trace;
+    return trace;
+}
+
+MillenniumDosSecondSpecialActionPrefix MillenniumDosGameSession::observe_second_special_action(
+    const std::uint8_t observed_runtime_byte) {
+    if (game_executable_.empty()) {
+        throw std::runtime_error("Millennium DOS special-action observation needs original executable");
+    }
+    clear_last_observation();
+    const auto trace = evaluate_millennium_dos_second_special_action_prefix(
+        game_executable_, observed_runtime_byte);
+    if (trace.action != flow_.special_action_1 || trace.runtime_byte_address != 0xda3a) {
+        throw std::runtime_error("Unsupported Millennium DOS second special-action profile");
+    }
+    last_special_action_ = trace.action;
+    last_second_special_action_trace_ = trace;
+    return trace;
+}
+
+std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::uint8_t action) {
+    clear_last_observation();
     if (action == flow_.special_action_0 || action == flow_.special_action_1) {
         last_special_action_ = action;
         return std::nullopt;
@@ -75,8 +132,9 @@ std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::u
 
 std::optional<std::uint8_t> MillenniumDosGameSession::reconstructed_runtime_byte(
     const std::uint16_t address) const {
-    if (address != flow_.eighth_function_key.reset_runtime_byte_address) return std::nullopt;
-    return reconstructed_da30_;
+    if (address == flow_.eighth_function_key.reset_runtime_byte_address) return reconstructed_da30_;
+    if (address == 0x07f9) return reconstructed_07f9_;
+    return std::nullopt;
 }
 
 } // namespace eon

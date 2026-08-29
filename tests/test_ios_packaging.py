@@ -42,7 +42,11 @@ class IosPackagingTests(unittest.TestCase):
                          *(f"Resources/po/{catalog}.po" for catalog in CATALOGS)):
             path = app / resource
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.touch()
+            # BSD zip on macOS omits empty files from recursive archives in
+            # some runner images.  These fixture resources stand for actual
+            # bundled files, so make the test archive portable rather than
+            # depending on that host-specific empty-file behaviour.
+            path.write_bytes(b"fixture resource\n")
         return app
 
     def test_ci_cross_compiles_png_dependencies_for_ios(self):
@@ -56,6 +60,12 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn("-DZLIB_ROOT=\"$IOS_PREFIX\"", workflow)
         self.assertIn("-DSDL3_DIR=\"$IOS_PREFIX/lib/cmake/SDL3\"", workflow)
         self.assertIn("packaging/ios/verify-ipa.py", workflow)
+
+    def test_ci_stages_reviewed_resources_when_ninja_omits_ios_bundle_sources(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('mkdir -p "$APP/Resources/assets/cards"', workflow)
+        self.assertIn('cp assets/cards/millennium.png assets/cards/deuteros.png', workflow)
+        self.assertIn('cp po/{ar,de,el,en_GB,es,fi,fr,hi,it,ja,ko,nl,no,pl,pt_BR,ru,sv,tr,uk,zh_CN}.po', workflow)
 
     def test_ios_bundle_has_an_install_destination(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
