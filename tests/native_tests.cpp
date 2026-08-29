@@ -26,6 +26,7 @@
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_dos_last_screen.hpp"
+#include "data/millennium_save_comparison.hpp"
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -908,7 +909,15 @@ int main() {
     // The declarative recovery map is a second, narrower admission layer:
     // every visible code-path fact retains its exact release/profile identity
     // and cannot become a hook or a cross-release fallback.
-    assert(eon::recovery_map().size() >= 9);
+    assert(eon::recovery_map().size() == eon::parser_profile_manifest().size());
+    for (const auto& profile : eon::parser_profile_manifest()) {
+        const auto count = std::count_if(eon::recovery_map().begin(), eon::recovery_map().end(),
+            [&profile](const auto& entry) {
+                return entry.release_sha256 == profile.release_sha256
+                    && entry.parser_profile_id == profile.id;
+            });
+        assert(count == 1);
+    }
     for (const auto& entry : eon::recovery_map()) {
         assert(eon::release_has_parser_profile(entry.release_sha256, entry.parser_profile_id));
         assert(eon::release_has_recovery_map_entry(entry.release_sha256, entry.id));
@@ -924,7 +933,7 @@ int main() {
         "millennium-dos-title-flow"));
     const auto amiga_map = eon::recovery_map_for_release(
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
-    assert(amiga_map.size() == 2);
+    assert(amiga_map.size() == 3);
     for (const auto& entry : amiga_map) assert(entry.game == eon::Game::deuteros);
 
     const auto amiga_millennium = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
@@ -3731,6 +3740,47 @@ int main() {
     assert(atari_root_inventory.files.back().size == 49'269);
     assert(atari_root_inventory.files.back().sha256
         == "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686");
+    const auto* atari_save_i_entry = atari_disk.find("2200SAVE.I");
+    const auto* atari_save_ii_entry = atari_disk.find("2200SAVE.II");
+    const auto* atari_save_iii_entry = atari_disk.find("2200SAVE.III");
+    const auto* atari_save_iv_entry = atari_disk.find("2200SAVE.IV");
+    assert(atari_save_i_entry && atari_save_ii_entry && atari_save_iii_entry && atari_save_iv_entry);
+    const auto authenticated_dos_save = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::dos, "2200SAVE.I", *initial_save);
+    const auto authenticated_atari_save_i = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.I", atari_disk.read(*atari_save_i_entry));
+    const auto authenticated_atari_save_ii = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.II", atari_disk.read(*atari_save_ii_entry));
+    const auto authenticated_atari_save_iii = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.III", atari_disk.read(*atari_save_iii_entry));
+    const auto authenticated_atari_save_iv = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.IV", atari_disk.read(*atari_save_iv_entry));
+    const auto dos_atari_i = eon::compare_millennium_saves(authenticated_dos_save,
+        authenticated_atari_save_i);
+    assert(dos_atari_i.shared_bytes == 7'313);
+    assert(dos_atari_i.equal_positions == 6'030);
+    assert(dos_atari_i.different_positions == 1'283);
+    assert(dos_atari_i.common_prefix_bytes == 0 && dos_atari_i.common_suffix_bytes == 0);
+    assert(dos_atari_i.left_only_bytes == 2'225 && dos_atari_i.right_only_bytes == 0);
+    const auto atari_i_ii = eon::compare_millennium_saves(authenticated_atari_save_i,
+        authenticated_atari_save_ii);
+    assert(atari_i_ii.shared_bytes == 7'313 && atari_i_ii.equal_positions == 6'719);
+    assert(atari_i_ii.different_positions == 594);
+    assert(atari_i_ii.common_prefix_bytes == 22 && atari_i_ii.common_suffix_bytes == 6);
+    const auto atari_iii_iv = eon::compare_millennium_saves(authenticated_atari_save_iii,
+        authenticated_atari_save_iv);
+    assert(atari_iii_iv.equal_positions == 6'607 && atari_iii_iv.different_positions == 706);
+    assert(atari_iii_iv.common_prefix_bytes == 4 && atari_iii_iv.common_suffix_bytes == 8);
+    auto altered_atari_save = atari_disk.read(*atari_save_i_entry);
+    altered_atari_save[0] ^= 0x01;
+    bool rejected_altered_atari_save = false;
+    try {
+        static_cast<void>(eon::authenticate_millennium_save(
+            eon::MillenniumSavePlatform::atari_st, "2200SAVE.I", altered_atari_save));
+    } catch (const std::runtime_error&) {
+        rejected_altered_atari_save = true;
+    }
+    assert(rejected_altered_atari_save);
     {
         auto altered_atari_image = *atari_image;
         // DATA12.BIN starts at FAT12 cluster 442: first data byte is $2400

@@ -31,6 +31,7 @@
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
+#include "data/millennium_save_comparison.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
 #include "data/sha256.hpp"
 #include "data/reference_trace.hpp"
@@ -1756,6 +1757,32 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     }
     std::cout << " (metadata only; never generated or written)\n";
     report_millennium_atari_root_inventory(root_inventory);
+    const auto* save_i = disk.find("2200SAVE.I");
+    const auto* save_ii = disk.find("2200SAVE.II");
+    const auto* save_iii = disk.find("2200SAVE.III");
+    const auto* save_iv = disk.find("2200SAVE.IV");
+    if (!save_i || !save_ii || !save_iii || !save_iv) {
+        throw std::runtime_error("Verified Millennium Atari ST disk has incomplete save inventory");
+    }
+    const auto authenticated_save_i = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.I", disk.read(*save_i));
+    const auto authenticated_save_ii = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.II", disk.read(*save_ii));
+    const auto authenticated_save_iii = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.III", disk.read(*save_iii));
+    const auto authenticated_save_iv = eon::authenticate_millennium_save(
+        eon::MillenniumSavePlatform::atari_st, "2200SAVE.IV", disk.read(*save_iv));
+    const auto save_i_ii = eon::compare_millennium_saves(authenticated_save_i,
+        authenticated_save_ii);
+    const auto save_iii_iv = eon::compare_millennium_saves(authenticated_save_iii,
+        authenticated_save_iv);
+    std::cout << "          Atari save byte comparison: I/II " << save_i_ii.equal_positions
+        << "/" << save_i_ii.shared_bytes << " equal positions (prefix/suffix "
+        << save_i_ii.common_prefix_bytes << "/" << save_i_ii.common_suffix_bytes
+        << "); III/IV " << save_iii_iv.equal_positions << "/" << save_iii_iv.shared_bytes
+        << " (prefix/suffix " << save_iii_iv.common_prefix_bytes << "/"
+        << save_iii_iv.common_suffix_bytes
+        << "; hash-gated byte facts only, no save-format or compatibility claim)\n";
     std::cout << "          MILL22A.inf candidate entry: JMP 0x" << std::hex << config_entry.entry_address
         << " resolves from independent static base 0x" << config_entry.proven_load_base
         << " to file +0x" << config_entry.entry_file_offset << "; TRAP #14 selectors 0x"

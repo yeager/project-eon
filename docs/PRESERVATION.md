@@ -180,6 +180,12 @@ read-only provenance report. The map contains no guest-to-host hooks, patch
 targets, replacement byte sequences, emulation directives, or inferred code
 flow; it never executes source instructions and never changes original media.
 
+Every bounded parser profile in the release manifest has exactly one map row.
+This includes data and format readers as well as recovered control-flow
+boundaries: a map address may therefore be a verified leaf/file offset rather
+than a runtime entry point. The address is provenance, not a reachability or
+execution claim.
+
 The map is evidence-neutral between Project Eon's modes. Original mode uses it
 only to identify proven source boundaries. Opt-in Modern presentation may
 display the same diagnostics, but gains no authority to alter original media,
@@ -389,6 +395,28 @@ written, or substituted because it appears in this evidence table.
 | `2200SAVE.IV` | 464 | 7,313 | `8c1709bb7aba3adc2e6538867383229c4d6a285d29a78fb431970d0d926ffbd2` |
 | `DATA12.BIN` | 442 | 932 | `6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda` |
 | `MILENIUM.TOS` | 540 | 49,269 | `4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686` |
+
+### Millennium DOS/Atari ST save-artifact comparison
+
+The verified English DOS archive contains a 9,538-byte `2200SAVE.I` with
+SHA-256 `a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7`.
+The verified Equinox Atari ST disk contains the four 7,313-byte
+`2200SAVE.I`–`2200SAVE.IV` files listed above. `MillenniumAuthenticatedSave`
+admits only those five platform-plus-original-filename-plus-size-plus-digest
+tuples and retains each supplied byte stream in memory only. It has no save
+writer, serializer, import path, or compatibility fallback.
+
+`MillenniumSaveByteComparison` is deliberately narrower than a format parser:
+it reports shared physical length, equal/different byte positions, common
+prefix/suffix length, and each side's unmatched tail. It does not name fields,
+infer slot state, assert cross-platform compatibility, or treat matching bytes
+as shared gameplay data. Against the supplied original media, DOS
+`2200SAVE.I` and Atari ST `2200SAVE.I` share 7,313 positional bytes, of which
+6,030 are equal; their common prefix and suffix are both zero and the DOS
+artifact has a further 2,225 bytes. Atari `I`/`II` share 6,719 of 7,313 byte
+positions (common prefix/suffix 22/6); Atari `III`/`IV` share 6,607 (4/8).
+These are reproducible byte facts, not an inferred save schema. Any altered,
+wrong-sized, wrong-named, or unrecognised save is rejected before comparison.
 
 The nonnegative fall-through after the self-loop is also byte-verified, but
 is not executed. At reconstructed target `+$1a`, 26 original bytes have

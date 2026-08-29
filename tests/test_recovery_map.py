@@ -21,7 +21,21 @@ class RecoveryMapTests(unittest.TestCase):
         }
         entries = recovery_map["entries"]
         self.assertEqual(len({entry["id"] for entry in entries}), len(entries))
-        self.assertGreaterEqual(len(entries), 9)
+        # Recovery-map coverage is intentionally one-to-one with bounded
+        # parser profiles: a new parser cannot silently be left without a
+        # hash-bound source location and preservation-document anchor.
+        mapped_profiles = [
+            (entry["release_sha256"], entry["parser_profile_id"])
+            for entry in entries
+        ]
+        self.assertEqual(len(mapped_profiles), len(set(mapped_profiles)))
+        self.assertEqual(set(mapped_profiles), profiles)
+        headings = re.findall(r"^#{2,6}\s+(.+)$",
+                              (ROOT / "docs" / "PRESERVATION.md").read_text(), re.MULTILINE)
+        anchors = {
+            re.sub(r"[^a-z0-9 -]", "", heading.lower()).replace(" ", "-")
+            for heading in headings
+        }
         for entry in entries:
             self.assertIn(entry["release_sha256"], releases)
             self.assertIn((entry["release_sha256"], entry["parser_profile_id"]), profiles)
@@ -29,6 +43,7 @@ class RecoveryMapTests(unittest.TestCase):
             self.assertEqual(entry["evidence_level"], "verified-static")
             self.assertEqual(entry["runtime_status"], "read-only parser and diagnostics")
             self.assertTrue(entry["documentation_anchor"].startswith("PRESERVATION.md#"))
+            self.assertIn(entry["documentation_anchor"].split("#", 1)[1], anchors)
 
     def test_compiled_map_exactly_matches_json(self):
         recovery_map = json.loads((ROOT / "docs" / "recovery-map.json").read_text())
