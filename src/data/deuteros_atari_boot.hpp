@@ -270,6 +270,40 @@ parse_deuteros_atari_supervisor_callback_continuation(
     std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariSupervisorCallbackProfile& callback);
 
+// The not-equal path in the post-callback comparison has two local BSR.W
+// targets. These profiles preserve each target's literal setup through its
+// first external/raw-reader-wrapper boundary. Neither profile claims that the
+// comparison takes this path, that either BSR returns, or that XBIOS succeeds.
+struct DeuterosAtariPostCallbackCalleeProfiles {
+    std::size_t first_callee_offset = 0;
+    std::size_t first_callee_byte_count = 0;
+    std::string first_callee_sha256;
+    std::uint32_t first_callee_literal = 0;
+    std::uint16_t first_callee_ram_address = 0;
+    std::uint16_t first_callee_trap_selector = 0;
+    std::size_t first_callee_trap_offset = 0;
+    std::uint16_t first_callee_trap_opcode = 0;
+    std::uint16_t first_callee_stack_cleanup_opcode = 0;
+    std::uint32_t first_callee_stack_cleanup_bytes = 0;
+    std::size_t first_callee_post_trap_branch_offset = 0;
+    std::int16_t first_callee_post_trap_branch_displacement = 0;
+    std::size_t first_callee_post_trap_branch_target_offset = 0;
+    std::size_t second_callee_offset = 0;
+    std::size_t second_callee_prefix_byte_count = 0;
+    std::string second_callee_prefix_sha256;
+    std::uint32_t second_callee_byte_count = 0;
+    std::uint32_t second_callee_destination = 0;
+    std::uint32_t second_callee_raw_reader_argument = 0;
+    std::uint16_t second_callee_bsr_opcode = 0;
+    std::int16_t second_callee_bsr_displacement = 0;
+    std::size_t second_callee_bsr_target_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariPostCallbackCalleeProfiles
+parse_deuteros_atari_post_callback_callee_profiles(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariSupervisorCallbackContinuation& continuation);
+
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is
 // known to enter the duplicate at its `$13200` load address.

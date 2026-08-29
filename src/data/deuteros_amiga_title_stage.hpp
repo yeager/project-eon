@@ -303,6 +303,27 @@ struct DeuterosAmigaTitlePostExecServiceBatchProfile {
 parse_deuteros_amiga_title_post_exec_service_batch_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// The first direct callee in the post-Exec service batch is complete local
+// setup for a single graphics-library vector.  Its vector call remains an
+// ABI boundary; this records only the literal register/address operands and
+// following RTS, never a graphics effect or a returned result.
+struct DeuterosAmigaTitlePostExecGraphicsVectorProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t a1_literal = 0;
+    std::uint32_t a0_literal = 0;
+    std::uint32_t d0_literal = 0;
+    std::uint32_t graphics_library_base_address = 0;
+    std::int16_t graphics_library_vector = 0;
+    std::uint32_t return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecGraphicsVectorProfile
+parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // The first common internal setup callee opens the literal
 // `graphics.library` name through an Exec vector.  Its return is an explicit
 // ABI input: zero enters the original self-loop and any nonzero longword is

@@ -47,6 +47,8 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     supervisor_callback_ = parse_deuteros_atari_supervisor_callback(second_stage_bytes, second_stage_);
     supervisor_callback_continuation_ = parse_deuteros_atari_supervisor_callback_continuation(
         second_stage_bytes, second_stage_, supervisor_callback_);
+    post_callback_callees_ = parse_deuteros_atari_post_callback_callee_profiles(
+        second_stage_bytes, second_stage_, supervisor_callback_continuation_);
 }
 
 } // namespace eon

@@ -23,6 +23,7 @@ ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
     std::error_code error;
     if (std::filesystem::is_regular_file(directory, error) && !error) {
         candidates_.push_back(directory);
+        report_.candidates = candidates_.size();
         return;
     }
     error.clear();
@@ -34,6 +35,7 @@ ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
         candidates_.push_back(iterator->path());
     }
     std::sort(candidates_.begin(), candidates_.end());
+    report_.candidates = candidates_.size();
 }
 
 bool ReleaseScanner::advance(std::size_t max_files) {
@@ -45,16 +47,29 @@ bool ReleaseScanner::advance(std::size_t max_files) {
             const auto manifest = release_manifest();
             if (std::none_of(manifest.begin(), manifest.end(),
                     [size](const auto& known) { return known.size == size; })) continue;
+            ++report_.size_candidates;
             const auto fingerprint = to_hex(sha256_file(candidate));
+            ++report_.hashed_candidates;
             const auto found = std::find_if(manifest.begin(), manifest.end(),
                 [&fingerprint](const auto& known) { return fingerprint == known.sha256; });
             if (found != manifest.end()) {
-                releases_.push_back({found->game, found->platform, std::string(found->language),
-                    fingerprint, candidate});
+                ++report_.verified_occurrences;
+                const auto existing = std::find_if(releases_.begin(), releases_.end(),
+                    [&fingerprint](const auto& release) { return release.sha256 == fingerprint; });
+                if (existing == releases_.end()) {
+                    releases_.push_back({found->game, found->platform, std::string(found->language),
+                        fingerprint, candidate});
+                } else {
+                    // Candidates are lexically sorted before scanning. Keep
+                    // the first path as a deterministic in-place read target
+                    // and record every additional copy/link as evidence only.
+                    ++report_.duplicate_occurrences;
+                }
             }
         } catch (const std::exception&) {
             // A file may disappear during a scan. It is simply not a verified
             // release; no filename fallback is allowed.
+            ++report_.unreadable_candidates;
         }
     }
     if (!done()) return false;

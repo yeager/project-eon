@@ -17,6 +17,20 @@ struct ReleaseArchive {
     std::filesystem::path path;
 };
 
+// Counts are deliberately aggregate-only: a preservation scan must make its
+// admission decision auditable without exposing unrecognised filenames or
+// treating them as a fallback catalogue.  A "verified occurrence" is one
+// read of a complete outer archive whose hash matches the manifest.  Multiple
+// occurrences of the same content identity are represented by one release.
+struct ReleaseScanReport {
+    std::size_t candidates = 0;
+    std::size_t size_candidates = 0;
+    std::size_t hashed_candidates = 0;
+    std::size_t verified_occurrences = 0;
+    std::size_t duplicate_occurrences = 0;
+    std::size_t unreadable_candidates = 0;
+};
+
 // A bounded, read-only scan over a user-selected directory.  The launcher
 // advances this while rendering so data verification never replaces its first
 // frame with a blocking hash pass.  Recognition remains content-addressed.
@@ -30,11 +44,13 @@ public:
     [[nodiscard]] std::size_t scanned_count() const { return next_candidate_; }
     [[nodiscard]] std::size_t candidate_count() const { return candidates_.size(); }
     [[nodiscard]] const std::vector<ReleaseArchive>& releases() const { return releases_; }
+    [[nodiscard]] const ReleaseScanReport& report() const { return report_; }
 
 private:
     std::vector<std::filesystem::path> candidates_;
     std::size_t next_candidate_ = 0;
     std::vector<ReleaseArchive> releases_;
+    ReleaseScanReport report_;
 };
 
 [[nodiscard]] std::vector<ReleaseArchive> find_release_archives(

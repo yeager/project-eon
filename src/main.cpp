@@ -1872,6 +1872,16 @@ int main(int argc, char** argv) {
                 report_millennium_atari_st(release);
             }
         }
+        if (request.inspect_data) {
+            const auto& report = scanner.report();
+            std::cout << "SCAN SUMMARY  " << report.candidates << " candidates; "
+                << report.size_candidates << " manifest-size matches; "
+                << report.hashed_candidates << " hashed; "
+                << report.verified_occurrences << " verified occurrences; "
+                << releases.size() << " unique releases; "
+                << report.duplicate_occurrences << " duplicate occurrences; "
+                << report.unreadable_candidates << " unreadable candidates\n";
+        }
         if (!found) {
             if (request.inspect_data) {
                 std::cerr << "No recognised original release matches the requested inspection filters.\n";
