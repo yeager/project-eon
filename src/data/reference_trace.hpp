@@ -24,9 +24,14 @@ struct ReferenceTrace {
     std::string emulator_name;
     std::string emulator_version;
     std::string emulator_sha256;
+    std::string format;
+    std::string adapter;
     std::size_t event_count = 0;
     std::uint64_t event_size = 0;
     std::string event_sha256;
+    std::size_t adapter_interrupt_count = 0;
+    std::size_t adapter_file_count = 0;
+    std::size_t adapter_exec_count = 0;
 };
 
 struct ReferenceTraceValidation {
@@ -34,7 +39,7 @@ struct ReferenceTraceValidation {
     std::string error;
 };
 
-// Read and validate one user-supplied v1 manifest. The manifest names its
+// Read and validate one user-supplied v1 or narrowly declared v2 manifest. The manifest names its
 // sibling events file by basename only, pins it by size/SHA-256, and pins its
 // source release to one of the scanner's recognised ReleaseArchive objects.
 // Both files are bounded, ASCII/LF-only, and are left untouched.

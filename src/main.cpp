@@ -2500,6 +2500,11 @@ int main(int argc, char** argv) {
             << "          events " << trace.event_sha256 << " (" << trace.event_count << " ordered events)\n"
             << "          capture " << trace.capture_start_utc << " to " << trace.capture_end_utc << '\n'
             << "          emulator " << trace.emulator_name << " " << trace.emulator_version << '\n';
+        if (!trace.adapter.empty()) {
+            std::cout << "          adapter " << trace.adapter << " (" << trace.adapter_interrupt_count
+                << " interrupt, " << trace.adapter_file_count << " file, "
+                << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
+        }
         return 0;
     }
     if (request.verify_game || request.inspect_data) {

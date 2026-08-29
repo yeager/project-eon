@@ -1,4 +1,4 @@
-# Reference trace format v1
+# Reference trace format
 
 Project Eon reference traces are external preservation evidence. They are not
 game data, emulator snapshots, replay scripts, or a license to invent runtime
@@ -10,6 +10,13 @@ does not emulate a platform service, modify supplied media, create state, or
 advance a game session. A game-specific adapter may consume an event only
 after its caller, ABI and result are separately documented in
 [`PRESERVATION.md`](PRESERVATION.md).
+
+Format **v1** remains the generic identity-and-ordering format. Format **v2**
+is not a general semantic-trace upgrade: it currently admits exactly one
+strict diagnostics adapter, `millennium-dos-en-startup-v1`. It validates a
+small set of declared observations against literal, hash-pinned source sites.
+It neither replays the observations nor treats a validated result as a DOS,
+private-driver, file, or child-process result.
 
 ## Pair and encoding
 
@@ -47,7 +54,22 @@ user-supplied release whose game, platform, language, outer SHA-256 and byte
 size all match the manifest. Matching a filename, a similar regional release,
 or another platform is insufficient.
 
-## Event stream
+### v2 adapter manifest addition
+
+A v2 manifest has the same required records plus this one exact record:
+
+| Key | Rule |
+| --- | --- |
+| `format` | Exactly `project-eon-reference-trace-v2`. |
+| `adapter` | Exactly `millennium-dos-en-startup-v1`. |
+
+This adapter is accepted only for the clean English Millennium DOS outer
+release `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
+It is deliberately not transferable to the Spanish DOS release, a filename
+match, a modified executable, or another platform. A v1 manifest has no
+`adapter` record; unknown or omitted records remain rejected in both versions.
+
+## Event stream (v1)
 
 Each event record is exactly `event<TAB>sequence tick type`, with decimal,
 strictly increasing `sequence` and `tick` fields. The accepted event types are
@@ -57,6 +79,37 @@ this ordering and identity check. A later adapter must define and validate raw,
 type-specific evidence fields before consuming any event. Events are
 intentionally not an execution request until that path-specific preservation
 adapter exists.
+
+## Event stream (v2 Millennium DOS adapter)
+
+Each record remains one LF-terminated `event<TAB>` line with strictly
+increasing decimal `sequence` and `tick`. The remainder is a type followed by
+single-space-separated `key=value` fields. Every field is required exactly as
+shown below; additional, omitted, duplicate, reordered-result, or
+nearby-address records are rejected. The entries describe a recorder's
+observation at a verified original site, not an instruction for Eon to perform
+the operation.
+
+| Type | Exact declared schema |
+| --- | --- |
+| `interrupt` | `image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000` |
+| `interrupt` | `image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4` |
+| `interrupt` | `image=titles.exe pc=0x0d0a int=0x21 ah=0x06 dl=0xff` |
+| `interrupt` | `image=titles.exe pc=0x1a12 int=0x21 ax=0x4c00` |
+| `file` | `image=mill.com pc=0x02cf op=driver-load path=ega640.bin` or `path=mcga.bin` |
+| `exec` | `image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=titles.exe` or `path=2200ad.exe` |
+
+For example, this is a declaration of the already documented raw vector
+request, **not** evidence that the vector was installed:
+
+```text
+event	1 10 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000
+```
+
+The adapter does not infer carry flags, register returns, selected video
+driver, file-open/load completion, DOS behaviour, private `INT 91h` dispatch,
+or an executed child. It reports only counts by type after validating the
+external trace's hash and source-release provenance.
 
 ## Command-line boundary
 

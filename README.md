@@ -50,6 +50,15 @@ runtime, are visibly identified as Modern, and never overwrite, cache inside,
 or replace the original archive. Project Eon will not distribute unlicensed
 original assets or derivative asset packs.
 
+Modern also has a deliberately external **asset-pack admission format** for
+future lawful high-resolution art layers. A user may place a pack below a
+separate, user-selected Modern-pack root; its `pack.eonmodern` manifest is
+bound to one exact recognised source-release SHA-256 and verifies every asset
+by path, byte length, and SHA-256. Discovery is read-only and non-recursive.
+At present Eon validates and reports eligibility only: it does not ship a
+pack, select an asset automatically, decode pack art, or change game logic,
+saves, or supplied media. See `docs/MODERN_ASSET_PACK_FORMAT.md`.
+
 ## Original game data
 
 Project Eon does not distribute commercial game files. Players provide their
