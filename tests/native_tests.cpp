@@ -888,6 +888,14 @@ int main() {
     assert(title_flow.input_exit_private_driver_function == 0x13);
     assert(title_flow.input_exit_private_driver_call_count == 5);
     assert(title_flow.input_exit_private_driver_helper_address == 0x1917);
+    assert(title_flow.input_exit_helper_selector_iterations == 15);
+    assert(title_flow.input_exit_helper_selector_state_address == 0x1181);
+    assert(title_flow.input_exit_helper_selector_accumulator_address == 0x18f7);
+    assert(title_flow.input_exit_helper_selector_mask == 0x3ff);
+    assert(title_flow.input_exit_helper_selector_range == 0x24);
+    assert(title_flow.input_exit_helper_selector_subtract == 0x18);
+    assert(title_flow.input_exit_helper_resource_index_bias == 1);
+    assert(title_flow.input_exit_helper_resource_loader_address == 0x1712);
     assert(title_flow.exit_code == 0);
     assert(title_flow.launcher_title_program_address == 0x68f);
     assert(title_flow.launcher_game_program_address == 0x69a);

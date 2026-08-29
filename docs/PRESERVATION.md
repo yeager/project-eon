@@ -1307,6 +1307,22 @@ call sites include the known `$40638` and `$407b4` title response paths.
 shape. It does not supply the pending-word value, read or return a byte, model
 concurrency, or make any writes to the original in-stage byte region.
 
+Static backtracking identifies a producer for that same byte region but also
+the next hard input boundary. During title setup, `$1ef74` places callback
+address `$1f056` in the original descriptor at `$1ef48 + $12`, then reaches
+Exec vector `-$1ce(A6)`; neither registration result nor callback invocation
+is available in the supplied ADF. The candidate callback itself is wholly
+present at `$1f056..$1f14f` (ADF `+$7a056`, 250 bytes, SHA-256
+`ff4b055b2d5128465c891debcad00ff4e53cbf661de47b9ee3d6278f33d5e5f8`). Its
+local byte-one path reads caller-owned A0 offsets `$8` and `$6`, rejects a
+repeat, values at or above `$50`, and a pending count at or above `$14`, then
+copies one byte from table `$1ee20` to `$1eec0 + [$1eed6]` and increments
+`$1eed6`. That connects the static callback path to the recovered response
+queue, but does not identify A0's ABI or values, table semantics, the
+registration service, or a real input device. Project Eon consequently leaves
+title input and response production unimplemented rather than inventing a
+keyboard, mouse, or host event mapping.
+
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
 raw title image masks `D0` to `$0000ffff`, performs original unsigned divides
 by `$0064` and `$000a` (with the two intervening original subroutine calls),
@@ -1701,6 +1717,15 @@ caller-connected private-driver boundary only: ABI, helper effect, destination,
 composition and BIOS-visible output remain unknown. No post-key loading frame,
 transition, resource effect, process exit, launcher return, or game startup is
 executed or drawn by Project Eon.
+
+The local helper `$1917` is now independently byte-locked. Each of its five
+calls starts a fixed 15-iteration selector loop. Selector `$18f9` adds the
+unknown word at `$1181` to accumulator `$18f7`, masks the result with `$03ff`,
+loads one original byte at that resulting offset, and reduces values at or
+above `$24` by `$18`. Its caller then adds one and calls resource loader
+`$1712`. This establishes only a bounded potential resource index path; the
+state word, accumulator, loaded byte, destination buffers and all resulting
+rendering remain unknown.
 
 The supplied driver images add one ABI-independent local fact for that exact
 function number. In both hash-identified `EGA640.BIN` (dispatch target `$0d37`)
