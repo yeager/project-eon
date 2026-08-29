@@ -1753,6 +1753,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
     const auto trap_entry = eon::parse_millennium_atari_trap_entry(bss_source, target);
     const auto fopen_fallthrough = eon::parse_millennium_atari_fopen_fallthrough(target, trap_entry);
+    const auto fread_frame_prefix = eon::execute_millennium_atari_fread_frame_prefix(
+        target, fopen_fallthrough);
     const auto fread_config_transfer = eon::parse_millennium_atari_fread_config_transfer_boundary(
         target, fopen_fallthrough);
     std::cout << "          bounded launcher bootstrap: executed " << std::dec
@@ -1886,6 +1888,17 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << fopen_fallthrough.fread_trap_offset << "; stack cleanup 0x"
         << fopen_fallthrough.stack_cleanup_bytes << "; SHA-256 " << fopen_fallthrough.sha256
         << std::dec << " (static call boundary only; no Fopen/Fread result or data is modeled)\n"
+        << "          Fread frame prefix: target +0x" << std::hex
+        << fread_frame_prefix.entry_offset << "; " << std::dec
+        << fread_frame_prefix.byte_count << " original bytes, "
+        << fread_frame_prefix.relative_stack_pointer_delta
+        << " relative stack delta; D0 handle slot +"
+        << fread_frame_prefix.opaque_handle_frame_offset << "..+"
+        << (fread_frame_prefix.opaque_handle_frame_offset
+            + fread_frame_prefix.opaque_handle_frame_bytes - 1U)
+        << " remains opaque; stops before TRAP #1 +0x" << std::hex
+        << fread_frame_prefix.stop_before_trap_offset << std::dec
+        << " (no Fopen result or GEMDOS call)\n"
         << "          Fread-config transfer: target +0x" << std::hex
         << fread_config_transfer.entry_offset << "; TRAP #1, stack cleanup 0x"
         << fread_config_transfer.stack_cleanup_bytes << ", JSR 0x"

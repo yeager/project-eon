@@ -15,6 +15,7 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     trap_ = parse_millennium_atari_trap_entry(bss_source_, target_);
     fopen_result_gate_ = execute_millennium_atari_fopen_result_gate(target_, trap_);
     fopen_fallthrough_ = parse_millennium_atari_fopen_fallthrough(target_, trap_);
+    fread_frame_prefix_ = execute_millennium_atari_fread_frame_prefix(target_, fopen_fallthrough_);
     fread_config_transfer_ = parse_millennium_atari_fread_config_transfer_boundary(
         target_, fopen_fallthrough_);
     root_inventory_ = inventory_millennium_atari_equinox_root(disk);

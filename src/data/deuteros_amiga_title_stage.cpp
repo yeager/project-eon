@@ -1093,6 +1093,43 @@ evaluate_deuteros_amiga_title_callback_producer(
         static_cast<std::uint16_t>(input.pending_count + 1U)};
 }
 
+DeuterosAmigaTitleCallbackSecondEventResult
+evaluate_deuteros_amiga_title_callback_second_event(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaTitleCallbackSecondEventInput input) {
+    const auto profile = parse_deuteros_amiga_title_callback_registration_profile(disk, plan);
+    DeuterosAmigaTitleCallbackSecondEventResult result;
+    result.mirrored_event_address = profile.callback_event_mirror_address;
+    result.mirrored_event_value = profile.callback_second_event_value;
+    result.copied_word_destinations = profile.callback_second_event_copy_destinations;
+    result.transformed_word_destination = profile.callback_second_event_transform_destination_address;
+    if (!input.gate_is_zero) {
+        result.stop = DeuterosAmigaTitleCallbackSecondEventStop::gate_return;
+        result.next_address = profile.callback_address + 0xfaU;
+        return result;
+    }
+    if (input.caller_word_at_6 == profile.callback_second_event_special_word) {
+        result.copied_word_values = {input.caller_word_at_10, input.caller_word_at_12};
+        result.copied_words_written = true;
+        result.stop = DeuterosAmigaTitleCallbackSecondEventStop::external_service_boundary;
+        result.next_address = profile.callback_second_event_service_address;
+        return result;
+    }
+    const auto masked = static_cast<std::uint16_t>(input.caller_word_at_6
+        & profile.callback_second_event_mask);
+    if (masked == profile.callback_second_event_accepted_values[0]
+        || masked == profile.callback_second_event_accepted_values[1]) {
+        // LSL.W #2,D1 then LSL.W #1,D1 add 1/2 to D0 from their carry bits.
+        result.transformed_word_value = static_cast<std::uint16_t>(
+            ((input.caller_word_at_8 >> 14U) & 1U)
+            | (((input.caller_word_at_8 >> 13U) & 1U) << 1U));
+        result.transformed_word_written = true;
+    }
+    result.stop = DeuterosAmigaTitleCallbackSecondEventStop::ordinary_return;
+    result.next_address = profile.callback_address + 0xfaU;
+    return result;
+}
+
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t input_display_word) {

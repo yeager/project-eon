@@ -65,9 +65,10 @@ behaviour. V1 has one deliberately narrow renderer mapping: an explicitly
 selected pack may provide `millennium.dos.title.png-640x400` or the preferred
 4× `millennium.dos.title.png-1280x800` for the English Millennium DOS P00
 title only. Each is a bounded (at most 8 MiB), exact 8-bit RGBA PNG and
-remains Modern-only. Eon revalidates the manifest,
-release binding and file hash immediately before decoding the in-memory bytes
-with SDL_image, then uploads only a transient texture. No pack can affect
+remains Modern-only. Eon revalidates the manifest, release binding and file
+hash immediately before decoding; it validates PNG chunks and inflates the
+fixed-size RGBA IDAT scanlines before SDL_image receives the bytes, then
+uploads only a transient texture. No pack can affect
 saves, input, simulation, Original rendering, or original media. The precise
 syntax and integration requirements are recorded in
 [`MODERN_ASSET_PACK_FORMAT.md`](MODERN_ASSET_PACK_FORMAT.md).
@@ -614,6 +615,16 @@ known additional stack delta of `-4` and both original successors: the
 negative self-loop at `+$18` and the nonnegative static Fread-preparation
 entry at `+$1a`. It does not choose D0's sign, materialize a handle, invoke
 Fclose/Fread, or treat either successor as dynamically taken.
+
+The gate's nonnegative **static** successor now has its next local execution
+prefix recorded too, but is not selected as a runtime outcome. At target
+`+$1a`, 18 original bytes push literal Fread buffer `$2a500`, count `$20000`,
+the opaque GEMDOS-owned `D0` handle word, and selector `$003f`. The resulting
+relative frame has delta `-12`; its handle slot is explicitly reserved at
+frame bytes `+$2..+$3` rather than populated by Eon. The prefix stops at the
+original Fread `TRAP #1` at target `+$2c`. This is a caller-linked symbolic
+continuation from one encoded successor, not a claim that Fopen succeeded or
+that Fread is reached, called, or supplied a result.
 
 The SDL launcher creates this bounded session only for the exact identified
 Equinox image when the Atari ST Millennium card or CLI target is selected; it
@@ -2226,6 +2237,17 @@ original byte that would be written at `$1eec0 + pending`. It returns the
 incremented count as a trace value only. It does not invoke a callback, map
 host input, write the queue, or make the accepted arm evidence of an original
 input device or title-menu action.
+
+The callback's independently bounded byte-two arm is exposed on the same
+terms. `evaluate_deuteros_amiga_title_callback_second_event` takes an explicit
+value for the original `$1ee16` gate plus caller-frame words; it returns before
+the arm when that gate is nonzero. With word `A0+$6 = $00ff`, it reports only
+the two local word copies to `$1ee10`/`$1ee12` and stops before service
+`$20118`. Otherwise it masks that word to `$007f`; only `$68` or `$69` reach
+the local two-bit carry trace from `A0+$8` and the intended `$1ffd4` store.
+The evaluator does not invoke the service, register or invoke a callback, map
+host events, or write title-stage state. These remain raw control/data-flow
+facts, not a recovered input ABI or menu action.
 
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
 raw title image masks `D0` to `$0000ffff`, performs original unsigned divides

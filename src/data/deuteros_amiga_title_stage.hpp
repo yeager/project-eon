@@ -852,6 +852,38 @@ struct DeuterosAmigaTitleCallbackProducerResult {
     std::uint16_t pending_count_after = 0;
 };
 
+// Explicit frame values for the callback's byte-two arm. The gate value is
+// supplied because it is original mutable title-stage state, not media.
+struct DeuterosAmigaTitleCallbackSecondEventInput {
+    bool gate_is_zero = false;
+    std::uint16_t caller_word_at_6 = 0;
+    std::uint16_t caller_word_at_8 = 0;
+    std::uint16_t caller_word_at_10 = 0;
+    std::uint16_t caller_word_at_12 = 0;
+};
+
+enum class DeuterosAmigaTitleCallbackSecondEventStop {
+    gate_return,
+    ordinary_return,
+    external_service_boundary,
+};
+
+// The byte-two route's local write trace. No original memory is changed; the
+// service route stops before its unknown callee.
+struct DeuterosAmigaTitleCallbackSecondEventResult {
+    std::uint32_t mirrored_event_address = 0;
+    std::uint8_t mirrored_event_value = 0;
+    std::array<std::uint32_t, 2> copied_word_destinations{};
+    std::array<std::uint16_t, 2> copied_word_values{};
+    bool copied_words_written = false;
+    std::uint32_t transformed_word_destination = 0;
+    std::uint16_t transformed_word_value = 0;
+    bool transformed_word_written = false;
+    DeuterosAmigaTitleCallbackSecondEventStop stop =
+        DeuterosAmigaTitleCallbackSecondEventStop::ordinary_return;
+    std::uint32_t next_address = 0;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -1029,6 +1061,14 @@ parse_deuteros_amiga_title_callback_registration_profile(
 evaluate_deuteros_amiga_title_callback_producer(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     DeuterosAmigaTitleCallbackProducerInput input);
+
+// Evaluates only the callback's locally decoded byte-two arm using explicit
+// caller-frame and gate inputs. It never invokes the $20118 service, registers
+// a callback, maps host input, or writes title-stage cells.
+[[nodiscard]] DeuterosAmigaTitleCallbackSecondEventResult
+evaluate_deuteros_amiga_title_callback_second_event(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    DeuterosAmigaTitleCallbackSecondEventInput input);
 
 // Validates and models only the literal byte-copy part of the first title
 // exit. The model reads the supplied ADF in place; it does not invoke either
