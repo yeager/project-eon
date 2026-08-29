@@ -321,6 +321,17 @@ MODE`), and `$12572` (`KEYBOARD MODE`). This is a bounded preservation parser,
 not an STX decoder, a menu model, or a control map: it neither assigns a key
 or mouse action nor attempts to execute the protected physical media.
 
+The same Disk 1 container now has a read-only, hash-bound STX sector index.
+Its 80 track records expose 800 identified sectors without producing a flat
+disk image.  Direct original spans are T0/H0/S1 at container `$c0` (512 bytes,
+SHA-256 `d0601ec6e1bbea0d5f4d5ba37130148e6670225b6337d001f4d4e6b8fc45fd08`)
+and T1/H0/S9 at `$1570` (512 bytes, SHA-256
+`096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad`).
+The latter contains the literal `MILL22B.inf` at sector-relative `$be`.
+These are physical-container provenance facts only: Project Eon performs no
+STX flattening, filesystem traversal, boot interpretation, or executable
+handoff from them.
+
 ### Millennium Atari ST relocation evidence
 
 The Equinox FAT12 `MILL22B.INF` chain is separately hash-identified (84,720

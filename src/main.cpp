@@ -11,6 +11,7 @@
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
+#include "data/atari_st_stx.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_audio.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
@@ -1630,6 +1631,8 @@ void report_millennium_atari_root_inventory(const eon::MillenniumAtariRootInvent
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     constexpr auto equinox_disk_sha256 =
         "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
+    constexpr auto disk1_stx_sha256 =
+        "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd";
     const auto image = eon::extract_verified_release_asset(release, equinox_disk_sha256);
     if (!image) return;
     const eon::Fat12Disk disk(*image);
@@ -1651,6 +1654,32 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << live_bootstrap.target().target_address << ", Fopen boundary "
         << live_bootstrap.fopen_boundary().fopen_filename << std::dec
         << " (no GEMDOS call)\n";
+    if (const auto physical_disk = eon::extract_verified_release_asset(release, disk1_stx_sha256)) {
+        const eon::AtariStStxPhysicalDisk stx(*physical_disk);
+        const auto boot = stx.sector(0, 0, 1);
+        const auto loader = stx.sector(1, 0, 9);
+        const auto boot_location = std::find_if(stx.sectors().begin(), stx.sectors().end(),
+            [](const eon::AtariStStxSector& sector) {
+                return sector.track == 0 && sector.side == 0 && sector.id == 1;
+            });
+        const auto loader_location = std::find_if(stx.sectors().begin(), stx.sectors().end(),
+            [](const eon::AtariStStxSector& sector) {
+                return sector.track == 1 && sector.side == 0 && sector.id == 9;
+            });
+        if (boot_location == stx.sectors().end() || loader_location == stx.sectors().end()) {
+            throw std::runtime_error("Verified Millennium Atari STX has no required physical sector");
+        }
+        std::cout << "          physical Disk 1 STX: SHA-256 " << disk1_stx_sha256
+            << "; " << stx.track_count() << " track records, " << stx.sectors().size()
+            << " identified sectors; T0/H0/S1 +0x" << std::hex
+            << boot_location->payload_offset << ", " << std::dec << boot.size()
+            << " bytes, SHA-256 " << eon::to_hex(eon::sha256(boot))
+            << "; T1/H0/S9 +0x" << std::hex << loader_location->payload_offset
+            << ", " << std::dec << loader.size() << " bytes, SHA-256 "
+            << eon::to_hex(eon::sha256(loader)) << "; literal +0xbe MILL22B.inf"
+            << " (direct STX sector spans only; no flattened image, filesystem traversal,"
+            << " boot semantics, or executable handoff)\n";
+    }
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");
     const auto& root_inventory = live_bootstrap.root_inventory();

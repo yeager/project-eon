@@ -241,6 +241,14 @@ jobs:
           cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"
           cp po/*.po "$APP/Contents/Resources/po/"
           cp README.md LICENSE "$APP/Contents/Resources/"
+          # The artifact name is architecture-specific. Do not rely on the
+          # runner label alone: a host/default-architecture CMake regression
+          # must not publish an Intel binary as arm64 (or vice versa).
+          built_architectures=$(lipo -archs "$APP/Contents/MacOS/ProjectEon")
+          if [ "$built_architectures" != "${{ matrix.arch }}" ]; then
+            echo "macOS bundle architecture mismatch: expected ${{ matrix.arch }}, got $built_architectures" >&2
+            exit 1
+          fi
           rpaths_for() {
             otool -l "$1" | sed -n 's/^[[:space:]]*path \(.*\) (offset [0-9][0-9]*)$/\1/p'
           }
