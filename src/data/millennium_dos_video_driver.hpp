@@ -52,4 +52,9 @@ struct MillenniumDosVideoDriverProfile {
 [[nodiscard]] MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
     std::span<const std::uint8_t> bytes, MillenniumDosVideoDriverKind kind);
 
+// Spanish FAT12 drivers are accepted only by their own content identities;
+// their matching dispatch offsets never authorize English-driver substitution.
+[[nodiscard]] MillenniumDosVideoDriverProfile parse_millennium_dos_spanish_video_driver(
+    std::span<const std::uint8_t> bytes, MillenniumDosVideoDriverKind kind);
+
 } // namespace eon

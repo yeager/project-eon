@@ -1761,6 +1761,13 @@ int main(int argc, char** argv) {
                 report_millennium_atari_st(release);
             }
         }
+        if (!found) {
+            if (request.inspect_data) {
+                std::cerr << "No recognised original release matches the requested inspection filters.\n";
+            } else {
+                std::cerr << "No recognised original release matches the requested verification game.\n";
+            }
+        }
         return found ? 0 : 5;
     }
     if (request.game && !eon::release_available(releases, *request.game, request.platform)) {

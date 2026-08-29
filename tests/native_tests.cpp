@@ -1952,6 +1952,15 @@ int main() {
     assert(spanish_title_boundary.private_driver_function == 0x13);
     assert(spanish_title_boundary.private_driver_call_count == 5);
     assert(graphics && graphics->size == 311'420);
+    const auto* spanish_ega = disk.find("EGA640.BIN");
+    const auto* spanish_mcga = disk.find("MCGA.BIN");
+    assert(spanish_ega && spanish_mcga);
+    const auto spanish_ega_profile = eon::parse_millennium_dos_spanish_video_driver(
+        disk.read(*spanish_ega), eon::MillenniumDosVideoDriverKind::ega640);
+    const auto spanish_mcga_profile = eon::parse_millennium_dos_spanish_video_driver(
+        disk.read(*spanish_mcga), eon::MillenniumDosVideoDriverKind::mcga);
+    assert(spanish_ega_profile.byte_size == 4630 && spanish_ega_profile.function_six_address == 0x8a6);
+    assert(spanish_mcga_profile.byte_size == 4346 && spanish_mcga_profile.function_thirteen_address == 0x905);
     assert(spanish_title && spanish_title->size == 18'998);
     assert(spanish_static_data && spanish_static_data->size == 13'254);
     const auto spanish_launch_manual = eon::parse_millennium_dos_spanish_launch_manual(

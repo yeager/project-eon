@@ -2367,6 +2367,15 @@ own bytes retain entry `$1b80`, private wrapper `$0122`, and post-title
 This locks shared machine-code facts without substituting English resources,
 drivers, ABI effects, or frames.
 
+The Spanish FAT12 image also supplies its own `EGA640.BIN` (4,630 bytes,
+SHA-256 `ef031b0b6e720ab2dafc1eb6373ddb76e0ff15f7b59ac785265c5136be153daf`)
+and `MCGA.BIN` (4,346 bytes, SHA-256
+`3fb76b2ccccffc304b0525cd410b940bbb61e3d1a7a90340d72e5683d7f0211d`).
+Both are parsed only after these Spanish identities and retain their own
+function-$06 and function-$13 dispatch targets. Matching offsets are evidence
+of local code structure, not permission to load an English driver or execute
+the private ABI.
+
 The English DOS `TITLE.LIB` (18,907 bytes, SHA-256
 `6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678`)
 and `GX.LIB` (312,748 bytes, SHA-256

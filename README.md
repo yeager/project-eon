@@ -167,6 +167,12 @@ verified reports are printed; it never selects a fallback platform or language.
 Inspection neither extracts files to disk nor creates, alters, or substitutes
 game data.
 
+For scripts, `--inspect` exits `0` after one or more matching reports, `3`
+when the supplied path has no recognised original archive, and `5` when a
+valid game/platform filter has no matching supported release. In the latter
+case Project Eon reports the mismatch and never silently changes platform or
+language. A missing data path exits `2` without creating the default location.
+
 When a report reaches a platform boundary, it also states the minimum missing
 reference-trace inputs. Those lines are a collection checklist, not an
 emulation request: use a hash-identified original release and a trace-capable,
