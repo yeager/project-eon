@@ -39,6 +39,9 @@ never claim parity or invent behaviour that evidence does not support.
 - Run CMake/Ninja, `ctest`, Python preservation tests, `gitleaks detect`, and
   `git diff --check` for relevant changes. Configure `EON_REAL_DATA_DIR` for
   genuine-media tests when available.
+- Do not use `/tmp` for builds, tools, mounts, traces, or temporary work.
+  Use a scoped path beneath `/home/yeager/.cache/project-eon-tools/` instead;
+  it must remain outside the repository and user-supplied game media.
 - CI builds Linux, macOS, and Windows; creates non-published DEB/RPM, macOS
   arm64/x86_64, and Inno Setup artifacts. Never create a release unless the
   maintainer explicitly requests one.
