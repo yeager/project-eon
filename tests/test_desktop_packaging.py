@@ -35,6 +35,9 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("private runtime", source)
         self.assertIn("LD_TRACE_LOADED_OBJECTS=1", source)
         self.assertIn("generated RPM runtime dependencies", source)
+        self.assertIn("rpm2cpio", source)
+        self.assertIn("package layout regression", source)
+        self.assertIn("cpio zlib1g-dev", WORKFLOW.read_text(encoding="utf-8"))
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")

@@ -2297,6 +2297,31 @@ int main() {
     assert(spanish_text_catalog.pointers.size() == eon::MillenniumDosStaticTextCatalog::pointer_count);
     assert(spanish_text_catalog.records.size() == 434);
     assert(spanish_text_catalog.pointers[2].target_offset == 0x36a);
+    const auto spanish_control_text = eon::parse_millennium_dos_control_text_evidence(
+        disk.read(*spanish_static_data));
+    assert(spanish_control_text.source_sha256
+        == "8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31");
+    assert((spanish_control_text.pointer_indices
+        == std::array<std::size_t, 5>{{271, 350, 390, 398, 399}}));
+    assert(spanish_control_text.literals[0].record_offset == 0x1351);
+    assert(spanish_control_text.literals[0].literal_offset == 0x1359);
+    assert(spanish_control_text.literals[0].literal == "boton / espacio");
+    assert(spanish_control_text.literals[1].literal == "pulsa espacio para continuar..");
+    assert(spanish_control_text.literals[2].literal == "pulsa el boton izquierdo para seguir");
+    assert(spanish_control_text.literals[3].literal == "MODO RATON");
+    assert(spanish_control_text.literals[4].literal == "MODO TECLADO");
+    {
+        auto altered_spanish_control_text = disk.read(*spanish_static_data);
+        altered_spanish_control_text[0x2eb6] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_control_text_evidence(
+                altered_spanish_control_text));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
 
     const auto atari_release = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st;

@@ -35,12 +35,20 @@ struct DosExpectedLiteral {
     std::string_view record_sha256;
 };
 
-constexpr std::array<DosExpectedLiteral, 5> dos_literals{{
+constexpr std::array<DosExpectedLiteral, 5> english_dos_literals{{
     {271, 0x12a7, 25, 0x12ac, "left button / space", "4ff26c46bfaba03c12a1a29271499c81d044ce2cccc8db06ad3e07535ad5445c"},
     {350, 0x1d88, 33, 0x1d8a, "press space bar to continue...", "ab5a128110d288c166213ef0e64b8593d1945ab8e9624363c573fe8ef942f818"},
     {390, 0x2aef, 38, 0x2af4, "press left button to continue...", "b0676d538a2ef6b07cdf467bb10a4dbea34af96fccafc90180a01825935c1d4f"},
     {398, 0x2bcd, 22, 0x2bd6, "MOUSE MODE", "220c3cd2cb86c2353f8f9320e6ec7c469007e4bd31e11dce52c847f8c510c5cc"},
     {399, 0x2be3, 22, 0x2bea, "KEYBOARD MODE", "0951952248daef3634e418d0bed0cfa2ea8cd58f7975ee5e77880c54ad731f2d"},
+}};
+
+constexpr std::array<DosExpectedLiteral, 5> spanish_dos_literals{{
+    {271, 0x1351, 24, 0x1359, "boton / espacio", "1644bb8d9ecb1e41a50804e6966a9f91e99433968d6ce690aa1e8aaad79e00c1"},
+    {350, 0x1f41, 33, 0x1f43, "pulsa espacio para continuar..", "5d3b18d963f840dce41371210411578f218add619a52c39e49b382db2bb7f0b6"},
+    {390, 0x2d99, 42, 0x2d9e, "pulsa el boton izquierdo para seguir", "6af12fa55735c3a6a6a986af3242472e47c01480d2b3e180c21e1996df04cdfd"},
+    {398, 0x2e98, 22, 0x2ea1, "MODO RATON", "cc2cbde218ba9d86e805bf2247d6acf13a15019d28a840fdb67345be5efb28c2"},
+    {399, 0x2eae, 22, 0x2eb6, "MODO TECLADO", "e9d50a0d17dd4d11a008b88ccedb3f8b60dd6bdb3ec126ef8e28199b96f143d0"},
 }};
 
 struct AtariExpectedLiteral {
@@ -60,15 +68,27 @@ constexpr std::array<AtariExpectedLiteral, 5> atari_literals{{
 
 MillenniumDosControlTextEvidence parse_millennium_dos_control_text_evidence(
     const std::span<const std::uint8_t> static_data) {
-    constexpr std::string_view source_sha256 = "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
+    constexpr std::string_view english_source_sha256 =
+        "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
+    constexpr std::string_view spanish_source_sha256 =
+        "8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31";
     constexpr std::size_t pointer_table_size = 0x366;
-    if (static_data.size() < pointer_table_size || to_hex(sha256(static_data)) != source_sha256) {
+    const auto source_hash = to_hex(sha256(static_data));
+    const std::array<DosExpectedLiteral, 5>* literals = nullptr;
+    if (source_hash == english_source_sha256) {
+        literals = &english_dos_literals;
+    } else if (source_hash == spanish_source_sha256) {
+        literals = &spanish_dos_literals;
+    } else {
         throw std::runtime_error("Unsupported Millennium DOS control-text source");
     }
+    if (static_data.size() < pointer_table_size) {
+        throw std::runtime_error("Truncated Millennium DOS control-text source");
+    }
     MillenniumDosControlTextEvidence result;
-    result.source_sha256 = std::string(source_sha256);
-    for (std::size_t slot = 0; slot < dos_literals.size(); ++slot) {
-        const auto& expected = dos_literals[slot];
+    result.source_sha256 = source_hash;
+    for (std::size_t slot = 0; slot < literals->size(); ++slot) {
+        const auto& expected = (*literals)[slot];
         const auto target = read_le16(static_data, expected.pointer_index * 2U);
         if (target != expected.record_offset || expected.record_offset > static_data.size()
             || expected.record_size > static_data.size() - expected.record_offset

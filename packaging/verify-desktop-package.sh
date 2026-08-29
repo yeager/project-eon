@@ -64,11 +64,36 @@ for package in "$@"; do
     *.rpm)
       contents=$(rpm -qlp "$package")
       # RPM calculates ELF requirements by default. Keep that metadata visible
-      # as a contract, because this verifier cannot assume an RPM host is
-      # available to install the artifact on Ubuntu CI.
+      # as a contract. The payload is exercised below without installing it on
+      # the Ubuntu CI host, so an RPM repository is not needed for this test.
       dependencies=$(rpm -qp --requires "$package")
       if ! printf '%s\n' "$dependencies" | grep -Fq 'libc.so.6'; then
         echo "$package lacks generated RPM runtime dependencies" >&2
+        exit 1
+      fi
+
+      # Do not limit RPM validation to its dependency declaration. Extract the
+      # artifact into an isolated directory and run the installed executable,
+      # just as the DEB path does. This catches a missing private SDL library,
+      # a lost $ORIGIN runpath, or a package layout regression before upload.
+      temporary=$(mktemp -d)
+      temporary_directories+=("$temporary")
+      rpm2cpio "$package" | (cd "$temporary" && cpio --quiet -idm)
+      executable="$temporary/usr/bin/project-eon"
+      if [ ! -x "$executable" ]; then
+        echo "$package lacks its installed executable" >&2
+        exit 1
+      fi
+      runtime_trace=$(LD_TRACE_LOADED_OBJECTS=1 "$executable")
+      for library in libSDL3.so.0 libSDL3_image.so.0 libSDL3_ttf.so.0; do
+        if ! printf '%s\n' "$runtime_trace" | grep -Fq "$temporary/usr/bin/$library"; then
+          echo "$package does not resolve $library from its installed runtime" >&2
+          exit 1
+        fi
+      done
+      usage=$("$executable" --help 2>&1)
+      if ! printf '%s\n' "$usage" | grep -Fq 'Usage:'; then
+        echo "$package executable did not load and print CLI usage" >&2
         exit 1
       fi
       ;;
