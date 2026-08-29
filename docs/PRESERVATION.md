@@ -3577,6 +3577,15 @@ bounded grammar, required capture hashes and rejection rules are in
 emulator snapshots, ROMs and all game media remain user-owned and excluded
 from Git and packages.
 
+The `deuteros-amiga-en-title-stage-v1` v2 adapter additionally pins the clean
+system ADF SHA-256 and the `$13000` title-stage image SHA-256 before accepting
+only raw observations at the already documented Exec, OpenLibrary,
+graphics-vector, custom-register and callback boundaries. Its raw result
+fields are retained as external provenance only: the adapter does not emulate,
+replay, shim, call, write, invoke, or make a title-stage runtime input from
+them. This preserves evidence beyond the present hard ABI boundary without
+claiming that the original title stage has started.
+
 ## Current boundary
 
 Release recognition, archive traversal, selected FAT12 content, Deuteros ADF

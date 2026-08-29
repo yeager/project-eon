@@ -13,8 +13,9 @@ after its caller, ABI and result are separately documented in
 
 Format **v1** remains the generic identity-and-ordering format. Format **v2**
 is not a general semantic-trace upgrade: it admits only the strict diagnostics
-adapters `millennium-dos-en-startup-v1`, `deuteros-atari-st-boot-v1`, and
-`millennium-amiga-en-defjam-bootstrap-v1`.
+adapters `millennium-dos-en-startup-v1`, `deuteros-atari-st-boot-v1`,
+`millennium-amiga-en-defjam-bootstrap-v1`, and
+`deuteros-amiga-en-title-stage-v1`.
 Their observations are checked against literal, hash-pinned source sites.
 Neither replays observations nor treats a
 validated result as a platform-service, private-driver, file, device, or
@@ -80,6 +81,15 @@ Its v2 manifest adds `source_media_sha256`, exactly
 This binds the report to the documented Replicants Disk 1 and copied
 second-stage interval; it is not transferable to another Atari image,
 development disk, repacked archive, or similarly named file.
+
+`deuteros-amiga-en-title-stage-v1` is accepted only for the English Deuteros
+Amiga outer archive `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`.
+Its v2 manifest adds `source_media_sha256`, exactly
+`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`, for the
+clean system ADF, and `source_stage_sha256`, exactly
+`48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03`, for its
+`ADF +0x6e000`, `0x6ca00`-byte title stage. This binds evidence only; it does
+not make the title stage executable or transfer a trace into runtime.
 
 ## Event stream (v1)
 
@@ -174,6 +184,28 @@ The exact source and boundary evidence are documented in
 The registered adapter dispatches its event stream only for the outer hash
 above and reports the CPU handoff count as diagnostics. It does not make the
 opaque bootstrap executable or consume a trace as runtime input.
+
+## Event stream (v2 Deuteros Amiga title-stage adapter)
+
+`deuteros-amiga-en-title-stage-v1` admits raw post-observation result fields
+only at already documented ABI boundary sites. `result_d0` and `result_sr` are
+lower-case, zero-padded raw longword/word values; they are provenance, never
+inputs to a reimplementation. Every record is LF-terminated and begins
+`event<TAB>sequence tick`; sequence and tick strictly increase.
+
+| Type | Exact declared schema |
+| --- | --- |
+| `exec` | `site=0x00040450 exec_base_address=0x00000004 vector=-0x0096\|-0x009c result_d0=<u32> result_sr=<u16>` |
+| `open-library` | `site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=<u32> result_sr=<u16>` |
+| `graphics` | `site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=<u32> result_sr=<u16>` |
+| `custom-register` | `site=0x0004046c base=0x00dff000 offset=<0x0040\|0x0042\|0x009a\|0x0096> value=<0x7fff\|0xc000\|0x87ff> result_d0=<u32> result_sr=<u16>` |
+| `callback` | Registration: `site=0x0001ef74 callback=0x0001f056 exec_base_address=0x00000004 vector=-0x01ce result_d0=<u32> result_sr=<u16>`; entry: `site=0x0001f056 incoming_a0=<u32> result_d0=<u32> result_sr=<u16>` |
+
+It only verifies identity, grammar and literal caller sites, then reports
+counts. It never opens `graphics.library`, calls Exec or a graphics vector,
+switches privilege/state, writes custom hardware, invokes a callback, maps
+`incoming_a0`, or treats an observed raw result as a service ABI, input,
+timing, screen or title-stage execution result.
 
 ## Command-line boundary
 

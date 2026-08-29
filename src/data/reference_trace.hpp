@@ -39,6 +39,9 @@ struct ReferenceTrace {
     std::size_t adapter_table_count = 0;
     std::size_t adapter_raw_reader_count = 0;
     std::size_t adapter_cpu_count = 0;
+    std::size_t adapter_open_library_count = 0;
+    std::size_t adapter_graphics_count = 0;
+    std::size_t adapter_custom_register_count = 0;
 };
 
 struct ReferenceTraceValidation {
