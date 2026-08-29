@@ -2338,11 +2338,11 @@ parse_deuteros_amiga_title_post_exec_service_route_profile(const AmigaAdf& disk,
     const auto all = disk.bytes(stage.disk_offset, stage.length);
     const auto span = [&](std::uint32_t a, std::size_t n) { return all.subspan(a - stage.destination, n); };
     const auto caller = span(0x4051e, 20); const auto entry = span(0x20e18, 140); const auto nested = span(0x20ba8, 74);
-    require_word(caller, 0, 0x23fc); require_long(caller, 2, 0x0002151a); require_long(caller, 6, 0x000222ae); require_word(caller, 14, 0x4eb9); require_long(caller, 16, 0x00020e18);
+    require_word(caller, 0, 0x23fc); require_long(caller, 2, 0x0002151a); require_long(caller, 6, 0x000222ae); require_word(caller, 10, 0x7000); require_word(caller, 12, 0x4eb9); require_long(caller, 14, 0x00020e18);
     require_word(entry, 82, 0x4eb9); require_long(entry, 84, 0x0001fb9a); require_word(entry, 98, 0x4eb9); require_long(entry, 100, 0x0001ff08); require_word(entry, 126, 0x4eb9); require_long(entry, 128, 0x00022bca); require_word(entry, 132, 0x6100); require_word(entry, 136, 0x6000);
-    require_word(nested, 26, 0xe20f); require_word(nested, 46, 0x4eb9); require_long(nested, 48, 0x00041a68); require_word(nested, 64, 0x4eb9); require_long(nested, 66, 0x00041a68); require_word(nested, 72, 0x4e75);
+    require_word(nested, 26, 0xe20f); require_word(nested, 46, 0x4eb9); require_long(nested, 48, 0x00041a68); require_word(nested, 60, 0x4eb9); require_long(nested, 62, 0x00041a68); require_word(nested, 72, 0x4e75);
     if (to_hex(sha256(all)) != stage_hash || to_hex(sha256(caller)) != caller_hash || to_hex(sha256(entry)) != entry_hash || to_hex(sha256(nested)) != nested_hash) throw std::runtime_error("Unsupported Deuteros post-Exec service-route profile");
-    return {0x4052c, 0x20e18, 0x20ba8, {{0x1fb9a, 0x1ff08, 0x22bca}}, 0x41a68, 0x20bf0, 0x20bf2, std::string(caller_hash), std::string(entry_hash), std::string(nested_hash)};
+    return {0x4052a, 0x20e18, 0x20ba8, {{0x1fb9a, 0x1ff08, 0x22bca}}, 0x41a68, 0x20bf0, 0x20bf2, std::string(caller_hash), std::string(entry_hash), std::string(nested_hash)};
 }
 
 DeuterosAmigaTitlePostExecTailFlagGateProfile

@@ -18,16 +18,31 @@ import sys
 import tempfile
 
 
-def media_snapshot(directory: Path) -> dict[Path, str]:
-    """Return a content snapshot without trusting timestamps or filenames."""
+ORIGINAL_MEDIA_SUFFIXES = frozenset({".zip", ".adf", ".msa", ".st", ".stx"})
+
+
+def media_snapshot(directory: Path, *, original_media_only: bool = False) -> dict[Path, str]:
+    """Return a content snapshot without trusting timestamps or filenames.
+
+    A user media directory can legitimately contain unrelated downloads.  The
+    preservation assertion therefore snapshots only recognised container
+    classes when checking supplied media, while test-pack fixtures retain a
+    complete snapshot.
+    """
     snapshot: dict[Path, str] = {}
     for path in sorted(directory.rglob("*")):
         relative = path.relative_to(directory)
         if path.is_dir():
+            if original_media_only:
+                continue
             snapshot[relative] = "directory"
             continue
         if not path.is_file():
+            if original_media_only:
+                continue
             snapshot[relative] = "other"
+            continue
+        if original_media_only and path.suffix.lower() not in ORIGINAL_MEDIA_SUFFIXES:
             continue
         digest = hashlib.sha256()
         with path.open("rb") as source:
@@ -35,6 +50,15 @@ def media_snapshot(directory: Path) -> dict[Path, str]:
                 digest.update(block)
         snapshot[relative] = f"file:{digest.hexdigest()}"
     return snapshot
+
+
+def snapshot_difference(before: dict[Path, str], after: dict[Path, str]) -> str:
+    """Format a bounded, actionable difference for an immutability failure."""
+    changed = sorted(path for path in before.keys() | after.keys() if before.get(path) != after.get(path))
+    return ", ".join(
+        f"{path}: {before.get(path, '<missing>')} -> {after.get(path, '<missing>')}"
+        for path in changed[:8]
+    ) or "no supported-media content difference"
 
 
 def write_reference_trace(
@@ -104,7 +128,13 @@ def main() -> int:
     if not data_directory.is_dir():
         raise SystemExit(f"Real data directory not found: {data_directory}")
 
-    before = media_snapshot(data_directory)
+    test_tmpdir = os.environ.get("EON_TEST_TMPDIR")
+    if not test_tmpdir:
+        raise SystemExit("EON_TEST_TMPDIR is required; tests must not use the system temporary directory")
+    temporary_root = Path(test_tmpdir)
+    temporary_root.mkdir(parents=True, exist_ok=True)
+
+    before = media_snapshot(data_directory, original_media_only=True)
     environment = os.environ | {"SDL_VIDEODRIVER": "dummy"}
     # Keep the explicit spelling usable for scripts and package integrations;
     # it must select the same original data directory without creating or
@@ -277,14 +307,16 @@ def main() -> int:
         (str(executable), "--inspect-save", str(dos_archive)),
         env=environment, check=False, capture_output=True, text=True,
     )
+    after_archive_save = media_snapshot(data_directory, original_media_only=True)
     if (archive_save_report.returncode != 0
             or "verified English Millennium DOS archive" not in archive_save_report.stdout
             or "[0] +00=0x8100 +04=0x0 +06=0x0 +08=0x2292" not in archive_save_report.stdout
             or "[37] +00=0x8600 +04=0x0 +06=0x0 +08=0x0" not in archive_save_report.stdout
-            or media_snapshot(data_directory) != before):
+            or after_archive_save != before):
         raise SystemExit(
             "archive-backed DOS save inspection did not remain hash-bound and read-only:\n"
-            f"{archive_save_report.stdout}\n{archive_save_report.stderr}"
+            f"{archive_save_report.stdout}\n{archive_save_report.stderr}\n"
+            f"media difference: {snapshot_difference(before, after_archive_save)}"
         )
     trace_specs = (
         (
@@ -344,7 +376,7 @@ def main() -> int:
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
         ),
     }
-    with tempfile.TemporaryDirectory() as temporary_trace_root:
+    with tempfile.TemporaryDirectory(dir=temporary_root) as temporary_trace_root:
         trace_root = Path(temporary_trace_root)
         for (game, platform, adapter, source_sha256, events, media_sha256,
              stage_sha256, expected_diagnostics) in trace_specs:
@@ -403,7 +435,7 @@ def main() -> int:
     # Pack bytes are deliberately temporary test fixtures, outside supplied
     # media. They prove the CLI invokes the real read-only admission reader;
     # neither this test nor the runtime writes a Modern-pack cache.
-    with tempfile.TemporaryDirectory() as temporary_pack_root:
+    with tempfile.TemporaryDirectory(dir=temporary_root) as temporary_pack_root:
         pack_root = Path(temporary_pack_root)
         eligible_pack = pack_root / "test-modern-pack"
         eligible_pack.mkdir()
@@ -860,14 +892,14 @@ def main() -> int:
             f"{name} exited before its SDL loop (status {completed.returncode}):\n"
             f"{completed.stderr}"
         )
-    after = media_snapshot(data_directory)
+    after = media_snapshot(data_directory, original_media_only=True)
     if after != before:
         raise SystemExit("Project Eon changed the supplied game-data directory")
 
     # The Unix default is a read-only lookup at ~/.projecteon.  It must not
     # bootstrap a missing user-data directory as a side effect of inspection.
     if os.name != "nt":
-        with tempfile.TemporaryDirectory() as temporary_home:
+        with tempfile.TemporaryDirectory(dir=temporary_root) as temporary_home:
             isolated_environment = environment | {"HOME": temporary_home}
             missing_default = Path(temporary_home) / ".projecteon"
             completed = subprocess.run(
@@ -882,7 +914,7 @@ def main() -> int:
     # An existing but empty directory is distinct from a missing default path:
     # recognition completes, reports no release, and leaves that directory
     # untouched instead of preparing a placeholder collection.
-    with tempfile.TemporaryDirectory() as empty_directory:
+    with tempfile.TemporaryDirectory(dir=temporary_root) as empty_directory:
         completed = subprocess.run(
             (str(executable), "--data", empty_directory, "--inspect"), env=environment,
             check=False, capture_output=True, text=True,

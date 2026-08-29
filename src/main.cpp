@@ -878,6 +878,17 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << paired_local_route.high_block_entry_address << ", RTS 0x"
         << paired_local_route.high_block_return_address
         << " (cells and writes unmodelled)" << std::dec << '\n';
+    const auto service_route =
+        eon::parse_deuteros_amiga_title_post_exec_service_route_profile(disk, plan);
+    std::cout << "          Post-Exec service route: JSR 0x" << std::hex
+        << service_route.caller_address << " -> 0x" << service_route.entry_address
+        << "; external calls 0x" << service_route.external_call_targets[0] << "/0x"
+        << service_route.external_call_targets[1] << "/0x"
+        << service_route.external_call_targets[2] << ", nested 0x"
+        << service_route.nested_entry_address << " -> 0x"
+        << service_route.nested_branch_target << ", continuation 0x"
+        << service_route.continuation_target
+        << " (calls, branches, and writes unmodelled)" << std::dec << '\n';
     const auto post_exec_tail_flag_gate =
         eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(disk, plan);
     std::cout << "          Conditional tail flag gate: 0x" << std::hex
