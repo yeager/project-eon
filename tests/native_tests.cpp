@@ -850,10 +850,28 @@ int main() {
         assert(explicit_directory.request && !explicit_directory.request->data_directory_is_default);
         assert(explicit_directory.request->data_directory == "original-media");
         char inspect_option[] = "--inspect";
+        char game_option[] = "--game";
         char millennium[] = "millennium";
         char* inspect_args[] = {program, inspect_option};
         const auto inspect = eon::parse_command_line(2, inspect_args);
         assert(inspect.request && inspect.request->inspect_data);
+        char inspect_save_option[] = "--inspect-save";
+        char inspect_save_path[] = "/original/2200SAVE.I";
+        char* inspect_save_args[] = {program, inspect_save_option, inspect_save_path};
+        const auto inspect_save = eon::parse_command_line(3, inspect_save_args);
+        assert(inspect_save.request && inspect_save.request->inspect_save
+            && *inspect_save.request->inspect_save == "/original/2200SAVE.I");
+        char* inspect_save_with_game_args[] = {program, inspect_save_option, inspect_save_path,
+            game_option, millennium};
+        assert(!eon::parse_command_line(5, inspect_save_with_game_args).request);
+        char* inspect_save_with_data_args[] = {program, data_option, custom_path,
+            inspect_save_option, inspect_save_path};
+        assert(!eon::parse_command_line(5, inspect_save_with_data_args).request);
+        char presentation_option[] = "--presentation";
+        char modern_presentation[] = "modern";
+        char* inspect_save_with_presentation_args[] = {program, inspect_save_option, inspect_save_path,
+            presentation_option, modern_presentation};
+        assert(!eon::parse_command_line(5, inspect_save_with_presentation_args).request);
         char modern_packs_option[] = "--modern-packs";
         char pack_root[] = "separately-installed-modern-packs";
         char* modern_pack_args[] = {program, inspect_option, modern_packs_option, pack_root};
@@ -864,11 +882,9 @@ int main() {
         assert(!eon::parse_command_line(3, modern_pack_without_inspect_args).request);
         char modern_pack_option[] = "--modern-pack";
         char modern_manifest[] = "explicit/pack.eonmodern";
-        char presentation_option[] = "--presentation";
         char modern[] = "modern";
         char platform_option[] = "--platform";
         char dos[] = "dos";
-        char game_option[] = "--game";
         char* selected_modern_pack_args[] = {program, game_option, millennium, platform_option, dos,
             presentation_option, modern, modern_pack_option, modern_manifest};
         const auto selected_modern_pack = eon::parse_command_line(9, selected_modern_pack_args);
@@ -7153,7 +7169,10 @@ int main() {
         input_random.advance_vblank();
         if (!events.alternate_resources.empty()) {
             assert(events.alternate_resources.size() == 1);
-            first_input_alternate = events.alternate_resources.front();
+            first_input_alternate = events.alternate_resources.front().resource_relative_offset;
+            assert(events.alternate_resources.front().command_stream_offset == 0x0a8a);
+            assert(events.alternate_resources.front().command_disk_offset == 0x1c28a);
+            assert(events.alternate_resources.front().channel_index == 3);
             assert(tick == 82);
             break;
         }
@@ -7222,7 +7241,10 @@ int main() {
         const auto events = live_input_opening.tick(true);
         if (!events.alternate_resources.empty()) {
             assert(events.alternate_resources.size() == 1);
-            live_input_alternate = events.alternate_resources.front();
+            live_input_alternate = events.alternate_resources.front().resource_relative_offset;
+            assert(events.alternate_resources.front().command_stream_offset == 0x0a8a);
+            assert(events.alternate_resources.front().command_disk_offset == 0x1c28a);
+            assert(events.alternate_resources.front().channel_index == 3);
             assert(tick == 82);
             assert(events.title_handoff);
             break;

@@ -28,6 +28,10 @@ struct LaunchRequest {
     std::optional<Game> game;
     std::optional<Game> verify_game;
     std::optional<std::filesystem::path> reference_trace;
+    // An explicitly supplied Millennium DOS save is a diagnostics-only input.
+    // It is parsed read-only and never joins a launch, simulation, or save
+    // write path.
+    std::optional<std::filesystem::path> inspect_save;
     // Explicit diagnostics-only root for separately installed Modern packs.
     // There is deliberately no default lookup.
     std::optional<std::filesystem::path> modern_pack_root;
@@ -41,6 +45,9 @@ struct LaunchRequest {
     // user's desktop locale or substitute another edition.
     std::optional<std::string> release_language;
     Presentation presentation = Presentation::original;
+    // Keep diagnostics-only inputs from quietly accepting an otherwise
+    // meaningless presentation switch.
+    bool presentation_explicit = false;
     DisplayPreferences display;
     std::string language;
 };

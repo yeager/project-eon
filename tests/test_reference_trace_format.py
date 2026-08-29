@@ -35,6 +35,21 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         },
     }
 
+    recovery_boundaries = {
+        "millennium-dos-en-startup-v1": (
+            "millennium-dos-launcher", "millennium-dos-title-flow", "millennium-dos-game-flow",
+        ),
+        "deuteros-atari-st-boot-v1": (
+            "deuteros-atari-protected-boot", "deuteros-atari-first-stage",
+        ),
+        "millennium-amiga-en-defjam-bootstrap-v1": (
+            "millennium-amiga-defjam-bootstrap", "millennium-amiga-shared-resident",
+        ),
+        "deuteros-amiga-en-title-stage-v1": (
+            "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
+        ),
+    }
+
     def test_registry_rows_match_release_manifest(self):
         manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
         releases = {release["sha256"]: release for release in manifest["releases"]}
@@ -59,6 +74,17 @@ class ReferenceTraceFormatTests(unittest.TestCase):
                 if "media" in identity:
                     self.assertIn(identity["media"], documented)
                     self.assertIn(identity["stage"], documented)
+
+    def test_declarative_adapter_boundary_maps_are_documented_and_compiled(self):
+        code = TRACE_VALIDATOR.read_text(encoding="utf-8")
+        documented = FORMAT.read_text(encoding="utf-8")
+        for adapter, boundaries in self.recovery_boundaries.items():
+            with self.subTest(adapter=adapter):
+                self.assertIn(f'AdapterRecoveryMap{{"{adapter}"', code)
+                self.assertIn(f"`{adapter}`", documented)
+                for boundary in boundaries:
+                    self.assertIn(f'"{boundary}"', code)
+                    self.assertIn(f"`{boundary}`", documented)
 
     def test_documented_dos_schema_includes_the_2200ad_private_wrapper_site(self):
         documented = FORMAT.read_text(encoding="utf-8")
