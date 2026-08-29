@@ -66,7 +66,7 @@ AtariStStxPhysicalDisk::AtariStStxPhysicalDisk(std::vector<std::uint8_t> image)
             }
             const auto track = image_[descriptor + 8];
             const auto side = image_[descriptor + 9];
-            if (track != (track_number & 0x7fU) || side > 1) {
+            if (track != (track_number & 0x7fU) || side != (track_number >> 7U)) {
                 throw std::runtime_error("Unsupported STX sector identity");
             }
             const auto id = image_[descriptor + 10];

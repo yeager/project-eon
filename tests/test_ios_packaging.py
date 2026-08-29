@@ -38,6 +38,8 @@ class IosPackagingTests(unittest.TestCase):
 <key>LSRequiresIPhoneOS</key><true/>
 <key>UIDeviceFamily</key><array><integer>2</integer></array>
 <key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
+<key>UIFileSharingEnabled</key><true/>
+<key>LSSupportsOpeningDocumentsInPlace</key><true/>
 </dict></plist>""", encoding="utf-8")
         for resource in (*(f"Resources/assets/cards/{card}" for card in CARDS),
                          *(f"Resources/assets/fonts/{font}" for font in FONTS),
@@ -80,6 +82,16 @@ class IosPackagingTests(unittest.TestCase):
         i18n = (ROOT / "src" / "i18n.cpp").read_text(encoding="utf-8")
         self.assertIn('base / "Resources" / "assets" / "cards"', main)
         self.assertIn('executable_directory / "Resources" / "po"', i18n)
+
+    def test_ios_keeps_user_media_out_of_the_ipa_but_files_visible_at_runtime(self):
+        launcher = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")
+        plist = (ROOT / "packaging" / "ios" / "Info.plist.in").read_text(encoding="utf-8")
+        verifier = VERIFY.read_text(encoding="utf-8")
+        self.assertIn('std::filesystem::path(home) / "Documents" / "ProjectEon"', launcher)
+        self.assertIn("UIFileSharingEnabled", plist)
+        self.assertIn("LSSupportsOpeningDocumentsInPlace", plist)
+        self.assertIn("Files sharing for user media", verifier)
+        self.assertIn("opening user media in place", verifier)
 
     def test_creates_payload_with_relative_output(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -12,6 +12,7 @@
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
 #include "data/atari_st_stx.hpp"
+#include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_audio.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
@@ -49,6 +50,7 @@
 #include <array>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -1026,6 +1028,50 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " original VOC names at 0x" << std::hex << sound_effect_names.table_address
         << " (SHA-256 " << sound_effect_names.table_sha256
         << "; static only, no event mapping or playback)\n" << std::dec;
+    // The executable names an exact original VOC family, but no recovered
+    // caller selects an entry or invokes a sound-driver ABI. Decode it here
+    // only as a hash-verified inspection diagnostic: SDL must not play a
+    // voice merely because its bytes are available.
+    const auto inventory = eon::inventory_verified_release(release);
+    std::size_t decoded_voice_count = 0;
+    std::size_t decoded_pcm_sample_count = 0;
+    std::array<std::uint32_t, 2> voice_sample_rates{};
+    std::size_t voice_sample_rate_count = 0;
+    for (const auto& filename : sound_effect_names.filenames) {
+        const auto asset = std::find_if(inventory.begin(), inventory.end(),
+            [filename](const eon::ArchiveAsset& candidate) {
+                const auto separator = candidate.path.find_last_of('/');
+                const auto leaf = separator == std::string::npos
+                    ? std::string_view(candidate.path)
+                    : std::string_view(candidate.path).substr(separator + 1U);
+                return candidate.kind == eon::AssetKind::audio && leaf == filename;
+            });
+        if (asset == inventory.end()) {
+            throw std::runtime_error("Verified Millennium DOS VOC named by executable is missing");
+        }
+        const auto bytes = eon::extract_verified_release_asset(release, asset->sha256);
+        if (!bytes) throw std::runtime_error("Verified Millennium DOS VOC cannot be read");
+        const auto voice = eon::decode_creative_voice(*bytes);
+        if (voice.unsigned_pcm.size() > std::numeric_limits<std::size_t>::max() - decoded_pcm_sample_count) {
+            throw std::runtime_error("Millennium DOS VOC diagnostic sample count overflows");
+        }
+        decoded_pcm_sample_count += voice.unsigned_pcm.size();
+        if (std::find(voice_sample_rates.begin(), voice_sample_rates.begin() + voice_sample_rate_count,
+                voice.sample_rate) == voice_sample_rates.begin() + voice_sample_rate_count) {
+            if (voice_sample_rate_count == voice_sample_rates.size()) {
+                throw std::runtime_error("Unsupported Millennium DOS VOC sample-rate family");
+            }
+            voice_sample_rates[voice_sample_rate_count++] = voice.sample_rate;
+        }
+        ++decoded_voice_count;
+    }
+    std::cout << "          Original VOC bank: " << decoded_voice_count << " hash-verified voices, "
+        << decoded_pcm_sample_count << " unsigned PCM samples at ";
+    for (std::size_t index = 0; index < voice_sample_rate_count; ++index) {
+        if (index != 0) std::cout << '/';
+        std::cout << voice_sample_rates[index] << " Hz";
+    }
+    std::cout << " (inspection only; no event mapping, driver ABI, or playback)\n";
     const auto startup_allocation = eon::parse_millennium_dos_startup_allocation_boundary(*game);
     const auto startup_zero_path = eon::parse_millennium_dos_startup_zero_path_boundary(*game);
     const auto startup_zero_continuation =

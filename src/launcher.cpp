@@ -5,6 +5,10 @@
 #include <cstdlib>
 #include <string_view>
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
 namespace eon {
 namespace {
 
@@ -46,9 +50,20 @@ std::filesystem::path default_data_directory(const char* executable_path) {
 #else
     static_cast<void>(executable_path);
     if (const auto* home = std::getenv("HOME"); home && *home) {
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        // IPA payloads deliberately contain no game data. iPadOS therefore
+        // uses a Files-visible, non-hidden user-media location, without
+        // creating it during this read-only lookup.
+        return std::filesystem::path(home) / "Documents" / "ProjectEon";
+#else
         return std::filesystem::path(home) / ".projecteon";
+#endif
     }
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+    return std::filesystem::path("Documents") / "ProjectEon";
+#else
     return std::filesystem::path(".projecteon");
+#endif
 #endif
 }
 
@@ -70,8 +85,13 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
         "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
         "               [--modern-packs <explicit-pack-root>]\n\n"
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+        "Without --data/--data-dir, iPadOS reads user-supplied media from Documents/ProjectEon.\n"
+#else
         "Without --data/--data-dir, game data is read from ~/.projecteon on Linux/macOS\n"
-        "or <install directory>/data on Windows. Without --game, the graphical\n"
+        "or <install directory>/data on Windows.\n"
+#endif
+        "Without --game, the graphical\n"
         "start menu is shown.\n";
 }
 

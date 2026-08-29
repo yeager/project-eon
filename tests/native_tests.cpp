@@ -3973,6 +3973,18 @@ int main() {
         invalid_stx_header_rejected = true;
     }
     assert(invalid_stx_header_rejected);
+    // The per-sector CHRN must describe the same physical side as the track
+    // record.  Otherwise a malformed container could forge a second logical
+    // identity for bytes belonging to this track.
+    auto inconsistent_stx_side = *atari_physical_dump;
+    inconsistent_stx_side[0x29] = 1; // Track 0's first sector descriptor: ID head.
+    bool inconsistent_stx_side_rejected = false;
+    try {
+        static_cast<void>(eon::AtariStStxPhysicalDisk(std::move(inconsistent_stx_side)));
+    } catch (const std::runtime_error&) {
+        inconsistent_stx_side_rejected = true;
+    }
+    assert(inconsistent_stx_side_rejected);
     const auto atari_control_text = eon::parse_millennium_atari_physical_control_text_evidence(
         *atari_physical_dump);
     assert(atari_control_text.span_offset == 0x12420);
