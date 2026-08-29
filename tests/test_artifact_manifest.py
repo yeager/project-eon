@@ -13,6 +13,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "packaging" / "write-artifact-manifest.py"
+VERIFIER = ROOT / "packaging" / "verify-artifact-manifest.py"
 REVISION = "0123456789abcdef0123456789abcdef01234567"
 
 
@@ -62,3 +63,40 @@ class ArtifactManifestTests(unittest.TestCase):
                  str(root / "manifest.json"), str(symlink)], text=True, capture_output=True)
             self.assertEqual(linked.returncode, 2)
             self.assertIn("non-symlink regular file", linked.stderr)
+
+    def test_verifier_detects_tampering_schema_and_unrecorded_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifact = root / "artifact.bin"
+            artifact.write_bytes(b"verified artifact")
+            manifest = root / "manifest.json"
+            subprocess.run([sys.executable, str(SCRIPT), "--source-revision", REVISION,
+                            "--output", str(manifest), str(artifact)], check=True)
+            command = [sys.executable, str(VERIFIER), "--manifest", str(manifest),
+                       "--directory", str(root), "--expected-source-revision", REVISION,
+                       "--require-exact-directory"]
+            verified = subprocess.run(command, text=True, capture_output=True)
+            self.assertEqual(verified.returncode, 0, verified.stderr)
+            self.assertIn("verified 1 Project Eon artifact", verified.stdout)
+            artifact.write_bytes(b"tampered artifact")
+            tampered = subprocess.run(command, text=True, capture_output=True)
+            self.assertEqual(tampered.returncode, 2)
+            self.assertIn("SHA-256 mismatch", tampered.stderr)
+            artifact.write_bytes(b"verified artifact")
+            (root / "unexpected.bin").write_bytes(b"not recorded")
+            extra = subprocess.run(command, text=True, capture_output=True)
+            self.assertEqual(extra.returncode, 2)
+            self.assertIn("unrecorded entries", extra.stderr)
+            (root / "unexpected.bin").unlink()
+            document = json.loads(manifest.read_text(encoding="utf-8"))
+            document["artifacts"][0]["sha256"] = "UPPERCASE"
+            manifest.write_text(json.dumps(document), encoding="utf-8")
+            malformed = subprocess.run(command, text=True, capture_output=True)
+            self.assertEqual(malformed.returncode, 2)
+            self.assertIn("invalid SHA-256", malformed.stderr)
+            document["artifacts"][0]["sha256"] = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            document["artifacts"][0]["name"] = r"portable\\escape.bin"
+            manifest.write_text(json.dumps(document), encoding="utf-8")
+            unsafe_name = subprocess.run(command, text=True, capture_output=True)
+            self.assertEqual(unsafe_name.returncode, 2)
+            self.assertIn("safe basename", unsafe_name.stderr)

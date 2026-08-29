@@ -1563,6 +1563,59 @@ parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
         std::string(caller_hash), std::string(routine_hash)};
 }
 
+DeuterosAmigaTitlePostExecStateInitProfile
+parse_deuteros_amiga_title_post_exec_state_init_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // `$403fa` is the second call in the already verified `$403f4` batch,
+    // after the graphics-vector routine.  The local target is complete
+    // through RTS, but reaching it still requires every prior call to return.
+    constexpr std::uint32_t caller_address = 0x403fa;
+    constexpr std::uint32_t entry_address = 0x20510;
+    constexpr std::array<std::uint8_t, 6> caller_bytes{{
+        0x4e, 0xb9, 0x00, 0x02, 0x05, 0x10,
+    }};
+    constexpr std::array<std::uint8_t, 38> routine_bytes{{
+        0x33, 0xfc, 0x00, 0x00, 0x00, 0x02, 0x02, 0xc4,
+        0x33, 0xfc, 0xf6, 0x90, 0x00, 0x02, 0x02, 0x7e,
+        0x23, 0xfc, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x02, 0x80,
+        0x33, 0xf9, 0x00, 0x02, 0x02, 0x76, 0x00, 0x02, 0x02, 0x7c,
+        0x4e, 0x75,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash =
+        "f31dc5923e4b39eb1726fc9b05ac7f56c0209f5d60c9499b979ebfc7c08a58a2";
+    constexpr std::string_view routine_hash =
+        "60ee2fcb4a18f62cd2066aba2429e760a64f14cd3f07f3cfe8467972030008bc";
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](const std::uint32_t address, const std::size_t length) {
+        return stage.length != 0 && address >= stage.destination
+            && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (!in_stage(caller_address, caller_bytes.size())
+        || !in_stage(entry_address, routine_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec state-init code lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
+    const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || to_hex(sha256(caller)) != caller_hash
+        || to_hex(sha256(routine)) != routine_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec state-init profile");
+    }
+    return {caller_address, entry_address,
+        0x202c4, 0x0000,
+        0x2027e, 0xf690,
+        0x20280, 0x00000001,
+        0x20276, 0x2027c,
+        entry_address + static_cast<std::uint32_t>(routine_bytes.size()),
+        std::string(caller_hash), std::string(routine_hash)};
+}
+
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     // $37f56 reaches this copy only if the two preceding original calls

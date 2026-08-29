@@ -324,6 +324,32 @@ struct DeuterosAmigaTitlePostExecGraphicsVectorProfile {
 parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// The second direct callee in the post-Exec service batch is a wholly local,
+// straight-line state-initialization routine.  Its caller is reached only if
+// the preceding graphics vector and all earlier original calls return.  This
+// profile therefore records the original instruction operands and RTS only:
+// it neither writes host-side state nor implies that the title path reached
+// this code.
+struct DeuterosAmigaTitlePostExecStateInitProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t cleared_word_address = 0;
+    std::uint16_t cleared_word_value = 0;
+    std::uint32_t initial_word_address = 0;
+    std::uint16_t initial_word_value = 0;
+    std::uint32_t initial_long_address = 0;
+    std::uint32_t initial_long_value = 0;
+    std::uint32_t copied_word_source_address = 0;
+    std::uint32_t copied_word_destination_address = 0;
+    std::uint32_t return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecStateInitProfile
+parse_deuteros_amiga_title_post_exec_state_init_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // The first common internal setup callee opens the literal
 // `graphics.library` name through an Exec vector.  Its return is an explicit
 // ABI input: zero enters the original self-loop and any nonzero longword is

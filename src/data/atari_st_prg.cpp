@@ -6,6 +6,7 @@
 #include <array>
 #include <limits>
 #include <stdexcept>
+#include <tuple>
 
 namespace eon {
 namespace {
@@ -323,6 +324,50 @@ MillenniumAtariConfigEvidence probe_millennium_atari_config(const Fat12Disk& dis
         result.sha256 = to_hex(sha256(payload));
         result.first_word = read_be16(payload, 0);
         if (payload.size() >= 6U) result.first_longword_operand = read_be32(payload, 2);
+    }
+    return result;
+}
+
+MillenniumAtariRootInventory inventory_millennium_atari_equinox_root(const Fat12Disk& disk) {
+    // This ordered table is a physical FAT12-root fact from the verified
+    // Equinox image, not an inferred load order or game-data schema.
+    constexpr std::array<std::tuple<std::string_view, std::uint16_t, std::uint32_t,
+        std::string_view>, 13> expected{{
+        {"DESKTOP.INF", 2, 555, "ce2aa85b442be281f25c22456c0d081d01b51108e96716bba9f867b7e791ab19"},
+        {"MILL22A.INF", 3, 7506, "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6"},
+        {"MILL22B.INF", 11, 84720, "e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9"},
+        {"MILL22C.INF", 94, 9597, "a28a49eea33a14210193bbe6e36abf95700ac6789681bf1a9eac5d09a0999055"},
+        {"MILL22D.INF", 104, 18428, "de0a95d3e4659a305b3e55b3417a7648127b41866de0a0ca344a81c66979dbc0"},
+        {"MILL22E.INF", 122, 302892, "9aeb6aafceab228521725ffe687cd3d95406d7f272bca77f855ebb600664b2af"},
+        {"MILL22F.INF", 418, 22123, "26ef995a9c6a43647e7905477168980159d1426d90f901d4f4c32f7cf13e455e"},
+        {"2200SAVE.I", 440, 7313, "b0b91572a7cc8ca0b7b112a8ce09bcf0c6645c6b32df836ae8c2eb27d86c333a"},
+        {"2200SAVE.II", 448, 7313, "fa11ee72b3ca009d8a5d6cece8ff3f95b01b29ed53106e2d3730c9a545400065"},
+        {"2200SAVE.III", 456, 7313, "54519e0eebfe3f3a38b04e4b372caf67476148c135dafbfe8d0a4bcae601eae2"},
+        {"2200SAVE.IV", 464, 7313, "8c1709bb7aba3adc2e6538867383229c4d6a285d29a78fb431970d0d926ffbd2"},
+        {"DATA12.BIN", 442, 932, "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda"},
+        {"MILENIUM.TOS", 540, 49269, "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686"},
+    }};
+    if (disk.root_entries().size() != expected.size()) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Equinox root entry count");
+    }
+    MillenniumAtariRootInventory result;
+    result.files.reserve(expected.size());
+    for (std::size_t index = 0; index < expected.size(); ++index) {
+        const auto& [name, first_cluster, size, expected_hash] = expected[index];
+        const auto& entry = disk.root_entries()[index];
+        if (entry.directory() || entry.name != name || entry.first_cluster != first_cluster
+            || entry.size != size) {
+            throw std::runtime_error("Unexpected Millennium Atari ST Equinox root entry");
+        }
+        const auto bytes = disk.read(entry);
+        if (bytes.size() != size) {
+            throw std::runtime_error("Truncated Millennium Atari ST Equinox root file");
+        }
+        const auto digest = to_hex(sha256(bytes));
+        if (digest != expected_hash) {
+            throw std::runtime_error("Unexpected Millennium Atari ST Equinox root file hash");
+        }
+        result.files.push_back({std::string(name), first_cluster, size, digest});
     }
     return result;
 }

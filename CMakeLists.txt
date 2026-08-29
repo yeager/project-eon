@@ -203,6 +203,15 @@ else()
     target_compile_options(project-eon PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
 endif()
 
+# GCC 15's PRE pass can crash while optimizing the deliberately large
+# provenance-report translation unit at -O3.  Keep the workaround narrowly
+# scoped to the affected source; all data parsers and the rest of the runtime
+# retain the configured optimisation level.  This is a compiler reliability
+# guard, not a change to recovered game behaviour.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set_source_files_properties(src/main.cpp PROPERTIES COMPILE_OPTIONS "-O1")
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     add_executable(eon-native-tests

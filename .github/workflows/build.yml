@@ -183,13 +183,19 @@ jobs:
           --source-revision "$GITHUB_SHA"
           --output package/project-eon-linux-artifacts.json
           package/deb/*.deb package/rpm/*.rpm
+          && mkdir artifact-upload
+          && cp package/deb/*.deb package/rpm/*.rpm package/project-eon-linux-artifacts.json artifact-upload/
+      - name: Verify artifact integrity manifest
+        run: >-
+          python3 packaging/verify-artifact-manifest.py
+          --manifest artifact-upload/project-eon-linux-artifacts.json
+          --directory artifact-upload
+          --expected-source-revision "$GITHUB_SHA"
+          --require-exact-directory
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linux-packages-x86_64
-          path: |
-            package/deb/*.deb
-            package/rpm/*.rpm
-            package/project-eon-linux-artifacts.json
+          path: artifact-upload/
 
   package-macos:
     name: macOS app (${{ matrix.arch }})
@@ -340,12 +346,19 @@ jobs:
           --source-revision "$GITHUB_SHA"
           --output project-eon-macos-${{ matrix.arch }}-artifacts.json
           project-eon-macos-${{ matrix.arch }}.zip
+          && mkdir artifact-upload
+          && cp project-eon-macos-${{ matrix.arch }}.zip project-eon-macos-${{ matrix.arch }}-artifacts.json artifact-upload/
+      - name: Verify artifact integrity manifest
+        run: >-
+          python3 packaging/verify-artifact-manifest.py
+          --manifest artifact-upload/project-eon-macos-${{ matrix.arch }}-artifacts.json
+          --directory artifact-upload
+          --expected-source-revision "$GITHUB_SHA"
+          --require-exact-directory
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: macos-${{ matrix.arch }}-app
-          path: |
-            project-eon-macos-${{ matrix.arch }}.zip
-            project-eon-macos-${{ matrix.arch }}-artifacts.json
+          path: artifact-upload/
 
   package-windows:
     name: Windows Inno Setup
@@ -488,12 +501,20 @@ jobs:
             --source-revision "$env:GITHUB_SHA" `
             --output installer/project-eon-windows-artifacts.json `
             $installer[0].FullName
+          New-Item -ItemType Directory -Path artifact-upload | Out-Null
+          Copy-Item $installer[0].FullName, installer/project-eon-windows-artifacts.json artifact-upload/
+      - name: Verify artifact integrity manifest
+        shell: pwsh
+        run: |
+          python packaging/verify-artifact-manifest.py `
+            --manifest artifact-upload/project-eon-windows-artifacts.json `
+            --directory artifact-upload `
+            --expected-source-revision "$env:GITHUB_SHA" `
+            --require-exact-directory
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-x64-installer
-          path: |
-            installer/Project-Eon-*-windows-x64.exe
-            installer/project-eon-windows-artifacts.json
+          path: artifact-upload/
 
   package-ipados:
     name: iPadOS sideload IPA
@@ -545,9 +566,16 @@ jobs:
           --source-revision "$GITHUB_SHA"
           --output project-eon-ipados-arm64-unsigned-artifacts.json
           project-eon-ipados-arm64-unsigned.ipa
+          && mkdir artifact-upload
+          && cp project-eon-ipados-arm64-unsigned.ipa project-eon-ipados-arm64-unsigned-artifacts.json artifact-upload/
+      - name: Verify artifact integrity manifest
+        run: >-
+          python3 packaging/verify-artifact-manifest.py
+          --manifest artifact-upload/project-eon-ipados-arm64-unsigned-artifacts.json
+          --directory artifact-upload
+          --expected-source-revision "$GITHUB_SHA"
+          --require-exact-directory
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ipados-arm64-unsigned-ipa
-          path: |
-            project-eon-ipados-arm64-unsigned.ipa
-            project-eon-ipados-arm64-unsigned-artifacts.json
+          path: artifact-upload/

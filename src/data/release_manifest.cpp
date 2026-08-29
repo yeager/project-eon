@@ -18,7 +18,7 @@ constexpr std::array<ReleaseManifestEntry, 6> releases{{
     {"b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", Game::millennium, Platform::dos, "es", 330'050},
 }};
 
-constexpr std::array<ParserProfileManifestEntry, 21> profiles{{
+constexpr std::array<ParserProfileManifestEntry, 22> profiles{{
     {"deuteros-amiga-clean-main-stage", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x5800, 0x4200},
     {"deuteros-amiga-clean-title-handoff", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x6e000, 0x6ca00},
     {"deuteros-amiga-bundle-0", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x1b800, 0x2f3f4},
@@ -27,6 +27,7 @@ constexpr std::array<ParserProfileManifestEntry, 21> profiles{{
     {"millennium-amiga-defjam-bootstrap", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x400, 0x400},
     {"millennium-amiga-shared-resident", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x16400, 0x2c000},
     {"millennium-atari-equinox-bootstrap", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 0x200},
+    {"millennium-atari-equinox-root-inventory", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
     {"millennium-dos-title-flow", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", 7'022, 0x0, 7'022},
     {"millennium-dos-save-layout", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7", 9'538, 0x0, 9'538},
     {"millennium-dos-gx-canvas", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f", 312'748, 0x6, 3'461},

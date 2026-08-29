@@ -335,6 +335,18 @@ byte size and SHA-256, so a maintainer can verify a downloaded package without
 trusting a workspace path or unpacking any game media. The workflow itself and
 its third-party actions are pinned to immutable Git commit IDs.
 
+The adjacent verifier validates the manifest schema, expected source revision,
+safe artifact basenames, byte lengths, and SHA-256 values. CI runs it before
+every upload with an exact-directory check, so no unrecorded entry can
+enter an artifact bundle. Maintainers can repeat the same check after download:
+
+```sh
+python3 packaging/verify-artifact-manifest.py \
+  --manifest project-eon-linux-artifacts.json \
+  --directory . --expected-source-revision <40-lowercase-commit> \
+  --require-exact-directory
+```
+
 ## Repository
 
 Development lives at <https://github.com/yeager/project-eon>.
