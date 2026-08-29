@@ -1336,4 +1336,34 @@ parse_millennium_amiga_resident_separate_post_external_call_boundary(
         0x68f72, terminal_target, terminal_target_offset, observed_terminal_hash};
 }
 
+MillenniumAmigaResidentSeparateTerminalJumpRawTargetBoundary
+parse_millennium_amiga_resident_separate_terminal_jump_raw_target_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparatePostExternalCallBoundary& boundary) {
+    // The preceding code only conditionally reaches this JMP after unknown
+    // calls.  Its target lies in the source resident range, but that range is
+    // loader-transformed before any runtime interpretation.  Preserve a
+    // larger source fingerprint without treating it as decoded code.
+    constexpr std::uint32_t jump_address = 0x68f72;
+    constexpr std::uint32_t target_address = 0x7c54e;
+    constexpr std::size_t raw_disk_offset = 0x2a94e;
+    constexpr std::size_t byte_count = 256;
+    constexpr std::string_view expected_hash =
+        "0149a457e657e18805ff61675e80741fa78d25f201f120498193315804b87eea";
+    if (boundary.terminal_jump_address != jump_address
+        || boundary.terminal_jump_target != target_address
+        || boundary.terminal_jump_target_raw_disk_offset != raw_disk_offset
+        || raw_disk_offset < plan.resident_stage.disk_offset
+        || raw_disk_offset > plan.resident_stage.disk_offset + plan.resident_stage.length
+        || byte_count > plan.resident_stage.disk_offset + plan.resident_stage.length - raw_disk_offset) {
+        throw std::runtime_error("Unexpected Millennium Amiga terminal jump raw target placement");
+    }
+    const auto source = disk.bytes(raw_disk_offset, byte_count);
+    const auto hash = to_hex(sha256(source));
+    if (hash != expected_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga terminal jump raw target");
+    }
+    return {jump_address, target_address, raw_disk_offset, byte_count, hash};
+}
+
 } // namespace eon

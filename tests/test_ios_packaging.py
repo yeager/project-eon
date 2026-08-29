@@ -4,10 +4,12 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import zipfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "packaging" / "ios" / "package-ipa.sh"
+VERIFY = ROOT / "packaging" / "ios" / "verify-ipa.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 CATALOGS = ("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl",
             "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
@@ -18,6 +20,31 @@ FONTS = ("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanaga
 @unittest.skipUnless(os.name != "nt" and shutil.which("bash") and shutil.which("unzip"),
                      "requires POSIX bash and unzip")
 class IosPackagingTests(unittest.TestCase):
+    @staticmethod
+    def create_complete_app(root: pathlib.Path) -> pathlib.Path:
+        app = root / "ProjectEon.app"
+        app.mkdir()
+        # A minimal arm64 MH_MAGIC_64 header is sufficient for the archive
+        # verifier; it never executes test payloads.
+        (app / "project-eon").write_bytes(b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01" + b"\0" * 24)
+        (app / "Info.plist").write_text("""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<plist version=\"1.0\"><dict>
+<key>CFBundleExecutable</key><string>project-eon</string>
+<key>CFBundleIdentifier</key><string>com.yeager.projecteon</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>LSRequiresIPhoneOS</key><true/>
+<key>UIDeviceFamily</key><array><integer>2</integer></array>
+<key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
+</dict></plist>""", encoding="utf-8")
+        for resource in ("Resources/assets/cards/millennium.png",
+                         "Resources/assets/cards/deuteros.png",
+                         *(f"Resources/assets/fonts/{font}" for font in FONTS),
+                         *(f"Resources/po/{catalog}.po" for catalog in CATALOGS)):
+            path = app / resource
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+        return app
+
     def test_ci_cross_compiles_png_dependencies_for_ios(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("package-ipados:", workflow)
@@ -28,6 +55,7 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn("github.com/pnggroup/libpng.git", workflow)
         self.assertIn("-DZLIB_ROOT=\"$IOS_PREFIX\"", workflow)
         self.assertIn("-DSDL3_DIR=\"$IOS_PREFIX/lib/cmake/SDL3\"", workflow)
+        self.assertIn("packaging/ios/verify-ipa.py", workflow)
 
     def test_ios_bundle_has_an_install_destination(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
@@ -44,26 +72,39 @@ class IosPackagingTests(unittest.TestCase):
     def test_creates_payload_with_relative_output(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
-            app = root / "ProjectEon.app"
-            app.mkdir()
-            (app / "ProjectEon").touch()
-            for resource in ("Resources/assets/cards/millennium.png",
-                             "Resources/assets/cards/deuteros.png",
-                             *(f"Resources/assets/fonts/{font}" for font in FONTS),
-                             *(f"Resources/po/{catalog}.po" for catalog in CATALOGS)):
-                path = app / resource
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.touch()
+            app = self.create_complete_app(root)
             subprocess.run(["bash", str(SCRIPT), str(app), "project-eon.ipa"],
                            cwd=root, check=True)
             ipa = root / "project-eon.ipa"
             self.assertTrue(ipa.is_file())
             listing = subprocess.check_output(["unzip", "-l", str(ipa)], text=True)
-            self.assertIn("Payload/ProjectEon.app/ProjectEon", listing)
+            self.assertIn("Payload/ProjectEon.app/project-eon", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/millennium.png", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/fonts/NotoSansSC-Regular.otf", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/sv.po", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/zh_CN.po", listing)
+
+    def test_archive_verifier_rejects_post_package_media_injection(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            ipa = root / "project-eon.ipa"
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            with zipfile.ZipFile(ipa, "a") as archive:
+                archive.writestr("Payload/ProjectEon.app/Resources/original.adf", b"real media is forbidden")
+            result = subprocess.run(["python3", str(VERIFY), str(ipa)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("possible original game media", result.stderr)
+
+    def test_archive_verifier_rejects_non_arm64_executable(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            (app / "project-eon").write_bytes(b"not a Mach-O")
+            ipa = root / "project-eon.ipa"
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=False,
+                           capture_output=True, text=True)
+            self.assertFalse(ipa.exists())
 
     def test_rejects_incomplete_bundle(self):
         with tempfile.TemporaryDirectory() as temporary:

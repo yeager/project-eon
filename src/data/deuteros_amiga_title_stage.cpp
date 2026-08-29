@@ -1616,6 +1616,82 @@ parse_deuteros_amiga_title_post_exec_state_init_profile(
         std::string(caller_hash), std::string(routine_hash)};
 }
 
+DeuterosAmigaTitlePostExecThirdServiceProfile
+parse_deuteros_amiga_title_post_exec_third_service_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // `$40400` is the third edge in the already validated `$403f4` batch.
+    // Its primary entry calls `$20094`; only if that local routine returns
+    // does `$1f37a` load A6 and tail-jump.  The three graphics vectors in
+    // `$20094` deliberately remain unexecuted ABI boundaries.
+    constexpr std::uint32_t caller_address = 0x40400;
+    constexpr std::uint32_t dispatch_entry_address = 0x1f37a;
+    constexpr std::uint32_t graphics_service_address = 0x20094;
+    constexpr std::array<std::uint8_t, 6> caller_bytes{{
+        0x4e, 0xb9, 0x00, 0x01, 0xf3, 0x7a,
+    }};
+    constexpr std::array<std::uint8_t, 18> dispatch_bytes{{
+        0x4e, 0xb9, 0x00, 0x02, 0x00, 0x94,
+        0x4d, 0xf9, 0x00, 0x01, 0xf3, 0x72,
+        0x4e, 0xf9, 0x00, 0x02, 0x01, 0xd2,
+    }};
+    constexpr std::array<std::uint8_t, 102> service_bytes{{
+        0x42, 0x80, 0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
+        0x4e, 0xae, 0xfe, 0x62, 0x42, 0x80, 0x53, 0x80,
+        0x41, 0xf9, 0x00, 0x01, 0xff, 0xda, 0x2c, 0x79,
+        0x00, 0x01, 0x2f, 0xec, 0x4e, 0xae, 0xfe, 0x68,
+        0x13, 0xc0, 0x00, 0x02, 0x00, 0x92, 0x23, 0xfc,
+        0x00, 0x01, 0xff, 0xe6, 0x00, 0x02, 0x00, 0x8e,
+        0x41, 0xf9, 0x00, 0x01, 0xff, 0xda, 0x31, 0x7c,
+        0x00, 0x0a, 0x00, 0x06, 0x31, 0x7c, 0x00, 0x0a,
+        0x00, 0x08, 0x31, 0x7c, 0x00, 0x0c, 0x00, 0x04,
+        0x41, 0xf9, 0x00, 0x01, 0x2e, 0x12, 0x43, 0xf9,
+        0x00, 0x01, 0xff, 0xda, 0x24, 0x79, 0x00, 0x02,
+        0x00, 0x8e, 0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
+        0x4e, 0xae, 0xfe, 0x5c, 0x4e, 0x75,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash =
+        "901b0ad5740a3e6aea3eba28b6aadf5ac5c187e961cc848f6f1a882b3592f464";
+    constexpr std::string_view dispatch_hash =
+        "58e85705bc821d42834936342b242162c749889b9d9c23c3d5896f7bcf06e4ff";
+    constexpr std::string_view service_hash =
+        "7427cdaa0f716496e21c5ef0f6a8d0850a9606a9b4ffe6e56df599109b0ca947";
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](const std::uint32_t address, const std::size_t length) {
+        return stage.length != 0 && address >= stage.destination
+            && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (!in_stage(caller_address, caller_bytes.size())
+        || !in_stage(dispatch_entry_address, dispatch_bytes.size())
+        || !in_stage(graphics_service_address, service_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec third-service code lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
+    const auto dispatch = stage_bytes.subspan(
+        dispatch_entry_address - stage.destination, dispatch_bytes.size());
+    const auto service = stage_bytes.subspan(
+        graphics_service_address - stage.destination, service_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !std::equal(dispatch_bytes.begin(), dispatch_bytes.end(), dispatch.begin())
+        || !std::equal(service_bytes.begin(), service_bytes.end(), service.begin())
+        || to_hex(sha256(caller)) != caller_hash
+        || to_hex(sha256(dispatch)) != dispatch_hash
+        || to_hex(sha256(service)) != service_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec third-service profile");
+    }
+    return {caller_address, dispatch_entry_address, graphics_service_address,
+        0x12fec, {{-0x19e, -0x198, -0x1a4}}, 0x20092,
+        0x1ffe6, 0x2008e, 0x1ffda, {{0x0006, 0x0008, 0x0004}},
+        {{0x000a, 0x000a, 0x000c}},
+        graphics_service_address + static_cast<std::uint32_t>(service_bytes.size()),
+        0x1f372, 0x201d2,
+        std::string(caller_hash), std::string(dispatch_hash), std::string(service_hash)};
+}
+
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     // $37f56 reaches this copy only if the two preceding original calls

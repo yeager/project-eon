@@ -448,6 +448,17 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << post_exec_state_init.copied_word_source_address << " -> 0x"
         << post_exec_state_init.copied_word_destination_address
         << " (prior ABI returns unmodelled)" << std::dec << '\n';
+    const auto post_exec_third_service =
+        eon::parse_deuteros_amiga_title_post_exec_third_service_profile(disk, plan);
+    std::cout << "          Conditional post-Exec third service: call 0x" << std::hex
+        << post_exec_third_service.caller_address << " -> 0x"
+        << post_exec_third_service.dispatch_entry_address << " -> local 0x"
+        << post_exec_third_service.graphics_service_address << "; vectors -0x"
+        << static_cast<std::uint16_t>(-post_exec_third_service.graphics_library_vectors[0])
+        << "/-0x" << static_cast<std::uint16_t>(-post_exec_third_service.graphics_library_vectors[1])
+        << "/-0x" << static_cast<std::uint16_t>(-post_exec_third_service.graphics_library_vectors[2])
+        << ", tail 0x" << post_exec_third_service.dispatcher_tail_jump_address
+        << " (prior ABI returns unmodelled)" << std::dec << '\n';
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec
