@@ -37,6 +37,9 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("generated RPM runtime dependencies", source)
         self.assertIn("rpm2cpio", source)
         self.assertIn("package layout regression", source)
+        self.assertIn('HOME="$isolated_home" "$executable" --inspect', source)
+        self.assertIn("created its default game-data directory during lookup", source)
+        self.assertIn("isolated missing default game-data path", source)
         self.assertIn("cpio zlib1g-dev", WORKFLOW.read_text(encoding="utf-8"))
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:

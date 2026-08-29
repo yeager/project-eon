@@ -3476,10 +3476,16 @@ at `+$006d`, then updates words at `+$00f4`, `+$00f0`, and `+$00f2` through
 the encoded wrap masks before storing literal `$47ea` at `+$005c` and
 returning. `MillenniumDosGxOverlayStartupRecordEvidence` accepts only the
 full supplied GX executable and the independently hash-identified caller
-selector. It reports raw source bytes and instruction operands only: none of
-the records is named as a screen, layout, state format, or rendering command;
-no startup selector, source record, returned call, memory state, resource, or
-display is executed or reconstructed by Project Eon.
+selector. `MillenniumDosGxOverlayStartupEvaluation` executes this exact,
+call-free suffix in a transient overlay only after explicit observations
+establish both the preceding private-wrapper return and the adapter's `RETF`
+return. It preserves the selected source record, every little-endian word
+copy, the final-byte store, and the three masked-state results
+`+$00f4=$00f4`, `+$00f0=$00f2`, and `+$00f2=$00f6`; the `$000f` entry's prior
+`+$005a=$b800` write is recorded too. The encoded `RET`/`RETF` chain reaches
+caller return site `$d376`. No missing return is fabricated, and all writes
+remain offsets in a disposable host overlay: no original executable, archive,
+save, screen, layout, resource, or display state is modified or inferred.
 
 ### Millennium DOS GX dispatcher slot 13 boundary
 
@@ -3860,6 +3866,11 @@ report boundary. The latter has no recovered presentation/runtime chain, so the
 SDL view deliberately does not load Amiga art, audio, or generated Atari state.
 The runtime also does not create its default data directory; it reports a
 missing path until the user supplies original media there or passes `--data`.
+Linux package CI proves this against the extracted installed executable with
+an isolated `HOME`: `--inspect` must report the absent
+`~/.projecteon` location and must leave it absent. This supplements the
+payload-media rejection check, so package metadata alone is never treated as
+proof of the runtime's read-only boundary.
 The Windows Inno Setup installer follows the same rule: it installs only
 Project Eon and its own runtime resources, and does not pre-create
 `<install-directory>\\data`.

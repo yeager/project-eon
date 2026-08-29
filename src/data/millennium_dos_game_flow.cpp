@@ -1713,6 +1713,98 @@ parse_millennium_dos_gx_overlay_startup_record_evidence(
     return result;
 }
 
+MillenniumDosGxOverlayStartupEvaluation evaluate_millennium_dos_gx_overlay_startup(
+    const std::span<const std::uint8_t> game_executable,
+    const std::span<const std::uint8_t> gx_overlay_executable,
+    const std::optional<std::uint16_t> observed_private_return_ax,
+    const std::optional<std::uint8_t> observed_mode_byte,
+    const bool observed_adapter_return) {
+    // The caller reaches the adapter only after the private wrapper returns.
+    // Keep the existing evaluator as the sole authority for that bridge, then
+    // execute just the overlay bytes with no CALL, INT, host pointer, or media
+    // write.  An adapter return is deliberately a separate observation: RETF
+    // may transfer control away from this suffix in a real run.
+    const auto caller = evaluate_millennium_dos_post_gx_startup_prefix(
+        game_executable, observed_private_return_ax, observed_mode_byte);
+    MillenniumDosGxOverlayStartupEvaluation result;
+    result.caller_entry_address = caller.entry_address;
+    result.observed_private_return_ax = observed_private_return_ax;
+    result.observed_mode_byte = observed_mode_byte;
+    if (caller.outcome == MillenniumDosPostGxStartupPrefixOutcome::private_interrupt_boundary) {
+        result.outcome = MillenniumDosGxOverlayStartupOutcome::private_interrupt_boundary;
+        result.boundary_address = caller.boundary_address;
+        return result;
+    }
+
+    result.selected_ax = caller.selected_ax;
+    if (!observed_adapter_return) {
+        result.outcome = MillenniumDosGxOverlayStartupOutcome::overlay_adapter_boundary;
+        result.boundary_address = caller.boundary_address;
+        return result;
+    }
+
+    const auto loader = parse_millennium_dos_gx_overlay_load_evidence(
+        game_executable, gx_overlay_executable);
+    const auto adapter = parse_millennium_dos_gx_overlay_adapter_evidence(game_executable, loader);
+    const auto dispatcher = parse_millennium_dos_gx_overlay_dispatcher_evidence(
+        gx_overlay_executable, adapter);
+    const auto selector = parse_millennium_dos_gx_overlay_selector_evidence(
+        game_executable, gx_overlay_executable, adapter, dispatcher);
+    const auto records = parse_millennium_dos_gx_overlay_startup_record_evidence(
+        gx_overlay_executable, selector);
+
+    std::size_t selected_index = 0;
+    if (caller.selected_ax == 0x000e) {
+        selected_index = 0;
+    } else if (caller.selected_ax == 0x0012) {
+        selected_index = 1;
+    } else if (caller.selected_ax == 0x0014) {
+        selected_index = 2;
+    } else if (caller.selected_ax == 0x000f) {
+        selected_index = 3;
+    } else {
+        throw std::runtime_error("Unsupported Millennium DOS GX startup selector result");
+    }
+    const auto selector_value = selector.overlay_targets[selected_index];
+    const auto entry_offset = dispatcher.observed_selector_targets[selector_value];
+    const auto source_offset = selector.overlay_record_offsets[selected_index];
+    if (caller.selected_ax != selector_value
+        || source_offset + 8U > gx_overlay_executable.size()) {
+        throw std::runtime_error("Unsupported Millennium DOS GX startup overlay connection");
+    }
+
+    result.selected_overlay_entry_offset = entry_offset;
+    result.selected_source_record_offset = source_offset;
+    // The $000f route alone writes B800 before it reaches the shared record
+    // suffix.  It is retained as an overlay-relative write, not an attempt to
+    // map an original segment into host memory.
+    if (caller.selected_ax == 0x000f) {
+        result.overlay_writes.push_back({0x005a, 0xb800, 2});
+    }
+    for (std::size_t word = 0; word < records.copy_word_count; ++word) {
+        const auto source = source_offset + word * 2U;
+        const auto value = static_cast<std::uint16_t>(gx_overlay_executable[source])
+            | (static_cast<std::uint16_t>(gx_overlay_executable[source + 1U]) << 8U);
+        result.overlay_writes.push_back({static_cast<std::uint16_t>(
+            records.copy_destination_offset + word * 2U),
+            static_cast<std::uint16_t>(value), 2});
+    }
+    // The original stores AL after MOVSW x4.  At that point each entry has
+    // installed one of the literal 0/2/1/3 values in AX.
+    const std::uint8_t entry_al = caller.selected_ax == 0x000e ? 0
+        : caller.selected_ax == 0x0012 ? 2
+        : caller.selected_ax == 0x0014 ? 1 : 3;
+    result.overlay_writes.push_back({records.copied_last_byte_storage_offset, entry_al, 1});
+    result.overlay_writes.push_back({records.state_word_storage_offsets[0], 0x00f4, 2});
+    result.overlay_writes.push_back({records.state_word_storage_offsets[1], 0x00f2, 2});
+    result.overlay_writes.push_back({records.state_word_storage_offsets[2], 0x00f6, 2});
+    result.overlay_writes.push_back({records.terminal_word_storage_offset,
+        records.terminal_word_value, 2});
+    result.outcome = MillenniumDosGxOverlayStartupOutcome::overlay_return;
+    result.boundary_address = 0xd376;
+    return result;
+}
+
 MillenniumDosGxOverlayDispatch13Evidence
 parse_millennium_dos_gx_overlay_dispatch13_evidence(
     const std::span<const std::uint8_t> gx_overlay_executable,
