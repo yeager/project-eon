@@ -24,8 +24,10 @@ class ModernGraphicsPopupTests(unittest.TestCase):
     def test_popup_is_modal_for_gamepad_navigation(self) -> None:
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_UP", SOURCE)
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_DOWN", SOURCE)
-        self.assertIn("if (show_modern_graphics_settings) show_modern_graphics_settings = false;", SOURCE)
-        self.assertIn("if (!show_modern_graphics_settings && screen == Screen::menu", SOURCE)
+        modal = SOURCE.index("if (show_modern_graphics_settings) {")
+        self.assertIn("SDL_GAMEPAD_BUTTON_BACK", SOURCE[modal:])
+        self.assertIn("                continue;", SOURCE[modal:])
+        self.assertLess(modal, SOURCE.index("millennium_title_session->poll_console(true)"))
 
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:
         title_poll = SOURCE.index("millennium_title_session->poll_console(true)")

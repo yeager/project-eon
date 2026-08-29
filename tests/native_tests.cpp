@@ -174,6 +174,44 @@ int main() {
         assert(valid_zip.entries().size() == 1);
         assert(valid_zip.extract(valid_zip.entries().front()).empty());
 
+        // EOCD comments are part of the original archive byte stream.  A
+        // marker-looking sequence inside one is data, not a second archive
+        // footer.  The parser must locate the EOCD whose declared comment
+        // reaches the physical end rather than accepting the later marker.
+        auto commented_zip = zip;
+        commented_zip[98] = 31;
+        commented_zip[99] = 0;
+        commented_zip.insert(commented_zip.end(), 31, 0);
+        commented_zip[108] = 0x50;
+        commented_zip[109] = 0x4b;
+        commented_zip[110] = 0x05;
+        commented_zip[111] = 0x06;
+        const eon::ZipArchive comment_zip(std::move(commented_zip));
+        assert(comment_zip.entries().size() == 1);
+        assert(comment_zip.extract(comment_zip.entries().front()).empty());
+
+        auto truncated_comment = zip;
+        truncated_comment[98] = 1;
+        bool rejected_truncated_comment = false;
+        try {
+            static_cast<void>(eon::ZipArchive(std::move(truncated_comment)));
+        } catch (const std::runtime_error&) {
+            rejected_truncated_comment = true;
+        }
+        assert(rejected_truncated_comment);
+
+        auto central_gap = zip;
+        // The central directory's recorded length begins at EOCD - 10.
+        central_gap[90] = 46;
+        central_gap[91] = 0;
+        bool rejected_central_gap = false;
+        try {
+            static_cast<void>(eon::ZipArchive(std::move(central_gap)));
+        } catch (const std::runtime_error&) {
+            rejected_central_gap = true;
+        }
+        assert(rejected_central_gap);
+
         auto mismatched_local_name = zip;
         mismatched_local_name[30] = 'b';
         const eon::ZipArchive local_name_zip(std::move(mismatched_local_name));
@@ -186,7 +224,7 @@ int main() {
         assert(rejected_local_name);
 
         auto invalid_central_size = zip;
-        invalid_central_size[90] = 46;
+        invalid_central_size[90] = 48;
         bool rejected_central_size = false;
         try {
             static_cast<void>(eon::ZipArchive(std::move(invalid_central_size)));
@@ -3725,6 +3763,17 @@ int main() {
         == "a617235dd94a6c0b3f5fb9f9e078652ed8f1e45213e85c80b10ec165a6b7216f");
     assert(post_exec_pointer_seed.callee_sha256
         == "1e1ccdae97d5849873d3d2e785f5a8be585ffa0e104b5c550ecade6bc37a33a2");
+    const auto post_exec_service_batch =
+        eon::parse_deuteros_amiga_title_post_exec_service_batch_profile(system_disk, load_plan);
+    assert(post_exec_service_batch.call_site_address == 0x404ce);
+    assert(post_exec_service_batch.callee_address == 0x403f4);
+    assert((post_exec_service_batch.direct_callee_addresses
+        == std::array<std::uint32_t, 4>{{0x403c8, 0x20510, 0x1f37a, 0x40698}}));
+    assert(post_exec_service_batch.return_address == 0x4040e);
+    assert(post_exec_service_batch.call_site_sha256
+        == "555513267ef304f2a5cec2303f8565db8e4ed9ecb2abd7bc87b73dbe5d6c0976");
+    assert(post_exec_service_batch.callee_sha256
+        == "5353ab8b18d63a51e12ef2f586a68d872981fa491ca13531198f18a2a38edf07");
     {
         auto altered_pointer_seed_disk = *amiga_disk1;
         altered_pointer_seed_disk[0x9b4c2] ^= 0x01;
@@ -3758,6 +3807,32 @@ int main() {
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_pointer_seed_disk));
             static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_service_batch_disk = *amiga_disk1;
+        altered_service_batch_disk[0x9b4ce] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_service_batch_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_service_batch_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_service_batch_disk = *amiga_disk1;
+        altered_service_batch_disk[0x9b3f4] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_service_batch_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_service_batch_profile(
                 altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;

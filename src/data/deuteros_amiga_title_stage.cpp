@@ -1460,6 +1460,58 @@ parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
         std::string(call_site_hash), std::string(callee_hash)};
 }
 
+DeuterosAmigaTitlePostExecServiceBatchProfile
+parse_deuteros_amiga_title_post_exec_service_batch_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // `$404ce` immediately follows the pointer-seed call.  The later local
+    // routine has no branches or data-dependent dispatch of its own, but all
+    // four targets remain opaque: this parser neither calls nor models them.
+    constexpr std::uint32_t call_site_address = 0x404ce;
+    constexpr std::uint32_t callee_address = 0x403f4;
+    constexpr std::array<std::uint8_t, 6> call_site_bytes{{
+        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xf4,
+    }};
+    constexpr std::array<std::uint8_t, 26> callee_bytes{{
+        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xc8,
+        0x4e, 0xb9, 0x00, 0x02, 0x05, 0x10,
+        0x4e, 0xb9, 0x00, 0x01, 0xf3, 0x7a,
+        0x4e, 0xb9, 0x00, 0x04, 0x06, 0x98,
+        0x4e, 0x75,
+    }};
+    constexpr std::array<std::uint32_t, 4> direct_callees{{
+        0x403c8, 0x20510, 0x1f37a, 0x40698,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view call_site_hash =
+        "555513267ef304f2a5cec2303f8565db8e4ed9ecb2abd7bc87b73dbe5d6c0976";
+    constexpr std::string_view callee_hash =
+        "5353ab8b18d63a51e12ef2f586a68d872981fa491ca13531198f18a2a38edf07";
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](const std::uint32_t address, const std::size_t length) {
+        return stage.length != 0 && address >= stage.destination
+            && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (!in_stage(call_site_address, call_site_bytes.size())
+        || !in_stage(callee_address, callee_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec service batch lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto call_site = stage_bytes.subspan(call_site_address - stage.destination, call_site_bytes.size());
+    const auto callee = stage_bytes.subspan(callee_address - stage.destination, callee_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(call_site_bytes.begin(), call_site_bytes.end(), call_site.begin())
+        || !std::equal(callee_bytes.begin(), callee_bytes.end(), callee.begin())
+        || to_hex(sha256(call_site)) != call_site_hash
+        || to_hex(sha256(callee)) != callee_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec service batch profile");
+    }
+    return {call_site_address, callee_address, direct_callees,
+        callee_address + static_cast<std::uint32_t>(callee_bytes.size()),
+        std::string(call_site_hash), std::string(callee_hash)};
+}
+
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     // $37f56 reaches this copy only if the two preceding original calls

@@ -71,8 +71,11 @@ or mutate media.
   entries, inconsistent central-directory extent, and local-header method,
   flag, filename, size, or CRC disagreement. For data-descriptor entries,
   central-directory CRC and sizes are authoritative because local fields may
-  be placeholders; non-descriptor local values must match. These checks are
-  applied before recursively reading any DOS, Amiga, or Atari ST leaf bytes.
+  be placeholders; non-descriptor local values must match. The classic
+  central directory must end exactly at the EOCD, and the EOCD comment length
+  must reach the physical end of the supplied stream; a marker-looking value
+  inside a comment cannot hide the actual directory. These checks are applied
+  before recursively reading any DOS, Amiga, or Atari ST leaf bytes.
 - DOS and Atari ST media use a native read-only FAT12 reader with validated
   geometry, bounded cluster chains, loop detection, and directory parsing.
 - Standard Amiga ADF geometry is 80 cylinders × 2 sides × 11 sectors × 512
@@ -2777,3 +2780,15 @@ following word at `$403f2` is RTS.
 reports their literal operands. Reaching the call still requires the two Exec
 vectors and all earlier original calls to have returned, so Project Eon does
 not execute it, materialize D0/D1, write `$1f97c`, or claim startup progress.
+
+The immediately following call at `$404ce..$404d3` / ADF `+0x9b4ce` is a
+separate six-byte static edge to `$403f4` (SHA-256
+`555513267ef304f2a5cec2303f8565db8e4ed9ecb2abd7bc87b73dbe5d6c0976`). Its
+26-byte callee `$403f4..$4040d` / ADF `+0x9b3f4` hashes to
+`5353ab8b18d63a51e12ef2f586a68d872981fa491ca13531198f18a2a38edf07` and is
+exactly four direct `JSR` operands followed by `RTS`: `$403c8`, `$20510`,
+`$1f37a`, and `$40698`. `DeuterosAmigaTitlePostExecServiceBatchProfile`
+validates the caller, complete callee, and return address `$4040e`. This does
+not establish that any nested call returns, or assign effects to their code;
+the profile records only the caller-connected static call batch after the
+unexecuted Exec boundary.

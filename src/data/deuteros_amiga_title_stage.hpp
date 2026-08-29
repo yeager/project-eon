@@ -285,6 +285,24 @@ struct DeuterosAmigaTitlePostExecPointerSeedProfile {
     std::string callee_sha256;
 };
 
+// The immediately following caller-connected subroutine is a fixed sequence
+// of four direct local calls and RTS.  Its callees are deliberately not
+// followed here: their return values and any external ABI they reach are not
+// established by the supplied media.  This is an address/byte provenance
+// profile, not a title-stage execution model.
+struct DeuterosAmigaTitlePostExecServiceBatchProfile {
+    std::uint32_t call_site_address = 0;
+    std::uint32_t callee_address = 0;
+    std::array<std::uint32_t, 4> direct_callee_addresses{};
+    std::uint32_t return_address = 0;
+    std::string call_site_sha256;
+    std::string callee_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecServiceBatchProfile
+parse_deuteros_amiga_title_post_exec_service_batch_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // The first common internal setup callee opens the literal
 // `graphics.library` name through an Exec vector.  Its return is an explicit
 // ABI input: zero enters the original self-loop and any nonzero longword is
