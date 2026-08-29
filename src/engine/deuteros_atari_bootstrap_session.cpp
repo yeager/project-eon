@@ -36,6 +36,8 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     }
     second_stage_ = parse_deuteros_atari_second_stage(second_stage_bytes);
     dispatch_ = parse_deuteros_atari_dispatch(second_stage_bytes);
+    state1_service_boundary_ = parse_deuteros_atari_state1_service_boundary(
+        second_stage_bytes, second_stage_, dispatch_);
     // These are byte-validated static argument paths reached after the
     // second-stage hand-off. Retaining them in the live session prevents the
     // launch path from being less evidence-backed than --inspect, while still

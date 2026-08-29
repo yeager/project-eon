@@ -83,8 +83,29 @@ struct ModernGraphicsSettings {
     bool smooth_scaling = true;
     bool scanlines = false;
     bool frame = true;
+    // The selected output mode controls only the SDL window.  Original frame
+    // dimensions, indexed pixels and simulation state remain unchanged.
+    std::size_t output_resolution_index = 0;
+    std::size_t aspect_ratio_index = 0;
     int focused_option = 0;
 };
+
+struct OutputResolution {
+    int width = 1280;
+    int height = 720;
+};
+
+constexpr std::array<OutputResolution, 3> output_resolutions{{
+    {1280, 720}, {1600, 900}, {1920, 1080},
+}};
+
+// Every option has an explicit display ratio.  The renderer derives both
+// viewport dimensions from the same ratio so it never independently stretches
+// width and height into an accidental, visually odd shape.
+constexpr std::array<float, 3> display_aspect_ratios{{4.0F / 3.0F, 8.0F / 5.0F, 16.0F / 9.0F}};
+constexpr std::array<const char*, 3> display_aspect_names{{
+    "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",
+}};
 
 // These data products come from the same verified English DOS archive. The
 // title is launchable; GX remains read-only inspection evidence because the
@@ -157,30 +178,53 @@ void draw_scanlines(SDL_Renderer* renderer, const SDL_FRect& bounds) {
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
 
+SDL_FRect aspect_viewport(const float x, const float y, const float maximum_width,
+    const float maximum_height, const ModernGraphicsSettings& settings) {
+    const auto ratio = display_aspect_ratios.at(settings.aspect_ratio_index);
+    float width = maximum_width;
+    float height = width / ratio;
+    if (height > maximum_height) {
+        height = maximum_height;
+        width = height * ratio;
+    }
+    // Center inside the allocated presentation region.  This makes a wider
+    // or narrower chosen ratio deliberate and legible, never a clipped crop.
+    return {x + (maximum_width - width) / 2.0F, y + (maximum_height - height) / 2.0F,
+        width, height};
+}
+
 void draw_modern_graphics_popup(SDL_Renderer* renderer,
     const ModernGraphicsSettings& settings) {
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 3, 10, 20, 240);
-    SDL_FRect panel{356, 174, 568, 338};
+    SDL_FRect panel{356, 142, 568, 430};
     SDL_RenderFillRect(renderer, &panel);
     SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
     SDL_RenderRect(renderer, &panel);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    draw_text(renderer, 390, 206, "MODERN GRAPHICS SETTINGS");
-    draw_text(renderer, 390, 244, "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE");
-    constexpr std::array<const char*, 3> names{{"SMOOTH SCALING", "SCANLINES", "MODERN FRAME"}};
-    const std::array<bool, 3> values{{settings.smooth_scaling, settings.scanlines, settings.frame}};
+    draw_text(renderer, 390, 174, "MODERN GRAPHICS SETTINGS");
+    draw_text(renderer, 390, 212, "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE");
+    constexpr std::array<const char*, 5> names{{
+        "OUTPUT RESOLUTION", "ASPECT RATIO", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
+    }};
+    const auto& resolution = output_resolutions.at(settings.output_resolution_index);
+    const std::array<std::string, 5> values{{
+        std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
+        display_aspect_names.at(settings.aspect_ratio_index),
+        settings.smooth_scaling ? "ON" : "OFF",
+        settings.scanlines ? "ON" : "OFF",
+        settings.frame ? "ON" : "OFF",
+    }};
     for (std::size_t index = 0; index < names.size(); ++index) {
         SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(settings.focused_option)
                 ? 255 : 205, index == static_cast<std::size_t>(settings.focused_option) ? 195 : 225,
             index == static_cast<std::size_t>(settings.focused_option) ? 80 : 235, 255);
-        draw_text(renderer, 410, 288.0F + static_cast<float>(index) * 42.0F,
+        draw_text(renderer, 390, 256.0F + static_cast<float>(index) * 42.0F,
             std::string(index == static_cast<std::size_t>(settings.focused_option) ? "> " : "  ") + names[index]);
-        draw_text(renderer, 710, 288.0F + static_cast<float>(index) * 42.0F,
-            values[index] ? "ON" : "OFF");
+        draw_text(renderer, 690, 256.0F + static_cast<float>(index) * 42.0F, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 438, "SETTINGS APPLY TO SDL RENDERING ONLY.");
+    draw_text(renderer, 390, 504, "SETTINGS APPLY TO SDL RENDERING ONLY.");
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -1782,6 +1826,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto dispatch = eon::parse_deuteros_atari_dispatch(second_stage);
         const auto& state0_plan = live_bootstrap.state0_raw_load_plan();
         const auto& state1_plan = live_bootstrap.state1_raw_load_plan();
+        const auto& state1_service = live_bootstrap.state1_service_boundary();
         const auto& state5_plan = live_bootstrap.state5_raw_load_plan();
         const auto& state5_return = live_bootstrap.state5_return();
         const auto& supervisor_callback = live_bootstrap.supervisor_callback();
@@ -1824,6 +1869,14 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << dispatch.state0_linear_sector << ")" << std::dec << '\n';
         std::cout << "          Static aliases: table slots 2/3/4 -> state-0 routine 0x"
             << std::hex << dispatch.vector_addresses[0] << std::dec << '\n';
+        std::cout << "          State-1 vector service boundary: stage +0x" << std::hex
+            << state1_service.callee_offset << " pushes 0x" << state1_service.longword_argument
+            << " and XBIOS selector 0x" << state1_service.xbios_selector << ", TRAP #14; "
+            << "ADDQ.L #" << std::dec << static_cast<unsigned>(state1_service.stack_cleanup_bytes)
+            << ",A7 then returns raw args (RAM 0x" << std::hex << state1_service.destination
+            << ", 0x" << state1_service.byte_count << " bytes, sector 0x"
+            << state1_service.linear_sector << "); SHA-256 " << state1_service.callee_sha256
+            << std::dec << " (no XBIOS execution, state selection, or media interpretation)\n";
         std::vector<std::uint8_t> state0_bytes;
         for (const auto& request : state0_plan.requests) {
             const auto chunk = disk1.read_sectors(request.track, request.side,
@@ -2510,6 +2563,29 @@ int main(int argc, char** argv) {
     bool show_scanner = false;
     bool show_modern_graphics_settings = false;
     ModernGraphicsSettings modern_graphics_settings;
+    const auto cycle_output_resolution = [&](const int direction) {
+        const auto count = output_resolutions.size();
+        const auto current = modern_graphics_settings.output_resolution_index;
+        const auto next = direction < 0 ? (current + count - 1U) % count : (current + 1U) % count;
+        modern_graphics_settings.output_resolution_index = next;
+        const auto& resolution = output_resolutions.at(next);
+        SDL_SetWindowSize(window, resolution.width, resolution.height);
+    };
+    const auto cycle_aspect_ratio = [&](const int direction) {
+        const auto count = display_aspect_ratios.size();
+        const auto current = modern_graphics_settings.aspect_ratio_index;
+        modern_graphics_settings.aspect_ratio_index = direction < 0
+            ? (current + count - 1U) % count : (current + 1U) % count;
+    };
+    const auto change_modern_graphics_option = [&](const int direction) {
+        switch (modern_graphics_settings.focused_option) {
+        case 0: cycle_output_resolution(direction); break;
+        case 1: cycle_aspect_ratio(direction); break;
+        case 2: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
+        case 3: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
+        default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+        }
+    };
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -2532,33 +2608,26 @@ int main(int argc, char** argv) {
                         show_modern_graphics_settings = false;
                     } else if (event.key.key == SDLK_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 2) % 3;
+                            (modern_graphics_settings.focused_option + 4) % 5;
                     } else if (event.key.key == SDLK_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 3;
+                            (modern_graphics_settings.focused_option + 1) % 5;
                     } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
-                        switch (modern_graphics_settings.focused_option) {
-                        case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
-                        case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
-                        default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
-                        }
+                        change_modern_graphics_option(event.key.key == SDLK_LEFT ? -1 : 1);
                     }
                 } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
                     if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
                         show_modern_graphics_settings = false;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 2) % 3;
+                            (modern_graphics_settings.focused_option + 4) % 5;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 3;
+                            (modern_graphics_settings.focused_option + 1) % 5;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
                         || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
-                        switch (modern_graphics_settings.focused_option) {
-                        case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
-                        case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
-                        default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
-                        }
+                        change_modern_graphics_option(
+                            event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT ? -1 : 1);
                     }
                 }
                 continue;
@@ -2856,7 +2925,6 @@ int main(int argc, char** argv) {
                 // a GX canvas must never replace the original title frame.
                 constexpr bool millennium_game_execution_observed = false;
                 SDL_Texture* texture = millennium_preview_texture;
-                const auto& image = millennium_assets->title;
                 if (millennium_game_execution_observed) {
                     draw_text(renderer, 64, 220,
                         tr("AUTHENTIC DOS HANDOFF - TITLES.EXE -> 2200ad.exe; GX.LIB IMG00 -> IMG01"));
@@ -2879,10 +2947,8 @@ int main(int argc, char** argv) {
                 SDL_SetTextureScaleMode(texture,
                     modern && modern_graphics_settings.smooth_scaling
                         ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
-                const float scale = 2.0F;
-                SDL_FRect preview_bounds{64, 250,
-                    static_cast<float>(image.width) * scale,
-                    static_cast<float>(image.height) * scale};
+                const auto preview_bounds = aspect_viewport(64, 250, 576, 400,
+                    modern_graphics_settings);
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
@@ -3110,10 +3176,9 @@ int main(int argc, char** argv) {
                         ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 // Keep the original pixels intact while allowing the extra
                 // provenance boundary to remain visible after title handoff.
-                const float scale = title_stage ? 1.75F : 2.0F;
-                SDL_FRect preview_bounds{64, title_stage ? 350.0F : deuteros_title_resource ? 306.0F : 274.0F,
-                    static_cast<float>(eon::DeuterosAmigaFrame::width) * scale,
-                    static_cast<float>(eon::DeuterosAmigaFrame::height) * scale};
+                const auto preview_bounds = aspect_viewport(64,
+                    title_stage ? 350.0F : deuteros_title_resource ? 306.0F : 274.0F,
+                    576, title_stage ? 350.0F : 400.0F, modern_graphics_settings);
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, preview_texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);

@@ -3,6 +3,17 @@ msgstr ""
 "Language: hi\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "OUTPUT RESOLUTION"
+msgstr "आउटपुट रिज़ॉल्यूशन"
+msgid "ASPECT RATIO"
+msgstr "आस्पेक्ट अनुपात"
+msgid "ORIGINAL 4:3"
+msgstr "मूल 4:3"
+msgid "SQUARE PIXELS 8:5"
+msgstr "वर्ग पिक्सेल 8:5"
+msgid "WIDESCREEN 16:9"
+msgstr "वाइडस्क्रीन 16:9"
+
 msgid "PROJECT EON"
 msgstr "प्रोजेक्ट इऑन"
 

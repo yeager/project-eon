@@ -16,8 +16,13 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("SETTINGS APPLY TO SDL RENDERING ONLY.", SOURCE)
 
     def test_popup_controls_only_renderer_options(self) -> None:
-        for option in ("smooth_scaling", "scanlines", "frame"):
+        for option in ("output_resolution_index", "aspect_ratio_index", "smooth_scaling", "scanlines", "frame"):
             self.assertIn(option, SOURCE)
+        self.assertIn("SDL_SetWindowSize(window, resolution.width, resolution.height)", SOURCE)
+        self.assertIn("aspect_viewport", SOURCE)
+        self.assertIn("display_aspect_ratios", SOURCE)
+        self.assertIn("width / ratio", SOURCE)
+        self.assertIn("width = height * ratio", SOURCE)
         self.assertIn("draw_scanlines", SOURCE)
         self.assertIn("draw_modern_surface_frame", SOURCE)
 

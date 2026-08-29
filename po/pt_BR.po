@@ -4,6 +4,17 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "OUTPUT RESOLUTION"
+msgstr "RESOLUÇÃO DE SAÍDA"
+msgid "ASPECT RATIO"
+msgstr "PROPORÇÃO DE TELA"
+msgid "ORIGINAL 4:3"
+msgstr "ORIGINAL 4:3"
+msgid "SQUARE PIXELS 8:5"
+msgstr "PIXELS QUADRADOS 8:5"
+msgid "WIDESCREEN 16:9"
+msgstr "TELA WIDESCREEN 16:9"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 
