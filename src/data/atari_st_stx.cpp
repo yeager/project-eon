@@ -1,5 +1,7 @@
 #include "data/atari_st_stx.hpp"
 
+#include "data/sha256.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <limits>
@@ -136,6 +138,7 @@ AtariStStxFat12Root::AtariStStxFat12Root(const AtariStStxPhysicalDisk& disk)
     }
     root_start_lba_ = static_cast<std::uint16_t>(root_start);
     data_start_lba_ = static_cast<std::uint16_t>(data_start);
+    validate_mirrored_fats();
     for (std::uint16_t index = 0; index < root_entry_count; ++index) {
         const auto sector = logical_sector(static_cast<std::uint16_t>(root_start_lba_ + index / 16U));
         const auto offset = static_cast<std::size_t>(index % 16U) * 32U;
@@ -151,7 +154,43 @@ AtariStStxFat12Root::AtariStStxFat12Root(const AtariStStxPhysicalDisk& disk)
             little32(sector, offset + 28U)});
     }
     if (entries_.empty()) throw std::runtime_error("STX FAT12 root has no live entries");
-    for (const auto& entry : entries_) validate_file_chain(entry);
+    // A divergent physical mirror is itself preservation evidence. Do not
+    // silently choose the first copy to certify a file chain; retain the root
+    // records, but only validate chains when the two originals agree.
+    if (fat_mirrors_match_) {
+        for (const auto& entry : entries_) validate_file_chain(entry);
+    }
+}
+
+void AtariStStxFat12Root::validate_mirrored_fats() {
+    // FAT copies are physical-sector metadata, not a synthesized flat disk.
+    // Hash both addressed copies before following a cluster link. A mismatch
+    // remains observable and prevents later chain certification rather than
+    // silently choosing one physical copy.
+    if (fat_count_ != 2 || sectors_per_fat_ == 0) {
+        throw std::runtime_error("Invalid STX FAT12 mirror layout");
+    }
+    std::vector<std::uint8_t> primary;
+    std::vector<std::uint8_t> secondary;
+    primary.reserve(static_cast<std::size_t>(sectors_per_fat_) * bytes_per_sector_);
+    secondary.reserve(static_cast<std::size_t>(sectors_per_fat_) * bytes_per_sector_);
+    for (std::uint16_t offset = 0; offset < sectors_per_fat_; ++offset) {
+        const auto first_lba = static_cast<std::uint32_t>(reserved_sectors_) + offset;
+        const auto second_lba = first_lba + sectors_per_fat_;
+        if (second_lba >= total_sectors_) {
+            throw std::runtime_error("STX FAT12 mirror sector outside declared medium");
+        }
+        const auto first = logical_sector(static_cast<std::uint16_t>(first_lba));
+        const auto second = logical_sector(static_cast<std::uint16_t>(second_lba));
+        if (first.size() != bytes_per_sector_ || second.size() != bytes_per_sector_) {
+            throw std::runtime_error("STX FAT12 mirror sector has unexpected size");
+        }
+        primary.insert(primary.end(), first.begin(), first.end());
+        secondary.insert(secondary.end(), second.begin(), second.end());
+    }
+    fat_primary_sha256_ = to_hex(sha256(primary));
+    fat_secondary_sha256_ = to_hex(sha256(secondary));
+    fat_mirrors_match_ = primary == secondary;
 }
 
 std::span<const std::uint8_t> AtariStStxFat12Root::logical_sector(const std::uint16_t lba) const {

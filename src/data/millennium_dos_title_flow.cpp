@@ -62,6 +62,44 @@ MillenniumDosSpanishTitleBoundary parse_millennium_dos_spanish_title_boundary(
         0x0122, 0x1968, 0x0013, 5, 0x1917};
 }
 
+MillenniumDosSpanishTitlePresentationEvidence
+parse_millennium_dos_spanish_title_presentation_evidence(
+    const std::span<const std::uint8_t> titles_executable,
+    const std::span<const std::uint8_t> title_library) {
+    constexpr std::string_view titles_sha256 =
+        "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7";
+    constexpr std::string_view title_library_sha256 =
+        "30d6ccb95e7f501d59e72fc2e34583302116bd88f6eceaae989f6ad986ef7f19";
+    constexpr std::array<std::uint8_t, 12> selection{
+        0xb8, 0x00, 0x00, 0xe8, 0x0b, 0xfb, 0xe8, 0xe7, 0xf3, 0xe8, 0x21, 0xfd};
+    // Revalidate the independent input profile too. This prevents a generic
+    // similarly-shaped COM image from being used to associate a title library
+    // with the Spanish release.
+    static_cast<void>(parse_millennium_dos_spanish_title_boundary(titles_executable));
+    constexpr std::size_t selection_offset = 0x1c14 - 0x100;
+    if (to_hex(sha256(titles_executable)) != titles_sha256
+        || to_hex(sha256(title_library)) != title_library_sha256
+        || !has_bytes(titles_executable, selection_offset, selection)) {
+        throw std::runtime_error("Unsupported Millennium Spanish DOS title presentation evidence");
+    }
+    // The complete library identity pins the directory as well as P00. The
+    // first resource's fixed span is read directly from the caller's view so
+    // this evidence parser neither extracts nor owns a copy of game data.
+    constexpr std::size_t p00_offset = 6;
+    constexpr std::size_t p00_size = 10'555;
+    if (title_library.size() < p00_offset + p00_size) {
+        throw std::runtime_error("Unsupported Millennium Spanish DOS P00 title resource");
+    }
+    const auto resource = title_library.subspan(p00_offset, p00_size);
+    const auto resource_sha256 = to_hex(sha256(resource));
+    if (resource_sha256 != "91c315133e58634d7327c7d3a3e95ecaa035580200f609f161db6b044261b43b") {
+        throw std::runtime_error("Unsupported Millennium Spanish DOS P00 title hash");
+    }
+    return {std::string(titles_sha256), std::string(title_library_sha256), 0x1c14, 0,
+        0x1725, 0x1c1a, 0x1004, 0x1c1d, 0x1941, "P00", p00_offset, p00_size,
+        resource_sha256};
+}
+
 MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     std::span<const std::uint8_t> titles_executable,
     std::span<const std::uint8_t> mill_launcher) {

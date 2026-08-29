@@ -193,4 +193,30 @@ struct MillenniumDosSpanishTitleBoundary {
 [[nodiscard]] MillenniumDosSpanishTitleBoundary parse_millennium_dos_spanish_title_boundary(
     std::span<const std::uint8_t> titles_executable);
 
+// The Spanish title input boundary is independent from selection/presentation
+// evidence. This companion profile links its exact TITLES.EXE resource-zero
+// setup to the exact FAT12 TITLE.LIB P00 bytes that Eon already decodes. It
+// establishes only original title presentation provenance; the following
+// codec/driver/private-ABI calls remain outside the runtime contract.
+struct MillenniumDosSpanishTitlePresentationEvidence {
+    std::string titles_sha256;
+    std::string title_library_sha256;
+    std::uint16_t selection_entry_address = 0;
+    std::uint16_t selected_resource_index = 0;
+    std::uint16_t selection_callee_address = 0;
+    std::uint16_t codec_call_address = 0;
+    std::uint16_t codec_call_target = 0;
+    std::uint16_t transition_call_address = 0;
+    std::uint16_t transition_call_target = 0;
+    std::string selected_resource_name;
+    std::size_t selected_resource_offset = 0;
+    std::size_t selected_resource_size = 0;
+    std::string selected_resource_sha256;
+};
+
+[[nodiscard]] MillenniumDosSpanishTitlePresentationEvidence
+parse_millennium_dos_spanish_title_presentation_evidence(
+    std::span<const std::uint8_t> titles_executable,
+    std::span<const std::uint8_t> title_library);
+
 } // namespace eon
