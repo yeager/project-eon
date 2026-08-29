@@ -315,10 +315,15 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "SDL3 reimplementation project for Millennium 2.2 and Deuteros")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_DEBIAN_PACKAGE_SECTION "games")
-# SDL3 is intentionally built from upstream source in CI.  The package ships
-# its two private SDL libraries, but dpkg-shlibdeps cannot map those private
-# SONAMEs to distro packages, so keep dependency generation deterministic.
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
+# DEB/RPM artifacts install below /usr, independent of the developer's local
+# CMAKE_INSTALL_PREFIX.  SDL3, SDL_image, and SDL_ttf are private payload
+# libraries in that directory; tell dpkg-shlibdeps where to find them so it
+# does not replace them with a host libsdl3 dependency.  It can then generate
+# the real system-library dependencies required by a fresh installation.
+set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS
+    "${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
 include(CPack)

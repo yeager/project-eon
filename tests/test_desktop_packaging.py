@@ -31,11 +31,21 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("OFL-1.1.txt", source)
         self.assertIn('for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN', source)
         self.assertIn("localization catalog", source)
+        self.assertIn("generated Debian runtime dependencies", source)
+        self.assertIn("private runtime", source)
+        self.assertIn("LD_TRACE_LOADED_OBJECTS=1", source)
+        self.assertIn("generated RPM runtime dependencies", source)
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("Verify package contents contain no game media", workflow)
         self.assertIn("bash packaging/verify-desktop-package.sh package/deb/*.deb package/rpm/*.rpm", workflow)
+
+    def test_debian_package_generates_system_dependencies_without_host_sdl(self) -> None:
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn('set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")', cmake)
+        self.assertIn("set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)", cmake)
+        self.assertIn("CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS", cmake)
 
     def test_ci_validates_macos_archive_and_windows_runtime_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
