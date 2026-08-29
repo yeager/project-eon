@@ -3149,6 +3149,53 @@ int main() {
         rejected_post_gx_missing_mode_observation = true;
     }
     assert(rejected_post_gx_missing_mode_observation);
+    // The four selected GX startup entries are call-free and return through
+    // the original adapter.  The evaluator advances there only after both
+    // the private-wrapper and adapter returns were explicitly observed; all
+    // reconstructed writes remain overlay-relative.
+    const auto gx_startup_initial = eon::evaluate_millennium_dos_gx_overlay_startup(
+        *game_executable, *gx_overlay);
+    assert(gx_startup_initial.outcome
+        == eon::MillenniumDosGxOverlayStartupOutcome::private_interrupt_boundary);
+    assert(gx_startup_initial.boundary_address == 0x0129);
+    const auto gx_startup_adapter = eon::evaluate_millennium_dos_gx_overlay_startup(
+        *game_executable, *gx_overlay, 0, 3);
+    assert(gx_startup_adapter.outcome
+        == eon::MillenniumDosGxOverlayStartupOutcome::overlay_adapter_boundary);
+    assert(gx_startup_adapter.selected_ax == 0x0012);
+    assert(gx_startup_adapter.boundary_address == 0xd373);
+    const auto gx_startup_default = eon::evaluate_millennium_dos_gx_overlay_startup(
+        *game_executable, *gx_overlay, 0, 0, true);
+    assert(gx_startup_default.outcome
+        == eon::MillenniumDosGxOverlayStartupOutcome::overlay_return);
+    assert(gx_startup_default.selected_overlay_entry_offset == 0x0090);
+    assert(gx_startup_default.selected_source_record_offset == 0x0070);
+    assert(gx_startup_default.boundary_address == 0xd376);
+    assert((gx_startup_default.overlay_writes
+        == std::vector<eon::MillenniumDosGxOverlayStartupWrite>{
+            {0x0065, 0x0dc7, 2}, {0x0067, 0x0024, 2}, {0x0069, 0x05a0, 2},
+            {0x006b, 0x05a2, 2}, {0x006d, 0x00, 1}, {0x00f4, 0x00f4, 2},
+            {0x00f0, 0x00f2, 2}, {0x00f2, 0x00f6, 2}, {0x005c, 0x47ea, 2}}));
+    const auto gx_startup_two = eon::evaluate_millennium_dos_gx_overlay_startup(
+        *game_executable, *gx_overlay, 0, 2, true);
+    assert(gx_startup_two.selected_overlay_entry_offset == 0x009f);
+    assert(gx_startup_two.selected_source_record_offset == 0x0078);
+    assert((gx_startup_two.overlay_writes.front()
+        == eon::MillenniumDosGxOverlayStartupWrite{0x005a, 0xb800, 2}));
+    assert((gx_startup_two.overlay_writes[5]
+        == eon::MillenniumDosGxOverlayStartupWrite{0x006d, 3, 1}));
+    const auto gx_startup_three = eon::evaluate_millennium_dos_gx_overlay_startup(
+        *game_executable, *gx_overlay, 0, 3, true);
+    assert(gx_startup_three.selected_overlay_entry_offset == 0x0097);
+    assert(gx_startup_three.selected_source_record_offset == 0x0080);
+    assert((gx_startup_three.overlay_writes[4]
+        == eon::MillenniumDosGxOverlayStartupWrite{0x006d, 2, 1}));
+    const auto gx_startup_four = eon::evaluate_millennium_dos_gx_overlay_startup(
+        *game_executable, *gx_overlay, 0, 4, true);
+    assert(gx_startup_four.selected_overlay_entry_offset == 0x00a7);
+    assert(gx_startup_four.selected_source_record_offset == 0x0088);
+    assert((gx_startup_four.overlay_writes[4]
+        == eon::MillenniumDosGxOverlayStartupWrite{0x006d, 1, 1}));
     {
         auto altered_startup_allocation = *game_executable;
         altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;

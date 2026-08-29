@@ -100,6 +100,26 @@ for package in "$@"; do
     *) echo "unsupported package: $package" >&2; exit 2 ;;
   esac
 
+  # Run the installed executable with its Linux default location under an
+  # isolated HOME. A distribution payload must neither ship media nor create
+  # ~/.projecteon while only looking for it. This is intentionally an
+  # end-to-end check: package listing checks alone cannot prove the installed
+  # binary retained the read-only default-data boundary.
+  isolated_home=$(mktemp -d)
+  temporary_directories+=("$isolated_home")
+  if inspect_output=$(HOME="$isolated_home" "$executable" --inspect 2>&1); then
+    echo "$package unexpectedly inspected missing default game data" >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$inspect_output" | grep -Fq "Data path does not exist: \"$isolated_home/.projecteon\""; then
+    echo "$package did not report its isolated missing default game-data path" >&2
+    exit 1
+  fi
+  if [ -e "$isolated_home/.projecteon" ]; then
+    echo "$package created its default game-data directory during lookup" >&2
+    exit 1
+  fi
+
   # The generated cards and a catalog prove that the launcher can render and
   # localize after installation.  The original data directory stays absent.
   for required in \

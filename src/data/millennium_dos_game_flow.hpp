@@ -976,6 +976,39 @@ struct MillenniumDosGxOverlayStartupRecordEvidence {
     std::string record_bank_sha256;
 };
 
+// A byte-for-byte execution record for the small, self-contained GX startup
+// overlay suffix.  These writes belong to a transient host overlay only: they
+// never name the original fields or modify the supplied GX executable.  The
+// suffix has no calls or interrupts and ends in the overlay's encoded RET, so
+// it can be evaluated only after the caller explicitly reports both preceding
+// returns.  It is not a substitute for the surrounding DOS/private ABI.
+struct MillenniumDosGxOverlayStartupWrite {
+    std::uint16_t offset = 0;
+    std::uint16_t value = 0;
+    std::uint8_t byte_count = 0;
+
+    constexpr bool operator==(const MillenniumDosGxOverlayStartupWrite&) const = default;
+};
+
+enum class MillenniumDosGxOverlayStartupOutcome {
+    private_interrupt_boundary,
+    overlay_adapter_boundary,
+    overlay_return,
+};
+
+struct MillenniumDosGxOverlayStartupEvaluation {
+    MillenniumDosGxOverlayStartupOutcome outcome =
+        MillenniumDosGxOverlayStartupOutcome::private_interrupt_boundary;
+    std::uint16_t caller_entry_address = 0;
+    std::optional<std::uint16_t> observed_private_return_ax;
+    std::optional<std::uint8_t> observed_mode_byte;
+    std::uint16_t selected_ax = 0;
+    std::uint16_t selected_overlay_entry_offset = 0;
+    std::uint16_t selected_source_record_offset = 0;
+    std::vector<MillenniumDosGxOverlayStartupWrite> overlay_writes;
+    std::uint16_t boundary_address = 0;
+};
+
 // Hash-locked continuation of dispatcher table slot 13 (+$08d0) in the
 // original GX overlay. The dispatcher selects this raw target only after its
 // native selector calculation. This describes the following literal setup,
@@ -1039,6 +1072,13 @@ parse_millennium_dos_gx_overlay_selector_evidence(
 parse_millennium_dos_gx_overlay_startup_record_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
     const MillenniumDosGxOverlaySelectorEvidence& selector);
+[[nodiscard]] MillenniumDosGxOverlayStartupEvaluation
+evaluate_millennium_dos_gx_overlay_startup(
+    std::span<const std::uint8_t> game_executable,
+    std::span<const std::uint8_t> gx_overlay_executable,
+    std::optional<std::uint16_t> observed_private_return_ax = std::nullopt,
+    std::optional<std::uint8_t> observed_mode_byte = std::nullopt,
+    bool observed_adapter_return = false);
 [[nodiscard]] MillenniumDosGxOverlayDispatch13Evidence
 parse_millennium_dos_gx_overlay_dispatch13_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
