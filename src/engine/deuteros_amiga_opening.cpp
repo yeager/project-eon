@@ -19,6 +19,7 @@ DeuterosAmigaMainResourceTransfer require_opening_transfer(const AmigaAdf& disk,
 DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
     : disk_(std::move(system_adf)),
       load_plan_(parse_deuteros_amiga_load_plan(disk_)),
+      title_handoff_route_(parse_deuteros_amiga_title_handoff_route(disk_, load_plan_)),
       transferred_bundle_(require_opening_transfer(disk_, load_plan_)),
       bundle_(parse_deuteros_amiga_bundle(disk_, load_plan_.resource_disk_offsets[0])),
       sound_bank_(parse_deuteros_amiga_sound_bank(disk_, bundle_)),
@@ -41,10 +42,12 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // the original title-stage interval; another alternate resource must not
     // be presented as a title handoff.
     if (!title_stage_session_ && events.alternate_resources.size() == 1
-        && events.alternate_resources.front() == 0x0b38) {
-        // `$21982` returned bootstrap profile one through `$12ffc`; bind the
-        // caller-proven value to the title stage before its Exec boundary.
-        title_stage_session_.emplace(disk_, load_plan_, 1);
+        && events.alternate_resources.front() == title_handoff_route_.resource_relative_offset) {
+        // Bind only the exact raw $0f command to the caller-side profile
+        // written through the verified bootstrap return cell.  Do not treat a
+        // coincidentally equal resource operand from another bundle path as a
+        // title stage.
+        title_stage_session_.emplace(disk_, load_plan_, title_handoff_route_.bootstrap_profile_value);
         events.title_handoff = true;
     }
     ++ticks_;

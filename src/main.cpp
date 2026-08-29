@@ -2992,6 +2992,18 @@ int main(int argc, char** argv) {
     // launcher until a genuine DOS return/startup path is recovered.
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
+    // Keep keyboard/gamepad focus on the same card as the automatic
+    // hash-verified choice.  Without this, selecting a game that has only
+    // Amiga media can leave focus on the disabled DOS card even though the
+    // launcher has correctly selected Amiga as its only startable platform.
+    const auto focus_active_platform_card = [&] {
+        if (!active_platform) return;
+        const auto card = std::find_if(platform_cards.begin(), platform_cards.end(),
+            [&](const PlatformCard& candidate) { return candidate.platform == *active_platform; });
+        if (card != platform_cards.end()) {
+            focused_platform_card = static_cast<int>(std::distance(platform_cards.begin(), card));
+        }
+    };
     const auto focus_menu_card = [&](const int next_focus) {
         focused = next_focus;
         if (request.platform) return;
@@ -3001,6 +3013,9 @@ int main(int argc, char** argv) {
             active_platform = next_platform;
             discard_millennium_assets();
         }
+        // This is also needed when the active platform happens not to change:
+        // the game card can have been focused while scanning was incomplete.
+        focus_active_platform_card();
     };
     const auto start_millennium_title = [&] {
         millennium_atari_session = load_millennium_atari_bootstrap(releases, active_platform);

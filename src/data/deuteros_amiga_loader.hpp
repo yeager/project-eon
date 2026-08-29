@@ -160,6 +160,19 @@ struct DeuterosAmigaLoadPlan {
     AmigaLoadStage title_stage;
 };
 
+// The opening channel's literal $0f operand is only a resource-relative
+// value.  This separate record joins that exact six-byte command to the
+// already decoded main-stage return slot and bootstrap profile.  It does not
+// assign a menu meaning to either value or execute the intervening services.
+struct DeuterosAmigaTitleHandoffRoute {
+    std::uint32_t resource_command_disk_offset = 0;
+    std::uint32_t resource_relative_offset = 0;
+    std::uint32_t resource_runtime_address = 0;
+    std::uint32_t bootstrap_profile_return_cell = 0;
+    std::uint16_t bootstrap_profile_value = 0;
+    std::string command_sha256;
+};
+
 // Static facts from the nonzero arm of the main loop's verified channel-request
 // edge. This never chooses an arm, invokes a service, or simulates its input
 // port; it preserves only byte-addressed control-flow evidence.
@@ -300,6 +313,12 @@ struct DeuterosAmigaResourceConsumerSample {
 // Decode load constants from the genuine 68000 instructions. Every expected
 // opcode is checked before its immediate value is accepted.
 [[nodiscard]] DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk);
+
+// Validates the opening's exact $0f,$00000b38 command and its caller-side
+// bootstrap return relationship.  The returned route can only admit the
+// matching live VM event; it is not a general alternate-resource dispatcher.
+[[nodiscard]] DeuterosAmigaTitleHandoffRoute parse_deuteros_amiga_title_handoff_route(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Hash-validates the raw main-stage continuation reached by the channel-request
 // branch. It reports static bytes only and never executes the recorded calls.
