@@ -1032,7 +1032,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << game_startup_callees.other_entry_address << " -> private 0x"
             << game_startup_callees.other_private_target_address << ", local 0x"
             << game_startup_callees.other_followup_target_address << ", compares 0x"
-            << game_startup_callees.other_compare_value << " at 0x"
+            << static_cast<unsigned>(game_startup_callees.other_compare_value) << " at 0x"
             << game_startup_callees.other_result_source_address << "; SHA-256 "
             << game_startup_callees.equal_sha256 << "/" << game_startup_callees.other_sha256
             << std::dec << " (call returns and predicates remain unmodeled)\n";
@@ -1908,7 +1908,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << " relative stack bytes; Fopen boundary "
         << live_bootstrap.fopen_boundary().fopen_filename << std::dec
         << " (no GEMDOS call)\n";
-    if (const auto physical_disk = eon::extract_verified_release_asset(release, disk1_stx_sha256)) {
+    const auto physical_disk = eon::extract_verified_release_asset(release, disk1_stx_sha256);
+    if (physical_disk) {
         const eon::AtariStStxPhysicalDisk stx(*physical_disk);
         const eon::AtariStStxFat12Root stx_root(stx);
         const auto boot = stx.sector(0, 0, 1);
@@ -1943,6 +1944,13 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
             << (stx_root.fat_mirrors_match()
                 ? " (no flattened image, file extraction, boot semantics, or executable handoff)\n"
                 : " (root records only; no FAT chain, flattened image, file extraction, boot semantics, or executable handoff)\n");
+    } else {
+        // The standalone Equinox outer release is an independently recognised
+        // launch source, but does not contain this larger collection's
+        // physical dump.  State that scope rather than suggesting its STX
+        // evidence was searched elsewhere or silently borrowed.
+        std::cout << "          physical Disk 1 STX: absent from this verified outer release "
+            "(no physical-media fallback or substitution)\n";
     }
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");

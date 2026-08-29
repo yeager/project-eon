@@ -34,6 +34,10 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("card.platform == eon::Platform::atari_st", SOURCE)
         self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
 
+    def test_atari_media_scope_never_implies_a_physical_dump_fallback(self) -> None:
+        self.assertIn("absent from this verified outer release", SOURCE)
+        self.assertIn("no physical-media fallback or substitution", SOURCE)
+
     def test_ambiguous_or_missing_platform_cards_cannot_start_a_game(self) -> None:
         self.assertIn("eon::platform_card_startable", SOURCE)
         self.assertIn("!active_platform || !active_release_language", SOURCE)
@@ -147,6 +151,13 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("never imported into runtime", body)
         self.assertIn("verified English Millennium DOS archive", body)
         self.assertIn("extract_verified_release_asset", body)
+
+    def test_spanish_startup_diagnostics_print_byte_operands_numerically(self) -> None:
+        # A uint8_t streams as a character in C++. Preservation output must
+        # retain the observed comparison byte (0x02 here), not emit a control
+        # character into logs intended for trace comparison.
+        marker = SOURCE.index("game_startup_callees.other_compare_value")
+        self.assertIn("static_cast<unsigned>", SOURCE[marker - 120:marker + 160])
 
 
 if __name__ == "__main__":
