@@ -90,6 +90,17 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         0xff, 0x03, 0xa3, 0xf7, 0x18, 0x8b, 0xf0, 0xac, 0x5e,
         0x25, 0x3f, 0x00, 0x3c, 0x24, 0x72, 0x04, 0x2c, 0x18,
         0xeb, 0xf8};
+    constexpr std::array<std::uint8_t, 13> input_exit_helper_patch_offset_builder{
+        0x56, 0xb9, 0x70, 0x01, 0x32, 0xe4, 0xf7, 0xe1,
+        0x2e, 0xa3, 0x41, 0x13, 0x5e};
+    constexpr std::array<std::uint8_t, 24> input_exit_helper_position_dispatch{
+        0xad, 0x2e, 0xa3, 0x51, 0x13, 0xad, 0x2e, 0xa3,
+        0x4f, 0x13, 0xbf, 0x3d, 0x13, 0xbe, 0x57, 0x13,
+        0xa5, 0xa5, 0x0e, 0x07, 0xbb, 0x49, 0x13, 0xb8};
+    constexpr std::array<std::uint8_t, 8> input_exit_helper_position_table_first{
+        0x1c, 0x00, 0x7c, 0x00, 0x2e, 0x00, 0x7c, 0x00};
+    constexpr std::array<std::uint8_t, 4> input_exit_helper_position_table_last{
+        0x18, 0x01, 0x7c, 0x00};
     constexpr std::array<std::uint8_t, 10> clean_exit{
         0x32, 0xc0, 0x2e, 0xa2, 0x0e, 0x1a, 0x8b, 0x26,
         0xa0, 0x1a};
@@ -122,7 +133,11 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         || !has_bytes(titles_executable, 0x1968 - file_to_load_bias, input_exit_private_driver_entry)
         || !has_bytes(titles_executable, 0x1931 - file_to_load_bias, input_exit_private_driver_loop)
         || !has_bytes(titles_executable, 0x1917 - file_to_load_bias, input_exit_helper_loop)
-        || !has_bytes(titles_executable, 0x18f9 - file_to_load_bias, input_exit_helper_selector)) {
+        || !has_bytes(titles_executable, 0x18f9 - file_to_load_bias, input_exit_helper_selector)
+        || !has_bytes(titles_executable, 0x1712 - file_to_load_bias, input_exit_helper_patch_offset_builder)
+        || !has_bytes(titles_executable, 0x174a - file_to_load_bias, input_exit_helper_position_dispatch)
+        || !has_bytes(titles_executable, 0x1768 - file_to_load_bias, input_exit_helper_position_table_first)
+        || !has_bytes(titles_executable, 0x17a0 - file_to_load_bias, input_exit_helper_position_table_last)) {
         throw std::runtime_error("Unsupported Millennium DOS title control flow");
     }
     constexpr std::size_t title_selection_callee_address = 0x1725;
@@ -381,6 +396,13 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_exit_helper_selector_subtract = 0x18,
         .input_exit_helper_resource_index_bias = 1,
         .input_exit_helper_resource_loader_address = 0x1712,
+        .input_exit_helper_patch_offset_builder_address = 0x1712,
+        .input_exit_helper_patch_offset_stride = 0x0170,
+        .input_exit_helper_patch_offset_cell_address = 0x1341,
+        .input_exit_helper_position_table_address = 0x1768,
+        .input_exit_helper_position_count = 15,
+        .input_exit_helper_position_stride = 4,
+        .input_exit_helper_private_driver_function = 6,
         .exit_code = 0,
         .title_private_interrupt_wrapper_address = 0x0122,
         .title_private_interrupt_record_address = 0x1ac4,

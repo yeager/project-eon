@@ -25,7 +25,8 @@ class DesktopPackagingTests(unittest.TestCase):
             with self.subTest(extension=extension):
                 self.assertIn(extension, source)
         self.assertIn("assets/cards/millennium.png", source)
-        self.assertIn("po/sv.po", source)
+        self.assertIn('for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN', source)
+        self.assertIn("localization catalog", source)
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
