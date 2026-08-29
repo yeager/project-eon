@@ -1859,6 +1859,36 @@ int main() {
     assert(defjam_independent_branch_preparation.entry_address == 0x68586);
     assert(defjam_independent_branch_preparation.unknown_call_address == 0x68590);
     assert(defjam_independent_branch_preparation.unknown_call_target == 0x7b26a);
+    const auto defjam_independent_post_call_tail =
+        eon::parse_millennium_amiga_resident_independent_post_call_tail_boundary(
+            defjam_loader_disk, defjam_plan, defjam_independent_branch_preparation);
+    assert(defjam_independent_post_call_tail.entry_address == 0x68596);
+    assert(defjam_independent_post_call_tail.raw_disk_offset == 0x16996);
+    assert(defjam_independent_post_call_tail.byte_count == 104);
+    assert(defjam_independent_post_call_tail.sha256
+        == "eeed978d0afd278cc48868c0d2b76205304ddfa80b174d2aac95dc50b80dd551");
+    assert((defjam_independent_post_call_tail.absolute_byte_addresses
+        == std::array<std::uint32_t, 6>{{0x7b3b0, 0x7b3b1, 0x7b3b4,
+            0x7b3ba, 0x7b3bb, 0x7b3bc}}));
+    assert(defjam_independent_post_call_tail.external_jump_address == 0x685ee);
+    assert(defjam_independent_post_call_tail.external_jump_target == 0x7bcf8);
+    assert(defjam_independent_post_call_tail.negative_path_address == 0x685f4);
+    assert(defjam_independent_post_call_tail.negative_path_return_address == 0x685fc);
+    assert(defjam_independent_post_call_tail.nonnegative_return_address == 0x685fe);
+    {
+        auto altered = *defjam_adf;
+        altered[0x16996 + 103] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(
+                eon::parse_millennium_amiga_resident_independent_post_call_tail_boundary(
+                    eon::AmigaAdf(std::move(altered)), defjam_plan,
+                    defjam_independent_branch_preparation));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto defjam_separate_entry = eon::parse_millennium_amiga_resident_separate_entry_gate(defjam_loader_disk, defjam_plan);
     assert(defjam_separate_entry.entry_address == 0x68d50);
     assert(defjam_separate_entry.branch_address == 0x68d58);
@@ -2076,6 +2106,8 @@ int main() {
         assert(image);
         const std::span bytes(*image);
         assert(bytes.size() >= 0x2bfc8);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(0x16996, 104)))
+            == defjam_independent_post_call_tail.sha256);
         assert(eon::to_hex(eon::sha256(bytes.subspan(0x1719c, 36)))
             == defjam_separate_post_call_tail.sha256);
         assert(eon::to_hex(eon::sha256(bytes.subspan(0x171c0, 14)))
@@ -5746,6 +5778,30 @@ int main() {
         == std::array<std::uint32_t, 8>{{0x32, 0x36, 0x3a, 0x3e, 0x42, 0x46, 0x4a, 0x4e}}));
     assert(deuteros_killer_execution.next_clear_address == 0x52);
     assert(deuteros_killer_execution.loop_target_address == 0x30);
+    const auto deuteros_killer_decoder = eon::parse_deuteros_atari_killer_boot_decoder_boundary(
+        deuteros_disk2_boot, deuteros_disk2.boot_profile());
+    assert(deuteros_killer_decoder.caller_offset == 0x6c);
+    assert(deuteros_killer_decoder.caller_byte_count == 8);
+    assert(deuteros_killer_decoder.caller_sha256
+        == "5e21bb3b7a3bc300d36f330a3112efbc5388515eb0441f23d9205bcc26df3d95");
+    assert(deuteros_killer_decoder.decoder_offset == 0xc6);
+    assert(deuteros_killer_decoder.decoder_byte_count == 18);
+    assert(deuteros_killer_decoder.decoder_sha256
+        == "218908b4c5751ffa0b5b19aaebd278df41e29a8f70cd6285a0e05ee9e07f5c04");
+    assert(deuteros_killer_decoder.source_address == 0x1156);
+    assert(deuteros_killer_decoder.source_offset == 0x156);
+    assert(deuteros_killer_decoder.encoded_byte_count == 52);
+    assert(deuteros_killer_decoder.encoded_sha256
+        == "56ca6d45903d6cd36809ebbba04adcf398197a84e1e41e1bf0e1e3d53de9e7f2");
+    assert(deuteros_killer_decoder.xor_immediate == 0xb9);
+    assert(deuteros_killer_decoder.gemdos_selector == 9);
+    assert(deuteros_killer_decoder.trap_opcode == 0x4e41);
+    const auto deuteros_killer_decoded = eon::decode_deuteros_atari_killer_boot_message(
+        deuteros_disk2_boot, deuteros_killer_decoder);
+    assert(deuteros_killer_decoded.size() == 52);
+    assert(deuteros_killer_decoded.back() == 0);
+    assert(eon::to_hex(eon::sha256(deuteros_killer_decoded))
+        == "9dfdd91bcc5c6b21d7d0751be79a527449045168d77f2f12240598384f898485");
     {
         auto altered_boot = deuteros_disk2_boot;
         altered_boot[0xd8] ^= 0x01;
@@ -5765,6 +5821,30 @@ int main() {
         try {
             static_cast<void>(eon::execute_deuteros_atari_killer_boot_prefix(
                 altered_boot, deuteros_disk2.boot_profile()));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_boot = deuteros_disk2_boot;
+        altered_boot[0x156] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_killer_boot_decoder_boundary(
+                altered_boot, deuteros_disk2.boot_profile()));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_boot = deuteros_disk2_boot;
+        altered_boot[0x156] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::decode_deuteros_atari_killer_boot_message(
+                altered_boot, deuteros_killer_decoder));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

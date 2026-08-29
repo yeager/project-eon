@@ -1148,6 +1148,44 @@ parse_millennium_amiga_resident_independent_branch_preparation_boundary(
     return {entry, entry + 10, 0x7b26a};
 }
 
+MillenniumAmigaResidentIndependentPostCallTailBoundary
+parse_millennium_amiga_resident_independent_post_call_tail_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentBranchPreparationBoundary& boundary) {
+    // This starts at the return PC of JSR $7b26a. That return is not
+    // presumed: hash-lock its call-free caller-side tail as source evidence.
+    constexpr std::uint32_t entry = 0x68596;
+    constexpr std::array<std::uint8_t, 104> expected{{
+        0x4c,0xdf,0x20,0x0f,0x42,0x46,0x1c,0x39,0x00,0x07,0xb3,0xb0,
+        0x1e,0x39,0x00,0x07,0xb3,0xb1,0xdf,0x39,0x00,0x07,0xb3,0xb4,
+        0x64,0x02,0x52,0x06,0x4a,0x79,0x00,0x07,0xb3,0xb6,0x6b,0x02,
+        0x44,0x46,0xd4,0x46,0x52,0x43,0xda,0xfc,0x00,0x90,0x42,0x46,
+        0x1c,0x39,0x00,0x07,0xb3,0xba,0x1e,0x39,0x00,0x07,0xb3,0xbb,
+        0xdf,0x39,0x00,0x07,0xb3,0xbc,0x64,0x02,0x52,0x06,0x4a,0x39,
+        0x00,0x07,0xb3,0xbd,0x67,0x02,0x44,0x46,0xd2,0x46,0x6b,0x0a,
+        0x53,0x40,0x67,0x06,0x4e,0xf9,0x00,0x07,0xbc,0xf8,0x06,0x42,
+        0x28,0x00,0x06,0x43,0x28,0x00,0x4e,0x75,
+    }};
+    constexpr std::string_view expected_hash =
+        "eeed978d0afd278cc48868c0d2b76205304ddfa80b174d2aac95dc50b80dd551";
+    if (boundary.unknown_call_address != 0x68590 || boundary.unknown_call_target != 0x7b26a
+        || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga independent post-call tail placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga independent post-call tail is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto hash = to_hex(sha256(bytes));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga independent post-call tail");
+    }
+    return {entry, plan.resident_stage.disk_offset + relative, expected.size(), hash,
+        {0x7b3b0, 0x7b3b1, 0x7b3b4, 0x7b3ba, 0x7b3bb, 0x7b3bc},
+        0x685ee, 0x7bcf8, 0x685f4, 0x685fc, 0x685fe};
+}
+
 MillenniumAmigaResidentSeparateEntryGate
 parse_millennium_amiga_resident_separate_entry_gate(const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
     constexpr std::uint32_t entry = 0x68d50;

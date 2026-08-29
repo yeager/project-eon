@@ -1234,6 +1234,19 @@ At `$68586`, a fixed local register-preparation prefix reaches unknown `JSR
 $7b26a` at `$68590`. This is a boundary only: no register values, target
 effect, or continuation is modeled.
 
+The return-PC tail after that unknown `JSR` is nevertheless immutable source
+evidence. The 104 call-free raw bytes at `$68596..$685fd` / ADF `+0x16996`
+hash to `eeed978d0afd278cc48868c0d2b76205304ddfa80b174d2aac95dc50b80dd551`
+in all six supplied images. They restore a saved register mask, read six
+absolute byte cells (`$7b3b0`, `$7b3b1`, `$7b3b4`, `$7b3ba`, `$7b3bb`, and
+`$7b3bc`), and contain the literal routes to external `JMP $7bcf8` at
+`$685ee`, the already bounded negative path at `$685f4`, its `RTS` at
+`$685fc`, and the separately bounded `$685fe` post-negative prefix.
+`MillenniumAmigaResidentIndependentPostCallTailBoundary` validates those
+bytes and operands only. It does **not** assume `$7b26a` returns, assign
+meaning to the cells or condition flags, execute this tail, or infer which
+route an original run takes.
+
 A separate resident entry at `$68d50` has its own literal load/test and
 conditional branch `$68d58 → $68d62`. This is preserved as an independent
 static gate; no cell, path, or runtime meaning is inferred.
@@ -1685,6 +1698,23 @@ and the distinct indirect-jump layout. `execute_deuteros_atari_killer_boot_prefi
 adds the bounded direct `$12` branch described above; it neither chooses a
 reset vector nor executes the indirect branch or unbounded loop, and it
 attaches no game semantics to the protection code.
+
+There is a separate static boot-entry route on the same supplied Disk 2. The
+eight bytes at boot `+$6c` (`LEA $1156(PC),A0; BSR.W $10c6`) hash to
+`5e21bb3b7a3bc300d36f330a3112efbc5388515eb0441f23d9205bcc26df3d95`.
+The 18-byte callee at `+$c6` hashes to
+`218908b4c5751ffa0b5b19aaebd278df41e29a8f70cd6285a0e05ee9e07f5c04`:
+it saves A0, applies `EORI.B #$b9,(A0)+` until the transformed byte is zero,
+then pushes GEMDOS selector `$0009` and executes `TRAP #1`. The first
+caller-connected encoded span is boot `+$156..+$189` (52 bytes), hash
+`56ca6d45903d6cd36809ebbba04adcf398197a84e1e41e1bf0e1e3d53de9e7f2`.
+`decode_deuteros_atari_killer_boot_message` evaluates only that bytewise XOR
+in a new host vector; its 52 resulting bytes, including the zero terminator,
+hash to `9dfdd91bcc5c6b21d7d0751be79a527449045168d77f2f12240598384f898485`.
+It neither modifies the supplied boot bytes nor invokes GEMDOS, displays the
+decoded protection text, emulates a condition selecting this caller, or
+assigns any title/game meaning. The `TRAP #1` service/frame and all later
+boot-entry control remain explicit preservation boundaries.
 
 ### Deuteros Amiga execution chain
 
