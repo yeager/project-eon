@@ -18,6 +18,7 @@
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
+#include "data/deuteros_amiga_reference_trace.hpp"
 #include "data/deuteros_atari_boot.hpp"
 #include "data/deuteros_atari_reference_trace.hpp"
 #include "data/fat12.hpp"
@@ -636,6 +637,26 @@ int main() {
             diagnostics, trace_error));
         assert(!eon::validate_deuteros_atari_reference_events(
             "event\t1 10 table base=0x00001eac shifted_index=0x0002 target_a1=0x00001f51 entry_pc=0x00001f51 return_pc=0x00001f08 return_d1=0x00000000 return_d2=0x00000000\n",
+            diagnostics, trace_error));
+    }
+    // These strings validate only declared title-stage ABI observations. They
+    // are not Amiga media, a trace fixture, or a request to execute an ABI.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 10 exec site=0x00040450 exec_base_address=0x00000004 vector=-0x0096 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t2 20 open-library site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=0x00012fec result_sr=0x2000\n"
+            "event\t3 30 graphics site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t4 40 custom-register site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t5 50 callback site=0x0001ef74 callback=0x0001f056 exec_base_address=0x00000004 vector=-0x01ce result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t6 60 callback site=0x0001f056 incoming_a0=0x00001000 result_d0=0x00000001 result_sr=0x2000\n";
+        eon::DeuterosAmigaReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_deuteros_amiga_title_reference_events(valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 6 && diagnostics.exec_count == 1
+            && diagnostics.open_library_count == 1 && diagnostics.graphics_count == 1
+            && diagnostics.custom_register_count == 1 && diagnostics.callback_count == 2);
+        assert(!eon::validate_deuteros_amiga_title_reference_events(
+            "event\t1 10 graphics site=0x0004069a graphics_base_address=0x00012fed vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
             diagnostics, trace_error));
     }
     assert_modern_asset_pack_admission();

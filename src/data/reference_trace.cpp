@@ -1,6 +1,7 @@
 #include "data/reference_trace.hpp"
 
 #include "data/deuteros_atari_reference_trace.hpp"
+#include "data/deuteros_amiga_reference_trace.hpp"
 #include "data/millennium_amiga_reference_trace.hpp"
 #include "data/millennium_dos_reference_trace.hpp"
 #include "data/sha256.hpp"
@@ -342,6 +343,49 @@ bool validate_deuteros_atari_events(const std::filesystem::path& path,
     return true;
 }
 
+bool validate_deuteros_amiga_events(const std::filesystem::path& path,
+                                    const std::uintmax_t expected_size,
+                                    const std::string_view expected_sha256,
+                                    DeuterosAmigaReferenceTraceDiagnostics& diagnostics,
+                                    std::string& error) {
+    std::uintmax_t observed_size = 0;
+    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
+    if (observed_size != expected_size) {
+        error = "Reference trace events size does not match its manifest";
+        return false;
+    }
+    try {
+        if (to_hex(sha256_file(path)) != expected_sha256) {
+            error = "Reference trace events SHA-256 does not match its manifest";
+            return false;
+        }
+    } catch (const std::exception&) {
+        error = "Unable to hash reference trace events";
+        return false;
+    }
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) {
+        error = "Unable to read reference trace events";
+        return false;
+    }
+    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    if (!stream.eof()) {
+        error = "Unable to read reference trace events";
+        return false;
+    }
+    if (!validate_deuteros_amiga_title_reference_events(contents, diagnostics, error)) return false;
+    try {
+        if (to_hex(sha256_file(path)) != expected_sha256) {
+            error = "Reference trace events changed while it was being validated";
+            return false;
+        }
+    } catch (const std::exception&) {
+        error = "Unable to rehash reference trace events";
+        return false;
+    }
+    return true;
+}
+
 bool validate_millennium_amiga_events(const std::filesystem::path& path,
                                       const std::uintmax_t expected_size,
                                       const std::string_view expected_sha256,
@@ -413,6 +457,11 @@ ReferenceTraceValidation validate_reference_trace(
         "source_release_sha256", "source_release_size", "source_media_sha256", "source_stage_sha256",
         "capture_start_utc", "capture_end_utc", "emulator_name", "emulator_version", "emulator_sha256",
         "config_sha256", "command_tail_sha256", "input_timeline_sha256"};
+    constexpr std::array deuteros_amiga_v2_required_fields{
+        "format", "adapter", "event_file", "event_size", "event_sha256", "game", "platform", "language",
+        "source_release_sha256", "source_release_size", "source_media_sha256", "source_stage_sha256",
+        "capture_start_utc", "capture_end_utc", "emulator_name", "emulator_version", "emulator_sha256",
+        "config_sha256", "command_tail_sha256", "input_timeline_sha256"};
     const bool v1 = fields.contains("format") && fields.at("format") == "project-eon-reference-trace-v1";
     const bool millennium_dos_v2 = fields.contains("format")
         && fields.at("format") == "project-eon-reference-trace-v2"
@@ -423,6 +472,9 @@ ReferenceTraceValidation validate_reference_trace(
     const bool millennium_amiga_v2 = fields.contains("format")
         && fields.at("format") == "project-eon-reference-trace-v2"
         && fields.contains("adapter") && fields.at("adapter") == "millennium-amiga-en-defjam-bootstrap-v1";
+    const bool deuteros_amiga_v2 = fields.contains("format")
+        && fields.at("format") == "project-eon-reference-trace-v2"
+        && fields.contains("adapter") && fields.at("adapter") == "deuteros-amiga-en-title-stage-v1";
     const auto manifest_has_exact_fields = [&fields](const auto& required) {
         if (fields.size() != required.size()) return false;
         return std::all_of(required.begin(), required.end(), [&fields](const auto field) {
@@ -432,6 +484,7 @@ ReferenceTraceValidation validate_reference_trace(
     if (!(v1 ? manifest_has_exact_fields(v1_required_fields)
              : millennium_dos_v2 ? manifest_has_exact_fields(v2_required_fields)
              : deuteros_atari_v2 ? manifest_has_exact_fields(deuteros_atari_v2_required_fields)
+             : deuteros_amiga_v2 ? manifest_has_exact_fields(deuteros_amiga_v2_required_fields)
              : millennium_amiga_v2 ? manifest_has_exact_fields(v2_required_fields)
              : false)) {
         return {{}, "Reference trace manifest has unknown or missing fields"};
@@ -444,7 +497,7 @@ ReferenceTraceValidation validate_reference_trace(
         || !lowercase_sha256(fields.at("config_sha256"))
         || !lowercase_sha256(fields.at("command_tail_sha256"))
         || !lowercase_sha256(fields.at("input_timeline_sha256"))
-        || (deuteros_atari_v2 && (!lowercase_sha256(fields.at("source_media_sha256"))
+        || ((deuteros_atari_v2 || deuteros_amiga_v2) && (!lowercase_sha256(fields.at("source_media_sha256"))
             || !lowercase_sha256(fields.at("source_stage_sha256"))))
         || !utc_timestamp(fields.at("capture_start_utc"))
         || !utc_timestamp(fields.at("capture_end_utc"))
@@ -491,6 +544,13 @@ ReferenceTraceValidation validate_reference_trace(
             || source->sha256 != "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400")) {
         return {{}, "Reference trace adapter does not match the clean English Millennium Amiga release"};
     }
+    if (deuteros_amiga_v2 && (source->game != Game::deuteros || source->platform != Platform::amiga
+            || source->language != "en"
+            || source->sha256 != "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04"
+            || fields.at("source_media_sha256") != "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
+            || fields.at("source_stage_sha256") != "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03")) {
+        return {{}, "Reference trace adapter does not match the exact Deuteros Amiga title-stage media"};
+    }
     try {
         if (to_hex(sha256_file(source->path)) != source->sha256) {
             return {{}, "Reference trace source release changed after the provenance scan"};
@@ -507,6 +567,7 @@ ReferenceTraceValidation validate_reference_trace(
     MillenniumDosEnglishReferenceTraceDiagnostics diagnostics;
     DeuterosAtariReferenceTraceDiagnostics deuteros_diagnostics;
     MillenniumAmigaReferenceTraceDiagnostics amiga_diagnostics;
+    DeuterosAmigaReferenceTraceDiagnostics deuteros_amiga_diagnostics;
     const bool events_valid = v1
         ? validate_events(events_path, event_size, fields.at("event_sha256"), event_count, error)
         : millennium_dos_v2
@@ -515,23 +576,30 @@ ReferenceTraceValidation validate_reference_trace(
             : deuteros_atari_v2
                 ? validate_deuteros_atari_events(events_path, event_size, fields.at("event_sha256"),
                     deuteros_diagnostics, error)
-                : validate_millennium_amiga_events(events_path, event_size, fields.at("event_sha256"),
-                    amiga_diagnostics, error);
+                : deuteros_amiga_v2
+                    ? validate_deuteros_amiga_events(events_path, event_size, fields.at("event_sha256"),
+                        deuteros_amiga_diagnostics, error)
+                    : validate_millennium_amiga_events(events_path, event_size, fields.at("event_sha256"),
+                        amiga_diagnostics, error);
     if (!events_valid) {
         return {{}, error};
     }
     if (millennium_dos_v2) event_count = diagnostics.event_count;
     if (deuteros_atari_v2) event_count = deuteros_diagnostics.event_count;
     if (millennium_amiga_v2) event_count = amiga_diagnostics.event_count;
+    if (deuteros_amiga_v2) event_count = deuteros_amiga_diagnostics.event_count;
     return {ReferenceTrace{manifest_path, events_path, *source,
         fields.at("capture_start_utc"), fields.at("capture_end_utc"), fields.at("emulator_name"),
         fields.at("emulator_version"), fields.at("emulator_sha256"), fields.at("format"),
         v1 ? "" : fields.at("adapter"), event_count, event_size, fields.at("event_sha256"),
-        diagnostics.interrupt_count, diagnostics.file_count, diagnostics.exec_count,
-        deuteros_diagnostics.trap_count, deuteros_diagnostics.callback_count,
+        diagnostics.interrupt_count, diagnostics.file_count,
+        millennium_dos_v2 ? diagnostics.exec_count : deuteros_amiga_diagnostics.exec_count,
+        deuteros_diagnostics.trap_count,
+        deuteros_atari_v2 ? deuteros_diagnostics.callback_count : deuteros_amiga_diagnostics.callback_count,
         deuteros_diagnostics.frame_count, deuteros_diagnostics.state_count,
         deuteros_diagnostics.table_count, deuteros_diagnostics.raw_reader_count,
-        amiga_diagnostics.cpu_count}, {}};
+        amiga_diagnostics.cpu_count, deuteros_amiga_diagnostics.open_library_count,
+        deuteros_amiga_diagnostics.graphics_count, deuteros_amiga_diagnostics.custom_register_count}, {}};
 }
 
 } // namespace eon

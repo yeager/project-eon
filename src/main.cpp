@@ -2553,6 +2553,11 @@ int main(int argc, char** argv) {
                     << " raw-reader observations; diagnostics only)\n";
             } else if (trace.adapter == "millennium-amiga-en-defjam-bootstrap-v1") {
                 std::cout << trace.adapter_cpu_count << " CPU handoff observations; diagnostics only)\n";
+            } else if (trace.adapter == "deuteros-amiga-en-title-stage-v1") {
+                std::cout << trace.adapter_exec_count << " Exec, " << trace.adapter_open_library_count
+                    << " OpenLibrary, " << trace.adapter_graphics_count << " graphics, "
+                    << trace.adapter_custom_register_count << " custom-register, "
+                    << trace.adapter_callback_count << " callback observations; diagnostics only)\n";
             } else {
                 std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
                     << " file, " << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
