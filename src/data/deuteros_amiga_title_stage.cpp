@@ -1066,6 +1066,33 @@ parse_deuteros_amiga_title_callback_registration_profile(
         std::string(registration_hash), std::string(callback_hash)};
 }
 
+DeuterosAmigaTitleCallbackProducerResult
+evaluate_deuteros_amiga_title_callback_producer(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaTitleCallbackProducerInput input) {
+    // The original callback's byte-one arm stores A0+$8, rejects unsigned
+    // A0+$6 >= $50 and a full 20-entry queue, then selects either half of the
+    // original 160-byte table. Model that pure byte selection only.
+    const auto profile = parse_deuteros_amiga_title_callback_registration_profile(disk, plan);
+    if (input.caller_word_at_6 >= 0x50 || input.pending_count >= profile.callback_pending_limit) {
+        throw std::runtime_error("Deuteros title callback producer input takes an unmodeled return path");
+    }
+    const auto half = static_cast<std::uint16_t>(
+        (input.caller_word_at_8 & profile.callback_producer_selector_mask) == 0
+            ? 0 : profile.callback_producer_second_half_adjustment);
+    const auto index = static_cast<std::uint16_t>(input.caller_word_at_6 + half);
+    if (index >= profile.callback_source_table_byte_count) {
+        throw std::runtime_error("Deuteros title callback producer source index is outside original table");
+    }
+    const auto& stage = plan.title_stage;
+    const auto table = disk.bytes(stage.disk_offset + profile.callback_source_table_address
+        - stage.destination, profile.callback_source_table_byte_count);
+    return {profile.callback_event_mirror_address, profile.callback_producer_value,
+        0x1ee0e, input.caller_word_at_8, profile.callback_source_table_address,
+        index, table[index], profile.callback_destination_address, input.pending_count,
+        static_cast<std::uint16_t>(input.pending_count + 1U)};
+}
+
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t input_display_word) {

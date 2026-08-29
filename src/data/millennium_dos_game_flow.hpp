@@ -774,6 +774,38 @@ struct MillenniumDosPostOverlayAdapterContinuation {
 parse_millennium_dos_post_overlay_adapter_continuation(
     std::span<const std::uint8_t> game_executable);
 
+// The caller continuation after a returned GX adapter has six opaque local
+// calls before it consults the original mode byte and reaches one more
+// private-INT wrapper.  This evaluator advances only through individually
+// observed returns.  It has no callee effects, does not read host memory for
+// the mode, and stops at the original INT boundary.
+enum class MillenniumDosPostOverlayContinuationOutcome {
+    adapter_return_boundary,
+    local_call_boundary,
+    mode_byte_boundary,
+    private_interrupt_boundary,
+};
+
+struct MillenniumDosPostOverlayContinuationEvaluation {
+    MillenniumDosPostOverlayContinuationOutcome outcome =
+        MillenniumDosPostOverlayContinuationOutcome::adapter_return_boundary;
+    std::uint16_t entry_address = 0;
+    std::array<bool, 6> observed_initial_call_returns{};
+    std::optional<std::uint8_t> observed_mode_byte;
+    std::uint16_t boundary_address = 0;
+    std::optional<std::uint16_t> selected_callee_address;
+    std::optional<std::uint16_t> selected_private_call_address;
+    std::optional<std::uint16_t> private_wrapper_address;
+    std::optional<std::uint8_t> private_interrupt;
+};
+
+[[nodiscard]] MillenniumDosPostOverlayContinuationEvaluation
+evaluate_millennium_dos_post_overlay_continuation(
+    std::span<const std::uint8_t> game_executable,
+    bool observed_adapter_return = false,
+    std::array<bool, 6> observed_initial_call_returns = {},
+    std::optional<std::uint8_t> observed_mode_byte = std::nullopt);
+
 // This is the following encoded caller span after the preceding segment
 // setup. It contains fifteen local near CALL encodings, two AL tests, a
 // conditional branch, and an encoded one-byte read/flip/store sequence. Its
