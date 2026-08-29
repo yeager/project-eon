@@ -64,6 +64,8 @@ def main() -> int:
         )
     if "INSPECTION  read-only provenance scan; original media stays in place" not in data_dir_inspection.stdout:
         raise SystemExit("--inspect did not identify its read-only provenance boundary")
+    if "RECOVERY MAP  " not in data_dir_inspection.stdout:
+        raise SystemExit("--inspect did not report the hash-bound recovery map")
     reported_releases = {
         line.removeprefix("VERIFIED  ") for line in data_dir_inspection.stdout.splitlines()
         if line.startswith("VERIFIED  ")

@@ -12,7 +12,7 @@
    between platforms to distinguish game rules from presentation data.
 6. Build a deterministic, platform-neutral simulation and validate its state
    transitions against observed original execution.
-7. Put original and modern renderers over that same state model.
+7. Put Original and Modern renderers over that same state model.
 
 ## Evidence rule
 

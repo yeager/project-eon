@@ -14,10 +14,35 @@ content identities are authoritative.
    recorded observation of the original game.
 4. Every decoded format becomes a bounds-checked parser tested against genuine
    media.
-5. Modern presentation may reinterpret graphics and interaction, but cannot
-   silently change simulation rules or saved state.
+5. Original mode cannot change recovered simulation rules or saved state.
+   Modern changes are allowed only when explicitly enabled and documented
+   under the mode contract below.
 6. This repository contains code, documentation, hashes, and newly created
    menu artwork—not commercial game assets.
+
+## Original and Modern mode contract
+
+Project Eon deliberately distinguishes a preservation result from an
+enhancement. **Original** is the preservation contract: a hash-admitted,
+recovered baseline is rendered and played without host-side feature
+substitutions. Its compatibility claims must remain reproducible through the
+corpus identities, bounded parsers, recorded observations, and reference
+captures in this ledger.
+
+**Modern** is an explicit opt-in improvement mode. It may add graphics,
+resolution and aspect handling, scalable UI, contemporary input,
+accessibility, runtime diagnostics, and evidence-documented gameplay or
+quality-of-life changes. Every non-renderer improvement must declare its
+enablement, affected state, save compatibility, evidence basis (if it claims
+to reproduce an original behaviour), and test coverage. A Modern feature must
+never silently become active in Original.
+
+Both modes read supplied media in place. Neither mode may modify, replace,
+unpack, redistribute, or use an original asset as a writable runtime cache.
+Modern must not alter an original save file; any future Eon-native save or
+extension data must be separate, versioned, and documented. Modern behaviour
+is not evidence for Original compatibility, and Original-mode evidence never
+authorises unlabelled Modern changes.
 
 ## Corpus identity
 
@@ -111,6 +136,28 @@ the separate physical control-text dump. Spanish DOS title, static-text and
 launch-manual parsing is likewise anchored to its original floppy image. These
 full-image spans are explicit preservation boundaries; a future sector-accurate
 span may replace one only with a measured mapping and a regression test.
+
+## Declarative recovery map
+
+[`recovery-map.json`](recovery-map.json) is the companion index for recovered
+code paths. It borrows the auditability of a declarative function map without
+adopting a recompilation hook model: each entry names an exact outer-release
+SHA-256, one existing bounded `parser_profile_id`, CPU family, observed source
+address, evidence level, and preservation-document anchor. The profile ID
+must resolve through `release-manifest.json`; an entry cannot be reported for
+a sibling dump, matching filename, related language, or another platform.
+
+The compiled `recovery_map` table and JSON are source-parity tested. During
+`--inspect`, after the archive has been rehashed, Project Eon prints only the
+rows admitted for that release as `RECOVERY MAP` diagnostics. This is a
+read-only provenance report. The map contains no guest-to-host hooks, patch
+targets, replacement byte sequences, emulation directives, or inferred code
+flow; it never executes source instructions and never changes original media.
+
+The map is evidence-neutral between Project Eon's modes. Original mode uses it
+only to identify proven source boundaries. Opt-in Modern presentation may
+display the same diagnostics, but gains no authority to alter original media,
+saves, or recovered game logic from a map entry.
 
 ### Stable evidence anchors
 
@@ -2729,7 +2776,7 @@ DOS return nor `2200AD.EXE` startup. No host action invokes a handler, mutates
 documented but are not host-bound until their input production and state
 prerequisites are recovered.
 
-Project Eon's **host** F10 opens a modern SDL graphics popup with smooth
+Project Eon's **host** F10 opens a Modern SDL graphics popup with smooth
 scaling, scanline, and renderer-frame toggles. It is explicitly consumed before
 the title availability poll and is not an original F10 action: it changes only
 host rendering and never original pixels, game logic, runtime state, or saves.
@@ -3002,6 +3049,27 @@ selector. It reports raw source bytes and instruction operands only: none of
 the records is named as a screen, layout, state format, or rendering command;
 no startup selector, source record, returned call, memory state, resource, or
 display is executed or reconstructed by Project Eon.
+
+### Millennium DOS GX dispatcher slot 13 boundary
+
+The already hash-identified `2200GX.EXE` dispatcher table maps raw selector
+slot 13 to `+$08d0`. Its exact 148-byte handler span, `+$08d0..+$0963`, has
+SHA-256 `afd0e53d6588f8576da75c48155d63b8f1b2380f02c9d2adfc65a27e78e25ee0`.
+It saves ES/DI/DS/SI, contains direct near calls at `+$08d4`, `+$08d7`,
+`+$08fd`, `+$093d`, `+$0940`, `+$094f`, and `+$0952`, and encodes zero stores
+to words `+$00f0`, `+$00f2`, and `+$00f4`. A literal `CMP AL,$20` branches to
+`+$090b`; an independently native word flag branches at `+$0909` to `+$0910`,
+while its fall-through is the local return. The
+other literal route advances/wraps encoded state offsets, makes more direct
+calls, and uses a short back edge at `+$0962` to `+$08fc`.
+
+`MillenniumDosGxOverlayDispatch13Evidence` accepts only the full known GX
+SHA-256 and the independently verified dispatcher table. It exposes these
+instruction operands and bounds as a conditional static trace; it does not
+choose dispatcher input, supply call returns or branch values, interpret the
+stored words, or execute/write any original media. The evidence is available
+to both Original and Modern presentation modes without altering Original
+semantics.
 
 ### Millennium Spanish DOS floppy evidence
 
@@ -3285,7 +3353,7 @@ and tests.
 4. Assert results against genuine data and test malformed boundary conditions.
 5. Record both disk/file offsets and relocated runtime addresses.
 6. Preserve cross-platform disagreements instead of prematurely merging them.
-7. Label generated modern/menu artwork so it cannot be mistaken for original
+7. Label generated launcher/menu artwork so it cannot be mistaken for original
    preserved art.
 
 Git history records interpretation changes. Corrections must explain their new

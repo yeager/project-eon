@@ -21,9 +21,11 @@ never claim parity or invent behaviour that evidence does not support.
 
 - Support every recognised DOS, Amiga, and Atari ST release without silently
   substituting another platform or language.
-- The SDL3 app must start from CLI and the card menu. Original presentation
-  uses recovered pixels; modern presentation may add renderer-only chrome but
-  must not change logic, saves, or original asset bytes.
+- The SDL3 app must start from CLI and the card menu. Original mode uses
+  recovered pixels and is the preservation contract. Modern mode may add
+  explicitly labelled opt-in graphics, input, accessibility, and
+  evidence-documented gameplay improvements, but must not mutate or replace
+  original asset bytes or original save files, and must never affect Original.
 - Default media locations are `~/.projecteon` on Linux/macOS and
   `<install-directory>/data` on Windows. Looking up a missing default path
   must not create it.

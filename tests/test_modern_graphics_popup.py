@@ -1,4 +1,4 @@
-"""Guard Project Eon's renderer-only modern graphics settings overlay."""
+"""Guard Project Eon's renderer-only Modern graphics settings overlay."""
 
 from pathlib import Path
 import unittest

@@ -10,16 +10,37 @@ science-fiction strategy games **Millennium 2.2: Return to Earth** (1989) and
 
 The goal is to make both games fully playable from legally obtained original
 game data while preserving their rules and atmosphere. The target architecture
-is one deterministic game simulation with two interchangeable presentation
+has a deterministic recovered baseline and two explicitly selected runtime
 modes; recovered paths are added only when original media evidence supports
 them:
 
-- **Original** — authentic artwork, sound, layout, timing and behaviour.
-- **Modern** — high-resolution graphics, scalable UI, modern input and
-  accessibility improvements without changing the underlying game.
+- **Original** — the preservation contract: authentic recovered artwork,
+  sound, layout, timing and behaviour, with no host-side feature substitutions.
+- **Modern** — an explicit opt-in improvement profile. It may provide
+  high-resolution graphics, scalable UI, modern input, accessibility features
+  and later evidence-documented gameplay improvements.
 
-Presentation mode must be switchable without restarting a game or converting
-its state.
+Original media is immutable in both modes. Modern features must be visibly
+labelled, separately configurable, and must never silently alter Original
+mode, original asset bytes, or original save files. The current Modern
+implementation is renderer-only and can be switched without restarting or
+converting state; later Modern features must document their state contract.
+
+### Mode contract
+
+| Contract | Original | Modern |
+| --- | --- | --- |
+| Purpose | Reproduce proven original behaviour | Opt-in host-side improvements |
+| Logic | Recovered baseline only | Baseline plus individually documented, enabled improvements |
+| Graphics and input | Recovered presentation and controls | May add rendering, input, accessibility, and quality-of-life options |
+| Original media and saves | Read in place; never changed | The same; no alteration or replacement |
+| Compatibility claim | Preservation evidence and reference captures | Each improvement states its scope and compatibility boundary |
+
+Modern is allowed to pursue substantial improvements where they are useful,
+including the kind of graphics, camera, input, accessibility, and diagnostics
+work found in contemporary recompilation projects. Such work is never evidence
+for the original game: it must be opt-in, identified in the UI and
+documentation, and must not weaken Original-mode verification.
 
 ## Original game data
 
@@ -45,8 +66,8 @@ their often inconsistent filenames.
   read-only importers.
 - Match reference captures in Original mode, including graphics, audio, input,
   interface layout and timing.
-- Provide a polished Modern mode while keeping gameplay and saved state
-  identical between renderers.
+- Provide a polished Modern mode with opt-in improvements while retaining a
+  separately verifiable Original mode.
 - Support deterministic, versioned saves and migrate imported original saves
   where their formats can be verified.
 - Run on current desktop operating systems without requiring the original

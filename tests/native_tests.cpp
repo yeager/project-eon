@@ -37,6 +37,7 @@
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "data/sha256.hpp"
+#include "data/recovery_map.hpp"
 #include "data/release_manifest.hpp"
 
 #include <algorithm>
@@ -871,6 +872,27 @@ int main() {
     assert(!eon::release_has_parser_profile(
         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
         "millennium-dos-spanish-startup"));
+    // The declarative recovery map is a second, narrower admission layer:
+    // every visible code-path fact retains its exact release/profile identity
+    // and cannot become a hook or a cross-release fallback.
+    assert(eon::recovery_map().size() >= 9);
+    for (const auto& entry : eon::recovery_map()) {
+        assert(eon::release_has_parser_profile(entry.release_sha256, entry.parser_profile_id));
+        assert(eon::release_has_recovery_map_entry(entry.release_sha256, entry.id));
+        const auto mapped_release = std::find_if(releases.begin(), releases.end(),
+            [&entry](const auto& candidate) { return candidate.sha256 == entry.release_sha256; });
+        assert(mapped_release != releases.end());
+        assert(mapped_release->game == entry.game);
+        assert(mapped_release->platform == entry.platform);
+        assert(mapped_release->language == entry.language);
+    }
+    assert(!eon::release_has_recovery_map_entry(
+        "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4",
+        "millennium-dos-title-flow"));
+    const auto amiga_map = eon::recovery_map_for_release(
+        "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
+    assert(amiga_map.size() == 2);
+    for (const auto& entry : amiga_map) assert(entry.game == eon::Game::deuteros);
 
     const auto amiga_millennium = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium && release.platform == eon::Platform::amiga;
@@ -2031,6 +2053,18 @@ int main() {
         == std::array<std::uint16_t, 3>{{0xf4, 0xf0, 0xf2}}));
     assert(gx_overlay_startup_records.terminal_word_storage_offset == 0x5c);
     assert(gx_overlay_startup_records.terminal_word_value == 0x47ea);
+    const auto gx_overlay_dispatch13 = eon::parse_millennium_dos_gx_overlay_dispatch13_evidence(
+        *gx_overlay, gx_overlay_dispatcher);
+    assert(gx_overlay_dispatch13.entry_offset == 0x08d0);
+    assert(gx_overlay_dispatch13.byte_count == 148);
+    assert((gx_overlay_dispatch13.call_offsets
+        == std::array<std::uint16_t, 7>{{0x08d4,0x08d7,0x08fd,0x093d,0x0940,0x094f,0x0952}}));
+    assert((gx_overlay_dispatch13.call_targets
+        == std::array<std::uint16_t, 7>{{0x0802,0x0453,0x2454,0x0454,0x099b,0x06fc,0x0796}}));
+    assert((gx_overlay_dispatch13.zeroed_word_storage_offsets
+        == std::array<std::uint16_t, 3>{{0x00f0,0x00f2,0x00f4}}));
+    assert(gx_overlay_dispatch13.first_result_compare_value == 0x20);
+    assert(gx_overlay_dispatch13.local_back_edge_target_offset == 0x08fc);
     {
         auto altered_gx_overlay = *gx_overlay;
         altered_gx_overlay[0xb2] ^= 0x01;
@@ -2038,6 +2072,18 @@ int main() {
         try {
             static_cast<void>(eon::parse_millennium_dos_gx_overlay_startup_record_evidence(
                 altered_gx_overlay, gx_overlay_selector));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_gx_overlay = *gx_overlay;
+        altered_gx_overlay[0x0900] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_gx_overlay_dispatch13_evidence(
+                altered_gx_overlay, gx_overlay_dispatcher));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
