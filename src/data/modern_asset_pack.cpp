@@ -73,6 +73,28 @@ bool safe_relative_path(const std::string_view value) {
     return true;
 }
 
+bool non_symlink_relative_path(const std::filesystem::path& pack_root,
+                               const std::filesystem::path& relative,
+                               std::string& error) {
+    std::error_code filesystem_error;
+    auto current = pack_root;
+    const auto root_status = std::filesystem::symlink_status(current, filesystem_error);
+    if (filesystem_error || std::filesystem::is_symlink(root_status)
+        || !std::filesystem::is_directory(root_status)) {
+        error = "Modern asset-pack directory must be a non-symlink directory: " + current.string();
+        return false;
+    }
+    for (const auto& component : relative) {
+        current /= component;
+        const auto status = std::filesystem::symlink_status(current, filesystem_error);
+        if (filesystem_error || std::filesystem::is_symlink(status)) {
+            error = "Modern asset-pack asset path contains a symlink: " + current.string();
+            return false;
+        }
+    }
+    return true;
+}
+
 bool parse_game(const std::string_view value, Game& game) {
     if (value == "millennium") { game = Game::millennium; return true; }
     if (value == "deuteros") { game = Game::deuteros; return true; }
@@ -161,7 +183,11 @@ ModernAssetPackValidation validate_modern_asset_pack(const std::filesystem::path
             || asset.size > maximum_asset_size || !lower_sha256(asset.sha256)) {
             return rejected(manifest_path, "Modern asset-pack asset has invalid identity, path, size, or SHA-256");
         }
-        asset.path = manifest_path.parent_path() / relative;
+        const auto relative_path = std::filesystem::path(relative);
+        if (!non_symlink_relative_path(manifest_path.parent_path(), relative_path, error)) {
+            return rejected(manifest_path, error);
+        }
+        asset.path = manifest_path.parent_path() / relative_path;
         if (!asset_ids.insert(asset.id).second || !asset_paths.insert(asset.path.lexically_normal()).second) {
             return rejected(manifest_path, "Modern asset pack duplicates an asset id or path");
         }

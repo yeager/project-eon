@@ -572,6 +572,19 @@ void assert_modern_asset_pack_admission() {
     const auto changed = eon::validate_modern_asset_pack(pack_root / "pack.eonmodern");
     assert(!changed.accepted());
     assert(!changed.error.empty());
+    // A non-symlink final file is insufficient when an intermediate component
+    // points outside the selected pack directory.
+    const auto external = root / "outside";
+    std::filesystem::create_directories(external);
+    const auto linked_textures = pack_root / "textures";
+    std::filesystem::remove_all(linked_textures);
+    std::error_code symlink_error;
+    std::filesystem::create_directory_symlink(external, linked_textures, symlink_error);
+    if (!symlink_error) {
+        const auto symlinked = eon::validate_modern_asset_pack(pack_root / "pack.eonmodern");
+        assert(!symlinked.accepted());
+        assert(symlinked.error.find("symlink") != std::string::npos);
+    }
     std::filesystem::remove_all(root);
 }
 
