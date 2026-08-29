@@ -2216,6 +2216,17 @@ operands and bounds only. It neither supplies an A0 frame nor calls `$20118`,
 Exec, or a device, and does not give the bytes, words, or destinations a
 presumed control/input meaning.
 
+For preservation experiments, the accepted byte-one producer arm is also
+available as a deliberately detached, controlled trace. After validating the
+same callback and table hashes, `evaluate_deuteros_amiga_title_callback_producer`
+accepts only caller-supplied `A0+$6 < $50` and pending count `< $14`; it
+records the original mirror to `$1ef2e`, word copy to `$1ee0e`, the table index
+(`A0+$6`, plus `$50` when low three bits of `A0+$8` are nonzero), and the one
+original byte that would be written at `$1eec0 + pending`. It returns the
+incremented count as a trace value only. It does not invoke a callback, map
+host input, write the queue, or make the accepted arm evidence of an original
+input device or title-menu action.
+
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
 raw title image masks `D0` to `$0000ffff`, performs original unsigned divides
 by `$0064` and `$000a` (with the two intervening original subroutine calls),
@@ -3153,6 +3164,17 @@ converge on raw `PUSH CS`/`POP DS` and two `PUSH CS`/`POP ES` pairs. The parser
 validates the whole original executable, span hash, and every near-call target.
 It does not claim any call returns, choose the byte value or branch, assign a
 meaning to the segment setup, execute a target, or provide native state.
+
+`MillenniumDosPostOverlayContinuationEvaluation` makes this conditional chain
+available to a trace-backed runtime without widening that contract. It first
+requires an explicit observation that the overlay `RETF` returned. It then
+requires six separately ordered observations for the returns from `$d152`,
+`$4f08`, `$4111`, `$40af`, `$42b2`, and `$107a`; without the next observation
+it stops at that original CALL. Only after all six does it accept an explicitly
+observed `$da05` byte. `$01` selects `$d1a1 → $d1a9 → $0124/INT $91`; every
+other byte selects `$d1b5 → $d1bd → $0124/INT $91`. The evaluator stops at
+the interrupt instruction `$0129`, makes no local writes, and does not claim
+the six calls' effects, the private ABI, or a return from the interrupt.
 
 The following 69-byte encoded caller span is separately preserved as
 `MillenniumDosPostOverlayAdapterLoop`. It begins at `$d39d`, directly after

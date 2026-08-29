@@ -827,6 +827,31 @@ struct DeuterosAmigaTitleCallbackRegistrationProfile {
     std::string callback_sha256;
 };
 
+// Controlled inputs for the callback's one-byte producer route only. These
+// are caller-provided original-frame values, not a host input binding or an
+// asserted Exec callback invocation.
+struct DeuterosAmigaTitleCallbackProducerInput {
+    std::uint16_t caller_word_at_6 = 0;
+    std::uint16_t caller_word_at_8 = 0;
+    std::uint16_t pending_count = 0;
+};
+
+// A read-only trace of the accepted byte-one producer route. `queued_byte`
+// comes from the hash-locked original title stage; no original queue cell is
+// modified.
+struct DeuterosAmigaTitleCallbackProducerResult {
+    std::uint32_t mirrored_event_address = 0;
+    std::uint8_t mirrored_event_value = 0;
+    std::uint32_t selector_word_address = 0;
+    std::uint16_t selector_word_value = 0;
+    std::uint32_t source_table_address = 0;
+    std::uint16_t source_table_index = 0;
+    std::uint8_t queued_byte = 0;
+    std::uint32_t destination_address = 0;
+    std::uint16_t destination_offset = 0;
+    std::uint16_t pending_count_after = 0;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -995,6 +1020,15 @@ parse_deuteros_amiga_title_response_queue_profile(
 [[nodiscard]] DeuterosAmigaTitleCallbackRegistrationProfile
 parse_deuteros_amiga_title_callback_registration_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// Evaluates only the fully local callback byte-one producer route with
+// explicit caller-frame values. It validates the registration/callback/table
+// profile first, rejects out-of-route inputs, and never invokes Exec, binds a
+// host input, or writes the original title-stage queue.
+[[nodiscard]] DeuterosAmigaTitleCallbackProducerResult
+evaluate_deuteros_amiga_title_callback_producer(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    DeuterosAmigaTitleCallbackProducerInput input);
 
 // Validates and models only the literal byte-copy part of the first title
 // exit. The model reads the supplied ADF in place; it does not invoke either

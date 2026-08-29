@@ -1074,6 +1074,65 @@ parse_millennium_dos_post_overlay_adapter_continuation(
         0xd39c, std::string(continuation_sha256)};
 }
 
+MillenniumDosPostOverlayContinuationEvaluation
+evaluate_millennium_dos_post_overlay_continuation(
+    const std::span<const std::uint8_t> game_executable,
+    const bool observed_adapter_return,
+    const std::array<bool, 6> observed_initial_call_returns,
+    const std::optional<std::uint8_t> observed_mode_byte) {
+    // This follows the encoded return site only when a capture has explicitly
+    // observed RETF returning from the GX overlay. Every local CALL remains
+    // opaque: a boolean observation advances past it without modelling its
+    // registers, flags, or memory effects.
+    const auto continuation = parse_millennium_dos_post_overlay_adapter_continuation(
+        game_executable);
+    MillenniumDosPostOverlayContinuationEvaluation result;
+    result.entry_address = continuation.return_site_address;
+    result.observed_initial_call_returns = observed_initial_call_returns;
+    result.observed_mode_byte = observed_mode_byte;
+    if (!observed_adapter_return) {
+        if (observed_mode_byte) {
+            throw std::runtime_error("Millennium DOS post-overlay mode observation precedes adapter return");
+        }
+        result.outcome = MillenniumDosPostOverlayContinuationOutcome::adapter_return_boundary;
+        result.boundary_address = 0xd373;
+        return result;
+    }
+    for (std::size_t index = 0; index < observed_initial_call_returns.size(); ++index) {
+        if (!observed_initial_call_returns[index]) {
+            if (observed_mode_byte) {
+                throw std::runtime_error("Millennium DOS post-overlay mode observation precedes local call return");
+            }
+            result.outcome = MillenniumDosPostOverlayContinuationOutcome::local_call_boundary;
+            result.boundary_address = continuation.initial_call_addresses[index];
+            return result;
+        }
+    }
+    if (!observed_mode_byte) {
+        result.outcome = MillenniumDosPostOverlayContinuationOutcome::mode_byte_boundary;
+        result.boundary_address = continuation.mode_compare_address;
+        return result;
+    }
+
+    const auto callees = parse_millennium_dos_english_game_startup_callees(game_executable);
+    if (continuation.equal_call_target != callees.equal_entry_address
+        || continuation.other_call_target != callees.other_entry_address
+        || callees.equal_private_target_address != 0x0124
+        || callees.other_private_target_address != 0x0124) {
+        throw std::runtime_error("Unsupported Millennium DOS post-overlay callee connection");
+    }
+    const bool equal = *observed_mode_byte == continuation.mode_equal_value;
+    result.selected_callee_address = equal ? callees.equal_entry_address : callees.other_entry_address;
+    result.selected_private_call_address = equal
+        ? callees.equal_private_call_address : callees.other_private_call_address;
+    result.private_wrapper_address = equal
+        ? callees.equal_private_target_address : callees.other_private_target_address;
+    result.private_interrupt = 0x91;
+    result.outcome = MillenniumDosPostOverlayContinuationOutcome::private_interrupt_boundary;
+    result.boundary_address = 0x0129;
+    return result;
+}
+
 MillenniumDosPostOverlayAdapterLoop parse_millennium_dos_post_overlay_adapter_loop(
     const std::span<const std::uint8_t> game_executable) {
     // This begins at the byte directly after the independently bounded

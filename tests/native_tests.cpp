@@ -2967,6 +2967,50 @@ int main() {
     assert(post_overlay_adapter.second_pop_es_address == 0xd39c);
     assert(post_overlay_adapter.continuation_sha256
         == "1df4b30f14434eae3a44463402710bcd1b162200a923c0b9cc1f827faf3763ac");
+    // The post-adapter continuation cannot pass even its first local call
+    // unless a genuine trace observed the overlay's RETF and that call's
+    // return.  Once all six returns and the original mode byte are observed,
+    // it reaches the selected existing private-INT boundary without assigning
+    // an effect to any of the opaque calls.
+    const auto post_overlay_before_return = eon::evaluate_millennium_dos_post_overlay_continuation(
+        *game_executable);
+    assert(post_overlay_before_return.outcome
+        == eon::MillenniumDosPostOverlayContinuationOutcome::adapter_return_boundary);
+    assert(post_overlay_before_return.boundary_address == 0xd373);
+    const auto post_overlay_first_call = eon::evaluate_millennium_dos_post_overlay_continuation(
+        *game_executable, true);
+    assert(post_overlay_first_call.outcome
+        == eon::MillenniumDosPostOverlayContinuationOutcome::local_call_boundary);
+    assert(post_overlay_first_call.boundary_address == 0xd376);
+    const auto post_overlay_fourth_call = eon::evaluate_millennium_dos_post_overlay_continuation(
+        *game_executable, true, {true, true, true, false, false, false});
+    assert(post_overlay_fourth_call.boundary_address == 0xd37f);
+    const auto post_overlay_mode_boundary = eon::evaluate_millennium_dos_post_overlay_continuation(
+        *game_executable, true, {true, true, true, true, true, true});
+    assert(post_overlay_mode_boundary.outcome
+        == eon::MillenniumDosPostOverlayContinuationOutcome::mode_byte_boundary);
+    assert(post_overlay_mode_boundary.boundary_address == 0xd388);
+    const auto post_overlay_equal = eon::evaluate_millennium_dos_post_overlay_continuation(
+        *game_executable, true, {true, true, true, true, true, true}, 1);
+    assert(post_overlay_equal.outcome
+        == eon::MillenniumDosPostOverlayContinuationOutcome::private_interrupt_boundary);
+    assert(post_overlay_equal.selected_callee_address == 0xd1a1);
+    assert(post_overlay_equal.selected_private_call_address == 0xd1a9);
+    assert(post_overlay_equal.private_wrapper_address == 0x0124);
+    assert(post_overlay_equal.private_interrupt == 0x91);
+    assert(post_overlay_equal.boundary_address == 0x0129);
+    const auto post_overlay_other = eon::evaluate_millennium_dos_post_overlay_continuation(
+        *game_executable, true, {true, true, true, true, true, true}, 3);
+    assert(post_overlay_other.selected_callee_address == 0xd1b5);
+    assert(post_overlay_other.selected_private_call_address == 0xd1bd);
+    bool rejected_post_overlay_out_of_order_mode = false;
+    try {
+        static_cast<void>(eon::evaluate_millennium_dos_post_overlay_continuation(
+            *game_executable, true, {}, 1));
+    } catch (const std::runtime_error&) {
+        rejected_post_overlay_out_of_order_mode = true;
+    }
+    assert(rejected_post_overlay_out_of_order_mode);
     const auto post_overlay_loop =
         eon::parse_millennium_dos_post_overlay_adapter_loop(*game_executable);
     assert(post_overlay_loop.executable_sha256
@@ -7042,6 +7086,32 @@ int main() {
     assert(title_callback.callback_source_table_byte_count == 0xa0);
     assert(title_callback.callback_source_table_sha256
         == "2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265");
+    // This models only the accepted byte-one callback arm with explicitly
+    // supplied frame values. It does not bind an Amiga callback to host input.
+    const auto title_callback_producer = eon::evaluate_deuteros_amiga_title_callback_producer(
+        system_disk, load_plan, {3, 0, 2});
+    assert(title_callback_producer.mirrored_event_address == 0x1ef2e);
+    assert(title_callback_producer.mirrored_event_value == 1);
+    assert(title_callback_producer.selector_word_address == 0x1ee0e);
+    assert(title_callback_producer.selector_word_value == 0);
+    assert(title_callback_producer.source_table_address == 0x1ee20);
+    assert(title_callback_producer.source_table_index == 3);
+    assert(title_callback_producer.queued_byte == 0x33);
+    assert(title_callback_producer.destination_address == 0x1eec0);
+    assert(title_callback_producer.destination_offset == 2);
+    assert(title_callback_producer.pending_count_after == 3);
+    const auto title_callback_second_half = eon::evaluate_deuteros_amiga_title_callback_producer(
+        system_disk, load_plan, {3, 7, 0});
+    assert(title_callback_second_half.source_table_index == 0x53);
+    assert(title_callback_second_half.queued_byte == 0x33);
+    bool callback_producer_rejected = false;
+    try {
+        static_cast<void>(eon::evaluate_deuteros_amiga_title_callback_producer(
+            system_disk, load_plan, {0x50, 0, 0}));
+    } catch (const std::runtime_error&) {
+        callback_producer_rejected = true;
+    }
+    assert(callback_producer_rejected);
     assert(title_callback.callback_destination_address == 0x1eec0);
     assert(title_callback.registration_sha256
         == "f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27");
