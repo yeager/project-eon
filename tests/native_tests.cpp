@@ -97,6 +97,42 @@ void assert_deuteros_atari_post_callback_callees(const std::vector<std::uint8_t>
     assert(rejected);
 }
 
+void assert_deuteros_atari_second_callee_continuation(const std::vector<std::uint8_t>& second_stage,
+    const eon::DeuterosAtariSecondStageProfile& stage,
+    const eon::DeuterosAtariPostCallbackCalleeProfiles& callees) {
+    const auto continuation = eon::parse_deuteros_atari_second_callee_continuation(
+        second_stage, stage, callees);
+    assert(continuation.continuation_offset == 0x1138);
+    assert(continuation.continuation_byte_count == 38);
+    assert(continuation.continuation_sha256
+        == "5b1480495df8defe3e1264dd083ec1c91134c01e56d3d94e060c583ee9b54a89");
+    assert(continuation.trap_argument_address == 0x20000);
+    assert(continuation.trap_selector == 6);
+    assert(continuation.trap_offset == 0x1144);
+    assert(continuation.trap_opcode == 0x4e4e);
+    assert(continuation.stack_cleanup_opcode == 0x5c8f);
+    assert(continuation.stack_cleanup_bytes == 6);
+    assert(continuation.copy_source == 0x20020);
+    assert(continuation.copy_destination_pointer_address == 0x25f4);
+    assert(continuation.copy_loop_counter == 0x1f3f);
+    assert(continuation.copy_move_opcode == 0x22d8);
+    assert(continuation.copy_dbf_opcode == 0x51cf);
+    assert(continuation.copy_dbf_displacement == -4);
+    assert(continuation.copy_loop_target_offset == 0x1156);
+    assert(continuation.return_opcode == 0x4e75);
+
+    auto altered_second_stage = second_stage;
+    altered_second_stage[0x1138] ^= 0x01;
+    bool rejected = false;
+    try {
+        static_cast<void>(eon::parse_deuteros_atari_second_callee_continuation(
+            altered_second_stage, stage, callees));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
 void assert_deuteros_amiga_post_exec_state_init(const std::vector<std::uint8_t>& system_adf,
     const eon::AmigaAdf& disk, const eon::DeuterosAmigaLoadPlan& plan) {
     const auto profile = eon::parse_deuteros_amiga_title_post_exec_state_init_profile(disk, plan);
@@ -1466,6 +1502,21 @@ int main() {
     assert(startup_zero_path.first_external_interrupt == 0x21);
     assert(startup_zero_path.first_external_service == 0x3d);
     assert(startup_zero_path.first_external_access_mode == 0x02);
+    const auto startup_nonzero_path = eon::parse_millennium_dos_startup_nonzero_path_boundary(
+        *game_executable);
+    assert(startup_nonzero_path.executable_sha256
+        == "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57");
+    assert(startup_nonzero_path.nonzero_entry_address == 0xd44b);
+    assert(startup_nonzero_path.immediate_al_value == 0x08);
+    assert(startup_nonzero_path.short_jump_address == 0xd44d);
+    assert(startup_nonzero_path.continuation_entry_address == 0xd41b);
+    assert(startup_nonzero_path.continuation_byte_storage_address == 0x2fb2);
+    assert(startup_nonzero_path.continuation_stack_source_address == 0xd12c);
+    assert(startup_nonzero_path.continuation_first_call_address == 0xd423);
+    assert(startup_nonzero_path.continuation_first_call_target == 0x09e4);
+    assert(startup_nonzero_path.first_external_interrupt_site == 0x09e7);
+    assert(startup_nonzero_path.first_external_interrupt == 0x33);
+    assert(startup_nonzero_path.first_external_service == 0x00);
     {
         auto altered_startup_allocation = *game_executable;
         altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;
@@ -1485,6 +1536,18 @@ int main() {
         try {
             static_cast<void>(eon::parse_millennium_dos_startup_zero_path_boundary(
                 altered_startup_zero_path));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_startup_nonzero_path = *game_executable;
+        altered_startup_nonzero_path[0xd44d - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_startup_nonzero_path_boundary(
+                altered_startup_nonzero_path));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
@@ -3094,6 +3157,7 @@ int main() {
     assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
     assert(deuteros_atari_session.post_callback_callees().first_callee_offset == 0x800);
     assert(deuteros_atari_session.post_callback_callees().second_callee_bsr_target_offset == 0x30);
+    assert(deuteros_atari_session.second_callee_continuation().copy_loop_target_offset == 0x1156);
     assert(deuteros_atari_session.dispatch().state0_destination == 0x13200);
     assert(deuteros_atari_session.state0_raw_load_plan().source_offset == 0x4800);
     assert(deuteros_atari_session.state0_raw_load_plan().requests.size() == 4);
@@ -3342,6 +3406,10 @@ int main() {
     assert(deuteros_supervisor_callback_continuation.second_bsr_target_offset == 0x1122);
     assert_deuteros_atari_post_callback_callees(deuteros_second_stage, deuteros_second_stage_profile,
         deuteros_supervisor_callback_continuation);
+    assert_deuteros_atari_second_callee_continuation(deuteros_second_stage,
+        deuteros_second_stage_profile, eon::parse_deuteros_atari_post_callback_callee_profiles(
+            deuteros_second_stage, deuteros_second_stage_profile,
+            deuteros_supervisor_callback_continuation));
     {
         auto altered_second_stage = deuteros_second_stage;
         altered_second_stage[0xde] ^= 0x01;

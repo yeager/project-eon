@@ -724,6 +724,50 @@ parse_millennium_dos_startup_zero_path_boundary(
         std::string(selector_names_sha256), std::string(security_name_sha256)};
 }
 
+MillenniumDosStartupNonzeroPathBoundary
+parse_millennium_dos_startup_nonzero_path_boundary(
+    const std::span<const std::uint8_t> game_executable) {
+    // This is the static DX-nonzero edge from $d2f2.  The short jump skips
+    // the adjacent zeroing instruction at $d419, so no AH value is inferred.
+    // The first called in-image routine reaches an INT 33h boundary before
+    // any return or mouse state can be established.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr auto executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr auto nonzero_entry = std::to_array<std::uint8_t>({
+        0xb0, 0x08, 0xeb, 0xcc});
+    constexpr auto continuation = std::to_array<std::uint8_t>({
+        0x2e, 0xa2, 0xb2, 0x2f, 0x8b, 0x26, 0x2c, 0xd1, 0xe8, 0xbe, 0x35});
+    constexpr auto local_callee_prefix = std::to_array<std::uint8_t>({
+        0xb8, 0x00, 0x00, 0xcd, 0x33});
+    constexpr auto nonzero_entry_sha256 =
+        "92252049901ece1d56c7b17fdd7450ce8ade576650b4f7b032f61dd1e4e59522";
+    constexpr auto continuation_sha256 =
+        "7fb9d6276e557976c68a02e9900531347fd95ecbfbd6fc3fa60cd0c176ca5c5d";
+    constexpr auto local_callee_prefix_sha256 =
+        "d84b931c90a3b7e1baf2a0a6caf2c67fc5834ed6a160750ba6991b77fdb11909";
+    constexpr auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(0xd44b), nonzero_entry)
+        || !has_bytes(game_executable, offset(0xd41b), continuation)
+        || !has_bytes(game_executable, offset(0x09e4), local_callee_prefix)
+        || to_hex(sha256(game_executable.subspan(offset(0xd44b), nonzero_entry.size())))
+            != nonzero_entry_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0xd41b), continuation.size())))
+            != continuation_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0x09e4), local_callee_prefix.size())))
+            != local_callee_prefix_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS startup nonzero-path boundary");
+    }
+    return {std::string(executable_sha256), 0xd44b, 0x08, 0xd44d, 0xd41b,
+        0x2fb2, 0xd12c, 0xd423, 0x09e4, 0x09e7, 0x33, 0x00,
+        std::string(nonzero_entry_sha256), std::string(continuation_sha256),
+        std::string(local_callee_prefix_sha256)};
+}
+
 MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     const std::span<const std::uint8_t> game_executable,
