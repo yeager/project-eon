@@ -233,6 +233,16 @@ nor authorizes an Eon runtime transition. The binary does offer debugger,
 protocol above and the resulting external evidence must be independently
 reviewed before it can extend an adapter.
 
+The observed original prompt is `Please Select Sound Effect Type`, offering
+`0 = IBM Speaker`, `1 = Sound Blaster`, and `2 = Covox Sound Master`. Controlled
+external selections `0` and `1` both reached `Thank You. Please Wait...`, then
+the current DOSBox-X machine configuration entered repeated unhandled
+interrupts (`INT 6`, followed by `INT 0`). This is an emulator/configuration
+failure observation, not a statement about original-game behavior, a recovered
+sound mapping, a valid title hand-off, or a license to select that value in
+Eon's runtime. Further capture requires a separately validated machine/
+driver configuration and the complete raw trace contract.
+
 Project Eon's external trace admission format is specified in
 [`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md). Generic v1 verifies
 only a trace's hash, capture provenance and exact recognised source release.
