@@ -212,21 +212,66 @@ jobs:
           cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"
           cp po/*.po "$APP/Contents/Resources/po/"
           cp README.md LICENSE "$APP/Contents/Resources/"
+          rpaths_for() {
+            otool -l "$1" | sed -n 's/^[[:space:]]*path \(.*\) (offset [0-9][0-9]*)$/\1/p'
+          }
+          resolve_rpath_reference() {
+            local binary="$1"
+            local reference="$2"
+            local suffix="${reference#@rpath/}"
+            local rpath candidate
+            while IFS= read -r rpath; do
+              case "$rpath" in
+                @loader_path/*)
+                  candidate="$(dirname "$binary")/${rpath#@loader_path/}/$suffix"
+                  ;;
+                @executable_path/*)
+                  candidate="$APP/Contents/MacOS/${rpath#@executable_path/}/$suffix"
+                  ;;
+                /*)
+                  candidate="$rpath/$suffix"
+                  ;;
+                *)
+                  echo "unsupported LC_RPATH '$rpath' while resolving $reference" >&2
+                  exit 1
+                  ;;
+              esac
+              if [ -f "$candidate" ]; then
+                printf '%s\n' "$candidate"
+                return 0
+              fi
+            done < <(rpaths_for "$binary")
+            echo "unable to resolve $reference referenced by $binary" >&2
+            return 1
+          }
+          resolve_loader_reference() {
+            local binary="$1"
+            local reference="$2"
+            printf '%s/%s\n' "$(dirname "$binary")" "${reference#@loader_path/}"
+          }
           bundle_dylib() {
             local binary="$1"
-            otool -L "$binary" | awk 'NR>1{print $1}' | while read -r ref; do
+            # Resolve dependencies relative to the unmodified source object,
+            # then rewrite only the in-bundle copy.  This matters for a
+            # dependency that was expressed through @loader_path by Homebrew.
+            local source_binary="${2:-$1}"
+            otool -L "$source_binary" | awk 'NR>1{print $1}' | while read -r ref; do
+              local install_name="$ref"
               case "$ref" in
-                /usr/lib/*|/System/*|@executable_path/*|@rpath/*|@loader_path/*) continue ;;
+                /usr/lib/*|/System/*|@executable_path/*) continue ;;
+                @loader_path/*) ref=$(resolve_loader_reference "$source_binary" "$ref") ;;
+                @rpath/*) ref=$(resolve_rpath_reference "$source_binary" "$ref") ;;
               esac
+              test -f "$ref" || { echo "missing dynamic library $ref referenced by $source_binary" >&2; exit 1; }
               local name=$(basename "$ref")
               local dest="$APP/Contents/Frameworks/$name"
               if [ ! -f "$dest" ]; then
                 cp "$ref" "$dest"
                 chmod 644 "$dest"
                 install_name_tool -id "@executable_path/../Frameworks/$name" "$dest"
-                bundle_dylib "$dest"
+                bundle_dylib "$dest" "$ref"
               fi
-              install_name_tool -change "$ref" "@executable_path/../Frameworks/$name" "$binary"
+              install_name_tool -change "$install_name" "@executable_path/../Frameworks/$name" "$binary"
             done
           }
           bundle_dylib "$APP/Contents/MacOS/ProjectEon"
@@ -239,6 +284,10 @@ jobs:
           <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleVersion</key><string>0.1.0</string></dict></plist>
           PLIST
           codesign --force --deep -s - "$APP"
+          # This checks every Mach-O object in the completed bundle, including
+          # dependencies expressed through LC_RPATH.  It rejects an artifact
+          # that would load from Homebrew or any other developer-machine path.
+          bash packaging/macos/verify-dylib-closure.sh "$APP"
           # Check the assembled bundle before zipping it. Source-tree asset
           # fallbacks are not available to an installed application.
           for required in \
