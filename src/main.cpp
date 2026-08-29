@@ -745,6 +745,30 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << post_exec_tail_flag_gate_copy_callee.gate_word_address << ", RTS 0x"
         << post_exec_tail_flag_gate_copy_callee.terminal_return_address
         << " (cell values, transfer, loop, and increment unmodelled)" << std::dec << '\n';
+    const auto title_response_queue =
+        eon::parse_deuteros_amiga_title_response_queue_profile(disk, plan);
+    std::cout << "          Title response queue boundary: entry 0x" << std::hex
+        << title_response_queue.entry_address << "; pending word 0x"
+        << title_response_queue.pending_word_address << ", bytes 0x"
+        << title_response_queue.byte_region_address << ", shift 0x" << std::dec
+        << title_response_queue.shift_byte_count << ", RTS 0x" << std::hex
+        << title_response_queue.return_address << "; SHA-256 "
+        << title_response_queue.sha256 << std::dec
+        << " (runtime queue/callback input unmodelled)\n";
+    const auto title_callback =
+        eon::parse_deuteros_amiga_title_callback_registration_profile(disk, plan);
+    std::cout << "          Title callback boundary: registration 0x" << std::hex
+        << title_callback.registration_entry_address << " -> callback 0x"
+        << title_callback.callback_address << "; Exec base 0x"
+        << title_callback.exec_base_address << " vector -0x"
+        << static_cast<std::uint16_t>(-title_callback.exec_vector)
+        << "; byte-one table 0x" << title_callback.callback_source_table_address
+        << " +0x" << title_callback.callback_source_table_byte_count << " -> queue 0x"
+        << title_callback.callback_destination_address << ", pending 0x"
+        << title_callback.callback_pending_word_address << "; byte-two gate 0x"
+        << title_callback.callback_second_event_gate_address << " -> service 0x"
+        << title_callback.callback_second_event_service_address << std::dec
+        << " (static provenance only; no Exec/callback/input execution)\n";
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec
@@ -1795,7 +1819,14 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
             << "; BPB-backed root LBA " << std::dec << stx_root.root_start_lba() << ".."
             << (stx_root.root_start_lba() + stx_root.root_sector_count() - 1U) << " has "
             << stx_root.entries().size() << " direct-sector entries"
-            << " (no flattened image, file extraction, boot semantics, or executable handoff)\n";
+            << "; mirrored FAT LBA " << stx_root.fat_start_lba() << ".."
+            << (stx_root.fat_start_lba() + stx_root.sectors_per_fat() - 1U)
+            << (stx_root.fat_mirrors_match() ? " matches" : " differs from")
+            << " second copy; SHA-256 " << stx_root.fat_primary_sha256() << "/"
+            << stx_root.fat_secondary_sha256()
+            << (stx_root.fat_mirrors_match()
+                ? " (no flattened image, file extraction, boot semantics, or executable handoff)\n"
+                : " (root records only; no FAT chain, flattened image, file extraction, boot semantics, or executable handoff)\n");
     }
     const auto equinox_config = eon::probe_millennium_atari_config(disk);
     if (!equinox_config.present) throw std::runtime_error("Verified Millennium Atari ST disk has no MILL22A.inf");

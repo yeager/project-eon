@@ -372,22 +372,27 @@ The same Disk 1 container now has a read-only, hash-bound STX sector index.
 Its 80 track records expose 800 identified sectors without producing a flat
 disk image. Its direct BPB is internally consistent with that physical view:
 512-byte sectors, two sectors per cluster, one head, ten sectors per track,
-800 sectors, two five-sector mirrored FATs, and a 112-entry root. The root is
-therefore read directly from logical sectors 11 through 17 through the STX
-CHS map; both FAT copies compare equal and six live 8.3 records have bounded,
-acyclic cluster chains (`EXEC.TOS`, `MILL22A.INF` through `MILL22D.INF`, and
-`DESKTOP.INF`). `AtariStStxFat12Root` retains only this sector-backed metadata:
-it neither flattens the STX container nor extracts a file or claims a boot or
-program handoff. Direct original spans are T0/H0/S1 at container `$c0` (512 bytes,
+800 sectors, two five-sector FAT copies, and a 112-entry root. The root is
+read directly from logical sectors 11 through 17 through the STX CHS map;
+six live 8.3 records are retained (`EXEC.TOS`, `MILL22A.INF` through
+`MILL22D.INF`, and `DESKTOP.INF`). The two original FAT copies are **not**
+identical: their exact five-sector SHA-256 values are
+`2421cedef5612bca7bbc90168a7338d904f82ea1fdc09214c684424b428d9417` and
+`22c2c826ed3de246e506187e16aea375dc2fee09a03abbc9140ebdd251640879`.
+`AtariStStxFat12Root` reports both and deliberately declines to certify any
+cluster chain or select either copy when they differ. It neither flattens the
+STX container nor extracts a file or claims a boot or program handoff. Direct
+original spans are T0/H0/S1 at container `$c0` (512 bytes,
 SHA-256 `d0601ec6e1bbea0d5f4d5ba37130148e6670225b6337d001f4d4e6b8fc45fd08`)
 and T1/H0/S9 at `$1570` (512 bytes, SHA-256
 `096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad`).
 The latter contains the literal `MILL22B.inf` at sector-relative `$be`.
 These are physical-container provenance facts only: Project Eon performs no
 STX flattening, file-payload extraction, boot interpretation, or executable
-handoff from them. The sector-backed root/FAT chain validation above is a
-read-only metadata traversal, not a claim that the container has been turned
-into a flat filesystem image.
+handoff from them. The sector-backed root/FAT scan is read-only metadata, not
+a claim that the container has been turned into a flat filesystem image. This
+is read-only metadata traversal of physical sectors, never a flattened-media
+substitute.
 
 ### Millennium Atari ST relocation evidence
 
@@ -2249,6 +2254,12 @@ The evaluator does not invoke the service, register or invoke a callback, map
 host events, or write title-stage state. These remain raw control/data-flow
 facts, not a recovered input ABI or menu action.
 
+Read-only `--inspect` diagnostics now report the callback registration, its
+Exec-vector boundary, byte-one original-table/queue operands, and byte-two
+gate/service operands. The report is intentionally static provenance; it does
+not display a decoded event, evaluate either controlled trace, or imply that
+the original callback registration or input path ran.
+
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
 raw title image masks `D0` to `$0000ffff`, performs original unsigned divides
 by `$0064` and `$000a` (with the two intervening original subroutine calls),
@@ -3656,6 +3667,18 @@ this strictly availability-only Spanish title hand-off. It neither assigns a
 DOS character nor executes the following private driver, DOS return, IBM.COM
 child status, or `2200AD.EXE`. This locks a real local input/control path
 without substituting English resources, drivers, ABI effects, or frames.
+
+`MillenniumDosSpanishTitlePresentationEvidence` separately binds the visible
+Spanish title to this same executable identity rather than merely finding a
+similarly named library entry. The exact `$1c14..$1c1f` selection bytes set
+AX to zero, call `$1725`, then call the local codec path `$1004` and title
+transition `$1941`. They are bound to the full Spanish `TITLE.LIB` SHA-256
+`30d6ccb95e7f501d59e72fc2e34583302116bd88f6eceaae989f6ad986ef7f19` and its
+`P00` resource at `+$000006`, 10,555 bytes, SHA-256
+`91c315133e58634d7327c7d3a3e95ecaa035580200f609f161db6b044261b43b`.
+This proves the source provenance of the already-rendered original Spanish
+title only; it does not execute codec/transition calls, assign cadence, or
+cross any private-driver boundary.
 
 Spanish `2200AD.EXE` has a separately recovered COM startup prefix, not an
 English substitute. Its entry preserves `DS=CS` and `ES=CS`, then jumps to

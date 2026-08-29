@@ -4297,6 +4297,25 @@ int main() {
     assert(spanish_title_boundary.post_title_entry_address == 0x1968);
     assert(spanish_title_boundary.private_driver_function == 0x13);
     assert(spanish_title_boundary.private_driver_call_count == 5);
+    const auto spanish_title_presentation =
+        eon::parse_millennium_dos_spanish_title_presentation_evidence(
+            disk.read(*spanish_titles), disk.read(*spanish_title));
+    assert(spanish_title_presentation.titles_sha256
+        == "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7");
+    assert(spanish_title_presentation.title_library_sha256
+        == "30d6ccb95e7f501d59e72fc2e34583302116bd88f6eceaae989f6ad986ef7f19");
+    assert(spanish_title_presentation.selection_entry_address == 0x1c14);
+    assert(spanish_title_presentation.selected_resource_index == 0);
+    assert(spanish_title_presentation.selection_callee_address == 0x1725);
+    assert(spanish_title_presentation.codec_call_address == 0x1c1a);
+    assert(spanish_title_presentation.codec_call_target == 0x1004);
+    assert(spanish_title_presentation.transition_call_address == 0x1c1d);
+    assert(spanish_title_presentation.transition_call_target == 0x1941);
+    assert(spanish_title_presentation.selected_resource_name == "P00"
+        && spanish_title_presentation.selected_resource_offset == 6
+        && spanish_title_presentation.selected_resource_size == 10'555
+        && spanish_title_presentation.selected_resource_sha256
+            == "91c315133e58634d7327c7d3a3e95ecaa035580200f609f161db6b044261b43b");
     eon::MillenniumDosTitleSession spanish_title_session(spanish_title_boundary);
     assert(!spanish_title_session.handed_off());
     assert(!spanish_title_session.poll_console(false));
@@ -4309,6 +4328,18 @@ int main() {
         bool rejected = false;
         try {
             static_cast<void>(eon::MillenniumDosTitleSession(altered_boundary));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+    assert(rejected);
+    }
+    {
+        auto altered_spanish_titles = disk.read(*spanish_titles);
+        altered_spanish_titles[0x1c14 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_spanish_title_presentation_evidence(
+                altered_spanish_titles, disk.read(*spanish_title)));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
@@ -4653,6 +4684,12 @@ int main() {
     assert(stx_root.sectors_per_cluster() == 2);
     assert(stx_root.total_sectors() == 800);
     assert(stx_root.root_start_lba() == 11 && stx_root.root_sector_count() == 7);
+    assert(stx_root.fat_start_lba() == 1 && stx_root.sectors_per_fat() == 5);
+    assert(!stx_root.fat_mirrors_match());
+    assert(stx_root.fat_primary_sha256()
+        == "2421cedef5612bca7bbc90168a7338d904f82ea1fdc09214c684424b428d9417");
+    assert(stx_root.fat_secondary_sha256()
+        == "22c2c826ed3de246e506187e16aea375dc2fee09a03abbc9140ebdd251640879");
     assert(stx_root.entries().size() == 6);
     assert(stx_root.entries()[0].name == "EXEC.TOS" && stx_root.entries()[0].first_cluster == 2
         && stx_root.entries()[0].size == 221);
@@ -4681,17 +4718,13 @@ int main() {
         invalid_stx_root_name_rejected = true;
     }
     assert(invalid_stx_root_name_rejected);
-    auto cyclic_stx_chain = *atari_physical_dump;
-    cyclic_stx_chain[0x2d0] = 0xb0; // FAT12 cluster 11 -> 11 (odd packed entry).
-    cyclic_stx_chain[0x2d1] = 0x00;
-    bool cyclic_stx_chain_rejected = false;
-    try {
-        const eon::AtariStStxPhysicalDisk disk(std::move(cyclic_stx_chain));
-        static_cast<void>(eon::AtariStStxFat12Root(disk));
-    } catch (const std::runtime_error&) {
-        cyclic_stx_chain_rejected = true;
-    }
-    assert(cyclic_stx_chain_rejected);
+    auto altered_stx_primary_fat = *atari_physical_dump;
+    altered_stx_primary_fat[0x2d0] ^= 0x01; // One physical primary-FAT byte.
+    const eon::AtariStStxPhysicalDisk altered_stx_disk(std::move(altered_stx_primary_fat));
+    const eon::AtariStStxFat12Root altered_stx_root(altered_stx_disk);
+    assert(!altered_stx_root.fat_mirrors_match());
+    assert(altered_stx_root.fat_primary_sha256() != stx_root.fat_primary_sha256());
+    assert(altered_stx_root.fat_secondary_sha256() == stx_root.fat_secondary_sha256());
     auto invalid_stx_header = *atari_physical_dump;
     invalid_stx_header[0] = 0;
     bool invalid_stx_header_rejected = false;

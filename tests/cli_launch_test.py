@@ -523,6 +523,18 @@ def main() -> int:
                     "Millennium Amiga post-negative-D3 continuation did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+        if game == "deuteros" and platform == "amiga":
+            expected_callback_boundary = (
+                "Title callback boundary: registration 0x1ef74 -> callback 0x1f056; Exec base 0x4 "
+                "vector -0x1ce; byte-one table 0x1ee20 +0xa0 -> queue 0x1eec0, pending 0x1eed6; "
+                "byte-two gate 0x1ee16 -> service 0x20118 "
+                "(static provenance only; no Exec/callback/input execution)"
+            )
+            if expected_callback_boundary not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Amiga title callback boundary did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "millennium" and platform == "dos" and language == "English":
             expected_gx_overlay = (
                 "2200GX.EXE overlay evidence: name 0x11c2, loader 0x11ce reads segment cell 0x118; "
