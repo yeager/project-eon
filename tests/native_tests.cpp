@@ -20,6 +20,7 @@
 #include "data/deuteros_atari_boot.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
+#include "data/millennium_control_text.hpp"
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
@@ -27,6 +28,7 @@
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
+#include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
@@ -846,6 +848,7 @@ int main() {
         "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
     assert(titles_bytes && mill_bytes);
     const auto title_flow = eon::parse_millennium_dos_title_flow(*titles_bytes, *mill_bytes);
+    const auto millennium_title_transition = eon::parse_millennium_dos_title_transition(title_lib, title_flow);
     assert(title_flow.title_entry_address == 0x1b80);
     assert(title_flow.title_selection_callee_entry_address == 0x1725);
     assert(title_flow.title_selection_callee_branch_address == 0x172f);
@@ -859,6 +862,18 @@ int main() {
     assert(title_flow.title_resource_index == 0);
     assert(title_flow.intro_transition_steps == 37);
     assert(title_flow.intro_step_stride == 0x170);
+    assert(millennium_title_transition.original_step_stride == 0x170);
+    assert(millennium_title_transition.patches.size() == 37);
+    assert(millennium_title_transition.patches.front().resource_name == "P01");
+    assert(millennium_title_transition.patches.front().bitmap.width == 16);
+    assert(millennium_title_transition.patches.front().bitmap.height == 23);
+    assert(eon::to_hex(eon::sha256(millennium_title_transition.patches.front().bitmap.pixels))
+        == "330db310a838487f4afea0011c1ba5f381e4ed7ad97d95e4745e7be2d2d8aaa1");
+    assert((millennium_title_transition.patches[1].mode_two_logical_to_dac
+        == std::vector<std::uint8_t>{0x00, 0xcc, 0x00}));
+    assert(millennium_title_transition.patches.back().resource_name == "P25");
+    assert(eon::to_hex(eon::sha256(millennium_title_transition.patches.back().bitmap.pixels)
+        ) == "d7e44c796aed167010cdef9ab7ccef38b3b260854b51b2fba818972f30dd35dd");
     assert(title_flow.input_interrupt == 0x21);
     assert(title_flow.input_service == 0x06);
     assert(title_flow.input_parameter == 0xff);
@@ -1715,6 +1730,24 @@ int main() {
     assert(text_catalog.pointers[402].target_offset == 0x2c0c);
     assert(text_catalog.records.front().source_offset == 0x366);
     assert(text_catalog.records.front().bytes == std::vector<std::uint8_t>({0x20, 0x00}));
+    const auto dos_control_text = eon::parse_millennium_dos_control_text_evidence(*static_data);
+    assert((dos_control_text.pointer_indices
+        == std::array<std::size_t, 5>{{271, 350, 390, 398, 399}}));
+    assert(dos_control_text.literals[0].record_offset == 0x12a7);
+    assert(dos_control_text.literals[0].literal == "left button / space");
+    assert(dos_control_text.literals[1].literal == "press space bar to continue...");
+    assert(dos_control_text.literals[2].literal == "press left button to continue...");
+    assert(dos_control_text.literals[3].literal == "MOUSE MODE");
+    assert(dos_control_text.literals[4].literal == "KEYBOARD MODE");
+    auto altered_dos_control_text = *static_data;
+    altered_dos_control_text[0x2bea] ^= 0x01;
+    bool rejected_altered_dos_control_text = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_control_text_evidence(altered_dos_control_text));
+    } catch (const std::runtime_error&) {
+        rejected_altered_dos_control_text = true;
+    }
+    assert(rejected_altered_dos_control_text);
     const auto initial_save = eon::extract_asset_by_sha256(english_dos->path,
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7");
     assert(initial_save && initial_save->size() == eon::MillenniumDosSaveLayout::serialized_size);
@@ -1912,6 +1945,28 @@ int main() {
     assert(atari_executable && atari_executable->size == 49'269);
     assert(eon::to_hex(eon::sha256(atari_disk.read(*atari_data)))
         == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
+    const auto atari_physical_dump = eon::extract_asset_by_sha256(atari_release->path,
+        "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd");
+    assert(atari_physical_dump && atari_physical_dump->size() == 423'696);
+    const auto atari_control_text = eon::parse_millennium_atari_physical_control_text_evidence(
+        *atari_physical_dump);
+    assert(atari_control_text.span_offset == 0x12420);
+    assert(atari_control_text.span_size == 368);
+    assert(atari_control_text.literals[0].literal == "SAVE GAME");
+    assert(atari_control_text.literals[1].literal == "LOAD GAME");
+    assert(atari_control_text.literals[2].literal == "press left button to continue...");
+    assert(atari_control_text.literals[3].literal == "MOUSE MODE");
+    assert(atari_control_text.literals[4].literal == "KEYBOARD MODE");
+    auto altered_atari_control_text = *atari_physical_dump;
+    altered_atari_control_text[0x12572] ^= 0x01;
+    bool rejected_altered_atari_control_text = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_physical_control_text_evidence(
+            altered_atari_control_text));
+    } catch (const std::runtime_error&) {
+        rejected_altered_atari_control_text = true;
+    }
+    assert(rejected_altered_atari_control_text);
     const auto* atari_auxiliary_entry = atari_disk.find("MILL22B.INF");
     assert(atari_auxiliary_entry);
     const auto atari_auxiliary_resource = eon::probe_millennium_atari_auxiliary_resource_name(atari_disk);
@@ -3294,6 +3349,19 @@ int main() {
         == "d6b37bc6431a1fe9145ae9403a5165028ccfd856a6529d1752f824b166807223");
     assert(title_graphics_setup.palette_sha256
         == "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55");
+    // This caller-connected clear loop is locally complete, but its target
+    // remains the graphics setup's externally initialized pointer cell.
+    const auto title_display_clear = eon::parse_deuteros_amiga_title_display_clear_profile(
+        system_disk, load_plan);
+    assert(title_display_clear.entry_address == 0x1f182);
+    assert(title_display_clear.destination_pointer_address == 0x1f168);
+    assert(title_display_clear.initial_loop_counter == 0x1f3f);
+    assert(title_display_clear.iteration_count == 0x1f40);
+    assert(title_display_clear.value == 0);
+    assert(title_display_clear.write_width_bytes == 4);
+    assert(title_display_clear.return_address == 0x1f194);
+    assert(title_display_clear.sha256
+        == "9b02afb723e201cacb93d18d87613dee0f56369707867989209a41d9430ec5f3");
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x79d80] ^= 0x01;
@@ -3301,6 +3369,19 @@ int main() {
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::parse_deuteros_amiga_title_graphics_setup_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x7a182] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_display_clear_profile(
                 altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;

@@ -687,6 +687,57 @@ parse_deuteros_amiga_title_graphics_setup_profile(
     return result;
 }
 
+DeuterosAmigaTitleDisplayClearProfile
+parse_deuteros_amiga_title_display_clear_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // The common title-entry setup calls this immediately after the local
+    // graphics setup.  Its base pointer was copied from the externally
+    // initialized $12ff4 cell, so only the instruction-level loop is local.
+    constexpr std::uint32_t entry_address = 0x1f182;
+    constexpr std::uint32_t destination_pointer_address = 0x1f168;
+    constexpr std::uint16_t initial_loop_counter = 0x1f3f;
+    constexpr std::uint32_t iteration_count = 0x1f40;
+    constexpr std::size_t code_length = 20;
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view code_hash =
+        "9b02afb723e201cacb93d18d87613dee0f56369707867989209a41d9430ec5f3";
+    const auto& stage = plan.title_stage;
+    if (stage.length == 0 || entry_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || code_length > stage.length - (entry_address - stage.destination)) {
+        throw std::runtime_error("Deuteros title display clear lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto code = stage_bytes.subspan(entry_address - stage.destination, code_length);
+    if (to_hex(sha256(stage_bytes)) != stage_hash || to_hex(sha256(code)) != code_hash) {
+        throw std::runtime_error("Unsupported Deuteros title display clear");
+    }
+
+    // movea.l $1f168,a1; move.w #$1f3f,d0; clr.l d1;
+    // move.l d1,(a1)+; dbra d0,$1f18e; rts
+    require_word(code, 0, 0x2279);
+    require_long(code, 2, destination_pointer_address);
+    require_word(code, 6, 0x303c);
+    require_word(code, 8, initial_loop_counter);
+    require_word(code, 10, 0x4281);
+    require_word(code, 12, 0x22c1);
+    require_word(code, 14, 0x51c8);
+    require_word(code, 16, 0xfffc);
+    require_word(code, 18, 0x4e75);
+
+    DeuterosAmigaTitleDisplayClearProfile result;
+    result.entry_address = entry_address;
+    result.destination_pointer_address = destination_pointer_address;
+    result.initial_loop_counter = initial_loop_counter;
+    result.iteration_count = iteration_count;
+    result.value = 0;
+    result.write_width_bytes = 4;
+    result.return_address = 0x1f194;
+    result.sha256 = std::string(code_hash);
+    return result;
+}
+
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t input_display_word) {

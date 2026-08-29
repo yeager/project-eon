@@ -64,12 +64,14 @@ add_executable(project-eon
     src/data/deuteros_atari_stage.cpp
     src/data/fat12.cpp
     src/data/millennium_dos_bitmap.cpp
+    src/data/millennium_control_text.cpp
     src/data/millennium_dos_game_data.cpp
     src/data/millennium_dos_game_flow.cpp
     src/data/millennium_dos_gameplay_screen.cpp
     src/data/millennium_dos_last_screen.cpp
     src/data/millennium_dos_lib.cpp
     src/data/millennium_dos_title_flow.cpp
+    src/data/millennium_dos_title_transition.cpp
     src/data/millennium_dos_video_driver.cpp
     src/data/millennium_amiga_loader.cpp
     src/data/sha256.cpp
@@ -156,12 +158,14 @@ if(BUILD_TESTING)
         src/data/deuteros_atari_stage.cpp
         src/data/fat12.cpp
         src/data/millennium_dos_bitmap.cpp
+        src/data/millennium_control_text.cpp
         src/data/millennium_dos_game_data.cpp
         src/data/millennium_dos_game_flow.cpp
         src/data/millennium_dos_gameplay_screen.cpp
         src/data/millennium_dos_last_screen.cpp
         src/data/millennium_dos_lib.cpp
         src/data/millennium_dos_title_flow.cpp
+        src/data/millennium_dos_title_transition.cpp
         src/data/millennium_dos_video_driver.cpp
         src/data/millennium_amiga_loader.cpp
         src/data/sha256.cpp

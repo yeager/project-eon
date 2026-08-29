@@ -293,6 +293,22 @@ struct DeuterosAmigaTitleGraphicsSetupProfile {
     std::string palette_sha256;
 };
 
+// The next direct caller-connected callee is wholly local, but its destination
+// address comes from the graphics setup's externally established `$1f168`
+// cell.  This profile preserves the original clear-loop operands without
+// resolving that pointer, writing title-stage memory, or assigning a display
+// meaning to the cleared region.
+struct DeuterosAmigaTitleDisplayClearProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t destination_pointer_address = 0;
+    std::uint16_t initial_loop_counter = 0;
+    std::uint32_t iteration_count = 0;
+    std::uint32_t value = 0;
+    std::uint8_t write_width_bytes = 0;
+    std::uint32_t return_address = 0;
+    std::string sha256;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -428,6 +444,12 @@ execute_deuteros_amiga_title_entry_mode_five_prefix(
 // executing their Exec vector or resolving either external pointer cell.
 [[nodiscard]] DeuterosAmigaTitleGraphicsSetupProfile
 parse_deuteros_amiga_title_graphics_setup_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// Parses the immediate local `$1f182` clear loop that follows graphics setup.
+// It does not resolve `$1f168` or perform any of the encoded writes.
+[[nodiscard]] DeuterosAmigaTitleDisplayClearProfile
+parse_deuteros_amiga_title_display_clear_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Validates and models only the literal byte-copy part of the first title
