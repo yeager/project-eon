@@ -138,6 +138,23 @@ def main() -> int:
         raise SystemExit("--inspect did not identify its read-only provenance boundary")
     if "RECOVERY MAP  " not in data_dir_inspection.stdout:
         raise SystemExit("--inspect did not report the hash-bound recovery map")
+
+    # External emulator mounting must never turn Eon's own bounded archive
+    # inventory into a write path.  Exercise the explicit leaf-manifest mode
+    # against real media; the final content snapshot below is the direct
+    # regression assertion for both scanner and inventory reads.
+    inventory_inspection = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--inspect", "--inventory",
+            "--game", "deuteros", "--platform", "amiga"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (inventory_inspection.returncode != 0
+            or "ARCHIVE INVENTORY  " not in inventory_inspection.stdout
+            or "read in place only" not in inventory_inspection.stdout):
+        raise SystemExit(
+            "--inspect --inventory did not provide its bounded read-only preservation manifest:\n"
+            f"{inventory_inspection.stdout}\n{inventory_inspection.stderr}"
+        )
     reported_releases = {
         line.removeprefix("VERIFIED  ") for line in data_dir_inspection.stdout.splitlines()
         if line.startswith("VERIFIED  ")
