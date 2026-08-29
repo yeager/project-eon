@@ -105,6 +105,7 @@ add_executable(project-eon
     src/data/amiga_adf.cpp
     src/data/amiga_ofs.cpp
     src/data/atari_st_prg.cpp
+    src/data/atari_st_stx.cpp
     src/data/creative_voice.cpp
     src/data/deuteros_amiga_bundle.cpp
     src/data/deuteros_amiga_audio.cpp
@@ -267,6 +268,7 @@ if(BUILD_TESTING)
         src/data/deuteros_atari_reference_trace.cpp
         src/data/deuteros_atari_stage.cpp
         src/data/fat12.cpp
+        src/data/atari_st_stx.cpp
         src/data/millennium_dos_bitmap.cpp
         src/data/millennium_control_text.cpp
         src/data/millennium_dos_game_data.cpp

@@ -8,6 +8,7 @@
 #include "data/zip_archive.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
+#include "data/atari_st_stx.hpp"
 #include "data/amiga_ofs.hpp"
 #include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
@@ -3950,6 +3951,28 @@ int main() {
     const auto atari_physical_dump = eon::extract_asset_by_sha256(atari_release->path,
         "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd");
     assert(atari_physical_dump && atari_physical_dump->size() == 423'696);
+    const eon::AtariStStxPhysicalDisk atari_stx(*atari_physical_dump);
+    assert(atari_stx.track_count() == 80);
+    assert(atari_stx.sectors().size() == 800);
+    const auto stx_boot = atari_stx.sector(0, 0, 1);
+    assert(stx_boot.size() == 512);
+    assert(eon::to_hex(eon::sha256(stx_boot))
+        == "d0601ec6e1bbea0d5f4d5ba37130148e6670225b6337d001f4d4e6b8fc45fd08");
+    const auto stx_loader = atari_stx.sector(1, 0, 9);
+    assert(stx_loader.size() == 512);
+    assert(eon::to_hex(eon::sha256(stx_loader))
+        == "096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad");
+    assert(std::equal(stx_loader.begin() + 0xbe, stx_loader.begin() + 0xc9,
+        "MILL22B.inf"));
+    auto invalid_stx_header = *atari_physical_dump;
+    invalid_stx_header[0] = 0;
+    bool invalid_stx_header_rejected = false;
+    try {
+        static_cast<void>(eon::AtariStStxPhysicalDisk(std::move(invalid_stx_header)));
+    } catch (const std::runtime_error&) {
+        invalid_stx_header_rejected = true;
+    }
+    assert(invalid_stx_header_rejected);
     const auto atari_control_text = eon::parse_millennium_atari_physical_control_text_evidence(
         *atari_physical_dump);
     assert(atari_control_text.span_offset == 0x12420);
