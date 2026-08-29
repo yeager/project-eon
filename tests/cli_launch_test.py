@@ -98,6 +98,53 @@ def main() -> int:
             f"{targeted_inspection.stdout}\n{targeted_inspection.stderr}"
         )
 
+    source_match = re.search(
+        r"VERIFIED  Millennium 2\.2 / DOS / [^\n]+\n\s*([0-9a-f]{64})",
+        targeted_inspection.stdout,
+    )
+    if source_match is None:
+        raise SystemExit("targeted inspection did not print its hash-bound DOS source identity")
+    # Pack bytes are deliberately temporary test fixtures, outside supplied
+    # media. They prove the CLI invokes the real read-only admission reader;
+    # neither this test nor the runtime writes a Modern-pack cache.
+    with tempfile.TemporaryDirectory() as temporary_pack_root:
+        pack_root = Path(temporary_pack_root)
+        eligible_pack = pack_root / "test-modern-pack"
+        eligible_pack.mkdir()
+        asset = eligible_pack / "art.bin"
+        asset.write_bytes(b"Project Eon temporary external Modern-pack test asset\n")
+        asset_hash = hashlib.sha256(asset.read_bytes()).hexdigest()
+        (eligible_pack / "pack.eonmodern").write_text(
+            "schema\tproject-eon.modern-asset-pack/v1\n"
+            "id\ttest-modern-pack\n"
+            "version\t1\n"
+            "license\tCC0-1.0\n"
+            "provenance\tindependently-created\n"
+            "game\tmillennium\n"
+            "platform\tdos\n"
+            f"source_release_sha256\t{source_match.group(1)}\n"
+            f"asset\ttest-art art.bin {asset.stat().st_size} {asset_hash}\n",
+            encoding="ascii",
+        )
+        rejected_pack = pack_root / "rejected-test-pack"
+        rejected_pack.mkdir()
+        (rejected_pack / "pack.eonmodern").write_text("not-a-manifest\n", encoding="ascii")
+        packs_before = media_snapshot(pack_root)
+        pack_report = subprocess.run(
+            (str(executable), "--data", str(data_directory), "--inspect", "--game", "millennium",
+                "--platform", "dos", "--modern-packs", str(pack_root)),
+            env=environment, check=False, capture_output=True, text=True,
+        )
+        if (pack_report.returncode != 0
+                or "MODERN PACK ELIGIBLE  test-modern-pack 1" not in pack_report.stdout
+                or "MODERN PACK REJECTED" not in pack_report.stdout
+                or "no pack is selected or rendered" not in pack_report.stdout
+                or media_snapshot(pack_root) != packs_before):
+            raise SystemExit(
+                "explicit Modern-pack inspection did not report read-only eligibility and rejection:\n"
+                f"{pack_report.stdout}\n{pack_report.stderr}"
+            )
+
     # A syntactically valid but unavailable platform filter must fail clearly;
     # it is never permission to replace Atari ST with an Amiga/DOS report.
     unavailable_filter = subprocess.run(

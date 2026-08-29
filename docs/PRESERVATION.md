@@ -66,6 +66,15 @@ asset mapping, save access, or game-logic hook. The precise syntax and future
 integration requirements are recorded in
 [`MODERN_ASSET_PACK_FORMAT.md`](MODERN_ASSET_PACK_FORMAT.md).
 
+The explicit `--inspect --modern-packs <root>` diagnostic performs that
+admission report only after the filtered original-release reports have been
+rehashed. A valid pack is reported **eligible** only when its complete release
+identity also occurs among those reverified reports; otherwise it is reported
+as rejected for this invocation. The root must already be a non-symlink
+directory and is never defaulted, created, scanned recursively, or selected
+as a renderer input. `--modern-packs` without `--inspect` is a command-line
+error, which prevents a pack scan from masquerading as a game launch.
+
 ### Transient Scale2x pixel reconstruction (Modern)
 
 The current Modern path provides a deterministic, edge-aware RGBA **Scale2x**

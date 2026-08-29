@@ -32,6 +32,7 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
 #include "data/millennium_save_comparison.hpp"
+#include "data/modern_asset_pack.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
 #include "data/sha256.hpp"
 #include "data/reference_trace.hpp"
@@ -53,6 +54,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace {
@@ -2437,6 +2439,49 @@ std::unique_ptr<eon::DeuterosAtariBootstrapSession> load_deuteros_atari_bootstra
     }
 }
 
+// Modern packs are intentionally a report-only preservation boundary.  This
+// routine does not retain a pack object beyond inspection, nor does it create
+// a default directory, decode an asset, or give a renderer any pack choice.
+void report_modern_asset_packs(const std::filesystem::path& root,
+                               const std::vector<eon::ReleaseArchive>& inspected_releases) {
+    std::cout << "MODERN PACKS  read-only admission report; no pack is selected or rendered\n";
+    std::error_code error;
+    const auto status = std::filesystem::symlink_status(root, error);
+    if (error || std::filesystem::is_symlink(status) || !std::filesystem::is_directory(status)) {
+        std::cout << "MODERN PACK ROOT REJECTED  must be an existing non-symlink directory: "
+            << root << '\n';
+        return;
+    }
+    const auto validations = eon::discover_modern_asset_packs(root);
+    if (validations.empty()) {
+        std::cout << "MODERN PACKS  no direct-child pack.eonmodern candidates\n";
+        return;
+    }
+    for (const auto& validation : validations) {
+        if (!validation.accepted()) {
+            std::cout << "MODERN PACK REJECTED  " << validation.manifest_path << '\n'
+                << "          " << validation.error << '\n';
+            continue;
+        }
+        const auto& pack = validation.pack;
+        const bool source_is_inspected = std::any_of(inspected_releases.begin(), inspected_releases.end(),
+            [&pack](const eon::ReleaseArchive& release) {
+                return release.game == pack.game && release.platform == pack.platform
+                    && release.sha256 == pack.source_release_sha256;
+            });
+        if (!source_is_inspected) {
+            std::cout << "MODERN PACK REJECTED  " << validation.manifest_path << '\n'
+                << "          pack source is not one of this inspection's reverified original releases\n";
+            continue;
+        }
+        std::cout << "MODERN PACK ELIGIBLE  " << pack.id << " " << pack.version << '\n'
+            << "          " << eon::name(pack.game) << " / " << eon::name(pack.platform)
+            << " / source " << pack.source_release_sha256 << '\n'
+            << "          " << pack.provenance << "; " << pack.assets.size()
+            << " hash-verified external assets; admission only\n";
+    }
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -2512,6 +2557,7 @@ int main(int argc, char** argv) {
             std::cout << "INSPECTION  read-only provenance scan; original media stays in place\n";
         }
         bool found = false;
+        std::vector<eon::ReleaseArchive> inspected_releases;
         for (const auto& release : releases) {
             if (request.verify_game && release.game != *request.verify_game) continue;
             if (request.inspect_data && request.game && release.game != *request.game) continue;
@@ -2524,6 +2570,7 @@ int main(int argc, char** argv) {
                 return 6;
             }
             found = true;
+            inspected_releases.push_back(release);
             std::cout << "VERIFIED  " << eon::name(release.game) << " / "
                 << eon::name(release.platform) << " / " << release.language << '\n'
                 << "          " << release.sha256 << '\n'
@@ -2551,6 +2598,9 @@ int main(int argc, char** argv) {
                 && release.language == "en") {
                 report_millennium_atari_st(release);
             }
+        }
+        if (request.modern_pack_root) {
+            report_modern_asset_packs(*request.modern_pack_root, inspected_releases);
         }
         if (request.inspect_data) {
             const auto& report = scanner.report();
