@@ -421,6 +421,15 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << ", D0 0x" << title_stage.initialization_exec_allocation_size
         << "; custom 0x" << title_stage.initialization_custom_base_address
         << "+40/42/9a/96 (not called or written)" << std::dec << '\n';
+    const auto post_exec_pointer_seed =
+        eon::parse_deuteros_amiga_title_post_exec_pointer_seed_profile(disk, plan);
+    std::cout << "          Conditional post-Exec pointer seed: call 0x" << std::hex
+        << post_exec_pointer_seed.call_site_address << " with D1=0x"
+        << post_exec_pointer_seed.caller_d1_literal << " -> local 0x"
+        << post_exec_pointer_seed.callee_address << ", literal 0x"
+        << post_exec_pointer_seed.literal_value << " to cell 0x"
+        << post_exec_pointer_seed.destination_address
+        << " (prior ABI returns unmodelled)" << std::dec << '\n';
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec

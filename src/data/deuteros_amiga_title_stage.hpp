@@ -269,6 +269,22 @@ struct DeuterosAmigaTitleEntryModeFivePrefix {
     std::uint32_t stop_before_exec_address = 0;
 };
 
+// A direct, wholly local callee in the static continuation after the two
+// title-entry Exec vectors.  Its call still depends on those earlier vectors
+// and intervening calls returning, so this is provenance for an instruction
+// sequence, not an executable startup result.  The callee itself merely
+// loads a literal longword into D0, stores it in an in-stage cell, and RTSes.
+struct DeuterosAmigaTitlePostExecPointerSeedProfile {
+    std::uint32_t call_site_address = 0;
+    std::uint32_t caller_d1_literal = 0;
+    std::uint32_t callee_address = 0;
+    std::uint32_t literal_value = 0;
+    std::uint32_t destination_address = 0;
+    std::uint32_t return_address = 0;
+    std::string call_site_sha256;
+    std::string callee_sha256;
+};
+
 // The first common internal setup callee opens the literal
 // `graphics.library` name through an Exec vector.  Its return is an explicit
 // ABI input: zero enters the original self-loop and any nonzero longword is
@@ -533,6 +549,13 @@ execute_deuteros_amiga_title_entry_prefix(
 execute_deuteros_amiga_title_entry_mode_five_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint16_t incoming_profile);
+
+// Parses the direct local `$403e6` callee and its `$404c2` call site in the
+// static continuation after the hard Exec boundary.  It never assumes that
+// the earlier vectors or calls returned and does not write title-stage memory.
+[[nodiscard]] DeuterosAmigaTitlePostExecPointerSeedProfile
+parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Parses the two caller-connected common setup callees without
 // executing their Exec vector or resolving either external pointer cell.

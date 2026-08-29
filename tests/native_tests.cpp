@@ -3652,6 +3652,57 @@ int main() {
     assert(title_stage.initialization_normal_call_address == 0x1fb9a);
     assert(title_stage.title_exit_resolved_profile == 0);
     assert(title_stage.title_exit_main_stage_entry_address == 0x21734);
+    const auto post_exec_pointer_seed =
+        eon::parse_deuteros_amiga_title_post_exec_pointer_seed_profile(system_disk, load_plan);
+    assert(post_exec_pointer_seed.call_site_address == 0x404c2);
+    assert(post_exec_pointer_seed.caller_d1_literal == 0x13000);
+    assert(post_exec_pointer_seed.callee_address == 0x403e6);
+    assert(post_exec_pointer_seed.literal_value == 0x1c482);
+    assert(post_exec_pointer_seed.destination_address == 0x1f97c);
+    assert(post_exec_pointer_seed.return_address == 0x403f2);
+    assert(post_exec_pointer_seed.call_site_sha256
+        == "a617235dd94a6c0b3f5fb9f9e078652ed8f1e45213e85c80b10ec165a6b7216f");
+    assert(post_exec_pointer_seed.callee_sha256
+        == "1e1ccdae97d5849873d3d2e785f5a8be585ffa0e104b5c550ecade6bc37a33a2");
+    {
+        auto altered_pointer_seed_disk = *amiga_disk1;
+        altered_pointer_seed_disk[0x9b4c2] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_pointer_seed_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_pointer_seed_disk = *amiga_disk1;
+        altered_pointer_seed_disk[0x9b3e6] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_pointer_seed_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_pointer_seed_disk = *amiga_disk1;
+        altered_pointer_seed_disk[0x9b3f2] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_pointer_seed_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto title_graphics_setup = eon::parse_deuteros_amiga_title_graphics_setup_profile(
         system_disk, load_plan);
     assert(title_graphics_setup.entry_address == 0x1ed80);
