@@ -112,6 +112,12 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertIn("v2 adapters additionally validate literal, hash-pinned", research)
         self.assertNotIn("Its first version\nverifies a trace's hash", research)
 
+    def test_research_does_not_mistake_a_zip_mount_for_a_dos_game_launch(self):
+        research = (ROOT / "docs" / "research.md").read_text(encoding="utf-8")
+        self.assertIn("does **not** expose\n`MILL.COM` as an executable DOS file", research)
+        self.assertIn("`Bad command or\nfilename`", research)
+        self.assertIn("not a game\nlaunch", research)
+
 
 if __name__ == "__main__":
     unittest.main()
