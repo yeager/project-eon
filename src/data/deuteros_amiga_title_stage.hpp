@@ -607,6 +607,38 @@ struct DeuterosAmigaTitlePostExecTailReturnContinuationProfile {
 parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// `$40504` is a caller-connected absolute call in the static post-Exec
+// continuation.  Its local target selects one of two literal pointers based
+// on raw flag bytes, then branches into an already profiled graphics wrapper.
+// This is strictly byte provenance: Project Eon neither reads the flags,
+// takes a branch, follows the wrapper ABI, nor attributes a presentation
+// effect to either pointer.
+struct DeuterosAmigaTitlePostExecPointerRouteProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t caller_continuation_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t entry_local_call_target = 0;
+    std::uint32_t entry_clear_flag_address = 0;
+    std::uint32_t entry_return_address = 0;
+    std::uint32_t selected_flag_address = 0;
+    std::uint32_t selected_pointer_cell_address = 0;
+    std::uint32_t selected_pointer_literal = 0;
+    std::uint8_t selected_flag_value = 0;
+    std::uint32_t selected_branch_target = 0;
+    std::uint32_t alternate_entry_address = 0;
+    std::uint32_t alternate_flag_address = 0;
+    std::uint32_t alternate_pointer_cell_address = 0;
+    std::uint32_t alternate_pointer_literal = 0;
+    std::uint32_t alternate_branch_target = 0;
+    std::uint32_t alternate_return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecPointerRouteProfile
+parse_deuteros_amiga_title_post_exec_pointer_route_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // `$40616` begins with the two opcode bytes retained at the end of the
 // preceding return-continuation evidence span.  This overlapping profile
 // binds the complete following conditional block through its local branch

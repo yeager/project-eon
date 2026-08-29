@@ -4426,6 +4426,21 @@ recorded as a cell operand). `DeuterosAmigaTitlePostExecTailReturnContinuationPr
 binds those bytes without entering calls, providing ABI results, or assigning
 game/display semantics.
 
+The fourth direct operand in that continuation has an independently bound
+caller edge: `$40504..$40509` / ADF `+$9b504` encodes `JSR $2022a` and has
+SHA-256 `ce9c44a0a83e370fdf54b5ec8ef0ffd72c170b007419176403293d2a54f91188`.
+Its 76-byte local region `$2022a..$20275` / ADF `+$7b22a` has SHA-256
+`a7f7c0c3efa60284b3d292249b3560da4d832ff0c5dfa34711b72604760b39a9`.
+The entry records a local BSR to `$20238`, a raw clear of `$1ffd9`, and RTS
+`$20236`. Its first local subroute tests `$1ffd8`, retains raw literal
+`$1ffe6` for pointer cell `$2008e`, stores raw byte `$01` at `$1ffd8`, and
+branches to `$200dc`; adjacent entry `$20258` records the complementary raw
+test/clear of `$1ffd8`, literal `$2001e` for the same cell, branch `$200fa`,
+and RTS `$20274`. `DeuterosAmigaTitlePostExecPointerRouteProfile` hash-locks
+the caller and this whole region. It does not read either flag, choose a
+subroute, write the pointer cell or flags, enter either graphics wrapper, or
+assign a title/display meaning to the literals.
+
 The next complete instruction starts at `$40616`, so
 `DeuterosAmigaTitlePostExecTailFlagGateProfile` deliberately overlaps the
 preceding span's final opcode word. Its 94-byte span `$40616..$40673` / ADF
