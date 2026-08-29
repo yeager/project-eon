@@ -291,6 +291,28 @@ struct MillenniumAmigaResidentPostNegativeD3Terminal {
     std::string raw_sha256;
 };
 
+// The BPL target from the immediately preceding local terminal is itself a
+// complete static selector prefix.  It has two unresolved local branches and
+// a terminal external JMP, so this deliberately records encodings and raw
+// provenance only; it never selects a route, restores registers, or enters
+// the jump target.
+struct MillenniumAmigaResidentPostNegativeD3ContinuationBoundary {
+    std::uint32_t entry_address = 0;
+    std::array<std::uint16_t, 3> add_immediates{};
+    std::uint16_t range_base_immediate = 0;
+    std::uint32_t compare_branch_address = 0;
+    std::uint32_t compare_branch_target = 0;
+    std::uint32_t low_range_branch_address = 0;
+    std::uint32_t low_range_branch_target = 0;
+    std::uint32_t negative_range_branch_address = 0;
+    std::uint32_t negative_range_branch_target = 0;
+    std::uint32_t terminal_jump_address = 0;
+    std::uint32_t terminal_jump_target = 0;
+    std::size_t raw_disk_offset = 0;
+    std::uint32_t byte_count = 0;
+    std::string raw_sha256;
+};
+
 struct MillenniumAmigaResidentIndependentZeroTargetBoundary {
     std::uint32_t entry_address = 0;
     std::uint16_t compare_immediate = 0;
@@ -506,6 +528,11 @@ parse_millennium_amiga_resident_negative_d3_terminal(
 parse_millennium_amiga_resident_post_negative_d3_terminal(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentNegativeD3Terminal& terminal);
+
+[[nodiscard]] MillenniumAmigaResidentPostNegativeD3ContinuationBoundary
+parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentPostNegativeD3Terminal& terminal);
 
 // Validates only the first compare/conditional-branch pair at the independent
 // entry's fixed-flag-zero target. It does not interpret the comparison.

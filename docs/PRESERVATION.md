@@ -737,9 +737,22 @@ is 28 bytes, and has SHA-256
 all six supplied Amiga variants. It encodes two absolute byte stores to
 `$7b3b5/$7b3bc`, copies D1/D2, tests D0, then records `BNE.S $68612 →
 $68616` with the zero `RTS` at `$68614`. The target encodes `BPL.S $68616 →
-$6861a` and the alternate `RTS` at `$68618`. `$6861a` remains the strict
-continuation boundary. Project Eon does not choose either predicate, assign
-meaning to registers or absolute cells, perform stores, or follow that target.
+$6861a` and the alternate `RTS` at `$68618`. Project Eon does not choose
+either predicate, assign meaning to registers or absolute cells, or perform
+stores.
+
+The BPL target is bounded independently. The 54 original bytes at
+`$6861a..$6864f` map to ADF `+$16a1a` and hash to
+`d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce` in all
+six supplied Amiga variants. They add immediate `$2800` to `D2`, `D3`, and
+`D1`, save `D0-D3/A5`, load `$7d00` into `D6`, form a pair of word sums, and
+encode local `BCC.S $68636 → $6863a`, `BCS.S $68642 → $68650`, and `BMI.S
+$68644 → $68694` branches. The unbranched suffix restores the saved registers
+and encodes `JMP $7bef0` at `$6864a`.
+`MillenniumAmigaResidentPostNegativeD3ContinuationBoundary` hash-locks this
+complete raw span and the literal branch/jump targets. It does not evaluate
+registers or flags, choose a route, restore state, follow either local target,
+or execute the external jump; those effects remain runtime boundaries.
 
 At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
 $68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control
@@ -1276,6 +1289,21 @@ at `$30`, advances by `$20`, and loops without a counter or return. Project
 Eon records the copy and loop profile but does not execute it, wipe host
 memory, or infer any resource/title semantics. The runtime reports these
 boundaries rather than inventing a GEMDOS title path or unpacking media.
+
+`DeuterosAtariKillerBootHandoff` now binds the complete caller-connected
+relocation edge rather than only its resulting clear-loop shape. The 24-byte
+setup at boot `+$d8` hashes to
+`1ce81773d11374cac65ce69742a475e0731cbc8798f7c7bd374c04a2d2a7d150`; it
+contains `DBF D7,-4` after `D7=$0009`, so the literal ten-longword copy is
+encoded in the original boot sector, followed by `JMP $0012.w`. The destination
+is within the relocated source span: `$12 - $8 = +$a`, whose first word is
+`LEA +$1c(PC),A0` (`$41fa`). Separately, relocated offset `+$8` is the literal
+`JMP (A0)` (`$4ed0`) after `MOVEA.L $0004.w,A0`; this is a vector-cell boundary,
+not evidence that Project Eon may read or follow RAM `$4`. The parser validates
+both hashes, the direct relocation relationship, the relocated continuation,
+and the distinct indirect-jump layout. It neither chooses a reset vector nor
+executes either branch, clears memory, or attaches game semantics to the
+protection code.
 
 ### Deuteros Amiga execution chain
 

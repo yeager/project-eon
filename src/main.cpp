@@ -1258,6 +1258,9 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         disk, plan, negative_d3);
     const auto post_negative_d3 = eon::parse_millennium_amiga_resident_post_negative_d3_terminal(
         disk, plan, negative_d3_terminal);
+    const auto post_negative_d3_continuation =
+        eon::parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
+            disk, plan, post_negative_d3);
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -1487,7 +1490,21 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << post_negative_d3.nonnegative_branch_target << ", negative RTS 0x"
         << post_negative_d3.negative_return_address << "; SHA-256 "
         << post_negative_d3.raw_sha256 << std::dec
-        << " (static only; no registers, stores, predicates, or continuation executed)\n";
+        << " (static only; no registers, stores, predicates, or continuation executed)\n"
+        << "          post-negative-D3 continuation: entry 0x" << std::hex
+        << post_negative_d3_continuation.entry_address << " (disk 0x"
+        << post_negative_d3_continuation.raw_disk_offset << ", " << std::dec
+        << post_negative_d3_continuation.byte_count << " bytes); BCC 0x" << std::hex
+        << post_negative_d3_continuation.compare_branch_address << " -> 0x"
+        << post_negative_d3_continuation.compare_branch_target << ", BCS 0x"
+        << post_negative_d3_continuation.low_range_branch_address << " -> 0x"
+        << post_negative_d3_continuation.low_range_branch_target << ", BMI 0x"
+        << post_negative_d3_continuation.negative_range_branch_address << " -> 0x"
+        << post_negative_d3_continuation.negative_range_branch_target << "; terminal JMP 0x"
+        << post_negative_d3_continuation.terminal_jump_address << " -> 0x"
+        << post_negative_d3_continuation.terminal_jump_target << "; SHA-256 "
+        << post_negative_d3_continuation.raw_sha256 << std::dec
+        << " (static only; no branch, restore, or jump execution)\n";
 }
 
 void report_millennium_atari_root_inventory(const eon::MillenniumAtariRootInventory& inventory) {
@@ -2076,6 +2093,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")
         << ", branch 0x" << std::hex << continuation.boot_branch_target << std::dec << '\n';
     if (continuation.has_killer_boot_continuation_profile) {
+        const auto killer_handoff = eon::parse_deuteros_atari_killer_boot_handoff(
+            disk2.read_sectors(0, 0, 1, 1), continuation);
         std::cout << "          Disk 2 relocated continuation: boot +0x" << std::hex
             << continuation.killer_boot_vector_source_offset << " +0x"
             << continuation.killer_boot_relocated_byte_count << " -> RAM 0x"
@@ -2084,6 +2103,17 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << continuation.killer_boot_clear_start << " in 0x"
             << continuation.killer_boot_clear_stride << "-byte blocks (not executed)" << std::dec
             << '\n';
+        std::cout << "          Disk 2 KILLER_BOOT handoff: setup +0x" << std::hex
+            << killer_handoff.setup_offset << " +0x" << killer_handoff.setup_byte_count
+            << " copies boot +0x" << killer_handoff.source_offset << " +0x"
+            << killer_handoff.byte_count << " -> RAM 0x" << killer_handoff.destination
+            << "; JMP 0x" << killer_handoff.continuation_address << " enters relocated +0x"
+            << killer_handoff.continuation_relocated_offset << " opcode 0x"
+            << killer_handoff.continuation_first_opcode << "; copied vector +0x"
+            << killer_handoff.vector_jump_relocated_offset << " is JMP (A0) through RAM $"
+            << killer_handoff.vector_jump_pointer_address << "; setup/relocated SHA-256 "
+            << killer_handoff.setup_sha256 << "/" << killer_handoff.relocated_sha256 << std::dec
+            << " (byte-proven relocation only; neither vector cell nor path executes)\n";
     }
     std::cout << "          Atari ST trace boundary: next evidence must identify the XBIOS Floprd result, "
         << "callback entry/return frame, dispatch word at RAM 0x1eaa, and selected vector D1/D2 "
