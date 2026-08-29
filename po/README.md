@@ -38,3 +38,7 @@ SDL3_image, zlib, and libpng only; they neither build SDL_ttf/freetype nor
 bundle a font. Adding an untested platform-specific system-font fallback would
 break the project's reproducible package contract, so no such fallback is
 used.
+
+The exact SDL_ttf 3 and bundled-Noto implementation requirements, including
+the current source-archive/submodule constraint and required package tests,
+are recorded in [`docs/UNICODE_RENDERING.md`](../docs/UNICODE_RENDERING.md).
