@@ -736,9 +736,11 @@ executables.
 
 When the Amiga Millennium launcher target is selected, Project Eon creates a
 bounded session only for the exact Defjam ADF above. It validates this load
-plan, its shared resident range, and the resident entry directly from the
-original disk bytes, then stops before the opaque first-stage invocation or
-any AmigaOS behavior. Other recognised Amiga images remain preservation
+plan, its shared resident range, resident entry, exact caller-side opaque
+handoff, and the source-only first-stage anchors directly from the original
+disk bytes. The session stops before the opaque first-stage invocation or any
+AmigaOS behavior: the added records are diagnostics, not an attempt to decode
+or execute the stage. Other recognised Amiga images remain preservation
 evidence but are not silently substituted for Defjam's path.
 
 For a reproducible chain of custody, the parser also reports a SHA-256 for
@@ -1405,6 +1407,48 @@ post-indirect-call register and branch layout, not proof that any table
 handler returns, that D1/D2 carry a particular game meaning, or that the
 wrapper/raw reader is reached. Project Eon records the original `$1200`
 increment and branch target without executing or supplying their inputs.
+
+#### Deuteros Atari ST dynamic-trace acquisition boundary
+
+There is no further caller-connected static parse that can establish a
+runtime state after this point. The supplied Replicants Disk 1 bytes prove
+the code *requests* the supervisor callback and later indexes the six-entry
+table, but they do not contain the callback frame, the service result, or the
+RAM values that determine the branch and indirect call. A next recovery step
+therefore requires an external trace made from this exact outer archive
+(`c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653`), the
+hash-identified Replicants Disk 1
+(`aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`), and
+the second-stage interval
+`2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
+
+The trace must retain the emulator/ROM/configuration identity and input
+timeline already required by the reference-trace format, plus these raw
+observations in execution order:
+
+- the `TRAP #14` at copied-stage `+$dc` (RAM `$1edc`), including the incoming
+  A7/SR, selector `$0026`, callback argument `$00001fa6`, and the service
+  return PC/A7/SR/D0;
+- callback entry at RAM `$1fa6` and its return, including the incoming stack
+  longword read by `MOVE.L (A7),D0`, the outgoing A7 after it is set to
+  `$0007b000`, and the returned PC/A7/SR/D0;
+- the values and provenance of RAM longwords `$25f4` and `$25fc` at the
+  comparison/input-capture sites, the resulting branch PC at copied-stage
+  `+$ee`, and the word written to `$1eaa` by the hash-locked
+  `+$c4..+$cf` block;
+- when the table lookup is reached, the table base, shifted index, resolved
+  `A1` target, indirect-call entry/return PCs, and that callee's returned
+  `D1` and `D2`; and
+- the first subsequent raw-reader call/return at copied-stage `+$60`, with
+  its complete XBIOS input frame and result, before any claimed load,
+  resource type, palette, or display state.
+
+The physical stage offsets above map to copied RAM by adding `$1e00`; the
+original source remains the hash-locked track-2 interval, not an emulator
+snapshot. A trace missing any one of these observations may still be kept as
+preservation evidence, but cannot choose a dispatch vector or justify a
+runtime implementation. No current parser, test, or launcher path supplies
+these values, calls XBIOS, or synthesizes a fallback screen.
 
 The byte-proven continuation after that wrapper boundary is retained without
 asserting that the raw reader returns. At track-2 `+$1138`, the next 38 bytes

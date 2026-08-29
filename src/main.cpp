@@ -1299,15 +1299,13 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     if (!image) return;
     const eon::MillenniumAmigaBootstrapSession live_bootstrap(*image);
     const eon::AmigaAdf disk(*image);
-    const auto plan = eon::parse_millennium_amiga_load_plan(disk);
-    const auto opaque_invocation =
-        eon::parse_millennium_amiga_bootstrap_opaque_invocation_boundary(disk, plan);
-    const auto first_stage_source_anchors =
-        eon::parse_millennium_amiga_first_stage_source_anchor_boundary(disk, plan);
+    const auto& plan = live_bootstrap.plan();
+    const auto& opaque_invocation = live_bootstrap.opaque_invocation_boundary();
+    const auto& first_stage_source_anchors = live_bootstrap.first_stage_source_anchors();
     std::cout << "          bounded launcher bootstrap: resident entry 0x" << std::hex
         << live_bootstrap.resident_entry().entry_address << ", raw resident SHA-256 "
         << live_bootstrap.shared_resident().raw_sha256 << std::dec
-        << " (no opaque raw-stage invocation)\n";
+        << " (opaque handoff validated; no raw-stage invocation)\n";
     const auto resident = eon::parse_millennium_amiga_resident_entry(disk, plan);
     const auto splitter = eon::parse_millennium_amiga_resident_word_splitter(disk, plan);
     const auto helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
