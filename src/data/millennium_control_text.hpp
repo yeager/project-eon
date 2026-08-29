@@ -20,10 +20,10 @@ struct MillenniumControlTextLiteralEvidence {
     std::string record_sha256;
 };
 
-// The English DOS 2200AD4.BIN pointer table directly selects these raw
-// records. Pointer indices are source-media facts, not command identifiers or
-// reconstructed controls. No executable caller from the loaded buffer to an
-// input dispatcher has been recovered.
+// The English and Spanish DOS 2200AD4.BIN pointer tables directly select
+// these raw records. Pointer indices are source-media facts, not command
+// identifiers or reconstructed controls. No executable caller from the loaded
+// buffer to an input dispatcher has been recovered.
 struct MillenniumDosControlTextEvidence {
     std::string source_sha256;
     std::array<std::size_t, 5> pointer_indices{};

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import re
 import unittest
 
 
@@ -25,6 +26,30 @@ class ReleaseManifestTests(unittest.TestCase):
             self.assertGreaterEqual(profile["offset"], 0)
             self.assertGreater(profile["length"], 0)
             self.assertLessEqual(profile["offset"] + profile["length"], profile["leaf_size"])
+
+        self.assertEqual({profile["release_sha256"] for profile in profiles}, set(releases))
+
+    def test_compiled_profile_table_exactly_matches_json(self):
+        """Keep runtime admission and preservation interchange in lockstep."""
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
+        source = (ROOT / "src" / "data" / "release_manifest.cpp").read_text()
+        rows = re.findall(
+            r'\{"([a-z0-9-]+)", "([0-9a-f]{64})", "([0-9a-f]{64})", '
+            r"([0-9']+), (0x[0-9a-f]+|[0-9']+), (0x[0-9a-f]+|[0-9']+)\}",
+            source,
+        )
+        compiled = [
+            {
+                "id": entry_id,
+                "release_sha256": release_sha256,
+                "leaf_sha256": leaf_sha256,
+                "leaf_size": int(leaf_size.replace("'", ""), 10),
+                "offset": int(offset.replace("'", ""), 0),
+                "length": int(length.replace("'", ""), 0),
+            }
+            for entry_id, release_sha256, leaf_sha256, leaf_size, offset, length in rows
+        ]
+        self.assertEqual(compiled, manifest["parser_profiles"])
 
     def test_manifest_explicitly_keeps_variant_profiles_separate(self):
         manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())

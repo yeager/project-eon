@@ -50,6 +50,14 @@ a different language, an alternate/cracked dump, or another platform. The
 manifest contains no game bytes and does not ask the runtime to extract, copy,
 or mutate media.
 
+The manifest has a source-parity test: the compiled profile table must exactly
+reproduce each JSON record (ID, outer and leaf identities, size and span). This
+prevents preservation tooling and the runtime from silently diverging. It now
+includes every English DOS leaf consumed by a recovered parser (game flow,
+static data, overlay, both video drivers, last screen, title library, launcher
+and first decoded voice), alongside narrower instruction/resource windows where
+a parser intentionally has a smaller evidence boundary.
+
 ### Stable evidence anchors
 
 | Artifact | Bytes | SHA-256 |
@@ -2560,20 +2568,30 @@ to inspection as original data only. No caller-connected code proves which
 input selects a mode or continues a prompt, so Project Eon does not convert
 them into SDL mappings or a reconstructed keyboard reference.
 
-For the verified English source specifically,
-`MillenniumDosControlTextEvidence` hash-locks the pointer-table selections and
-the surrounding raw records: indices 271, 350, 390, 398, and 399 select records
-at `$12a7`, `$1d88`, `$2aef`, `$2bcd`, and `$2be3` respectively. Their raw
-record hashes are `4ff26c46bfaba03c12a1a29271499c81d044ce2cccc8db06ad3e07535ad5445c`,
+`MillenniumDosControlTextEvidence` accepts the two separately hash-identified
+original static-data files, never a translation fallback. For English, indices
+271, 350, 390, 398, and 399 select records at `$12a7`, `$1d88`, `$2aef`,
+`$2bcd`, and `$2be3`; their raw-record SHA-256 values are
+`4ff26c46bfaba03c12a1a29271499c81d044ce2cccc8db06ad3e07535ad5445c`,
 `ab5a128110d288c166213ef0e64b8593d1945ab8e9624363c573fe8ef942f818`,
 `b0676d538a2ef6b07cdf467bb10a4dbea34af96fccafc90180a01825935c1d4f`,
 `220c3cd2cb86c2353f8f9320e6ec7c469007e4bd31e11dce52c847f8c510c5cc`, and
 `0951952248daef3634e418d0bed0cfa2ea8cd58f7975ee5e77880c54ad731f2d`.
-The parser returns these exact printable substrings while retaining each raw
-record's native prefix and boundary as provenance. The original static-data
-loader establishes that the file is requested, but its runtime destination and
-any input-dispatch caller remain unrecovered; these texts are therefore not
-host controls.
+
+For the supplied Spanish FAT12 `2200AD4.BIN` (13,254 bytes, SHA-256
+`8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31`), the
+same pointer indices select that edition's raw records at `$1351`, `$1f41`,
+`$2d99`, `$2e98`, and `$2eae`. Their SHA-256 values are
+`1644bb8d9ecb1e41a50804e6966a9f91e99433968d6ce690aa1e8aaad79e00c1`,
+`5d3b18d963f840dce41371210411578f218add619a52c39e49b382db2bb7f0b6`,
+`6af12fa55735c3a6a6a986af3242472e47c01480d2b3e180c21e1996df04cdfd`,
+`cc2cbde218ba9d86e805bf2247d6acf13a15019d28a840fdb67345be5efb28c2`, and
+`e9d50a0d17dd4d11a008b88ccedb3f8b60dd6bdb3ec126ef8e28199b96f143d0`.
+The parser returns only those exact supplied printable substrings while
+retaining each raw record's native prefix and boundary as provenance. The
+original static-data loader establishes that the file is requested, but its
+runtime destination and any input-dispatch caller remain unrecovered; these
+texts are therefore not host controls.
 
 ### Millennium DOS GX canvas
 
