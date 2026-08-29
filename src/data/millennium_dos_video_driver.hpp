@@ -36,6 +36,10 @@ struct MillenniumDosVideoDriverProfile {
     // record offsets and local I/O facts only; callers must not emulate its
     // unproven ES:BX record ABI or resulting blit.
     std::uint16_t function_six_address = 0;
+    // Both identified drivers load a far pointer from ES:BX + $00.  Its
+    // ownership and pointed-to format remain outside this profile.
+    std::uint16_t function_six_source_pointer_offset = 0;
+    std::uint16_t function_six_source_pointer_load_address = 0;
     std::uint16_t function_six_screen_width = 0;
     std::uint16_t function_six_horizontal_offset = 0;
     std::uint16_t function_six_height_offset = 0;

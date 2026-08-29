@@ -905,6 +905,8 @@ parse_deuteros_amiga_title_callback_registration_profile(
     constexpr std::uint32_t descriptor_address = 0x1ef48;
     constexpr std::uint32_t callback_address = 0x1f056;
     constexpr std::uint32_t request_address = 0x1eefa;
+    constexpr std::uint32_t source_table_address = 0x1ee20;
+    constexpr std::size_t source_table_length = 0xa0;
     constexpr std::size_t registration_length = 0xde;
     constexpr std::size_t callback_length = 0xfa;
     constexpr std::string_view stage_hash =
@@ -913,6 +915,8 @@ parse_deuteros_amiga_title_callback_registration_profile(
         "f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27";
     constexpr std::string_view callback_hash =
         "ff4b055b2d5128465c891debcad00ff4e53cbf661de47b9ee3d6278f33d5e5f8";
+    constexpr std::string_view source_table_hash =
+        "2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265";
     const auto& stage = plan.title_stage;
     const auto stage_code = [&](std::uint32_t address, std::size_t length) {
         if (stage.length == 0 || address < stage.destination
@@ -925,9 +929,11 @@ parse_deuteros_amiga_title_callback_registration_profile(
     const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto registration = stage_code(registration_entry, registration_length);
     const auto callback = stage_code(callback_address, callback_length);
+    const auto source_table = stage_code(source_table_address, source_table_length);
     if (to_hex(sha256(stage_bytes)) != stage_hash
         || to_hex(sha256(registration)) != registration_hash
-        || to_hex(sha256(callback)) != callback_hash) {
+        || to_hex(sha256(callback)) != callback_hash
+        || to_hex(sha256(source_table)) != source_table_hash) {
         throw std::runtime_error("Unsupported Deuteros title callback registration");
     }
 
@@ -954,6 +960,8 @@ parse_deuteros_amiga_title_callback_registration_profile(
     if (big16(registration, 0xd8) != 4) throw std::runtime_error("Unexpected Deuteros callback Exec base");
     require_word(registration, 0xda, 0x4eae);
     if (big16(registration, 0xdc) != 0xfe32) throw std::runtime_error("Unexpected Deuteros callback Exec vector");
+    const auto registration_return = stage_code(registration_entry + registration_length, 2);
+    require_word(registration_return, 0, 0x4e75); // rts: no local result inspection
 
     // The producer route is entered only for byte one after three early
     // callback returns. It rejects a word >= $50 and pending count >= $14,
@@ -971,7 +979,7 @@ parse_deuteros_amiga_title_callback_registration_profile(
     require_word(callback, 186, 0x0c39);
     if (big16(callback, 188) != 0x14 || big32(callback, 190) != 0x0001eed6 || big16(callback, 194) != 0x642e) throw std::runtime_error("Unexpected Deuteros callback pending limit");
     require_word(callback, 196, 0x207c);
-    require_long(callback, 198, 0x0001ee20);
+    require_long(callback, 198, source_table_address);
     require_word(callback, 208, 0x227c);
     require_long(callback, 210, 0x0001eec0);
     require_word(callback, 230, 0x13b0);
@@ -981,7 +989,9 @@ parse_deuteros_amiga_title_callback_registration_profile(
 
     return {registration_entry, descriptor_address, 0x12, callback_address,
         request_address, 0x1c, 0x28, 9, 4, static_cast<std::int16_t>(-0x1ce),
-        4, {6, 15, 16}, 1, 6, 0x14, 0x1eed6, 0x1ee20, 0x1eec0,
+        registration_entry + registration_length,
+        4, {6, 15, 16}, 1, 6, 0x14, 0x1eed6, source_table_address,
+        source_table_length, std::string(source_table_hash), 0x1eec0,
         std::string(registration_hash), std::string(callback_hash)};
 }
 

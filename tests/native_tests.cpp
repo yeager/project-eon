@@ -973,6 +973,7 @@ int main() {
     assert(title_flow.input_exit_helper_position_stride == 4);
     assert(title_flow.input_exit_helper_private_driver_function == 6);
     assert(title_flow.input_exit_helper_driver_record_address == 0x1349);
+    assert(title_flow.input_exit_helper_driver_record_source_offset_cell_address == 0x1349);
     assert(title_flow.input_exit_helper_driver_record_segment_cell_address == 0x134b);
     assert(title_flow.input_exit_helper_driver_record_table_second_cell_address == 0x134f);
     assert(title_flow.input_exit_helper_driver_record_table_first_cell_address == 0x1351);
@@ -1056,6 +1057,8 @@ int main() {
     assert(ega_profile.function_four_input_offset == 0 && ega_profile.function_four_input_mask == 3);
     assert(ega_profile.function_four_state_address == 0x8d);
     assert(ega_profile.function_six_address == 0x8a6);
+    assert(ega_profile.function_six_source_pointer_offset == 0);
+    assert(ega_profile.function_six_source_pointer_load_address == 0x8d9);
     assert(ega_profile.function_six_screen_width == 0x140);
     assert(ega_profile.function_six_horizontal_offset == 8);
     assert(ega_profile.function_six_height_offset == 0x10);
@@ -1081,6 +1084,8 @@ int main() {
     assert(mcga_profile.function_four_input_offset == 0 && mcga_profile.function_four_input_mask == 3);
     assert(mcga_profile.function_four_state_address == 0xaf);
     assert(mcga_profile.function_six_address == 0x705);
+    assert(mcga_profile.function_six_source_pointer_offset == 0);
+    assert(mcga_profile.function_six_source_pointer_load_address == 0x72e);
     assert(mcga_profile.function_six_screen_width == 0x140);
     assert(mcga_profile.function_thirteen_address == 0x905);
     assert(mcga_profile.function_thirteen_status_port == 0x3da);
@@ -1993,6 +1998,13 @@ int main() {
     assert(spanish_ibm_handoff.second_call_address == 0x024c);
     assert(spanish_ibm_handoff.callee_address == 0x0339);
     assert(spanish_ibm_handoff.callee_return_address == 0x0368);
+    assert(spanish_ibm_handoff.exec_parameter_block_address == 0x0708);
+    assert(spanish_ibm_handoff.exec_ax == 0x4b00);
+    assert(spanish_ibm_handoff.exec_interrupt == 0x21);
+    assert(spanish_ibm_handoff.carry_branch_address == 0x0362);
+    assert(spanish_ibm_handoff.carry_branch_target_address == 0x0369);
+    assert(spanish_ibm_handoff.child_status_ah == 0x4d);
+    assert(spanish_ibm_handoff.child_status_interrupt == 0x21);
     // The complete Spanish executable ABI remains a separate preservation
     // boundary, but its F8 selected-record gate bytes are independently
     // accepted from the genuine FAT12 file in place.
@@ -3534,6 +3546,7 @@ int main() {
     assert(title_callback.request_command_value == 9);
     assert(title_callback.exec_base_address == 4);
     assert(title_callback.exec_vector == -0x1ce);
+    assert(title_callback.registration_return_address == 0x1f052);
     assert(title_callback.callback_a0_event_offset == 4);
     assert((title_callback.callback_early_return_values == std::array<std::uint8_t, 3>{{6, 15, 16}}));
     assert(title_callback.callback_producer_value == 1);
@@ -3541,6 +3554,9 @@ int main() {
     assert(title_callback.callback_pending_limit == 0x14);
     assert(title_callback.callback_pending_word_address == 0x1eed6);
     assert(title_callback.callback_source_table_address == 0x1ee20);
+    assert(title_callback.callback_source_table_byte_count == 0xa0);
+    assert(title_callback.callback_source_table_sha256
+        == "2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265");
     assert(title_callback.callback_destination_address == 0x1eec0);
     assert(title_callback.registration_sha256
         == "f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27");
@@ -3601,6 +3617,21 @@ int main() {
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x7a056] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_callback_registration_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        // A malformed copy is used only to prove that the parser fails closed;
+        // no replacement game data is constructed or executed.
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x79e20] ^= 0x01;
         bool rejected = false;
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
