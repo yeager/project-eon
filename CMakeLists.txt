@@ -212,8 +212,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set_source_files_properties(
         src/main.cpp
         src/engine/deuteros_atari_bootstrap_session.cpp
-        tests/native_tests.cpp
         PROPERTIES COMPILE_OPTIONS "-O1")
+    # The monolithic preservation corpus test hits a distinct GCC 15 RTL
+    # optimiser crash even at -O1. It is test-only code, so disable
+    # optimisation for this one translation unit rather than weakening the
+    # executable or recovered parsers.
+    set_source_files_properties(tests/native_tests.cpp PROPERTIES COMPILE_OPTIONS "-O0")
 endif()
 
 include(CTest)

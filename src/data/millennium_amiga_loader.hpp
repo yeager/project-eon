@@ -634,4 +634,21 @@ parse_millennium_amiga_resident_separate_post_external_call_boundary(
     const AmigaAdf&, const MillenniumAmigaLoadPlan&,
     const MillenniumAmigaResidentSeparateByteGateTakenBranchBoundary&);
 
+// The terminal JMP in the conditional post-external-call byte sequence names
+// this raw resident source window.  The loader's transform is not recovered,
+// so these bytes are provenance only and must not be decoded as executable
+// target instructions.
+struct MillenniumAmigaResidentSeparateTerminalJumpRawTargetBoundary {
+    std::uint32_t jump_address = 0;
+    std::uint32_t target_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+};
+
+[[nodiscard]] MillenniumAmigaResidentSeparateTerminalJumpRawTargetBoundary
+parse_millennium_amiga_resident_separate_terminal_jump_raw_target_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&,
+    const MillenniumAmigaResidentSeparatePostExternalCallBoundary&);
+
 } // namespace eon

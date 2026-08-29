@@ -350,6 +350,36 @@ struct DeuterosAmigaTitlePostExecStateInitProfile {
 parse_deuteros_amiga_title_post_exec_state_init_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// The third direct target in the post-Exec service batch first calls a
+// complete local graphics-library setup routine.  The routine's three vector
+// calls remain explicit ABI boundaries.  If that routine returns, the caller
+// loads a literal A6 value and tail-jumps within the title stage.  This profile
+// is byte provenance only: it does not call vectors, write their operands, or
+// claim that the tail target was reached at runtime.
+struct DeuterosAmigaTitlePostExecThirdServiceProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t dispatch_entry_address = 0;
+    std::uint32_t graphics_service_address = 0;
+    std::uint32_t graphics_library_base_address = 0;
+    std::array<std::int16_t, 3> graphics_library_vectors{};
+    std::uint32_t status_byte_address = 0;
+    std::uint32_t destination_pointer_literal = 0;
+    std::uint32_t destination_pointer_cell_address = 0;
+    std::uint32_t descriptor_address = 0;
+    std::array<std::uint16_t, 3> descriptor_offsets{};
+    std::array<std::uint16_t, 3> descriptor_values{};
+    std::uint32_t service_return_address = 0;
+    std::uint32_t dispatcher_a6_literal = 0;
+    std::uint32_t dispatcher_tail_jump_address = 0;
+    std::string caller_sha256;
+    std::string dispatch_sha256;
+    std::string service_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecThirdServiceProfile
+parse_deuteros_amiga_title_post_exec_third_service_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // The first common internal setup callee opens the literal
 // `graphics.library` name through an Exec vector.  Its return is an explicit
 // ABI input: zero enters the original self-loop and any nonzero longword is

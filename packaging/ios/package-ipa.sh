@@ -43,28 +43,8 @@ stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/Payload"
 cp -R "$app" "$stage/Payload/ProjectEon.app"
 (cd "$stage" && /usr/bin/zip -qr "$ipa" Payload)
-unzip -tq "$ipa" >/dev/null
-for required in \
-  Payload/ProjectEon.app/Resources/assets/cards/millennium.png \
-  Payload/ProjectEon.app/Resources/assets/cards/deuteros.png; do
-  if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
-    echo "IPA validation failed: missing $required" >&2
-    exit 1
-  fi
-done
-for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
-    NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
-    NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do
-  required="Payload/ProjectEon.app/Resources/assets/fonts/$font"
-  if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
-    echo "IPA validation failed: missing $required" >&2
-    exit 1
-  fi
-done
-for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
-  required="Payload/ProjectEon.app/Resources/po/$catalog.po"
-  if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
-    echo "IPA validation failed: missing $required" >&2
-    exit 1
-  fi
-done
+if ! python3 "$(dirname "$0")/verify-ipa.py" "$ipa"; then
+  # Do not leave a failed archive in a directory that a caller may upload.
+  rm -f "$ipa"
+  exit 1
+fi

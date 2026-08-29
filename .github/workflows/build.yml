@@ -560,6 +560,9 @@ jobs:
           APP=$(find build-ios -name 'project-eon.app' -type d -print -quit)
           test -n "$APP"
           bash packaging/ios/package-ipa.sh "$APP" "$GITHUB_WORKSPACE/project-eon-ipados-arm64-unsigned.ipa"
+          # Validate the finished archive, not only the app bundle passed to
+          # the packager, before it can enter the artifact manifest/upload.
+          python3 packaging/ios/verify-ipa.py "$GITHUB_WORKSPACE/project-eon-ipados-arm64-unsigned.ipa"
       - name: Write artifact integrity manifest
         run: >-
           python3 packaging/write-artifact-manifest.py

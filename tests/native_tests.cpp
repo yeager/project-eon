@@ -165,6 +165,43 @@ void assert_deuteros_amiga_post_exec_state_init(const std::vector<std::uint8_t>&
     }
 }
 
+void assert_deuteros_amiga_post_exec_third_service(const std::vector<std::uint8_t>& system_adf,
+    const eon::AmigaAdf& disk, const eon::DeuterosAmigaLoadPlan& plan) {
+    const auto profile = eon::parse_deuteros_amiga_title_post_exec_third_service_profile(disk, plan);
+    assert(profile.caller_address == 0x40400);
+    assert(profile.dispatch_entry_address == 0x1f37a);
+    assert(profile.graphics_service_address == 0x20094);
+    assert(profile.graphics_library_base_address == 0x12fec);
+    assert((profile.graphics_library_vectors == std::array<std::int16_t, 3>{{-0x19e, -0x198, -0x1a4}}));
+    assert(profile.status_byte_address == 0x20092);
+    assert(profile.destination_pointer_literal == 0x1ffe6);
+    assert(profile.destination_pointer_cell_address == 0x2008e);
+    assert(profile.descriptor_address == 0x1ffda);
+    assert((profile.descriptor_offsets == std::array<std::uint16_t, 3>{{0x0006, 0x0008, 0x0004}}));
+    assert((profile.descriptor_values == std::array<std::uint16_t, 3>{{0x000a, 0x000a, 0x000c}}));
+    assert(profile.service_return_address == 0x200fa);
+    assert(profile.dispatcher_a6_literal == 0x1f372);
+    assert(profile.dispatcher_tail_jump_address == 0x201d2);
+    assert(profile.caller_sha256
+        == "901b0ad5740a3e6aea3eba28b6aadf5ac5c187e961cc848f6f1a882b3592f464");
+    assert(profile.dispatch_sha256
+        == "58e85705bc821d42834936342b242162c749889b9d9c23c3d5896f7bcf06e4ff");
+    assert(profile.service_sha256
+        == "7427cdaa0f716496e21c5ef0f6a8d0850a9606a9b4ffe6e56df599109b0ca947");
+    for (const auto disk_offset : {0x9b400U, 0x7a37aU, 0x7b094U}) {
+        auto altered = system_adf;
+        altered[disk_offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_third_service_profile(
+                eon::AmigaAdf(std::move(altered)), plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+}
+
 } // namespace
 
 int main() {
@@ -909,6 +946,15 @@ int main() {
     assert(defjam_post_external_call.terminal_jump_target_raw_disk_offset == 0x2a94e);
     assert(defjam_post_external_call.terminal_jump_target_prefix_sha256
         == "502069bdbda2f35899d16237fd1d2aa477be20f0c950231fb71f32583f23de14");
+    const auto defjam_terminal_jump_raw_target =
+        eon::parse_millennium_amiga_resident_separate_terminal_jump_raw_target_boundary(
+            defjam_loader_disk, defjam_plan, defjam_post_external_call);
+    assert(defjam_terminal_jump_raw_target.jump_address == 0x68f72);
+    assert(defjam_terminal_jump_raw_target.target_address == 0x7c54e);
+    assert(defjam_terminal_jump_raw_target.raw_disk_offset == 0x2a94e);
+    assert(defjam_terminal_jump_raw_target.byte_count == 256);
+    assert(defjam_terminal_jump_raw_target.sha256
+        == "0149a457e657e18805ff61675e80741fa78d25f201f120498193315804b87eea");
     auto invalid_post_external_call_disk_bytes = *defjam_adf;
     invalid_post_external_call_disk_bytes[0x1734e] ^= 0x01;
     bool invalid_post_external_call_rejected = false;
@@ -922,6 +968,19 @@ int main() {
         invalid_post_external_call_rejected = true;
     }
     assert(invalid_post_external_call_rejected);
+    auto invalid_terminal_jump_raw_target_disk_bytes = *defjam_adf;
+    invalid_terminal_jump_raw_target_disk_bytes[0x2a94e + 255] ^= 0x01;
+    bool invalid_terminal_jump_raw_target_rejected = false;
+    try {
+        const eon::AmigaAdf invalid_terminal_jump_raw_target_disk(
+            std::move(invalid_terminal_jump_raw_target_disk_bytes));
+        static_cast<void>(
+            eon::parse_millennium_amiga_resident_separate_terminal_jump_raw_target_boundary(
+                invalid_terminal_jump_raw_target_disk, defjam_plan, defjam_post_external_call));
+    } catch (const std::runtime_error&) {
+        invalid_terminal_jump_raw_target_rejected = true;
+    }
+    assert(invalid_terminal_jump_raw_target_rejected);
     // Every supplied Millennium Amiga image shares the verified resident raw
     // range. One image is shorter than a standard ADF, so check the common
     // raw bytes directly rather than incorrectly forcing it through the ADF
@@ -973,6 +1032,10 @@ int main() {
         assert(eon::to_hex(eon::sha256(bytes.subspan(
             defjam_post_external_call.terminal_jump_target_raw_disk_offset, 32)))
             == defjam_post_external_call.terminal_jump_target_prefix_sha256);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(
+            defjam_terminal_jump_raw_target.raw_disk_offset,
+            defjam_terminal_jump_raw_target.byte_count)))
+            == defjam_terminal_jump_raw_target.sha256);
         for (std::size_t index = 0;
              index < defjam_separate_post_call_tail.target_raw_disk_offsets.size(); ++index) {
             assert(eon::to_hex(eon::sha256(bytes.subspan(
@@ -4093,6 +4156,7 @@ int main() {
     assert(post_exec_graphics_vector.routine_sha256
         == "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f");
     assert_deuteros_amiga_post_exec_state_init(*amiga_disk1, system_disk, load_plan);
+    assert_deuteros_amiga_post_exec_third_service(*amiga_disk1, system_disk, load_plan);
     {
         auto altered_pointer_seed_disk = *amiga_disk1;
         altered_pointer_seed_disk[0x9b4c2] ^= 0x01;

@@ -700,6 +700,16 @@ variant. It does not claim `$7caa6` returns, that any later call returns, that
 the absolute cells are live, that the target bytes are their runtime code, or
 that the final jump occurs.
 
+The terminal-jump target itself is retained as a larger source-only recovery
+boundary. The 256 original bytes at `$7c54e` / ADF `+0x2a94e` hash to
+`0149a457e657e18805ff61675e80741fa78d25f201f120498193315804b87eea` across
+all six supplied images. `MillenniumAmigaResidentSeparateTerminalJumpRawTargetBoundary`
+rejects any changed byte in that complete window. It deliberately does not
+decode the bytes as instructions: the established loader transform means the
+linear raw correspondence is provenance, not proof of runtime representation.
+Nor does the boundary claim that the preceding unknown calls return, the
+terminal jump executes, or the target has any recovered semantics.
+
 The next local static control-flow prefix begins at `$68dc0` / ADF `+0x171c0`.
 Its 14 bytes, SHA-256
 `ef2fe6161118a1b0ac6cee838be9a4dc2b0483ba274a213d3ac653ea6f334e3b`, load
@@ -2996,3 +3006,22 @@ four straight-line operands followed by RTS: word literals `$0000` and
 byte provenance. It does not perform those writes or infer their meanings:
 reaching this second batch call still requires the preceding graphics vector
 and every earlier unresolved original call to return.
+
+The third batch edge at `$40400..$40405` / ADF `+0x9b400` hashes to
+`901b0ad5740a3e6aea3eba28b6aadf5ac5c187e961cc848f6f1a882b3592f464` and
+targets `$1f37a`. Its primary 18-byte entry `$1f37a..$1f38b` / ADF
+`+0x7a37a` hashes to
+`58e85705bc821d42834936342b242162c749889b9d9c23c3d5896f7bcf06e4ff`: it
+first calls local `$20094`, then—only if that call returns—loads A6 with
+literal `$1f372` and tail-jumps to `$201d2`. The independently bounded
+`$20094..$200f9` routine / ADF `+0x7b094` is 102 bytes and hashes to
+`7427cdaa0f716496e21c5ef0f6a8d0850a9606a9b4ffe6e56df599109b0ca947`.
+It clears D0 and calls graphics-library vectors `-$19e`, `-$198`, and
+`-$1a4` through A6 loaded from `$12fec`; it records the first result byte at
+`$20092`, literal pointer `$1ffe6` at `$2008e`, and three literal words
+`$000a/$000a/$000c` at offsets `$0006/$0008/$0004` from `$1ffda`, before RTS
+at `$200f8`. `DeuterosAmigaTitlePostExecThirdServiceProfile` hash-locks all
+three spans and these operands. It does not call any vector, supply a vector
+result, write any title-stage cell, or execute the tail jump. Reaching this
+third edge requires the earlier graphics vector, state-init routine, and all
+prior original calls to return.
