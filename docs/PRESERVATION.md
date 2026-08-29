@@ -4466,6 +4466,18 @@ It records table literal `$4129a`, bit 15, local target `$41c32`, continuation
 `DeuterosAmigaTitlePostExecPairedLocalRouteProfile` never reads the table or
 cells, takes a branch, performs a copy/write, or assigns visual semantics.
 
+The following caller `$4051e..$40531` has SHA-256
+`98306b421ce3f0216642ad091dc72ffb63ab1325b68c839b8814d4e4fc25dac6` and
+reaches local `$20e18..$20ea3` (140 bytes,
+`037c48dd824e064d3734fb4b72b6e649bfda6b9a7a764147a76690f4ce9506e0`). Its
+three absolute call operands are `$1fb9a`, `$1ff08`, and `$22bca`; a local
+BSR enters `$20ba8..$20bf1` (74 bytes,
+`25dcfad3d1b9298771e33cab73a4de86cd8ff9c27d7fdef787be5ef750f7035b`), whose
+DBF loop has RTS `$20bf0`. After its return the parent branches `$20bf2`.
+`DeuterosAmigaTitlePostExecServiceRouteProfile` hash-locks these spans without
+entering any external call, reading source cells, selecting loop branches, or
+writing original state.
+
 The next complete instruction starts at `$40616`, so
 `DeuterosAmigaTitlePostExecTailFlagGateProfile` deliberately overlaps the
 preceding span's final opcode word. Its 94-byte span `$40616..$40673` / ADF
