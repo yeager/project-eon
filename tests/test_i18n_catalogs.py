@@ -133,6 +133,17 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("Unicode-rendering boundary", documentation)
         self.assertIn("SDL_RenderDebugText", documentation)
 
+    def test_unicode_renderer_plan_covers_every_shipped_catalog(self) -> None:
+        """A future bundled-font renderer must not drop a catalog by accident."""
+        plan = (ROOT / "docs" / "UNICODE_RENDERING.md").read_text(encoding="utf-8")
+        self.assertIn("release-3.2.2", plan)
+        self.assertIn("SDLTTF_HARFBUZZ=ON", plan)
+        self.assertIn("SDL3_ttf::SDL3_ttf", plan)
+        self.assertIn("OFL-1.1", plan)
+        for language in sorted(CATALOGS):
+            with self.subTest(language=language):
+                self.assertIn(f"`{language}`", plan)
+
     def test_variable_evidence_panel_uses_language_neutral_notation(self) -> None:
         """Addresses and bytes may vary, but launcher wording must use PO text."""
         source = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
