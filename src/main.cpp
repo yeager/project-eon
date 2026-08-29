@@ -858,6 +858,17 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << post_exec_tail_return_continuation.indirect_call_pointer_literal
         << ", stop 0x" << post_exec_tail_return_continuation.stop_before_address
         << " (all ABI returns unmodelled)" << std::dec << '\n';
+    const auto post_exec_pointer_route =
+        eon::parse_deuteros_amiga_title_post_exec_pointer_route_profile(disk, plan);
+    std::cout << "          Conditional pointer route: JSR 0x" << std::hex
+        << post_exec_pointer_route.caller_address << " -> 0x"
+        << post_exec_pointer_route.entry_address << "; pointer literals 0x"
+        << post_exec_pointer_route.selected_pointer_literal << "/0x"
+        << post_exec_pointer_route.alternate_pointer_literal << " via cell 0x"
+        << post_exec_pointer_route.selected_pointer_cell_address << ", branches 0x"
+        << post_exec_pointer_route.selected_branch_target << "/0x"
+        << post_exec_pointer_route.alternate_branch_target
+        << " (conditions and ABI returns unmodelled)" << std::dec << '\n';
     const auto post_exec_tail_flag_gate =
         eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(disk, plan);
     std::cout << "          Conditional tail flag gate: 0x" << std::hex

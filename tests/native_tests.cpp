@@ -7000,6 +7000,29 @@ int main() {
     assert(post_exec_tail_return_continuation.stop_before_address == 0x40618);
     assert(post_exec_tail_return_continuation.sha256
         == "10a96a2c80f83b32530ed9355cb2988bcac233c49f66d93484b31d0c0e3667c6");
+    const auto post_exec_pointer_route =
+        eon::parse_deuteros_amiga_title_post_exec_pointer_route_profile(system_disk, load_plan);
+    assert(post_exec_pointer_route.caller_address == 0x40504);
+    assert(post_exec_pointer_route.caller_continuation_address == 0x4050a);
+    assert(post_exec_pointer_route.entry_address == 0x2022a);
+    assert(post_exec_pointer_route.entry_local_call_target == 0x20238);
+    assert(post_exec_pointer_route.entry_clear_flag_address == 0x1ffd9);
+    assert(post_exec_pointer_route.entry_return_address == 0x20236);
+    assert(post_exec_pointer_route.selected_flag_address == 0x1ffd8);
+    assert(post_exec_pointer_route.selected_pointer_cell_address == 0x2008e);
+    assert(post_exec_pointer_route.selected_pointer_literal == 0x1ffe6);
+    assert(post_exec_pointer_route.selected_flag_value == 1);
+    assert(post_exec_pointer_route.selected_branch_target == 0x200dc);
+    assert(post_exec_pointer_route.alternate_entry_address == 0x20258);
+    assert(post_exec_pointer_route.alternate_flag_address == 0x1ffd8);
+    assert(post_exec_pointer_route.alternate_pointer_cell_address == 0x2008e);
+    assert(post_exec_pointer_route.alternate_pointer_literal == 0x2001e);
+    assert(post_exec_pointer_route.alternate_branch_target == 0x200fa);
+    assert(post_exec_pointer_route.alternate_return_address == 0x20274);
+    assert(post_exec_pointer_route.caller_sha256
+        == "ce9c44a0a83e370fdf54b5ec8ef0ffd72c170b007419176403293d2a54f91188");
+    assert(post_exec_pointer_route.routine_sha256
+        == "a7f7c0c3efa60284b3d292249b3560da4d832ff0c5dfa34711b72604760b39a9");
     const auto post_exec_tail_flag_gate =
         eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(system_disk, load_plan);
     assert(post_exec_tail_flag_gate.entry_address == 0x40616);
@@ -7118,6 +7141,32 @@ int main() {
             static_cast<void>(
                 eon::parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(
                     altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_pointer_route_caller_disk = *amiga_disk1;
+        altered_pointer_route_caller_disk[0x9b504] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_pointer_route_caller_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_pointer_route_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_pointer_route_disk = *amiga_disk1;
+        altered_pointer_route_disk[0x7b22a] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_pointer_route_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_pointer_route_profile(
+                altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

@@ -2223,6 +2223,62 @@ parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(
         0x4069a, 0x1bf36, stop_before_address, std::string(profile_hash)};
 }
 
+DeuterosAmigaTitlePostExecPointerRouteProfile
+parse_deuteros_amiga_title_post_exec_pointer_route_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // The static caller at `$40504` can arrive only after all preceding
+    // post-Exec continuation calls return.  `$2022a` then has a local BSR,
+    // a raw flag clear, and an RTS.  Its primary subroute may branch to the
+    // separately profiled graphics wrapper at `$200dc`; retain the adjacent
+    // alternative entry as evidence only, without choosing either condition.
+    constexpr std::uint32_t caller_address = 0x40504;
+    constexpr std::uint32_t caller_continuation_address = 0x4050a;
+    constexpr std::uint32_t entry_address = 0x2022a;
+    constexpr std::array<std::uint8_t, 6> caller_bytes{{
+        0x4e, 0xb9, 0x00, 0x02, 0x02, 0x2a,
+    }};
+    constexpr std::array<std::uint8_t, 76> routine_bytes{{
+        0x61, 0x00, 0x00, 0x0c, 0x13, 0xfc, 0x00, 0x00, 0x00, 0x01, 0xff, 0xd9,
+        0x4e, 0x75, 0x4a, 0x39, 0x00, 0x01, 0xff, 0xd8, 0x67, 0x02, 0x4e, 0x75,
+        0x23, 0xfc, 0x00, 0x01, 0xff, 0xe6, 0x00, 0x02, 0x00, 0x8e, 0x13, 0xfc,
+        0x00, 0x01, 0x00, 0x01, 0xff, 0xd8, 0x60, 0x00, 0xfe, 0x86, 0x4a, 0x39,
+        0x00, 0x01, 0xff, 0xd8, 0x67, 0x14, 0x42, 0x39, 0x00, 0x01, 0xff, 0xd8,
+        0x23, 0xfc, 0x00, 0x02, 0x00, 0x1e, 0x00, 0x02, 0x00, 0x8e, 0x60, 0x00,
+        0xfe, 0x88, 0x4e, 0x75,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash =
+        "ce9c44a0a83e370fdf54b5ec8ef0ffd72c170b007419176403293d2a54f91188";
+    constexpr std::string_view routine_hash =
+        "a7f7c0c3efa60284b3d292249b3560da4d832ff0c5dfa34711b72604760b39a9";
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](const std::uint32_t address, const std::size_t length) {
+        return stage.length != 0 && address >= stage.destination
+            && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (!in_stage(caller_address, caller_bytes.size())
+        || !in_stage(entry_address, routine_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec pointer route lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
+    const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || to_hex(sha256(caller)) != caller_hash
+        || to_hex(sha256(routine)) != routine_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec pointer-route profile");
+    }
+    return {caller_address, caller_continuation_address, entry_address,
+        0x20238, 0x1ffd9, 0x20236,
+        0x1ffd8, 0x2008e, 0x1ffe6, 1, 0x200dc,
+        0x20258, 0x1ffd8, 0x2008e, 0x2001e, 0x200fa, 0x20274,
+        std::string(caller_hash), std::string(routine_hash)};
+}
+
 DeuterosAmigaTitlePostExecTailFlagGateProfile
 parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
