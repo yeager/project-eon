@@ -57,6 +57,18 @@ user-supplied release whose game, platform, language, outer SHA-256 and byte
 size all match the manifest. Matching a filename, a similar regional release,
 or another platform is insufficient.
 
+After verification the CLI prints the three opaque capture fingerprints as
+`config=`, `command-tail=`, and `input-timeline=` alongside the source and
+event identities. This lets an independent reviewer compare two capture
+environments without Project Eon opening those potentially private files or
+turning their contents into runtime input. The recorder must retain the
+preimages separately when disclosure is appropriate; a SHA-256 declaration
+alone proves identity only when it can be compared to such retained evidence.
+
+Capture timestamps are validated as real Gregorian UTC instants (including
+leap years), not merely strings shaped like timestamps. They establish a
+capture boundary and ordering only; they do not establish emulation timing.
+
 ### v2 adapter manifest addition
 
 A v2 manifest has the same required records plus this one exact record:

@@ -231,11 +231,37 @@ def main() -> int:
             )
             if (trace_report.returncode != 0
                     or "REFERENCE TRACE VERIFIED  provenance-only; no replay performed" not in trace_report.stdout
+                    or ("capture fingerprints config=" + "0" * 64
+                        + " command-tail=" + "0" * 64
+                        + " input-timeline=" + "0" * 64) not in trace_report.stdout
                     or f"adapter {adapter} (" not in trace_report.stdout
                     or expected_diagnostics not in trace_report.stdout):
                 raise SystemExit(
                     f"{adapter} was not admitted and reported through the public CLI:\n"
                     f"{trace_report.stdout}\n{trace_report.stderr}"
+                )
+            # A timestamp-shaped string is not enough provenance: calendar
+            # validity is enforced before an otherwise hash-matched genuine
+            # release can receive a trace report. This remains validation
+            # only; it does not alter the original archive or replay an event.
+            invalid_time_manifest = trace_root / f"{adapter}-invalid-time.eontrace"
+            invalid_time_manifest.write_text(
+                manifest.read_text(encoding="ascii").replace(
+                    "capture_start_utc\t2026-08-29T00:00:00Z",
+                    "capture_start_utc\t2026-02-29T00:00:00Z",
+                ),
+                encoding="ascii",
+            )
+            invalid_time_report = subprocess.run(
+                (str(executable), "--data", str(data_directory), "--game", game,
+                    "--platform", platform, "--reference-trace", str(invalid_time_manifest)),
+                env=environment, check=False, capture_output=True, text=True,
+            )
+            if (invalid_time_report.returncode == 0
+                    or "invalid versioned values" not in invalid_time_report.stderr):
+                raise SystemExit(
+                    f"{adapter} accepted an impossible UTC capture date:\n"
+                    f"{invalid_time_report.stdout}\n{invalid_time_report.stderr}"
                 )
 
     # Pack bytes are deliberately temporary test fixtures, outside supplied
