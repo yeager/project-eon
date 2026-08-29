@@ -17,6 +17,21 @@ MillenniumAmigaBootstrapSession::MillenniumAmigaBootstrapSession(
         throw std::runtime_error("Millennium Amiga raw resident plan differs from shared evidence");
     }
     resident_entry_ = parse_millennium_amiga_resident_entry(disk, plan_);
+    opaque_invocation_boundary_ =
+        parse_millennium_amiga_bootstrap_opaque_invocation_boundary(disk, plan_);
+    first_stage_source_anchors_ =
+        parse_millennium_amiga_first_stage_source_anchor_boundary(disk, plan_);
+
+    // Keep the diagnostic boundary joined to the same session-owned plan.
+    // This guards against a future caller validating one plan but reporting
+    // a continuation/anchor record derived from another image or range.
+    if (opaque_invocation_boundary_.first_stage_target != plan_.first_stage.destination
+        || opaque_invocation_boundary_.resident_stage_target != plan_.resident_entry
+        || first_stage_source_anchors_.raw_disk_offset != plan_.first_stage.disk_offset
+        || first_stage_source_anchors_.byte_count != plan_.first_stage.length
+        || first_stage_source_anchors_.sha256 != plan_.first_stage.raw_sha256) {
+        throw std::runtime_error("Millennium Amiga bootstrap evidence is detached from load plan");
+    }
 }
 
 } // namespace eon

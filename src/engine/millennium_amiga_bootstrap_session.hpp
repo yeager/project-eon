@@ -20,11 +20,28 @@ public:
     [[nodiscard]] const MillenniumAmigaResidentEntry& resident_entry() const {
         return resident_entry_;
     }
+    // This is the checked caller-side continuation from the boot loader.  It
+    // records that the original first stage is invoked through A3 and that
+    // the resident entry is the terminal A3 jump; it never invokes either
+    // raw stage or assumes that the first one returns.
+    [[nodiscard]] const MillenniumAmigaBootstrapOpaqueInvocationBoundary&
+    opaque_invocation_boundary() const {
+        return opaque_invocation_boundary_;
+    }
+    // These anchors belong to the exact bytes requested by the opaque first
+    // stage. They are source provenance only and are not a decoded first
+    // stage, API model, input map, or renderer input.
+    [[nodiscard]] const MillenniumAmigaFirstStageSourceAnchorBoundary&
+    first_stage_source_anchors() const {
+        return first_stage_source_anchors_;
+    }
 
 private:
     MillenniumAmigaLoadPlan plan_;
     MillenniumAmigaSharedResidentLayout shared_resident_;
     MillenniumAmigaResidentEntry resident_entry_;
+    MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary_;
+    MillenniumAmigaFirstStageSourceAnchorBoundary first_stage_source_anchors_;
 };
 
 } // namespace eon

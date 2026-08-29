@@ -1084,6 +1084,13 @@ int main() {
     assert(defjam_session.shared_resident().raw_sha256
         == "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e");
     assert(defjam_session.resident_entry().entry_address == 0x68000);
+    assert(defjam_session.opaque_invocation_boundary().entry_address == 0x7029e);
+    assert(defjam_session.opaque_invocation_boundary().first_stage_target == 0x41000);
+    assert(defjam_session.opaque_invocation_boundary().resident_stage_target == 0x68000);
+    assert(defjam_session.first_stage_source_anchors().raw_disk_offset == 0x24200);
+    assert(defjam_session.first_stage_source_anchors().byte_count == 0x6e000);
+    assert(defjam_session.first_stage_source_anchors().sha256
+        == defjam_session.plan().first_stage.raw_sha256);
     assert(defjam_plan.bootstrap_loader.disk_offset == 0x400);
     assert(defjam_plan.bootstrap_loader.length == 0x400);
     assert(defjam_plan.bootstrap_loader.destination == 0x70000);
