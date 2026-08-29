@@ -65,6 +65,8 @@
 #include <span>
 #include <vector>
 
+#include <zlib.h>
+
 namespace {
 
 void assert_deuteros_atari_post_callback_callees(const std::vector<std::uint8_t>& second_stage,
@@ -579,13 +581,43 @@ void assert_modern_asset_pack_admission() {
     const auto render_root = root / "render-title";
     std::filesystem::create_directories(render_root);
     const auto png = render_root / "title.png";
-    const std::vector<std::uint8_t> png_bytes{
-        0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a,
-        0, 0, 0, 13, 'I', 'H', 'D', 'R', 0, 0, 2, 128, 0, 0, 1, 144,
-        8, 6, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 'I', 'D', 'A', 'T', 0, 0, 0, 0,
-        0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82,
+    // The runtime's mapping is decoder-independent, so construct a small
+    // structurally valid PNG with correct CRCs here.  Its empty IDAT is not
+    // sent to SDL_image; this only exercises the pre-decoder admission gate.
+    const auto mapped_png = [](const std::uint32_t width, const std::uint32_t height) {
+        std::vector<std::uint8_t> bytes{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a};
+        const auto append_u32 = [&bytes](const std::uint32_t value) {
+            bytes.push_back(static_cast<std::uint8_t>(value >> 24U));
+            bytes.push_back(static_cast<std::uint8_t>(value >> 16U));
+            bytes.push_back(static_cast<std::uint8_t>(value >> 8U));
+            bytes.push_back(static_cast<std::uint8_t>(value));
+        };
+        const auto append_chunk = [&bytes, &append_u32](const std::array<char, 4>& type,
+                                                         const std::vector<std::uint8_t>& data) {
+            append_u32(static_cast<std::uint32_t>(data.size()));
+            bytes.insert(bytes.end(), type.begin(), type.end());
+            bytes.insert(bytes.end(), data.begin(), data.end());
+            uLong crc = crc32(0L, Z_NULL, 0);
+            crc = crc32(crc, reinterpret_cast<const Bytef*>(type.data()), type.size());
+            if (!data.empty()) crc = crc32(crc, data.data(), static_cast<uInt>(data.size()));
+            append_u32(static_cast<std::uint32_t>(crc));
+        };
+        std::vector<std::uint8_t> header;
+        const auto append_header_u32 = [&header](const std::uint32_t value) {
+            header.push_back(static_cast<std::uint8_t>(value >> 24U));
+            header.push_back(static_cast<std::uint8_t>(value >> 16U));
+            header.push_back(static_cast<std::uint8_t>(value >> 8U));
+            header.push_back(static_cast<std::uint8_t>(value));
+        };
+        append_header_u32(width);
+        append_header_u32(height);
+        header.insert(header.end(), {8U, 6U, 0U, 0U, 0U});
+        append_chunk({'I', 'H', 'D', 'R'}, header);
+        append_chunk({'I', 'D', 'A', 'T'}, {});
+        append_chunk({'I', 'E', 'N', 'D'}, {});
+        return bytes;
     };
+    const auto png_bytes = mapped_png(640U, 400U);
     {
         std::ofstream output(png, std::ios::binary);
         output.write(reinterpret_cast<const char*>(png_bytes.data()),
@@ -605,11 +637,7 @@ void assert_modern_asset_pack_admission() {
     assert(surface.pack_id == "render-title" && surface.asset_id == "millennium.dos.title.png-640x400"
         && surface.width == 640 && surface.height == 400
         && surface.png == png_bytes);
-    auto png_4x = png_bytes;
-    png_4x[18] = 5; // 1280 pixels wide.
-    png_4x[19] = 0;
-    png_4x[22] = 3; // 800 pixels tall.
-    png_4x[23] = 32;
+    const auto png_4x = mapped_png(1280U, 800U);
     {
         std::ofstream output(png, std::ios::binary | std::ios::trunc);
         output.write(reinterpret_cast<const char*>(png_4x.data()),
@@ -669,8 +697,7 @@ void assert_modern_asset_pack_admission() {
         render_root / "pack.eonmodern", release_hash));
     } catch (const std::runtime_error&) { wrong_hash_rejected = true; }
     assert(wrong_hash_rejected);
-    auto malformed_png = png_bytes;
-    malformed_png[19] = 1; // Width 65,537 instead of 640.
+    const auto malformed_png = mapped_png(65'537U, 400U);
     {
         std::ofstream output(png, std::ios::binary | std::ios::trunc);
         output.write(reinterpret_cast<const char*>(malformed_png.data()),
@@ -682,6 +709,22 @@ void assert_modern_asset_pack_admission() {
         render_root / "pack.eonmodern", release_hash));
     } catch (const std::runtime_error&) { malformed_rejected = true; }
     assert(malformed_rejected);
+    // Correct release and asset hashes alone must not smuggle a chunk with a
+    // bad internal checksum into SDL_image.  The PNG gate validates every
+    // chunk CRC before decoder input.
+    auto bad_crc_png = png_bytes;
+    bad_crc_png[32] ^= 0x01U; // IHDR checksum's final byte.
+    {
+        std::ofstream output(png, std::ios::binary | std::ios::trunc);
+        output.write(reinterpret_cast<const char*>(bad_crc_png.data()),
+            static_cast<std::streamsize>(bad_crc_png.size()));
+    }
+    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(bad_crc_png)));
+    bool bad_crc_rejected = false;
+    try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash));
+    } catch (const std::runtime_error&) { bad_crc_rejected = true; }
+    assert(bad_crc_rejected);
     auto trailing_png = png_bytes;
     trailing_png.push_back(0);
     {
@@ -1383,6 +1426,8 @@ int main() {
     const eon::AmigaAdf defjam_loader_disk(*defjam_adf);
     const auto defjam_plan = eon::parse_millennium_amiga_load_plan(defjam_loader_disk);
     const eon::MillenniumAmigaBootstrapSession defjam_session(*defjam_adf);
+    assert(defjam_session.post_negative_d3_terminal().entry_address == 0x685fe);
+    assert(defjam_session.post_negative_d3_continuation().entry_address == 0x6861a);
     assert(defjam_session.plan().loader_magic == 0xa8d398fb);
     assert(defjam_session.shared_resident().raw_sha256
         == "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e");
@@ -1731,6 +1776,55 @@ int main() {
     assert(defjam_post_negative_d3_continuation.byte_count == 54);
     assert(defjam_post_negative_d3_continuation.raw_sha256
         == "d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce");
+    // The BPL target is now a bounded, call-free execution prefix.  It keeps
+    // word-width arithmetic and both unresolved branches explicit rather
+    // than treating the terminal external jump as a host call.
+    const auto continuation_external =
+        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
+            defjam_post_negative_d3_continuation,
+            {0xaabbccdd, 0x12340002, 0x56780001, 0x00000040, 0x11110000, 0x22220000, 0x33445566});
+    assert(continuation_external.d1 == 0x12342802);
+    assert(continuation_external.d2 == 0x56782801);
+    assert(continuation_external.d3 == 0x00002840);
+    assert(continuation_external.d6 == 0x1111a502);
+    assert(continuation_external.d7 == 0x2222a501);
+    assert((continuation_external.restored_registers
+        == std::array<std::uint32_t, 5>{{0xaabbccdd, 0x12340002, 0x56780001, 0x00000040, 0x33445566}}));
+    assert(continuation_external.stop
+        == eon::MillenniumAmigaResidentPostNegativeD3ContinuationStop::external_jump_boundary);
+    assert(continuation_external.next_address == 0x7bef0);
+    const auto continuation_low_range =
+        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
+            defjam_post_negative_d3_continuation, {0, 0, 0, 0xd800});
+    assert(continuation_low_range.d3 == 0);
+    assert(continuation_low_range.stop
+        == eon::MillenniumAmigaResidentPostNegativeD3ContinuationStop::low_range_branch_boundary);
+    assert(continuation_low_range.next_address == 0x68650);
+    const auto continuation_negative_range =
+        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
+            defjam_post_negative_d3_continuation, {0, 0, 0, 0x6000});
+    assert(continuation_negative_range.d3 == 0x8800);
+    assert(continuation_negative_range.stop
+        == eon::MillenniumAmigaResidentPostNegativeD3ContinuationStop::negative_range_branch_boundary);
+    assert(continuation_negative_range.next_address == 0x68694);
+    const auto continuation_pair_fallthrough =
+        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
+            defjam_post_negative_d3_continuation, {0, 0x12340000, 0x56781000, 0x40});
+    assert(continuation_pair_fallthrough.d1 == 0x56781001);
+    assert(continuation_pair_fallthrough.d2 == 0x12342800);
+    {
+        auto detached_continuation = defjam_post_negative_d3_continuation;
+        detached_continuation.terminal_jump_target = 0;
+        bool rejected = false;
+        try {
+            static_cast<void>(
+                eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
+                    detached_continuation, {}));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered = *defjam_adf;
         altered[0x16a1a] ^= 0x01;

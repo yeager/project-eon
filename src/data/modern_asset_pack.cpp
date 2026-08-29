@@ -9,9 +9,12 @@
 #include <fstream>
 #include <iterator>
 #include <map>
+#include <limits>
 #include <set>
 #include <string_view>
 #include <system_error>
+
+#include <zlib.h>
 
 namespace eon {
 namespace {
@@ -156,6 +159,29 @@ bool png_critical_chunk(const std::vector<std::uint8_t>& bytes, const std::size_
     return bytes[offset] >= 'A' && bytes[offset] <= 'Z';
 }
 
+// SDL_image is deliberately not the first parser of an externally supplied
+// Modern title.  Verify every PNG chunk checksum before handing the bounded
+// bytes to its decoder.  Feed zlib in portable chunks because crc32 accepts a
+// uInt length even though our file-size boundary is expressed as size_t.
+bool png_chunk_crc_matches(const std::vector<std::uint8_t>& bytes,
+                           const std::size_t type, const std::size_t data,
+                           const std::size_t length) {
+    uLong crc = crc32(0L, Z_NULL, 0);
+    // The type is always four bytes.  Keep it as a separate feed so the
+    // data segment has a straightforward bounds-proven offset.
+    crc = crc32(crc, bytes.data() + type, 4U);
+    std::size_t remaining = length;
+    std::size_t offset = data;
+    while (remaining != 0U) {
+        const auto count = std::min(remaining,
+            static_cast<std::size_t>(std::numeric_limits<uInt>::max()));
+        crc = crc32(crc, bytes.data() + offset, static_cast<uInt>(count));
+        offset += count;
+        remaining -= count;
+    }
+    return static_cast<std::uint32_t>(crc) == big32(bytes, data + length);
+}
+
 bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
                                  const MillenniumTitlePngTarget& target) {
     constexpr std::array<std::uint8_t, 8> signature{{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}};
@@ -170,6 +196,7 @@ bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
         const auto data = offset + 8U;
         if (length > bytes.size() - data || bytes.size() - data - length < 4U) return false;
         const auto next = data + static_cast<std::size_t>(length) + 4U;
+        if (!png_chunk_crc_matches(bytes, type, data, length)) return false;
         if (first_chunk) {
             if (length != 13U || !png_chunk_type(bytes, type, 'I', 'H', 'D', 'R')
                 || big32(bytes, data) != target.width || big32(bytes, data + 4U) != target.height

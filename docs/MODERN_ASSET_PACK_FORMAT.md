@@ -89,9 +89,10 @@ non-empty RGBA PNG, exactly its identifier's 640×400 or 1280×800 dimensions
 preferred when both are declared, so a pack can offer a genuine 4× redraw
 without any filename-based override rule. After normal manifest admission,
 Eon reads the selected file again, hashes the exact in-memory bytes, validates
-the PNG signature, terminal IEND, consecutive IDAT sequence and constrained
-IHDR, and asks SDL_image to decode those bytes from memory. SDL_image failure
-or a post-decode dimension mismatch rejects the external surface. It is
+the PNG signature, checksum of every chunk, terminal IEND, consecutive IDAT
+sequence and constrained IHDR, and asks SDL_image to decode those bytes from
+memory. A bad checksum is rejected before SDL_image sees the bytes. SDL_image
+failure or a post-decode dimension mismatch rejects the external surface. It is
 displayed only as the Modern replacement for the recovered English P00 title;
 Original always uses the recovered original pixels. The runtime label displays
 the active pack identity, dimensions, and declared provenance.

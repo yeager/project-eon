@@ -361,6 +361,44 @@ struct MillenniumAmigaResidentPostNegativeD3ContinuationBoundary {
     std::string raw_sha256;
 };
 
+// $6861a is reached only after the preceding bounded terminal takes BPL. It
+// has no calls and balances its MOVEM save before the terminal external JMP.
+// The model exposes only its literal word arithmetic and where it leaves the
+// verified local bytes; it neither invents a stack nor follows an external
+// target or either branch beyond this span.
+struct MillenniumAmigaResidentPostNegativeD3ContinuationInput {
+    std::uint32_t d0 = 0;
+    std::uint32_t d1 = 0;
+    std::uint32_t d2 = 0;
+    std::uint32_t d3 = 0;
+    std::uint32_t d6 = 0;
+    std::uint32_t d7 = 0;
+    std::uint32_t a5 = 0;
+};
+
+enum class MillenniumAmigaResidentPostNegativeD3ContinuationStop {
+    low_range_branch_boundary,
+    negative_range_branch_boundary,
+    external_jump_boundary,
+};
+
+struct MillenniumAmigaResidentPostNegativeD3ContinuationExecution {
+    // Values immediately before a local branch leaves the span or before the
+    // balanced restore. `restored_registers` is D0,D1,D2,D3,A5 on the sole
+    // external-jump route; no host stack is represented.
+    std::uint32_t d0 = 0;
+    std::uint32_t d1 = 0;
+    std::uint32_t d2 = 0;
+    std::uint32_t d3 = 0;
+    std::uint32_t d6 = 0;
+    std::uint32_t d7 = 0;
+    std::uint32_t a5 = 0;
+    std::array<std::uint32_t, 5> restored_registers{};
+    MillenniumAmigaResidentPostNegativeD3ContinuationStop stop =
+        MillenniumAmigaResidentPostNegativeD3ContinuationStop::external_jump_boundary;
+    std::uint32_t next_address = 0;
+};
+
 struct MillenniumAmigaResidentIndependentZeroTargetBoundary {
     std::uint32_t entry_address = 0;
     std::uint16_t compare_immediate = 0;
@@ -594,6 +632,11 @@ execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
 parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentPostNegativeD3Terminal& terminal);
+
+[[nodiscard]] MillenniumAmigaResidentPostNegativeD3ContinuationExecution
+execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
+    const MillenniumAmigaResidentPostNegativeD3ContinuationBoundary& boundary,
+    MillenniumAmigaResidentPostNegativeD3ContinuationInput input);
 
 // Validates only the first compare/conditional-branch pair at the independent
 // entry's fixed-flag-zero target. It does not interpret the comparison.

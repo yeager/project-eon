@@ -238,7 +238,8 @@ path. It reports each direct-child pack as eligible or rejected after the
 selected original releases have been rehashed. The explicit Modern launch form
 `--game millennium --platform dos --presentation modern --modern-pack
 /path/to/pack.eonmodern` may render only the documented, hash-revalidated
-640×400 RGBA PNG title target; Original never uses an external pack. Neither
+640×400 RGBA PNG title target; Original never uses an external pack. Each PNG
+chunk checksum is verified before decoding. Neither
 form creates a directory or cache. See [the Modern asset-pack format](docs/MODERN_ASSET_PACK_FORMAT.md)
 for the external, separately installed format.
 

@@ -1005,6 +1005,80 @@ parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
         static_cast<std::uint32_t>(expected.size()), observed_hash};
 }
 
+MillenniumAmigaResidentPostNegativeD3ContinuationExecution
+execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
+    const MillenniumAmigaResidentPostNegativeD3ContinuationBoundary& boundary,
+    const MillenniumAmigaResidentPostNegativeD3ContinuationInput input) {
+    constexpr auto expected_hash =
+        "d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce";
+    if (boundary.entry_address != 0x6861a
+        || boundary.add_immediates != std::array<std::uint16_t, 3>{0x2800, 0x2800, 0x2800}
+        || boundary.range_base_immediate != 0x7d00
+        || boundary.compare_branch_address != 0x68636
+        || boundary.compare_branch_target != 0x6863a
+        || boundary.low_range_branch_address != 0x68642
+        || boundary.low_range_branch_target != 0x68650
+        || boundary.negative_range_branch_address != 0x68644
+        || boundary.negative_range_branch_target != 0x68694
+        || boundary.terminal_jump_address != 0x6864a
+        || boundary.terminal_jump_target != 0x7bef0
+        || boundary.raw_disk_offset != 0x16a1a || boundary.byte_count != 54
+        || boundary.raw_sha256 != expected_hash) {
+        throw std::runtime_error("Detached Millennium Amiga post-negative-D3 continuation evidence");
+    }
+
+    const auto with_low_word = [](std::uint32_t value, std::uint16_t low) {
+        return (value & 0xffff0000U) | low;
+    };
+    const auto add_word = [&](std::uint32_t value, std::uint16_t addend) {
+        return with_low_word(value, static_cast<std::uint16_t>(value + addend));
+    };
+
+    MillenniumAmigaResidentPostNegativeD3ContinuationExecution result;
+    result.d0 = input.d0;
+    result.d1 = add_word(input.d1, 0x2800);
+    result.d2 = add_word(input.d2, 0x2800);
+    result.d3 = add_word(input.d3, 0x2800);
+    result.a5 = input.a5;
+
+    // MOVEM saves D0-D3/A5, then the original executes only word-width
+    // arithmetic.  Keep upper halves exactly as supplied rather than making
+    // a fabricated full-register interpretation.
+    result.d6 = with_low_word(input.d6, 0x7d00);
+    result.d7 = with_low_word(input.d7, static_cast<std::uint16_t>(result.d6));
+    result.d6 = add_word(result.d6, static_cast<std::uint16_t>(result.d1));
+    result.d7 = add_word(result.d7, static_cast<std::uint16_t>(result.d2));
+
+    // CMP.W D7,D6 / BCC.S: unsigned low-word D6 >= D7 takes the branch,
+    // skipping the EXG/SUB/ADDQ sequence but staying inside this exact span.
+    if (static_cast<std::uint16_t>(result.d6) < static_cast<std::uint16_t>(result.d7)) {
+        std::swap(result.d1, result.d2); // EXG D1,D2
+        result.d1 = with_low_word(result.d1,
+            static_cast<std::uint16_t>(result.d1 - result.d2));
+        result.d1 = add_word(result.d1, 1); // ADDQ.W #1,D1
+    }
+
+    const auto d3_low = static_cast<std::uint16_t>(result.d3);
+    if (d3_low < 0x0062U) {
+        result.stop = MillenniumAmigaResidentPostNegativeD3ContinuationStop::low_range_branch_boundary;
+        result.next_address = boundary.low_range_branch_target;
+        return result;
+    }
+    if ((d3_low & 0x8000U) != 0) {
+        result.stop = MillenniumAmigaResidentPostNegativeD3ContinuationStop::negative_range_branch_boundary;
+        result.next_address = boundary.negative_range_branch_target;
+        return result;
+    }
+
+    // The only route to the external JMP executes MOVEM.L (SP)+,D0-D3/A5.
+    // Expose that exact restored image, but do not represent SP or enter the
+    // external target.
+    result.restored_registers = {input.d0, input.d1, input.d2, input.d3, input.a5};
+    result.stop = MillenniumAmigaResidentPostNegativeD3ContinuationStop::external_jump_boundary;
+    result.next_address = boundary.terminal_jump_target;
+    return result;
+}
+
 MillenniumAmigaResidentIndependentZeroTargetBoundary
 parse_millennium_amiga_resident_independent_zero_target_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,

@@ -42,6 +42,17 @@ public:
     first_stage_source_anchors() const {
         return first_stage_source_anchors_;
     }
+    // This is a separately bounded resident-local chain. It is not reached by
+    // the opaque bootstrap path; retaining it in the same media-bound session
+    // prevents a caller from joining arithmetic evidence from another image.
+    [[nodiscard]] const MillenniumAmigaResidentPostNegativeD3Terminal&
+    post_negative_d3_terminal() const {
+        return post_negative_d3_terminal_;
+    }
+    [[nodiscard]] const MillenniumAmigaResidentPostNegativeD3ContinuationBoundary&
+    post_negative_d3_continuation() const {
+        return post_negative_d3_continuation_;
+    }
 
 private:
     MillenniumAmigaLoadPlan plan_;
@@ -50,6 +61,8 @@ private:
     MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary_;
     MillenniumAmigaBootstrapRelocationBoundary relocation_boundary_;
     MillenniumAmigaFirstStageSourceAnchorBoundary first_stage_source_anchors_;
+    MillenniumAmigaResidentPostNegativeD3Terminal post_negative_d3_terminal_;
+    MillenniumAmigaResidentPostNegativeD3ContinuationBoundary post_negative_d3_continuation_;
 };
 
 } // namespace eon
