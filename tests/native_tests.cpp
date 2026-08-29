@@ -5392,7 +5392,9 @@ int main() {
     assert(invalid_atari_residual_jsr_rejected);
     std::size_t millennium_st_images = 0;
     std::size_t millennium_fat12_images = 0;
-    std::size_t millennium_config_files = 0;
+    std::size_t millennium_named_config_files = 0;
+    std::size_t millennium_exact_config_files = 0;
+    std::size_t millennium_exact_program_files = 0;
     for (const auto& asset : eon::inventory_zip(atari_release->path)) {
         if (asset.kind != eon::AssetKind::atari_st_disk) continue;
         ++millennium_st_images;
@@ -5401,8 +5403,20 @@ int main() {
         try {
             const eon::Fat12Disk candidate_disk(*candidate);
             ++millennium_fat12_images;
-            if (eon::probe_millennium_atari_config(candidate_disk).present) {
-                ++millennium_config_files;
+            const auto candidate_config = eon::probe_millennium_atari_config(candidate_disk);
+            if (candidate_config.present) {
+                ++millennium_named_config_files;
+                if (candidate_config.sha256
+                    == "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6") {
+                    ++millennium_exact_config_files;
+                }
+            }
+            if (const auto* candidate_program = candidate_disk.find("MILENIUM.TOS")) {
+                if (!candidate_program->directory()
+                    && eon::to_hex(eon::sha256(candidate_disk.read(*candidate_program)))
+                        == "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686") {
+                    ++millennium_exact_program_files;
+                }
             }
         } catch (const std::runtime_error&) {
             // Protected/raw supplied ST media have no FAT12 file namespace.
@@ -5410,7 +5424,9 @@ int main() {
     }
     assert(millennium_st_images == 7);
     assert(millennium_fat12_images == 5);
-    assert(millennium_config_files == 4);
+    assert(millennium_named_config_files == 4);
+    assert(millennium_exact_config_files == 4);
+    assert(millennium_exact_program_files == 1);
     auto invalid_atari_target_source = atari_bss_source;
     invalid_atari_target_source.bytes.front() ^= 0x01;
     bool invalid_atari_target_rejected = false;
@@ -6179,6 +6195,9 @@ int main() {
     assert(title_stage_session.original_bytes().size() == 0x6ca00);
     assert(title_stage_session.original_sha256()
         == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
+    const auto title_palette_evidence = title_stage_session.transition_palette_evidence();
+    assert((title_palette_evidence[0] == eon::RgbColor{0, 0, 0}));
+    assert((title_palette_evidence[1] == eon::RgbColor{153, 170, 119}));
     assert(title_stage_session.entry_prefix().incoming_profile == 1);
     assert(title_stage_session.entry_prefix().stop_before_exec_address == 0x40450);
     {

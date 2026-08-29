@@ -69,8 +69,11 @@ class ModernGraphicsPopupTests(unittest.TestCase):
 
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:
         title_poll = SOURCE.index("millennium_title_session->poll_console(true)")
-        exclusion = SOURCE.rfind("event.key.key != SDLK_F10", 0, title_poll)
-        self.assertGreaterEqual(exclusion, 0)
+        f10_guard = SOURCE.rfind("event.key.key == SDLK_F10", 0, title_poll)
+        text_input = SOURCE.rfind("event.type == SDL_EVENT_TEXT_INPUT", 0, title_poll)
+        self.assertGreaterEqual(f10_guard, 0)
+        self.assertGreaterEqual(text_input, 0)
+        self.assertLess(f10_guard, text_input)
 
 
 if __name__ == "__main__":

@@ -2152,7 +2152,13 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     // leaf in memory so absence is not guessed from the one Equinox variant.
     std::size_t supplied_st_images = 0;
     std::size_t readable_fat12_images = 0;
-    std::size_t config_files = 0;
+    std::size_t named_config_files = 0;
+    std::size_t exact_equinox_config_files = 0;
+    std::size_t exact_equinox_program_files = 0;
+    constexpr std::string_view equinox_config_sha256 =
+        "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6";
+    constexpr std::string_view equinox_program_sha256 =
+        "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686";
     for (const auto& asset : eon::inventory_verified_release(release)) {
         if (asset.kind != eon::AssetKind::atari_st_disk) continue;
         ++supplied_st_images;
@@ -2167,11 +2173,23 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
             continue;
         }
         ++readable_fat12_images;
-        if (eon::probe_millennium_atari_config(*candidate_disk).present) ++config_files;
+        const auto candidate_config = eon::probe_millennium_atari_config(*candidate_disk);
+        if (candidate_config.present) {
+            ++named_config_files;
+            if (candidate_config.sha256 == equinox_config_sha256) ++exact_equinox_config_files;
+        }
+        if (const auto* candidate_program = candidate_disk->find("MILENIUM.TOS")) {
+            if (!candidate_program->directory()
+                && eon::to_hex(eon::sha256(candidate_disk->read(*candidate_program)))
+                    == equinox_program_sha256) {
+                ++exact_equinox_program_files;
+            }
+        }
     }
     std::cout << "          supplied ST config scan: " << supplied_st_images << " images, "
-        << readable_fat12_images << " valid FAT12 volumes, " << config_files << " files named "
-        << equinox_config.requested_filename
+        << readable_fat12_images << " valid FAT12 volumes, " << named_config_files << " files named "
+        << equinox_config.requested_filename << "; " << exact_equinox_config_files
+        << " exact config hash and " << exact_equinox_program_files << " exact MILENIUM.TOS hash"
         << " (raw/protected images are not reinterpreted as files)\n";
     std::cout << "          Atari ST trace boundary: next evidence must identify GEMDOS Fopen D0/handle "
         << "behaviour, TRAP #14 and Line-A returns, configuration load address, and any codec, "
@@ -3162,6 +3180,10 @@ int main(int argc, char** argv) {
     std::optional<std::uint32_t> deuteros_title_resource;
     std::unique_ptr<eon::DeuterosAtariBootstrapSession> deuteros_atari_session;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
+    // SDL text input is the host analogue of DOS' character-availability
+    // poll. Keep it active only while TITLES.EXE's recovered title boundary
+    // is live; raw key presses alone do not prove a nonzero DOS AL result.
+    bool millennium_title_text_input_active = false;
     // This evidence-only object is intentionally never constructed by the
     // launcher until a genuine DOS return/startup path is recovered.
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
@@ -3222,8 +3244,20 @@ int main(int argc, char** argv) {
                 *millennium_assets->spanish_title_boundary);
             millennium_state_page = 0;
         }
+        if (millennium_title_session && !millennium_title_text_input_active) {
+            if (!SDL_StartTextInput(window)) {
+                std::cerr << "Unable to enable Millennium DOS title text input: "
+                          << SDL_GetError() << '\n';
+            } else {
+                millennium_title_text_input_active = true;
+            }
+        }
     };
     const auto start_deuteros = [&] {
+        if (millennium_title_text_input_active) {
+            SDL_StopTextInput(window);
+            millennium_title_text_input_active = false;
+        }
         deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform);
         deuteros_opening = load_deuteros_opening(releases, active_platform);
         create_deuteros_opening_texture();
@@ -3402,16 +3436,19 @@ int main(int argc, char** argv) {
                 // an Original session's immutable renderer contract.
                 continue;
             }
-            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+            if (event.type == SDL_EVENT_TEXT_INPUT && event.text.text && event.text.text[0] != '\0'
                 && screen == Screen::launching && selected == eon::Game::millennium
-                && event.key.key != SDLK_ESCAPE && event.key.key != SDLK_F1 && event.key.key != SDLK_F10
                 && millennium_title_session) {
-                // TITLES.EXE uses DOS' non-blocking character availability
-                // poll, rather than a game-specific action key.  SDL's key
-                // event supplies that availability signal. Its original
-                // process exit and the launcher/DOS return remain unexecuted.
+                // TITLES.EXE's INT 21h/AH=06h poll distinguishes a nonzero
+                // console character from a raw physical key. SDL text input
+                // supplies only that availability signal; UTF-8 contents are
+                // deliberately never decoded as a DOS character or command.
                 if (!millennium_title_session->handed_off()) {
-                    static_cast<void>(millennium_title_session->poll_console(true));
+                    if (millennium_title_session->poll_console(true)
+                        && millennium_title_text_input_active) {
+                        SDL_StopTextInput(window);
+                        millennium_title_text_input_active = false;
+                    }
                 }
             }
             if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
@@ -3987,6 +4024,16 @@ int main(int argc, char** argv) {
                         tr("TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"));
                     draw_text(renderer, 64, 312,
                         tr("ORIGINAL TITLE STAGE SHA-256: ") + title_stage->original_sha256());
+                    const auto palette = title_stage->transition_palette_evidence();
+                    for (std::size_t index = 0; index < palette.size(); ++index) {
+                        const auto& color = palette[index];
+                        SDL_SetRenderDrawColor(renderer, color.red, color.green, color.blue, 255);
+                        const SDL_FRect swatch{560.0F + static_cast<float>(index) * 16.0F,
+                            326.0F, 14.0F, 14.0F};
+                        SDL_RenderFillRect(renderer, &swatch);
+                        SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+                        SDL_RenderRect(renderer, &swatch);
+                    }
                 }
                 if (const auto& trace = deuteros_opening->alternate_renderer_trace()) {
                     draw_text(renderer, 64, title_stage ? 328 : 284, tr("ORIGINAL $20580 STREAM: +0x")
@@ -4039,6 +4086,7 @@ int main(int argc, char** argv) {
     }
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
+    if (millennium_title_text_input_active) SDL_StopTextInput(window);
     SDL_DestroyTexture(millennium_preview_texture);
     SDL_DestroyTexture(millennium_modern_preview_texture);
     SDL_DestroyTexture(millennium_external_modern_texture);

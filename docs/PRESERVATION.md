@@ -487,6 +487,17 @@ no FAT12 pathname namespace to substitute. Project Eon reads a present entry
 only through its original cluster chain in memory, and never creates, changes,
 or falls back to a synthetic `.inf` file.
 
+The release-wide FAT12 diagnostic now distinguishes a matching filename from
+the exact launcher pair. Of seven supplied Atari leaves, five are readable
+FAT12 volumes and four contain a regular `MILL22A.inf`; all four have the
+same verified configuration hash
+`74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6`.
+Only one volume contains the exact `MILENIUM.TOS` hash
+`4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686` used
+by the bounded Equinox bootstrap. A shared configuration filename or hash is
+not permission to pair it with another executable, flatten an STX image, or
+use another variant as a launch fallback.
+
 The same exact Equinox FAT12 root is now retained as a 13-file,
 cluster-addressed inventory. `DESKTOP.INF` is cluster 2, 555 bytes, SHA-256
 `ce2aa85b442be281f25c22456c0d081d01b51108e96716bba9f867b7e791ab19`;
@@ -2073,6 +2084,14 @@ The 40 source bytes hash to
 not resolve `$12ff4`, write title-stage memory, open a library, or turn those
 palette words into an SDL title screen.
 
+After the verified opening handoff, the launcher may show the first sixteen
+raw RGB4 words at the independently hash-validated `$1ed24` source as a small
+palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
+literal 12-bit colours from the original in-place stage after range checking;
+it does not invoke graphics.library, allocate a display, use the palette to
+colour a reconstructed bitmap, or present the strip as an original title
+screen. The surrounding launcher text explicitly preserves that boundary.
+
 The immediately following caller-connected local callee is now bounded too.
 `$1f182..$1f195` (ADF `+$7a182`, 20 bytes, SHA-256
 `9b02afb723e201cacb93d18d87613dee0f56369707867989209a41d9430ec5f3`) loads
@@ -2672,7 +2691,12 @@ The complete caller range `$1c28..$1c69` (file `+$1b28`, 66 bytes, SHA-256
 `d08916b10f92fe78e643a3335680c341f2347c361cded2419954422c0c37e6dd`) makes
 the input boundary precise. It only performs `AND AL,AL` and sends every
 nonzero result to `$1c54`; it neither stores nor compares a scan code, so no
-key name or control binding is proven. The static exit chain reaches `$1968`
+key name or control binding is proven. Eon's host bridge therefore enables
+SDL text input only while the verified title boundary is active and sends an
+availability observation only for non-empty UTF-8 text input—never for a raw
+physical key event. It does not decode, preserve, or assign meaning to that
+text, and stops text input immediately after the one original title hand-off.
+The static exit chain reaches `$1968`
 and embedded bytes at `$1884` spelling `    LOADING    2`. `$1968` loads AX=5
 and calls `$1931`; that local loop runs five times, loading AX=`$0013`, calling
 the private `INT $91` wrapper `$0122`, then helper `$1917`. This establishes a

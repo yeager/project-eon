@@ -52,4 +52,27 @@ std::span<const std::uint8_t> DeuterosAmigaTitleStageSession::original_bytes() c
     return disk_->bytes(stage_.disk_offset, stage_.length);
 }
 
+std::array<RgbColor, 16> DeuterosAmigaTitleStageSession::transition_palette_evidence() const {
+    constexpr std::size_t word_count = 16;
+    constexpr std::size_t byte_count = word_count * 2U;
+    const auto address = profile_.transition_source_palette_address;
+    if (address < stage_.destination || address - stage_.destination > stage_.length
+        || byte_count > stage_.length - (address - stage_.destination)) {
+        throw std::runtime_error("Deuteros title palette evidence lies outside original stage");
+    }
+    const auto bytes = original_bytes().subspan(address - stage_.destination, byte_count);
+    std::array<RgbColor, word_count> colors{};
+    for (std::size_t index = 0; index < colors.size(); ++index) {
+        const auto rgb4 = static_cast<std::uint16_t>(
+            (static_cast<std::uint16_t>(bytes[index * 2U]) << 8U) | bytes[index * 2U + 1U]);
+        if ((rgb4 & 0xf000U) != 0) {
+            throw std::runtime_error("Invalid Deuteros title RGB4 palette evidence");
+        }
+        colors[index] = {static_cast<std::uint8_t>(((rgb4 >> 8U) & 0xfU) * 17U),
+            static_cast<std::uint8_t>(((rgb4 >> 4U) & 0xfU) * 17U),
+            static_cast<std::uint8_t>((rgb4 & 0xfU) * 17U)};
+    }
+    return colors;
+}
+
 } // namespace eon
