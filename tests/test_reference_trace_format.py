@@ -124,6 +124,8 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertIn("without extracting or copying", research)
         self.assertIn("not an Eon reference trace", research)
         self.assertIn("nor authorizes an Eon runtime transition", research)
+        self.assertIn("emulator/configuration\nfailure observation", research)
+        self.assertIn("not a statement about original-game behavior", research)
 
 
 if __name__ == "__main__":
