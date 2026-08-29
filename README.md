@@ -391,9 +391,9 @@ with Gitleaks. CI also produces non-published test artifacts: `.deb` and
 Setup installer, and an arm64 iPadOS `.ipa`. The iPadOS artifact is unsigned
 for sideload signing with the user's own certificate and provisioning profile.
 Its packaging step independently validates the final IPA archive before upload:
-the archive must contain the expected arm64 Mach-O and iPad `Info.plist`, the
+the archive must contain a structurally valid arm64 executable Mach-O and iPad `Info.plist`, the
 required launcher cards, fonts and PO catalogues, and no links, path escapes or
-possible game media. Packages contain Project Eon only—never original game
+possible game media or unexpected dynamic frameworks. Packages contain Project Eon only—never original game
 media. The iPad app enables Files sharing and opens user documents in place, so
 place owned original archives or disk images in `Documents/ProjectEon` after
 sideloading; do not add them to the IPA. CI has read-only repository permission and cannot release,

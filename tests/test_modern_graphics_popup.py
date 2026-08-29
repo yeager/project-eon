@@ -15,6 +15,27 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("MODERN GRAPHICS SETTINGS", SOURCE)
         self.assertIn("SETTINGS APPLY TO SDL RENDERING ONLY.", SOURCE)
 
+    def test_every_visible_popup_label_is_explicitly_catalogued_before_rendering(self) -> None:
+        """The F10 dialog is launcher chrome, not original in-game prose."""
+        start = SOURCE.index("void draw_modern_graphics_popup")
+        end = SOURCE.index("bool inside(", start)
+        popup = SOURCE[start:end]
+        self.assertIn("const eon::Translator& translator", popup)
+        self.assertIn("translator.translate(message)", popup)
+        for message in (
+            "MODERN GRAPHICS SETTINGS",
+            "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE",
+            "SETTINGS APPLY TO SDL RENDERING ONLY.",
+        ):
+            with self.subTest(message=message):
+                self.assertIn(f'tr("{message}")', popup)
+        self.assertIn("tr(names[index])", popup)
+        self.assertIn("tr(display_aspect_names.at(settings.aspect_ratio_index))", popup)
+        self.assertIn('tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)"', popup)
+        self.assertIn('tr(settings.smooth_scaling ? "ON" : "OFF")', popup)
+        self.assertIn('tr(settings.scanlines ? "ON" : "OFF")', popup)
+        self.assertIn('tr(settings.frame ? "ON" : "OFF")', popup)
+
     def test_popup_controls_only_renderer_options(self) -> None:
         for option in ("output_resolution_index", "aspect_ratio_index", "smooth_scaling", "scanlines", "frame"):
             self.assertIn(option, SOURCE)

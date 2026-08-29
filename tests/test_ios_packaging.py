@@ -29,7 +29,14 @@ class IosPackagingTests(unittest.TestCase):
         app.mkdir()
         # A minimal arm64 MH_MAGIC_64 header is sufficient for the archive
         # verifier; it never executes test payloads.
-        (app / "project-eon").write_bytes(b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01" + b"\0" * 24)
+        # Minimal but structurally valid arm64 mach_header_64: MH_EXECUTE,
+        # one eight-byte load command, then its command bytes. The IPA
+        # verifier never executes this fixture.
+        (app / "project-eon").write_bytes(
+            b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01\0\0\0\0"
+            + b"\x02\0\0\0\x01\0\0\0\x08\0\0\0\0\0\0\0\0\0\0\0"
+            + b"\x01\0\0\0\x08\0\0\0"
+        )
         (app / "Info.plist").write_text("""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <plist version=\"1.0\"><dict>
 <key>CFBundleExecutable</key><string>project-eon</string>
@@ -121,11 +128,36 @@ class IosPackagingTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("possible original game media", result.stderr)
 
+    def test_archive_verifier_rejects_post_package_dynamic_framework_injection(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            ipa = root / "project-eon.ipa"
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            with zipfile.ZipFile(ipa, "a") as archive:
+                archive.writestr(
+                    "Payload/ProjectEon.app/Frameworks/unreviewed.dylib", b"not allowed"
+                )
+            result = subprocess.run(["python3", str(VERIFY), str(ipa)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unexpected dynamic framework", result.stderr)
+
     def test_archive_verifier_rejects_non_arm64_executable(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             (app / "project-eon").write_bytes(b"not a Mach-O")
+            ipa = root / "project-eon.ipa"
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=False,
+                           capture_output=True, text=True)
+            self.assertFalse(ipa.exists())
+
+    def test_archive_verifier_rejects_arm64_header_without_executable_load_commands(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            # An arm64 magic/cputype prefix alone is not a launchable binary.
+            (app / "project-eon").write_bytes(b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01" + b"\0" * 24)
             ipa = root / "project-eon.ipa"
             subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=False,
                            capture_output=True, text=True)
@@ -152,6 +184,16 @@ class IosPackagingTests(unittest.TestCase):
                                     capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("refusing to package", result.stderr)
+
+    def test_rejects_unexpected_dynamic_framework_before_archiving(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            (app / "Frameworks").mkdir()
+            result = subprocess.run(["bash", str(SCRIPT), str(app), str(root / "bad.ipa")],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unexpected dynamic framework", result.stderr)
 
 
 if __name__ == "__main__":
