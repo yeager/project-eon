@@ -60,6 +60,26 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("reconstruct_rgba_scale2x(*frame", SOURCE)
         self.assertNotIn("deuteros_modern_preview_source_tick = source_tick;\n                }", SOURCE)
 
+    def test_deuteros_external_opening_pack_is_modern_only_and_tick_bound(self) -> None:
+        loader = SOURCE.index("const auto load_deuteros_external_modern_sequence")
+        renderer = SOURCE.index("SDL_Texture* texture = preview_texture;", loader)
+        loader_block = SOURCE[loader:renderer]
+        self.assertIn("request.presentation != eon::Presentation::modern", loader_block)
+        self.assertIn("active_platform != eon::Platform::amiga", loader_block)
+        self.assertIn("candidate.language == *active_release_language", loader_block)
+        self.assertIn("load_deuteros_amiga_held_opening_modern_sequence", loader_block)
+        refresh = SOURCE.index("const auto refresh_deuteros_external_modern_texture", loader)
+        refresh_block = SOURCE[refresh:renderer]
+        self.assertIn("source_tick > eon::deuteros_amiga_held_opening_frame_count", refresh_block)
+        self.assertIn("source_tick == eon::deuteros_amiga_held_opening_frame_count && !title_handed_off", refresh_block)
+        self.assertIn("load_deuteros_amiga_held_opening_modern_frame", refresh_block)
+        self.assertIn("deuteros_external_modern_sequence.reset()", refresh_block)
+        render_block = SOURCE[renderer:SOURCE.index("SDL_SetTextureScaleMode(texture", renderer)]
+        self.assertIn("if (modern)", render_block)
+        self.assertIn("refresh_deuteros_external_modern_texture(source_tick", render_block)
+        self.assertLess(render_block.index("refresh_deuteros_external_modern_texture"),
+                        render_block.index("reconstruct_rgba_scale2x(*frame"))
+
     def test_deuteros_title_handoff_stops_host_vm_scheduling(self) -> None:
         """The retained frame is presentation evidence, never a fake title VM."""
         scheduler = SOURCE.index("constexpr std::uint64_t scheduler_period_ms = 20")

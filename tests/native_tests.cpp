@@ -785,6 +785,50 @@ void assert_modern_asset_pack_admission() {
         render_root / "pack.eonmodern", release_hash));
     } catch (const std::runtime_error&) { trailing_rejected = true; }
     assert(trailing_rejected);
+    // The recovered Deuteros opening is not a generic movie. Its one finite
+    // externally redrawable route is 82 VM-composed frames ending at the
+    // held-input handoff. All frames must be present at one exact tier before
+    // any renderer can select a single one.
+    const auto deuteros_root = root / "deuteros-opening";
+    std::filesystem::create_directories(deuteros_root / "opening");
+    const auto deuteros_png = mapped_png(640U, 400U);
+    const auto deuteros_png_hash = eon::to_hex(eon::sha256(deuteros_png));
+    std::ofstream deuteros_manifest(deuteros_root / "pack.eonmodern", std::ios::binary);
+    deuteros_manifest << "schema\tproject-eon.modern-asset-pack/v1\n"
+        << "id\tdeuteros-held-opening\nversion\t1\nlicense\tCC0-1.0\n"
+        << "provenance\tindependently-created\ngame\tdeuteros\nplatform\tamiga\n"
+        << "source_release_sha256\tf4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04\n";
+    for (std::size_t frame = 1; frame <= eon::deuteros_amiga_held_opening_frame_count; ++frame) {
+        auto number = std::to_string(frame);
+        number.insert(number.begin(), 3U - number.size(), '0');
+        const auto path = deuteros_root / "opening" / (number + ".png");
+        std::ofstream output(path, std::ios::binary);
+        output.write(reinterpret_cast<const char*>(deuteros_png.data()),
+            static_cast<std::streamsize>(deuteros_png.size()));
+        deuteros_manifest << "asset\tdeuteros.amiga.opening.held-v1.frame-" << number
+            << ".png-640x400 opening/" << number << ".png " << deuteros_png.size()
+            << ' ' << deuteros_png_hash << '\n';
+    }
+    deuteros_manifest.close();
+    const auto deuteros_sequence = eon::load_deuteros_amiga_held_opening_modern_sequence(
+        deuteros_root / "pack.eonmodern",
+        "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
+    assert(deuteros_sequence.width == 640 && deuteros_sequence.height == 400);
+    const auto deuteros_first = eon::load_deuteros_amiga_held_opening_modern_frame(deuteros_sequence, 1);
+    const auto deuteros_last = eon::load_deuteros_amiga_held_opening_modern_frame(deuteros_sequence, 82);
+    assert(deuteros_first.png == deuteros_png && deuteros_last.png == deuteros_png);
+    bool opening_tick_rejected = false;
+    try { static_cast<void>(eon::load_deuteros_amiga_held_opening_modern_frame(deuteros_sequence, 83));
+    } catch (const std::runtime_error&) { opening_tick_rejected = true; }
+    assert(opening_tick_rejected);
+    {
+        std::ofstream output(deuteros_root / "opening" / "082.png", std::ios::binary | std::ios::trunc);
+        output << "changed";
+    }
+    bool changed_opening_frame_rejected = false;
+    try { static_cast<void>(eon::load_deuteros_amiga_held_opening_modern_frame(deuteros_sequence, 82));
+    } catch (const std::runtime_error&) { changed_opening_frame_rejected = true; }
+    assert(changed_opening_frame_rejected);
     // A non-symlink final file is insufficient when an intermediate component
     // points outside the selected pack directory.
     const auto external = root / "outside";
@@ -980,6 +1024,13 @@ int main() {
         const auto selected_modern_pack = eon::parse_command_line(9, selected_modern_pack_args);
         assert(selected_modern_pack.request && selected_modern_pack.request->modern_pack_manifest
             && *selected_modern_pack.request->modern_pack_manifest == modern_manifest);
+        char deuteros[] = "deuteros";
+        char deuteros_amiga[] = "amiga";
+        char* deuteros_modern_pack_args[] = {program, game_option, deuteros, platform_option, deuteros_amiga,
+            presentation_option, modern, modern_pack_option, modern_manifest};
+        const auto deuteros_modern_pack = eon::parse_command_line(9, deuteros_modern_pack_args);
+        assert(deuteros_modern_pack.request && deuteros_modern_pack.request->modern_pack_manifest
+            && *deuteros_modern_pack.request->modern_pack_manifest == modern_manifest);
         char* modern_pack_missing_presentation[] = {program, game_option, millennium, platform_option, dos,
             modern_pack_option, modern_manifest};
         assert(!eon::parse_command_line(7, modern_pack_missing_presentation).request);

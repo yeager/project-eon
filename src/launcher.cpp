@@ -182,10 +182,9 @@ ParseResult parse_command_line(int argc, char** argv) {
         || !request.game || !request.platform)) {
         return {{}, "--modern-pack requires --game, --platform, and --presentation modern; it cannot be used with --inspect", false};
     }
-    // The only renderer pack admitted today targets the hash-identified
-    // English P00.  Refuse the combination at parse time instead of letting
-    // an English asset become an optional or invisible fallback for Spanish
-    // FAT12 media.
+    // Every current renderer mapping is bound to a hash-identified English
+    // release. Refuse non-English selection before any SDL or pack I/O instead
+    // of letting external art become an optional cross-edition fallback.
     if (request.modern_pack_manifest && request.release_language
         && *request.release_language != "en") {
         return {{}, "--modern-pack currently supports only --release-language en; no cross-edition art fallback is permitted", false};
