@@ -117,6 +117,20 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("stop_millennium_title();\n                    screen = Screen::menu;", SOURCE)
         self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])
 
+    def test_save_inspection_reports_recovered_original_columns(self) -> None:
+        # --inspect-save must be useful to preservation work: expose the
+        # executable-recovered positional records, while retaining its
+        # read-only, non-runtime contract.
+        inspection = SOURCE.index("int inspect_millennium_dos_save")
+        inspection_end = SOURCE.index("enum class Screen", inspection)
+        body = SOURCE[inspection:inspection_end]
+        self.assertIn("save.state_record(index)", body)
+        self.assertIn("] +00=0x", body)
+        self.assertIn(" +04=0x", body)
+        self.assertIn(" +06=0x", body)
+        self.assertIn(" +08=0x", body)
+        self.assertIn("never imported into runtime", body)
+
 
 if __name__ == "__main__":
     unittest.main()

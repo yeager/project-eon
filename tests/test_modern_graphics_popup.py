@@ -76,6 +76,15 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("                continue;", SOURCE[modal:])
         self.assertLess(modal, SOURCE.index("millennium_title_session->poll_console(true)"))
 
+    def test_f10_modal_cancels_a_held_deuteros_opening_signal(self) -> None:
+        """Renderer chrome must not pass an old held key to `$14` behind it."""
+        f10_guard = SOURCE.index("event.key.key == SDLK_F10")
+        modal = SOURCE.index("if (show_modern_graphics_settings) {", f10_guard)
+        f10_block = SOURCE[f10_guard:modal]
+        self.assertIn("clear_deuteros_opening_input();", f10_block)
+        self.assertIn("deuteros_input_pressed = false;", SOURCE)
+        self.assertLess(f10_guard, modal)
+
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:
         title_poll = SOURCE.index("millennium_title_session->poll_console(true)")
         f10_guard = SOURCE.rfind("event.key.key == SDLK_F10", 0, title_poll)

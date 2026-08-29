@@ -100,6 +100,17 @@ int inspect_millennium_dos_save(const std::filesystem::path& path) {
             std::cout << "          reference identity: not present in supplied media; "
                          "structure-only observation, never imported into runtime\n";
         }
+        // The executable reconstructs these four columns into 38 records.
+        // Print the verified positional fields rather than assigning game
+        // meanings, so a user can compare a supplied original save without
+        // Eon copying, modifying, or attempting to load it into a runtime.
+        for (std::size_t index = 0; index < save.layout().state_table.size(); ++index) {
+            const auto& record = save.state_record(index);
+            std::cout << "          [" << index << "] +00=0x" << std::hex
+                << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
+                << " +06=0x" << record.runtime_offset_6 << " +08=0x"
+                << record.runtime_offset_8 << std::dec << '\n';
+        }
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Save inspection rejected: " << error.what() << '\n';
@@ -304,6 +315,28 @@ void report_recovery_map(const eon::ReleaseArchive& release) {
         std::cout << "            " << entry.id << ": profile " << entry.parser_profile_id
             << ", " << entry.cpu << " " << entry.source_address << ", "
             << entry.evidence_level << "; " << entry.runtime_status << '\n';
+    }
+}
+
+// This is the textual counterpart of the platform cards.  It is emitted only
+// after every unfiltered release has been rehashed for this inspection, so a
+// stale scanner result cannot make an Atari (or sibling) platform appear
+// launchable.  It reports admission only; it neither opens a guest image nor
+// crosses a GEMDOS, XBIOS, or callback boundary.
+void report_platform_admission(const std::vector<eon::ReleaseArchive>& releases) {
+    for (const auto game : {eon::Game::millennium, eon::Game::deuteros}) {
+        for (const auto platform : {eon::Platform::dos, eon::Platform::amiga,
+                 eon::Platform::atari_st}) {
+            const auto status = eon::platform_card_status(releases, game, platform);
+            if (status == eon::PlatformCardStatus::unavailable) continue;
+            const auto languages = eon::available_release_languages(releases, game, platform);
+            const char* admission = status == eon::PlatformCardStatus::ready
+                ? "READY" : "RELEASE SELECTION REQUIRED";
+            std::cout << "PLATFORM ADMISSION  " << eon::name(game) << " / "
+                << eon::name(platform) << " / " << admission << " / "
+                << languages.size() << " verified original "
+                << (languages.size() == 1 ? "language" : "languages") << '\n';
+        }
     }
 }
 
@@ -2948,6 +2981,13 @@ int main(int argc, char** argv) {
         }
         if (request.inspect_data) {
             const auto& report = scanner.report();
+            // Filtered inspection intentionally reports only the selected
+            // original identity, so it must not imply a complete card state.
+            // The unfiltered report has reverified every identity and can
+            // therefore expose the exact launcher admission table.
+            if (!request.game && !request.platform && !request.release_language) {
+                report_platform_admission(inspected_releases);
+            }
             std::cout << "SCAN SUMMARY  " << report.candidates << " candidates; "
                 << report.size_candidates << " manifest-size matches; "
                 << report.hashed_candidates << " hashed; "
@@ -3198,6 +3238,13 @@ int main(int argc, char** argv) {
     bool show_modern_graphics_settings = false;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
+    const auto clear_deuteros_opening_input = [&] {
+        // The recovered `$14` path receives only a held host signal. A
+        // launcher-modal transition is not an original input poll, so it
+        // must cancel any prior host hold rather than letting it leak behind
+        // the F10 renderer settings dialog or into a fresh opening session.
+        deuteros_input_pressed = false;
+    };
     std::optional<std::uint32_t> deuteros_title_resource;
     std::unique_ptr<eon::DeuterosAtariBootstrapSession> deuteros_atari_session;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
@@ -3287,6 +3334,7 @@ int main(int argc, char** argv) {
     };
     const auto start_deuteros = [&] {
         stop_millennium_title();
+        clear_deuteros_opening_input();
         deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform);
         deuteros_opening = load_deuteros_opening(releases, active_platform);
         create_deuteros_opening_texture();
@@ -3392,6 +3440,7 @@ int main(int argc, char** argv) {
                 // default that a runtime key may silently replace.  Modern
                 // and Custom launches retain the in-game settings popup.
                 if (request.presentation != eon::Presentation::modern) continue;
+                if (!show_modern_graphics_settings) clear_deuteros_opening_input();
                 show_modern_graphics_settings = !show_modern_graphics_settings;
                 if (!show_modern_graphics_settings && screen == Screen::menu
                     && launcher_page == LauncherPage::profiles

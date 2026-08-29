@@ -257,6 +257,13 @@ failure counts. Identical verified archives found more than once are one
 release, with the lexically first path used as the deterministic read-only
 source.
 
+An unfiltered inspection also prints a `PLATFORM ADMISSION` row for every
+verified game/platform pair. `READY` means exactly one verified original
+language can reach the profile cards; `RELEASE SELECTION REQUIRED` means the
+media is verified but an exact original edition must be chosen first. The rows
+are derived only after the full report rehashes every release, and are an
+audit of launcher availability—not native Atari ST execution or API emulation.
+
 For scripts, `--inspect` exits `0` after one or more matching reports, `3`
 when the supplied path has no recognised original archive, and `5` when a
 valid game/platform filter has no matching supported release. In the latter
