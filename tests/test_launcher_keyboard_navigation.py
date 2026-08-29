@@ -30,6 +30,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME", SOURCE)
         self.assertIn("if (!eon::platform_card_selectable(status)) return false;", SOURCE)
         self.assertIn("RELEASE SELECTION REQUIRED", SOURCE)
+        self.assertIn("ATARI BOOTSTRAP ONLY", SOURCE)
+        self.assertIn("card.platform == eon::Platform::atari_st", SOURCE)
         self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
 
     def test_ambiguous_or_missing_platform_cards_cannot_start_a_game(self) -> None:
@@ -121,7 +123,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # --inspect-save must be useful to preservation work: expose the
         # executable-recovered positional records, while retaining its
         # read-only, non-runtime contract.
-        inspection = SOURCE.index("int inspect_millennium_dos_save")
+        inspection = SOURCE.index("int report_millennium_dos_save_inspection")
         inspection_end = SOURCE.index("enum class Screen", inspection)
         body = SOURCE[inspection:inspection_end]
         self.assertIn("save.state_record(index)", body)
@@ -130,6 +132,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn(" +06=0x", body)
         self.assertIn(" +08=0x", body)
         self.assertIn("never imported into runtime", body)
+        self.assertIn("verified English Millennium DOS archive", body)
+        self.assertIn("extract_verified_release_asset", body)
 
 
 if __name__ == "__main__":

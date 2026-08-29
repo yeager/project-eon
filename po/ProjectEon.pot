@@ -26,6 +26,10 @@ msgid "VERIFIED ORIGINAL DATA"
 msgstr ""
 
 #: src/main.cpp
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr ""
+
+#: src/main.cpp
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr ""
 

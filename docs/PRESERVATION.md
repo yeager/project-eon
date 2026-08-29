@@ -561,13 +561,17 @@ These are reproducible byte facts, not an inferred save schema. Any altered,
 wrong-sized, wrong-named, or unrecognised save is rejected before comparison.
 
 `project-eon --inspect-save <path>` is a separate, read-only diagnostic for a
-user-supplied Millennium DOS `2200SAVE.I` file. It accepts only the recovered
-9,538-byte `$0056` envelope and reports its SHA-256 plus the 38-entry
-columnar-table structure. A hash matching the supplied English DOS initial
-save is explicitly labelled as that reference artifact. Any other
-structure-valid input remains **unverified provenance** and is reported only
-as a structure observation: it is not selected as a release, persisted,
-converted, loaded into a runtime, or written anywhere. This makes later
+user-supplied Millennium DOS `2200SAVE.I` file or the verified English DOS
+archive which contains the supplied reference save. A direct file accepts only
+the recovered 9,538-byte `$0056` envelope. An archive is admitted only after
+its complete hash selects the English DOS release, then the expected save hash
+is read directly in memory; it is never unpacked or copied to disk. Both
+routes report the save SHA-256 plus all 38 recovered columnar records. A hash
+matching the supplied English DOS initial save is explicitly labelled as that
+reference artifact. Any other structure-valid direct input remains
+**unverified provenance** and is reported only as a structure observation: it
+is not selected as a release, persisted, converted, loaded into a runtime, or
+written anywhere. This makes later
 user-save preservation work auditable without confusing file-format validity
 with an assertion of original-media identity or save compatibility.
 
@@ -2052,6 +2056,11 @@ the two direct pre-Exec stores as an immutable sparse state record:
 hash-validated entry instructions, not a title-stage RAM image: the incoming
 controller longword is still unavailable, no other title RAM is initialized,
 and neither the source ADF nor a host-side Amiga memory map is changed.
+After this handoff, the launcher also presents those two numeric writes and
+the one local A7 setup value as a compact provenance row beside the raw palette
+strip. It obtains all three values from the session's hash-validated sparse
+records; the row is machine notation rather than a title screen, title text,
+or a guest-memory allocation.
 `DeuterosAmigaTitleHandoffRoute` additionally binds that live event to the
 six original command bytes at ADF `+$1c28a` (`00 0f 00 00 0b 38`, SHA-256
 `9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41`) and
@@ -3698,6 +3707,12 @@ launch action remain unavailable until one identity is selected. A card is
 directly startable only when it has exactly one verified language identity.
 This keeps an unrecognised, incomplete, or ambiguous real-media candidate
 from becoming an implicit Atari ST (or other platform) fallback.
+
+Verified Atari ST cards display **Atari bootstrap only** rather than implying
+full runtime parity. The label preserves their exact-media admission while
+making the next unsupported native-API/callback boundary visible before a
+user enters the profile flow; it does not disable, replace, or emulate the
+documented bounded bootstrap session.
 
 The same selector is strict for read-only provenance inspection: `--inspect
 --game millennium --platform dos --release-language es` reports only the

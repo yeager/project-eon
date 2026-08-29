@@ -300,6 +300,9 @@ release enables one. Missing or unrecognised media stays disabled, while a
 platform containing multiple verified original editions requires an explicit
 release card before a presentation profile can launch it. This applies equally
 to Atari ST media; the launcher never substitutes an Amiga or DOS release.
+Verified Atari ST cards are additionally labelled **Atari bootstrap only**.
+They select their exact original media but do not claim unrecovered GEMDOS,
+XBIOS, callback, title, or gameplay parity as a completed game start.
 The two menu cards are newly generated Project Eon artwork inspired by the
 games' broad lunar-recovery and orbital-expansion themes. They contain no
 extracted game assets and are never used inside Original mode.

@@ -62,4 +62,7 @@ method, inferred simulation meanings, or save-file creation path. The CLI
 `--inspect-save` report prints each recovered record as `+00`, `+04`, `+06`,
 and `+08`, matching the executable's recovered runtime offsets rather than
 naming them as game concepts. It is a comparison/inspection route only: the
-supplied file remains in place and is never imported into a runtime.
+supplied file remains in place and is never imported into a runtime. The same
+command also accepts the verified English DOS release archive: it verifies the
+complete outer archive then reads the expected `2200SAVE.I` leaf in memory,
+without unpacking or copying commercial game data.

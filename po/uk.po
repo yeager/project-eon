@@ -241,3 +241,6 @@ msgstr "ІДЕНТИЧНІСТЬ ВИДАННЯ ФІКСУЄТЬСЯ ПІД ЧА
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "ПОТРІБНО ВИБРАТИ ВИДАННЯ"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "ЛИШЕ ЗАВАНТАЖЕННЯ ATARI"

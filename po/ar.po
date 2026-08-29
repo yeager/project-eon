@@ -203,3 +203,6 @@ msgstr "تُثبَّت هوية الإصدار عند التشغيل"
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "اختيار الإصدار مطلوب"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "إقلاع أتاري فقط"

@@ -87,7 +87,7 @@ std::string usage() {
         "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
         "               [--release-language en|es]\n"
         "               [--modern-packs <explicit-pack-root>]\n\n"
-        "  project-eon --inspect-save <2200SAVE.I>\n\n"
+        "  project-eon --inspect-save <2200SAVE.I|verified Millennium DOS archive>\n\n"
 #if defined(__APPLE__) && TARGET_OS_IPHONE
         "Without --data/--data-dir, iPadOS reads user-supplied media from Documents/ProjectEon.\n"
 #else

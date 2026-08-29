@@ -203,3 +203,6 @@ msgstr "Η ΤΑΥΤΟΤΗΤΑ ΤΗΣ ΕΚΔΟΣΗΣ ΚΛΕΙΔΩΝΕΙ ΣΤΗΝ 
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "ΑΠΑΙΤΕΙΤΑΙ ΕΠΙΛΟΓΗ ΕΚΔΟΣΗΣ"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "ΜΟΝΟ ΕΚΚΙΝΗΣΗ ATARI"

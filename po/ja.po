@@ -203,3 +203,6 @@ msgstr "版の識別情報は起動時に固定されます"
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "リリースの選択が必要です"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "ATARI ブートストラップのみ"
