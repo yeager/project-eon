@@ -23,6 +23,19 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
         || config_.size != 7506 || config_.sha256 != expected_hash) {
         throw std::runtime_error("Unsupported Millennium Atari ST Fopen boundary");
     }
+    // FAT12 supplies immutable source evidence for the name named by Fopen.
+    // Keep the loader/config disagreement explicit: this read does not stand
+    // in for the native Fread buffer, and the session still ends before TRAP #1.
+    const auto* entry = disk.find(config_.requested_filename);
+    if (!entry || entry->directory()) {
+        throw std::runtime_error("Unsupported Millennium Atari ST configuration source");
+    }
+    const auto payload = disk.read(*entry);
+    config_entry_ = parse_millennium_atari_config_entry(payload);
+    fread_config_load_address_boundary_ = parse_millennium_atari_fread_config_load_address_boundary(
+        fread_config_transfer_, payload, config_entry_);
+    fread_mapped_config_prelude_ = parse_millennium_atari_fread_mapped_config_prelude(
+        fread_config_transfer_, payload, config_entry_);
 }
 
 } // namespace eon
