@@ -66,7 +66,27 @@ bool utc_timestamp(const std::string_view value) {
         if (index == 4 || index == 7 || index == 10 || index == 13 || index == 16 || index == 19) continue;
         if (value[index] < '0' || value[index] > '9') return false;
     }
-    return true;
+    const auto number_at = [&value](const std::size_t offset, const std::size_t width) {
+        unsigned result = 0;
+        for (std::size_t index = 0; index < width; ++index) {
+            result = result * 10U + static_cast<unsigned>(value[offset + index] - '0');
+        }
+        return result;
+    };
+    const unsigned year = number_at(0, 4);
+    const unsigned month = number_at(5, 2);
+    const unsigned day = number_at(8, 2);
+    const unsigned hour = number_at(11, 2);
+    const unsigned minute = number_at(14, 2);
+    const unsigned second = number_at(17, 2);
+    if (year == 0 || month == 0 || month > 12 || hour > 23 || minute > 59 || second > 59) {
+        return false;
+    }
+    constexpr std::array<unsigned, 12> month_days{31, 28, 31, 30, 31, 30,
+                                                   31, 31, 30, 31, 30, 31};
+    const bool leap_year = year % 4U == 0U && (year % 100U != 0U || year % 400U == 0U);
+    const unsigned maximum_day = month == 2 && leap_year ? 29U : month_days[month - 1U];
+    return day != 0 && day <= maximum_day;
 }
 
 std::optional<Game> game_from_trace(const std::string_view value) {
@@ -598,7 +618,8 @@ ReferenceTraceValidation validate_reference_trace(
     if (deuteros_amiga_v2) event_count = deuteros_amiga_diagnostics.event_count;
     return {ReferenceTrace{manifest_path, events_path, *source,
         fields.at("capture_start_utc"), fields.at("capture_end_utc"), fields.at("emulator_name"),
-        fields.at("emulator_version"), fields.at("emulator_sha256"), fields.at("format"),
+        fields.at("emulator_version"), fields.at("emulator_sha256"), fields.at("config_sha256"),
+        fields.at("command_tail_sha256"), fields.at("input_timeline_sha256"), fields.at("format"),
         v1 ? "" : fields.at("adapter"), event_count, event_size, fields.at("event_sha256"),
         diagnostics.interrupt_count, diagnostics.file_count,
         millennium_dos_v2 ? diagnostics.exec_count : deuteros_amiga_diagnostics.exec_count,

@@ -2636,7 +2636,10 @@ int main(int argc, char** argv) {
             << "          source " << trace.source_release.sha256 << '\n'
             << "          events " << trace.event_sha256 << " (" << trace.event_count << " ordered events)\n"
             << "          capture " << trace.capture_start_utc << " to " << trace.capture_end_utc << '\n'
-            << "          emulator " << trace.emulator_name << " " << trace.emulator_version << '\n';
+            << "          emulator " << trace.emulator_name << " " << trace.emulator_version << '\n'
+            << "          capture fingerprints config=" << trace.config_sha256
+            << " command-tail=" << trace.command_tail_sha256
+            << " input-timeline=" << trace.input_timeline_sha256 << '\n';
         if (!trace.adapter.empty()) {
             std::cout << "          adapter " << trace.adapter << " (";
             if (trace.adapter == "deuteros-atari-st-boot-v1") {

@@ -24,6 +24,13 @@ struct ReferenceTrace {
     std::string emulator_name;
     std::string emulator_version;
     std::string emulator_sha256;
+    // These are opaque capture-side fingerprints. They are printed so an
+    // independent preservation reviewer can compare the recorded emulator
+    // configuration, invocation and input evidence without Eon opening,
+    // replaying, or retaining any of those private capture files.
+    std::string config_sha256;
+    std::string command_tail_sha256;
+    std::string input_timeline_sha256;
     std::string format;
     std::string adapter;
     std::size_t event_count = 0;
