@@ -124,6 +124,7 @@ add_executable(project-eon
     src/data/millennium_dos_last_screen.cpp
     src/data/millennium_dos_lib.cpp
     src/data/millennium_dos_title_flow.cpp
+    src/data/millennium_dos_title_exit.cpp
     src/data/millennium_dos_title_transition.cpp
     src/data/millennium_dos_video_driver.cpp
     src/data/millennium_amiga_loader.cpp
@@ -258,6 +259,7 @@ if(BUILD_TESTING)
         src/data/millennium_dos_last_screen.cpp
         src/data/millennium_dos_lib.cpp
         src/data/millennium_dos_title_flow.cpp
+        src/data/millennium_dos_title_exit.cpp
         src/data/millennium_dos_title_transition.cpp
         src/data/millennium_dos_video_driver.cpp
         src/data/millennium_amiga_loader.cpp

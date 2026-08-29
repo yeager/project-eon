@@ -40,8 +40,32 @@ public:
     [[nodiscard]] const DeuterosAtariPostCallbackCalleeProfiles& post_callback_callees() const {
         return post_callback_callees_;
     }
+    [[nodiscard]] const DeuterosAtariFirstCalleeContinuation& first_callee_continuation() const {
+        return first_callee_continuation_;
+    }
     [[nodiscard]] const DeuterosAtariSecondCalleeContinuation& second_callee_continuation() const {
         return second_callee_continuation_;
+    }
+    [[nodiscard]] const DeuterosAtariRawReaderWrapperProfile& raw_reader_wrapper() const {
+        return raw_reader_wrapper_;
+    }
+    [[nodiscard]] const DeuterosAtariRawReaderCallLayout& raw_reader_call_layout() const {
+        return raw_reader_call_layout_;
+    }
+    [[nodiscard]] const DeuterosAtariDirectVectorCalleeProfiles& direct_vector_callees() const {
+        return direct_vector_callees_;
+    }
+    [[nodiscard]] const DeuterosAtariDirectVectorTransferLoopProfile& direct_vector_transfer_loop() const {
+        return direct_vector_transfer_loop_;
+    }
+    [[nodiscard]] const DeuterosAtariDirectVectorTransferTailProfile& direct_vector_transfer_tail() const {
+        return direct_vector_transfer_tail_;
+    }
+    [[nodiscard]] const DeuterosAtariStateSelectionLayout& state_selection_layout() const {
+        return state_selection_layout_;
+    }
+    [[nodiscard]] const DeuterosAtariStateSelectionContinuation& state_selection_continuation() const {
+        return state_selection_continuation_;
     }
     [[nodiscard]] const std::string& first_stage_sha256() const { return first_stage_sha256_; }
     [[nodiscard]] const std::string& second_stage_sha256() const { return second_stage_sha256_; }
@@ -58,7 +82,15 @@ private:
     DeuterosAtariSupervisorCallbackProfile supervisor_callback_;
     DeuterosAtariSupervisorCallbackContinuation supervisor_callback_continuation_;
     DeuterosAtariPostCallbackCalleeProfiles post_callback_callees_;
+    DeuterosAtariFirstCalleeContinuation first_callee_continuation_;
     DeuterosAtariSecondCalleeContinuation second_callee_continuation_;
+    DeuterosAtariRawReaderWrapperProfile raw_reader_wrapper_;
+    DeuterosAtariRawReaderCallLayout raw_reader_call_layout_;
+    DeuterosAtariDirectVectorCalleeProfiles direct_vector_callees_;
+    DeuterosAtariDirectVectorTransferLoopProfile direct_vector_transfer_loop_;
+    DeuterosAtariDirectVectorTransferTailProfile direct_vector_transfer_tail_;
+    DeuterosAtariStateSelectionLayout state_selection_layout_;
+    DeuterosAtariStateSelectionContinuation state_selection_continuation_;
     std::string first_stage_sha256_;
     std::string second_stage_sha256_;
 };

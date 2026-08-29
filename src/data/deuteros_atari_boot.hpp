@@ -304,6 +304,25 @@ parse_deuteros_atari_post_callback_callee_profiles(
     std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariSupervisorCallbackContinuation& continuation);
 
+// The first post-callback callee has a literal post-service branch. Its
+// target is recorded independently from the XBIOS boundary: the branch proves
+// byte layout, not that the service returns or that the target executes.
+struct DeuterosAtariFirstCalleeContinuation {
+    std::size_t continuation_offset = 0;
+    std::size_t continuation_byte_count = 0;
+    std::string continuation_sha256;
+    std::uint16_t immediate_load_opcode = 0;
+    std::uint32_t immediate_value = 0;
+    std::uint16_t absolute_store_opcode = 0;
+    std::uint16_t absolute_store_address = 0;
+    std::uint16_t return_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariFirstCalleeContinuation
+parse_deuteros_atari_first_callee_continuation(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariPostCallbackCalleeProfiles& callees);
+
 // The second post-callback callee reaches the local raw-reader wrapper first.
 // If that unknown external/raw-reader path returns, its next 38 bytes perform
 // another literal TRAP #14 setup, then copy a fixed longword range and RTS.
@@ -334,6 +353,236 @@ struct DeuterosAtariSecondCalleeContinuation {
 parse_deuteros_atari_second_callee_continuation(
     std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariPostCallbackCalleeProfiles& callees);
+
+// The local range wrapper at track-2 +$30 is the direct static target of the
+// copied dispatcher's final BSR.W and of the second post-callback callee. It
+// divides the caller's literal range unit, preserves its inputs, calls the
+// raw reader at +$60, and has literal status/loop branches. This is a byte
+// layout profile only: it does not assign a meaning or
+// value to that RAM word, infer a raw-reader/XBIOS result, or claim that a
+// caller reaches or returns from this wrapper.
+struct DeuterosAtariRawReaderWrapperProfile {
+    std::size_t wrapper_offset = 0;
+    std::size_t wrapper_byte_count = 0;
+    std::string wrapper_sha256;
+    std::uint16_t divisor_opcode = 0;
+    std::uint16_t divisor = 0;
+    std::uint16_t raw_reader_bsr_opcode = 0;
+    std::int16_t raw_reader_bsr_displacement = 0;
+    std::size_t raw_reader_bsr_target_offset = 0;
+    std::uint16_t status_test_opcode = 0;
+    std::uint16_t status_word_address = 0;
+    std::uint16_t nonzero_branch_opcode = 0;
+    std::int8_t nonzero_branch_displacement = 0;
+    std::size_t nonzero_branch_target_offset = 0;
+    std::uint16_t chunk_subtract_opcode = 0;
+    std::uint32_t chunk_bytes = 0;
+    std::uint16_t first_terminal_branch_opcode = 0;
+    std::int8_t first_terminal_branch_displacement = 0;
+    std::size_t first_terminal_branch_target_offset = 0;
+    std::uint16_t second_terminal_branch_opcode = 0;
+    std::int8_t second_terminal_branch_displacement = 0;
+    std::size_t second_terminal_branch_target_offset = 0;
+    std::uint16_t destination_advance_opcode = 0;
+    std::uint32_t destination_advance_bytes = 0;
+    std::uint16_t unit_advance_opcode = 0;
+    std::uint16_t loop_branch_opcode = 0;
+    std::int8_t loop_branch_displacement = 0;
+    std::size_t loop_branch_target_offset = 0;
+    std::uint16_t return_helper_branch_opcode = 0;
+    std::int8_t return_helper_branch_displacement = 0;
+    std::size_t return_helper_target_offset = 0;
+    std::size_t raw_reader_entry_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariRawReaderWrapperProfile
+parse_deuteros_atari_raw_reader_wrapper(std::span<const std::uint8_t> bytes,
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariPostCallbackCalleeProfiles& callees);
+
+// The wrapper's direct BSR.W target is a complete, fixed-size machine-code
+// block at track-2 +$60.  This profile preserves its literal arithmetic,
+// stack layout, ABI opcode, and post-ABI store/RTS bytes without assigning a
+// result to the external call or treating it as a performed disk operation.
+struct DeuterosAtariRawReaderCallLayout {
+    std::size_t routine_offset = 0;
+    std::size_t routine_byte_count = 0;
+    std::string routine_sha256;
+    std::uint16_t initial_count_opcode = 0;
+    std::uint16_t initial_count_immediate = 0;
+    std::uint16_t count_compare_opcode = 0;
+    std::uint32_t count_compare_immediate = 0;
+    std::uint16_t count_branch_opcode = 0;
+    std::int8_t count_branch_displacement = 0;
+    std::size_t count_branch_target_offset = 0;
+    std::uint16_t first_word_shift_opcode = 0;
+    std::uint16_t second_word_shift_opcode = 0;
+    std::uint16_t word_increment_opcode = 0;
+    std::uint16_t count_register_transfer_opcode = 0;
+    std::uint16_t source_register_transfer_opcode = 0;
+    std::uint16_t side_compare_opcode = 0;
+    std::uint16_t side_compare_immediate = 0;
+    std::uint16_t side_branch_opcode = 0;
+    std::int8_t side_branch_displacement = 0;
+    std::size_t side_branch_target_offset = 0;
+    std::uint16_t alternate_side_opcode = 0;
+    std::uint16_t side_adjust_opcode = 0;
+    std::uint16_t side_adjust_immediate = 0;
+    std::size_t abi_call_offset = 0;
+    std::uint16_t abi_selector = 0;
+    std::uint16_t abi_call_opcode = 0;
+    std::uint16_t stack_cleanup_opcode = 0;
+    std::uint32_t stack_cleanup_bytes = 0;
+    std::uint16_t post_call_store_opcode = 0;
+    std::uint16_t post_call_store_address = 0;
+    std::uint16_t return_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariRawReaderCallLayout
+parse_deuteros_atari_raw_reader_call_layout(std::span<const std::uint8_t> bytes,
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariRawReaderWrapperProfile& wrapper);
+
+// The copied dispatch table's three distinct direct targets are complete
+// fixed-size blocks in the recovered second stage.  This profiles the table
+// linkage and original bytes only.  It neither supplies a dispatch index nor
+// claims that an indirect JSR reaches, executes, or returns from any target.
+struct DeuterosAtariDirectVectorCalleeProfile {
+    std::size_t vector_slot = 0;
+    std::uint32_t runtime_address = 0;
+    std::size_t stage_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::uint16_t first_opcode = 0;
+    std::uint16_t final_word = 0;
+};
+
+struct DeuterosAtariDirectVectorCalleeProfiles {
+    std::size_t vector_table_offset = 0;
+    std::array<DeuterosAtariDirectVectorCalleeProfile, 3> distinct_callees{};
+    std::size_t alias_branch_offset = 0;
+    std::uint16_t alias_branch_opcode = 0;
+    std::int8_t alias_branch_displacement = 0;
+    std::size_t alias_branch_target_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariDirectVectorCalleeProfiles
+parse_deuteros_atari_direct_vector_callees(std::span<const std::uint8_t> bytes,
+    const DeuterosAtariSecondStageProfile& stage, const DeuterosAtariDispatchProfile& dispatch);
+
+// The third distinct table body contains one self-contained literal-pointer
+// transfer loop.  This parser records its original encoding and DBF backedge
+// only.  It neither selects a vector nor claims that the surrounding body,
+// transfer, later branch, or any raw-media operation executes.
+struct DeuterosAtariDirectVectorTransferLoopProfile {
+    std::size_t loop_block_offset = 0;
+    std::size_t loop_block_byte_count = 0;
+    std::string loop_block_sha256;
+    std::uint16_t destination_pointer_load_opcode = 0;
+    std::uint32_t destination_pointer = 0;
+    std::uint16_t source_pointer_load_opcode = 0;
+    std::uint32_t source_pointer = 0;
+    std::uint16_t counter_load_opcode = 0;
+    std::uint16_t counter_initial_value = 0;
+    std::uint16_t transfer_opcode = 0;
+    std::uint16_t dbf_opcode = 0;
+    std::int16_t dbf_displacement = 0;
+    std::size_t dbf_target_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariDirectVectorTransferLoopProfile
+parse_deuteros_atari_direct_vector_transfer_loop(std::span<const std::uint8_t> bytes,
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDirectVectorCalleeProfiles& callees);
+
+// The bytes directly after the third direct vector's literal-pointer loop
+// contain two immediate adjustments, a local BSR.W to the already bounded
+// range wrapper, and a BRA.W to the separately bounded dispatcher return.
+// This preserves their literal instruction layout only.  It does not select
+// the vector, execute either branch, assign register meanings, or perform a
+// raw-media operation.
+struct DeuterosAtariDirectVectorTransferTailProfile {
+    std::size_t tail_offset = 0;
+    std::size_t tail_byte_count = 0;
+    std::string tail_sha256;
+    std::uint16_t first_immediate_adjust_opcode = 0;
+    std::uint32_t first_immediate_adjust_value = 0;
+    std::uint16_t second_immediate_adjust_opcode = 0;
+    std::uint32_t second_immediate_adjust_value = 0;
+    std::uint16_t literal_load_opcode = 0;
+    std::uint32_t literal_load_value = 0;
+    std::uint16_t range_wrapper_bsr_opcode = 0;
+    std::int16_t range_wrapper_bsr_displacement = 0;
+    std::size_t range_wrapper_bsr_target_offset = 0;
+    std::uint16_t dispatcher_return_bra_opcode = 0;
+    std::int16_t dispatcher_return_bra_displacement = 0;
+    std::size_t dispatcher_return_bra_target_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariDirectVectorTransferTailProfile
+parse_deuteros_atari_direct_vector_transfer_tail(std::span<const std::uint8_t> bytes,
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDirectVectorCalleeProfiles& callees,
+    const DeuterosAtariDirectVectorTransferLoopProfile& loop,
+    const DeuterosAtariRawReaderWrapperProfile& wrapper,
+    const DeuterosAtariState5ReturnProfile& state5_return);
+
+// The copied dispatcher captures the low word of a RAM longword before its
+// supervisor-service boundary, and separately contains a literal table lookup
+// followed by JSR (A1).  These byte-proven layouts identify the input and
+// lookup mechanics, but do not establish an initial RAM value, a service
+// return, bounds checking, a selected vector, or any game meaning.
+struct DeuterosAtariStateSelectionLayout {
+    std::size_t input_capture_offset = 0;
+    std::size_t input_capture_byte_count = 0;
+    std::string input_capture_sha256;
+    std::uint16_t source_longword_load_opcode = 0;
+    std::uint16_t source_longword_address = 0;
+    std::uint16_t state_word_store_opcode = 0;
+    std::uint16_t state_word_address = 0;
+    std::size_t table_lookup_offset = 0;
+    std::size_t table_lookup_byte_count = 0;
+    std::string table_lookup_sha256;
+    std::uint16_t table_base_load_opcode = 0;
+    std::uint16_t table_base_address = 0;
+    std::uint16_t state_word_load_opcode = 0;
+    std::uint16_t index_shift_opcode = 0;
+    std::uint16_t indexed_vector_load_opcode = 0;
+    std::uint16_t indexed_vector_displacement = 0;
+    std::uint16_t indirect_call_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariStateSelectionLayout
+parse_deuteros_atari_state_selection_layout(std::span<const std::uint8_t> bytes,
+    const DeuterosAtariSecondStageProfile& stage, const DeuterosAtariDispatchProfile& dispatch);
+
+// The bytes immediately following the copied dispatcher's JSR (A1) retain
+// the selected routine's D1/D2 convention, advance the raw-reader argument,
+// and call the local range wrapper. This is only a post-indirect-call layout:
+// it does not establish that a table entry is selected, that it returns, or
+// that the wrapper/raw reader is reached or returns.
+struct DeuterosAtariStateSelectionContinuation {
+    std::size_t continuation_offset = 0;
+    std::size_t continuation_byte_count = 0;
+    std::string continuation_sha256;
+    std::uint16_t indirect_call_opcode = 0;
+    std::uint16_t d1_stack_save_opcode = 0;
+    std::uint16_t raw_reader_argument_advance_opcode = 0;
+    std::uint16_t raw_reader_argument_advance_bytes = 0;
+    std::uint16_t d2_to_d7_opcode = 0;
+    std::uint16_t raw_reader_wrapper_bsr_opcode = 0;
+    std::int16_t raw_reader_wrapper_bsr_displacement = 0;
+    std::size_t raw_reader_wrapper_target_offset = 0;
+    std::uint16_t state_word_return_opcode = 0;
+    std::uint16_t state_word_address = 0;
+    std::uint16_t return_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariStateSelectionContinuation
+parse_deuteros_atari_state_selection_continuation(std::span<const std::uint8_t> bytes,
+    const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariStateSelectionLayout& layout,
+    const DeuterosAtariRawReaderWrapperProfile& wrapper);
 
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is

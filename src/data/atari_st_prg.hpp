@@ -126,6 +126,54 @@ struct MillenniumAtariFopenFallthrough {
 [[nodiscard]] MillenniumAtariFopenFallthrough parse_millennium_atari_fopen_fallthrough(
     const MillenniumAtariMaterializedTarget& target, const MillenniumAtariTrapEntry& trap);
 
+// The original continuation immediately after the statically prepared Fread
+// boundary. It begins with the still-uninvoked GEMDOS trap and ends at an
+// absolute JSR into the Fread destination. This proves a loader-to-buffer
+// control transfer encoding only: it does not claim that either GEMDOS call
+// returns, that the destination was filled, or that the JSR is reachable.
+struct MillenniumAtariFreadConfigTransferBoundary {
+    std::uint32_t target_address = 0;
+    std::size_t entry_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::uint16_t trap_opcode = 0;
+    std::uint16_t stack_cleanup_opcode = 0;
+    std::uint32_t stack_cleanup_bytes = 0;
+    std::uint16_t config_jsr_opcode = 0;
+    std::uint32_t config_buffer_address = 0;
+};
+
+struct MillenniumAtariConfigEntry;
+
+[[nodiscard]] MillenniumAtariFreadConfigTransferBoundary
+parse_millennium_atari_fread_config_transfer_boundary(
+    const MillenniumAtariMaterializedTarget& target,
+    const MillenniumAtariFopenFallthrough& fallthrough);
+
+// The recovered Fread boundary names $2a500 as its destination, while the
+// supplied MILL22A.inf has an absolute leading JMP.  This parser preserves
+// the resulting address relationship without treating the file bytes as a
+// successfully materialized native buffer.  In particular, it makes the
+// 34-byte disagreement between that literal destination mapping and the
+// independently verified candidate entry explicit rather than silently
+// choosing a host-side load address.
+struct MillenniumAtariFreadConfigLoadAddressBoundary {
+    std::uint32_t fread_destination_address = 0;
+    std::uint16_t payload_initial_jump_opcode = 0;
+    std::uint32_t payload_initial_jump_target_address = 0;
+    std::uint32_t payload_initial_jump_target_file_offset_from_destination = 0;
+    std::string payload_initial_jump_sha256;
+    std::uint32_t independent_entry_load_base = 0;
+    std::uint32_t independent_entry_file_offset = 0;
+    std::int32_t independent_entry_offset_delta = 0;
+};
+
+[[nodiscard]] MillenniumAtariFreadConfigLoadAddressBoundary
+parse_millennium_atari_fread_config_load_address_boundary(
+    const MillenniumAtariFreadConfigTransferBoundary& transfer,
+    std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigEntry& independent_entry);
+
 // Evidence for the exact configuration filename requested by the recovered
 // Fopen boundary.  The profile retains only filesystem facts, a whole-payload
 // hash and the literal leading instruction word(s); it never projects the
@@ -170,11 +218,12 @@ struct MillenniumAtariAuxiliaryResourceNameEvidence {
     std::uint32_t preceding_return_file_offset = 0;
 };
 
-// The initial, directly-addressed control block in the genuine Equinox
-// MILL22A.inf payload.  The file is not a host configuration format: its
-// leading JMP and all reported addresses are original 68000 facts.  This
-// parser never calls the traps, follows the JSRs, or projects any of its
-// mutable words into a replacement game state.
+// An independently address-derived candidate control block in the genuine
+// Equinox MILL22A.inf payload. The file is not a host configuration format:
+// its leading JMP and all reported addresses are original 68000 facts. The
+// Fread destination relationship remains an explicit unresolved boundary, so
+// this parser never claims the block is dynamically reached, calls traps,
+// follows JSRs, or projects mutable words into replacement game state.
 struct MillenniumAtariConfigEntry {
     std::uint32_t proven_load_base = 0;
     std::uint32_t entry_address = 0;
@@ -312,6 +361,32 @@ struct MillenniumAtariConfigFourthJsr {
     std::uint16_t d4_initial_value = 0;
 };
 
+// The contiguous local predecessor immediately before the direct $2b448
+// target. It is a hash-addressed byte/control-flow anchor only: no entry
+// path to its first byte is established, and neither DBF loop is executed or
+// assigned a data effect.
+struct MillenniumAtariConfigFourthPrelude {
+    std::uint32_t prelude_address = 0;
+    std::uint32_t prelude_file_offset = 0;
+    std::uint32_t byte_count = 0;
+    std::string sha256;
+    std::uint16_t d0_setup_opcode = 0;
+    std::uint32_t d0_initial_value = 0;
+    std::uint16_t d1_setup_opcode = 0;
+    std::uint16_t d1_initial_value = 0;
+    std::uint16_t first_dbf_opcode = 0;
+    std::int16_t first_dbf_displacement = 0;
+    std::uint32_t first_dbf_target_address = 0;
+    std::uint16_t a3_push_opcode = 0;
+    std::uint32_t a5_initial_address = 0;
+    std::uint16_t second_d0_setup_opcode = 0;
+    std::uint16_t second_d0_initial_value = 0;
+    std::uint16_t second_dbf_opcode = 0;
+    std::int16_t second_dbf_displacement = 0;
+    std::uint32_t second_dbf_target_address = 0;
+    std::uint32_t continuation_address = 0;
+};
+
 // The first local loop immediately after $2b448's proven setup. This is a
 // byte-precise DBF backedge, not a claim about the loop's data or effects.
 struct MillenniumAtariConfigFourthLoop {
@@ -408,6 +483,22 @@ struct MillenniumAtariConfigAbsoluteJsrInventory {
     std::vector<std::pair<std::uint32_t, std::uint32_t>> encodings;
 };
 
+// A hash-identified local span at one of the non-entry-block absolute-JSR
+// targets. The inventory proves only that the encoding occurs in the original
+// payload; it does not establish reachability or a calling convention. The
+// body is retained whole because its register and memory effects depend on
+// state outside the static bytes.
+struct MillenniumAtariConfigResidualJsrBody {
+    std::uint32_t callsite_file_offset = 0;
+    std::uint32_t target_address = 0;
+    std::uint32_t target_file_offset = 0;
+    std::uint32_t terminal_return_address = 0;
+    std::uint32_t byte_count = 0;
+    std::string sha256;
+    std::uint16_t first_opcode = 0;
+    std::uint16_t return_opcode = 0;
+};
+
 // Strictly parses a genuine Atari ST PRG image, including its compact
 // relocation byte stream.  It rejects malformed offsets rather than treating
 // a different file as a compatible game executable.
@@ -464,10 +555,11 @@ struct MillenniumAtariConfigAbsoluteJsrInventory {
 [[nodiscard]] MillenniumAtariAuxiliaryResourceNameEvidence
 probe_millennium_atari_auxiliary_resource_name(const Fat12Disk& disk);
 
-// Validates the exact initial control path reached by MILL22A.inf's leading
-// JMP on the verified Equinox disk.  It reports literal XBIOS selectors,
-// arguments, JSR destinations and PEA target only.  No TOS/XBIOS/GEMDOS
-// service is emulated, no file is unpacked and no supplied media is changed.
+// Validates an exact static candidate control block named by MILL22A.inf's
+// leading JMP on the verified Equinox disk. It reports literal XBIOS
+// selectors, arguments, JSR destinations and PEA target only. The native
+// load address remains unresolved; no TOS/XBIOS/GEMDOS service is emulated,
+// no file is unpacked and no supplied media is changed.
 [[nodiscard]] MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
     std::span<const std::uint8_t> payload);
 
@@ -514,6 +606,12 @@ parse_millennium_atari_config_trap_argument_strings(
 [[nodiscard]] MillenniumAtariConfigFourthJsr parse_millennium_atari_config_fourth_jsr(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry);
 
+// Validates the static contiguous predecessor of the verified $2b448 setup.
+// It does not establish that the predecessor is called or either DBF loop is
+// dynamically entered.
+[[nodiscard]] MillenniumAtariConfigFourthPrelude parse_millennium_atari_config_fourth_prelude(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthJsr& setup);
+
 // Validates the first exact $2b448 loop body and its DBF backedge only. It
 // never runs iterations, reads pointed-to data, or translates loop effects
 // into a replacement runtime state.
@@ -553,5 +651,12 @@ parse_millennium_atari_config_trap_argument_strings(
 // payload. It does not claim that every byte pattern is reachable code.
 [[nodiscard]] MillenniumAtariConfigAbsoluteJsrInventory inventory_millennium_atari_config_absolute_jsrs(
     std::span<const std::uint8_t> payload);
+
+// Hash-locks the complete static body at the inventory-only JSR encoding
+// +0xdac -> $2b576. It neither executes the body nor promotes the raw
+// encoding to a proven call path.
+[[nodiscard]] MillenniumAtariConfigResidualJsrBody parse_millennium_atari_config_residual_jsr_body(
+    std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigAbsoluteJsrInventory& inventory);
 
 } // namespace eon

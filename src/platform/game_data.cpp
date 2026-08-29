@@ -2,13 +2,29 @@
 
 #include "data/release_manifest.hpp"
 #include "data/sha256.hpp"
+#include "data/zip_archive.hpp"
 
 #include <algorithm>
 #include <exception>
+#include <stdexcept>
 #include <system_error>
 
 namespace eon {
 namespace {
+
+const ReleaseManifestEntry& require_manifest_identity(const ReleaseArchive& release) {
+    const auto manifest = release_manifest();
+    const auto found = std::find_if(manifest.begin(), manifest.end(), [&release](const auto& candidate) {
+        return candidate.sha256 == release.sha256
+            && candidate.game == release.game
+            && candidate.platform == release.platform
+            && candidate.language == release.language;
+    });
+    if (found == manifest.end()) {
+        throw std::runtime_error("Release metadata is not an exact recognised manifest identity");
+    }
+    return *found;
+}
 
 } // namespace
 
@@ -17,6 +33,22 @@ std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& d
     while (!scanner.advance(64)) {
     }
     return scanner.releases();
+}
+
+void verify_release_archive(const ReleaseArchive& release) {
+    static_cast<void>(require_manifest_identity(release));
+    static_cast<void>(ZipArchive::open_verified(release.path, release.sha256));
+}
+
+std::vector<ArchiveAsset> inventory_verified_release(const ReleaseArchive& release) {
+    static_cast<void>(require_manifest_identity(release));
+    return inventory_verified_zip(release.path, release.sha256);
+}
+
+std::optional<std::vector<std::uint8_t>> extract_verified_release_asset(
+    const ReleaseArchive& release, std::string_view expected_asset_sha256) {
+    static_cast<void>(require_manifest_identity(release));
+    return extract_verified_asset_by_sha256(release.path, release.sha256, expected_asset_sha256);
 }
 
 ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {

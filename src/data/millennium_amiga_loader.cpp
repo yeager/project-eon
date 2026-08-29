@@ -109,6 +109,112 @@ MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(const AmigaAdf& disk) {
     return plan;
 }
 
+MillenniumAmigaBootstrapOpaqueInvocationBoundary
+parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    // This is the bootstrap-loader's static continuation after its setup
+    // call. It issues the already-validated first raw read, calls that loaded
+    // address indirectly through A3, then issues the resident read and jumps
+    // to its A3 value. The first invocation is deliberately an opaque stop:
+    // the following source bytes are not evidence that it returns at runtime.
+    constexpr std::uint32_t entry_address = 0x7029e;
+    constexpr std::size_t raw_disk_offset = 0x69e;
+    constexpr std::array<std::uint8_t, 132> expected{{
+        0x23,0xc9,0x00,0x06,0x60,0x42,0x20,0x3c,0x00,0x06,0x1a,0x80,
+        0x53,0x80,0x66,0xfc,0x4e,0xb9,0x00,0x06,0x61,0x28,0x22,0x3c,
+        0x00,0x04,0x10,0x00,0x20,0x3c,0x00,0x02,0x42,0x00,0x2e,0x3c,
+        0x00,0x00,0x16,0x00,0xce,0xfc,0x00,0x50,0x4e,0xb9,0x00,0x06,
+        0x61,0xda,0x70,0x00,0x2e,0x79,0x00,0x07,0xff,0x00,0x26,0x7c,
+        0x00,0x04,0x10,0x00,0x22,0x79,0x00,0x06,0x60,0x42,0x4e,0x93,
+        0x22,0x3c,0x00,0x06,0x80,0x00,0x20,0x3c,0x00,0x01,0x64,0x00,
+        0x2e,0x3c,0x00,0x00,0x16,0x00,0xde,0x87,0x4e,0xb9,0x00,0x06,
+        0x61,0xda,0x70,0x00,0x2e,0x79,0x00,0x07,0xff,0x00,0x26,0x7c,
+        0x00,0x06,0x80,0x00,0x22,0x79,0x00,0x06,0x60,0x42,0x60,0x04,
+        0x20,0x4b,0x4e,0x75,0x2c,0x3c,0xa8,0xd3,0x98,0xfb,0x4e,0xd3,
+    }};
+    constexpr std::string_view expected_hash =
+        "b8ca18e61e5372ba4387abd69f6796435671465ddaf48cd3a3e4b41e2528efdc";
+    constexpr std::uint32_t first_invocation = 0x702e4;
+    constexpr std::uint32_t static_post_first = 0x702e6;
+    constexpr std::uint32_t resident_jump = 0x70320;
+    if (plan.bootstrap_loader.disk_offset != bootstrap_disk_offset
+        || plan.bootstrap_loader.destination != bootstrap_destination
+        || plan.first_stage.disk_offset != 0x24200 || plan.first_stage.length != 0x6e000
+        || plan.first_stage.destination != 0x41000 || plan.resident_stage.disk_offset != 0x16400
+        || plan.resident_stage.length != 0x2c000 || plan.resident_stage.destination != 0x68000
+        || plan.resident_entry != plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga opaque invocation plan");
+    }
+    if (raw_disk_offset < plan.bootstrap_loader.disk_offset
+        || raw_disk_offset > plan.bootstrap_loader.disk_offset + plan.bootstrap_loader.length
+        || expected.size() > plan.bootstrap_loader.disk_offset + plan.bootstrap_loader.length - raw_disk_offset) {
+        throw std::runtime_error("Millennium Amiga opaque invocation boundary outside bootstrap loader");
+    }
+    const auto bytes = disk.bytes(raw_disk_offset, expected.size());
+    const auto hash = to_hex(sha256(bytes));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga opaque invocation boundary");
+    }
+    return {entry_address, raw_disk_offset, expected.size(), hash, first_invocation,
+        plan.first_stage.destination, static_post_first, resident_jump,
+        plan.resident_stage.destination};
+}
+
+MillenniumAmigaFirstStageSourceAnchorBoundary
+parse_millennium_amiga_first_stage_source_anchor_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    // The first stage is invoked indirectly and its output representation is
+    // unknown. These are only byte-exact anchors in the original raw input.
+    constexpr std::size_t source_offset = 0x24200;
+    constexpr std::size_t source_size = 0x6e000;
+    constexpr std::string_view source_hash =
+        "5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a";
+    constexpr std::array<std::uint32_t, 3> anchor_offsets{{0x4a3dc, 0x4a648, 0x4a936}};
+    constexpr std::array<std::string_view, 3> anchors{{
+        "exec.library", "graphics.library", "input.device",
+    }};
+    constexpr std::array<std::size_t, 2> window_offsets{{0x4a5b0, 0x4a900}};
+    constexpr std::array<std::size_t, 2> window_sizes{{0x160, 0x220}};
+    constexpr std::array<std::string_view, 2> window_hashes{{
+        "97bb8cbe026ac3bba2c19cc296bc7cef00fbd0c8095c678f4cc303761b8b8309",
+        "ee84336cbf4665bcd2bc48d054c024a20e4c5faaaf26cd5fdcc78e6b8f3931c9",
+    }};
+    if (plan.first_stage.disk_offset != source_offset || plan.first_stage.length != source_size
+        || plan.first_stage.destination != 0x41000) {
+        throw std::runtime_error("Unexpected Millennium Amiga first-stage source plan");
+    }
+    const auto source = disk.bytes(source_offset, source_size);
+    const auto hash = to_hex(sha256(source));
+    if (hash != source_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga first-stage source range");
+    }
+    for (std::size_t index = 0; index < anchors.size(); ++index) {
+        const auto offset = anchor_offsets[index];
+        const auto text = anchors[index];
+        if (offset > source.size() || text.size() + 1U > source.size() - offset
+            || !std::equal(text.begin(), text.end(), source.begin() + offset)
+            || source[offset + text.size()] != 0) {
+            throw std::runtime_error("Unexpected Millennium Amiga first-stage source anchor");
+        }
+    }
+    MillenniumAmigaFirstStageSourceAnchorBoundary result{
+        source_offset, source_size, hash, anchor_offsets, window_offsets, window_sizes, {},
+    };
+    for (std::size_t index = 0; index < window_offsets.size(); ++index) {
+        const auto offset = window_offsets[index];
+        const auto size = window_sizes[index];
+        if (offset > source.size() || size > source.size() - offset) {
+            throw std::runtime_error("Millennium Amiga first-stage source window outside range");
+        }
+        const auto window_hash = to_hex(sha256(source.subspan(offset, size)));
+        if (window_hash != window_hashes[index]) {
+            throw std::runtime_error("Unexpected Millennium Amiga first-stage source window");
+        }
+        result.window_sha256[index] = window_hash;
+    }
+    return result;
+}
+
 MillenniumAmigaSharedResidentLayout parse_millennium_amiga_shared_resident_layout(
     const std::span<const std::uint8_t> image) {
     constexpr std::uint32_t disk_offset = 0x16400;

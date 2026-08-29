@@ -49,8 +49,25 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
         second_stage_bytes, second_stage_, supervisor_callback_);
     post_callback_callees_ = parse_deuteros_atari_post_callback_callee_profiles(
         second_stage_bytes, second_stage_, supervisor_callback_continuation_);
+    first_callee_continuation_ = parse_deuteros_atari_first_callee_continuation(
+        second_stage_bytes, second_stage_, post_callback_callees_);
     second_callee_continuation_ = parse_deuteros_atari_second_callee_continuation(
         second_stage_bytes, second_stage_, post_callback_callees_);
+    raw_reader_wrapper_ = parse_deuteros_atari_raw_reader_wrapper(
+        second_stage_bytes, second_stage_, post_callback_callees_);
+    raw_reader_call_layout_ = parse_deuteros_atari_raw_reader_call_layout(
+        second_stage_bytes, second_stage_, raw_reader_wrapper_);
+    direct_vector_callees_ = parse_deuteros_atari_direct_vector_callees(
+        second_stage_bytes, second_stage_, dispatch_);
+    direct_vector_transfer_loop_ = parse_deuteros_atari_direct_vector_transfer_loop(
+        second_stage_bytes, second_stage_, direct_vector_callees_);
+    direct_vector_transfer_tail_ = parse_deuteros_atari_direct_vector_transfer_tail(
+        second_stage_bytes, second_stage_, direct_vector_callees_, direct_vector_transfer_loop_,
+        raw_reader_wrapper_, state5_return_);
+    state_selection_layout_ = parse_deuteros_atari_state_selection_layout(
+        second_stage_bytes, second_stage_, dispatch_);
+    state_selection_continuation_ = parse_deuteros_atari_state_selection_continuation(
+        second_stage_bytes, second_stage_, state_selection_layout_, raw_reader_wrapper_);
 }
 
 } // namespace eon

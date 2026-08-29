@@ -23,6 +23,9 @@ public:
     [[nodiscard]] const MillenniumAtariFopenFallthrough& fopen_fallthrough() const {
         return fopen_fallthrough_;
     }
+    [[nodiscard]] const MillenniumAtariFreadConfigTransferBoundary& fread_config_transfer() const {
+        return fread_config_transfer_;
+    }
     [[nodiscard]] const MillenniumAtariRootInventory& root_inventory() const {
         return root_inventory_;
     }
@@ -35,6 +38,7 @@ private:
     MillenniumAtariMaterializedTarget target_;
     MillenniumAtariTrapEntry trap_;
     MillenniumAtariFopenFallthrough fopen_fallthrough_;
+    MillenniumAtariFreadConfigTransferBoundary fread_config_transfer_;
     MillenniumAtariRootInventory root_inventory_;
     MillenniumAtariConfigEvidence config_;
 };

@@ -532,6 +532,36 @@ DeuterosAtariPostCallbackCalleeProfiles parse_deuteros_atari_post_callback_calle
         static_cast<std::int16_t>(be16(second_window, 20)), second_bsr_target};
 }
 
+DeuterosAtariFirstCalleeContinuation parse_deuteros_atari_first_callee_continuation(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariPostCallbackCalleeProfiles& callees) {
+    // The first callee's XBIOS call at +$824 is an intentionally opaque
+    // boundary. Its following BRA.W targets +$1116, where these literal bytes
+    // lay out an immediate-to-RAM store and RTS. Do not assert that the trap
+    // returns, that this target is reached, or that either RAM value has game
+    // semantics.
+    constexpr std::size_t continuation_offset = 0x1116;
+    constexpr auto continuation_bytes = std::to_array<std::uint8_t>({
+        0x20, 0x3c, 0x00, 0x00, 0xb0, 0x00, 0x21, 0xc0, 0x25, 0xf0, 0x4e, 0x75,
+    });
+    constexpr std::string_view continuation_sha256 =
+        "8778c08ae16a5f66009dda8d60a0dacba267cca4d29211a11fd2e30c40a7796b";
+    if (stage.direct_entry_source_offset != 0xc4 || callees.first_callee_offset != 0x800
+        || callees.first_callee_post_trap_branch_offset != 44
+        || callees.first_callee_post_trap_branch_target_offset != continuation_offset
+        || callees.first_callee_trap_opcode != 0x4e4e) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST first-callee continuation topology");
+    }
+    require_bytes(bytes, continuation_offset, continuation_bytes,
+        "Unexpected Deuteros Atari ST first-callee continuation");
+    const auto window = bytes.subspan(continuation_offset, continuation_bytes.size());
+    if (to_hex(sha256(window)) != continuation_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST first-callee continuation hash");
+    }
+    return {continuation_offset, continuation_bytes.size(), std::string(continuation_sha256),
+        be16(window, 0), be32(window, 2), be16(window, 6), be16(window, 8), be16(window, 10)};
+}
+
 DeuterosAtariSecondCalleeContinuation parse_deuteros_atari_second_callee_continuation(
     const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariPostCallbackCalleeProfiles& callees) {
@@ -571,6 +601,377 @@ DeuterosAtariSecondCalleeContinuation parse_deuteros_atari_second_callee_continu
         be16(window, 14), 6, be32(window, 18), be16(window, 24), be16(window, 28),
         be16(window, 30), be16(window, 32), static_cast<std::int16_t>(be16(window, 34)),
         copy_loop_target, be16(window, 36)};
+}
+
+DeuterosAtariRawReaderWrapperProfile parse_deuteros_atari_raw_reader_wrapper(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariPostCallbackCalleeProfiles& callees) {
+    // This is the shared static wrapper at +$30. It calls the raw reader at
+    // +$60 before sampling the word written at $1e28, then uses literal
+    // conditional branches and a loop back to its save/call sequence. The
+    // word's provenance/value and every service return remain deliberately
+    // outside the recovered model.
+    constexpr std::size_t wrapper_offset = 0x30;
+    constexpr auto wrapper_bytes = std::to_array<std::uint8_t>({
+        0x8e, 0xfc, 0x12, 0x00, 0x2f, 0x00, 0x2f, 0x01,
+        0x2f, 0x07, 0x61, 0x00, 0x00, 0x24, 0x2e, 0x1f,
+        0x22, 0x1f, 0x20, 0x1f, 0x4a, 0x78, 0x1e, 0x28,
+        0x66, 0xe0, 0x04, 0x80, 0x00, 0x00, 0x12, 0x00,
+        0x67, 0x0c, 0x65, 0x0a, 0x06, 0x81, 0x00, 0x00,
+        0x12, 0x00, 0x52, 0x87, 0x60, 0xd6, 0x60, 0xca,
+    });
+    constexpr std::string_view wrapper_sha256 =
+        "132ce2473e3764453bba01308e1f5044dc748bbea8b01975b67a259aa57cea7e";
+    constexpr std::size_t raw_reader_offset = 0x60;
+    constexpr std::size_t return_helper_offset = 0x2a;
+    constexpr std::array<std::uint8_t, 6> return_helper_bytes{
+        0x3e, 0x38, 0x1e, 0x28, 0x4e, 0x75};
+    if (stage.raw_read_routine_offset != raw_reader_offset
+        || callees.second_callee_bsr_target_offset != wrapper_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST raw-reader wrapper topology");
+    }
+    require_bytes(bytes, wrapper_offset, wrapper_bytes,
+        "Unexpected Deuteros Atari ST raw-reader wrapper");
+    require_bytes(bytes, return_helper_offset, return_helper_bytes,
+        "Unexpected Deuteros Atari ST raw-reader wrapper return helper");
+    const auto window = bytes.subspan(wrapper_offset, wrapper_bytes.size());
+    const auto digest = to_hex(sha256(window));
+    if (digest != wrapper_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST raw-reader wrapper hash");
+    }
+    // Word branches use their extension-word address; byte branches use the
+    // address immediately after their opcode/displacement pair.
+    const auto raw_reader_target = wrapper_offset + 12U
+        + static_cast<std::int16_t>(be16(window, 12));
+    const auto nonzero_target = wrapper_offset + 26U
+        + static_cast<std::int8_t>(window[25]);
+    const auto first_terminal_target = wrapper_offset + 34U
+        + static_cast<std::int8_t>(window[33]);
+    const auto second_terminal_target = wrapper_offset + 36U
+        + static_cast<std::int8_t>(window[35]);
+    const auto loop_target = wrapper_offset + 46U
+        + static_cast<std::int8_t>(window[45]);
+    const auto return_helper_target = wrapper_offset + 48U
+        + static_cast<std::int8_t>(window[47]);
+    if (raw_reader_target != raw_reader_offset || nonzero_target != return_helper_offset
+        || first_terminal_target != wrapper_offset + 46U
+        || second_terminal_target != wrapper_offset + 46U
+        || loop_target != wrapper_offset + 4U || return_helper_target != return_helper_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST raw-reader wrapper branches");
+    }
+    return {wrapper_offset, wrapper_bytes.size(), std::string(wrapper_sha256),
+        be16(window, 0), be16(window, 2), be16(window, 10),
+        static_cast<std::int16_t>(be16(window, 12)), raw_reader_target,
+        be16(window, 20), be16(window, 22), be16(window, 24),
+        static_cast<std::int8_t>(window[25]), nonzero_target, be16(window, 26), be32(window, 28),
+        be16(window, 32), static_cast<std::int8_t>(window[33]), first_terminal_target,
+        be16(window, 34), static_cast<std::int8_t>(window[35]), second_terminal_target,
+        be16(window, 36), be32(window, 38), be16(window, 42), be16(window, 44),
+        static_cast<std::int8_t>(window[45]), loop_target, be16(window, 46),
+        static_cast<std::int8_t>(window[47]), return_helper_target, raw_reader_offset};
+}
+
+DeuterosAtariRawReaderCallLayout parse_deuteros_atari_raw_reader_call_layout(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariRawReaderWrapperProfile& wrapper) {
+    // This is the wrapper's direct BSR target.  Keep the external ABI call as
+    // a hard boundary: the byte profile records only the original setup and
+    // following store/RTS encoding, never a service result or disk transfer.
+    constexpr std::size_t routine_offset = 0x60;
+    constexpr auto routine_bytes = std::to_array<std::uint8_t>({
+        0x74, 0x09, 0xb0, 0xbc, 0x00, 0x00, 0x12, 0x00,
+        0x64, 0x08, 0xe0, 0x48, 0xe2, 0x48, 0x52, 0x40,
+        0x34, 0x00, 0x28, 0x07, 0x76, 0x00, 0xb8, 0x7c,
+        0x00, 0x50, 0x65, 0x06, 0x76, 0x01, 0x04, 0x44,
+        0x00, 0x50, 0x3f, 0x02, 0x3f, 0x03, 0x3f, 0x04,
+        0x3f, 0x3c, 0x00, 0x01, 0x3f, 0x3c, 0x00, 0x00,
+        0x2f, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x2f, 0x01,
+        0x3f, 0x3c, 0x00, 0x08, 0x4e, 0x4e, 0xdf, 0xfc,
+        0x00, 0x00, 0x00, 0x14, 0x31, 0xc0, 0x1e, 0x28,
+        0x4e, 0x75,
+    });
+    constexpr std::string_view routine_sha256 =
+        "a5bec9d04daa8ce600add594f6325030acd2ad8535910dee62497da90d572c90";
+    constexpr std::size_t abi_call_relative_offset = 60;
+    constexpr std::size_t post_call_relative_offset = 68;
+    if (bytes.size() != 0x1200U || stage.raw_read_routine_offset != routine_offset
+        || wrapper.raw_reader_entry_offset != routine_offset
+        || wrapper.raw_reader_bsr_target_offset != routine_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST raw-reader call topology");
+    }
+    require_bytes(bytes, routine_offset, routine_bytes,
+        "Unexpected Deuteros Atari ST raw-reader call layout");
+    const auto window = bytes.subspan(routine_offset, routine_bytes.size());
+    const auto digest = to_hex(sha256(window));
+    if (digest != routine_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST raw-reader call hash");
+    }
+    // Both byte branches remain simple layout facts.  The first skips the
+    // two shifts/increment; the second skips the alternate-side adjustment.
+    const auto count_branch_target = routine_offset + 10U
+        + static_cast<std::int8_t>(window[9]);
+    const auto side_branch_target = routine_offset + 28U
+        + static_cast<std::int8_t>(window[27]);
+    if (count_branch_target != routine_offset + 18U
+        || side_branch_target != routine_offset + 34U) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST raw-reader call branches");
+    }
+    return {routine_offset, routine_bytes.size(), digest,
+        be16(window, 0), window[1], be16(window, 2), be32(window, 4),
+        be16(window, 8), static_cast<std::int8_t>(window[9]), count_branch_target,
+        be16(window, 10), be16(window, 12), be16(window, 14), be16(window, 16),
+        be16(window, 18), be16(window, 22), be16(window, 24), be16(window, 26),
+        static_cast<std::int8_t>(window[27]), side_branch_target, be16(window, 28),
+        be16(window, 30), be16(window, 32), routine_offset + abi_call_relative_offset,
+        be16(window, 58), be16(window, abi_call_relative_offset),
+        be16(window, 62), be32(window, 64), be16(window, post_call_relative_offset),
+        be16(window, post_call_relative_offset + 2U), be16(window, post_call_relative_offset + 4U)};
+}
+
+DeuterosAtariDirectVectorCalleeProfiles parse_deuteros_atari_direct_vector_callees(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch) {
+    // The copied dispatcher reaches these bodies only through JSR (A1), so
+    // their relationship is a table fact rather than a reachability claim.
+    // Each byte interval is complete through its original RTS or BRA.W. No
+    // register value, raw read, branch outcome, or game-state purpose is
+    // inferred from the literal code.
+    constexpr std::size_t table_offset = 0xac;
+    constexpr std::array<std::size_t, 3> slots{{0, 1, 5}};
+    constexpr std::array<std::size_t, 3> offsets{{0x11a, 0x12e, 0x152}};
+    constexpr std::array<std::size_t, 3> counts{{20, 34, 84}};
+    constexpr std::array<std::string_view, 3> hashes{{
+        "04c8eba86a6259f8d0b175fa18792cc64263863db51e76f9de839eec5c79ce0f",
+        "0bc76b22089d008e4ce90d63216c75acbe0786b0a06127fbd66ef0dc252949ac",
+        "eaee587850078d67a72dcf0da4b45e672c89a1352b040db580bedc0ba3b20e97",
+    }};
+    constexpr std::array<std::uint16_t, 3> first_words{{0x223c, 0x2f3c, 0x203c}};
+    constexpr std::array<std::uint16_t, 3> final_words{{0x4e75, 0x4e75, 0xff70}};
+    constexpr std::size_t alias_offset = 0x150;
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || dispatch.vector_addresses
+            != std::array<std::uint32_t, 6>{{0x1f1a, 0x1f2e, 0x1f50, 0x1f1a, 0x1f1a, 0x1f52}}) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector callee topology");
+    }
+    DeuterosAtariDirectVectorCalleeProfiles result;
+    result.vector_table_offset = table_offset;
+    for (std::size_t index = 0; index < slots.size(); ++index) {
+        const auto window = bytes.subspan(offsets[index], counts[index]);
+        const auto digest = to_hex(sha256(window));
+        if (digest != hashes[index] || be16(window, 0) != first_words[index]
+            || be16(window, counts[index] - 2U) != final_words[index]) {
+            throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector callee bytes");
+        }
+        const auto runtime_address = be32(bytes, table_offset + slots[index] * 4U);
+        if (runtime_address != 0x1e00U + offsets[index]) {
+            throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector callee address");
+        }
+        result.distinct_callees[index] = {slots[index], runtime_address, offsets[index], counts[index],
+            digest, be16(window, 0), be16(window, counts[index] - 2U)};
+    }
+    constexpr std::array<std::uint8_t, 2> alias_bytes{{0x60, 0xc8}};
+    require_bytes(bytes, alias_offset, alias_bytes,
+        "Unexpected Deuteros Atari ST direct-vector alias branch");
+    const auto alias_target = alias_offset + 2U + static_cast<std::int8_t>(bytes[alias_offset + 1U]);
+    if (alias_target != offsets[0]) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector alias target");
+    }
+    result.alias_branch_offset = alias_offset;
+    result.alias_branch_opcode = be16(bytes, alias_offset);
+    result.alias_branch_displacement = static_cast<std::int8_t>(bytes[alias_offset + 1U]);
+    result.alias_branch_target_offset = alias_target;
+    return result;
+}
+
+DeuterosAtariDirectVectorTransferLoopProfile parse_deuteros_atari_direct_vector_transfer_loop(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDirectVectorCalleeProfiles& callees) {
+    // This interval is nested within the byte-verified third distinct table
+    // body.  Its pointer literals and loop encoding are useful preservation
+    // facts, while all dynamic questions stay at the explicit table/call and
+    // raw-media boundaries.
+    constexpr std::size_t loop_offset = 0x170;
+    constexpr auto loop_bytes = std::to_array<std::uint8_t>({
+        0x41, 0xf9, 0x00, 0x05, 0x7a, 0x00,
+        0x22, 0x7c, 0x00, 0x00, 0xb0, 0x06,
+        0x30, 0x3c, 0x93, 0x92,
+        0x53, 0x40, 0x12, 0xd8, 0x51, 0xc8, 0xff, 0xfc,
+        0x2e, 0x1f, 0x22, 0x17,
+    });
+    constexpr std::string_view loop_sha256 =
+        "92cb6cf8a41c55df8459a9608c9626ff7cc831cceb69dd2b5531ac766b111552";
+    constexpr std::size_t dbf_relative_offset = 20;
+    constexpr std::size_t transfer_relative_offset = 18;
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || callees.distinct_callees[2].vector_slot != 5
+        || callees.distinct_callees[2].stage_offset != 0x152
+        || callees.distinct_callees[2].byte_count != 84
+        || callees.distinct_callees[2].sha256
+            != "eaee587850078d67a72dcf0da4b45e672c89a1352b040db580bedc0ba3b20e97") {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer topology");
+    }
+    require_bytes(bytes, loop_offset, loop_bytes,
+        "Unexpected Deuteros Atari ST direct-vector transfer loop");
+    const auto window = bytes.subspan(loop_offset, loop_bytes.size());
+    const auto digest = to_hex(sha256(window));
+    if (digest != loop_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer hash");
+    }
+    // On this 68000 DBF encoding the signed displacement is relative to the
+    // extension word, so -4 returns to the preceding byte transfer.
+    const auto target = loop_offset + dbf_relative_offset + 2U
+        + static_cast<std::int16_t>(be16(window, dbf_relative_offset + 2U));
+    if (target != loop_offset + 18U) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer backedge");
+    }
+    return {loop_offset, loop_bytes.size(), digest, be16(window, 0), be32(window, 2),
+        be16(window, 6), be32(window, 8), be16(window, 12), be16(window, 14),
+        be16(window, transfer_relative_offset), be16(window, dbf_relative_offset),
+        static_cast<std::int16_t>(be16(window, dbf_relative_offset + 2U)), target};
+}
+
+DeuterosAtariDirectVectorTransferTailProfile parse_deuteros_atari_direct_vector_transfer_tail(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDirectVectorCalleeProfiles& callees,
+    const DeuterosAtariDirectVectorTransferLoopProfile& loop,
+    const DeuterosAtariRawReaderWrapperProfile& wrapper,
+    const DeuterosAtariState5ReturnProfile& state5_return) {
+    // This is the remaining suffix of the complete third direct-vector body.
+    // It joins already independent byte boundaries (the local range wrapper
+    // and the vector-5 dispatcher return) without turning either static
+    // branch into an execution or state-selection claim.
+    constexpr std::size_t tail_offset = 0x18c;
+    constexpr auto tail_bytes = std::to_array<std::uint8_t>({
+        0x06, 0x87, 0x00, 0x00, 0xb4, 0x00,
+        0x06, 0x81, 0x00, 0x00, 0xb4, 0x00,
+        0x20, 0x3c, 0x00, 0x04, 0xc8, 0x00,
+        0x61, 0x00, 0xfe, 0x90,
+        0x60, 0x00, 0xff, 0x70,
+    });
+    constexpr std::string_view tail_sha256 =
+        "45ac9d176b63fa93e16475543939d2f16b4e98cc839b44d2ce2ba9358e978083";
+    constexpr std::size_t bsr_relative_offset = 18;
+    constexpr std::size_t bra_relative_offset = 22;
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || callees.distinct_callees[2].stage_offset != 0x152
+        || callees.distinct_callees[2].byte_count != 84
+        || loop.loop_block_offset != 0x170 || loop.loop_block_byte_count != 28
+        || loop.loop_block_sha256
+            != "92cb6cf8a41c55df8459a9608c9626ff7cc831cceb69dd2b5531ac766b111552"
+        || wrapper.wrapper_offset != 0x30 || state5_return.branch_offset != 0x1a2
+        || state5_return.branch_target_offset != 0x114) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer tail topology");
+    }
+    require_bytes(bytes, tail_offset, tail_bytes,
+        "Unexpected Deuteros Atari ST direct-vector transfer tail");
+    const auto window = bytes.subspan(tail_offset, tail_bytes.size());
+    const auto digest = to_hex(sha256(window));
+    if (digest != tail_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer tail hash");
+    }
+    const auto bsr_target = tail_offset + bsr_relative_offset + 2U
+        + static_cast<std::int16_t>(be16(window, bsr_relative_offset + 2U));
+    const auto bra_target = tail_offset + bra_relative_offset + 2U
+        + static_cast<std::int16_t>(be16(window, bra_relative_offset + 2U));
+    if (bsr_target != wrapper.wrapper_offset || bra_target != state5_return.branch_target_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer tail branches");
+    }
+    return {tail_offset, tail_bytes.size(), digest,
+        be16(window, 0), be32(window, 2), be16(window, 6), be32(window, 8),
+        be16(window, 12), be32(window, 14), be16(window, bsr_relative_offset),
+        static_cast<std::int16_t>(be16(window, bsr_relative_offset + 2U)), bsr_target,
+        be16(window, bra_relative_offset),
+        static_cast<std::int16_t>(be16(window, bra_relative_offset + 2U)), bra_target};
+}
+
+DeuterosAtariStateSelectionLayout parse_deuteros_atari_state_selection_layout(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariDispatchProfile& dispatch) {
+    // The first pair of copied-dispatcher operations has already happened
+    // before the XBIOS callback boundary: it copies a longword's low word to
+    // the dispatch word. The lookup block is later in the same copied code,
+    // after that boundary; retain it as a static layout without claiming that
+    // the service returns or that its JSR selects a specific table vector.
+    constexpr std::size_t input_capture_offset = 0xc4;
+    constexpr auto input_capture_bytes = std::to_array<std::uint8_t>({
+        0x20, 0x38, 0x25, 0xfc, 0x31, 0xc0, 0x1e, 0xaa, 0x4f, 0xf9, 0x00, 0x00,
+    });
+    constexpr std::string_view input_capture_sha256 =
+        "03cf620d981a775fd1adabe55deea940e08760e3e49c62cd0643c22b5aa08082";
+    constexpr std::size_t table_lookup_offset = 0xf2;
+    constexpr auto table_lookup_bytes = std::to_array<std::uint8_t>({
+        0x4f, 0xf9, 0x00, 0x00, 0x24, 0x78, 0x43, 0xf8, 0x1e, 0xac,
+        0x30, 0x38, 0x1e, 0xaa, 0xe5, 0x48, 0x22, 0x71, 0x00, 0x00,
+        0x4e, 0x91,
+    });
+    constexpr std::string_view table_lookup_sha256 =
+        "8e8551a51a7b989e6d2b7d1535819dea658a4e3e64562737755125c13c8f0d3c";
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != input_capture_offset
+        || stage.dispatch_state_address != 0x1eaa || stage.dispatch_table_address != 0x1eac
+        || dispatch.vector_addresses
+            != std::array<std::uint32_t, 6>{{0x1f1a, 0x1f2e, 0x1f50, 0x1f1a, 0x1f1a, 0x1f52}}) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-selection topology");
+    }
+    require_bytes(bytes, input_capture_offset, input_capture_bytes,
+        "Unexpected Deuteros Atari ST state-selection input capture");
+    require_bytes(bytes, table_lookup_offset, table_lookup_bytes,
+        "Unexpected Deuteros Atari ST state-selection table lookup");
+    const auto input_window = bytes.subspan(input_capture_offset, input_capture_bytes.size());
+    const auto lookup_window = bytes.subspan(table_lookup_offset, table_lookup_bytes.size());
+    if (to_hex(sha256(input_window)) != input_capture_sha256
+        || to_hex(sha256(lookup_window)) != table_lookup_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-selection layout hash");
+    }
+    return {input_capture_offset, input_capture_bytes.size(), std::string(input_capture_sha256),
+        be16(input_window, 0), be16(input_window, 2), be16(input_window, 4),
+        be16(input_window, 6), table_lookup_offset, table_lookup_bytes.size(),
+        std::string(table_lookup_sha256), be16(lookup_window, 6), be16(lookup_window, 8),
+        be16(lookup_window, 10), be16(lookup_window, 14), be16(lookup_window, 16),
+        be16(lookup_window, 18), be16(lookup_window, 20)};
+}
+
+DeuterosAtariStateSelectionContinuation parse_deuteros_atari_state_selection_continuation(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariStateSelectionLayout& layout,
+    const DeuterosAtariRawReaderWrapperProfile& wrapper) {
+    // This starts directly after JSR (A1), which remains an indirect-call
+    // boundary. The original bytes preserve D1, advance D4 by one side span,
+    // transfer D2 to D7, and BSR to the local range wrapper. They do not show
+    // that the selected routine returns, what either result register means, or
+    // that either later call executes.
+    constexpr std::size_t continuation_offset = 0x108;
+    constexpr auto continuation_bytes = std::to_array<std::uint8_t>({
+        0x2f, 0x01, 0xc4, 0xfc, 0x12, 0x00, 0x2e, 0x02, 0x61, 0x00,
+        0xff, 0x1e, 0x30, 0x38, 0x1e, 0xaa, 0x4e, 0x75,
+    });
+    constexpr std::string_view continuation_sha256 =
+        "e9ae4bd51bb06c6cb57ac7f26e81497995f7639f99a12e2a149194a39589e16c";
+    constexpr std::size_t indirect_call_offset = 0x106;
+    constexpr std::size_t wrapper_bsr_offset = 0x110;
+    constexpr std::size_t wrapper_offset = 0x30;
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || layout.table_lookup_offset != 0xf2 || layout.indirect_call_opcode != 0x4e91
+        || wrapper.wrapper_offset != wrapper_offset || wrapper.raw_reader_bsr_target_offset != 0x60) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-selection continuation topology");
+    }
+    require_bytes(bytes, indirect_call_offset, std::array<std::uint8_t, 2>{0x4e, 0x91},
+        "Unexpected Deuteros Atari ST state-selection indirect call");
+    require_bytes(bytes, continuation_offset, continuation_bytes,
+        "Unexpected Deuteros Atari ST state-selection continuation");
+    const auto window = bytes.subspan(continuation_offset, continuation_bytes.size());
+    const auto digest = to_hex(sha256(window));
+    if (digest != continuation_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-selection continuation hash");
+    }
+    const auto wrapper_target = wrapper_bsr_offset + 2U
+        + static_cast<std::int16_t>(be16(bytes, wrapper_bsr_offset + 2U));
+    if (wrapper_target != wrapper_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-selection wrapper branch");
+    }
+    return {continuation_offset, continuation_bytes.size(), digest, be16(bytes, indirect_call_offset),
+        be16(window, 0), be16(window, 2), be16(window, 4), be16(window, 6), be16(window, 8),
+        static_cast<std::int16_t>(be16(window, 10)), wrapper_target, be16(window, 12),
+        be16(window, 14), be16(window, 16)};
 }
 
 DeuterosAtariState0DuplicateStagePrefix

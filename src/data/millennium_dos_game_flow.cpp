@@ -768,6 +768,344 @@ parse_millennium_dos_startup_nonzero_path_boundary(
         std::string(local_callee_prefix_sha256)};
 }
 
+MillenniumDosStartupZeroContinuationBoundary
+parse_millennium_dos_startup_zero_continuation_boundary(
+    const std::span<const std::uint8_t> game_executable) {
+    // $d2f8 is the return site of the $d2f5 selector call. The selector's
+    // own local callee reaches DOS first, so this is conditional static
+    // provenance rather than an admitted execution path.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd2f8;
+    constexpr auto continuation = std::to_array<std::uint8_t>({
+        0xbe, 0x82, 0x00, 0x32, 0xe4, 0x2e, 0x8a, 0x04, 0x2c, 0x30,
+        0xa2, 0x22, 0x01, 0xe8, 0x72, 0xfd, 0xbb, 0x00, 0xfa, 0xb4,
+        0x48, 0xcd, 0x21,
+    });
+    constexpr std::string_view continuation_sha256 =
+        "9c7b13c4e0b99e8529e78063b91ae92d967b9fc6de66ebeeaacec01563e4a9d9";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), continuation)
+        || near_call_target(0xd308, continuation[14], continuation[15]) != 0xd07a
+        || to_hex(sha256(game_executable.subspan(offset(entry), continuation.size())))
+            != continuation_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS startup zero continuation");
+    }
+    return {std::string(executable_sha256), entry, continuation.size(),
+        std::string(continuation_sha256), 0x0082, 0x30, 0x0122, 0xd305,
+        0xd07a, 0xd30d, 0x21, 0x48, 0xfa00};
+}
+
+MillenniumDosStartupPostAllocationBoundary
+parse_millennium_dos_startup_post_allocation_boundary(
+    const std::span<const std::uint8_t> game_executable) {
+    // $d30f follows INT $21/AH=$48 only if that native boundary returns.
+    // Keep AX/BX uninterpreted: this profile establishes only that their
+    // literal register operands occur before the next DOS boundary.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd30f;
+    constexpr auto boundary = std::to_array<std::uint8_t>({
+        0x2e, 0x89, 0x1e, 0x30, 0xd1, 0x8e, 0xc0, 0xb4, 0x49, 0xcd,
+    });
+    constexpr std::string_view boundary_sha256 =
+        "f583faad7bddba301c431adb94fa9d53d5b197dcba2f447b0b654df6f1b452ce";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), boundary)
+        || to_hex(sha256(game_executable.subspan(offset(entry), boundary.size())))
+            != boundary_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS startup post-allocation boundary");
+    }
+    return {std::string(executable_sha256), entry, boundary.size(), 0xd30f,
+        0xd130, 0xd314, 0xd318, 0x21, 0x49, std::string(boundary_sha256)};
+}
+
+MillenniumDosStartupPostReleaseContinuation
+parse_millennium_dos_startup_post_release_continuation(
+    const std::span<const std::uint8_t> game_executable) {
+    // This is the caller's literal continuation at the return site following
+    // INT $21/AH=$49. It remains conditional static provenance: $d318 may
+    // not return, and each direct in-image call may likewise not return. Do
+    // not infer a freed segment or usable far pointer from the DOS request.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd31a;
+    constexpr auto continuation = std::to_array<std::uint8_t>({
+        0x0e, 0x1f, 0x5a, 0xc5, 0x16, 0x42, 0x10, 0xb9, 0xff, 0xff,
+        0x0e, 0x1f, 0xc5, 0x36, 0x42, 0x10, 0xb8, 0x00, 0x0a, 0x0e,
+        0x1f, 0xe8, 0xc0, 0x98, 0xe8, 0xe5, 0x3c, 0xe8, 0x96, 0x3e,
+    });
+    constexpr std::string_view continuation_sha256 =
+        "4d94bf904471cf96a03ce6dd111c0720f396e08ebf2f4603469377db0dc669ef";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), continuation)
+        || near_call_target(0xd332, continuation[22], continuation[23]) != 0x6bf2
+        || near_call_target(0xd335, continuation[25], continuation[26]) != 0x101a
+        || near_call_target(0xd338, continuation[28], continuation[29]) != 0x11ce
+        || to_hex(sha256(game_executable.subspan(offset(entry), continuation.size())))
+            != continuation_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS startup post-release continuation");
+    }
+    return {std::string(executable_sha256), entry, continuation.size(), 0xd31c,
+        0xd31d, 0x1042, 0xd326, 0xd32f, 0x6bf2, 0xd332, 0x101a,
+        0xd335, 0x11ce, std::string(continuation_sha256)};
+}
+
+MillenniumDosStartupPostGxLoaderBoundary
+parse_millennium_dos_startup_post_gx_loader_boundary(
+    const std::span<const std::uint8_t> game_executable) {
+    // This is not evidence that the GX loader returns.  It only preserves the
+    // literal instruction sequence at that encoded return site, up to the
+    // next private-runtime boundary.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd338;
+    constexpr auto boundary = std::to_array<std::uint8_t>({
+        0x0e, 0x07, 0xbb, 0xa0, 0xd1, 0xb8, 0x22, 0x00, 0xe8, 0xe1, 0x2d,
+    });
+    constexpr std::string_view boundary_sha256 =
+        "64e7dddae2ca6942cddaa4c564d61203b26c469fc898bb923b2ba227d93876ab";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), boundary)
+        || near_call_target(0xd343, boundary[9], boundary[10]) != 0x0124
+        || to_hex(sha256(game_executable.subspan(offset(entry), boundary.size())))
+            != boundary_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS startup post-GX-loader boundary");
+    }
+    return {std::string(executable_sha256), entry, boundary.size(), 0xd338, 0xd339,
+        0xd1a0, 0x0022, 0xd340, 0x0124, 0x91, std::string(boundary_sha256)};
+}
+
+MillenniumDosPrivateInt91Wrapper parse_millennium_dos_private_int91_wrapper(
+    const std::span<const std::uint8_t> game_executable) {
+    // Preserve the routine and its direct caller as code provenance. The
+    // private INT is an external boundary: neither this wrapper's preserved
+    // stack instructions nor its RET establish any host-side ABI or result.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0x0124;
+    constexpr auto wrapper = std::to_array<std::uint8_t>({
+        0x1e, 0x56, 0x57, 0x55, 0x06, 0xcd, 0x91, 0x07, 0x5d, 0x5f,
+        0x5e, 0x1f, 0xc3,
+    });
+    constexpr std::string_view wrapper_sha256 =
+        "5d17daad68e9062dc6852ae76740db4afdcb81555ba9fb7d15d4e4aa8d088175";
+    constexpr std::uint16_t caller_call = 0xd340;
+    constexpr auto caller = std::to_array<std::uint8_t>({0xe8, 0xe1, 0x2d});
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), wrapper)
+        || !has_bytes(game_executable, offset(caller_call), caller)
+        || near_call_target(0xd343, caller[1], caller[2]) != entry
+        || to_hex(sha256(game_executable.subspan(offset(entry), wrapper.size())))
+            != wrapper_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS private INT 91 wrapper");
+    }
+    return {std::string(executable_sha256), entry, wrapper.size(), caller_call, entry,
+        0x0124, 0x0125, 0x0126, 0x0127, 0x0128, 0x0129, 0x91, 0x012b,
+        0x012c, 0x012d, 0x012e, 0x012f, 0x0130, std::string(wrapper_sha256)};
+}
+
+MillenniumDosPostInt91CallerSelector parse_millennium_dos_post_int91_caller_selector(
+    const std::span<const std::uint8_t> game_executable) {
+    // The near CALL at $d340 returns here only if the private wrapper itself
+    // returns. This literal prefix has three comparisons against a byte in
+    // the original image, with a fourth fall-through pair, then reaches its
+    // first local CALL. The data byte and every call remain native state/code
+    // boundaries; preserve the encoded control flow without assigning it an
+    // interrupt ABI or host-side effect.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd343;
+    constexpr auto selector = std::to_array<std::uint8_t>({
+        0xba, 0x28, 0x00, 0xb8, 0x0e, 0x00, 0x8a, 0x0e, 0x05, 0xda,
+        0x80, 0xf9, 0x03, 0x74, 0x1c, 0xba, 0x50, 0x00, 0xb8, 0x12,
+        0x00, 0x80, 0xf9, 0x04, 0x74, 0x11, 0xba, 0xa0, 0x00, 0xb8,
+        0x14, 0x00, 0x80, 0xf9, 0x02, 0x74, 0x06, 0xba, 0x40, 0x01,
+        0xb8, 0x0f, 0x00, 0x2e, 0x89, 0x16, 0x6e, 0x4b, 0xe8, 0xdc,
+        0x98,
+    });
+    constexpr std::string_view selector_sha256 =
+        "571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), selector)
+        || near_call_target(0xd376, selector[49], selector[50]) != 0x6c52
+        || to_hex(sha256(game_executable.subspan(offset(entry), selector.size())))
+            != selector_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS post-INT 91 caller selector");
+    }
+    return {std::string(executable_sha256), entry, selector.size(), 0xda05,
+        0xd34d, 0x03, 0xd358, 0x04, 0xd363, 0x02, 0xd36e, 0x4b6e,
+        0xd373, 0x6c52, std::string(selector_sha256)};
+}
+
+MillenniumDosPostOverlayAdapterContinuation
+parse_millennium_dos_post_overlay_adapter_continuation(
+    const std::span<const std::uint8_t> game_executable) {
+    // The preceding adapter does a far transfer and may not return. This
+    // strictly preserves the instructions located at its encoded caller
+    // return site, without turning that continuation into host control flow.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd376;
+    constexpr auto continuation = std::to_array<std::uint8_t>({
+        0xe8, 0xd9, 0xfd, 0xe8, 0x8c, 0x7b, 0xe8, 0x92, 0x6d,
+        0xe8, 0x2d, 0x6d, 0xe8, 0x2d, 0x6f, 0xe8, 0xf2, 0x3c,
+        0x80, 0x3e, 0x05, 0xda, 0x01, 0x74, 0x05, 0xe8, 0x23,
+        0xfe, 0xeb, 0x03, 0xe8, 0x0a, 0xfe, 0x0e, 0x1f, 0x0e,
+        0x07, 0x0e, 0x07,
+    });
+    constexpr std::string_view continuation_sha256 =
+        "1df4b30f14434eae3a44463402710bcd1b162200a923c0b9cc1f827faf3763ac";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), continuation)
+        || near_call_target(0xd379, continuation[1], continuation[2]) != 0xd152
+        || near_call_target(0xd37c, continuation[4], continuation[5]) != 0x4f08
+        || near_call_target(0xd37f, continuation[7], continuation[8]) != 0x4111
+        || near_call_target(0xd382, continuation[10], continuation[11]) != 0x40af
+        || near_call_target(0xd385, continuation[13], continuation[14]) != 0x42b2
+        || near_call_target(0xd388, continuation[16], continuation[17]) != 0x107a
+        || near_call_target(0xd392, continuation[26], continuation[27]) != 0xd1b5
+        || near_call_target(0xd397, continuation[31], continuation[32]) != 0xd1a1
+        || to_hex(sha256(game_executable.subspan(offset(entry), continuation.size())))
+            != continuation_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS post-overlay-adapter continuation");
+    }
+    return {std::string(executable_sha256), entry, continuation.size(),
+        {0xd376, 0xd379, 0xd37c, 0xd37f, 0xd382, 0xd385},
+        {0xd152, 0x4f08, 0x4111, 0x40af, 0x42b2, 0x107a},
+        0xd388, 0xda05, 0x01, 0xd38d, 0xd394, 0xd38f, 0xd1b5,
+        0xd392, 0xd397, 0xd394, 0xd1a1, 0xd397, 0xd398, 0xd39a,
+        0xd39c, std::string(continuation_sha256)};
+}
+
+MillenniumDosPostOverlayAdapterLoop parse_millennium_dos_post_overlay_adapter_loop(
+    const std::span<const std::uint8_t> game_executable) {
+    // This begins at the byte directly after the independently bounded
+    // segment setup. It remains conditional on the adapter and all earlier
+    // calls returning. Preserve only its literal in-image instructions and
+    // their direct near targets; the raw byte sequence and every runtime
+    // interaction remain native boundaries.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd39d;
+    constexpr auto loop = std::to_array<std::uint8_t>({
+        0xe8, 0xca, 0x70, 0xb8, 0x00, 0x00, 0xe8, 0x79, 0x87,
+        0xe8, 0xcf, 0x8d, 0x32, 0xc0, 0xe8, 0xee, 0xa5, 0xe8,
+        0x48, 0x7f, 0xe8, 0xcb, 0xa7, 0xb8, 0x00, 0x00, 0xe8,
+        0x2a, 0x36, 0x22, 0xc0, 0x75, 0x08, 0xa0, 0xf9, 0x07,
+        0x34, 0x01, 0xa2, 0xf9, 0x07, 0xe8, 0xdb, 0x3d, 0xe8,
+        0x40, 0x37, 0xe8, 0xd5, 0x3a, 0xe8, 0x89, 0x37, 0xe8,
+        0xe6, 0x3a, 0xe8, 0x29, 0xa2, 0xe8, 0xf0, 0xa7, 0xe8,
+        0x27, 0x3b, 0x22, 0xc0, 0x74, 0xf0,
+    });
+    constexpr std::string_view loop_sha256 =
+        "1bbb4fcc18668021306de1e0014a9baab1f526af1514fa7ce9d1a61780972cf0";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(entry), loop)
+        || near_call_target(0xd3a0, loop[1], loop[2]) != 0x446a
+        || near_call_target(0xd3a6, loop[7], loop[8]) != 0x5b1f
+        || near_call_target(0xd3a9, loop[10], loop[11]) != 0x6178
+        || near_call_target(0xd3ae, loop[15], loop[16]) != 0x799c
+        || near_call_target(0xd3b1, loop[18], loop[19]) != 0x52f9
+        || near_call_target(0xd3b4, loop[21], loop[22]) != 0x7b7f
+        || near_call_target(0xd3ba, loop[27], loop[28]) != 0x09e4
+        || near_call_target(0xd3c9, loop[42], loop[43]) != 0x11a4
+        || near_call_target(0xd3cc, loop[45], loop[46]) != 0x0b0c
+        || near_call_target(0xd3cf, loop[48], loop[49]) != 0x0ea4
+        || near_call_target(0xd3d2, loop[51], loop[52]) != 0x0b5b
+        || near_call_target(0xd3d5, loop[54], loop[55]) != 0x0ebb
+        || near_call_target(0xd3d8, loop[57], loop[58]) != 0x7601
+        || near_call_target(0xd3db, loop[60], loop[61]) != 0x7bcb
+        || near_call_target(0xd3de, loop[63], loop[64]) != 0x0f05
+        || to_hex(sha256(game_executable.subspan(offset(entry), loop.size()))) != loop_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS post-overlay-adapter loop");
+    }
+    return {std::string(executable_sha256), entry, loop.size(),
+        {0xd39d, 0xd3a3, 0xd3a6, 0xd3ab, 0xd3ae, 0xd3b1, 0xd3b7,
+         0xd3c6, 0xd3c9, 0xd3cc, 0xd3cf, 0xd3d2, 0xd3d5, 0xd3d8, 0xd3db},
+        {0x446a, 0x5b1f, 0x6178, 0x799c, 0x52f9, 0x7b7f, 0x09e4,
+         0x11a4, 0x0b0c, 0x0ea4, 0x0b5b, 0x0ebb, 0x7601, 0x7bcb, 0x0f05},
+        0xd3ba, 0xd3bc, 0xd3c6, 0xd3be, 0x07f9, 0xd3c1, 0x01,
+        0xd3c3, 0xd3de, 0xd3e0, 0xd3d2, 0xd3e2, std::string(loop_sha256)};
+}
+
+MillenniumDosPostOverlayDispatchPrefix parse_millennium_dos_post_overlay_dispatch_prefix(
+    const std::span<const std::uint8_t> game_executable) {
+    // This is the literal main-loop dispatcher reached only by the preceding
+    // post-overlay span falling through. Keep every branch conditional and
+    // every target native: the parser admits code provenance, not an input
+    // event, a guard value, a selected table entry, or a call return.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0xd3e2;
+    constexpr auto prefix = std::to_array<std::uint8_t>({
+        0x32, 0xe4, 0x3c, 0x0b, 0x74, 0x26, 0x8a, 0x0e, 0x3a, 0xda,
+        0x22, 0xc9, 0x75, 0xe2, 0x3c, 0x0c, 0x75, 0x05, 0xe8, 0x79,
+        0x01, 0x33, 0xc0, 0x2c, 0x3b, 0x3c, 0x0a, 0x73, 0xd3, 0xbe,
+        0xbf, 0x2f, 0x32, 0xe4, 0xc0, 0xe0, 0x03, 0x01, 0xc6, 0xe8,
+        0xe4, 0xa2, 0xeb, 0xc4, 0xe8, 0x93, 0x3d, 0xeb, 0xbf,
+    });
+    constexpr std::string_view prefix_sha256 =
+        "7abec93ec23f7ca3c4b400e16b9e746da7b0b9a1dd4bec88ba891ef04b322065";
+    const auto offset = static_cast<std::size_t>(entry) - load_bias;
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset, prefix)
+        || near_call_target(0xd3f7, prefix[19], prefix[20]) != 0xd570
+        || near_call_target(0xd40d, prefix[40], prefix[41]) != 0x76f1
+        || near_call_target(0xd411, prefix[45], prefix[46]) != 0x11a4
+        || to_hex(sha256(game_executable.subspan(offset, prefix.size()))) != prefix_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS post-overlay dispatch prefix");
+    }
+    return {std::string(executable_sha256), entry, prefix.size(),
+        0xd3e4, 0x0b, 0xd3e6, 0xd40e, 0xd3e8, 0xda3a, 0xd3ec,
+        0xd3ee, 0xd3d2, 0xd3f0, 0x0c, 0xd3f2, 0xd3f8, 0xd3f4,
+        0xd570, 0xd3f9, 0x3b, 0xd3fb, 0x0a, 0xd3fd, 0xd3d2,
+        0xd3ff, 0x2fbf, 0xd40a, 0x76f1, 0xd40d, 0xd3d2, 0xd40e,
+        0x11a4, 0xd411, 0xd3d2, std::string(prefix_sha256)};
+}
+
 MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     const std::span<const std::uint8_t> game_executable,
@@ -1246,6 +1584,96 @@ MillenniumDosGxOverlaySelectorEvidence parse_millennium_dos_gx_overlay_selector_
     return {caller_address, 0xda05, {0x03,0x04,0x02}, {0x0028,0x0050,0x00a0,0x0140},
         {0x000e,0x0012,0x0014,0x000f}, {0x0070,0x0080,0x0088,0x0078},
         0x4b6e, 0xd373, 0x6c52, caller_sha256, overlay_sha256};
+}
+
+MillenniumDosEnglishGameStartupCallees
+parse_millennium_dos_english_game_startup_callees(
+    const std::span<const std::uint8_t> game_executable) {
+    // These are the two direct targets selected by the native AL comparison
+    // at $d2d9.  The result remains native: this function just preserves the
+    // immediate code/data operands that follow either encoded target.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t equal_entry = 0xd1a1;
+    constexpr std::uint16_t other_entry = 0xd1b5;
+    constexpr auto equal = std::to_array<std::uint8_t>({
+        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1, 0xe8, 0x78,
+        0x2f, 0xe8, 0x9f, 0x32, 0xb0, 0x01, 0xa2, 0x05, 0xda, 0xc3,
+    });
+    constexpr auto other = std::to_array<std::uint8_t>({
+        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1, 0xe8, 0x64,
+        0x2f, 0xe8, 0xa3, 0x32, 0xa0, 0x05, 0xda, 0x3c, 0x02, 0x75,
+        0x06, 0xb8, 0x00, 0xb8, 0xa3, 0x07, 0x01, 0xc3,
+    });
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::string_view equal_sha256 =
+        "6f59df77c567324b41dd6159a6fbac7d8970626fc40e8b908f9f58746a993a3e";
+    constexpr std::string_view other_sha256 =
+        "2f61098eb45bb48ea7a38ab2fcc2e065ae0d0b2ad08ea9973e3fe464943fba9b";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(equal_entry), equal)
+        || !has_bytes(game_executable, offset(other_entry), other)
+        || near_call_target(0xd1ac, equal[9], equal[10]) != 0x0124
+        || near_call_target(0xd1af, equal[12], equal[13]) != 0x044e
+        || near_call_target(0xd1c0, other[9], other[10]) != 0x0124
+        || near_call_target(0xd1c3, other[12], other[13]) != 0x0466
+        || to_hex(sha256(game_executable.subspan(offset(equal_entry), equal.size()))) != equal_sha256
+        || to_hex(sha256(game_executable.subspan(offset(other_entry), other.size()))) != other_sha256) {
+        throw std::runtime_error("Unexpected Millennium English DOS startup callees");
+    }
+    return {std::string(executable_sha256), equal_entry, equal.size(), std::string(equal_sha256),
+        0x0004, 0xd19f, 0xd1a9, 0x0124, 0xd1ac, 0x044e, 0x01, 0xda05, 0xd1b4,
+        other_entry, other.size(), std::string(other_sha256), 0x0004, 0xd19f,
+        0xd1bd, 0x0124, 0xd1c0, 0x0466, 0xda05, 0x02, 0x0107, 0xd1d0};
+}
+
+MillenniumDosEnglishGameStartupFollowups
+parse_millennium_dos_english_game_startup_followups(
+    const std::span<const std::uint8_t> game_executable,
+    const MillenniumDosEnglishGameStartupCallees& callees) {
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t equal_entry = 0x044e;
+    constexpr std::uint16_t palette_entry = 0x0466;
+    constexpr auto equal = std::to_array<std::uint8_t>({0xb0, 0x01, 0x2e, 0x88, 0x06, 0x05, 0xda, 0xc3});
+    constexpr auto palette = std::to_array<std::uint8_t>({
+        0x0e, 0x1f, 0xbe, 0x56, 0x04, 0xb9, 0x10, 0x00, 0x32, 0xdb,
+        0xac, 0x8a, 0xf8, 0xb8, 0x00, 0x10, 0xcd, 0x10, 0xfe, 0xc3,
+        0xe2, 0xf4, 0xc3,
+    });
+    constexpr std::array<std::uint8_t, 16> palette_table{
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+    };
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::string_view equal_sha256 =
+        "38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f";
+    constexpr std::string_view palette_sha256 =
+        "b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779";
+    constexpr std::string_view palette_table_sha256 =
+        "ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (to_hex(sha256(game_executable)) != executable_sha256
+        || callees.executable_sha256 != executable_sha256
+        || callees.equal_followup_target_address != equal_entry
+        || callees.other_followup_target_address != palette_entry
+        || !has_bytes(game_executable, offset(equal_entry), equal)
+        || !has_bytes(game_executable, offset(0x0456), palette_table)
+        || !has_bytes(game_executable, offset(palette_entry), palette)
+        || to_hex(sha256(game_executable.subspan(offset(equal_entry), equal.size()))) != equal_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0x0456), palette_table.size()))) != palette_table_sha256
+        || to_hex(sha256(game_executable.subspan(offset(palette_entry), palette.size()))) != palette_sha256) {
+        throw std::runtime_error("Unexpected Millennium English DOS startup follow-ups");
+    }
+    return {std::string(executable_sha256), equal_entry, equal.size(), std::string(equal_sha256),
+        0x01, 0xda05, 0x0455, palette_entry, palette.size(), std::string(palette_sha256),
+        0x0456, palette_table, std::string(palette_table_sha256), 16, 0x10, 0x1000, 0x047c};
 }
 
 MillenniumDosSpanishIbmHandoffEvidence parse_millennium_dos_spanish_ibm_handoff_evidence(

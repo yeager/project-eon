@@ -38,6 +38,12 @@ public:
     explicit ZipArchive(std::vector<std::uint8_t> bytes);
     static ZipArchive open(const std::filesystem::path& path);
 
+    // Read a supplied outer archive once, verify those exact in-memory bytes,
+    // then parse them.  This closes the scan-to-use gap: no caller can first
+    // fingerprint one on-disk version and subsequently extract another.
+    static ZipArchive open_verified(const std::filesystem::path& path,
+                                    std::string_view expected_sha256);
+
     [[nodiscard]] const std::vector<ZipEntry>& entries() const { return entries_; }
     [[nodiscard]] std::vector<std::uint8_t> extract(const ZipEntry& entry) const;
 
@@ -61,6 +67,19 @@ struct ArchiveAsset {
 [[nodiscard]] std::optional<std::vector<std::uint8_t>> extract_asset_by_sha256(
     const std::filesystem::path& path,
     std::string_view expected_sha256,
+    unsigned maximum_nesting = 2);
+
+// As above, but validates the complete supplied outer archive before walking
+// its nested members.  The outer identity is intentionally separate from the
+// leaf identity: a matching resource in a different release is not admitted.
+[[nodiscard]] std::vector<ArchiveAsset> inventory_verified_zip(
+    const std::filesystem::path& path,
+    std::string_view expected_archive_sha256,
+    unsigned maximum_nesting = 2);
+[[nodiscard]] std::optional<std::vector<std::uint8_t>> extract_verified_asset_by_sha256(
+    const std::filesystem::path& path,
+    std::string_view expected_archive_sha256,
+    std::string_view expected_asset_sha256,
     unsigned maximum_nesting = 2);
 
 } // namespace eon
