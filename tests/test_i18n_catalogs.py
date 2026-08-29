@@ -117,6 +117,24 @@ class CatalogTests(unittest.TestCase):
                 catalog = po_messages(PO / f"{language}.po")
                 self.assertTrue(all(catalog.get(label) for label in labels))
 
+    def test_modern_graphics_popup_labels_are_catalogued_in_every_language(self) -> None:
+        """F10 settings are Eon's UI, so they cannot fall back to English."""
+        labels = {
+            "MODERN GRAPHICS SETTINGS",
+            "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE",
+            "OUTPUT RESOLUTION", "ASPECT RATIO",
+            "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
+            "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",
+            "SCALE2X (MEMORY ONLY)", "OFF (ORIGINAL PIXELS)", "ON", "OFF",
+            "SETTINGS APPLY TO SDL RENDERING ONLY.",
+        }
+        source_catalog = po_messages(PO / "ProjectEon.pot")
+        self.assertTrue(labels <= set(source_catalog))
+        for language in sorted(CATALOGS):
+            with self.subTest(language=language):
+                catalog = po_messages(PO / f"{language}.po")
+                self.assertTrue(all(catalog.get(label) for label in labels))
+
     def test_catalogs_do_not_use_language_name_prefixed_english_placeholders(self) -> None:
         for language in sorted(CATALOGS):
             with self.subTest(language=language):

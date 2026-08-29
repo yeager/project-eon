@@ -8,11 +8,13 @@ ipa="$(cd "$(dirname "$ipa")" && pwd)/$(basename "$ipa")"
 # An IPA must never redistribute user-supplied commercial media. The build
 # bundle contains only executable/runtime resources, so reject common game
 # media rather than trusting a caller's staging directory.
-if find "$app" -type d -name data -print -quit | grep -q . \
+if find "$app" -type d -iname data -print -quit | grep -q . \
+    || find "$app" -type d -iname frameworks -print -quit | grep -q . \
     || find "$app" -type f \( -iname '*.zip' -o -iname '*.adf' -o -iname '*.st' \
-        -o -iname '*.msa' -o -iname '*.stx' -o -iname '*.img' -o -iname '*.exe' \
+        -o -iname '*.adz' -o -iname '*.dms' -o -iname '*.msa' -o -iname '*.stx' \
+        -o -iname '*.img' -o -iname '*.exe' \
         -o -iname '*.com' \) -print -quit | grep -q .; then
-  echo "refusing to package possible original game data" >&2
+  echo "refusing to package game media or an unexpected dynamic framework" >&2
   exit 1
 fi
 for required in \

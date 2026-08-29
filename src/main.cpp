@@ -270,8 +270,15 @@ SDL_FRect aspect_viewport(const float x, const float y, const float maximum_widt
         width, height};
 }
 
+// Keep this overlay's translation boundary explicit. draw_text() also has a
+// defensive translation lookup for legacy launcher call sites, but Modern's
+// settings are a visible opt-in control surface: every label and state name
+// must be supplied by the selected PO catalogue before it reaches the renderer.
 void draw_modern_graphics_popup(SDL_Renderer* renderer,
-    const ModernGraphicsSettings& settings) {
+    const ModernGraphicsSettings& settings, const eon::Translator& translator) {
+    const auto tr = [&translator](const std::string_view message) {
+        return std::string(translator.translate(message));
+    };
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 3, 10, 20, 240);
     SDL_FRect panel{356, 142, 568, 430};
@@ -279,30 +286,30 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
     SDL_RenderRect(renderer, &panel);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    draw_text(renderer, 390, 174, "MODERN GRAPHICS SETTINGS");
-    draw_text(renderer, 390, 212, "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE");
+    draw_text(renderer, 390, 174, tr("MODERN GRAPHICS SETTINGS"));
+    draw_text(renderer, 390, 212, tr("UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"));
     constexpr std::array<const char*, 6> names{{
         "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
     }};
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
     const std::array<std::string, 6> values{{
         std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
-        display_aspect_names.at(settings.aspect_ratio_index),
-        settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)",
-        settings.smooth_scaling ? "ON" : "OFF",
-        settings.scanlines ? "ON" : "OFF",
-        settings.frame ? "ON" : "OFF",
+        tr(display_aspect_names.at(settings.aspect_ratio_index)),
+        tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)"),
+        tr(settings.smooth_scaling ? "ON" : "OFF"),
+        tr(settings.scanlines ? "ON" : "OFF"),
+        tr(settings.frame ? "ON" : "OFF"),
     }};
     for (std::size_t index = 0; index < names.size(); ++index) {
         SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(settings.focused_option)
                 ? 255 : 205, index == static_cast<std::size_t>(settings.focused_option) ? 195 : 225,
             index == static_cast<std::size_t>(settings.focused_option) ? 80 : 235, 255);
         draw_text(renderer, 390, 256.0F + static_cast<float>(index) * 42.0F,
-            std::string(index == static_cast<std::size_t>(settings.focused_option) ? "> " : "  ") + names[index]);
+            std::string(index == static_cast<std::size_t>(settings.focused_option) ? "> " : "  ") + tr(names[index]));
         draw_text(renderer, 690, 256.0F + static_cast<float>(index) * 42.0F, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 546, "SETTINGS APPLY TO SDL RENDERING ONLY.");
+    draw_text(renderer, 390, 546, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -3694,7 +3701,7 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             }
         }
-        if (show_modern_graphics_settings) draw_modern_graphics_popup(renderer, modern_graphics_settings);
+        if (show_modern_graphics_settings) draw_modern_graphics_popup(renderer, modern_graphics_settings, translator);
         SDL_RenderPresent(renderer);
     }
 
