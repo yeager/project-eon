@@ -41,6 +41,12 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("installed package must not create a game-data directory", workflow)
         self.assertIn("installed Project Eon executable did not load and print its CLI usage", workflow)
 
+    def test_ci_rejects_unreviewed_files_before_inno_recurses_stage_directories(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        self.assertIn("Windows package stage contains unexpected file(s)", workflow)
+        self.assertIn("$approved", workflow)
+        self.assertIn("$relative -notin $approved", workflow)
+
     def test_ci_discovers_cmake_generated_runtime_dlls_before_ctest(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
         self.assertIn("generatedRuntimeDirectories", workflow)

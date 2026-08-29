@@ -483,6 +483,18 @@ jobs:
               throw "Windows package stage lacks required resource: $path"
             }
           }
+          # Inno recursively packages assets and PO files. Presence checks are
+          # not sufficient: reject an extra staged file so a stale workspace
+          # artifact or an unreviewed asset cannot hitch a ride in the final
+          # installer even if it is not recognised as game media.
+          $approved = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "README.md", "LICENSE") + $required
+          $unexpected = Get-ChildItem dist -Recurse -File | Where-Object {
+            $relative = $_.FullName.Substring((Resolve-Path dist).Path.Length).TrimStart('\', '/')
+            $relative -notin $approved -and $relative -notmatch '^(libpng|zlib).+\.dll$'
+          }
+          if ($unexpected) {
+            throw "Windows package stage contains unexpected file(s): $($unexpected.FullName -join ', ')"
+          }
           if (-not (Get-ChildItem dist -Filter "libpng*.dll" -File | Select-Object -First 1)) {
             throw "Windows package stage lacks libpng runtime DLL"
           }

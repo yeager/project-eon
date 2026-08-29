@@ -4152,6 +4152,10 @@ proof of the runtime's read-only boundary.
 The Windows Inno Setup installer follows the same rule: it installs only
 Project Eon and its own runtime resources, and does not pre-create
 `<install-directory>\\data`.
+Before Inno runs, CI also applies an explicit allowlist to the complete staging
+tree. This is stricter than rejecting game-media extensions: an unexpected
+non-media file inside recursively packaged `assets` or `po` is rejected rather
+than becoming an unreviewed installer payload.
 The unsigned iPadOS IPA is equally media-free: its Files-enabled default is
 `Documents/ProjectEon`, an app Documents location reached without copying or
 unpacking a selected archive. The runtime does not create that directory; it

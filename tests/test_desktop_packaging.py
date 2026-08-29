@@ -37,6 +37,8 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("LD_TRACE_LOADED_OBJECTS=1", source)
         self.assertIn("generated RPM runtime dependencies", source)
         self.assertIn("rpm2cpio", source)
+        self.assertIn('rpm_query=(rpm --dbpath "$rpm_database")', source)
+        self.assertIn("workstation's package-manager state", source)
         self.assertIn("package layout regression", source)
         self.assertIn('HOME="$isolated_home" "$executable" --inspect', source)
         self.assertIn("created its default game-data directory during lookup", source)

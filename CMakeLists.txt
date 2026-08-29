@@ -348,6 +348,11 @@ if(UNIX AND NOT APPLE)
         "$<TARGET_FILE:SDL3_ttf::SDL3_ttf>"
         "$<TARGET_SONAME_FILE:SDL3_ttf::SDL3_ttf>"
         DESTINATION "${CMAKE_INSTALL_BINDIR}")
+    # Desktop packages must expose the media-free card launcher through the
+    # host application menu. The entry runs only Project Eon; it names no
+    # original archive, data path, or mutable save location.
+    install(FILES packaging/project-eon.desktop
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 endif()
 install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
 install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
