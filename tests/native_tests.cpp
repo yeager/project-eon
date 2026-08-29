@@ -2620,6 +2620,8 @@ int main() {
     assert(deuteros_atari_session.state5_raw_load_plan().second_read.source_offset == 0x60c00);
     assert(deuteros_atari_session.state5_return().branch_target_offset == 0x114);
     assert(deuteros_atari_session.supervisor_callback().callback_address == 0x1fa6);
+    assert(deuteros_atari_session.supervisor_callback_continuation().ram_word_address == 0x25f4);
+    assert(deuteros_atari_session.supervisor_callback_continuation().branch_target_offset == 0xf2);
     const auto& deuteros_st_boot = deuteros_disk1.boot_profile();
     assert(deuteros_st_boot.bytes_per_sector == 512);
     assert(deuteros_st_boot.sectors_per_cluster == 2);
@@ -2835,6 +2837,38 @@ int main() {
     assert(deuteros_supervisor_callback.callback_stack_address == 0x7b000);
     assert(deuteros_supervisor_callback.callback_stack_move_opcode == 0x2f00);
     assert(deuteros_supervisor_callback.callback_return_opcode == 0x4e75);
+    const auto deuteros_supervisor_callback_continuation =
+        eon::parse_deuteros_atari_supervisor_callback_continuation(
+            deuteros_second_stage, deuteros_second_stage_profile, deuteros_supervisor_callback);
+    assert(deuteros_supervisor_callback_continuation.continuation_offset == 0xde);
+    assert(deuteros_supervisor_callback_continuation.continuation_bytes == 20);
+    assert(deuteros_supervisor_callback_continuation.continuation_sha256
+        == "ed326a1d22a28ce5646b242c947c5120cb0855d6d05080e35ce398d48d459f56");
+    assert(deuteros_supervisor_callback_continuation.ram_read_opcode == 0x2038);
+    assert(deuteros_supervisor_callback_continuation.ram_word_address == 0x25f4);
+    assert(deuteros_supervisor_callback_continuation.compare_opcode == 0xb0bc);
+    assert(deuteros_supervisor_callback_continuation.compare_immediate == 0x71100);
+    assert(deuteros_supervisor_callback_continuation.branch_opcode == 0x6708);
+    assert(deuteros_supervisor_callback_continuation.branch_displacement == 8);
+    assert(deuteros_supervisor_callback_continuation.branch_target_offset == 0xf2);
+    assert(deuteros_supervisor_callback_continuation.first_bsr_opcode == 0x6100);
+    assert(deuteros_supervisor_callback_continuation.first_bsr_displacement == 0x714);
+    assert(deuteros_supervisor_callback_continuation.first_bsr_target_offset == 0x800);
+    assert(deuteros_supervisor_callback_continuation.second_bsr_opcode == 0x6100);
+    assert(deuteros_supervisor_callback_continuation.second_bsr_displacement == 0x1032);
+    assert(deuteros_supervisor_callback_continuation.second_bsr_target_offset == 0x1122);
+    {
+        auto altered_second_stage = deuteros_second_stage;
+        altered_second_stage[0xde] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_supervisor_callback_continuation(
+                altered_second_stage, deuteros_second_stage_profile, deuteros_supervisor_callback));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_second_stage = deuteros_second_stage;
         altered_second_stage[0x1a6] ^= 0x01;
@@ -3371,6 +3405,11 @@ int main() {
     assert(title_stage.transition_graphics_library_base_address == 0x12fec);
     assert(title_stage.transition_first_library_vector == -0xc0);
     assert(title_stage.transition_second_library_vector == -0x1a4);
+    assert(title_stage.transition_first_phase_source_address == 0x12e12);
+    assert(title_stage.transition_first_phase_first_work_address == 0x1ffda);
+    assert(title_stage.transition_first_phase_second_work_address == 0x20056);
+    assert(title_stage.transition_first_phase_work_pointer_address == 0x2008e);
+    assert(title_stage.transition_poll_loop_address == 0x4071a);
     assert(title_stage.transition_second_phase_source_address == 0x12e12);
     assert(title_stage.transition_second_phase_first_work_address == 0x1ffda);
     assert(title_stage.transition_second_phase_second_work_address == 0x1ffe6);

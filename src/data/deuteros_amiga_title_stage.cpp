@@ -227,6 +227,19 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(code, transition + 68, 0x00012fec);
     require_word(code, transition + 72, 0x4eae); // jsr -$c0(a6)
     require_word(code, transition + 74, 0xff40);
+    // The first -$1a4 call receives a distinct third work address. Its
+    // return is followed by a local three-word comparison loop; the values
+    // and any concurrent writer are deliberately not supplied by this parser.
+    require_word(code, transition + 76, 0x41f9); // lea $12e12,a0
+    require_long(code, transition + 78, 0x00012e12);
+    require_word(code, transition + 82, 0x43f9); // lea $1ffda,a1
+    require_long(code, transition + 84, 0x0001ffda);
+    require_word(code, transition + 88, 0x45f9); // lea $20056,a2
+    require_long(code, transition + 90, 0x00020056);
+    require_word(code, transition + 94, 0x23ca); // move.l a2,$2008e
+    require_long(code, transition + 96, 0x0002008e);
+    require_word(code, transition + 100, 0x2c79); // movea.l $12fec,a6
+    require_long(code, transition + 102, 0x00012fec);
     require_word(code, transition + 106, 0x4eae); // jsr -$1a4(a6)
     require_word(code, transition + 108, 0xfe5c);
     require_word(code, transition + 110, 0x3039); // move.w $1ffc8,d0
@@ -237,10 +250,13 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(code, transition + 124, 0x0001ffd4);
     require_word(code, transition + 128, 0xb079); // cmp.w $1ffc8,d0
     require_long(code, transition + 130, 0x0001ffc8);
+    require_word(code, transition + 134, 0x6610); // bne.b $40732
     require_word(code, transition + 136, 0xb279); // cmp.w $1ffce,d1
     require_long(code, transition + 138, 0x0001ffce);
+    require_word(code, transition + 142, 0x6608); // bne.b $40732
     require_word(code, transition + 144, 0xb479); // cmp.w $1ffd4,d2
     require_long(code, transition + 146, 0x0001ffd4);
+    require_word(code, transition + 150, 0x67e8); // beq.b $4071a
     // The original branch supplies three work addresses to -$1a4, then
     // clears the active byte, restores the saved display word, and returns.
     require_word(code, transition + 152, 0x41f9); // lea $12e12,a0
@@ -523,6 +539,7 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         0x22d34, 0x11, 0x40410,
         0x202c6, 0x202b8, 0x1ed24, 0x40678, 16, 0x0eee, 0x12fec,
         static_cast<std::int16_t>(-0xc0), static_cast<std::int16_t>(-0x1a4),
+        0x12e12, 0x1ffda, 0x20056, 0x2008e, 0x4071a,
         0x12e12, 0x1ffda, 0x1ffe6, 0x2008e, 0x1ffc8, 0x1ffce, 0x1ffd4,
         0x4077c,
         0x407e6, 0, 0x3f7a8, 0x1f9a4, 0x1fe7a, 0x1f238,

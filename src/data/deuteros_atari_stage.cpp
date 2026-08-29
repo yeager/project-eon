@@ -435,6 +435,44 @@ DeuterosAtariSupervisorCallbackProfile parse_deuteros_atari_supervisor_callback(
         be16(bytes, callback_offset + 8U), be16(bytes, callback_offset + 10U)};
 }
 
+DeuterosAtariSupervisorCallbackContinuation
+parse_deuteros_atari_supervisor_callback_continuation(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariSupervisorCallbackProfile& callback) {
+    // The service boundary at +$dc is intentionally not crossed: this exact
+    // following code reads $25f4 rather than a documented service result.
+    // BEQ.S $08 joins at +$f2; otherwise the two local BSR.W displacements
+    // resolve from their extension words to +$800 and +$1122 respectively.
+    constexpr std::size_t continuation_offset = 0xde;
+    constexpr std::array<std::uint8_t, 20> continuation_bytes{
+        0x20, 0x38, 0x25, 0xf4, 0xb0, 0xbc, 0x00, 0x07, 0x11, 0x00,
+        0x67, 0x08, 0x61, 0x00, 0x07, 0x14, 0x61, 0x00, 0x10, 0x32};
+    constexpr std::string_view continuation_sha256 =
+        "ed326a1d22a28ce5646b242c947c5120cb0855d6d05080e35ce398d48d459f56";
+    constexpr std::size_t branch_target_offset = 0xf2;
+    constexpr std::size_t first_bsr_target_offset = 0x800;
+    constexpr std::size_t second_bsr_target_offset = 0x1122;
+    if (bytes.size() != 0x1200U || stage.direct_entry_source_offset != 0xc4
+        || callback.callsite_offset != 0xd2 || callback.callsite_bytes != 10
+        || callback.trap_opcode != 0x4e4e || continuation_offset != callback.callsite_offset + 12U
+        || !std::equal(continuation_bytes.begin(), continuation_bytes.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(continuation_offset))) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST supervisor callback continuation");
+    }
+    const auto digest = to_hex(sha256(bytes.subspan(continuation_offset, continuation_bytes.size())));
+    if (digest != continuation_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST supervisor callback continuation hash");
+    }
+    return {continuation_offset, continuation_bytes.size(), digest,
+        be16(bytes, continuation_offset), be16(bytes, continuation_offset + 2U),
+        be16(bytes, continuation_offset + 4U), be32(bytes, continuation_offset + 6U),
+        be16(bytes, continuation_offset + 10U), static_cast<std::int8_t>(bytes[continuation_offset + 11U]),
+        branch_target_offset, be16(bytes, continuation_offset + 12U),
+        static_cast<std::int16_t>(be16(bytes, continuation_offset + 14U)), first_bsr_target_offset,
+        be16(bytes, continuation_offset + 16U),
+        static_cast<std::int16_t>(be16(bytes, continuation_offset + 18U)), second_bsr_target_offset};
+}
+
 DeuterosAtariState0DuplicateStagePrefix
 parse_deuteros_atari_state0_duplicate_stage_prefix(const std::span<const std::uint8_t> state0_bytes,
     const std::span<const std::uint8_t> second_stage_bytes) {

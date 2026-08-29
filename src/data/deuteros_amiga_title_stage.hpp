@@ -46,8 +46,16 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t transition_graphics_library_base_address = 0;
     std::int16_t transition_first_library_vector = 0;
     std::int16_t transition_second_library_vector = 0;
+    // The first graphics-library call is followed by a local polling loop.
+    // These are original operand cells only; no vector, display, or concurrent
+    // update is modelled.
+    std::uint32_t transition_first_phase_source_address = 0;
+    std::uint32_t transition_first_phase_first_work_address = 0;
+    std::uint32_t transition_first_phase_second_work_address = 0;
+    std::uint32_t transition_first_phase_work_pointer_address = 0;
+    std::uint32_t transition_poll_loop_address = 0;
     // The transition's second phase supplies three original work addresses to
-    // the same graphics library before comparing three original display words.
+    // the same graphics library after the polling loop observes a difference.
     // Their roles are deliberately not inferred from these instructions.
     std::uint32_t transition_second_phase_source_address = 0;
     std::uint32_t transition_second_phase_first_work_address = 0;
