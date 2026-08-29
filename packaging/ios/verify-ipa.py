@@ -102,6 +102,13 @@ def validate_plist(raw: bytes) -> None:
     capabilities = plist.get("UIRequiredDeviceCapabilities", [])
     if "arm64" not in capabilities:
         fail("IPA Info.plist does not require arm64")
+    # The IPA stays media-free. These keys make its read-only user-media
+    # location reachable through Files rather than silently stranding it in
+    # an app-private root.
+    if plist.get("UIFileSharingEnabled") is not True:
+        fail("IPA Info.plist does not enable Files sharing for user media")
+    if plist.get("LSSupportsOpeningDocumentsInPlace") is not True:
+        fail("IPA Info.plist does not support opening user media in place")
 
 
 def validate_arm64_macho(raw: bytes) -> None:

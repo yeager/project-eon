@@ -436,6 +436,13 @@ def main() -> int:
                     "Millennium DOS GX selector evidence did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            if ("Original VOC bank: 14 hash-verified voices, 37100 unsigned PCM samples at "
+                    "10000 Hz/6024 Hz (inspection only; no event mapping, driver ABI, or playback)"
+                    not in inspected.stdout):
+                raise SystemExit(
+                    "Millennium DOS original VOC bank was not completely read in inspection:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "millennium" and platform == "dos" and language == "Spanish":
             expected_spanish_ibm = (
                 "Spanish IBM.COM handoff: caller 0x23d names 0x71d/0x728; calls 0x240/0x24c "

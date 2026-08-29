@@ -2711,6 +2711,13 @@ any VOC file to a host event, title transition, or timer. The existing decoder
 is retained as a source-byte parser only until a real caller and trigger are
 established.
 
+`--inspect` additionally resolves every one of those fourteen executable-named
+assets through the authenticated archive inventory and decodes them in memory.
+The supplied English bank contains 37,100 unsigned PCM samples across the
+original 10,000 Hz and 6,024 Hz rates. This is a read-only completeness check
+of the resource family, not an audio subsystem: no sound is scheduled or sent
+to SDL without a recovered event-to-index and driver-ABI chain.
+
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
 their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 92h, and 95h. `2200AD.EXE` jumps from file offset `0x0004` to `0xd1b0`, then
