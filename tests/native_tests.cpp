@@ -1,6 +1,7 @@
 #include "platform/game_data.hpp"
 #include "launcher.hpp"
 #include "i18n.hpp"
+#include "launcher_text.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -101,7 +102,12 @@ int main() {
         assert(eon::normalize_language("sv_SE.UTF-8") == "sv_SE");
         assert(eon::normalize_language("pt-BR") == "pt_BR");
         assert(eon::normalize_language("C") == "c");
-        assert(eon::normalize_language("not a locale").empty());
+    assert(eon::normalize_language("not a locale").empty());
+    // The Unicode launcher renderer must never consult a system font when no
+    // reviewed bundled asset is present. This is a no-renderer/no-font native
+    // contract and therefore requires no host font in CI.
+    assert(!eon::UnicodeTextRenderer::create(nullptr,
+        std::filesystem::temp_directory_path() / "project-eon-no-host-font.ttf"));
         char language_option[] = "--language";
         char swedish[] = "sv_SE.UTF-8";
         char* language_args[] = {program, language_option, swedish};
@@ -2032,8 +2038,37 @@ int main() {
     assert(spanish_game_startup.compared_al_value == 1);
     assert(spanish_game_startup.equal_call_address == 0xd2fa);
     assert(spanish_game_startup.equal_call_target_address == 0xd1be);
-    assert(spanish_game_startup.other_call_address == 0xd302);
-    assert(spanish_game_startup.other_call_target_address == 0xd1d5);
+    assert(spanish_game_startup.other_call_address == 0xd2ff);
+    assert(spanish_game_startup.other_call_target_address == 0xd1d2);
+    const auto spanish_game_startup_callees = eon::parse_millennium_dos_spanish_game_startup_callees(
+        disk.read(*executable), spanish_game_startup);
+    assert(spanish_game_startup_callees.equal_entry_address == 0xd1be);
+    assert(spanish_game_startup_callees.equal_byte_count == 20);
+    assert(spanish_game_startup_callees.equal_sha256
+        == "fdfc8f02550ee226dea27b1ac0204d1ead083c9d5585e18103bfe67435f0a5bb");
+    assert(spanish_game_startup_callees.equal_private_function == 4);
+    assert(spanish_game_startup_callees.equal_private_record_address == 0xd1bc);
+    assert(spanish_game_startup_callees.equal_private_call_address == 0xd1c6);
+    assert(spanish_game_startup_callees.equal_private_target_address == 0x0124);
+    assert(spanish_game_startup_callees.equal_followup_call_address == 0xd1c9);
+    assert(spanish_game_startup_callees.equal_followup_target_address == 0x044e);
+    assert(spanish_game_startup_callees.equal_result_value == 1);
+    assert(spanish_game_startup_callees.equal_result_storage_address == 0xda05);
+    assert(spanish_game_startup_callees.equal_return_address == 0xd1d1);
+    assert(spanish_game_startup_callees.other_entry_address == 0xd1d2);
+    assert(spanish_game_startup_callees.other_byte_count == 28);
+    assert(spanish_game_startup_callees.other_sha256
+        == "6b8180c8f3b01e1f8810b2132756486dc761aee980949643129eeb53f6e86472");
+    assert(spanish_game_startup_callees.other_private_function == 4);
+    assert(spanish_game_startup_callees.other_private_record_address == 0xd1bc);
+    assert(spanish_game_startup_callees.other_private_call_address == 0xd1da);
+    assert(spanish_game_startup_callees.other_private_target_address == 0x0124);
+    assert(spanish_game_startup_callees.other_followup_call_address == 0xd1dd);
+    assert(spanish_game_startup_callees.other_followup_target_address == 0x0466);
+    assert(spanish_game_startup_callees.other_result_source_address == 0xda05);
+    assert(spanish_game_startup_callees.other_compare_value == 2);
+    assert(spanish_game_startup_callees.other_equal_store_address == 0x0107);
+    assert(spanish_game_startup_callees.other_return_address == 0xd1ed);
     {
         auto altered_spanish_game = disk.read(*executable);
         altered_spanish_game[0xd1cd] ^= 0x01;
@@ -2041,6 +2076,18 @@ int main() {
         try {
             static_cast<void>(eon::parse_millennium_dos_spanish_game_startup_evidence(
                 altered_spanish_game));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_spanish_game = disk.read(*executable);
+        altered_spanish_game[0xd0be] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_spanish_game_startup_callees(
+                altered_spanish_game, spanish_game_startup));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

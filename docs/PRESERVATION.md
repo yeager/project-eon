@@ -2445,9 +2445,21 @@ English substitute. Its entry preserves `DS=CS` and `ES=CS`, then jumps to
 set `SS=CS`, `SP=$da00`, prepare `AX=$001f` and `ES:BX=CS:$d1bb`, then call
 the wrapped private entry `$0124`. If that original call returns, its AL is
 compared with `$01`: the equal route calls `$d1be`, while the other route
-calls `$d1d5`. The original word store at `$d14a` is recorded as a code
+calls `$d1d2`. The original word store at `$d14a` is recorded as a code
 operand only. Project Eon supplies neither the private return nor AL, takes
 neither branch, and creates no Spanish game state or English fallback.
+
+Both resulting local callees are now bounded in the Spanish executable. The
+AL-equal target `$d1be..$d1d1` is 20 bytes, SHA-256
+`fdfc8f02550ee226dea27b1ac0204d1ead083c9d5585e18103bfe67435f0a5bb`: it
+prepares `AX=$0004`, `ES:BX=CS:$d1bc`, calls private `$0124`, then local
+`$044e`, and only after both returns stores literal `$01` at `$da05`. The
+other target `$d1d2..$d1ed` is 28 bytes, SHA-256
+`6b8180c8f3b01e1f8810b2132756486dc761aee980949643129eeb53f6e86472`: it
+prepares the same AX/ES:BX pair, calls `$0124` and `$0466`, then reads `$da05`
+and compares it with `$02`; only its equal route stores `$b800` at `$0107`.
+The two follow-up routines, private return values, and predicates are still
+unrecovered. Thus neither branch becomes a presentation or simulation path.
 
 The Spanish FAT12 image also supplies its own `EGA640.BIN` (4,630 bytes,
 SHA-256 `ef031b0b6e720ab2dafc1eb6373ddb76e0ff15f7b59ac785265c5136be153daf`)

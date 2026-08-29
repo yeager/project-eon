@@ -1182,13 +1182,60 @@ parse_millennium_dos_spanish_game_startup_evidence(const std::span<const std::ui
         || near_call_target(0x0107, entry[5], entry[6]) != startup_entry_address
         || near_call_target(0xd2e5, startup[22], startup[23]) != 0x0124
         || near_call_target(0xd2fd, startup[46], startup[47]) != 0xd1be
-        || near_call_target(0xd305, startup[51], startup[52]) != 0xd1d5
+        || near_call_target(0xd302, startup[51], startup[52]) != 0xd1d2
         || to_hex(sha256(game_executable.subspan(startup_offset, startup.size()))) != startup_sha256) {
         throw std::runtime_error("Unexpected Millennium Spanish DOS game startup evidence");
     }
     return {std::string(executable_sha256), startup_entry_address, startup_entry_address,
         startup.size(), std::string(startup_sha256), 0xda00, 0x001f, 0xd1bb,
-        0xd2e2, 0x0124, 0xd14a, 0xd2f6, 0x01, 0xd2fa, 0xd1be, 0xd302, 0xd1d5};
+        0xd2e2, 0x0124, 0xd14a, 0xd2f6, 0x01, 0xd2fa, 0xd1be, 0xd2ff, 0xd1d2};
+}
+
+MillenniumDosSpanishGameStartupCallees
+parse_millennium_dos_spanish_game_startup_callees(
+    const std::span<const std::uint8_t> game_executable,
+    const MillenniumDosSpanishGameStartupEvidence& startup) {
+    // Both branch targets set AX=$0004 and ES=CS before retaining their
+    // distinct private-wrapper and local-follow-up calls. The equal route
+    // writes literal AL=$01 only after both calls return. The other route
+    // reads $da05 and conditionally stores $b800 at $0107. Those return and
+    // predicate conditions remain native boundaries, not host behavior.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t equal_entry = 0xd1be;
+    constexpr std::uint16_t other_entry = 0xd1d2;
+    constexpr auto equal = std::to_array<std::uint8_t>({
+        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0xbc, 0xd1, 0xe8, 0x5b,
+        0x2f, 0xe8, 0x82, 0x32, 0xb0, 0x01, 0xa2, 0x05, 0xda, 0xc3,
+    });
+    constexpr auto other = std::to_array<std::uint8_t>({
+        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0xbc, 0xd1, 0xe8, 0x47,
+        0x2f, 0xe8, 0x86, 0x32, 0xa0, 0x05, 0xda, 0x3c, 0x02, 0x75,
+        0x06, 0xb8, 0x00, 0xb8, 0xa3, 0x07, 0x01, 0xc3,
+    });
+    constexpr std::string_view equal_sha256 =
+        "fdfc8f02550ee226dea27b1ac0204d1ead083c9d5585e18103bfe67435f0a5bb";
+    constexpr std::string_view other_sha256 =
+        "6b8180c8f3b01e1f8810b2132756486dc761aee980949643129eeb53f6e86472";
+    const auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (startup.executable_sha256 != "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6"
+        || startup.equal_call_target_address != equal_entry
+        || startup.other_call_target_address != other_entry
+        || !has_bytes(game_executable, offset(equal_entry), equal)
+        || !has_bytes(game_executable, offset(other_entry), other)
+        || near_call_target(0xd1c9, equal[9], equal[10]) != 0x0124
+        || near_call_target(0xd1cc, equal[12], equal[13]) != 0x044e
+        || near_call_target(0xd1dd, other[9], other[10]) != 0x0124
+        || near_call_target(0xd1e0, other[12], other[13]) != 0x0466
+        || to_hex(sha256(game_executable.subspan(offset(equal_entry), equal.size()))) != equal_sha256
+        || to_hex(sha256(game_executable.subspan(offset(other_entry), other.size()))) != other_sha256) {
+        throw std::runtime_error("Unexpected Millennium Spanish DOS startup callees");
+    }
+    return {equal_entry, equal.size(), std::string(equal_sha256), 0x0004, 0xd1bc,
+        0xd1c6, 0x0124, 0xd1c9, 0x044e, 0x01, 0xda05, 0xd1d1,
+        other_entry, other.size(), std::string(other_sha256), 0x0004, 0xd1bc,
+        0xd1da, 0x0124, 0xd1dd, 0x0466, 0xda05, 0x02, 0x0107, 0xd1ed};
 }
 
 std::array<MillenniumDosEgaPaletteRegisterWrite, 16>
