@@ -2057,6 +2057,13 @@ offset `$0c`, and replaces the selector with `$fe`. The VM separately retains
 the raw bundle-relative `$0b38` operand for its alternate-resource event,
 without giving either value an invented gameplay name.
 
+The native real-media conformance test hashes the decoded RGBA surface after
+every one of the 82 held-input scheduler ticks. Its 82 expected SHA-256 values
+were derived from the hash-recognised English Amiga ADF at test-recording time;
+the test contains hashes only, never source pixels. This makes a changed timing,
+palette, blit, or handoff frame a deterministic preservation failure while
+keeping the original media external and immutable.
+
 The launcher keeps that held signal scoped to an active opening session. It
 clears it before a new Deuteros session and when the Modern F10 renderer dialog
 opens, so a host-modal transition cannot leak a stale Space/Enter/South hold
