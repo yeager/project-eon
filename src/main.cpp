@@ -519,6 +519,8 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << " original launcher-documentation bytes (SHA-256 " << launch_manual.sha256 << ")\n";
         const auto ibm_handoff = eon::parse_millennium_dos_spanish_ibm_handoff_evidence(
             disk.read(*ibm_entry), disk.read(*titles_entry), disk.read(*game_entry));
+        const auto game_startup = eon::parse_millennium_dos_spanish_game_startup_evidence(
+            disk.read(*game_entry));
         std::cout << "          Spanish IBM.COM handoff: caller 0x" << std::hex
             << ibm_handoff.caller_entry_address << " names 0x" << ibm_handoff.title_name_address
             << "/0x" << ibm_handoff.game_name_address << "; calls 0x"
@@ -532,6 +534,15 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << ibm_handoff.carry_branch_target_address << "; SHA-256 "
             << ibm_handoff.ibm_sha256 << std::dec
             << " (static only; no DOS call, result, title, or game ABI executed)\n";
+        std::cout << "          Spanish 2200AD startup: COM entry -> 0x" << std::hex
+            << game_startup.startup_entry_address << "; SS:SP=CS:0x"
+            << game_startup.stack_pointer << "; AX=0x" << game_startup.private_function
+            << " ES:BX=CS:0x" << game_startup.private_record_address << "; CALL 0x"
+            << game_startup.private_call_address << " -> 0x" << game_startup.private_wrapper_address
+            << "; AL==0x" << static_cast<unsigned>(game_startup.compared_al_value)
+            << " calls 0x" << game_startup.equal_call_target_address << ", otherwise 0x"
+            << game_startup.other_call_target_address << "; SHA-256 " << game_startup.startup_sha256
+            << std::dec << " (static only; no private result, branch, or game state is supplied)\n";
         std::cout << "          Spanish isolation boundary: only this image's IBM.COM, TITLES.EXE, "
             << "and 2200AD.EXE are reported; no English executable, state, or title path is "
             << "substituted. Next trace inputs: hash-locked DOS child return/AL, file operations, "

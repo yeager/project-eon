@@ -614,6 +614,32 @@ parse_millennium_dos_spanish_ibm_handoff_evidence(
     std::span<const std::uint8_t> titles_executable,
     std::span<const std::uint8_t> game_executable);
 
+// The Spanish 2200AD.EXE COM entry has its own hash-locked startup prefix.
+// It reaches the private wrapper at $0124, then branches on a native-returned
+// AL value. This profile intentionally records no return value or game state.
+struct MillenniumDosSpanishGameStartupEvidence {
+    std::string executable_sha256;
+    std::uint16_t entry_jump_target_address = 0;
+    std::uint16_t startup_entry_address = 0;
+    std::size_t startup_byte_count = 0;
+    std::string startup_sha256;
+    std::uint16_t stack_pointer = 0;
+    std::uint16_t private_function = 0;
+    std::uint16_t private_record_address = 0;
+    std::uint16_t private_call_address = 0;
+    std::uint16_t private_wrapper_address = 0;
+    std::uint16_t private_result_word_address = 0;
+    std::uint16_t result_compare_address = 0;
+    std::uint8_t compared_al_value = 0;
+    std::uint16_t equal_call_address = 0;
+    std::uint16_t equal_call_target_address = 0;
+    std::uint16_t other_call_address = 0;
+    std::uint16_t other_call_target_address = 0;
+};
+
+[[nodiscard]] MillenniumDosSpanishGameStartupEvidence
+parse_millennium_dos_spanish_game_startup_evidence(std::span<const std::uint8_t> game_executable);
+
 [[nodiscard]] MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     std::span<const std::uint8_t> game_executable,
