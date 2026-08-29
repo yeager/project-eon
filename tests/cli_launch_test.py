@@ -538,6 +538,21 @@ def main() -> int:
                 f"{game}/{platform} bounded launcher bootstrap did not match supplied media:\n"
                 f"{inspected.stdout}"
             )
+        expected_atari_launch_boundary = {
+            ("millennium", "atari-st"): (
+                "ATARI LAUNCH BOUNDARY  bootstrap only; stops before GEMDOS TRAP #1/Fopen result, "
+                "input, and later launcher control flow"
+            ),
+            ("deuteros", "atari-st"): (
+                "ATARI LAUNCH BOUNDARY  protected bootstrap only; stops before XBIOS/callback behavior, "
+                "state selection, title, and gameplay"
+            ),
+        }.get((game, platform))
+        if expected_atari_launch_boundary and expected_atari_launch_boundary not in inspected.stdout:
+            raise SystemExit(
+                f"{game}/{platform} did not report its exact Atari launch boundary:\n"
+                f"{inspected.stdout}"
+            )
         if game == "millennium" and platform == "amiga":
             expected_post_negative_d3 = (
                 "post-negative-D3 terminal: entry 0x685fe; byte stores 0x7b3b5/0x7b3bc; "

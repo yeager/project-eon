@@ -27,6 +27,11 @@ public:
     [[nodiscard]] bool frame_composed_on_last_tick() const { return frame_composed_on_last_tick_; }
     [[nodiscard]] std::uint64_t ticks() const { return ticks_; }
     [[nodiscard]] std::uint32_t vblank_counter() const { return random_.vblank_counter(); }
+    // These are raw opening-VM observables used by the provenance overlay.
+    // They are not title/gameplay labels or host controls.
+    [[nodiscard]] bool input_gate() const { return vm_.input_gate(); }
+    [[nodiscard]] std::uint16_t palette_index() const { return vm_.palette_index(); }
+    [[nodiscard]] std::size_t active_channel_count() const;
     [[nodiscard]] bool title_handed_off() const { return title_handed_off_; }
     [[nodiscard]] const DeuterosAmigaBootstrapProfile& title_handoff_profile() const {
         return load_plan_.title_handoff_profile;

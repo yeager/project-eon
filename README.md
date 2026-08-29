@@ -263,6 +263,10 @@ language can reach the profile cards; `RELEASE SELECTION REQUIRED` means the
 media is verified but an exact original edition must be chosen first. The rows
 are derived only after the full report rehashes every release, and are an
 audit of launcher availability—not native Atari ST execution or API emulation.
+Each verified Atari report also has a release-specific `ATARI LAUNCH BOUNDARY`:
+Millennium stops before its GEMDOS `Fopen` result and later launcher control
+flow, while Deuteros stops before protected XBIOS/callback behavior and state
+selection. These statements are evidence boundaries, not emulation promises.
 
 For scripts, `--inspect` exits `0` after one or more matching reports, `3`
 when the supplied path has no recognised original archive, and `5` when a

@@ -78,6 +78,21 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("unresolved Exec read", handoff_panel)
         self.assertNotIn("title_stage->tick", handoff_panel)
 
+    def test_deuteros_opening_panel_uses_raw_vm_observables(self) -> None:
+        opening_panel = SOURCE.index('tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE")')
+        handoff = SOURCE.index("if (deuteros_title_resource)", opening_panel)
+        panel = SOURCE[opening_panel:handoff]
+        for observable in (
+            "deuteros_opening->ticks()",
+            "deuteros_opening->vblank_counter()",
+            "deuteros_opening->palette_index()",
+            "deuteros_opening->active_channel_count()",
+            "deuteros_opening->input_gate()",
+        ):
+            with self.subTest(observable=observable):
+                self.assertIn(observable, panel)
+        self.assertIn("Machine-state telemetry", panel)
+
     def test_popup_is_modal_for_gamepad_navigation(self) -> None:
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_UP", SOURCE)
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_DOWN", SOURCE)

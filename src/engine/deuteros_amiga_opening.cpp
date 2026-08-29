@@ -1,5 +1,6 @@
 #include "engine/deuteros_amiga_opening.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace eon {
@@ -78,6 +79,11 @@ std::optional<std::vector<std::uint8_t>> DeuterosAmigaOpening::rgba_frame() cons
     if (!last_frame_) return std::nullopt;
     const auto palette = decode_deuteros_amiga_palette(disk_, bundle_, vm_.palette_index());
     return colorize_deuteros_amiga_frame(*last_frame_, palette);
+}
+
+std::size_t DeuterosAmigaOpening::active_channel_count() const {
+    return static_cast<std::size_t>(std::count_if(vm_.channels().begin(), vm_.channels().end(),
+        [](const DeuterosAmigaChannelState& channel) { return channel.active; }));
 }
 
 } // namespace eon

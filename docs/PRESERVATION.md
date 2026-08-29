@@ -157,6 +157,13 @@ their scope cannot establish whether an unprinted sibling language is present.
 The report is derived from scanner identities only and does not execute Atari
 ST GEMDOS/XBIOS services, callbacks, or guest code.
 
+Each rehashed Atari report includes `ATARI LAUNCH BOUNDARY`, matching the card
+label to a release-specific limitation: Millennium stops before the GEMDOS
+`TRAP #1`/`Fopen` result, input, and later launcher flow; Deuteros stops before
+protected XBIOS/callback behavior, state selection, title, and gameplay. It
+is a concise preservation diagnostic only, emitted after hash verification and
+without invoking guest code.
+
 ### Scan-to-use identity binding
 
 Recognition alone is not authority to parse a later version of a path. Before
@@ -2003,6 +2010,13 @@ timer once, as the original scheduler does. Tick 3 selects bitmap 1 at word
 coordinate `x=8`, pixel coordinate `y=183`; its blank-backed 320×200 frame has
 SHA-256 `d841fd0e6e01c09f7dc8ce6cd2bda1828a0eb62c5f198750403aa996cd7d48d4`.
 Tick 4 enters stepped mode 6, moves to `y=181`, and leaves timer 38.
+
+While this recovered opening is active, the launcher exposes a compact
+machine-notation overlay: scheduler tick, original VBL counter, current raw
+palette index, active channel count, and the `$2171e` gate bit. These values
+are queried directly from the opening VM and never drive host input or title
+logic. They make the rendered opening's provenance inspectable without
+interpreting a channel as gameplay or drawing any synthetic status screen.
 
 ### Deuteros Amiga title input and bootstrap handoff
 
