@@ -354,6 +354,20 @@ void report_recovery_map(const eon::ReleaseArchive& release) {
     }
 }
 
+// Keep the user-facing Atari card label tied to a concise, release-specific
+// provenance statement.  This runs after verify_release_archive() in the
+// inspection loop; it is not a claim that either native boundary is emulated.
+void report_atari_launch_boundary(const eon::ReleaseArchive& release) {
+    if (release.platform != eon::Platform::atari_st) return;
+    if (release.game == eon::Game::millennium) {
+        std::cout << "          ATARI LAUNCH BOUNDARY  bootstrap only; stops before "
+            "GEMDOS TRAP #1/Fopen result, input, and later launcher control flow\n";
+        return;
+    }
+    std::cout << "          ATARI LAUNCH BOUNDARY  protected bootstrap only; stops before "
+        "XBIOS/callback behavior, state selection, title, and gameplay\n";
+}
+
 // This is the textual counterpart of the platform cards.  It is emitted only
 // after every unfiltered release has been rehashed for this inspection, so a
 // stale scanner result cannot make an Atari (or sibling) platform appear
@@ -2989,6 +3003,7 @@ int main(int argc, char** argv) {
                 << "          " << release.sha256 << '\n'
                 << "          " << release.path << '\n';
             report_recovery_map(release);
+            report_atari_launch_boundary(release);
             if (release.game == eon::Game::deuteros
                 && release.platform == eon::Platform::amiga) {
                 report_deuteros_amiga(release);
@@ -4134,6 +4149,16 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 64, 220, tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"));
                 draw_text(renderer, 64, 238, tr("HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"));
                 draw_text(renderer, 64, 252, tr("PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"));
+                // Machine-state telemetry is deliberately notation-only: it
+                // makes the recovered 50 Hz opening observable without
+                // naming a title/menu action or creating a host control.
+                std::ostringstream opening_provenance;
+                opening_provenance << "T=" << deuteros_opening->ticks()
+                                  << "; VBL=0x" << std::hex << deuteros_opening->vblank_counter()
+                                  << "; PAL=" << std::dec << deuteros_opening->palette_index()
+                                  << "; CH=" << deuteros_opening->active_channel_count()
+                                  << "; $2171e=" << (deuteros_opening->input_gate() ? 1 : 0);
+                draw_text(renderer, 760, 238, opening_provenance.str());
                 if (deuteros_title_resource) {
                     std::ostringstream handoff;
                     handoff << std::hex << *deuteros_title_resource;

@@ -7786,11 +7786,16 @@ int main() {
     static_cast<void>(live_opening.tick());
     const auto live_tick2 = live_opening.tick();
     assert(live_tick2.palette == 1);
+    assert(live_opening.input_gate());
+    assert(live_opening.palette_index() == 1);
+    assert(live_opening.active_channel_count() == 4);
+    assert(live_opening.vblank_counter() == 8);
     static_cast<void>(live_opening.tick());
     const auto live_frame = live_opening.rgba_frame();
     assert(live_frame && live_frame->size() == 320U * 200U * 4U);
     assert(live_opening.frame_composed_on_last_tick());
     assert(live_opening.ticks() == 3);
+    assert(live_opening.active_channel_count() == 4);
     assert(live_opening.title_handoff_profile().disk_offset == 0x6e000);
     // Advance actual bundle-zero programs well beyond the first animation
     // transition. This catches any stateful selector reached by real control
