@@ -968,6 +968,67 @@ MillenniumDosPostInt91CallerSelector parse_millennium_dos_post_int91_caller_sele
         0xd373, 0x6c52, std::string(selector_sha256)};
 }
 
+MillenniumDosPostGxStartupPrefix evaluate_millennium_dos_post_gx_startup_prefix(
+    const std::span<const std::uint8_t> game_executable,
+    const std::optional<std::uint16_t> observed_private_return_ax,
+    const std::optional<std::uint8_t> observed_mode_byte) {
+    // This connected evaluator deliberately consumes observations rather than
+    // inventing an INT $91 return or the mode byte read at $d349. Validate
+    // each original component again at use time so a trace cannot connect a
+    // neighbouring binary or a mutated prefix.
+    const auto post_gx = parse_millennium_dos_startup_post_gx_loader_boundary(game_executable);
+    const auto wrapper = parse_millennium_dos_private_int91_wrapper(game_executable);
+    const auto selector = parse_millennium_dos_post_int91_caller_selector(game_executable);
+    if (post_gx.entry_address != 0xd338 || post_gx.private_call_address != 0xd340
+        || post_gx.private_call_target != wrapper.entry_address
+        || post_gx.private_interrupt != wrapper.private_interrupt
+        || selector.return_site_address != 0xd343
+        || selector.source_byte_address != 0xda05
+        || selector.shared_store_target_address != 0x4b6e
+        || selector.first_call_address != 0xd373 || selector.first_call_target != 0x6c52) {
+        throw std::runtime_error("Unsupported Millennium DOS post-GX startup-prefix connection");
+    }
+
+    MillenniumDosPostGxStartupPrefix result;
+    result.entry_address = post_gx.entry_address;
+    result.private_call_address = post_gx.private_call_address;
+    result.private_wrapper_address = post_gx.private_call_target;
+    result.private_interrupt = post_gx.private_interrupt;
+    result.observed_private_return_ax = observed_private_return_ax;
+    result.observed_mode_byte = observed_mode_byte;
+    if (!observed_private_return_ax) {
+        if (observed_mode_byte) {
+            throw std::runtime_error("Millennium DOS post-GX selector needs INT 91h return first");
+        }
+        result.boundary_address = wrapper.private_interrupt_site;
+        return result;
+    }
+    if (!observed_mode_byte) {
+        throw std::runtime_error("Millennium DOS post-GX selector needs observed mode byte");
+    }
+
+    // $d343 uses only the observed $da05 byte to choose these literal pairs.
+    // The observed AX return establishes reachability but has no encoded local
+    // consumer in this span, so it is intentionally retained as provenance.
+    if (*observed_mode_byte == selector.first_compare_value) {
+        result.selected_dx = 0x0050;
+        result.selected_ax = 0x0012;
+    } else if (*observed_mode_byte == selector.second_compare_value) {
+        result.selected_dx = 0x00a0;
+        result.selected_ax = 0x0014;
+    } else if (*observed_mode_byte == selector.third_compare_value) {
+        result.selected_dx = 0x0140;
+        result.selected_ax = 0x000f;
+    } else {
+        result.selected_dx = 0x0028;
+        result.selected_ax = 0x000e;
+    }
+    result.local_writes.push_back({selector.shared_store_target_address, result.selected_dx, 2});
+    result.outcome = MillenniumDosPostGxStartupPrefixOutcome::overlay_adapter_boundary;
+    result.boundary_address = selector.first_call_address;
+    return result;
+}
+
 MillenniumDosPostOverlayAdapterContinuation
 parse_millennium_dos_post_overlay_adapter_continuation(
     const std::span<const std::uint8_t> game_executable) {

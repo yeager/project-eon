@@ -147,6 +147,27 @@ struct DeuterosAtariSecondStageProfile {
 [[nodiscard]] DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
     std::span<const std::uint8_t> bytes);
 
+// The two possible SR-dependent paths in the track-2 entry join at +$18.
+// From that join the original code unconditionally installs the application
+// stack and jumps into the copied dispatcher.  This execution prefix models
+// only those shared local instructions; it deliberately neither reads SR nor
+// executes the dispatcher, whose first instruction consumes runtime RAM and
+// later reaches an XBIOS/callback boundary.
+struct DeuterosAtariSecondStageEntryExecutionPrefix {
+    std::size_t join_offset = 0;
+    std::size_t executed_byte_count = 0;
+    std::string sha256;
+    std::uint16_t stack_load_opcode = 0;
+    std::uint32_t application_stack = 0;
+    std::uint16_t jump_opcode = 0;
+    std::uint32_t dispatcher_entry = 0;
+    std::size_t stop_before_dispatcher_source_offset = 0;
+};
+
+[[nodiscard]] DeuterosAtariSecondStageEntryExecutionPrefix
+execute_deuteros_atari_second_stage_entry_prefix(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage);
+
 // Static values returned by the first two table vectors. They are raw-loader
 // arguments only; their game semantics and state-selection source are unknown.
 struct DeuterosAtariDispatchProfile {

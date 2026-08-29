@@ -3099,6 +3099,56 @@ int main() {
         rejected_out_of_order_startup_observation = true;
     }
     assert(rejected_out_of_order_startup_observation);
+    // The next real startup fragment is separately connected from the
+    // conditional GX-loader return. It accepts only observed native values,
+    // applies the one original CS-store, and stops before the overlay's far
+    // transfer rather than fabricating a loader/INT result.
+    const auto post_gx_initial = eon::evaluate_millennium_dos_post_gx_startup_prefix(
+        *game_executable);
+    assert(post_gx_initial.outcome
+        == eon::MillenniumDosPostGxStartupPrefixOutcome::private_interrupt_boundary);
+    assert(post_gx_initial.entry_address == 0xd338);
+    assert(post_gx_initial.private_call_address == 0xd340);
+    assert(post_gx_initial.private_wrapper_address == 0x0124);
+    assert(post_gx_initial.private_interrupt == 0x91);
+    assert(post_gx_initial.boundary_address == 0x0129);
+    const auto post_gx_default = eon::evaluate_millennium_dos_post_gx_startup_prefix(
+        *game_executable, 0x1234, 0);
+    assert(post_gx_default.outcome
+        == eon::MillenniumDosPostGxStartupPrefixOutcome::overlay_adapter_boundary);
+    assert(post_gx_default.selected_ax == 0x000e);
+    assert(post_gx_default.selected_dx == 0x0028);
+    assert((post_gx_default.local_writes
+        == std::vector<eon::MillenniumDosPostGxStartupPrefixWrite>{{0x4b6e, 0x0028, 2}}));
+    assert(post_gx_default.boundary_address == 0xd373);
+    const auto post_gx_three = eon::evaluate_millennium_dos_post_gx_startup_prefix(
+        *game_executable, 0, 3);
+    assert(post_gx_three.selected_ax == 0x0012);
+    assert(post_gx_three.selected_dx == 0x0050);
+    const auto post_gx_four = eon::evaluate_millennium_dos_post_gx_startup_prefix(
+        *game_executable, 0, 4);
+    assert(post_gx_four.selected_ax == 0x0014);
+    assert(post_gx_four.selected_dx == 0x00a0);
+    const auto post_gx_two = eon::evaluate_millennium_dos_post_gx_startup_prefix(
+        *game_executable, 0, 2);
+    assert(post_gx_two.selected_ax == 0x000f);
+    assert(post_gx_two.selected_dx == 0x0140);
+    bool rejected_post_gx_out_of_order_observation = false;
+    try {
+        static_cast<void>(eon::evaluate_millennium_dos_post_gx_startup_prefix(
+            *game_executable, std::nullopt, 3));
+    } catch (const std::runtime_error&) {
+        rejected_post_gx_out_of_order_observation = true;
+    }
+    assert(rejected_post_gx_out_of_order_observation);
+    bool rejected_post_gx_missing_mode_observation = false;
+    try {
+        static_cast<void>(eon::evaluate_millennium_dos_post_gx_startup_prefix(
+            *game_executable, 0, std::nullopt));
+    } catch (const std::runtime_error&) {
+        rejected_post_gx_missing_mode_observation = true;
+    }
+    assert(rejected_post_gx_missing_mode_observation);
     {
         auto altered_startup_allocation = *game_executable;
         altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;
@@ -5188,6 +5238,9 @@ int main() {
         == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
     assert(deuteros_atari_session.first_stage().next_destination == 0x70000);
     assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
+    assert(deuteros_atari_session.entry_execution().join_offset == 0x18);
+    assert(deuteros_atari_session.entry_execution().dispatcher_entry == 0x1ec4);
+    assert(deuteros_atari_session.entry_execution().stop_before_dispatcher_source_offset == 0xc4);
     assert(deuteros_atari_session.post_callback_callees().first_callee_offset == 0x800);
     assert(deuteros_atari_session.first_callee_continuation().continuation_offset == 0x1116);
     assert(deuteros_atari_session.post_callback_callees().second_callee_bsr_target_offset == 0x30);
@@ -5257,6 +5310,29 @@ int main() {
     assert(deuteros_second_stage_profile.dispatch_state_address == 0x1eaa);
     assert(deuteros_second_stage_profile.dispatch_table_address == 0x1eac);
     assert(deuteros_second_stage_profile.dispatch_raw_reader_address == 0x70030);
+    const auto deuteros_entry_execution = eon::execute_deuteros_atari_second_stage_entry_prefix(
+        deuteros_second_stage, deuteros_second_stage_profile);
+    assert(deuteros_entry_execution.join_offset == 0x18);
+    assert(deuteros_entry_execution.executed_byte_count == 12);
+    assert(deuteros_entry_execution.sha256
+        == "b40da514f09891a46ce07d1def675f82f77b7752f8153beb7638bdf5aea973ee");
+    assert(deuteros_entry_execution.stack_load_opcode == 0x4ff9);
+    assert(deuteros_entry_execution.application_stack == 0x2478);
+    assert(deuteros_entry_execution.jump_opcode == 0x4ef9);
+    assert(deuteros_entry_execution.dispatcher_entry == 0x1ec4);
+    assert(deuteros_entry_execution.stop_before_dispatcher_source_offset == 0xc4);
+    {
+        auto altered_second_stage = deuteros_second_stage;
+        altered_second_stage[0x1e] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::execute_deuteros_atari_second_stage_entry_prefix(
+                altered_second_stage, deuteros_second_stage_profile));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto deuteros_dispatch = eon::parse_deuteros_atari_dispatch(deuteros_second_stage);
     assert((deuteros_dispatch.vector_addresses
         == std::array<std::uint32_t, 6>{{0x1f1a, 0x1f2e, 0x1f50, 0x1f1a, 0x1f1a, 0x1f52}}));

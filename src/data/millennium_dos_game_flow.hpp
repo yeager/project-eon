@@ -703,6 +703,44 @@ struct MillenniumDosPostInt91CallerSelector {
 parse_millennium_dos_post_int91_caller_selector(
     std::span<const std::uint8_t> game_executable);
 
+// The caller-connected continuation immediately after the $d340 private
+// wrapper call in the English startup's post-GX-loader path. An observed
+// wrapper return is required before the original mode byte may be observed.
+// Eon then executes only the literal register selection and CS store before
+// the original overlay adapter call; it never transfers to that adapter.
+enum class MillenniumDosPostGxStartupPrefixOutcome {
+    private_interrupt_boundary,
+    overlay_adapter_boundary,
+};
+
+struct MillenniumDosPostGxStartupPrefixWrite {
+    std::uint16_t address = 0;
+    std::uint16_t value = 0;
+    std::uint8_t width = 0;
+    constexpr bool operator==(const MillenniumDosPostGxStartupPrefixWrite&) const = default;
+};
+
+struct MillenniumDosPostGxStartupPrefix {
+    MillenniumDosPostGxStartupPrefixOutcome outcome =
+        MillenniumDosPostGxStartupPrefixOutcome::private_interrupt_boundary;
+    std::uint16_t entry_address = 0;
+    std::uint16_t private_call_address = 0;
+    std::uint16_t private_wrapper_address = 0;
+    std::uint8_t private_interrupt = 0;
+    std::optional<std::uint16_t> observed_private_return_ax;
+    std::optional<std::uint8_t> observed_mode_byte;
+    std::uint16_t selected_ax = 0;
+    std::uint16_t selected_dx = 0;
+    std::vector<MillenniumDosPostGxStartupPrefixWrite> local_writes;
+    std::uint16_t boundary_address = 0;
+};
+
+[[nodiscard]] MillenniumDosPostGxStartupPrefix
+evaluate_millennium_dos_post_gx_startup_prefix(
+    std::span<const std::uint8_t> game_executable,
+    std::optional<std::uint16_t> observed_private_return_ax = std::nullopt,
+    std::optional<std::uint8_t> observed_mode_byte = std::nullopt);
+
 // This is the encoded caller continuation after the selector's overlay
 // adapter CALL. It is retained only as a conditional static code span: six
 // direct near CALLs precede a native-byte comparison, whose two locally

@@ -203,6 +203,47 @@ DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
         .side_switch_track = 0x50};
 }
 
+DeuterosAtariSecondStageEntryExecutionPrefix
+execute_deuteros_atari_second_stage_entry_prefix(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage) {
+    // The entry's MOVE SR / BCLR / BEQ decision depends on the original
+    // machine status register, which is not present in this media.  Both
+    // paths rejoin at +$18, however, so this is an executable local suffix
+    // rather than a guessed status-register branch.  Its JMP enters copied
+    // stage +$c4; do not cross that boundary because the dispatcher first
+    // reads runtime RAM and then reaches a callback/XBIOS service.
+    constexpr std::size_t join_offset = 0x18;
+    constexpr auto join_bytes = std::to_array<std::uint8_t>({
+        0x4f, 0xf9, 0x00, 0x00, 0x24, 0x78,
+        0x4e, 0xf9, 0x00, 0x00, 0x1e, 0xc4,
+    });
+    constexpr std::string_view join_sha256 =
+        "b40da514f09891a46ce07d1def675f82f77b7752f8153beb7638bdf5aea973ee";
+    constexpr std::size_t dispatcher_source_offset = 0xc4;
+    // Re-parse the full entry, not just the common tail: that proves the
+    // SR-dependent predecessors and their shared join still belong to this
+    // exact raw stage even for direct API callers that did not construct a
+    // bootstrap session first.
+    const auto parsed = parse_deuteros_atari_second_stage(bytes);
+    if (bytes.size() != 0x1200U || stage.application_stack != 0x2478U
+        || stage.direct_entry != 0x1ec4U
+        || stage.direct_entry_source_offset != dispatcher_source_offset
+        || parsed.application_stack != stage.application_stack
+        || parsed.direct_entry != stage.direct_entry
+        || parsed.direct_entry_source_offset != stage.direct_entry_source_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST entry-prefix topology");
+    }
+    require_bytes(bytes, join_offset, join_bytes,
+        "Unexpected Deuteros Atari ST entry-prefix instructions");
+    const auto window = bytes.subspan(join_offset, join_bytes.size());
+    const auto digest = to_hex(sha256(window));
+    if (digest != join_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST entry-prefix hash");
+    }
+    return {join_offset, join_bytes.size(), digest, be16(window, 0), be32(window, 2),
+        be16(window, 6), be32(window, 8), dispatcher_source_offset};
+}
+
 DeuterosAtariDispatchProfile parse_deuteros_atari_dispatch(
     std::span<const std::uint8_t> bytes) {
     if (bytes.size() != 0x1200U) {

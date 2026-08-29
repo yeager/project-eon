@@ -1315,16 +1315,22 @@ both hashes and the first-stage checksum, then records the second-stage
 dispatcher. It stops before `Floprd`, callback/XBIOS behavior, state
 selection, or a display is invented; other protected disks are detected but
 never substituted for this profile.
-At its loaded address `$70000`, it is executable code rather than a resource:
-it configures supervisor stack `$7b000`, application stack `$2478`, then jumps
-directly to `$1ec4`.  Because the preceding copy has now been proven to source
-`$70000`, this target maps exactly to track-2 byte offset `+$c4`. That copied
-entry stores a runtime word at `$1eaa`, indexes a vector table at `$1eac`,
-calls the selected address, then forwards returned `D1`/`D2` values to raw
-reader `$70030`.  The state word and selected handler are runtime-dependent:
-Project Eon does not assign a title/game meaning, load a guessed sector, or
-manufacture state. Its local raw-reader routine at `+$60` caps each XBIOS
-request at nine sectors and maps linear tracks from `$50` onward to side 1.
+At its loaded address `$70000`, it is executable code rather than a resource.
+Its SR-dependent entry paths rejoin at track-2 `+$18`; Eon executes that
+common, hash-locked 12-byte local suffix (SHA-256
+`b40da514f09891a46ce07d1def675f82f77b7752f8153beb7638bdf5aea973ee`):
+`LEA $2478,SP` followed by `JMP $1ec4`. It deliberately does not choose an SR
+branch or manufacture an incoming status word. Because the preceding copy has
+now been proven to source `$70000`, that jump maps exactly to track-2 byte
+offset `+$c4`. Execution stops before that copied dispatcher: its first
+instruction consumes runtime RAM at `$25fc`, and its connected path later
+reaches the undocumented supervisor callback/XBIOS boundary. The dispatcher
+stores a runtime word at `$1eaa`, indexes a vector table at `$1eac`, calls the
+selected address, then forwards returned `D1`/`D2` values to raw reader
+`$70030`. The state word and selected handler are runtime-dependent: Project
+Eon does not assign a title/game meaning, load a guessed sector, or manufacture
+state. Its local raw-reader routine at `+$60` caps each XBIOS request at nine
+sectors and maps linear tracks from `$50` onward to side 1.
 
 The first six static table slots are `$1f1a`, `$1f2e`, `$1f50`, `$1f1a`,
 `$1f1a`, and `$1f52`; they are all code addresses within the copied track-2
@@ -3081,6 +3087,18 @@ complete executable, the exact span/hash, and the wrapped near-call target.
 It does not assert that the private wrapper returns, read or assign a value to
 `$da05`, interpret the register pairs/store, run the callee, or infer any
 interrupt behavior.
+
+`MillenniumDosPostGxStartupPrefix` connects those two byte-locked spans only
+when a reference run has explicitly observed return from the `$d340` private
+wrapper and the original byte read at `$da05`. It preserves that returned AX
+word as provenance, then executes the selector's local literal pair and its
+one CS-store: mode bytes `$03`, `$04`, `$02`, and all other values select,
+respectively, AX:DX `$0012:$0050`, `$0014:$00a0`, `$000f:$0140`, and
+`$000e:$0028`, before original `DX` is stored to `$4b6e`. It stops at
+`$d373 -> $6c52`, the existing overlay adapter transfer. It does not invoke
+INT `$91`, manufacture a return, read an on-disk byte as runtime state,
+execute the adapter, load an overlay, or make the post-adapter continuation
+reachable. Missing or out-of-order observations are rejected.
 
 The encoded caller continuation after that adapter call is independently
 preserved as `MillenniumDosPostOverlayAdapterContinuation`. It is explicitly
