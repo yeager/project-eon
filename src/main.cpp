@@ -632,6 +632,9 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << "; AX=0x1f returns AH=0x"
         << static_cast<unsigned>(ega_driver.function_thirty_one_return_ah)
         << "/0x" << static_cast<unsigned>(mcga_driver.function_thirty_one_return_ah)
+        << "; AX=0x13 polls VGA status 0x" << ega_driver.function_thirteen_status_port
+        << " mask 0x" << static_cast<unsigned>(ega_driver.function_thirteen_retrace_mask)
+        << " (read-only retrace wait, no host I/O)"
         << " with driver-local AL at 0x" << ega_driver.function_thirty_one_state_address
         << "/0x" << mcga_driver.function_thirty_one_state_address
         << " (validated ABI only; no BIOS/driver execution)\n" << std::dec;

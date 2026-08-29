@@ -199,9 +199,10 @@ struct DeuterosAmigaTitleTimerGate {
     bool counter_reset_after_transition_return = false;
 };
 
-// The common $1bf36-zero response route following the timer gate. $1f238 is
-// an external helper, so its low-byte responses are supplied explicitly. The
-// non-zero $1bf36 route remains outside this intentionally narrow model.
+// The common $1bf36-zero response route following the timer gate. Its local
+// $1f238 helper is separately recovered, but its pending word/byte region are
+// runtime inputs, so low-byte responses remain explicit. The non-zero $1bf36
+// route remains outside this intentionally narrow model.
 struct DeuterosAmigaTitleZeroResponseLoop {
     std::uint32_t entry_address = 0;
     std::uint32_t state_word_address = 0;
@@ -332,6 +333,22 @@ struct DeuterosAmigaTitleFourPassByteCombineProfile {
     std::string sha256;
 };
 
+// This caller-connected local helper waits on an original word, then returns
+// a byte sourced from a fixed in-stage region while shifting twenty bytes and
+// decrementing that word. The cell contents and concurrent writers remain
+// runtime dependencies; this profile does not simulate the wait or queue.
+struct DeuterosAmigaTitleResponseQueueProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t pending_word_address = 0;
+    std::uint32_t wait_branch_address = 0;
+    std::uint32_t empty_branch_address = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t byte_region_address = 0;
+    std::uint16_t shift_initial_loop_counter = 0;
+    std::uint32_t shift_byte_count = 0;
+    std::string sha256;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -436,8 +453,9 @@ evaluate_deuteros_amiga_title_timer_gate(
     std::uint32_t elapsed_counter, std::uint16_t inhibit_word);
 
 // Evaluates only the original clean-stage zero-state response loop. The
-// supplied bytes are the low bytes returned by the external $1f238 helper;
-// no helper or custom-chip call is emulated.
+// supplied bytes are the low bytes returned by the locally recovered `$1f238`
+// helper with still-unknown runtime state; no helper or custom-chip call is
+// emulated.
 [[nodiscard]] DeuterosAmigaTitleZeroResponseLoop
 evaluate_deuteros_amiga_title_zero_response_loop(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
@@ -480,6 +498,13 @@ parse_deuteros_amiga_title_display_clear_profile(
 // perform reads/writes through that pointer.
 [[nodiscard]] DeuterosAmigaTitleFourPassByteCombineProfile
 parse_deuteros_amiga_title_four_pass_byte_combine_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// Parses the direct `$1f230` wait/shift helper used by known title response
+// paths. It does not supply the pending word, read the returned byte, or make
+// the encoded in-stage writes.
+[[nodiscard]] DeuterosAmigaTitleResponseQueueProfile
+parse_deuteros_amiga_title_response_queue_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Validates and models only the literal byte-copy part of the first title

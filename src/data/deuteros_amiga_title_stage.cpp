@@ -841,6 +841,63 @@ parse_deuteros_amiga_title_four_pass_byte_combine_profile(
     return result;
 }
 
+DeuterosAmigaTitleResponseQueueProfile
+parse_deuteros_amiga_title_response_queue_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t entry_address = 0x1f230;
+    constexpr std::uint32_t pending_word_address = 0x1eed6;
+    constexpr std::uint32_t byte_region_address = 0x1eec0;
+    constexpr std::size_t code_length = 42;
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view code_hash =
+        "ed2794b7bb16f17ca9690b367c9465c75ff52838356bf6b46d9744cb16da1054";
+    const auto& stage = plan.title_stage;
+    if (stage.length == 0 || entry_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || code_length > stage.length - (entry_address - stage.destination)) {
+        throw std::runtime_error("Deuteros title response queue lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto code = stage_bytes.subspan(entry_address - stage.destination, code_length);
+    if (to_hex(sha256(stage_bytes)) != stage_hash || to_hex(sha256(code)) != code_hash) {
+        throw std::runtime_error("Unsupported Deuteros title response queue");
+    }
+
+    // move.w $1eed6,d0; beq.b $1f230; move.w $1eed6,d0;
+    // beq.b $1f258; then return the first byte from $1eec0, shift the next
+    // twenty bytes down one address, decrement $1eed6, and RTS.
+    require_word(code, 0, 0x3039);
+    require_long(code, 2, pending_word_address);
+    require_word(code, 6, 0x67f8);
+    require_word(code, 8, 0x3039);
+    require_long(code, 10, pending_word_address);
+    require_word(code, 14, 0x6718);
+    require_word(code, 16, 0x207c);
+    require_long(code, 18, byte_region_address);
+    require_word(code, 22, 0x2248);
+    require_word(code, 24, 0x1018);
+    require_word(code, 26, 0x7213);
+    require_word(code, 28, 0x12d8);
+    require_word(code, 30, 0x51c9);
+    require_word(code, 32, 0xfffc);
+    require_word(code, 34, 0x5379);
+    require_long(code, 36, pending_word_address);
+    require_word(code, 40, 0x4e75);
+
+    DeuterosAmigaTitleResponseQueueProfile result;
+    result.entry_address = entry_address;
+    result.pending_word_address = pending_word_address;
+    result.wait_branch_address = entry_address;
+    result.empty_branch_address = 0x1f258;
+    result.return_address = 0x1f258;
+    result.byte_region_address = byte_region_address;
+    result.shift_initial_loop_counter = 0x13;
+    result.shift_byte_count = 0x14;
+    result.sha256 = std::string(code_hash);
+    return result;
+}
+
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t input_display_word) {

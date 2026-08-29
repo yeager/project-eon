@@ -32,6 +32,11 @@ struct MillenniumDosVideoDriverProfile {
     std::uint16_t function_four_input_offset = 0;
     std::uint8_t function_four_input_mask = 0;
     std::uint16_t function_four_state_address = 0;
+    std::uint16_t function_thirteen_address = 0;
+    std::uint16_t function_thirteen_status_port = 0;
+    std::uint8_t function_thirteen_retrace_mask = 0;
+    std::uint16_t function_thirteen_first_poll_address = 0;
+    std::uint16_t function_thirteen_second_poll_address = 0;
     std::uint16_t function_thirty_one_address = 0;
     std::uint16_t function_thirty_one_state_address = 0;
     std::uint8_t function_thirty_one_return_ah = 0;

@@ -1262,7 +1262,8 @@ at ADF `+0x76f36` is zero (SHA-256
 `96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7`). The
 zero branch's 60-byte response loop at `$40638` / ADF `+0x9b638` hashes to
 `b47192ea229873ef1ae47f841d044393bfd3e7e1a7fc0ca92308a555c2eb84d0`.
-It calls `$1f238`, treating its low-byte return as an explicit ABI input; a
+It calls `$1f238`, treating its low-byte return from the locally recovered
+but runtime-dependent helper as an explicit input; a
 non-`$43` response returns to `$40574`. A `$43` response XORs `$1bf36` with
 `$0101`, and the verified clean-state route emits literal `$0f00` writes to
 `$dff180` before further helper responses. Project Eon records this as a
@@ -1293,6 +1294,18 @@ supplied helper response bytes, but neither calls the helper nor writes title
 state. It does not assign names such as “selection”, “menu”, or “start game”
 to the control word, helpers, or literal response values before the original
 subroutines are independently recovered.
+
+The title response helper is now recovered as far as its own original runtime
+data boundary. `$1f230..$1f259` (ADF `+$7a230`, 42 bytes, SHA-256
+`ed2794b7bb16f17ca9690b367c9465c75ff52838356bf6b46d9744cb16da1054`) first
+loops on word `$1eed6` while it is zero. It then reads that word again; the
+second zero branch reaches RTS `$1f258`. On the nonzero route, it reads one
+byte from `$1eec0`, copies twenty subsequent bytes downward by one address
+with `DBRA` initial value `$13`, decrements `$1eed6`, and returns. The direct
+call sites include the known `$40638` and `$407b4` title response paths.
+`DeuterosAmigaTitleResponseQueueProfile` hash-locks this exact wait/shift
+shape. It does not supply the pending-word value, read or return a byte, model
+concurrency, or make any writes to the original in-stage byte region.
 
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
 raw title image masks `D0` to `$0000ffff`, performs original unsigned divides
@@ -1688,6 +1701,13 @@ caller-connected private-driver boundary only: ABI, helper effect, destination,
 composition and BIOS-visible output remain unknown. No post-key loading frame,
 transition, resource effect, process exit, launcher return, or game startup is
 executed or drawn by Project Eon.
+
+The supplied driver images add one ABI-independent local fact for that exact
+function number. In both hash-identified `EGA640.BIN` (dispatch target `$0d37`)
+and `MCGA.BIN` (target `$0905`), AX=`$0013` loads DX=`$03da`, repeatedly reads
+the VGA status port until bit `$08` is clear, then repeatedly reads until bit
+`$08` is set, and returns. Project Eon records this read-only vertical-retrace
+wait but does not perform host port I/O or infer that it produces a frame.
 
 The accompanying clean `MILL.COM` (1,445 bytes, SHA-256
 `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`)

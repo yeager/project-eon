@@ -962,6 +962,9 @@ int main() {
     assert(ega_profile.function_zero_mode_mismatch_return == 0x1ea);
     assert(ega_profile.function_four_input_offset == 0 && ega_profile.function_four_input_mask == 3);
     assert(ega_profile.function_four_state_address == 0x8d);
+    assert(ega_profile.function_thirteen_address == 0xd37);
+    assert(ega_profile.function_thirteen_status_port == 0x3da);
+    assert(ega_profile.function_thirteen_retrace_mask == 0x08);
     assert(ega_profile.function_thirty_one_address == 0x235);
     assert(ega_profile.function_thirty_one_state_address == 0x8a);
     assert(ega_profile.function_thirty_one_return_ah == 0x04);
@@ -980,6 +983,8 @@ int main() {
     assert(mcga_profile.function_zero_mode_mismatch_return == 0x208);
     assert(mcga_profile.function_four_input_offset == 0 && mcga_profile.function_four_input_mask == 3);
     assert(mcga_profile.function_four_state_address == 0xaf);
+    assert(mcga_profile.function_thirteen_address == 0x905);
+    assert(mcga_profile.function_thirteen_status_port == 0x3da);
     assert(mcga_profile.function_thirty_one_address == 0x24c);
     assert(mcga_profile.function_thirty_one_state_address == 0xac);
     assert(mcga_profile.function_thirty_one_return_ah == 0x01);
@@ -3389,6 +3394,20 @@ int main() {
     assert(title_byte_combine.return_address == 0x1f22e);
     assert(title_byte_combine.sha256
         == "31fc346d9d2647001899a2e939482aa97bd8bc94221ae81384787997928bb42b");
+    // The known title response paths call this local wait/shift helper, but
+    // its pending word and byte region remain original runtime state.
+    const auto title_response_queue =
+        eon::parse_deuteros_amiga_title_response_queue_profile(system_disk, load_plan);
+    assert(title_response_queue.entry_address == 0x1f230);
+    assert(title_response_queue.pending_word_address == 0x1eed6);
+    assert(title_response_queue.wait_branch_address == 0x1f230);
+    assert(title_response_queue.empty_branch_address == 0x1f258);
+    assert(title_response_queue.return_address == 0x1f258);
+    assert(title_response_queue.byte_region_address == 0x1eec0);
+    assert(title_response_queue.shift_initial_loop_counter == 0x13);
+    assert(title_response_queue.shift_byte_count == 0x14);
+    assert(title_response_queue.sha256
+        == "ed2794b7bb16f17ca9690b367c9465c75ff52838356bf6b46d9744cb16da1054");
     {
         auto altered_title_stage_disk = *amiga_disk1;
         altered_title_stage_disk[0x79d80] ^= 0x01;
@@ -3422,6 +3441,19 @@ int main() {
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
             static_cast<void>(eon::parse_deuteros_amiga_title_four_pass_byte_combine_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        altered_title_stage_disk[0x7a230] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_response_queue_profile(
                 altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;
