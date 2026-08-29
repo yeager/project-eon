@@ -2544,9 +2544,19 @@ int main(int argc, char** argv) {
             << "          capture " << trace.capture_start_utc << " to " << trace.capture_end_utc << '\n'
             << "          emulator " << trace.emulator_name << " " << trace.emulator_version << '\n';
         if (!trace.adapter.empty()) {
-            std::cout << "          adapter " << trace.adapter << " (" << trace.adapter_interrupt_count
-                << " interrupt, " << trace.adapter_file_count << " file, "
-                << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
+            std::cout << "          adapter " << trace.adapter << " (";
+            if (trace.adapter == "deuteros-atari-st-boot-v1") {
+                std::cout << trace.adapter_trap_count << " TRAP, " << trace.adapter_callback_count
+                    << " callback, " << trace.adapter_frame_count << " frame, "
+                    << trace.adapter_state_count << " state, " << trace.adapter_table_count
+                    << " table, " << trace.adapter_raw_reader_count
+                    << " raw-reader observations; diagnostics only)\n";
+            } else if (trace.adapter == "millennium-amiga-en-defjam-bootstrap-v1") {
+                std::cout << trace.adapter_cpu_count << " CPU handoff observations; diagnostics only)\n";
+            } else {
+                std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
+                    << " file, " << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
+            }
         }
         return 0;
     }

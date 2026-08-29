@@ -12,11 +12,13 @@ after its caller, ABI and result are separately documented in
 [`PRESERVATION.md`](PRESERVATION.md).
 
 Format **v1** remains the generic identity-and-ordering format. Format **v2**
-is not a general semantic-trace upgrade: it currently admits exactly one
-strict diagnostics adapter, `millennium-dos-en-startup-v1`. It validates a
-small set of declared observations against literal, hash-pinned source sites.
-It neither replays the observations nor treats a validated result as a DOS,
-private-driver, file, or child-process result.
+is not a general semantic-trace upgrade: it admits only the strict diagnostics
+adapters `millennium-dos-en-startup-v1`, `deuteros-atari-st-boot-v1`, and
+`millennium-amiga-en-defjam-bootstrap-v1`.
+Their observations are checked against literal, hash-pinned source sites.
+Neither replays observations nor treats a
+validated result as a platform-service, private-driver, file, device, or
+child-process result.
 
 ## Pair and encoding
 
@@ -61,13 +63,23 @@ A v2 manifest has the same required records plus this one exact record:
 | Key | Rule |
 | --- | --- |
 | `format` | Exactly `project-eon-reference-trace-v2`. |
-| `adapter` | Exactly `millennium-dos-en-startup-v1`. |
+| `adapter` | Exactly one registered adapter described below. |
 
-This adapter is accepted only for the clean English Millennium DOS outer
-release `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
+The existing DOS adapter is accepted only for the clean English Millennium DOS
+outer release `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
 It is deliberately not transferable to the Spanish DOS release, a filename
 match, a modified executable, or another platform. A v1 manifest has no
 `adapter` record; unknown or omitted records remain rejected in both versions.
+
+`deuteros-atari-st-boot-v1` is accepted only for the English Deuteros Atari
+ST outer archive `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653`.
+Its v2 manifest adds `source_media_sha256`, exactly
+`aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`, and
+`source_stage_sha256`, exactly
+`2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
+This binds the report to the documented Replicants Disk 1 and copied
+second-stage interval; it is not transferable to another Atari image,
+development disk, repacked archive, or similarly named file.
 
 ## Event stream (v1)
 
@@ -110,6 +122,58 @@ The adapter does not infer carry flags, register returns, selected video
 driver, file-open/load completion, DOS behaviour, private `INT 91h` dispatch,
 or an executed child. It reports only counts by type after validating the
 external trace's hash and source-release provenance.
+
+## Event stream (v2 Deuteros Atari ST adapter)
+
+`deuteros-atari-st-boot-v1` accepts only the external boot observations
+required by the dynamic-trace acquisition boundary. Every record has strictly
+increasing decimal `sequence` and `tick`. Hex words/longwords are lower-case,
+zero-padded `0x` values. `input_frame` and `result_frame` are bounded,
+even-length lower-case hexadecimal byte sequences, retaining the complete
+raw XBIOS frame without declaring a service ABI or interpreting its result.
+
+| Type | Exact declared schema |
+| --- | --- |
+| `trap` | `pc=0x00001edc incoming_a7=<u32> incoming_sr=<u16> selector=0x0026 callback=0x00001fa6 return_pc=<u32> return_a7=<u32> return_sr=<u16> return_d0=<u32>` |
+| `callback` | `entry_pc=0x00001fa6 incoming_a7=<u32> stack_longword=<u32> outgoing_a7=0x0007b000 return_pc=<u32> return_a7=<u32> return_sr=<u16> return_d0=<u32>` |
+| `state` | `ram_25f4=<u32> ram_25f4_provenance=<sha256> ram_25fc=<u32> ram_25fc_provenance=<sha256> branch_pc=<u32> state_word=<u16>` |
+| `table` | `base=0x00001eac shifted_index=<u16> target_a1=<0x00001f1a\|0x00001f2e\|0x00001f50\|0x00001f52> entry_pc=<same target_a1> return_pc=<u32> return_d1=<u32> return_d2=<u32>` |
+| `frame` | `site=0x00001e9c input_frame=<hex bytes> result_frame=<hex bytes>` |
+| `raw-reader` | `entry_pc=0x00001e60 trap_pc=0x00001e9c call_a7=<u32> return_pc=<u32> return_a7=<u32> return_sr=<u16> return_d0=<u32>` |
+
+The adapter validates and counts evidence only. It never calls XBIOS, installs
+a callback, selects a table vector, replays a frame, supplies a result, or
+uses trace data as game-media or runtime input.
+
+## Event stream (v2 Millennium Amiga bootstrap adapter)
+
+`millennium-amiga-en-defjam-bootstrap-v1` is a strict reserved schema for the clean English
+Millennium Amiga outer release
+`2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400`.
+It can validate only the two byte-exact caller-side handoffs in the hash-pinned
+Defjam bootstrap. The bootstrap's `ADF +0x400` source is copied to `$70000`,
+so the two instruction addresses below are factual sites in that original
+bootstrap; the first loaded stage remains opaque.
+
+Each record is an LF-terminated `event<TAB>` line with strictly increasing
+decimal `sequence` and `tick`. It must be exactly one of these schemas:
+
+| Type | Exact declared schema |
+| --- | --- |
+| `cpu` | `image=bootstrap-loader pc=0x702e4 op=jsr-indirect a3=0x41000` |
+| `cpu` | `image=bootstrap-loader pc=0x70320 op=jmp-indirect a3=0x68000 d6=0xa8d398fb` |
+
+The first record declares the original indirect `JSR (A3)` handoff to the
+first raw stage. The second declares the later terminal indirect `JMP (A3)`
+handoff to the resident stage. Neither declares that a read completed, that
+the JSR target ran or returned, that either transfer succeeded, a resulting
+register/flag value, an AmigaOS call, or an executed resident instruction.
+The exact source and boundary evidence are documented in
+[`PRESERVATION.md`](PRESERVATION.md#millennium-amiga-raw-loader-evidence).
+
+The registered adapter dispatches its event stream only for the outer hash
+above and reports the CPU handoff count as diagnostics. It does not make the
+opaque bootstrap executable or consume a trace as runtime input.
 
 ## Command-line boundary
 
