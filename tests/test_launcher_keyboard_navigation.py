@@ -20,6 +20,16 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("if (!eon::release_available(releases, game, platform)) return false;", SOURCE)
         self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
 
+    def test_all_launcher_card_labels_and_dynamic_selection_names_are_translated(self) -> None:
+        # The launcher owns its card labels and selection panel. Original
+        # in-game strings are deliberately out of scope and remain media data.
+        self.assertIn('tr(card.title)', SOURCE)
+        self.assertIn('tr(card.subtitle)', SOURCE)
+        self.assertIn('tr(launcher_game_label(selected))', SOURCE)
+        self.assertIn('tr(launcher_platform_label(*active_platform))', SOURCE)
+        self.assertNotIn('tr("Game: ") + eon::name(selected)', SOURCE)
+        self.assertNotIn('card.bounds.h - 46, card.title);', SOURCE)
+
     def test_profiles_have_two_runtime_modes_and_a_custom_tuning_route(self) -> None:
         self.assertIn("enum class ProfileChoice { original, modern, custom }", SOURCE)
         self.assertIn("Custom is not a third runtime mode", SOURCE)

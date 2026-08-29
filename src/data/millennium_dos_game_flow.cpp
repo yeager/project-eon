@@ -1690,6 +1690,34 @@ parse_millennium_dos_gx_overlay_dispatch13_evidence(
         std::string(span_sha256)};
 }
 
+MillenniumDosSoundEffectNameTableEvidence parse_millennium_dos_sound_effect_name_table_evidence(
+    const std::span<const std::uint8_t> game_executable) {
+    constexpr auto game_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::uint16_t table_address = 0xcfdd;
+    constexpr auto names = std::to_array<std::uint8_t>({
+        'S','F','X','1','.','V','O','C',0, 'S','F','X','2','.','V','O','C',0,
+        'S','F','X','3','.','V','O','C',0, 'S','F','X','4','.','V','O','C',0,
+        'S','F','X','5','.','V','O','C',0, 'S','F','X','6','.','V','O','C',0,
+        'S','F','X','7','.','V','O','C',0, 'S','F','X','8','.','V','O','C',0,
+        'S','F','X','9','.','V','O','C',0, 'S','F','X','A','.','V','O','C',0,
+        'S','F','X','B','.','V','O','C',0, 'S','F','X','C','.','V','O','C',0,
+        'S','F','X','D','.','V','O','C',0, 'S','F','X','E','.','V','O','C',0,
+    });
+    constexpr auto table_sha256 =
+        "5bc252a34057b25239c81ce4ead178c294456e9af233bdd98d2d6f0f3cb4d008";
+    const auto table_offset = static_cast<std::size_t>(table_address) - load_bias;
+    if (to_hex(sha256(game_executable)) != game_sha256
+        || !has_bytes(game_executable, table_offset, names)
+        || to_hex(sha256(game_executable.subspan(table_offset, names.size()))) != table_sha256) {
+        throw std::runtime_error("Unexpected Millennium DOS sound-effect name table");
+    }
+    return {game_sha256, table_address, names.size(), table_sha256,
+        {"SFX1.VOC", "SFX2.VOC", "SFX3.VOC", "SFX4.VOC", "SFX5.VOC", "SFX6.VOC", "SFX7.VOC",
+         "SFX8.VOC", "SFX9.VOC", "SFXA.VOC", "SFXB.VOC", "SFXC.VOC", "SFXD.VOC", "SFXE.VOC"}};
+}
+
 MillenniumDosEnglishGameStartupCallees
 parse_millennium_dos_english_game_startup_callees(
     const std::span<const std::uint8_t> game_executable) {

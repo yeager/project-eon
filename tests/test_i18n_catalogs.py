@@ -16,6 +16,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PO = ROOT / "po"
+LAUNCHER_SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 CATALOGS = {
     "ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja",
     "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN",
@@ -95,6 +96,26 @@ class CatalogTests(unittest.TestCase):
                 blank = sorted(key for key in source if not catalog.get(key))
                 self.assertEqual(missing, [])
                 self.assertEqual(blank, [])
+
+    def test_card_and_selection_labels_are_catalogued_before_rendering(self) -> None:
+        # These labels belong to Project Eon's shell, not to the supplied
+        # game media. They therefore must not bypass the launcher catalog.
+        labels = {
+            "MILLENNIUM 2.2", "RETURN TO EARTH", "DEUTEROS", "THE NEXT MILLENNIUM",
+            "DOS", "AMIGA", "ATARI ST", "UNKNOWN PLATFORM",
+            "ORIGINAL", "PRESERVATION PROFILE", "MODERN", "ENHANCED PROFILE",
+            "CUSTOM", "TUNE MODERN SETTINGS",
+        }
+        source_catalog = po_messages(PO / "ProjectEon.pot")
+        self.assertTrue(labels <= set(source_catalog))
+        self.assertIn("tr(card.title)", LAUNCHER_SOURCE)
+        self.assertIn("tr(card.subtitle)", LAUNCHER_SOURCE)
+        self.assertIn("tr(launcher_game_label(selected))", LAUNCHER_SOURCE)
+        self.assertIn("tr(launcher_platform_label(*active_platform))", LAUNCHER_SOURCE)
+        for language in sorted(CATALOGS):
+            with self.subTest(language=language):
+                catalog = po_messages(PO / f"{language}.po")
+                self.assertTrue(all(catalog.get(label) for label in labels))
 
     def test_catalogs_do_not_use_language_name_prefixed_english_placeholders(self) -> None:
         for language in sorted(CATALOGS):
