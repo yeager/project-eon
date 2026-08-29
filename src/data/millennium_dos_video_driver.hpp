@@ -32,6 +32,13 @@ struct MillenniumDosVideoDriverProfile {
     std::uint16_t function_four_input_offset = 0;
     std::uint8_t function_four_input_mask = 0;
     std::uint16_t function_four_state_address = 0;
+    // AX=$06 is reached by TITLES.EXE's $1712 setup. These are entry-side
+    // record offsets and local I/O facts only; callers must not emulate its
+    // unproven ES:BX record ABI or resulting blit.
+    std::uint16_t function_six_address = 0;
+    std::uint16_t function_six_screen_width = 0;
+    std::uint16_t function_six_horizontal_offset = 0;
+    std::uint16_t function_six_height_offset = 0;
     std::uint16_t function_thirteen_address = 0;
     std::uint16_t function_thirteen_status_port = 0;
     std::uint8_t function_thirteen_retrace_mask = 0;

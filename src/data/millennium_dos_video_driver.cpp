@@ -34,15 +34,17 @@ MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
     if (!has_bytes(bytes, 0, entry)) throw std::runtime_error("Unsupported Millennium DOS video-driver entry");
     const auto function_zero = little16(bytes, dispatch);
     const auto function_four = little16(bytes, dispatch + 8);
+    const auto function_six = little16(bytes, dispatch + 12);
     const auto function_thirteen = little16(bytes, dispatch + 0x26);
     const auto function_thirty_one = little16(bytes, dispatch + 0x3e);
     const auto expected_zero = static_cast<std::uint16_t>(ega ? 0x1c8 : 0x1e6);
     const auto expected_four = static_cast<std::uint16_t>(ega ? 0xc17 : 0x815);
+    const auto expected_six = static_cast<std::uint16_t>(ega ? 0x8a6 : 0x705);
     const auto expected_thirteen = static_cast<std::uint16_t>(ega ? 0xd37 : 0x905);
     const auto expected_thirty_one = static_cast<std::uint16_t>(ega ? 0x235 : 0x24c);
     const auto mode = static_cast<std::uint8_t>(ega ? 0x0e : 0x13);
     const auto state = static_cast<std::uint16_t>(ega ? 0x8d : 0xaf);
-    if (function_zero != expected_zero || function_four != expected_four
+    if (function_zero != expected_zero || function_four != expected_four || function_six != expected_six
         || function_thirteen != expected_thirteen
         || function_thirty_one != expected_thirty_one) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver dispatch targets");
@@ -66,9 +68,17 @@ MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
     constexpr auto thirteen_prefix = std::to_array<std::uint8_t>({
         0xba, 0xda, 0x03, 0xec, 0xa8, 0x08, 0x75, 0xfb,
         0xec, 0xa8, 0x08, 0x74, 0xfb, 0xc3});
+    constexpr auto ega_six_prefix = std::to_array<std::uint8_t>({
+        0x26, 0x83, 0x7f, 0x10, 0x00, 0x7e, 0xf8, 0xb8, 0x40,
+        0x01, 0x26, 0x2b, 0x47, 0x08, 0x26, 0x3b, 0x47, 0x10});
+    constexpr auto mcga_six_prefix = std::to_array<std::uint8_t>({
+        0xb8, 0x40, 0x01, 0x26, 0x2b, 0x47, 0x08, 0x26, 0x3b,
+        0x47, 0x10, 0x73, 0x04, 0x26, 0x89, 0x47, 0x10});
     if (!has_bytes(bytes, function_zero, zero_prefix)
         || (ega && !has_bytes(bytes, function_four, ega_four_prefix))
         || (!ega && !has_bytes(bytes, function_four, mcga_four_prefix))
+        || (ega && !has_bytes(bytes, function_six, ega_six_prefix))
+        || (!ega && !has_bytes(bytes, function_six, mcga_six_prefix))
         || !has_bytes(bytes, function_thirteen, thirteen_prefix)
         || !has_bytes(bytes, function_thirty_one, thirty_one_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver ABI profile");
@@ -92,6 +102,10 @@ MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
         .function_four_input_offset = 0,
         .function_four_input_mask = 3,
         .function_four_state_address = state,
+        .function_six_address = function_six,
+        .function_six_screen_width = 0x140,
+        .function_six_horizontal_offset = 8,
+        .function_six_height_offset = 0x10,
         .function_thirteen_address = function_thirteen,
         .function_thirteen_status_port = 0x03da,
         .function_thirteen_retrace_mask = 0x08,

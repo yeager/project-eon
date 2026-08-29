@@ -349,6 +349,33 @@ struct DeuterosAmigaTitleResponseQueueProfile {
     std::string sha256;
 };
 
+// Hash-locked facts from the original title callback registration and the
+// callback's byte-one producer route. These record only the descriptor and
+// caller-owned A0 offsets seen in the instructions; they do not identify the
+// Exec service, callback ABI, device, or event meanings.
+struct DeuterosAmigaTitleCallbackRegistrationProfile {
+    std::uint32_t registration_entry_address = 0;
+    std::uint32_t descriptor_address = 0;
+    std::uint16_t descriptor_callback_offset = 0;
+    std::uint32_t callback_address = 0;
+    std::uint32_t request_address = 0;
+    std::uint16_t request_command_offset = 0;
+    std::uint16_t request_descriptor_offset = 0;
+    std::uint16_t request_command_value = 0;
+    std::uint32_t exec_base_address = 0;
+    std::int16_t exec_vector = 0;
+    std::uint16_t callback_a0_event_offset = 0;
+    std::array<std::uint8_t, 3> callback_early_return_values{};
+    std::uint8_t callback_producer_value = 0;
+    std::uint16_t callback_a0_word_offset = 0;
+    std::uint16_t callback_pending_limit = 0;
+    std::uint32_t callback_pending_word_address = 0;
+    std::uint32_t callback_source_table_address = 0;
+    std::uint32_t callback_destination_address = 0;
+    std::string registration_sha256;
+    std::string callback_sha256;
+};
+
 // The first known title-stage exit has a fixed, conditional in-memory byte
 // copy before its already validated bootstrap-profile tail.  The two prior
 // calls and the subsequent BSR remain explicit boundaries: this result is
@@ -505,6 +532,10 @@ parse_deuteros_amiga_title_four_pass_byte_combine_profile(
 // the encoded in-stage writes.
 [[nodiscard]] DeuterosAmigaTitleResponseQueueProfile
 parse_deuteros_amiga_title_response_queue_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+[[nodiscard]] DeuterosAmigaTitleCallbackRegistrationProfile
+parse_deuteros_amiga_title_callback_registration_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Validates and models only the literal byte-copy part of the first title

@@ -898,6 +898,93 @@ parse_deuteros_amiga_title_response_queue_profile(
     return result;
 }
 
+DeuterosAmigaTitleCallbackRegistrationProfile
+parse_deuteros_amiga_title_callback_registration_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t registration_entry = 0x1ef74;
+    constexpr std::uint32_t descriptor_address = 0x1ef48;
+    constexpr std::uint32_t callback_address = 0x1f056;
+    constexpr std::uint32_t request_address = 0x1eefa;
+    constexpr std::size_t registration_length = 0xde;
+    constexpr std::size_t callback_length = 0xfa;
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view registration_hash =
+        "f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27";
+    constexpr std::string_view callback_hash =
+        "ff4b055b2d5128465c891debcad00ff4e53cbf661de47b9ee3d6278f33d5e5f8";
+    const auto& stage = plan.title_stage;
+    const auto stage_code = [&](std::uint32_t address, std::size_t length) {
+        if (stage.length == 0 || address < stage.destination
+            || address - stage.destination > stage.length
+            || length > stage.length - (address - stage.destination)) {
+            throw std::runtime_error("Deuteros title callback lies outside original stage");
+        }
+        return disk.bytes(stage.disk_offset + address - stage.destination, length);
+    };
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto registration = stage_code(registration_entry, registration_length);
+    const auto callback = stage_code(callback_address, callback_length);
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || to_hex(sha256(registration)) != registration_hash
+        || to_hex(sha256(callback)) != callback_hash) {
+        throw std::runtime_error("Unsupported Deuteros title callback registration");
+    }
+
+    // lea $1ef48,a0; descriptor+$0e=$1ef40; descriptor+$12=$1f056;
+    // request+$1c=9; request+$28=$1ef48; jsr -$1ce(a6).
+    require_word(registration, 0xa6, 0x41f9);
+    require_long(registration, 0xa8, descriptor_address);
+    require_word(registration, 0xac, 0x217c);
+    require_long(registration, 0xae, 0x0001ef40);
+    if (big16(registration, 0xb2) != 0x000e) throw std::runtime_error("Unexpected Deuteros callback descriptor offset");
+    require_word(registration, 0xb4, 0x217c);
+    require_long(registration, 0xb6, callback_address);
+    if (big16(registration, 0xba) != 0x0012) throw std::runtime_error("Unexpected Deuteros callback pointer offset");
+    require_word(registration, 0xc8, 0x337c);
+    if (big16(registration, 0xca) != 9 || big16(registration, 0xcc) != 0x001c) {
+        throw std::runtime_error("Unexpected Deuteros callback request command");
+    }
+    require_word(registration, 0xce, 0x237c);
+    require_long(registration, 0xd0, descriptor_address);
+    if (big16(registration, 0xd4) != 0x0028) {
+        throw std::runtime_error("Unexpected Deuteros callback request descriptor offset");
+    }
+    require_word(registration, 0xd6, 0x2c78);
+    if (big16(registration, 0xd8) != 4) throw std::runtime_error("Unexpected Deuteros callback Exec base");
+    require_word(registration, 0xda, 0x4eae);
+    if (big16(registration, 0xdc) != 0xfe32) throw std::runtime_error("Unexpected Deuteros callback Exec vector");
+
+    // The producer route is entered only for byte one after three early
+    // callback returns. It rejects a word >= $50 and pending count >= $14,
+    // then stores source-table byte [pending] and increments the count.
+    require_word(callback, 0, 0x0c28);
+    if (big16(callback, 2) != 6 || big16(callback, 4) != 4 || big16(callback, 6) != 0x6700) throw std::runtime_error("Unexpected Deuteros callback first gate");
+    require_word(callback, 10, 0x0c28);
+    if (big16(callback, 12) != 15 || big16(callback, 14) != 4 || big16(callback, 16) != 0x6700) throw std::runtime_error("Unexpected Deuteros callback second gate");
+    require_word(callback, 20, 0x0c28);
+    if (big16(callback, 22) != 16 || big16(callback, 24) != 4 || big16(callback, 26) != 0x6700) throw std::runtime_error("Unexpected Deuteros callback third gate");
+    require_word(callback, 46, 0xb03c);
+    if (big16(callback, 48) != 1 || big16(callback, 50) != 0x6700) throw std::runtime_error("Unexpected Deuteros callback producer gate");
+    require_word(callback, 180, 0xb07c);
+    if (big16(callback, 182) != 0x50 || big16(callback, 184) != 0x6438) throw std::runtime_error("Unexpected Deuteros callback word limit");
+    require_word(callback, 186, 0x0c39);
+    if (big16(callback, 188) != 0x14 || big32(callback, 190) != 0x0001eed6 || big16(callback, 194) != 0x642e) throw std::runtime_error("Unexpected Deuteros callback pending limit");
+    require_word(callback, 196, 0x207c);
+    require_long(callback, 198, 0x0001ee20);
+    require_word(callback, 208, 0x227c);
+    require_long(callback, 210, 0x0001eec0);
+    require_word(callback, 230, 0x13b0);
+    if (big16(callback, 232) != 0 || big16(callback, 234) != 0x1000) throw std::runtime_error("Unexpected Deuteros callback queue store");
+    require_word(callback, 236, 0x5279);
+    require_long(callback, 238, 0x0001eed6);
+
+    return {registration_entry, descriptor_address, 0x12, callback_address,
+        request_address, 0x1c, 0x28, 9, 4, static_cast<std::int16_t>(-0x1ce),
+        4, {6, 15, 16}, 1, 6, 0x14, 0x1eed6, 0x1ee20, 0x1eec0,
+        std::string(registration_hash), std::string(callback_hash)};
+}
+
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t input_display_word) {
