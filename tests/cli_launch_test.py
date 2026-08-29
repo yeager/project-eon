@@ -208,6 +208,37 @@ def main() -> int:
                     "Millennium Spanish DOS IBM.COM handoff did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_spanish_isolation = (
+                "Spanish isolation boundary: only this image's IBM.COM, TITLES.EXE, and 2200AD.EXE are "
+                "reported; no English executable, state, or title path is substituted."
+            )
+            if expected_spanish_isolation not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Spanish DOS isolation boundary was not reported:\n"
+                    f"{inspected.stdout}"
+                )
+        if game == "millennium" and platform == "atari-st":
+            expected_atari_boundary = (
+                "Atari ST trace boundary: next evidence must identify GEMDOS Fopen D0/handle behaviour, "
+                "TRAP #14 and Line-A returns, configuration load address, and any codec, palette, or planar "
+                "destination. No alternate ST image or DOS/Amiga asset is substituted."
+            )
+            if expected_atari_boundary not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Atari ST trace boundary was not reported:\n"
+                    f"{inspected.stdout}"
+                )
+        if game == "deuteros" and platform == "atari-st":
+            expected_atari_boundary = (
+                "Atari ST trace boundary: next evidence must identify the XBIOS Floprd result, callback "
+                "entry/return frame, dispatch word at RAM 0x1eaa, and selected vector D1/D2 returns. "
+                "Reported raw-load plans are not performed and no Amiga or synthetic screen is used."
+            )
+            if expected_atari_boundary not in inspected.stdout:
+                raise SystemExit(
+                    "Deuteros Atari ST trace boundary was not reported:\n"
+                    f"{inspected.stdout}"
+                )
         if game == "deuteros" and platform == "amiga":
             expected_callee = (
                 "Channel-request first callee: ADF 0x7a9c, entry 0x2229c; bit 5 branch 0x222b4 -> 0x2232c; "

@@ -523,6 +523,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << ibm_handoff.second_nonzero_branch_address << "; SHA-256 "
             << ibm_handoff.ibm_sha256 << std::dec
             << " (static only; no DOS call, result, title, or game ABI executed)\n";
+        std::cout << "          Spanish isolation boundary: only this image's IBM.COM, TITLES.EXE, "
+            << "and 2200AD.EXE are reported; no English executable, state, or title path is "
+            << "substituted. Next trace inputs: hash-locked DOS child return/AL, file operations, "
+            << "and CPU/interrupt events for this Spanish image.\n";
         return;
     }
     constexpr auto title_lib_sha256 =
@@ -1318,6 +1322,9 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << readable_fat12_images << " valid FAT12 volumes, " << config_files << " files named "
         << equinox_config.requested_filename
         << " (raw/protected images are not reinterpreted as files)\n";
+    std::cout << "          Atari ST trace boundary: next evidence must identify GEMDOS Fopen D0/handle "
+        << "behaviour, TRAP #14 and Line-A returns, configuration load address, and any codec, "
+        << "palette, or planar destination. No alternate ST image or DOS/Amiga asset is substituted.\n";
 }
 
 void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
@@ -1485,6 +1492,9 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << continuation.killer_boot_clear_stride << "-byte blocks (not executed)" << std::dec
             << '\n';
     }
+    std::cout << "          Atari ST trace boundary: next evidence must identify the XBIOS Floprd result, "
+        << "callback entry/return frame, dispatch word at RAM 0x1eaa, and selected vector D1/D2 "
+        << "returns. Reported raw-load plans are not performed and no Amiga or synthetic screen is used.\n";
 }
 
 std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
