@@ -5,6 +5,11 @@ game data, emulator snapshots, replay scripts, or a license to invent runtime
 results. No trace, ROM, disk image, executable bytes, screenshots, audio, or
 synthetic trace fixture belongs in this repository.
 
+For a safe, non-emulating way to assemble recorder output into an external
+manifest/event pair, see [REFERENCE_TRACE_ASSEMBLY.md](REFERENCE_TRACE_ASSEMBLY.md).
+Assembly records source identity before and after the operation; it does not
+admit, replay, or validate a trace's gameplay meaning.
+
 The initial implementation is validation and provenance reporting only. It
 does not emulate a platform service, modify supplied media, create state, or
 advance a game session. A game-specific adapter may consume an event only
