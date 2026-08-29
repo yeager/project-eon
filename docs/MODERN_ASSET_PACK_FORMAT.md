@@ -99,6 +99,15 @@ displayed only as the Modern replacement for the recovered English P00 title;
 Original always uses the recovered original pixels. The runtime label displays
 the active pack identity, dimensions, and declared provenance.
 
+Custom's pre-launch **Modern asset pack** control is an equivalent explicit
+selection route for desktop and supported native-dialog platforms. It permits
+one user-chosen `.eonmodern` candidate only; it supplies no initial folder,
+does not persist a selection, scan directories, or accept multiple paths, and
+does nothing on cancellation. SDL's extension filter is convenience only. The
+candidate remains untrusted until this document's complete manifest and asset
+admission checks bind it to the selected original release. The control is not
+available to mutate a running session or Original presentation.
+
 This mapping does not infer original behavior, alter game logic, save data, or
 original media. It creates no cache or extracted output. Other asset IDs remain
 admission-only metadata until separately documented and implemented.

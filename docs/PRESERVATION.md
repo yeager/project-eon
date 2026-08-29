@@ -99,6 +99,15 @@ Deuteros Amiga held-input sequence, and falls back to Eon's normal Modern
 Scale2x surface if its selected external mapping is rejected or cannot be
 decoded.
 
+The pre-launch Custom dialog is a second explicit candidate route, not a pack
+discovery mechanism. It requests a single manifest without a default location,
+does not retain the directory or selection across sessions, and ignores a
+cancelled dialog. Its asynchronous native callback only transfers a UTF-8 path
+to the launcher; all filesystem access and the same manifest/release/hash/PNG
+validation remain on Eon's main launch path. It cannot change a running
+session, supply Original presentation, or make a filename or dialog filter a
+trust decision.
+
 ### Transient Scale2x pixel reconstruction (Modern)
 
 The current Modern path provides a deterministic, edge-aware RGBA **Scale2x**

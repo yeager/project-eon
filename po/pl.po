@@ -21,6 +21,12 @@ msgstr "PROJECT EON"
 msgid "MODERN TITLE PACK: "
 msgstr "MODERN TITLE PACK: "
 
+msgid "MODERN ASSET PACK"
+msgstr "PAKIET NOWOCZESNYCH ZASOBÓW"
+
+msgid "CHOOSE…"
+msgstr "WYBIERZ…"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "WYBIERZ GRĘ   |   GÓRA/DÓŁ: PLATFORMA   |   D: SKAN DANYCH   |   F1: ORYGINALNY / NOWOCZESNY   |   ESC: WYJDŹ"
 

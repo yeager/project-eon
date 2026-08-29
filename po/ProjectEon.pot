@@ -18,6 +18,14 @@ msgid "MODERN TITLE PACK: "
 msgstr ""
 
 #: src/main.cpp
+msgid "MODERN ASSET PACK"
+msgstr ""
+
+#: src/main.cpp
+msgid "CHOOSE…"
+msgstr ""
+
+#: src/main.cpp
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr ""
 

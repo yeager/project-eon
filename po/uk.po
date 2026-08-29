@@ -21,6 +21,12 @@ msgstr "ПРОЄКТ ЕОН"
 msgid "MODERN TITLE PACK: "
 msgstr "MODERN TITLE PACK: "
 
+msgid "MODERN ASSET PACK"
+msgstr "ПАКУНОК СУЧАСНИХ РЕСУРСІВ"
+
+msgid "CHOOSE…"
+msgstr "ВИБРАТИ…"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВИБРАТИ ГРУ   |   ВГОРУ/ВНИЗ: ПЛАТФОРМА   |   D: ПЕРЕВІРКА ДАНИХ   |   F1: ОРИГІНАЛ / СУЧАСНИЙ   |   ESC: ВИЙТИ"
 

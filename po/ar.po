@@ -9,6 +9,12 @@ msgstr "بروجكت إيون"
 msgid "MODERN TITLE PACK: "
 msgstr "MODERN TITLE PACK: "
 
+msgid "MODERN ASSET PACK"
+msgstr "حزمة أصول حديثة"
+
+msgid "CHOOSE…"
+msgstr "اختر…"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "اختر اللعبة   |   أعلى/أسفل: المنصة   |   D: فحص البيانات   |   F1: أصلي / حديث   |   ESC: خروج"
 msgid "VERIFIED ORIGINAL DATA"
