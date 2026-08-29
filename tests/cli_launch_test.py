@@ -156,11 +156,11 @@ def main() -> int:
             f"expected {sorted(expected_reported_releases)}, got {sorted(reported_releases)}"
         )
     expected_platform_admission = {
-        "PLATFORM ADMISSION  Millennium 2.2 / DOS / RELEASE SELECTION REQUIRED / 2 verified original languages",
-        "PLATFORM ADMISSION  Millennium 2.2 / Amiga / READY / 1 verified original language",
-        "PLATFORM ADMISSION  Millennium 2.2 / Atari ST / READY / 1 verified original language",
-        "PLATFORM ADMISSION  Deuteros / Amiga / READY / 1 verified original language",
-        "PLATFORM ADMISSION  Deuteros / Atari ST / READY / 1 verified original language",
+        "PLATFORM ADMISSION  Millennium 2.2 / DOS / RELEASE SELECTION REQUIRED / RECOVERED PATH / 2 verified original languages",
+        "PLATFORM ADMISSION  Millennium 2.2 / Amiga / READY / RECOVERED PATH / 1 verified original language",
+        "PLATFORM ADMISSION  Millennium 2.2 / Atari ST / READY / BOOTSTRAP ONLY / 1 verified original language",
+        "PLATFORM ADMISSION  Deuteros / Amiga / READY / RECOVERED PATH / 1 verified original language",
+        "PLATFORM ADMISSION  Deuteros / Atari ST / READY / BOOTSTRAP ONLY / 1 verified original language",
     }
     reported_platform_admission = {
         line for line in data_dir_inspection.stdout.splitlines()

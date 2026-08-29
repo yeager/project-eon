@@ -157,6 +157,11 @@ their scope cannot establish whether an unprinted sibling language is present.
 The report is derived from scanner identities only and does not execute Atari
 ST GEMDOS/XBIOS services, callbacks, or guest code.
 
+The adjacent coverage field is independent of admission: `BOOTSTRAP ONLY` for
+Atari ST means the platform card can enter its bounded, hash-verified session
+but does not claim full native runtime parity. `RECOVERED PATH` identifies the
+current non-Atari route without granting it additional semantics.
+
 Each rehashed Atari report includes `ATARI LAUNCH BOUNDARY`, matching the card
 label to a release-specific limitation: Millennium stops before the GEMDOS
 `TRAP #1`/`Fopen` result, input, and later launcher flow; Deuteros stops before
@@ -856,6 +861,14 @@ cycles; bounds every block reference; and refuses incomplete file chains. It
 does not infer missing files or mutate image data.
 
 ### Millennium Amiga raw-loader evidence
+
+When the verified Defjam-family Amiga release is selected, the launcher shows
+the two raw ADF-range transfers plus the caller-side A3 handoffs and resident
+entry/result-cell operands. The values are queried from one
+`MillenniumAmigaBootstrapSession` after its load-plan, resident, and opaque
+invocation checks have succeeded. This is a numeric provenance panel only: it
+does not transform the first raw stage, call it, read its return, or substitute
+a DOS title/screen for the native Amiga path.
 
 Millennium's usable game media are not AmigaDOS files.  In the supplied Defjam
 image (ADF SHA-256
