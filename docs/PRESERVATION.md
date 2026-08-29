@@ -68,16 +68,20 @@ edition cannot become a Modern substitute merely by name.
 The two permitted provenance declarations are `independently-created` and
 `licensed-derivative`; they record the provider's legal claim, not a legal
 finding by Eon. No packs are shipped or accepted as proof of original
-behaviour. V1 has one deliberately narrow renderer mapping: an explicitly
+behaviour. V1 has two deliberately narrow renderer mappings: an explicitly
 selected pack may provide `millennium.dos.title.png-640x400` or the preferred
 4× `millennium.dos.title.png-1280x800` for the English Millennium DOS P00
-title only. Each is a bounded (at most 8 MiB), exact 8-bit RGBA PNG and
-remains Modern-only. Eon revalidates the manifest, release binding and file
-hash immediately before decoding; it validates PNG chunks and inflates the
-fixed-size RGBA IDAT scanlines before SDL_image receives the bytes, then
-uploads only a transient texture. No pack can affect
-saves, input, simulation, Original rendering, or original media. The precise
-syntax and integration requirements are recorded in
+title, or all 82 PNGs of the English Deuteros Amiga held-input opening route
+at one complete 2×/4× tier. Each is a bounded (at most 8 MiB), exact 8-bit
+RGBA PNG and remains Modern-only. The Deuteros sequence advances only from
+the existing original VM tick and admits tick 82 only after the verified
+original handoff; it does not add an opening clock, input mapping, audio
+track, or title-stage simulation. Eon revalidates the manifest, release
+binding and file hash immediately before decoding; it validates PNG chunks and
+inflates the fixed-size RGBA IDAT scanlines before SDL_image receives the
+bytes, then uploads only a transient texture. No pack can affect saves, input,
+simulation, Original rendering, or original media. The precise syntax and
+integration requirements are recorded in
 [`MODERN_ASSET_PACK_FORMAT.md`](MODERN_ASSET_PACK_FORMAT.md).
 
 The explicit `--inspect --modern-packs <root>` diagnostic performs that
@@ -89,9 +93,11 @@ directory and is never defaulted, created, scanned recursively, or selected
 as a renderer input. `--modern-packs` without `--inspect` is a command-line
 error, which prevents a pack scan from masquerading as a game launch. The
 separate `--modern-pack <pack.eonmodern>` launch option requires explicit
-`--game millennium --platform dos --presentation modern`; it never has a
-default path and falls back to Eon's normal Modern Scale2x surface if its
-selected external PNG is rejected or cannot be decoded.
+`--game`, `--platform`, and `--presentation modern`; it never has a default
+path. It can render only the documented release-bound Millennium DOS title or
+Deuteros Amiga held-input sequence, and falls back to Eon's normal Modern
+Scale2x surface if its selected external mapping is rejected or cannot be
+decoded.
 
 ### Transient Scale2x pixel reconstruction (Modern)
 

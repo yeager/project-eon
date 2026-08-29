@@ -134,7 +134,7 @@ std::uint32_t big32(const std::vector<std::uint8_t>& bytes, const std::size_t of
         | static_cast<std::uint32_t>(bytes[offset + 2]) << 8U | bytes[offset + 3];
 }
 
-struct MillenniumTitlePngTarget {
+struct ModernPngTarget {
     std::string_view id;
     std::uint32_t width;
     std::uint32_t height;
@@ -142,7 +142,7 @@ struct MillenniumTitlePngTarget {
 
 // Ordered largest first. Selection is deliberately a finite renderer map,
 // not a filename convention that grants arbitrary pack assets display access.
-constexpr std::array<MillenniumTitlePngTarget, 2> millennium_title_png_targets{{
+constexpr std::array<ModernPngTarget, 2> millennium_title_png_targets{{
     {"millennium.dos.title.png-1280x800", 1280U, 800U},
     {"millennium.dos.title.png-640x400", 640U, 400U},
 }};
@@ -188,7 +188,7 @@ bool png_chunk_crc_matches(const std::vector<std::uint8_t>& bytes,
 // sees it. This rejects empty/truncated streams, trailing compressed payload,
 // inflated-size surprises, and unsupported PNG filter bytes.
 bool rgba_png_scanlines_valid(const std::vector<std::uint8_t>& idat,
-                              const MillenniumTitlePngTarget& target) {
+                              const ModernPngTarget& target) {
     if (idat.empty()) return false;
     const auto row_bytes = static_cast<std::size_t>(target.width) * 4U + 1U;
     const auto decoded_size = row_bytes * static_cast<std::size_t>(target.height);
@@ -209,8 +209,8 @@ bool rgba_png_scanlines_valid(const std::vector<std::uint8_t>& idat,
     return true;
 }
 
-bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
-                                 const MillenniumTitlePngTarget& target) {
+bool rgba_png_layout(const std::vector<std::uint8_t>& bytes,
+                     const ModernPngTarget& target) {
     constexpr std::array<std::uint8_t, 8> signature{{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}};
     if (bytes.size() < 57U || !std::equal(signature.begin(), signature.end(), bytes.begin())) return false;
     std::size_t offset = 8;
@@ -251,6 +251,107 @@ bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
         offset = next;
     }
     return false;
+}
+
+ModernAssetPackPngSurface load_checked_png_surface(
+    const std::filesystem::path& pack_root, const ModernAssetPack& pack,
+    const ModernAssetPackAsset& asset, const ModernPngTarget& target) {
+    constexpr std::uintmax_t maximum_png_size = 8U * 1024U * 1024U;
+    if (asset.size == 0 || asset.size > maximum_png_size) {
+        throw std::runtime_error("Modern PNG asset is empty or exceeds its 8 MiB renderer limit");
+    }
+    const auto relative = asset.path.lexically_relative(pack_root);
+    std::string error;
+    if (!safe_relative_path(relative.generic_string())
+        || !non_symlink_relative_path(pack_root, relative, error)) {
+        throw std::runtime_error(error.empty()
+            ? "Modern PNG asset path is no longer safely below the selected pack"
+            : error);
+    }
+    std::uintmax_t observed_size = 0;
+    if (!regular_file(asset.path, maximum_png_size, observed_size, error) || observed_size != asset.size) {
+        throw std::runtime_error(error.empty()
+            ? "Modern PNG asset size changed after validation" : error);
+    }
+    // Rehash exactly the bytes that will be uploaded as a transient texture.
+    // This closes the normal admission-to-render change window without a cache
+    // or any write to supplied game media.
+    std::ifstream stream(asset.path, std::ios::binary);
+    if (!stream) throw std::runtime_error("Unable to read Modern RGBA asset");
+    std::vector<std::uint8_t> png((std::istreambuf_iterator<char>(stream)), {});
+    if (stream.bad()) throw std::runtime_error("Unable to read Modern PNG asset");
+    if (png.size() != asset.size) throw std::runtime_error("Modern PNG asset size changed after validation");
+    if (to_hex(sha256(png)) != asset.sha256) {
+        throw std::runtime_error("Modern PNG asset hash changed after validation");
+    }
+    if (!rgba_png_layout(png, target)) {
+        throw std::runtime_error("Modern asset is not a structurally valid mapped RGBA PNG");
+    }
+    return {pack.id, pack.provenance, std::string(target.id), target.width, target.height,
+        std::move(png)};
+}
+
+std::string deuteros_amiga_held_opening_asset_id(const std::size_t frame,
+                                                 const std::uint32_t width,
+                                                 const std::uint32_t height) {
+    std::string number = std::to_string(frame);
+    number.insert(number.begin(), 3U - number.size(), '0');
+    return "deuteros.amiga.opening.held-v1.frame-" + number + ".png-"
+        + std::to_string(width) + "x" + std::to_string(height);
+}
+
+std::optional<ModernAssetPackDeuterosAmigaOpeningSequence>
+find_deuteros_amiga_held_opening_sequence(const ModernAssetPack& pack) {
+    constexpr std::string_view prefix = "deuteros.amiga.opening.held-v1.frame-";
+    constexpr std::array<std::pair<std::uint32_t, std::uint32_t>, 2> tiers{{
+        {1280U, 800U}, {640U, 400U},
+    }};
+    std::vector<const ModernAssetPackAsset*> route_assets;
+    for (const auto& asset : pack.assets) {
+        if (asset.id.starts_with(prefix)) route_assets.push_back(&asset);
+    }
+    // A partial tier would otherwise make selection depend on a malformed
+    // provider order. A pack may offer both *complete* tiers, exactly as the
+    // Millennium title pack may offer 2x and 4x, but no partial second tier.
+    if (route_assets.size() != deuteros_amiga_held_opening_frame_count
+        && route_assets.size() != deuteros_amiga_held_opening_frame_count * 2U) return std::nullopt;
+    std::array<std::size_t, tiers.size()> tier_counts{};
+    for (std::size_t tier_index = 0; tier_index < tiers.size(); ++tier_index) {
+        const auto [width, height] = tiers[tier_index];
+        for (std::size_t frame = 1; frame <= deuteros_amiga_held_opening_frame_count; ++frame) {
+            const auto expected = deuteros_amiga_held_opening_asset_id(frame, width, height);
+            tier_counts[tier_index] += static_cast<std::size_t>(std::count_if(
+                pack.assets.begin(), pack.assets.end(), [&expected](const auto& asset) {
+                    return asset.id == expected;
+                }));
+        }
+        if (tier_counts[tier_index] != 0U
+            && tier_counts[tier_index] != deuteros_amiga_held_opening_frame_count) return std::nullopt;
+    }
+    if (tier_counts[0] + tier_counts[1] != route_assets.size()) return std::nullopt;
+    for (const auto [width, height] : tiers) {
+        ModernAssetPackDeuterosAmigaOpeningSequence sequence;
+        sequence.pack_root = pack.manifest_path.parent_path();
+        sequence.pack_id = pack.id;
+        sequence.provenance = pack.provenance;
+        sequence.source_release_sha256 = pack.source_release_sha256;
+        sequence.width = width;
+        sequence.height = height;
+        bool complete = true;
+        for (std::size_t frame = 1; frame <= deuteros_amiga_held_opening_frame_count; ++frame) {
+            const auto expected = deuteros_amiga_held_opening_asset_id(frame, width, height);
+            const auto found = std::find_if(pack.assets.begin(), pack.assets.end(), [&expected](const auto& asset) {
+                return asset.id == expected;
+            });
+            if (found == pack.assets.end()) {
+                complete = false;
+                break;
+            }
+            sequence.frames[frame - 1U] = *found;
+        }
+        if (complete) return sequence;
+    }
+    return std::nullopt;
 }
 
 } // namespace
@@ -390,7 +491,6 @@ std::vector<ModernAssetPackValidation> discover_modern_asset_packs(const std::fi
 
 ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
     const std::filesystem::path& manifest_path, const std::string_view source_release_sha256) {
-    constexpr std::uintmax_t maximum_png_size = 8U * 1024U * 1024U;
     const auto validation = validate_modern_asset_pack(manifest_path);
     if (!validation.accepted()) throw std::runtime_error("Modern title pack rejected: " + validation.error);
     const auto& pack = validation.pack;
@@ -398,7 +498,7 @@ ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
         || pack.source_release_sha256 != source_release_sha256) {
         throw std::runtime_error("Modern title pack does not match selected Millennium DOS release");
     }
-    const MillenniumTitlePngTarget* target = nullptr;
+    const ModernPngTarget* target = nullptr;
     const ModernAssetPackAsset* asset = nullptr;
     for (const auto& candidate_target : millennium_title_png_targets) {
         const auto found = std::find_if(pack.assets.begin(), pack.assets.end(), [&candidate_target](const auto& candidate) {
@@ -413,27 +513,56 @@ ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
     if (!asset || !target) {
         throw std::runtime_error("Modern title pack has no supported 640x400 or 1280x800 RGBA PNG title asset");
     }
-    if (asset->size == 0 || asset->size > maximum_png_size) {
-        throw std::runtime_error("Modern title PNG asset is empty or exceeds its 8 MiB renderer limit");
+    return load_checked_png_surface(pack.manifest_path.parent_path(), pack, *asset, *target);
+}
+
+ModernAssetPackDeuterosAmigaOpeningSequence
+load_deuteros_amiga_held_opening_modern_sequence(
+    const std::filesystem::path& manifest_path, const std::string_view source_release_sha256) {
+    const auto validation = validate_modern_asset_pack(manifest_path);
+    if (!validation.accepted()) throw std::runtime_error("Modern opening pack rejected: " + validation.error);
+    const auto& pack = validation.pack;
+    if (pack.game != Game::deuteros || pack.platform != Platform::amiga
+        || pack.source_release_sha256 != source_release_sha256) {
+        throw std::runtime_error("Modern opening pack does not match selected Deuteros Amiga release");
     }
-    // Rehash exactly the bytes that will be uploaded as a transient texture.
-    // This closes the normal admission-to-render change window without a cache
-    // or any write to supplied game media.
-    std::ifstream stream(asset->path, std::ios::binary);
-    if (!stream) throw std::runtime_error("Unable to read Modern title RGBA asset");
-    std::vector<std::uint8_t> png((std::istreambuf_iterator<char>(stream)), {});
-    // A byte-count and SHA-256 comparison bind the actual buffer. `eofbit` is
-    // not a reliable completeness signal for every istreambuf_iterator
-    // implementation, whereas `badbit` records a genuine I/O failure.
-    if (stream.bad()) throw std::runtime_error("Unable to read Modern title PNG asset");
-    if (png.size() != asset->size) throw std::runtime_error("Modern title PNG asset size changed after validation");
-    if (to_hex(sha256(png)) != asset->sha256) {
-        throw std::runtime_error("Modern title PNG asset hash changed after validation");
+    const auto sequence = find_deuteros_amiga_held_opening_sequence(pack);
+    if (!sequence) {
+        throw std::runtime_error("Modern opening pack must provide exactly one complete 82-frame 640x400 or 1280x800 held-input sequence");
     }
-    if (!millennium_title_png_layout(png, *target)) {
-        throw std::runtime_error("Modern title asset is not a structurally valid mapped RGBA PNG");
+    // Do not make a sequence eligible merely because its file hashes match.
+    // Every future source tick must have an already proven bounded RGBA PNG
+    // surface; otherwise a malformed late frame could make one visible
+    // opening route switch part-way back to original presentation. Discard
+    // these transient bytes now and recheck the selected one before upload.
+    for (const auto& asset : sequence->frames) {
+        static_cast<void>(load_checked_png_surface(pack.manifest_path.parent_path(), pack, asset,
+            {asset.id, sequence->width, sequence->height}));
     }
-    return {pack.id, pack.provenance, std::string(target->id), target->width, target->height, std::move(png)};
+    return *sequence;
+}
+
+ModernAssetPackPngSurface load_deuteros_amiga_held_opening_modern_frame(
+    const ModernAssetPackDeuterosAmigaOpeningSequence& sequence,
+    const std::uint64_t source_tick) {
+    if (source_tick == 0 || source_tick > deuteros_amiga_held_opening_frame_count) {
+        throw std::runtime_error("Modern Deuteros opening frame tick lies outside the recovered held-input route");
+    }
+    if ((sequence.width != 640U || sequence.height != 400U)
+        && (sequence.width != 1280U || sequence.height != 800U)) {
+        throw std::runtime_error("Modern Deuteros opening sequence has an unsupported frame tier");
+    }
+    const auto& asset = sequence.frames[static_cast<std::size_t>(source_tick - 1U)];
+    const auto expected = deuteros_amiga_held_opening_asset_id(
+        static_cast<std::size_t>(source_tick), sequence.width, sequence.height);
+    if (asset.id != expected) {
+        throw std::runtime_error("Modern Deuteros opening sequence frame identity is inconsistent");
+    }
+    ModernAssetPack pack;
+    pack.id = sequence.pack_id;
+    pack.provenance = sequence.provenance;
+    return load_checked_png_surface(sequence.pack_root, pack, asset,
+        {asset.id, sequence.width, sequence.height});
 }
 
 } // namespace eon

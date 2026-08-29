@@ -244,10 +244,11 @@ Audit separately installed Modern art packs only when explicitly requested:
 `--modern-packs` is valid only with `--inspect` and never has a default search
 path. It reports each direct-child pack as eligible or rejected after the
 selected original releases have been rehashed. The explicit Modern launch form
-`--game millennium --platform dos --presentation modern --modern-pack
-/path/to/pack.eonmodern` may render only the documented, hash-revalidated
-640×400 RGBA PNG title target; Original never uses an external pack. Each PNG
-chunk checksum is verified before decoding. Neither
+`--game <game> --platform <platform> --presentation modern --modern-pack
+/path/to/pack.eonmodern` may render only a documented, hash-revalidated
+Millennium DOS title target or the finite Deuteros Amiga held-input opening
+sequence; Original never uses an external pack. Each PNG chunk checksum is
+verified before decoding. Neither
 form creates a directory or cache. See [the Modern asset-pack format](docs/MODERN_ASSET_PACK_FORMAT.md)
 for the external, separately installed format.
 

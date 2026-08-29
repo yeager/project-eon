@@ -103,6 +103,37 @@ This mapping does not infer original behavior, alter game logic, save data, or
 original media. It creates no cache or extracted output. Other asset IDs remain
 admission-only metadata until separately documented and implemented.
 
+### Deuteros Amiga held-input opening sequence
+
+The second renderable v1 mapping is intentionally finite and route-specific.
+The verified Deuteros Amiga opening is a live 50 Hz channel VM, not a movie:
+without input it continues beyond the currently recovered interval and reaches
+later random-dependent state. Eon therefore admits external opening art only
+for the **held-input route** that starts with the recovered opening state and
+ends at its verified title handoff on source tick 82. The source release must
+be the English Deuteros Amiga archive
+`f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`.
+
+An eligible pack provides all 82 IDs below at 640x400, all 82 at 1280x800,
+or both complete tiers. There is no frame zero, no per-frame tier fallback,
+and no partial high-resolution override. The 4x tier is preferred only when
+all 82 of its frames are present and valid.
+
+```text
+asset	deuteros.amiga.opening.held-v1.frame-001.png-640x400 opening/001.png <size> <sha256>
+...
+asset	deuteros.amiga.opening.held-v1.frame-082.png-640x400 opening/082.png <size> <sha256>
+```
+
+Each PNG has the same bounded 8-bit RGBA, CRC, IDAT, exact-inflate, 8 MiB,
+and rehash-before-upload contract as the Millennium title mapping. Eon hashes
+and fully validates the PNG grammar of **all 82 selected-tier frames** before
+the sequence becomes eligible, then rechecks the selected file without
+following symlinks immediately before renderer use. The sequence is
+renderer-only: it cannot advance the VM, change input sampling, replace the
+original composed source frame, affect audio, alter the terminal title-stage
+boundary, or affect saves. Original mode never selects it.
+
 ## Preservation and runtime boundary
 
 Apart from the constrained title mapping above, admission is only an immutable

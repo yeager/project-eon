@@ -2,6 +2,7 @@
 
 #include "platform/game_data.hpp"
 
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -56,6 +57,25 @@ struct ModernAssetPackPngSurface {
     std::vector<std::uint8_t> png;
 };
 
+// The sole finite Deuteros Amiga route currently eligible for regenerated
+// opening art.  Frame zero does not exist: each source frame is composed
+// after one verified 50 Hz VM tick.  A held original input reaches the
+// recovered terminal handoff on tick 82.
+inline constexpr std::size_t deuteros_amiga_held_opening_frame_count = 82;
+
+// Admission metadata for one complete, same-resolution external sequence.
+// It owns no decoded pixels and does not alter the original opening VM.  Each
+// selected frame is rechecked immediately before its renderer upload.
+struct ModernAssetPackDeuterosAmigaOpeningSequence {
+    std::filesystem::path pack_root;
+    std::string pack_id;
+    std::string provenance;
+    std::string source_release_sha256;
+    std::uint32_t width = 0;
+    std::uint32_t height = 0;
+    std::array<ModernAssetPackAsset, deuteros_amiga_held_opening_frame_count> frames;
+};
+
 // Validate one exact pack.eonmodern manifest and its declared asset bytes.
 // The function is read-only and does not create a default directory, cache,
 // extraction directory, texture, or save file.  A successful result merely
@@ -76,5 +96,20 @@ struct ModernAssetPackPngSurface {
 // bytes are written.
 [[nodiscard]] ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
     const std::filesystem::path& manifest_path, std::string_view source_release_sha256);
+
+// Admit exactly all 82 frames for the currently recovered Deuteros Amiga
+// held-input opening route. A pack must provide every frame in at least one
+// tier; an optional second tier must also be complete. Gaps fail closed.
+[[nodiscard]] ModernAssetPackDeuterosAmigaOpeningSequence
+load_deuteros_amiga_held_opening_modern_sequence(
+    const std::filesystem::path& manifest_path, std::string_view source_release_sha256);
+
+// Load one already-admitted sequence frame for a source VM tick in [1, 82].
+// The file is rechecked without following symlinks before its bytes are
+// returned, and no cache, extraction directory, or original-media write is
+// created.
+[[nodiscard]] ModernAssetPackPngSurface load_deuteros_amiga_held_opening_modern_frame(
+    const ModernAssetPackDeuterosAmigaOpeningSequence& sequence,
+    std::uint64_t source_tick);
 
 } // namespace eon

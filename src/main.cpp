@@ -3182,6 +3182,15 @@ int main(int argc, char** argv) {
     std::optional<std::uint64_t> deuteros_preview_source_tick;
     std::optional<std::uint64_t> deuteros_modern_preview_attempted_tick;
     std::optional<std::uint64_t> deuteros_modern_preview_source_tick;
+    // A complete external Modern sequence is an alternative presentation of
+    // the finite held-input route only.  It neither provides VM state nor
+    // substitutes a single original pixel in Original mode.
+    SDL_Texture* deuteros_external_modern_texture = nullptr;
+    std::optional<eon::ModernAssetPackDeuterosAmigaOpeningSequence>
+        deuteros_external_modern_sequence;
+    std::optional<eon::ModernAssetPackPngSurface> deuteros_external_modern_surface;
+    std::optional<std::uint64_t> deuteros_external_modern_source_tick;
+    bool deuteros_external_modern_attempted = false;
     const auto create_deuteros_opening_texture = [&] {
         if (!deuteros_opening || preview_texture) return;
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -3207,6 +3216,82 @@ int main(int argc, char** argv) {
             std::cerr << "Unable to start Deuteros audio output: " << SDL_GetError() << '\n';
             SDL_DestroyAudioStream(deuteros_audio_stream);
             deuteros_audio_stream = nullptr;
+        }
+    };
+    const auto discard_deuteros_external_modern_sequence = [&] {
+        if (deuteros_external_modern_texture) SDL_DestroyTexture(deuteros_external_modern_texture);
+        deuteros_external_modern_texture = nullptr;
+        deuteros_external_modern_sequence.reset();
+        deuteros_external_modern_surface.reset();
+        deuteros_external_modern_source_tick.reset();
+        deuteros_external_modern_attempted = false;
+    };
+    const auto load_deuteros_external_modern_sequence = [&] {
+        if (deuteros_external_modern_attempted) return;
+        deuteros_external_modern_attempted = true;
+        if (!deuteros_opening || !request.modern_pack_manifest
+            || request.presentation != eon::Presentation::modern
+            || active_platform != eon::Platform::amiga || !active_release_language
+            || *active_release_language != "en") return;
+        const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
+            return candidate.game == eon::Game::deuteros && candidate.platform == eon::Platform::amiga
+                && candidate.language == *active_release_language;
+        });
+        if (release == releases.end()) return;
+        try {
+            deuteros_external_modern_sequence = eon::load_deuteros_amiga_held_opening_modern_sequence(
+                *request.modern_pack_manifest, release->sha256);
+        } catch (const std::exception& error) {
+            std::cerr << "Modern Deuteros opening pack not used: " << error.what() << '\n';
+            deuteros_external_modern_sequence.reset();
+        }
+    };
+    const auto refresh_deuteros_external_modern_texture = [&](
+        const std::uint64_t source_tick, const bool title_handed_off) -> SDL_Texture* {
+        if (!deuteros_external_modern_sequence || source_tick == 0
+            || source_tick > eon::deuteros_amiga_held_opening_frame_count
+            // Tick 82 is an external rendering target only when the original
+            // VM actually took its held-input handoff. Without it, the opening
+            // continues into a route that this finite art sequence does not claim.
+            || (source_tick == eon::deuteros_amiga_held_opening_frame_count && !title_handed_off)) {
+            return nullptr;
+        }
+        if (deuteros_external_modern_texture && deuteros_external_modern_source_tick
+            && *deuteros_external_modern_source_tick == source_tick) {
+            return deuteros_external_modern_texture;
+        }
+        try {
+            auto surface = eon::load_deuteros_amiga_held_opening_modern_frame(
+                *deuteros_external_modern_sequence, source_tick);
+            SDL_IOStream* stream = SDL_IOFromConstMem(surface.png.data(), surface.png.size());
+            if (!stream) throw std::runtime_error("Unable to open Modern Deuteros PNG bytes: "
+                + std::string(SDL_GetError()));
+            SDL_Surface* image = IMG_Load_IO(stream, true);
+            if (!image) throw std::runtime_error("Unable to decode Modern Deuteros PNG: "
+                + std::string(SDL_GetError()));
+            if (image->w != static_cast<int>(surface.width) || image->h != static_cast<int>(surface.height)) {
+                SDL_DestroySurface(image);
+                throw std::runtime_error("Modern Deuteros PNG dimensions changed during decode");
+            }
+            SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, image);
+            SDL_DestroySurface(image);
+            if (!texture) throw std::runtime_error("Unable to upload Modern Deuteros PNG: "
+                + std::string(SDL_GetError()));
+            if (deuteros_external_modern_texture) SDL_DestroyTexture(deuteros_external_modern_texture);
+            deuteros_external_modern_texture = texture;
+            deuteros_external_modern_surface = std::move(surface);
+            deuteros_external_modern_source_tick = source_tick;
+            return texture;
+        } catch (const std::exception& error) {
+            // A changed late asset revokes the complete sequence for the rest
+            // of this session. Do not select a lesser tier or another pack.
+            std::cerr << "Modern Deuteros opening pack disabled: " << error.what() << '\n';
+            if (deuteros_external_modern_texture) SDL_DestroyTexture(deuteros_external_modern_texture);
+            deuteros_external_modern_texture = nullptr;
+            deuteros_external_modern_sequence.reset();
+            deuteros_external_modern_surface.reset();
+            deuteros_external_modern_source_tick.reset();
+            return nullptr;
         }
     };
     SDL_Texture* millennium_preview_texture = nullptr;
@@ -3425,10 +3510,12 @@ int main(int argc, char** argv) {
     const auto start_deuteros = [&] {
         stop_millennium_title();
         clear_deuteros_opening_input();
+        discard_deuteros_external_modern_sequence();
         deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform);
         deuteros_opening = load_deuteros_opening(releases, active_platform);
         create_deuteros_opening_texture();
         start_deuteros_audio();
+        load_deuteros_external_modern_sequence();
         deuteros_last_tick = SDL_GetTicks();
         deuteros_title_resource.reset();
     };
@@ -3810,6 +3897,7 @@ int main(int argc, char** argv) {
             deuteros_opening = load_deuteros_opening(releases, active_platform);
             create_deuteros_opening_texture();
             start_deuteros_audio();
+            load_deuteros_external_modern_sequence();
             deuteros_last_tick = SDL_GetTicks();
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
@@ -4317,7 +4405,18 @@ int main(int argc, char** argv) {
                         + " - " + std::to_string(trace->glyph_codes.size()));
                 }
                 SDL_Texture* texture = preview_texture;
-                if (modern && modern_graphics_settings.pixel_reconstruction && frame
+                if (modern) {
+                    if (SDL_Texture* external = refresh_deuteros_external_modern_texture(source_tick,
+                            deuteros_opening->title_handed_off())) {
+                        texture = external;
+                        const auto& surface = *deuteros_external_modern_surface;
+                        draw_text(renderer, 64, title_stage ? 342 : 284,
+                            tr("MODERN") + " " + surface.pack_id + " ("
+                            + std::to_string(surface.width) + "x" + std::to_string(surface.height)
+                            + "; " + surface.provenance + "; T=1-82)");
+                    }
+                }
+                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction && frame
                     && (!deuteros_modern_preview_attempted_tick
                         || *deuteros_modern_preview_attempted_tick != source_tick)) {
                     const auto enhanced = eon::reconstruct_rgba_scale2x(*frame,
@@ -4335,7 +4434,7 @@ int main(int argc, char** argv) {
                     }
                     deuteros_modern_preview_attempted_tick = source_tick;
                 }
-                if (modern && modern_graphics_settings.pixel_reconstruction && modern_preview_texture
+                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction && modern_preview_texture
                     && deuteros_modern_preview_source_tick
                     && *deuteros_modern_preview_source_tick == source_tick) {
                     texture = modern_preview_texture;
@@ -4368,6 +4467,7 @@ int main(int argc, char** argv) {
     SDL_DestroyTexture(millennium_gx_canvas_texture);
     SDL_DestroyTexture(preview_texture);
     SDL_DestroyTexture(modern_preview_texture);
+    SDL_DestroyTexture(deuteros_external_modern_texture);
     SDL_DestroyAudioStream(deuteros_audio_stream);
     active_text_renderer.reset();
     SDL_DestroyRenderer(renderer);
