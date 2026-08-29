@@ -12,7 +12,8 @@ if find "$app" -type d -iname data -print -quit | grep -q . \
     || find "$app" -type d -iname frameworks -print -quit | grep -q . \
     || find "$app" -type f \( -iname '*.zip' -o -iname '*.adf' -o -iname '*.st' \
         -o -iname '*.adz' -o -iname '*.dms' -o -iname '*.msa' -o -iname '*.stx' \
-        -o -iname '*.img' -o -iname '*.exe' \
+        -o -iname '*.img' -o -iname '*.hfe' -o -iname '*.ipf' -o -iname '*.scp' \
+        -o -iname '*.ctr' -o -iname '*.lha' -o -iname '*.lzh' -o -iname '*.lzx' -o -iname '*.exe' \
         -o -iname '*.com' \) -print -quit | grep -q .; then
   echo "refusing to package game media or an unexpected dynamic framework" >&2
   exit 1

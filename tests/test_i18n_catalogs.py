@@ -102,7 +102,7 @@ class CatalogTests(unittest.TestCase):
         # game media. They therefore must not bypass the launcher catalog.
         labels = {
             "MILLENNIUM 2.2", "RETURN TO EARTH", "DEUTEROS", "THE NEXT MILLENNIUM",
-            "DOS", "AMIGA", "ATARI ST", "UNKNOWN PLATFORM",
+            "DOS", "AMIGA", "ATARI ST", "ATARI BOOTSTRAP ONLY", "UNKNOWN PLATFORM",
             "SELECT AN ORIGINAL RELEASE", "CHOOSE A LANGUAGE; NO EDITION FALLBACK IS USED",
             "ENGLISH", "SPANISH", "RELEASE IDENTITY IS FIXED AT LAUNCH",
             "ORIGINAL", "PRESERVATION PROFILE", "MODERN", "ENHANCED PROFILE",
