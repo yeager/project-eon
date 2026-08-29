@@ -318,3 +318,23 @@ msgstr ""
 #: src/main.cpp
 msgid "UNKNOWN PLATFORM"
 msgstr ""
+
+#: src/main.cpp
+msgid "SELECT AN ORIGINAL RELEASE"
+msgstr ""
+
+#: src/main.cpp
+msgid "CHOOSE A LANGUAGE; NO EDITION FALLBACK IS USED"
+msgstr ""
+
+#: src/main.cpp
+msgid "ENGLISH"
+msgstr ""
+
+#: src/main.cpp
+msgid "SPANISH"
+msgstr ""
+
+#: src/main.cpp
+msgid "RELEASE IDENTITY IS FIXED AT LAUNCH"
+msgstr ""

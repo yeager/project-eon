@@ -952,6 +952,20 @@ int main() {
         assert(eon::select_available_platform(
             menu_releases, eon::Game::deuteros, eon::Platform::dos) == eon::Platform::amiga);
         assert(!eon::select_available_platform({}, eon::Game::deuteros, eon::Platform::amiga));
+        const std::vector<eon::ReleaseArchive> multilingual_menu_releases{
+            {eon::Game::millennium, eon::Platform::dos, "en", {}, {}},
+            {eon::Game::millennium, eon::Platform::dos, "es", {}, {}},
+            {eon::Game::millennium, eon::Platform::amiga, "en", {}, {}},
+        };
+        assert((eon::available_release_languages(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::dos)
+            == std::vector<std::string>{"en", "es"}));
+        assert(!eon::select_available_release_language(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::dos, std::nullopt));
+        assert(eon::select_available_release_language(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::dos, std::string{"es"}) == "es");
+        assert(eon::select_available_release_language(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::amiga, std::nullopt) == "en");
 
         assert(eon::normalize_language("sv_SE.UTF-8") == "sv_SE");
         assert(eon::normalize_language("pt-BR") == "pt_BR");

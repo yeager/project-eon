@@ -24,6 +24,12 @@ platform selection never substitutes a different platform or language. A
 missing data path remains read-only: Project Eon reports it and does not create
 the default directory.
 
+When a selected game/platform has more than one hash-recognised original
+language, the launcher inserts an **Original release** card page before the
+Original/Modern/Custom cards. The CLI requires `--release-language` in the
+same case. This makes edition identity an explicit launch input rather than an
+English-first fallback; it does not translate or alter original in-game text.
+
 The portable entry points are:
 
 ```sh

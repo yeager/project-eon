@@ -163,6 +163,60 @@ class IosPackagingTests(unittest.TestCase):
                            capture_output=True, text=True)
             self.assertFalse(ipa.exists())
 
+    def test_archive_verifier_rejects_hidden_non_system_macho_dependency(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            # LC_LOAD_DYLIB (0x0c) with an @rpath name is a load-time
+            # dependency even if an archive contains no Frameworks directory.
+            # The fixture is never executed; package-ipa must reject it while
+            # inspecting the finished IPA.
+            library = b"@rpath/libunreviewed.dylib\0"
+            command_size = 24 + ((len(library) + 7) // 8) * 8
+            command = (
+                b"\x0c\0\0\0" + command_size.to_bytes(4, "little")
+                + (24).to_bytes(4, "little") + b"\0" * 12
+                + library.ljust(command_size - 24, b"\0")
+            )
+            header = (
+                b"\xcf\xfa\xed\xfe\x0c\0\0\x01\0\0\0\0"
+                + b"\x02\0\0\0\x01\0\0\0"
+                + command_size.to_bytes(4, "little") + b"\0" * 8
+            )
+            (app / "project-eon").write_bytes(header + command)
+            ipa = root / "bad.ipa"
+            result = subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(ipa.exists())
+            self.assertIn("non-system dynamic library", result.stderr)
+
+    def test_archive_verifier_allows_system_macho_dependency(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            # Static SDL still legitimately uses iPadOS's system UIKit
+            # framework. The verifier must distinguish that runtime contract
+            # from a bundle-local dependency.
+            library = b"/System/Library/Frameworks/UIKit.framework/UIKit\0"
+            command_size = 24 + ((len(library) + 7) // 8) * 8
+            command = (
+                b"\x0c\0\0\0" + command_size.to_bytes(4, "little")
+                + (24).to_bytes(4, "little") + b"\0" * 12
+                + library.ljust(command_size - 24, b"\0")
+            )
+            header = (
+                b"\xcf\xfa\xed\xfe\x0c\0\0\x01\0\0\0\0"
+                + b"\x02\0\0\0\x01\0\0\0"
+                + command_size.to_bytes(4, "little") + b"\0" * 8
+            )
+            (app / "project-eon").write_bytes(header + command)
+            ipa = root / "system-framework.ipa"
+            result = subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(ipa.is_file())
+
     def test_rejects_incomplete_bundle(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
