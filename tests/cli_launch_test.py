@@ -155,6 +155,22 @@ def main() -> int:
             "full --inspect report did not cover exactly the supported releases:\n"
             f"expected {sorted(expected_reported_releases)}, got {sorted(reported_releases)}"
         )
+    expected_platform_admission = {
+        "PLATFORM ADMISSION  Millennium 2.2 / DOS / RELEASE SELECTION REQUIRED / 2 verified original languages",
+        "PLATFORM ADMISSION  Millennium 2.2 / Amiga / READY / 1 verified original language",
+        "PLATFORM ADMISSION  Millennium 2.2 / Atari ST / READY / 1 verified original language",
+        "PLATFORM ADMISSION  Deuteros / Amiga / READY / 1 verified original language",
+        "PLATFORM ADMISSION  Deuteros / Atari ST / READY / 1 verified original language",
+    }
+    reported_platform_admission = {
+        line for line in data_dir_inspection.stdout.splitlines()
+        if line.startswith("PLATFORM ADMISSION  ")
+    }
+    if reported_platform_admission != expected_platform_admission:
+        raise SystemExit(
+            "full --inspect report did not expose the exact launcher admission states:\n"
+            f"expected {sorted(expected_platform_admission)}, got {sorted(reported_platform_admission)}"
+        )
 
     targeted_inspection = subprocess.run(
         (str(executable), "--data", str(data_directory), "--inspect", "--game", "millennium",

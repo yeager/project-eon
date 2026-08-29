@@ -149,6 +149,14 @@ releases, and unreadable candidates. The report deliberately does not print
 unrecognised filenames or infer their platform: it makes admission and scanner
 failures auditable while preserving the strict content-addressed boundary.
 
+For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
+rehashed game/platform card state. `READY` has exactly one verified original
+language; `RELEASE SELECTION REQUIRED` has several and cannot launch until a
+specific identity is selected. Filtered reports omit this aggregate deliberately:
+their scope cannot establish whether an unprinted sibling language is present.
+The report is derived from scanner identities only and does not execute Atari
+ST GEMDOS/XBIOS services, callbacks, or guest code.
+
 ### Scan-to-use identity binding
 
 Recognition alone is not authority to parse a later version of a path. Before
@@ -2004,6 +2012,13 @@ adds it to the verified main-resource base `$32a24`, stores `$3355c` at state
 offset `$0c`, and replaces the selector with `$fe`. The VM separately retains
 the raw bundle-relative `$0b38` operand for its alternate-resource event,
 without giving either value an invented gameplay name.
+
+The launcher keeps that held signal scoped to an active opening session. It
+clears it before a new Deuteros session and when the Modern F10 renderer dialog
+opens, so a host-modal transition cannot leak a stale Space/Enter/South hold
+into the next recovered `$14` poll. Closing the dialog requires a fresh host
+press; it does not manufacture an original CIA sample, title command, or input
+past the Exec/graphics boundary.
 
 Separately, the main loop polls active-low CIA-A port-A bit 6 at `$bfe001`
 after `$21380`. Once the gate and recorded input are both set, the first-buffer

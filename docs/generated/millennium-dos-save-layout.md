@@ -59,6 +59,7 @@ successfully parsed original save. It exposes the checked version, the 38
 positional four-word records, a SHA-256 identity, and bounded read-only spans
 for opaque ranges. It intentionally has no setters, serialization/export
 method, inferred simulation meanings, or save-file creation path. The CLI
-verification report prints each recovered record as `+00`, `+04`, `+06`, and
-`+08`, matching the executable's recovered runtime offsets rather than naming
-them as game concepts.
+`--inspect-save` report prints each recovered record as `+00`, `+04`, `+06`,
+and `+08`, matching the executable's recovered runtime offsets rather than
+naming them as game concepts. It is a comparison/inspection route only: the
+supplied file remains in place and is never imported into a runtime.
