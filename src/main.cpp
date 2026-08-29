@@ -3393,7 +3393,10 @@ int main(int argc, char** argv) {
                     modern && modern_graphics_settings.pixel_reconstruction);
                 if (modern && millennium_external_modern_texture && millennium_external_modern_surface) {
                     draw_text(renderer, 64, 202, tr("MODERN TITLE PACK: ")
-                        + millennium_external_modern_surface->pack_id + " (640x400 RGBA PNG)");
+                        + millennium_external_modern_surface->pack_id + " ("
+                        + std::to_string(millennium_external_modern_surface->width) + "x"
+                        + std::to_string(millennium_external_modern_surface->height) + " RGBA PNG; "
+                        + millennium_external_modern_surface->provenance + ")");
                 }
                 if (millennium_game_execution_observed) {
                     draw_text(renderer, 64, 220,

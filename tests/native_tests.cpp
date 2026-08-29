@@ -573,9 +573,9 @@ void assert_modern_asset_pack_admission() {
     assert(!changed.accepted());
     assert(!changed.error.empty());
     // External grammar bytes only: the runtime target must have the exact
-    // hash-bound ID, release identity and 640x400 RGBA PNG IHDR. SDL_image
-    // later decodes these rehashed in-memory bytes; this native test has no
-    // SDL decoder dependency.
+    // hash-bound ID, release identity, bounded RGBA PNG structure, and one
+    // finite title mapping. SDL_image later decodes these rehashed in-memory
+    // bytes; this native test has no SDL decoder dependency.
     const auto render_root = root / "render-title";
     std::filesystem::create_directories(render_root);
     const auto png = render_root / "title.png";
@@ -583,6 +583,7 @@ void assert_modern_asset_pack_admission() {
         0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a,
         0, 0, 0, 13, 'I', 'H', 'D', 'R', 0, 0, 2, 128, 0, 0, 1, 144,
         8, 6, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 'I', 'D', 'A', 'T', 0, 0, 0, 0,
         0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xae, 0x42, 0x60, 0x82,
     };
     {
@@ -601,8 +602,55 @@ void assert_modern_asset_pack_admission() {
     write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(png_bytes)));
     const auto surface = eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", release_hash);
-    assert(surface.pack_id == "render-title" && surface.width == 640 && surface.height == 400
+    assert(surface.pack_id == "render-title" && surface.asset_id == "millennium.dos.title.png-640x400"
+        && surface.width == 640 && surface.height == 400
         && surface.png == png_bytes);
+    auto png_4x = png_bytes;
+    png_4x[18] = 5; // 1280 pixels wide.
+    png_4x[19] = 0;
+    png_4x[22] = 3; // 800 pixels tall.
+    png_4x[23] = 32;
+    {
+        std::ofstream output(png, std::ios::binary | std::ios::trunc);
+        output.write(reinterpret_cast<const char*>(png_4x.data()),
+            static_cast<std::streamsize>(png_4x.size()));
+    }
+    write_render_manifest("millennium.dos.title.png-1280x800", eon::to_hex(eon::sha256(png_4x)));
+    const auto surface_4x = eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash);
+    assert(surface_4x.asset_id == "millennium.dos.title.png-1280x800"
+        && surface_4x.width == 1280 && surface_4x.height == 800 && surface_4x.png == png_4x);
+    const auto png_2x = render_root / "title-2x.png";
+    const auto png_4x_path = render_root / "title-4x.png";
+    {
+        std::ofstream output(png_2x, std::ios::binary);
+        output.write(reinterpret_cast<const char*>(png_bytes.data()),
+            static_cast<std::streamsize>(png_bytes.size()));
+    }
+    {
+        std::ofstream output(png_4x_path, std::ios::binary);
+        output.write(reinterpret_cast<const char*>(png_4x.data()),
+            static_cast<std::streamsize>(png_4x.size()));
+    }
+    {
+        std::ofstream output(render_root / "pack.eonmodern", std::ios::binary | std::ios::trunc);
+        output << "schema\tproject-eon.modern-asset-pack/v1\nid\trender-title\nversion\t1\n"
+               << "license\tCC0-1.0\nprovenance\tindependently-created\ngame\tmillennium\nplatform\tdos\n"
+               << "source_release_sha256\t" << release_hash << "\nasset\tmillennium.dos.title.png-640x400"
+               << " title-2x.png " << png_bytes.size() << ' ' << eon::to_hex(eon::sha256(png_bytes))
+               << "\nasset\tmillennium.dos.title.png-1280x800 title-4x.png " << png_4x.size() << ' '
+               << eon::to_hex(eon::sha256(png_4x)) << '\n';
+    }
+    const auto preferred_surface = eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash);
+    assert(preferred_surface.asset_id == "millennium.dos.title.png-1280x800"
+        && preferred_surface.png == png_4x);
+    {
+        std::ofstream output(png, std::ios::binary | std::ios::trunc);
+        output.write(reinterpret_cast<const char*>(png_bytes.data()),
+            static_cast<std::streamsize>(png_bytes.size()));
+    }
+    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(png_bytes)));
     bool wrong_release_rejected = false;
     try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
@@ -634,6 +682,19 @@ void assert_modern_asset_pack_admission() {
         render_root / "pack.eonmodern", release_hash));
     } catch (const std::runtime_error&) { malformed_rejected = true; }
     assert(malformed_rejected);
+    auto trailing_png = png_bytes;
+    trailing_png.push_back(0);
+    {
+        std::ofstream output(png, std::ios::binary | std::ios::trunc);
+        output.write(reinterpret_cast<const char*>(trailing_png.data()),
+            static_cast<std::streamsize>(trailing_png.size()));
+    }
+    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(trailing_png)));
+    bool trailing_rejected = false;
+    try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash));
+    } catch (const std::runtime_error&) { trailing_rejected = true; }
+    assert(trailing_rejected);
     // A non-symlink final file is insufficient when an intermediate component
     // points outside the selected pack directory.
     const auto external = root / "outside";
@@ -4279,6 +4340,12 @@ int main() {
         == "6f1e8ab7720c530f8cf5bfc07497824ff731ce977a15d941dad5acd999c6eeda");
     assert(atari_session.config().present);
     assert(atari_session.config().size == 7506);
+    assert(atari_session.config_entry().proven_load_base == 0x2a4de);
+    assert(atari_session.config_entry().entry_address == 0x2aa88);
+    assert(atari_session.fread_config_load_address_boundary().fread_destination_address == 0x2a500);
+    assert(atari_session.fread_config_load_address_boundary().independent_entry_offset_delta == 34);
+    assert(atari_session.fread_mapped_config_prelude().mapped_entry_file_offset == 0x588);
+    assert(atari_session.fread_mapped_config_prelude().continuation_address == 0x2aaaa);
     const auto atari_config_payload = atari_disk.read(*atari_disk.find("MILL22A.inf"));
     const auto atari_config_entry = eon::parse_millennium_atari_config_entry(atari_config_payload);
     assert(atari_config_entry.proven_load_base == 0x2a4de);

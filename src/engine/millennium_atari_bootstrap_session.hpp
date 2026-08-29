@@ -9,7 +9,9 @@ namespace eon {
 
 // Executes the strictly local Equinox Atari ST bootstrap in memory and stops
 // at the first GEMDOS Fopen boundary. No host file handle, D0 result, config
-// execution, or display state is invented.
+// execution, or display state is invented.  The session also retains the
+// separately read, hash-verified requested-config metadata and static address
+// disagreement, but never presents those source bytes as a Fread result.
 class MillenniumAtariBootstrapSession {
 public:
     MillenniumAtariBootstrapSession(const Fat12Disk& disk,
@@ -30,6 +32,17 @@ public:
         return root_inventory_;
     }
     [[nodiscard]] const MillenniumAtariConfigEvidence& config() const { return config_; }
+    [[nodiscard]] const MillenniumAtariConfigEntry& config_entry() const {
+        return config_entry_;
+    }
+    [[nodiscard]] const MillenniumAtariFreadConfigLoadAddressBoundary&
+    fread_config_load_address_boundary() const {
+        return fread_config_load_address_boundary_;
+    }
+    [[nodiscard]] const MillenniumAtariFreadMappedConfigPrelude&
+    fread_mapped_config_prelude() const {
+        return fread_mapped_config_prelude_;
+    }
 
 private:
     MillenniumAtariBootstrap bootstrap_;
@@ -41,6 +54,9 @@ private:
     MillenniumAtariFreadConfigTransferBoundary fread_config_transfer_;
     MillenniumAtariRootInventory root_inventory_;
     MillenniumAtariConfigEvidence config_;
+    MillenniumAtariConfigEntry config_entry_;
+    MillenniumAtariFreadConfigLoadAddressBoundary fread_config_load_address_boundary_;
+    MillenniumAtariFreadMappedConfigPrelude fread_mapped_config_prelude_;
 };
 
 } // namespace eon

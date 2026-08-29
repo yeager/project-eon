@@ -131,13 +131,68 @@ std::uint32_t big32(const std::vector<std::uint8_t>& bytes, const std::size_t of
         | static_cast<std::uint32_t>(bytes[offset + 2]) << 8U | bytes[offset + 3];
 }
 
-bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes) {
+struct MillenniumTitlePngTarget {
+    std::string_view id;
+    std::uint32_t width;
+    std::uint32_t height;
+};
+
+// Ordered largest first. Selection is deliberately a finite renderer map,
+// not a filename convention that grants arbitrary pack assets display access.
+constexpr std::array<MillenniumTitlePngTarget, 2> millennium_title_png_targets{{
+    {"millennium.dos.title.png-1280x800", 1280U, 800U},
+    {"millennium.dos.title.png-640x400", 640U, 400U},
+}};
+
+bool png_chunk_type(const std::vector<std::uint8_t>& bytes, const std::size_t offset,
+                    const char a, const char b, const char c, const char d) {
+    return bytes[offset] == static_cast<std::uint8_t>(a)
+        && bytes[offset + 1] == static_cast<std::uint8_t>(b)
+        && bytes[offset + 2] == static_cast<std::uint8_t>(c)
+        && bytes[offset + 3] == static_cast<std::uint8_t>(d);
+}
+
+bool png_critical_chunk(const std::vector<std::uint8_t>& bytes, const std::size_t offset) {
+    return bytes[offset] >= 'A' && bytes[offset] <= 'Z';
+}
+
+bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
+                                 const MillenniumTitlePngTarget& target) {
     constexpr std::array<std::uint8_t, 8> signature{{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}};
-    return bytes.size() >= 33U && std::equal(signature.begin(), signature.end(), bytes.begin())
-        && big32(bytes, 8) == 13U && bytes[12] == 'I' && bytes[13] == 'H'
-        && bytes[14] == 'D' && bytes[15] == 'R' && big32(bytes, 16) == 640U
-        && big32(bytes, 20) == 400U && bytes[24] == 8U && bytes[25] == 6U
-        && bytes[26] == 0U && bytes[27] == 0U && bytes[28] == 0U;
+    if (bytes.size() < 57U || !std::equal(signature.begin(), signature.end(), bytes.begin())) return false;
+    std::size_t offset = 8;
+    bool first_chunk = true;
+    bool saw_idat = false;
+    bool closed_idat = false;
+    while (offset <= bytes.size() && bytes.size() - offset >= 12U) {
+        const auto length = big32(bytes, offset);
+        const auto type = offset + 4U;
+        const auto data = offset + 8U;
+        if (length > bytes.size() - data || bytes.size() - data - length < 4U) return false;
+        const auto next = data + static_cast<std::size_t>(length) + 4U;
+        if (first_chunk) {
+            if (length != 13U || !png_chunk_type(bytes, type, 'I', 'H', 'D', 'R')
+                || big32(bytes, data) != target.width || big32(bytes, data + 4U) != target.height
+                || bytes[data + 8U] != 8U || bytes[data + 9U] != 6U
+                || bytes[data + 10U] != 0U || bytes[data + 11U] != 0U || bytes[data + 12U] != 0U) {
+                return false;
+            }
+            first_chunk = false;
+        } else if (png_chunk_type(bytes, type, 'I', 'D', 'A', 'T')) {
+            if (closed_idat) return false; // PNG IDAT chunks must be consecutive.
+            saw_idat = true;
+        } else if (png_chunk_type(bytes, type, 'I', 'E', 'N', 'D')) {
+            // IEND is terminal and cannot be followed by a hidden payload.
+            return saw_idat && length == 0U && next == bytes.size();
+        } else {
+            if (saw_idat) closed_idat = true;
+            // Unknown critical chunks can change decode semantics. Future
+            // mappings may admit one only with a documented decoder contract.
+            if (png_critical_chunk(bytes, type)) return false;
+        }
+        offset = next;
+    }
+    return false;
 }
 
 } // namespace
@@ -277,9 +332,6 @@ std::vector<ModernAssetPackValidation> discover_modern_asset_packs(const std::fi
 
 ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
     const std::filesystem::path& manifest_path, const std::string_view source_release_sha256) {
-    constexpr std::string_view target_id = "millennium.dos.title.png-640x400";
-    constexpr std::uint32_t width = 640;
-    constexpr std::uint32_t height = 400;
     constexpr std::uintmax_t maximum_png_size = 8U * 1024U * 1024U;
     const auto validation = validate_modern_asset_pack(manifest_path);
     if (!validation.accepted()) throw std::runtime_error("Modern title pack rejected: " + validation.error);
@@ -288,11 +340,20 @@ ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
         || pack.source_release_sha256 != source_release_sha256) {
         throw std::runtime_error("Modern title pack does not match selected Millennium DOS release");
     }
-    const auto asset = std::find_if(pack.assets.begin(), pack.assets.end(), [target_id](const auto& candidate) {
-        return candidate.id == target_id;
-    });
-    if (asset == pack.assets.end()) {
-        throw std::runtime_error("Modern title pack has no supported 640x400 RGBA PNG title asset");
+    const MillenniumTitlePngTarget* target = nullptr;
+    const ModernAssetPackAsset* asset = nullptr;
+    for (const auto& candidate_target : millennium_title_png_targets) {
+        const auto found = std::find_if(pack.assets.begin(), pack.assets.end(), [&candidate_target](const auto& candidate) {
+            return candidate.id == candidate_target.id;
+        });
+        if (found != pack.assets.end()) {
+            target = &candidate_target;
+            asset = &*found;
+            break;
+        }
+    }
+    if (!asset || !target) {
+        throw std::runtime_error("Modern title pack has no supported 640x400 or 1280x800 RGBA PNG title asset");
     }
     if (asset->size == 0 || asset->size > maximum_png_size) {
         throw std::runtime_error("Modern title PNG asset is empty or exceeds its 8 MiB renderer limit");
@@ -311,10 +372,10 @@ ModernAssetPackPngSurface load_millennium_dos_title_modern_surface(
     if (to_hex(sha256(png)) != asset->sha256) {
         throw std::runtime_error("Modern title PNG asset hash changed after validation");
     }
-    if (!millennium_title_png_layout(png)) {
-        throw std::runtime_error("Modern title asset is not a 640x400 RGBA PNG");
+    if (!millennium_title_png_layout(png, *target)) {
+        throw std::runtime_error("Modern title asset is not a structurally valid mapped RGBA PNG");
     }
-    return {pack.id, pack.provenance, width, height, std::move(png)};
+    return {pack.id, pack.provenance, std::string(target->id), target->width, target->height, std::move(png)};
 }
 
 } // namespace eon

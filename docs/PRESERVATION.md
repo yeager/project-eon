@@ -62,9 +62,10 @@ The two permitted provenance declarations are `independently-created` and
 `licensed-derivative`; they record the provider's legal claim, not a legal
 finding by Eon. No packs are shipped or accepted as proof of original
 behaviour. V1 has one deliberately narrow renderer mapping: an explicitly
-selected pack may provide `millennium.dos.title.png-640x400` for the English
-Millennium DOS P00 title only. It must be a bounded (at most 8 MiB), exact
-640x400, 8-bit RGBA PNG and remains Modern-only. Eon revalidates the manifest,
+selected pack may provide `millennium.dos.title.png-640x400` or the preferred
+4× `millennium.dos.title.png-1280x800` for the English Millennium DOS P00
+title only. Each is a bounded (at most 8 MiB), exact 8-bit RGBA PNG and
+remains Modern-only. Eon revalidates the manifest,
 release binding and file hash immediately before decoding the in-memory bytes
 with SDL_image, then uploads only a transient texture. No pack can affect
 saves, input, simulation, Original rendering, or original media. The precise
@@ -536,8 +537,11 @@ and remains outside the current non-executing recovery.
 The live Millennium Atari bootstrap session executes only the two proven
 in-memory copies from `MILENIUM.TOS`, materializing the original 514-byte
 target at `$77000`, then reaches the literal `Fopen` request above. It resolves
-the same read-only FAT12 entry and stops before `TRAP #1`: no host file handle,
-D0 result, config execution, or Atari display state is fabricated.
+the same read-only FAT12 entry and retains its independently verified candidate
+entry plus the explicit 34-byte Fread/load-address disagreement for diagnostics.
+That source read is never represented as a native Fread buffer. The session
+stops before `TRAP #1`: no host file handle, D0 result, config execution, or
+Atari display state is fabricated.
 The SDL launcher creates this bounded session only for the exact identified
 Equinox image when the Atari ST Millennium card or CLI target is selected; it
 does not reuse the DOS title flow for that platform.

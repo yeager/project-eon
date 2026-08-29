@@ -47,6 +47,10 @@ struct ModernAssetPackValidation {
 struct ModernAssetPackPngSurface {
     std::string pack_id;
     std::string provenance;
+    // The exact, documented renderer target selected from the manifest. It
+    // exists for visible Modern provenance, never as an original resource
+    // name or instruction to alter game state.
+    std::string asset_id;
     std::uint32_t width = 0;
     std::uint32_t height = 0;
     std::vector<std::uint8_t> png;

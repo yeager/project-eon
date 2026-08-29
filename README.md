@@ -55,8 +55,10 @@ future lawful high-resolution art layers. A user may place a pack below a
 separate, user-selected Modern-pack root; its `pack.eonmodern` manifest is
 bound to one exact recognised source-release SHA-256 and verifies every asset
 by path, byte length, and SHA-256. Discovery is read-only and non-recursive.
-At present Eon validates and reports eligibility only: it does not ship a
-pack, select an asset automatically, decode pack art, or change game logic,
+Eon currently renders only a deliberately bounded mapping: an explicitly
+selected, reverified pack may replace the recovered English Millennium DOS P00
+title in Modern mode with an independently supplied 640×400 or 1280×800 RGBA
+PNG. It never ships a pack, automatically selects one, or changes game logic,
 saves, or supplied media. See `docs/MODERN_ASSET_PACK_FORMAT.md`.
 
 ## Original game data

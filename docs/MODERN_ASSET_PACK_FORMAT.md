@@ -72,22 +72,29 @@ SHA-256 match the manifest at validation time.
 
 ## Current renderer mapping
 
-The only v1 runtime target is deliberately fixed and opt-in:
+The only v1 runtime mapping is deliberately narrow and opt-in. It has two
+fixed resolutions for the same recovered title target; Eon chooses the higher
+available verified target deterministically:
 
 ```text
 asset	millennium.dos.title.png-640x400 title.png <size> <sha256>
+asset	millennium.dos.title.png-1280x800 title-4x.png <size> <sha256>
 ```
 
 It is eligible only for the English Millennium DOS release selected by the
 launch and only with `--game millennium --platform dos --presentation modern
---modern-pack /absolute/or/explicit/pack.eonmodern`. The file must be a
-non-empty RGBA PNG, exactly 640×400 pixels (IHDR bit depth 8, colour type 6),
-and no more than 8 MiB. After normal manifest admission, Eon reads the file
-again, hashes the exact in-memory bytes, validates the constrained PNG header,
-and asks SDL_image to decode those bytes from memory. SDL_image failure or a
-post-decode dimension mismatch rejects the external surface. It is displayed
-only as the Modern replacement for the recovered English P00 title; Original
-always uses the recovered original pixels.
+--modern-pack /absolute/or/explicit/pack.eonmodern`. Each file must be a
+non-empty RGBA PNG, exactly its identifier's 640×400 or 1280×800 dimensions
+(IHDR bit depth 8, colour type 6), and no more than 8 MiB. A 1280×800 asset is
+preferred when both are declared, so a pack can offer a genuine 4× redraw
+without any filename-based override rule. After normal manifest admission,
+Eon reads the selected file again, hashes the exact in-memory bytes, validates
+the PNG signature, terminal IEND, consecutive IDAT sequence and constrained
+IHDR, and asks SDL_image to decode those bytes from memory. SDL_image failure
+or a post-decode dimension mismatch rejects the external surface. It is
+displayed only as the Modern replacement for the recovered English P00 title;
+Original always uses the recovered original pixels. The runtime label displays
+the active pack identity, dimensions, and declared provenance.
 
 This mapping does not infer original behavior, alter game logic, save data, or
 original media. It creates no cache or extracted output. Other asset IDs remain
