@@ -218,10 +218,11 @@ jobs:
           # fallbacks are not available to an installed application.
           for required in \
             "$APP/Contents/MacOS/assets/cards/millennium.png" \
-            "$APP/Contents/MacOS/assets/cards/deuteros.png" \
-            "$APP/Contents/Resources/po/sv.po" \
-            "$APP/Contents/Resources/po/en_GB.po"; do
+            "$APP/Contents/MacOS/assets/cards/deuteros.png"; do
             test -f "$required"
+          done
+          for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
+            test -f "$APP/Contents/Resources/po/$catalog.po"
           done
           if find "$APP" -type d -name data -print -quit | grep -q . \
               || find "$APP" -type f \( -iname '*.zip' -o -iname '*.adf' -o -iname '*.adz' \
@@ -235,10 +236,11 @@ jobs:
           listing=$(unzip -Z1 "project-eon-macos-${{ matrix.arch }}.zip")
           for required in \
             "ProjectEon.app/Contents/MacOS/assets/cards/millennium.png" \
-            "ProjectEon.app/Contents/MacOS/assets/cards/deuteros.png" \
-            "ProjectEon.app/Contents/Resources/po/sv.po" \
-            "ProjectEon.app/Contents/Resources/po/en_GB.po"; do
+            "ProjectEon.app/Contents/MacOS/assets/cards/deuteros.png"; do
             printf '%s\n' "$listing" | grep -Fxq "$required"
+          done
+          for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
+            printf '%s\n' "$listing" | grep -Fxq "ProjectEon.app/Contents/Resources/po/$catalog.po"
           done
       - uses: actions/upload-artifact@v7
         with:
@@ -289,7 +291,9 @@ jobs:
           # Validate the exact staging tree supplied to Inno Setup. In
           # particular, SDL3_image is linked against the shared libpng built
           # above, so that DLL must reach the installer as well.
-          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "po/sv.po", "po/en_GB.po")
+          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png")
+          $catalogs = @("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
+          foreach ($catalog in $catalogs) { $required += "po/$catalog.po" }
           foreach ($path in $required) {
             if (-not (Test-Path (Join-Path dist $path))) {
               throw "Windows package stage lacks required resource: $path"

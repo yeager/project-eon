@@ -9,6 +9,8 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "packaging" / "ios" / "package-ipa.sh"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
+CATALOGS = ("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl",
+            "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
 
 
 @unittest.skipUnless(os.name != "nt" and shutil.which("bash") and shutil.which("unzip"),
@@ -41,7 +43,7 @@ class IosPackagingTests(unittest.TestCase):
             (app / "ProjectEon").touch()
             for resource in ("Resources/assets/cards/millennium.png",
                              "Resources/assets/cards/deuteros.png",
-                             "Resources/po/sv.po", "Resources/po/en_GB.po"):
+                             *(f"Resources/po/{catalog}.po" for catalog in CATALOGS)):
                 path = app / resource
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.touch()
@@ -53,6 +55,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("Payload/ProjectEon.app/ProjectEon", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/millennium.png", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/sv.po", listing)
+            self.assertIn("Payload/ProjectEon.app/Resources/po/zh_CN.po", listing)
 
     def test_rejects_incomplete_bundle(self):
         with tempfile.TemporaryDirectory() as temporary:

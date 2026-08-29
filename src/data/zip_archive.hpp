@@ -24,6 +24,7 @@ enum class AssetKind {
 
 struct ZipEntry {
     std::string name;
+    std::uint16_t flags = 0;
     std::uint16_t method = 0;
     std::uint32_t crc32 = 0;
     std::uint32_t compressed_size = 0;

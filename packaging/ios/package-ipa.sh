@@ -17,9 +17,14 @@ if find "$app" -type d -name data -print -quit | grep -q . \
 fi
 for required in \
   Resources/assets/cards/millennium.png \
-  Resources/assets/cards/deuteros.png \
-  Resources/po/sv.po \
-  Resources/po/en_GB.po; do
+  Resources/assets/cards/deuteros.png; do
+  if [ ! -f "$app/$required" ]; then
+    echo "refusing to package incomplete iPad application: missing $required" >&2
+    exit 1
+  fi
+done
+for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
+  required="Resources/po/$catalog.po"
   if [ ! -f "$app/$required" ]; then
     echo "refusing to package incomplete iPad application: missing $required" >&2
     exit 1
@@ -32,9 +37,14 @@ cp -R "$app" "$stage/Payload/ProjectEon.app"
 unzip -tq "$ipa" >/dev/null
 for required in \
   Payload/ProjectEon.app/Resources/assets/cards/millennium.png \
-  Payload/ProjectEon.app/Resources/assets/cards/deuteros.png \
-  Payload/ProjectEon.app/Resources/po/sv.po \
-  Payload/ProjectEon.app/Resources/po/en_GB.po; do
+  Payload/ProjectEon.app/Resources/assets/cards/deuteros.png; do
+  if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
+    echo "IPA validation failed: missing $required" >&2
+    exit 1
+  fi
+done
+for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
+  required="Payload/ProjectEon.app/Resources/po/$catalog.po"
   if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
     echo "IPA validation failed: missing $required" >&2
     exit 1

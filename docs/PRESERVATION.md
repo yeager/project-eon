@@ -55,6 +55,12 @@ dumps are preferred as semantic baselines.
 
 - Nested ZIP parsing validates ranges, Deflate completion, output size, CRC-32,
   and SHA-256 before classification.
+- ZIP parsing additionally rejects multi-disk/ZIP64 archives, encrypted
+  entries, inconsistent central-directory extent, and local-header method,
+  flag, filename, size, or CRC disagreement. For data-descriptor entries,
+  central-directory CRC and sizes are authoritative because local fields may
+  be placeholders; non-descriptor local values must match. These checks are
+  applied before recursively reading any DOS, Amiga, or Atari ST leaf bytes.
 - DOS and Atari ST media use a native read-only FAT12 reader with validated
   geometry, bounded cluster chains, loop detection, and directory parsing.
 - Standard Amiga ADF geometry is 80 cylinders × 2 sides × 11 sectors × 512
@@ -1726,6 +1732,15 @@ above `$24` by `$18`. Its caller then adds one and calls resource loader
 `$1712`. This establishes only a bounded potential resource index path; the
 state word, accumulator, loaded byte, destination buffers and all resulting
 rendering remain unknown.
+
+`$1712` is a local index-to-buffer setup routine, not a recovered renderer. It
+zero-extends the selected byte, multiplies it by `$0170`, and stores the word
+at `$1341`. It then consumes one 4-byte entry from the fixed 15-entry original
+table `$1768..$17a3` (SHA-256
+`9c40c1fa63248237383703aa0aaf6659630e8d4fb48bc6ddd1c633ed4d26846f`), copies
+its two words to local cells, and calls private INT 91 wrapper `$0122` with
+AX=`$0006`. This proves original offset setup and table identity only—not a
+resource name, visual coordinates, blit ABI, or visible pixel result.
 
 The supplied driver images add one ABI-independent local fact for that exact
 function number. In both hash-identified `EGA640.BIN` (dispatch target `$0d37`)

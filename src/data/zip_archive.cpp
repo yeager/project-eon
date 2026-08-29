@@ -116,12 +116,21 @@ ZipArchive::ZipArchive(std::vector<std::uint8_t> bytes) : bytes_(std::move(bytes
         if (offset == search_start) break;
     }
     if (end_offset == std::numeric_limits<std::size_t>::max()) throw std::runtime_error("ZIP EOCD not found");
+    if (little16(bytes_, end_offset + 4) != 0 || little16(bytes_, end_offset + 6) != 0
+        || little16(bytes_, end_offset + 8) != little16(bytes_, end_offset + 10)) {
+        throw std::runtime_error("Multi-disk ZIP archives are unsupported");
+    }
     const auto entry_count = little16(bytes_, end_offset + 10);
     const auto central_size = little32(bytes_, end_offset + 12);
     auto offset = static_cast<std::size_t>(little32(bytes_, end_offset + 16));
+    if (entry_count == 0xffffU || central_size == 0xffffffffU
+        || offset == 0xffffffffU) {
+        throw std::runtime_error("ZIP64 archives are unsupported");
+    }
     if (offset > bytes_.size() || central_size > bytes_.size() - offset) {
         throw std::runtime_error("ZIP central directory outside archive");
     }
+    const auto central_end = offset + central_size;
     entries_.reserve(entry_count);
     for (std::uint16_t index = 0; index < entry_count; ++index) {
         if (offset > bytes_.size() || bytes_.size() - offset < 46
@@ -135,10 +144,13 @@ ZipArchive::ZipArchive(std::vector<std::uint8_t> bytes) : bytes_(std::move(bytes
         if (record_size > bytes_.size() - offset || name_length == 0 || name_length > 4096) {
             throw std::runtime_error("Unsafe ZIP entry metadata");
         }
+        const auto flags = little16(bytes_, offset + 8);
+        if ((flags & 0x0001U) != 0) throw std::runtime_error("Encrypted ZIP entries are unsupported");
         const auto name_begin = bytes_.begin() + static_cast<std::ptrdiff_t>(offset + 46);
         std::string name(name_begin, name_begin + name_length);
         ZipEntry entry{
             std::move(name),
+            flags,
             little16(bytes_, offset + 10),
             little32(bytes_, offset + 16),
             little32(bytes_, offset + 20),
@@ -153,6 +165,7 @@ ZipArchive::ZipArchive(std::vector<std::uint8_t> bytes) : bytes_(std::move(bytes
         entries_.push_back(std::move(entry));
         offset += record_size;
     }
+    if (offset != central_end) throw std::runtime_error("ZIP central directory size mismatch");
 }
 
 ZipArchive ZipArchive::open(const std::filesystem::path& path) {
@@ -175,8 +188,32 @@ std::vector<std::uint8_t> ZipArchive::extract(const ZipEntry& entry) const {
         || little32(bytes_, offset) != local_signature) {
         throw std::runtime_error("Invalid ZIP local entry");
     }
+    if (little16(bytes_, offset + 6) != entry.flags || little16(bytes_, offset + 8) != entry.method) {
+        throw std::runtime_error("ZIP local entry disagrees with central directory");
+    }
     const auto name_length = little16(bytes_, offset + 26);
     const auto extra_length = little16(bytes_, offset + 28);
+    if (name_length > bytes_.size() - offset - 30U
+        || extra_length > bytes_.size() - offset - 30U - name_length) {
+        throw std::runtime_error("ZIP local entry metadata outside archive");
+    }
+    const auto local_name = std::string_view(
+        reinterpret_cast<const char*>(bytes_.data() + offset + 30U), name_length);
+    if (local_name != entry.name) throw std::runtime_error("ZIP local filename mismatch");
+    const auto local_crc32 = little32(bytes_, offset + 14);
+    const auto local_compressed_size = little32(bytes_, offset + 18);
+    const auto local_uncompressed_size = little32(bytes_, offset + 22);
+    const bool has_data_descriptor = (entry.flags & 0x0008U) != 0;
+    // Bit 3 delegates these values to a trailing data descriptor. Some
+    // original archives retain provisional local values, so only the central
+    // directory is authoritative in that case; extraction still verifies its
+    // central-directory CRC against the decoded payload below.
+    if (!has_data_descriptor) {
+        if (local_crc32 != entry.crc32 || local_compressed_size != entry.compressed_size
+            || local_uncompressed_size != entry.uncompressed_size) {
+            throw std::runtime_error("ZIP local size or CRC mismatch");
+        }
+    }
     const auto data_offset = offset + 30U + name_length + extra_length;
     if (data_offset > bytes_.size() || entry.compressed_size > bytes_.size() - data_offset) {
         throw std::runtime_error("ZIP payload outside archive");

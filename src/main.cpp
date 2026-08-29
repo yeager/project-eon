@@ -1910,7 +1910,12 @@ int main(int argc, char** argv) {
             }
             if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                 && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
-                if (screen == Screen::launching && !request.game) screen = Screen::menu;
+                // Keep the renderer-only popup modal for every input device.
+                // In particular, Back must not unexpectedly leave the menu
+                // while its keyboard equivalent (Escape) merely closes this
+                // accessibility/presentation control.
+                if (show_modern_graphics_settings) show_modern_graphics_settings = false;
+                else if (screen == Screen::launching && !request.game) screen = Screen::menu;
                 else running = false;
             }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
@@ -1932,6 +1937,25 @@ int main(int argc, char** argv) {
                     modern_graphics_settings.focused_option =
                         (modern_graphics_settings.focused_option + 1) % 3;
                 } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
+                    switch (modern_graphics_settings.focused_option) {
+                    case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
+                    case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
+                    default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+                    }
+                }
+            }
+            if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && show_modern_graphics_settings) {
+                // Match the keyboard-only renderer controls with the standard
+                // directional pad. These values remain SDL presentation state
+                // and are never forwarded as recovered game input.
+                if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
+                    modern_graphics_settings.focused_option =
+                        (modern_graphics_settings.focused_option + 2) % 3;
+                } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
+                    modern_graphics_settings.focused_option =
+                        (modern_graphics_settings.focused_option + 1) % 3;
+                } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
+                    || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
                     switch (modern_graphics_settings.focused_option) {
                     case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
                     case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
@@ -2002,7 +2026,8 @@ int main(int argc, char** argv) {
                     }
                 }
             }
-            if (screen == Screen::menu && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+            if (!show_modern_graphics_settings && screen == Screen::menu
+                && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
                 const auto button = event.gbutton.button;
                 if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
                     || button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {

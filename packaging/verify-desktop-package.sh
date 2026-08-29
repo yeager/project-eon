@@ -18,9 +18,18 @@ for package in "$@"; do
 
   # The generated cards and a catalog prove that the launcher can render and
   # localize after installation.  The original data directory stays absent.
-  for required in "assets/cards/millennium.png" "assets/cards/deuteros.png" "po/sv.po"; do
+  for required in "assets/cards/millennium.png" "assets/cards/deuteros.png"; do
     if ! printf '%s\n' "$contents" | grep -Fq "$required"; then
       echo "$package lacks required Project Eon resource: $required" >&2
+      exit 1
+    fi
+  done
+  # Every shipped UI language must remain usable after installation. Keep the
+  # list explicit and aligned with CMake/iPadOS packaging rather than treating
+  # one catalog as proof that a partial localization bundle is acceptable.
+  for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
+    if ! printf '%s\n' "$contents" | grep -Fq "po/$catalog.po"; then
+      echo "$package lacks Project Eon localization catalog: $catalog.po" >&2
       exit 1
     fi
   done

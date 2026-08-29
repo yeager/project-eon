@@ -101,6 +101,11 @@ the selection. During the recovered Deuteros Amiga opening, hold South/A for
 the same verified physical input signal as Space/Enter; it is not mapped to any
 invented title or gameplay action.
 
+Press F1 to switch the renderer between Original and Modern presentation. F10
+opens Modern graphics settings; Up/Down and Left/Right (or the gamepad D-pad)
+select and change its renderer-only options, while Escape or gamepad Back
+closes the panel. These controls never become original-game input mappings.
+
 ### Language
 
 The launcher UI is translated through the portable gettext-style catalogs in

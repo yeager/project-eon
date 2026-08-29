@@ -119,6 +119,64 @@ int main() {
         const auto british_catalog = eon::Translator::from_language("en_GB.UTF-8");
         assert(!british_catalog.empty());
     }
+    {
+        // A minimal stored ZIP anchors parser integrity checks without using
+        // synthetic game data. It has one empty entry named "a".
+        std::vector<std::uint8_t> zip;
+        const auto append16 = [&zip](const std::uint16_t value) {
+            zip.push_back(static_cast<std::uint8_t>(value & 0xffU));
+            zip.push_back(static_cast<std::uint8_t>(value >> 8U));
+        };
+        const auto append32 = [&append16](const std::uint32_t value) {
+            append16(static_cast<std::uint16_t>(value & 0xffffU));
+            append16(static_cast<std::uint16_t>(value >> 16U));
+        };
+        append32(0x04034b50U);
+        append16(20); append16(0); append16(0); append16(0); append16(0);
+        append32(0); append32(0); append32(0); append16(1); append16(0);
+        zip.push_back('a');
+        append32(0x02014b50U);
+        append16(20); append16(20); append16(0); append16(0); append16(0); append16(0);
+        append32(0); append32(0); append32(0); append16(1); append16(0); append16(0);
+        append16(0); append16(0); append32(0); append32(0);
+        zip.push_back('a');
+        append32(0x06054b50U);
+        append16(0); append16(0); append16(1); append16(1); append32(47); append32(31); append16(0);
+        const eon::ZipArchive valid_zip(zip);
+        assert(valid_zip.entries().size() == 1);
+        assert(valid_zip.extract(valid_zip.entries().front()).empty());
+
+        auto mismatched_local_name = zip;
+        mismatched_local_name[30] = 'b';
+        const eon::ZipArchive local_name_zip(std::move(mismatched_local_name));
+        bool rejected_local_name = false;
+        try {
+            static_cast<void>(local_name_zip.extract(local_name_zip.entries().front()));
+        } catch (const std::runtime_error&) {
+            rejected_local_name = true;
+        }
+        assert(rejected_local_name);
+
+        auto invalid_central_size = zip;
+        invalid_central_size[90] = 46;
+        bool rejected_central_size = false;
+        try {
+            static_cast<void>(eon::ZipArchive(std::move(invalid_central_size)));
+        } catch (const std::runtime_error&) {
+            rejected_central_size = true;
+        }
+        assert(rejected_central_size);
+
+        auto encrypted_entry = zip;
+        encrypted_entry[39] = 1;
+        bool rejected_encryption = false;
+        try {
+            static_cast<void>(eon::ZipArchive(std::move(encrypted_entry)));
+        } catch (const std::runtime_error&) {
+            rejected_encryption = true;
+        }
+        assert(rejected_encryption);
+    }
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
     if (data_directory.empty() || !std::filesystem::is_directory(data_directory)) {
         std::cout << "SKIP: configure -DEON_REAL_DATA_DIR=<original archive directory>\n";
@@ -896,6 +954,13 @@ int main() {
     assert(title_flow.input_exit_helper_selector_subtract == 0x18);
     assert(title_flow.input_exit_helper_resource_index_bias == 1);
     assert(title_flow.input_exit_helper_resource_loader_address == 0x1712);
+    assert(title_flow.input_exit_helper_patch_offset_builder_address == 0x1712);
+    assert(title_flow.input_exit_helper_patch_offset_stride == 0x170);
+    assert(title_flow.input_exit_helper_patch_offset_cell_address == 0x1341);
+    assert(title_flow.input_exit_helper_position_table_address == 0x1768);
+    assert(title_flow.input_exit_helper_position_count == 15);
+    assert(title_flow.input_exit_helper_position_stride == 4);
+    assert(title_flow.input_exit_helper_private_driver_function == 6);
     assert(title_flow.exit_code == 0);
     assert(title_flow.launcher_title_program_address == 0x68f);
     assert(title_flow.launcher_game_program_address == 0x69a);
