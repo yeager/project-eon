@@ -2109,6 +2109,10 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << " +0x" << state1_skipped_ascii.ascii_byte_count << std::dec << " ("
             << state1_skipped_ascii.printable_run_count << " printable runs), SHA-256 "
             << state1_skipped_ascii.ascii_sha256
+            << "; marker offsets +0x" << std::hex
+            << state1_skipped_ascii.presentation_marker_offset << "/+0x"
+            << state1_skipped_ascii.game_name_marker_offsets[0] << "/+0x"
+            << state1_skipped_ascii.game_name_marker_offsets[1] << std::dec
             << " (preservation metadata only; never rendered, translated, or interpreted)\n";
         const auto materialize_raw_range = [&disk1](const auto& plan) {
             std::vector<std::uint8_t> bytes;

@@ -1037,8 +1037,15 @@ parse_deuteros_atari_state1_skipped_ascii_block(
     constexpr std::array<std::uint8_t, 4> branch{{0x60, 0x00, 0x09, 0xc2}};
     constexpr std::size_t ascii_relative_offset = 0x4800a;
     constexpr std::size_t ascii_byte_count = 0x438;
+    constexpr std::size_t presentation_marker_offset = 0;
+    constexpr std::size_t marker_byte_count = 55;
+    constexpr std::array<std::size_t, 2> game_name_marker_offsets{{0x3c, 0x78}};
     constexpr auto ascii_sha256 =
         "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e";
+    constexpr auto presentation_marker_sha256 =
+        "785ebbc9d234032ee38c1cb5444ac1b5d46db21151ffad08d7b1898d6e6ce52a";
+    constexpr auto game_name_marker_sha256 =
+        "f0eb99896cde59d36a075e624092cbf02de3ce0d201ca3c5050c13f9c65720dc";
     if (state1.source_offset != 0x55800 || state1.destination != 0xb000
         || state1.byte_count != 0x5e400 || state1_bytes.size() != state1.byte_count
         || ascii_relative_offset > state1_bytes.size()
@@ -1048,10 +1055,18 @@ parse_deuteros_atari_state1_skipped_ascii_block(
     require_bytes(state1_bytes, branch_relative_offset, branch,
         "Unexpected Deuteros Atari ST state-1 skip branch");
     const auto ascii = state1_bytes.subspan(ascii_relative_offset, ascii_byte_count);
-    if (to_hex(sha256(ascii)) != ascii_sha256) {
+    if (to_hex(sha256(ascii)) != ascii_sha256
+        || to_hex(sha256(ascii.subspan(presentation_marker_offset, marker_byte_count)))
+            != presentation_marker_sha256
+        || to_hex(sha256(ascii.subspan(game_name_marker_offsets[0], marker_byte_count)))
+            != game_name_marker_sha256
+        || to_hex(sha256(ascii.subspan(game_name_marker_offsets[1], marker_byte_count)))
+            != game_name_marker_sha256) {
         throw std::runtime_error("Unexpected Deuteros Atari ST state-1 skipped ASCII block");
     }
     return {branch_relative_offset, 0x09c2, ascii_relative_offset, ascii_byte_count, 18,
+        presentation_marker_offset, marker_byte_count, std::string(presentation_marker_sha256),
+        game_name_marker_offsets, marker_byte_count, std::string(game_name_marker_sha256),
         ascii_sha256};
 }
 

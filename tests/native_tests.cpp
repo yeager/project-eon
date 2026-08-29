@@ -4778,6 +4778,15 @@ int main() {
     assert(deuteros_state1_skipped_ascii.ascii_relative_offset == 0x4800a);
     assert(deuteros_state1_skipped_ascii.ascii_byte_count == 0x438);
     assert(deuteros_state1_skipped_ascii.printable_run_count == 18);
+    assert(deuteros_state1_skipped_ascii.presentation_marker_offset == 0);
+    assert(deuteros_state1_skipped_ascii.presentation_marker_byte_count == 55);
+    assert(deuteros_state1_skipped_ascii.presentation_marker_sha256
+        == "785ebbc9d234032ee38c1cb5444ac1b5d46db21151ffad08d7b1898d6e6ce52a");
+    assert((deuteros_state1_skipped_ascii.game_name_marker_offsets
+        == std::array<std::size_t, 2>{{0x3c, 0x78}}));
+    assert(deuteros_state1_skipped_ascii.game_name_marker_byte_count == 55);
+    assert(deuteros_state1_skipped_ascii.game_name_marker_sha256
+        == "f0eb99896cde59d36a075e624092cbf02de3ce0d201ca3c5050c13f9c65720dc");
     assert(deuteros_state1_skipped_ascii.ascii_sha256
         == "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e");
     {
