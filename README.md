@@ -90,9 +90,14 @@ Start the graphical card menu:
 ./build/project-eon
 ```
 
-In the card menu, Left/Right selects a game and Up/Down selects one of that
-game's hash-verified original platforms. The selected platform is carried into
-the launch request: the menu never substitutes a different platform's media.
+In the card menu, Tab and Shift+Tab move the keyboard focus between game cards,
+the platform control, and Start; the gold outline always identifies that focus.
+With the game-card control focused, Left/Right selects a game. With the
+platform control focused, the arrow keys select one of that game's
+hash-verified original platforms; Home/End chooses the first/last card or
+platform in the focused control. Enter or Space starts the selected original
+release from any launcher control. The selected platform is carried into the
+launch request: the menu never substitutes a different platform's media.
 When changing card, the platform is retained only if it is verified for the
 newly focused game; otherwise the menu selects that game's first verified
 platform. A card without a verified platform remains unavailable.
@@ -107,7 +112,9 @@ invented title or gameplay action.
 Press F1 to switch the renderer between Original and Modern presentation. F10
 opens Modern graphics settings; Up/Down and Left/Right (or the gamepad D-pad)
 select and change its renderer-only options, while Escape or gamepad Back
-closes the panel. These controls never become original-game input mappings.
+closes the panel. The panel is input-modal: it consumes all other keyboard and
+gamepad controls, so no launcher command or recovered original-game signal can
+be sent behind it. These controls never become original-game input mappings.
 
 ### Language
 

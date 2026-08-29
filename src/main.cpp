@@ -53,6 +53,10 @@
 namespace {
 
 enum class Screen { menu, launching };
+// The launcher has three independently reachable controls.  Keep this host
+// focus separate from a recovered game input state: it only determines which
+// read-only launch request control receives a keyboard command.
+enum class MenuFocus { cards, platform, start };
 
 const eon::Translator* active_translator = nullptr;
 std::unique_ptr<eon::UnicodeTextRenderer> active_text_renderer;
@@ -1985,6 +1989,7 @@ int main(int argc, char** argv) {
     Screen screen = request.game ? Screen::launching : Screen::menu;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     int focused = 0;
+    MenuFocus menu_focus = MenuFocus::cards;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
     std::optional<std::uint32_t> deuteros_title_resource;
@@ -2005,6 +2010,43 @@ int main(int argc, char** argv) {
         if (next_platform != active_platform) {
             active_platform = next_platform;
             discard_millennium_assets();
+        }
+    };
+    const auto change_menu_platform = [&](const int direction) {
+        if (request.platform) return;
+        const auto game = cards[static_cast<std::size_t>(focused)].game;
+        const auto platforms = menu_platforms_for(game);
+        if (platforms.empty()) return;
+        const auto current = std::find(platforms.begin(), platforms.end(), active_platform);
+        const auto index = current == platforms.end()
+            ? 0U : static_cast<unsigned>(std::distance(platforms.begin(), current));
+        const auto next = direction < 0
+            ? (index + platforms.size() - 1U) % platforms.size()
+            : (index + 1U) % platforms.size();
+        if (!active_platform || *active_platform != platforms[next]) {
+            active_platform = platforms[next];
+            discard_millennium_assets();
+        }
+    };
+    const auto select_menu_platform_endpoint = [&](const bool last) {
+        if (request.platform) return;
+        const auto platforms = menu_platforms_for(cards[static_cast<std::size_t>(focused)].game);
+        if (platforms.empty()) return;
+        const auto platform = platforms[last ? platforms.size() - 1U : 0U];
+        if (!active_platform || *active_platform != platform) {
+            active_platform = platform;
+            discard_millennium_assets();
+        }
+    };
+    const auto advance_menu_focus = [&](const int direction) {
+        // Do not stop the keyboard on a platform control which has no
+        // verified release to select.  A CLI-fixed platform is also not a
+        // launcher-editable control.
+        for (int attempts = 0; attempts < 3; ++attempts) {
+            const auto raw = (static_cast<int>(menu_focus) + direction + 3) % 3;
+            menu_focus = static_cast<MenuFocus>(raw);
+            if (menu_focus != MenuFocus::platform || request.platform
+                || !menu_platforms_for(cards[static_cast<std::size_t>(focused)].game).empty()) return;
         }
     };
     const auto start_millennium_title = [&] {
@@ -2039,67 +2081,66 @@ int main(int argc, char** argv) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) running = false;
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE
-                && show_modern_graphics_settings) {
-                show_modern_graphics_settings = false;
-            } else if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
-                if (screen == Screen::launching && !request.game) screen = Screen::menu;
-                else running = false;
-            }
-            if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
-                && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
-                // Keep the renderer-only popup modal for every input device.
-                // In particular, Back must not unexpectedly leave the menu
-                // while its keyboard equivalent (Escape) merely closes this
-                // accessibility/presentation control.
-                if (show_modern_graphics_settings) show_modern_graphics_settings = false;
-                else if (screen == Screen::launching && !request.game) screen = Screen::menu;
-                else running = false;
-            }
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
-                request.presentation = request.presentation == eon::Presentation::original
-                    ? eon::Presentation::modern : eon::Presentation::original;
-            }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
                 // F10 is consumed by Project Eon's renderer chrome, never by
                 // original DOS/Amiga input. It is available now and remains
                 // the future in-game modern-presentation entry point.
                 request.presentation = eon::Presentation::modern;
                 show_modern_graphics_settings = !show_modern_graphics_settings;
+                continue;
             }
-            if (event.type == SDL_EVENT_KEY_DOWN && show_modern_graphics_settings && !event.key.repeat) {
-                if (event.key.key == SDLK_UP) {
-                    modern_graphics_settings.focused_option =
-                        (modern_graphics_settings.focused_option + 2) % 3;
-                } else if (event.key.key == SDLK_DOWN) {
-                    modern_graphics_settings.focused_option =
-                        (modern_graphics_settings.focused_option + 1) % 3;
-                } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
-                    switch (modern_graphics_settings.focused_option) {
-                    case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
-                    case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
-                    default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+            if (show_modern_graphics_settings) {
+                // This renderer-only dialog is a real input boundary. In
+                // particular, Space, Enter and South/A must not leak into a
+                // recovered opening or DOS availability poll behind it.
+                if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+                    if (event.key.key == SDLK_ESCAPE) {
+                        show_modern_graphics_settings = false;
+                    } else if (event.key.key == SDLK_UP) {
+                        modern_graphics_settings.focused_option =
+                            (modern_graphics_settings.focused_option + 2) % 3;
+                    } else if (event.key.key == SDLK_DOWN) {
+                        modern_graphics_settings.focused_option =
+                            (modern_graphics_settings.focused_option + 1) % 3;
+                    } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
+                        switch (modern_graphics_settings.focused_option) {
+                        case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
+                        case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
+                        default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+                        }
+                    }
+                } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+                    if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
+                        show_modern_graphics_settings = false;
+                    } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
+                        modern_graphics_settings.focused_option =
+                            (modern_graphics_settings.focused_option + 2) % 3;
+                    } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
+                        modern_graphics_settings.focused_option =
+                            (modern_graphics_settings.focused_option + 1) % 3;
+                    } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
+                        || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+                        switch (modern_graphics_settings.focused_option) {
+                        case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
+                        case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
+                        default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+                        }
                     }
                 }
+                continue;
             }
-            if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN && show_modern_graphics_settings) {
-                // Match the keyboard-only renderer controls with the standard
-                // directional pad. These values remain SDL presentation state
-                // and are never forwarded as recovered game input.
-                if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
-                    modern_graphics_settings.focused_option =
-                        (modern_graphics_settings.focused_option + 2) % 3;
-                } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
-                    modern_graphics_settings.focused_option =
-                        (modern_graphics_settings.focused_option + 1) % 3;
-                } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
-                    || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
-                    switch (modern_graphics_settings.focused_option) {
-                    case 0: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
-                    case 1: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
-                    default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
-                    }
-                }
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
+                if (screen == Screen::launching && !request.game) screen = Screen::menu;
+                else running = false;
+            }
+            if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
+                && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
+                if (screen == Screen::launching && !request.game) screen = Screen::menu;
+                else running = false;
+            }
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F1 && !event.key.repeat) {
+                request.presentation = request.presentation == eon::Presentation::original
+                    ? eon::Presentation::modern : eon::Presentation::original;
             }
             if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
                 && screen == Screen::launching && selected == eon::Game::millennium
@@ -2131,32 +2172,30 @@ int main(int argc, char** argv) {
                 // manufacture a title or gameplay action.
                 deuteros_input_pressed = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
             }
-            if (!show_modern_graphics_settings && screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
+            if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) {
                 show_scanner = !show_scanner;
             }
-            if (!show_modern_graphics_settings && screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN) {
-                if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
-                    focus_menu_card(1 - focused);
-                }
-                if (!request.platform
-                    && (event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
-                    const auto game = cards[static_cast<std::size_t>(focused)].game;
-                    const auto platforms = menu_platforms_for(game);
-                    if (!platforms.empty()) {
-                        const auto current = std::find(platforms.begin(), platforms.end(), active_platform);
-                        const auto index = current == platforms.end()
-                            ? 0U : static_cast<unsigned>(std::distance(platforms.begin(), current));
-                        const auto next = event.key.key == SDLK_UP
-                            ? (index + platforms.size() - 1U) % platforms.size()
-                            : (index + 1U) % platforms.size();
-                        if (!active_platform || *active_platform != platforms[next]) {
-                            active_platform = platforms[next];
-                            discard_millennium_assets();
-                        }
+            if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+                if (event.key.key == SDLK_TAB) {
+                    advance_menu_focus((event.key.mod & SDL_KMOD_SHIFT) ? -1 : 1);
+                } else if (event.key.key == SDLK_HOME) {
+                    if (menu_focus == MenuFocus::cards) focus_menu_card(0);
+                    else if (menu_focus == MenuFocus::platform) select_menu_platform_endpoint(false);
+                } else if (event.key.key == SDLK_END) {
+                    if (menu_focus == MenuFocus::cards) {
+                        focus_menu_card(static_cast<int>(cards.size() - 1U));
+                    } else if (menu_focus == MenuFocus::platform) {
+                        select_menu_platform_endpoint(true);
                     }
-                }
-                if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
+                } else if (menu_focus == MenuFocus::cards
+                    && (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT)) {
+                    focus_menu_card(1 - focused);
+                } else if (menu_focus == MenuFocus::platform
+                    && (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT
+                        || event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
+                    change_menu_platform(event.key.key == SDLK_LEFT || event.key.key == SDLK_UP ? -1 : 1);
+                } else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
                     const auto game = cards[static_cast<std::size_t>(focused)].game;
                     if (eon::release_available(releases, game, active_platform)) {
                         selected = game;
@@ -2313,8 +2352,11 @@ int main(int argc, char** argv) {
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 185);
                 SDL_FRect label{card.bounds.x, card.bounds.y + card.bounds.h - 62, card.bounds.w, 62};
                 SDL_RenderFillRect(renderer, &label);
-                SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(focused) ? 255 : 130,
-                    index == static_cast<std::size_t>(focused) ? 195 : 150, 80, 255);
+                const bool selected_card = index == static_cast<std::size_t>(focused);
+                const bool card_has_keyboard_focus = selected_card && menu_focus == MenuFocus::cards;
+                SDL_SetRenderDrawColor(renderer, card_has_keyboard_focus ? 255 : selected_card ? 190 : 130,
+                    card_has_keyboard_focus ? 195 : selected_card ? 210 : 150,
+                    card_has_keyboard_focus ? 80 : selected_card ? 135 : 80, 255);
                 SDL_RenderRect(renderer, &card.bounds);
                 // Official game titles are immutable product identifiers, not
                 // launcher prose; all surrounding UI remains translated.
@@ -2325,6 +2367,12 @@ int main(int argc, char** argv) {
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
                     available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
                     ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
+            }
+            const SDL_FRect start_focus_bounds{56, 518, 276, 28};
+            const SDL_FRect platform_focus_bounds{56, 540, 780, 28};
+            if (menu_focus == MenuFocus::start) {
+                SDL_SetRenderDrawColor(renderer, 255, 195, 80, 255);
+                SDL_RenderRect(renderer, &start_focus_bounds);
             }
             draw_text(renderer, 64, 530, tr("ENTER / CLICK: START"));
             const auto focused_game = cards[static_cast<std::size_t>(focused)].game;
@@ -2342,6 +2390,10 @@ int main(int argc, char** argv) {
                     platform_text += eon::name(menu_platforms[index]);
                 }
                 platform_text += ')';
+            }
+            if (menu_focus == MenuFocus::platform) {
+                SDL_SetRenderDrawColor(renderer, 255, 195, 80, 255);
+                SDL_RenderRect(renderer, &platform_focus_bounds);
             }
             draw_text(renderer, 64, 552, platform_text);
             if (show_scanner) {

@@ -109,7 +109,13 @@ ZipArchive::ZipArchive(std::vector<std::uint8_t> bytes) : bytes_(std::move(bytes
     const auto search_start = bytes_.size() > 65'557 ? bytes_.size() - 65'557 : 0;
     std::size_t end_offset = std::numeric_limits<std::size_t>::max();
     for (std::size_t offset = bytes_.size() - 22;; --offset) {
-        if (little32(bytes_, offset) == end_signature) {
+        // The EOCD is allowed to have a comment, which may itself contain the
+        // four-byte EOCD signature.  Only accept a candidate whose declared
+        // comment reaches the physical end of this supplied byte stream.
+        // Without this check, a signature in a comment can be mistaken for an
+        // empty archive and silently hide the real central directory.
+        if (little32(bytes_, offset) == end_signature
+            && little16(bytes_, offset + 20) == bytes_.size() - offset - 22U) {
             end_offset = offset;
             break;
         }
@@ -127,10 +133,17 @@ ZipArchive::ZipArchive(std::vector<std::uint8_t> bytes) : bytes_(std::move(bytes
         || offset == 0xffffffffU) {
         throw std::runtime_error("ZIP64 archives are unsupported");
     }
-    if (offset > bytes_.size() || central_size > bytes_.size() - offset) {
+    if (offset > end_offset || central_size > end_offset - offset) {
         throw std::runtime_error("ZIP central directory outside archive");
     }
     const auto central_end = offset + central_size;
+    // ZIP64 and archive-extra-data records are deliberately unsupported.  In
+    // the supported classic layout, the central directory terminates at the
+    // EOCD, so it cannot overlap an EOCD comment or leave unauthenticated
+    // bytes between directory metadata and the end record.
+    if (central_end != end_offset) {
+        throw std::runtime_error("ZIP central directory does not end at EOCD");
+    }
     entries_.reserve(entry_count);
     for (std::uint16_t index = 0; index < entry_count; ++index) {
         if (offset > bytes_.size() || bytes_.size() - offset < 46
