@@ -282,3 +282,35 @@ msgstr ""
 #: src/main.cpp
 msgid "TUNE MODERN SETTINGS"
 msgstr ""
+
+#: src/main.cpp
+msgid "MILLENNIUM 2.2"
+msgstr ""
+
+#: src/main.cpp
+msgid "RETURN TO EARTH"
+msgstr ""
+
+#: src/main.cpp
+msgid "DEUTEROS"
+msgstr ""
+
+#: src/main.cpp
+msgid "THE NEXT MILLENNIUM"
+msgstr ""
+
+#: src/main.cpp
+msgid "DOS"
+msgstr ""
+
+#: src/main.cpp
+msgid "AMIGA"
+msgstr ""
+
+#: src/main.cpp
+msgid "ATARI ST"
+msgstr ""
+
+#: src/main.cpp
+msgid "UNKNOWN PLATFORM"
+msgstr ""

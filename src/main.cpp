@@ -174,6 +174,22 @@ void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
+// These are launcher labels, rather than names read from original media. Keep
+// the CLI/provenance names in game_data untouched: only rendered launcher UI
+// passes through the catalog.
+std::string_view launcher_game_label(const eon::Game game) {
+    return game == eon::Game::millennium ? "MILLENNIUM 2.2" : "DEUTEROS";
+}
+
+std::string_view launcher_platform_label(const eon::Platform platform) {
+    switch (platform) {
+    case eon::Platform::dos: return "DOS";
+    case eon::Platform::amiga: return "AMIGA";
+    case eon::Platform::atari_st: return "ATARI ST";
+    }
+    return "UNKNOWN PLATFORM";
+}
+
 // Modern presentation is deliberately renderer-only. It frames original
 // decoded surfaces and may derive a transient, opt-in in-memory Scale2x
 // texture from them; it neither changes an input, simulation, save byte, nor
@@ -1001,6 +1017,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto gx_overlay = eon::extract_verified_release_asset(release, gx_overlay_sha256);
     if (!gx_overlay) throw std::runtime_error("Verified Millennium DOS GX overlay missing");
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game);
+    const auto sound_effect_names = eon::parse_millennium_dos_sound_effect_name_table_evidence(*game);
+    std::cout << "          2200AD.EXE SFX name bank: " << sound_effect_names.filenames.size()
+        << " original VOC names at 0x" << std::hex << sound_effect_names.table_address
+        << " (SHA-256 " << sound_effect_names.table_sha256
+        << "; static only, no event mapping or playback)\n" << std::dec;
     const auto startup_allocation = eon::parse_millennium_dos_startup_allocation_boundary(*game);
     const auto startup_zero_path = eon::parse_millennium_dos_startup_zero_path_boundary(*game);
     const auto startup_zero_continuation =
@@ -3052,8 +3073,10 @@ int main(int argc, char** argv) {
                     if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
                     const bool available = eon::release_available(releases, card.game, std::nullopt);
                     draw_card_border(card.bounds, index == static_cast<std::size_t>(focused), available);
-                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, card.title);
-                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, card.subtitle);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45,
+                        tr(card.title));
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25,
+                        tr(card.subtitle));
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
                         available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
@@ -3073,7 +3096,8 @@ int main(int argc, char** argv) {
                     }
                     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
                     draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_platform_card), available);
-                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46, card.title);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46,
+                        tr(card.title));
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
                         available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
@@ -3108,9 +3132,9 @@ int main(int argc, char** argv) {
             }
         } else {
             draw_text(renderer, 64, 56, tr("LAUNCH REQUEST ACCEPTED"));
-            draw_text(renderer, 64, 92, tr("Game: ") + eon::name(selected));
+            draw_text(renderer, 64, 92, tr("Game: ") + tr(launcher_game_label(selected)));
             draw_text(renderer, 64, 116, tr("Platform: ")
-                + (active_platform ? eon::name(*active_platform) : tr("AUTO")));
+                + (active_platform ? tr(launcher_platform_label(*active_platform)) : tr("AUTO")));
             draw_text(renderer, 64, 136, modern ? tr("Presentation: Modern") : tr("Presentation: Original"));
             draw_text(renderer, 64, 156, tr("Original data is present and selected."));
             draw_text(renderer, 64, 180, tr("The simulation is incomplete; no synthetic substitute will run."));

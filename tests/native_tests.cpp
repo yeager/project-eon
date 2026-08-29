@@ -2050,6 +2050,23 @@ int main() {
         "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb");
     assert(game_executable && game_executable->size() == 54'391);
     assert(gx_overlay && gx_overlay->size() == 46'634);
+    const auto sound_effect_names = eon::parse_millennium_dos_sound_effect_name_table_evidence(
+        *game_executable);
+    assert(sound_effect_names.table_address == 0xcfdd && sound_effect_names.table_byte_count == 126);
+    assert(sound_effect_names.table_sha256
+        == "5bc252a34057b25239c81ce4ead178c294456e9af233bdd98d2d6f0f3cb4d008");
+    assert(sound_effect_names.filenames.front() == "SFX1.VOC");
+    assert(sound_effect_names.filenames.back() == "SFXE.VOC");
+    auto altered_sound_effect_names = *game_executable;
+    altered_sound_effect_names[0xcfdd - 0x100] = 'X';
+    bool rejected_sound_effect_names = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_sound_effect_name_table_evidence(
+            altered_sound_effect_names));
+    } catch (const std::runtime_error&) {
+        rejected_sound_effect_names = true;
+    }
+    assert(rejected_sound_effect_names);
     const auto gx_overlay_load = eon::parse_millennium_dos_gx_overlay_load_evidence(
         *game_executable, *gx_overlay);
     assert(gx_overlay_load.source_name_address == 0x11c2);

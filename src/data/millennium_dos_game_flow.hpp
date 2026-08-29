@@ -6,6 +6,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace eon {
@@ -964,6 +965,17 @@ struct MillenniumDosGxOverlayDispatch13Evidence {
     std::string span_sha256;
 };
 
+// Hash-locked source-level SFX resource-name bank in the English 2200AD.EXE.
+// It does not establish an event-to-index mapping, sound-driver ABI, timing,
+// or playback route.
+struct MillenniumDosSoundEffectNameTableEvidence {
+    std::string executable_sha256;
+    std::uint16_t table_address = 0;
+    std::size_t table_byte_count = 0;
+    std::string table_sha256;
+    std::array<std::string_view, 14> filenames{};
+};
+
 [[nodiscard]] MillenniumDosGxOverlayLoadEvidence
 parse_millennium_dos_gx_overlay_load_evidence(
     std::span<const std::uint8_t> game_executable,
@@ -993,6 +1005,9 @@ parse_millennium_dos_gx_overlay_startup_record_evidence(
 parse_millennium_dos_gx_overlay_dispatch13_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
     const MillenniumDosGxOverlayDispatcherEvidence& dispatcher);
+[[nodiscard]] MillenniumDosSoundEffectNameTableEvidence
+parse_millennium_dos_sound_effect_name_table_evidence(
+    std::span<const std::uint8_t> game_executable);
 
 // The English 2200AD.EXE startup's two local selector callees are bounded
 // independently from the broad main-loop profile.  Both retain the private
