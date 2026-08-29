@@ -2279,6 +2279,52 @@ parse_deuteros_amiga_title_post_exec_pointer_route_profile(
         std::string(caller_hash), std::string(routine_hash)};
 }
 
+DeuterosAmigaTitlePostExecPairedLocalRouteProfile
+parse_deuteros_amiga_title_post_exec_paired_local_route_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t first_caller = 0x4050a;
+    constexpr std::uint32_t entry = 0x41bb4;
+    constexpr std::string_view stage_hash = "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::array<std::string_view, 5> hashes{{
+        "ff1173e9ce1a06c3bc789122e2ee27b0a2b74aaeb8a832269f3e6a0a0475ec8a",
+        "d24863f099c973ddfd0f1567378d2a5e15b9753567fb3e6f71f75f19b10471c6",
+        "fba4dff4da954290d970f5ec129220c179a2ef73f010def6512401380b8640cc",
+        "765489ec36d727a326bfae44e34918cb85070d4ed3ef959cdcba9c41a102dd7e",
+        "96e344839df3e0fc7b2106541b7fea45de269e0c14e5d592a4ad3debbfe7448f",
+    }};
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](const std::uint32_t address, const std::size_t length) {
+        return stage.length != 0 && address >= stage.destination && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (!in_stage(first_caller, 20) || !in_stage(entry, 126) || !in_stage(0x41c32, 528)
+        || !in_stage(0x41eb0, 130)) throw std::runtime_error("Deuteros paired local route lies outside original stage");
+    const auto bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto span = [&](const std::uint32_t address, const std::size_t length) {
+        return bytes.subspan(address - stage.destination, length);
+    };
+    const auto callers = span(first_caller, 20);
+    const auto dispatcher = span(entry, 126);
+    const auto low = span(0x41c32, 528);
+    const auto high = span(0x41eb0, 130);
+    require_word(callers, 0, 0x303c); require_word(callers, 2, 0x004d);
+    require_word(callers, 4, 0x4eb9); require_long(callers, 6, entry);
+    require_word(callers, 10, 0x303c); require_word(callers, 12, 0x004e);
+    require_word(callers, 14, 0x4eb9); require_long(callers, 16, entry);
+    require_word(dispatcher, 0, 0x4bf9); require_long(dispatcher, 2, 0x0004129a);
+    require_word(dispatcher, 26, 0x0800); require_word(dispatcher, 28, 0x000f);
+    require_word(dispatcher, 30, 0x675e); require_word(dispatcher, 44, 0x4eb9);
+    require_long(dispatcher, 46, 0x00041c32); require_word(dispatcher, 122, 0x6000);
+    if (to_hex(sha256(bytes)) != stage_hash || to_hex(sha256(callers.subspan(0, 4))) != hashes[0]
+        || to_hex(sha256(callers.subspan(4, 6))) != hashes[1] || to_hex(sha256(dispatcher)) != hashes[2]
+        || to_hex(sha256(low)) != hashes[3] || to_hex(sha256(high)) != hashes[4])
+        throw std::runtime_error("Unsupported Deuteros paired local-route profile");
+    return {{{0x4050e, 0x40518}}, {{0x004d, 0x004e}}, {{0x40514, 0x4051e}}, entry,
+        0x4129a, 15, 0x41c32, 0x41c32, 0x41eb0, {{0x41d42, 0x41e40}}, 0x41d44,
+        0x41eb0, 0x41f30, {std::string(hashes[0]), std::string(hashes[1]), std::string(hashes[2]),
+            std::string(hashes[3]), std::string(hashes[4])}};
+}
+
 DeuterosAmigaTitlePostExecTailFlagGateProfile
 parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {

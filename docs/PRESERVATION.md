@@ -4450,6 +4450,22 @@ the caller and this whole region. It does not read either flag, choose a
 subroute, write the pointer cell or flags, enter either graphics wrapper, or
 assign a title/display meaning to the literals.
 
+The immediately following paired callers are independently bounded. `$4050a`
+loads D0 `$004d` then calls `$41bb4` at `$4050e`; `$40514` loads `$004e` then
+repeats the call at `$40518`. The respective four-byte literal spans hash to
+`ff1173e9ce1a06c3bc789122e2ee27b0a2b74aaeb8a832269f3e6a0a0475ec8a` and the
+identical six-byte calls hash to
+`d24863f099c973ddfd0f1567378d2a5e15b9753567fb3e6f71f75f19b10471c6`.
+The local dispatcher `$41bb4..$41c31`, low block `$41c32..$41e41`, and high
+continuation `$41eb0..$41f31` hash respectively to
+`fba4dff4da954290d970f5ec129220c179a2ef73f010def6512401380b8640cc`,
+`765489ec36d727a326bfae44e34918cb85070d4ed3ef959cdcba9c41a102dd7e`, and
+`96e344839df3e0fc7b2106541b7fea45de269e0c14e5d592a4ad3debbfe7448f`.
+It records table literal `$4129a`, bit 15, local target `$41c32`, continuation
+`$41eb0`, low-block return sites `$41d42`/`$41e40`, and RTS `$41f30`.
+`DeuterosAmigaTitlePostExecPairedLocalRouteProfile` never reads the table or
+cells, takes a branch, performs a copy/write, or assigns visual semantics.
+
 The next complete instruction starts at `$40616`, so
 `DeuterosAmigaTitlePostExecTailFlagGateProfile` deliberately overlaps the
 preceding span's final opcode word. Its 94-byte span `$40616..$40673` / ADF
