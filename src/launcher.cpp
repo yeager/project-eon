@@ -86,6 +86,7 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
         "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
         "               [--release-language en|es]\n"
+        "               [--inventory]\n"
         "               [--modern-packs <explicit-pack-root>]\n\n"
         "  project-eon --inspect-save <2200SAVE.I|verified Millennium DOS archive>\n\n"
 #if defined(__APPLE__) && TARGET_OS_IPHONE
@@ -107,6 +108,10 @@ ParseResult parse_command_line(int argc, char** argv) {
         if (argument == "--help" || argument == "-h") return {{}, {}, true};
         if (argument == "--inspect") {
             request.inspect_data = true;
+            continue;
+        }
+        if (argument == "--inventory") {
+            request.inventory_assets = true;
             continue;
         }
         if (index + 1 >= argc) return {{}, "Missing value for " + std::string(argument), false};
@@ -166,6 +171,9 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.verify_game && request.inspect_data) {
         return {{}, "--verify-data and --inspect cannot be combined", false};
+    }
+    if (request.inventory_assets && !request.inspect_data) {
+        return {{}, "--inventory requires --inspect; it is a read-only preservation report", false};
     }
     if (request.modern_pack_root && !request.inspect_data) {
         return {{}, "--modern-packs requires --inspect; it is diagnostics-only and never selects a renderer pack", false};

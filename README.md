@@ -223,6 +223,11 @@ Inspect every recognised original release in one read-only scan:
 ./build/project-eon --data "$HOME/Hämtningar" --inspect
 ```
 
+Add `--inventory` to an inspection for a bounded, hash-addressed manifest of
+the selected archive's nested original leaf assets. It is preservation
+diagnostics only: the archive is rehashed before the report and its leaves are
+read in memory, never unpacked, copied, or used as filename-based admission.
+
 Narrow that same non-SDL inspection to one requested original release when
 recording or comparing preservation evidence:
 
