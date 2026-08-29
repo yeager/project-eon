@@ -79,8 +79,8 @@ msgid "EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED"
 msgstr "निष्पादनयोग्य हस्तांतरण अभी पुनर्प्राप्त नहीं हुआ; किसी अंग्रेज़ी स्थिति को प्रतिस्थापित नहीं किया गया है"
 msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
 msgstr "प्रामाणिक DOS शीर्षक - P00 सूचकांक + VGA RGB6 DAC"
-msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
-msgstr "कोई भी कुंजी दबाएँ: मूल INT 21h/AH=06h शीर्षक हस्तांतरण"
+msgid "TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr "एक वर्ण टाइप करें: मूल INT 21h/AH=06h शीर्षक हस्तांतरण"
 msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
 msgstr "केवल पुनर्प्राप्त स्थितीय शब्द; अनुमानित गेम अर्थ नहीं"
 msgid "VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION"
@@ -144,6 +144,9 @@ msgstr "सेटिंग्स केवल SDL रेंडरिंग प�
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
 msgstr "ऊपर/नीचे: चुनें   बायाँ/दायाँ: बदलें   F10: बंद करें"
+
+msgid "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"
+msgstr "स्पर्श: बदलने के लिए पंक्ति टैप करें   बंद करने के लिए बाहर टैप करें"
 
 msgid "CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"
 msgstr "गेम कार्ड पर क्लिक करें या बायाँ/दायाँ दबाएँ, फिर एंटर दबाएँ"

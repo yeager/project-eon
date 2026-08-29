@@ -138,7 +138,7 @@ msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
 msgstr ""
 
 #: src/main.cpp
-msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgid "TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
 msgstr ""
 
 #: src/main.cpp
@@ -226,6 +226,9 @@ msgid "SETTINGS APPLY TO SDL RENDERING ONLY."
 msgstr ""
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
+msgstr ""
+
+msgid "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"
 msgstr ""
 
 msgid "OUTPUT RESOLUTION"

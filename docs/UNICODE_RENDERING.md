@@ -60,7 +60,8 @@ original in-game text, supplied game-media bytes, saved data, input, or
 preservation parsers. Original text remains the user's data and is not
 translated or replaced by the launcher.
 
-The F10 Modern graphics dialog is launcher chrome too, including its option
+The F10 Modern graphics dialog is launcher chrome too, including its keyboard,
+gamepad, and touch-control hints, and its option
 values and aspect-ratio labels. Its drawing function receives the selected
 `Translator` explicitly and resolves every visible label through the shipped
 PO catalogue before rendering. This keeps its settings legible in every

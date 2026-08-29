@@ -124,6 +124,7 @@ class CatalogTests(unittest.TestCase):
         labels = {
             "MODERN GRAPHICS SETTINGS",
             "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE",
+            "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE",
             "OUTPUT RESOLUTION", "ASPECT RATIO",
             "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
             "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",

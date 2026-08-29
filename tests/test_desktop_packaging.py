@@ -62,9 +62,12 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"', workflow)
         self.assertIn('Copy-Item assets/fonts dist/assets/fonts -Recurse', workflow)
         self.assertIn("refusing macOS artifact with possible original game data", workflow)
+        self.assertIn("-iname '*.hfe'", workflow)
+        self.assertIn("-iname '*.lzx'", workflow)
         self.assertIn("Windows package stage lacks libpng runtime DLL", workflow)
         self.assertIn("Windows package stage lacks zlib runtime DLL", workflow)
         self.assertIn("refusing Windows package stage with possible original game data", workflow)
+        self.assertIn("zip|adf|adz|dms|st|msa|stx|img|hfe|ipf|scp|ctr|lha|lzh|lzx|exe|com", workflow)
         self.assertIn("Verify installed Inno Setup package and runtime closure", workflow)
 
     def test_macos_bundle_closure_verifier_checks_rpaths_and_host_libraries(self) -> None:
