@@ -2201,6 +2201,20 @@ int main() {
     assert(atari_trap.fopen_result_test_offset == 22);
     assert(atari_trap.fopen_result_negative_branch_offset == 24);
     assert(atari_trap.fopen_result_negative_branch_target_offset == 24);
+    const auto atari_fopen_fallthrough = eon::parse_millennium_atari_fopen_fallthrough(
+        atari_target, atari_trap);
+    assert(atari_fopen_fallthrough.target_address == 0x77000);
+    assert(atari_fopen_fallthrough.entry_offset == 0x1a);
+    assert(atari_fopen_fallthrough.byte_count == 26);
+    assert(atari_fopen_fallthrough.sha256
+        == "663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0");
+    assert(atari_fopen_fallthrough.fread_buffer_address == 0x2a500);
+    assert(atari_fopen_fallthrough.fread_byte_count == 0x20000);
+    assert(atari_fopen_fallthrough.handle_push_opcode == 0x3f00);
+    assert(atari_fopen_fallthrough.fread_function == 0x3f);
+    assert(atari_fopen_fallthrough.fread_trap_offset == 0x2c);
+    assert(atari_fopen_fallthrough.stack_cleanup_opcode == 0xdffc);
+    assert(atari_fopen_fallthrough.stack_cleanup_bytes == 12);
     const auto atari_config = eon::probe_millennium_atari_config(atari_disk);
     assert(atari_config.requested_filename == "MILL22A.inf");
     assert(atari_config.root_entry_count == 13);
@@ -2218,6 +2232,8 @@ int main() {
     assert(atari_session.fopen_boundary().fopen_filename == "MILL22A.inf");
     assert(atari_session.fopen_boundary().fopen_access_mode == 2);
     assert(atari_session.fopen_boundary().fopen_function == 0x3d);
+    assert(atari_session.fopen_fallthrough().fread_function == 0x3f);
+    assert(atari_session.fopen_fallthrough().fread_buffer_address == 0x2a500);
     assert(atari_session.config().present);
     assert(atari_session.config().size == 7506);
     const auto atari_config_payload = atari_disk.read(*atari_disk.find("MILL22A.inf"));
@@ -2587,6 +2603,16 @@ int main() {
         invalid_atari_trap_rejected = true;
     }
     assert(invalid_atari_trap_rejected);
+    auto invalid_atari_fopen_fallthrough = atari_target;
+    invalid_atari_fopen_fallthrough.bytes[0x1a] ^= 0x01;
+    bool invalid_atari_fopen_fallthrough_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_fopen_fallthrough(
+            invalid_atari_fopen_fallthrough, atari_trap));
+    } catch (const std::runtime_error&) {
+        invalid_atari_fopen_fallthrough_rejected = true;
+    }
+    assert(invalid_atari_fopen_fallthrough_rejected);
     const auto atari_executable_bytes = atari_disk.read(*atari_executable);
     assert(std::equal(atari_bss_source.bytes.begin(), atari_bss_source.bytes.begin() + 0xbc,
         atari_executable_bytes.begin() + 28 + 0x117a));

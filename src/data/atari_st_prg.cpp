@@ -270,6 +270,40 @@ MillenniumAtariTrapEntry parse_millennium_atari_trap_entry(
     return result;
 }
 
+MillenniumAtariFopenFallthrough parse_millennium_atari_fopen_fallthrough(
+    const MillenniumAtariMaterializedTarget& target, const MillenniumAtariTrapEntry& trap) {
+    // The negative Fopen branch is self-referential at +$18. Its nonnegative
+    // fall-through begins at +$1a and pushes a literal buffer/count, the
+    // D0-owned handle word, and selector $3f before TRAP #1. ADDA.L #12,A7
+    // is retained as post-service stack cleanup only; no service result is
+    // read or emulated by this parser.
+    constexpr std::size_t entry_offset = 0x1a;
+    constexpr std::array<std::uint8_t, 26> entry_bytes{
+        0x2f, 0x3c, 0x00, 0x02, 0xa5, 0x00,
+        0x2f, 0x3c, 0x00, 0x02, 0x00, 0x00,
+        0x3f, 0x00, 0x3f, 0x3c, 0x00, 0x3f,
+        0x4e, 0x41, 0xdf, 0xfc, 0x00, 0x00, 0x00, 0x0c,
+    };
+    constexpr std::string_view expected_sha256 =
+        "663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0";
+    if (target.target_address == 0 || trap.target_address != target.target_address
+        || trap.fopen_result_negative_branch_offset != 0x18
+        || trap.fopen_result_negative_branch_target_offset != 0x18
+        || target.bytes.size() < entry_offset + entry_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(),
+            target.bytes.begin() + static_cast<std::ptrdiff_t>(entry_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fopen fall-through");
+    }
+    const auto bytes = std::span(target.bytes).subspan(entry_offset, entry_bytes.size());
+    const auto digest = to_hex(sha256(bytes));
+    if (digest != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fopen fall-through hash");
+    }
+    return {target.target_address, entry_offset, entry_bytes.size(), digest,
+        read_be32(bytes, 2), read_be32(bytes, 8), read_be16(bytes, 12), read_be16(bytes, 16),
+        entry_offset + 18U, read_be16(bytes, 20), read_be32(bytes, 22)};
+}
+
 MillenniumAtariConfigEvidence probe_millennium_atari_config(const Fat12Disk& disk) {
     constexpr std::string_view requested_filename = "MILL22A.inf";
     MillenniumAtariConfigEvidence result;

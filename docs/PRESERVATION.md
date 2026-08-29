@@ -208,6 +208,16 @@ no FAT12 pathname namespace to substitute. Project Eon reads a present entry
 only through its original cluster chain in memory, and never creates, changes,
 or falls back to a synthetic `.inf` file.
 
+The nonnegative fall-through after the self-loop is also byte-verified, but
+is not executed. At reconstructed target `+$1a`, 26 original bytes have
+SHA-256 `663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0`.
+They push literal buffer `$2a500`, count `$20000`, the OS-owned `D0` handle,
+and selector `$003f`, then issue `TRAP #1`; `ADDA.L #12,A7` immediately
+cleans the prepared arguments. `$003f` is the documented GEMDOS `Fread`
+interface. This proves only the static fall-through preparation: Project Eon
+does not decide whether `Fopen` succeeds, invoke either GEMDOS service,
+model a handle/result, or read/fill the target buffer.
+
 The live Millennium Atari bootstrap session executes only the two proven
 in-memory copies from `MILENIUM.TOS`, materializing the original 514-byte
 target at `$77000`, then reaches the literal `Fopen` request above. It resolves

@@ -118,7 +118,11 @@ Norwegian, Polish, Brazilian Portuguese, Russian, Swedish, Turkish, Ukrainian,
 and Simplified Chinese. Select a launcher language with `--language sv` (or
 `-l sv`); without it, Project Eon follows `LC_ALL`, `LC_MESSAGES`, then `LANG`.
 Only Project Eon's own UI is translated—original game text remains sourced from
-the selected original media.
+the selected original media. The current launcher debug-text renderer is
+ASCII-only, so although all 20 UTF-8 catalogs are packaged and selected, a
+bundled Unicode font renderer is still required before non-ASCII locales can
+be claimed as correctly drawn on screen. See [the localization packaging
+boundary](po/README.md#unicode-rendering-boundary).
 
 By default, Project Eon reads user-supplied media from `~/.projecteon` on
 Linux/macOS and `<install directory>\data` on Windows. `--data` (or the

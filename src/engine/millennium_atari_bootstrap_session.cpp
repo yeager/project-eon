@@ -12,6 +12,7 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     bss_source_ = materialize_millennium_atari_bss_source(program, prg, bootstrap_, bss_entry_);
     target_ = materialize_millennium_atari_target(bss_source_, bss_entry_);
     trap_ = parse_millennium_atari_trap_entry(bss_source_, target_);
+    fopen_fallthrough_ = parse_millennium_atari_fopen_fallthrough(target_, trap_);
     config_ = probe_millennium_atari_config(disk);
     constexpr std::string_view expected_hash =
         "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6";
