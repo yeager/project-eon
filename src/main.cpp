@@ -27,6 +27,7 @@
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
+#include "data/millennium_dos_title_exit.hpp"
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
@@ -219,7 +220,7 @@ std::optional<std::filesystem::path> find_font_directory() {
 void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     constexpr auto clean_system_adf =
         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
-    const auto image = eon::extract_asset_by_sha256(release.path, clean_system_adf);
+    const auto image = eon::extract_verified_release_asset(release, clean_system_adf);
     if (!image) return;
     const eon::AmigaAdf disk(*image);
     const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
@@ -459,6 +460,87 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << "/-0x" << static_cast<std::uint16_t>(-post_exec_third_service.graphics_library_vectors[2])
         << ", tail 0x" << post_exec_third_service.dispatcher_tail_jump_address
         << " (prior ABI returns unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_dispatch =
+        eon::parse_deuteros_amiga_title_post_exec_tail_dispatch_profile(disk, plan);
+    std::cout << "          Conditional post-Exec tail dispatch: 0x" << std::hex
+        << post_exec_tail_dispatch.caller_address << " -> 0x"
+        << post_exec_tail_dispatch.entry_address << "; BSR targets 0x"
+        << post_exec_tail_dispatch.local_call_addresses[0] << "/0x"
+        << post_exec_tail_dispatch.local_call_addresses[1] << "/0x"
+        << post_exec_tail_dispatch.local_call_addresses[2] << "/0x"
+        << post_exec_tail_dispatch.local_call_addresses[3] << ", RTS 0x"
+        << post_exec_tail_dispatch.return_address
+        << " (prior ABI returns unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_first_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_first_callee_profile(disk, plan);
+    std::cout << "          Conditional tail first callee: BSR 0x" << std::hex
+        << post_exec_tail_first_callee.caller_address << " -> local 0x"
+        << post_exec_tail_first_callee.entry_address << "; A0/A1 0x"
+        << post_exec_tail_first_callee.a0_literal << "/0x"
+        << post_exec_tail_first_callee.a1_literal << ", vector -0x"
+        << static_cast<std::uint16_t>(-post_exec_tail_first_callee.graphics_library_vector)
+        << " via cell 0x" << post_exec_tail_first_callee.graphics_library_base_address
+        << " (ABI return unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_second_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_second_callee_profile(disk, plan);
+    std::cout << "          Conditional tail second callee: BSR 0x" << std::hex
+        << post_exec_tail_second_callee.caller_address << " -> local 0x"
+        << post_exec_tail_second_callee.entry_address << "; cells 0x"
+        << post_exec_tail_second_callee.selection_cells[0] << "/0x"
+        << post_exec_tail_second_callee.selection_cells[3] << ", vector -0x"
+        << static_cast<std::uint16_t>(-post_exec_tail_second_callee.graphics_library_vector)
+        << " via cell 0x" << post_exec_tail_second_callee.graphics_library_base_address
+        << " (ABI return unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_third_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_third_callee_profile(disk, plan);
+    std::cout << "          Conditional tail third callee: BSR 0x" << std::hex
+        << post_exec_tail_third_callee.caller_address << " -> re-entry 0x"
+        << post_exec_tail_third_callee.entry_address << ", continuation 0x"
+        << post_exec_tail_third_callee.caller_continuation_address << ", RTS 0x"
+        << post_exec_tail_third_callee.routine_return_address
+        << " (ABI return unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_fourth_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_fourth_callee_profile(disk, plan);
+    std::cout << "          Conditional tail fourth callee: BSR 0x" << std::hex
+        << post_exec_tail_fourth_callee.caller_address << " -> local 0x"
+        << post_exec_tail_fourth_callee.entry_address << "; A0/A1 0x"
+        << post_exec_tail_fourth_callee.a0_literal << "/0x"
+        << post_exec_tail_fourth_callee.a1_literal << ", vector -0x"
+        << static_cast<std::uint16_t>(-post_exec_tail_fourth_callee.graphics_library_vector)
+        << " via cell 0x" << post_exec_tail_fourth_callee.graphics_library_base_address
+        << " (ABI return unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_return =
+        eon::parse_deuteros_amiga_title_post_exec_tail_return_profile(disk, plan);
+    std::cout << "          Conditional tail return: 0x" << std::hex
+        << post_exec_tail_return.continuation_address << " table 0x"
+        << post_exec_tail_return.source_table_address << " -> cells 0x"
+        << post_exec_tail_return.destination_addresses[0] << "/0x"
+        << post_exec_tail_return.destination_addresses[1] << "; local 0x"
+        << post_exec_tail_return.local_service_address << " vector -0x"
+        << static_cast<std::uint16_t>(-post_exec_tail_return.exec_vector)
+        << " via cell 0x" << post_exec_tail_return.exec_base_address
+        << " (ABI return unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_return_continuation =
+        eon::parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(disk, plan);
+    std::cout << "          Conditional tail return continuation: 0x" << std::hex
+        << post_exec_tail_return_continuation.continuation_address << "; calls 0x"
+        << post_exec_tail_return_continuation.direct_call_addresses[0] << "/0x"
+        << post_exec_tail_return_continuation.direct_call_addresses[12]
+        << ", indirect literal 0x"
+        << post_exec_tail_return_continuation.indirect_call_pointer_literal
+        << ", stop 0x" << post_exec_tail_return_continuation.stop_before_address
+        << " (all ABI returns unmodelled)" << std::dec << '\n';
+    const auto post_exec_tail_flag_gate =
+        eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(disk, plan);
+    std::cout << "          Conditional tail flag gate: 0x" << std::hex
+        << post_exec_tail_flag_gate.entry_address << " cells 0x"
+        << post_exec_tail_flag_gate.source_word_addresses[0] << "/0x"
+        << post_exec_tail_flag_gate.source_word_addresses[1] << "; jump 0x"
+        << post_exec_tail_flag_gate.absolute_jump_target << ", calls 0x"
+        << post_exec_tail_flag_gate.direct_call_targets[0] << "/0x"
+        << post_exec_tail_flag_gate.direct_call_targets[2] << ", stop 0x"
+        << post_exec_tail_flag_gate.stop_after_address
+        << " (all results and writes unmodelled)" << std::dec << '\n';
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec
@@ -542,7 +624,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         // into a runtime directory.
         constexpr auto spanish_image_sha256 =
             "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
-        const auto image = eon::extract_asset_by_sha256(release.path, spanish_image_sha256);
+        const auto image = eon::extract_verified_release_asset(release, spanish_image_sha256);
         if (!image) throw std::runtime_error("Verified Spanish Millennium floppy missing");
         const eon::Fat12Disk disk(*image);
         const auto* title_entry = disk.find("TITLE.LIB");
@@ -633,7 +715,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     }
     constexpr auto title_lib_sha256 =
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-    const auto title_bytes = eon::extract_asset_by_sha256(release.path, title_lib_sha256);
+    const auto title_bytes = eon::extract_verified_release_asset(release, title_lib_sha256);
     if (!title_bytes) return;
     const eon::MillenniumDosLib title_lib(*title_bytes);
     const auto* p00 = title_lib.find("P00");
@@ -648,14 +730,14 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << palette.logical_to_dac.size() << "\n";
     constexpr auto gx_lib_sha256 =
         "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
-    const auto gx_bytes = eon::extract_asset_by_sha256(release.path, gx_lib_sha256);
+    const auto gx_bytes = eon::extract_verified_release_asset(release, gx_lib_sha256);
     if (!gx_bytes) throw std::runtime_error("Verified Millennium GX.LIB missing");
     const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
     std::cout << "          GX.LIB IMG00 -> IMG01: " << gx_canvas.canvas.width << 'x'
         << gx_canvas.canvas.height << " original indexed canvas\n";
     constexpr auto last_lib_sha256 =
         "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510";
-    const auto last_bytes = eon::extract_asset_by_sha256(release.path, last_lib_sha256);
+    const auto last_bytes = eon::extract_verified_release_asset(release, last_lib_sha256);
     if (!last_bytes) throw std::runtime_error("Verified Millennium LAST.LIB missing");
     const auto last_screen = eon::parse_millennium_dos_last_screen(*last_bytes);
     std::cout << "          LAST.LIB last: " << last_screen.bitmap.width << 'x'
@@ -664,10 +746,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
     constexpr auto launcher_sha256 =
         "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
-    const auto titles = eon::extract_asset_by_sha256(release.path, titles_sha256);
-    const auto launcher = eon::extract_asset_by_sha256(release.path, launcher_sha256);
+    const auto titles = eon::extract_verified_release_asset(release, titles_sha256);
+    const auto launcher = eon::extract_verified_release_asset(release, launcher_sha256);
     if (!titles || !launcher) throw std::runtime_error("Verified Millennium title flow assets missing");
     const auto flow = eon::parse_millennium_dos_title_flow(*titles, *launcher);
+    const auto title_exit = eon::parse_millennium_dos_title_exit_closure(*titles);
     const auto transition = eon::parse_millennium_dos_title_transition(title_lib, flow);
     std::cout << "          TITLES.EXE: resource " << flow.title_resource_index
         << ", " << flow.intro_transition_steps << " transition steps, key poll INT 0x"
@@ -714,13 +797,23 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_private_interrupt_saved_offset_cell << "/0x"
         << flow.launcher_private_interrupt_saved_segment_cell << ", restore 0x"
         << flow.launcher_private_interrupt_restore_address << std::dec << "))\n";
+    std::cout << "          TITLES.EXE local exit: 0x" << std::hex
+        << title_exit.nonzero_entry_address << " calls 0x"
+        << title_exit.private_driver_target_address << "/0x"
+        << title_exit.post_driver_target_address << ", clears 0x"
+        << title_exit.status_storage_address << ", then jumps to 0x"
+        << title_exit.exit_stub_address << " (pre-exit CALL 0x"
+        << title_exit.exit_stub_preceding_call_target_address << ", INT 0x"
+        << static_cast<unsigned>(title_exit.exit_interrupt) << " AH=0x"
+        << static_cast<unsigned>(title_exit.exit_service)
+        << "; static boundary only)\n" << std::dec;
     std::cout << "          TITLE.LIB P01-P25: " << transition.patches.size()
         << " decoded " << transition.patches.front().bitmap.width << 'x'
         << transition.patches.front().bitmap.height
         << " patches (static order only; no timing, composition, or frame claimed)\n";
-    const auto ega640 = eon::extract_asset_by_sha256(release.path,
+    const auto ega640 = eon::extract_verified_release_asset(release,
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a");
-    const auto mcga = eon::extract_asset_by_sha256(release.path,
+    const auto mcga = eon::extract_verified_release_asset(release,
         "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228");
     if (!ega640 || !mcga) throw std::runtime_error("Verified Millennium video driver missing");
     const auto ega_driver = eon::parse_millennium_dos_video_driver(*ega640,
@@ -746,7 +839,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " (validated ABI only; no BIOS/driver execution)\n" << std::dec;
     constexpr auto static_data_sha256 =
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
-    const auto static_data = eon::extract_asset_by_sha256(release.path, static_data_sha256);
+    const auto static_data = eon::extract_verified_release_asset(release, static_data_sha256);
     if (!static_data) throw std::runtime_error("Verified Millennium static game data missing");
     const auto game_data = eon::parse_millennium_dos_game_data(*static_data);
     const auto text_catalog = eon::parse_millennium_dos_static_text_catalog(*static_data);
@@ -757,15 +850,31 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " raw records (read-only)\n";
     constexpr auto game_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
-    const auto game = eon::extract_asset_by_sha256(release.path, game_sha256);
+    const auto game = eon::extract_verified_release_asset(release, game_sha256);
     if (!game) throw std::runtime_error("Verified Millennium DOS executable missing");
     constexpr auto gx_overlay_sha256 =
         "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
-    const auto gx_overlay = eon::extract_asset_by_sha256(release.path, gx_overlay_sha256);
+    const auto gx_overlay = eon::extract_verified_release_asset(release, gx_overlay_sha256);
     if (!gx_overlay) throw std::runtime_error("Verified Millennium DOS GX overlay missing");
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game);
     const auto startup_allocation = eon::parse_millennium_dos_startup_allocation_boundary(*game);
     const auto startup_zero_path = eon::parse_millennium_dos_startup_zero_path_boundary(*game);
+    const auto startup_zero_continuation =
+        eon::parse_millennium_dos_startup_zero_continuation_boundary(*game);
+    const auto startup_post_allocation =
+        eon::parse_millennium_dos_startup_post_allocation_boundary(*game);
+    const auto startup_post_release =
+        eon::parse_millennium_dos_startup_post_release_continuation(*game);
+    const auto startup_post_gx_loader =
+        eon::parse_millennium_dos_startup_post_gx_loader_boundary(*game);
+    const auto private_int91 = eon::parse_millennium_dos_private_int91_wrapper(*game);
+    const auto post_int91_selector = eon::parse_millennium_dos_post_int91_caller_selector(*game);
+    const auto post_overlay_adapter =
+        eon::parse_millennium_dos_post_overlay_adapter_continuation(*game);
+    const auto post_overlay_loop =
+        eon::parse_millennium_dos_post_overlay_adapter_loop(*game);
+    const auto post_overlay_dispatch =
+        eon::parse_millennium_dos_post_overlay_dispatch_prefix(*game);
     const auto startup_nonzero_path = eon::parse_millennium_dos_startup_nonzero_path_boundary(*game);
     const auto gx_overlay_load = eon::parse_millennium_dos_gx_overlay_load_evidence(
         *game, *gx_overlay);
@@ -829,6 +938,83 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << startup_nonzero_path.first_external_interrupt_site << " (AH=0x"
         << static_cast<unsigned>(startup_nonzero_path.first_external_service) << std::dec
         << "; static boundary only, no mouse state or return supplied)\n";
+    std::cout << "          2200AD DX-zero return continuation: 0x" << std::hex
+        << startup_zero_continuation.continuation_entry_address << " reads CS:0x"
+        << startup_zero_continuation.source_byte_address << " then calls 0x"
+        << startup_zero_continuation.first_local_call_target << "; reaches INT 0x"
+        << static_cast<unsigned>(startup_zero_continuation.first_external_interrupt) << " at 0x"
+        << startup_zero_continuation.first_external_interrupt_site << " (AH=0x"
+        << static_cast<unsigned>(startup_zero_continuation.first_external_service)
+        << ", BX=0x" << startup_zero_continuation.allocation_request_paragraphs << std::dec
+        << "; conditional static boundary only, no DOS result or allocation supplied)\n";
+    std::cout << "          2200AD post-allocation successor: 0x" << std::hex
+        << startup_post_allocation.entry_address << " stores BX -> CS:0x"
+        << startup_post_allocation.cs_override_store_target_address << ", moves AX -> ES at 0x"
+        << startup_post_allocation.es_from_ax_address << ", then reaches INT 0x"
+        << static_cast<unsigned>(startup_post_allocation.first_external_interrupt) << " at 0x"
+        << startup_post_allocation.first_external_interrupt_site << " (AH=0x"
+        << static_cast<unsigned>(startup_post_allocation.first_external_service) << std::dec
+        << "; conditional static boundary only, no return or segment meaning supplied)\n";
+    std::cout << "          2200AD post-release continuation: 0x" << std::hex
+        << startup_post_release.entry_address << " restores DX, loads far cell 0x"
+        << startup_post_release.far_pointer_address << " into DX/SI, then calls 0x"
+        << startup_post_release.first_call_target << ", static-data loader 0x"
+        << startup_post_release.static_data_call_target << ", and GX loader 0x"
+        << startup_post_release.gx_loader_call_target << std::dec
+        << " (conditional static boundary only; no DOS result, pointer, or calls supplied)\n";
+    std::cout << "          2200AD post-GX-loader boundary: 0x" << std::hex
+        << startup_post_gx_loader.entry_address << " restores ES from CS, loads BX=0x"
+        << startup_post_gx_loader.bx_literal << "/AX=0x" << startup_post_gx_loader.ax_literal
+        << ", then calls private wrapper 0x" << startup_post_gx_loader.private_call_target
+        << " (INT 0x" << static_cast<unsigned>(startup_post_gx_loader.private_interrupt)
+        << std::dec << "; conditional static boundary only, no calls or result supplied)\n";
+    std::cout << "          2200AD private wrapper: 0x" << std::hex
+        << private_int91.entry_address << " is called from 0x"
+        << private_int91.caller_call_address << ", preserves raw stack span through INT 0x"
+        << static_cast<unsigned>(private_int91.private_interrupt) << " at 0x"
+        << private_int91.private_interrupt_site << ", then has RET at 0x"
+        << private_int91.return_address << std::dec
+        << " (static wrapper only; no private-interrupt ABI, return, or result supplied)\n";
+    std::cout << "          2200AD post-wrapper caller selector: return site 0x" << std::hex
+        << post_int91_selector.return_site_address << " compares CS:0x"
+        << post_int91_selector.source_byte_address << " against 0x"
+        << static_cast<unsigned>(post_int91_selector.first_compare_value) << "/0x"
+        << static_cast<unsigned>(post_int91_selector.second_compare_value) << "/0x"
+        << static_cast<unsigned>(post_int91_selector.third_compare_value)
+        << ", writes DX to CS:0x" << post_int91_selector.shared_store_target_address
+        << ", then CALLs 0x" << post_int91_selector.first_call_target << std::dec
+        << " (conditional static prefix only; no wrapper return, state, or callee effect supplied)\n";
+    std::cout << "          2200AD post-overlay-adapter continuation: return site 0x" << std::hex
+        << post_overlay_adapter.return_site_address << " has CALL targets 0x"
+        << post_overlay_adapter.initial_call_targets[0] << "/0x"
+        << post_overlay_adapter.initial_call_targets[1] << "/0x"
+        << post_overlay_adapter.initial_call_targets[2] << "/0x"
+        << post_overlay_adapter.initial_call_targets[3] << "/0x"
+        << post_overlay_adapter.initial_call_targets[4] << "/0x"
+        << post_overlay_adapter.initial_call_targets[5] << "; CS:0x"
+        << post_overlay_adapter.mode_byte_address << " == 0x"
+        << static_cast<unsigned>(post_overlay_adapter.mode_equal_value) << " branches to 0x"
+        << post_overlay_adapter.equal_branch_target << ", otherwise CALLs 0x"
+        << post_overlay_adapter.other_call_target << ", converging at 0x"
+        << post_overlay_adapter.convergence_address << std::dec
+        << " (conditional static prefix only; no call return, state, or target effect supplied)\n";
+    std::cout << "          2200AD post-overlay-adapter loop: 0x" << std::hex
+        << post_overlay_loop.entry_address << " has " << std::dec
+        << post_overlay_loop.call_addresses.size() << " hash-bound CALLs, tests AL at 0x"
+        << std::hex << post_overlay_loop.first_al_test_address << "/0x"
+        << post_overlay_loop.loop_al_test_address << ", and branches to 0x"
+        << post_overlay_loop.loop_zero_branch_target << " before dispatcher 0x"
+        << post_overlay_loop.following_dispatch_address << std::dec
+        << " (conditional static span only; no calls, byte values, branches, or target effects supplied)\n";
+    std::cout << "          2200AD post-overlay dispatch: action 0x" << std::hex
+        << static_cast<unsigned>(post_overlay_dispatch.first_action_value) << " -> 0x"
+        << post_overlay_dispatch.first_action_call_target << ", action 0x"
+        << static_cast<unsigned>(post_overlay_dispatch.second_action_value) << " -> 0x"
+        << post_overlay_dispatch.second_action_call_target << "; guard 0x"
+        << post_overlay_dispatch.guard_byte_address << " and table 0x"
+        << post_overlay_dispatch.table_base_address << " remain native; scaled CALL 0x"
+        << post_overlay_dispatch.scaled_call_target << std::dec
+        << " (validated dispatcher only; no input or call effects)\n";
     std::cout << "          2200GX.EXE overlay evidence: name 0x" << std::hex
         << gx_overlay_load.source_name_address << ", loader 0x"
         << gx_overlay_load.loader_entry_address << " reads segment cell 0x"
@@ -867,7 +1053,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " (static only; no selector value, records, returns, resources, or display executed)\n";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
-    const auto initial_save = eon::extract_asset_by_sha256(release.path, initial_save_sha256);
+    const auto initial_save = eon::extract_verified_release_asset(release, initial_save_sha256);
     if (!initial_save) throw std::runtime_error("Verified Millennium initial save missing");
     const eon::MillenniumDosSaveSession save_session(*initial_save);
     std::cout << "          2200SAVE.I: SHA-256 " << save_session.sha256()
@@ -888,9 +1074,9 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
 void report_millennium_amiga(const eon::ReleaseArchive& release) {
     std::size_t shared_resident_images = 0;
     std::optional<eon::MillenniumAmigaSharedResidentLayout> shared_resident;
-    for (const auto& asset : eon::inventory_zip(release.path)) {
+    for (const auto& asset : eon::inventory_verified_release(release)) {
         if (asset.kind != eon::AssetKind::amiga_adf) continue;
-        const auto image = eon::extract_asset_by_sha256(release.path, asset.sha256);
+        const auto image = eon::extract_verified_release_asset(release, asset.sha256);
         if (!image) throw std::runtime_error("Verified Millennium Amiga ADF is missing");
         const auto layout = eon::parse_millennium_amiga_shared_resident_layout(*image);
         if (shared_resident && (layout.disk_offset != shared_resident->disk_offset
@@ -913,11 +1099,15 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     // crack variants preserve the shared media ranges but patch this stage.
     constexpr auto loader_adf_sha256 =
         "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
-    const auto image = eon::extract_asset_by_sha256(release.path, loader_adf_sha256);
+    const auto image = eon::extract_verified_release_asset(release, loader_adf_sha256);
     if (!image) return;
     const eon::MillenniumAmigaBootstrapSession live_bootstrap(*image);
     const eon::AmigaAdf disk(*image);
     const auto plan = eon::parse_millennium_amiga_load_plan(disk);
+    const auto opaque_invocation =
+        eon::parse_millennium_amiga_bootstrap_opaque_invocation_boundary(disk, plan);
+    const auto first_stage_source_anchors =
+        eon::parse_millennium_amiga_first_stage_source_anchor_boundary(disk, plan);
     std::cout << "          bounded launcher bootstrap: resident entry 0x" << std::hex
         << live_bootstrap.resident_entry().entry_address << ", raw resident SHA-256 "
         << live_bootstrap.shared_resident().raw_sha256 << std::dec
@@ -985,6 +1175,22 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << "          raw stage SHA-256: bootstrap " << plan.bootstrap_loader.raw_sha256
         << "; first " << plan.first_stage.raw_sha256
         << "; resident " << plan.resident_stage.raw_sha256 << '\n'
+        << "          opaque loader handoff: " << std::dec
+        << opaque_invocation.byte_count << " bytes at disk 0x" << std::hex
+        << opaque_invocation.raw_disk_offset << " (SHA-256 " << opaque_invocation.sha256
+        << "); JSR (A3) at 0x" << opaque_invocation.first_stage_invocation_address
+        << " -> 0x" << opaque_invocation.first_stage_target
+        << ", terminal JMP (A3) at 0x" << opaque_invocation.resident_stage_jump_address
+        << " -> 0x" << opaque_invocation.resident_stage_target << std::dec
+        << " (opaque; no invocation or return execution)\n"
+        << "          first-stage source anchors: disk 0x" << std::hex
+        << first_stage_source_anchors.raw_disk_offset << " + 0x"
+        << first_stage_source_anchors.byte_count << " (SHA-256 "
+        << first_stage_source_anchors.sha256 << "); offsets +0x"
+        << first_stage_source_anchors.anchor_stage_offsets[0] << ", +0x"
+        << first_stage_source_anchors.anchor_stage_offsets[1] << ", +0x"
+        << first_stage_source_anchors.anchor_stage_offsets[2] << std::dec
+        << " and two verified source windows (provenance only; no stage decoding)\n"
         << "          resident gate: entry 0x" << std::hex << resident.entry_address
         << " calls 0x" << resident.initializer_address << "; d3 != 0 ORs 0x"
         << resident.d3_nonzero_or_mask << " into d0, stores word at 0x"
@@ -1213,7 +1419,7 @@ void report_millennium_atari_root_inventory(const eon::MillenniumAtariRootInvent
 void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     constexpr auto equinox_disk_sha256 =
         "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
-    const auto image = eon::extract_asset_by_sha256(release.path, equinox_disk_sha256);
+    const auto image = eon::extract_verified_release_asset(release, equinox_disk_sha256);
     if (!image) return;
     const eon::Fat12Disk disk(*image);
     const auto* executable = disk.find("MILENIUM.TOS");
@@ -1228,6 +1434,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto target = eon::materialize_millennium_atari_target(bss_source, bss_entry);
     const auto trap_entry = eon::parse_millennium_atari_trap_entry(bss_source, target);
     const auto fopen_fallthrough = eon::parse_millennium_atari_fopen_fallthrough(target, trap_entry);
+    const auto fread_config_transfer = eon::parse_millennium_atari_fread_config_transfer_boundary(
+        target, fopen_fallthrough);
     std::cout << "          bounded launcher bootstrap: target 0x" << std::hex
         << live_bootstrap.target().target_address << ", Fopen boundary "
         << live_bootstrap.fopen_boundary().fopen_filename << std::dec
@@ -1238,6 +1446,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto auxiliary_resource = eon::probe_millennium_atari_auxiliary_resource_name(disk);
     const auto config_entry = eon::parse_millennium_atari_config_entry(
         disk.read(*disk.find(equinox_config.requested_filename)));
+    const auto config_load_address_boundary = eon::parse_millennium_atari_fread_config_load_address_boundary(
+        fread_config_transfer, disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_trap_argument_strings = eon::parse_millennium_atari_config_trap_argument_strings(
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_first_jsr = eon::parse_millennium_atari_config_first_jsr(
@@ -1252,6 +1462,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
     const auto config_fourth_jsr = eon::parse_millennium_atari_config_fourth_jsr(
         disk.read(*disk.find(equinox_config.requested_filename)), config_entry);
+    const auto config_fourth_prelude = eon::parse_millennium_atari_config_fourth_prelude(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_jsr);
     const auto config_fourth_loop = eon::parse_millennium_atari_config_fourth_loop(
         disk.read(*disk.find(equinox_config.requested_filename)), config_fourth_jsr);
     const auto config_fourth_post_loop = eon::parse_millennium_atari_config_fourth_post_loop(
@@ -1267,6 +1479,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         config_fourth_loop);
     const auto config_jsr_inventory = eon::inventory_millennium_atari_config_absolute_jsrs(
         disk.read(*disk.find(equinox_config.requested_filename)));
+    const auto config_residual_jsr_body = eon::parse_millennium_atari_config_residual_jsr_body(
+        disk.read(*disk.find(equinox_config.requested_filename)), config_jsr_inventory);
     std::cout << "          auxiliary resource-name evidence: "
         << auxiliary_resource.container_filename << " cluster " << auxiliary_resource.first_cluster
         << ", +0x" << std::hex << auxiliary_resource.literal_file_offset << " = "
@@ -1315,6 +1529,12 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << fopen_fallthrough.fread_trap_offset << "; stack cleanup 0x"
         << fopen_fallthrough.stack_cleanup_bytes << "; SHA-256 " << fopen_fallthrough.sha256
         << std::dec << " (static call boundary only; no Fopen/Fread result or data is modeled)\n"
+        << "          Fread-config transfer: target +0x" << std::hex
+        << fread_config_transfer.entry_offset << "; TRAP #1, stack cleanup 0x"
+        << fread_config_transfer.stack_cleanup_bytes << ", JSR 0x"
+        << fread_config_transfer.config_buffer_address << "; SHA-256 "
+        << fread_config_transfer.sha256 << std::dec
+        << " (static edge only; no GEMDOS result, buffer fill, or JSR execution)\n"
         << "          requested config " << equinox_config.requested_filename << ": "
         << (equinox_config.present ? "present" : "absent") << " in Equinox FAT12 root ("
         << equinox_config.root_entry_count << " live entries)";
@@ -1326,8 +1546,8 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     }
     std::cout << " (metadata only; never generated or written)\n";
     report_millennium_atari_root_inventory(root_inventory);
-    std::cout << "          MILL22A.inf entry: JMP 0x" << std::hex << config_entry.entry_address
-        << " resolves from proven load base 0x" << config_entry.proven_load_base
+    std::cout << "          MILL22A.inf candidate entry: JMP 0x" << std::hex << config_entry.entry_address
+        << " resolves from independent static base 0x" << config_entry.proven_load_base
         << " to file +0x" << config_entry.entry_file_offset << "; TRAP #14 selectors 0x"
         << config_entry.initial_trap_selector << " (longword 0x"
         << config_entry.initial_trap_longword_argument << ") and 0x"
@@ -1337,6 +1557,15 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     std::cout << "; PEA 0x" << config_entry.final_pea_address << ", TRAP #14 selector 0x"
         << config_entry.final_trap_selector << ", RTS +0x" << config_entry.return_offset
         << std::dec << " (validated only; no TOS/XBIOS calls or config execution)\n";
+    std::cout << "          Fread/config address boundary: JSR destination 0x" << std::hex
+        << config_load_address_boundary.fread_destination_address << "; file JMP 0x"
+        << config_load_address_boundary.payload_initial_jump_target_address << " would be +0x"
+        << config_load_address_boundary.payload_initial_jump_target_file_offset_from_destination
+        << " from that destination, while independent entry evidence is +0x"
+        << config_load_address_boundary.independent_entry_file_offset << " (delta +0x"
+        << config_load_address_boundary.independent_entry_offset_delta << "; SHA-256 "
+        << config_load_address_boundary.payload_initial_jump_sha256 << std::dec
+        << "; unresolved native load-address boundary, no mapping or execution inferred)\n";
     std::cout << "          second literal TRAP argument: 0x" << std::hex
         << config_trap_argument_strings.argument_address << " (file +0x"
         << config_trap_argument_strings.file_offset << ") = "
@@ -1396,6 +1625,20 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_fourth_jsr.d6_initial_value << "/0x" << config_fourth_jsr.d5_initial_value
         << "/0x" << config_fourth_jsr.d4_initial_value << std::dec
         << " (validated original setup only; no loop, trap, or data interpretation)\n";
+    std::cout << "          MILL22A.inf static predecessor: 0x" << std::hex
+        << config_fourth_prelude.prelude_address << " file +0x"
+        << config_fourth_prelude.prelude_file_offset << " (" << std::dec
+        << config_fourth_prelude.byte_count << " bytes; SHA-256 "
+        << config_fourth_prelude.sha256 << "); D0/D1 0x" << std::hex
+        << config_fourth_prelude.d0_initial_value << "/0x"
+        << config_fourth_prelude.d1_initial_value << ", DBF 0x"
+        << config_fourth_prelude.first_dbf_opcode << " -> 0x"
+        << config_fourth_prelude.first_dbf_target_address << ", second D0 0x"
+        << config_fourth_prelude.second_d0_initial_value << ", DBF 0x"
+        << config_fourth_prelude.second_dbf_opcode << " -> 0x"
+        << config_fourth_prelude.second_dbf_target_address << " -> 0x"
+        << config_fourth_prelude.continuation_address << std::dec
+        << " (static adjacency only; no callsite, loop execution, or data effect inferred)\n";
     std::cout << "          MILL22A.inf 0x2b448 first loop: 0x" << std::hex
         << config_fourth_loop.body_address << " file +0x" << config_fourth_loop.body_file_offset
         << " (" << std::dec << config_fourth_loop.body_bytes << " bytes), DBF opcode 0x"
@@ -1459,16 +1702,24 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << config_jsr_inventory.encodings.back().first << " -> 0x"
         << config_jsr_inventory.encodings.back().second << std::dec
         << "; byte inventory only, not reachability claims)\n";
+    std::cout << "          MILL22A.inf inventory-only JSR body: +0x" << std::hex
+        << config_residual_jsr_body.callsite_file_offset << " -> 0x"
+        << config_residual_jsr_body.target_address << " (file +0x"
+        << config_residual_jsr_body.target_file_offset << ", " << std::dec
+        << config_residual_jsr_body.byte_count << " bytes through RTS 0x" << std::hex
+        << config_residual_jsr_body.return_opcode << "; SHA-256 "
+        << config_residual_jsr_body.sha256 << std::dec
+        << "; static body only, no reachability or execution claim)\n";
 
     // The outer archive is the supplied-media boundary.  Inspect every ST
     // leaf in memory so absence is not guessed from the one Equinox variant.
     std::size_t supplied_st_images = 0;
     std::size_t readable_fat12_images = 0;
     std::size_t config_files = 0;
-    for (const auto& asset : eon::inventory_zip(release.path)) {
+    for (const auto& asset : eon::inventory_verified_release(release)) {
         if (asset.kind != eon::AssetKind::atari_st_disk) continue;
         ++supplied_st_images;
-        const auto candidate = eon::extract_asset_by_sha256(release.path, asset.sha256);
+        const auto candidate = eon::extract_verified_release_asset(release, asset.sha256);
         if (!candidate) throw std::runtime_error("Verified Atari ST asset disappeared during scan");
         std::optional<eon::Fat12Disk> candidate_disk;
         try {
@@ -1497,8 +1748,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
     constexpr auto disk2_sha256 =
         "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193";
-    const auto disk1_image = eon::extract_asset_by_sha256(release.path, replicants_disk1_sha256);
-    const auto disk2_image = eon::extract_asset_by_sha256(release.path, disk2_sha256);
+    const auto disk1_image = eon::extract_verified_release_asset(release, replicants_disk1_sha256);
+    const auto disk2_image = eon::extract_verified_release_asset(release, disk2_sha256);
     if (!disk1_image || !disk2_image) return;
     const eon::DeuterosAtariBootstrapSession live_bootstrap(*disk1_image);
     const eon::DeuterosAtariDisk disk1(*disk1_image);
@@ -1526,6 +1777,13 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto& state5_return = live_bootstrap.state5_return();
         const auto& supervisor_callback = live_bootstrap.supervisor_callback();
         const auto& second_callee_continuation = live_bootstrap.second_callee_continuation();
+        const auto& raw_reader_wrapper = live_bootstrap.raw_reader_wrapper();
+        const auto& raw_reader_call = live_bootstrap.raw_reader_call_layout();
+        const auto& direct_vector_callees = live_bootstrap.direct_vector_callees();
+        const auto& direct_vector_transfer_loop = live_bootstrap.direct_vector_transfer_loop();
+        const auto& direct_vector_transfer_tail = live_bootstrap.direct_vector_transfer_tail();
+        const auto& state_selection = live_bootstrap.state_selection_layout();
+        const auto& state_selection_continuation = live_bootstrap.state_selection_continuation();
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -1642,6 +1900,67 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << supervisor_callback.callback_stack_address << ", pushes D0, RTS; SHA-256 "
             << supervisor_callback.callback_sha256 << std::dec
             << " (ABI boundary only; no XBIOS/callback execution)\n";
+        std::cout << "          Static raw-reader wrapper: stage +0x" << std::hex
+            << raw_reader_wrapper.wrapper_offset << " +0x" << raw_reader_wrapper.wrapper_byte_count
+            << " BSR.W -> +0x" << raw_reader_wrapper.raw_reader_bsr_target_offset
+            << "; status-word branch -> +0x" << raw_reader_wrapper.nonzero_branch_target_offset
+            << "; loop -> +0x" << raw_reader_wrapper.loop_branch_target_offset
+            << "; SHA-256 " << raw_reader_wrapper.wrapper_sha256 << std::dec
+            << " (layout only; no status value, XBIOS result, or reachability inferred)\n";
+        std::cout << "          Raw-reader call layout: stage +0x" << std::hex
+            << raw_reader_call.routine_offset << " +0x" << raw_reader_call.routine_byte_count
+            << " count cap 0x" << raw_reader_call.count_compare_immediate
+            << "; ABI opcode 0x" << raw_reader_call.abi_call_opcode << " selector 0x"
+            << raw_reader_call.abi_selector << "; post-call store $"
+            << raw_reader_call.post_call_store_address << ", RTS; SHA-256 "
+            << raw_reader_call.routine_sha256 << std::dec
+            << " (static bytes only; no ABI result or disk operation is performed)\n";
+        std::cout << "          Direct dispatch-table callees: slots "
+            << direct_vector_callees.distinct_callees[0].vector_slot << "/"
+            << direct_vector_callees.distinct_callees[1].vector_slot << "/"
+            << direct_vector_callees.distinct_callees[2].vector_slot << " at stage +0x"
+            << std::hex << direct_vector_callees.distinct_callees[0].stage_offset << "/+0x"
+            << direct_vector_callees.distinct_callees[1].stage_offset << "/+0x"
+            << direct_vector_callees.distinct_callees[2].stage_offset << "; hashes "
+            << direct_vector_callees.distinct_callees[0].sha256 << "/"
+            << direct_vector_callees.distinct_callees[1].sha256 << "/"
+            << direct_vector_callees.distinct_callees[2].sha256 << std::dec
+            << "; alias BRA +0x" << std::hex << direct_vector_callees.alias_branch_offset
+            << " -> +0x" << direct_vector_callees.alias_branch_target_offset << std::dec
+            << " (table/linkage bytes only; no index, call, return, or state interpretation)\n";
+        std::cout << "          Direct-vector literal transfer loop: stage +0x" << std::hex
+            << direct_vector_transfer_loop.loop_block_offset << " +0x"
+            << direct_vector_transfer_loop.loop_block_byte_count << " writes literal A0 0x"
+            << direct_vector_transfer_loop.destination_pointer << " and A1 0x"
+            << direct_vector_transfer_loop.source_pointer << "; DBF displacement " << std::dec
+            << direct_vector_transfer_loop.dbf_displacement << " -> stage +0x" << std::hex
+            << direct_vector_transfer_loop.dbf_target_offset << "; SHA-256 "
+            << direct_vector_transfer_loop.loop_block_sha256 << std::dec
+            << " (byte layout only; no vector selection, transfer, call, return, or media behavior)\n";
+        std::cout << "          Direct-vector transfer tail: stage +0x" << std::hex
+            << direct_vector_transfer_tail.tail_offset << " +0x"
+            << direct_vector_transfer_tail.tail_byte_count << " BSR.W -> +0x"
+            << direct_vector_transfer_tail.range_wrapper_bsr_target_offset << "; BRA.W -> +0x"
+            << direct_vector_transfer_tail.dispatcher_return_bra_target_offset << "; SHA-256 "
+            << direct_vector_transfer_tail.tail_sha256 << std::dec
+            << " (static bytes only; no vector selection, call, return, transfer, or media behavior)\n";
+        std::cout << "          State-selection layout: stage +0x" << std::hex
+            << state_selection.input_capture_offset << " loads RAM $"
+            << state_selection.source_longword_address << " then stores its low word at $"
+            << state_selection.state_word_address << "; SHA-256 "
+            << state_selection.input_capture_sha256 << "; later stage +0x"
+            << state_selection.table_lookup_offset << " reads that word, shifts it by two, loads"
+            << " table $" << state_selection.table_base_address << ", then JSR (A1); SHA-256 "
+            << state_selection.table_lookup_sha256 << std::dec
+            << " (static layout only; no input value, service return, bounds check, or vector"
+            << " selection inferred)\n";
+        std::cout << "          Post-indirect-call layout: stage +0x" << std::hex
+            << state_selection_continuation.continuation_offset << " saves D1, advances D4 by 0x"
+            << state_selection_continuation.raw_reader_argument_advance_bytes
+            << ", transfers D2 to D7, then BSR.W -> +0x"
+            << state_selection_continuation.raw_reader_wrapper_target_offset << "; SHA-256 "
+            << state_selection_continuation.continuation_sha256 << std::dec
+            << " (layout only; no callee return, register meaning, raw read, or reachability inferred)\n";
         std::cout << "          Post-raw-reader continuation: stage +0x" << std::hex
             << second_callee_continuation.continuation_offset << " -> XBIOS selector 0x"
             << second_callee_continuation.trap_selector << " with pointer 0x"
@@ -1709,7 +2028,7 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
             // ABI has been recovered, so expose only this authentic title.
             constexpr auto spanish_image_sha256 =
                 "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
-            const auto image = eon::extract_asset_by_sha256(spanish_release->path, spanish_image_sha256);
+            const auto image = eon::extract_verified_release_asset(*spanish_release, spanish_image_sha256);
             if (!image) return std::nullopt;
             const eon::Fat12Disk disk(*image);
             const auto* title_entry = disk.find("TITLE.LIB");
@@ -1732,7 +2051,7 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
                 .initial_save = std::nullopt,
             };
         }
-        const auto bytes = eon::extract_asset_by_sha256(release->path, title_lib_sha256);
+        const auto bytes = eon::extract_verified_release_asset(*release, title_lib_sha256);
         if (!bytes) return std::nullopt;
         const eon::MillenniumDosLib title_lib(*bytes);
         const auto* p00 = title_lib.find("P00");
@@ -1740,13 +2059,13 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         const auto resource = title_lib.read(*p00);
         const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
         const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
-        const auto gx_bytes = eon::extract_asset_by_sha256(release->path, gx_lib_sha256);
-        const auto titles = eon::extract_asset_by_sha256(release->path, titles_sha256);
-        const auto launcher = eon::extract_asset_by_sha256(release->path, launcher_sha256);
-        const auto game = eon::extract_asset_by_sha256(release->path, game_sha256);
-        const auto initial_save = eon::extract_asset_by_sha256(release->path, initial_save_sha256);
-        const auto ega640 = eon::extract_asset_by_sha256(release->path, ega640_sha256);
-        const auto mcga = eon::extract_asset_by_sha256(release->path, mcga_sha256);
+        const auto gx_bytes = eon::extract_verified_release_asset(*release, gx_lib_sha256);
+        const auto titles = eon::extract_verified_release_asset(*release, titles_sha256);
+        const auto launcher = eon::extract_verified_release_asset(*release, launcher_sha256);
+        const auto game = eon::extract_verified_release_asset(*release, game_sha256);
+        const auto initial_save = eon::extract_verified_release_asset(*release, initial_save_sha256);
+        const auto ega640 = eon::extract_verified_release_asset(*release, ega640_sha256);
+        const auto mcga = eon::extract_verified_release_asset(*release, mcga_sha256);
         if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga) {
             return std::nullopt;
         }
@@ -1781,7 +2100,7 @@ std::unique_ptr<eon::DeuterosAmigaOpening> load_deuteros_opening(
     });
     if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_asset_by_sha256(release->path, clean_system_adf);
+        const auto image = eon::extract_verified_release_asset(*release, clean_system_adf);
         if (!image) return {};
         return std::make_unique<eon::DeuterosAmigaOpening>(std::move(*image));
     } catch (const std::exception& error) {
@@ -1802,7 +2121,7 @@ std::unique_ptr<eon::MillenniumAtariBootstrapSession> load_millennium_atari_boot
     });
     if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_asset_by_sha256(release->path, equinox_disk_sha256);
+        const auto image = eon::extract_verified_release_asset(*release, equinox_disk_sha256);
         if (!image) return {};
         const eon::Fat12Disk disk(*image);
         const auto* executable = disk.find("MILENIUM.TOS");
@@ -1826,7 +2145,7 @@ std::unique_ptr<eon::MillenniumAmigaBootstrapSession> load_millennium_amiga_boot
     });
     if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_asset_by_sha256(release->path, defjam_adf_sha256);
+        const auto image = eon::extract_verified_release_asset(*release, defjam_adf_sha256);
         if (!image) return {};
         return std::make_unique<eon::MillenniumAmigaBootstrapSession>(std::move(*image));
     } catch (const std::exception& error) {
@@ -1850,7 +2169,7 @@ std::unique_ptr<eon::DeuterosAtariBootstrapSession> load_deuteros_atari_bootstra
     });
     if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_asset_by_sha256(release->path, replicants_disk1_sha256);
+        const auto image = eon::extract_verified_release_asset(*release, replicants_disk1_sha256);
         if (!image) return {};
         return std::make_unique<eon::DeuterosAtariBootstrapSession>(std::move(*image));
     } catch (const std::exception& error) {
@@ -1905,6 +2224,16 @@ int main(int argc, char** argv) {
             return 6;
         }
         const auto& trace = *validation.trace;
+        try {
+            // A trace is evidence about one immutable release. Re-read and
+            // hash the current archive before reporting it so a post-scan
+            // replacement cannot inherit the earlier admission result.
+            eon::verify_release_archive(trace.source_release);
+        } catch (const std::exception& error) {
+            std::cerr << "Reference trace rejected: source release no longer verifies: "
+                << error.what() << '\n';
+            return 6;
+        }
         std::cout << "REFERENCE TRACE VERIFIED  provenance-only; no replay performed\n"
             << "          " << eon::name(trace.source_release.game) << " / "
             << eon::name(trace.source_release.platform) << " / " << trace.source_release.language << '\n'
@@ -1923,6 +2252,13 @@ int main(int argc, char** argv) {
             if (request.verify_game && release.game != *request.verify_game) continue;
             if (request.inspect_data && request.game && release.game != *request.game) continue;
             if (request.inspect_data && request.platform && release.platform != *request.platform) continue;
+            try {
+                eon::verify_release_archive(release);
+            } catch (const std::exception& error) {
+                std::cerr << "Recognised release changed after scan; refusing to inspect it: "
+                    << error.what() << '\n';
+                return 6;
+            }
             found = true;
             std::cout << "VERIFIED  " << eon::name(release.game) << " / "
                 << eon::name(release.platform) << " / " << release.language << '\n'

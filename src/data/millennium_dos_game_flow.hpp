@@ -546,6 +546,273 @@ struct MillenniumDosStartupZeroPathBoundary {
 parse_millennium_dos_startup_zero_path_boundary(
     std::span<const std::uint8_t> game_executable);
 
+// This continuation is reachable only if the DX-zero selector and its
+// original DOS-facing loader return. It records the next encoded local call
+// and allocation request, stopping at that new DOS boundary. It never
+// supplies a selector value, file-open result, return value, or allocation.
+struct MillenniumDosStartupZeroContinuationBoundary {
+    std::string executable_sha256;
+    std::uint16_t continuation_entry_address = 0;
+    std::size_t continuation_byte_count = 0;
+    std::string continuation_sha256;
+    std::uint16_t source_byte_address = 0;
+    std::uint8_t source_byte_subtract_immediate = 0;
+    std::uint16_t decoded_byte_storage_address = 0;
+    std::uint16_t first_local_call_address = 0;
+    std::uint16_t first_local_call_target = 0;
+    std::uint16_t first_external_interrupt_site = 0;
+    std::uint8_t first_external_interrupt = 0;
+    std::uint8_t first_external_service = 0;
+    std::uint16_t allocation_request_paragraphs = 0;
+};
+
+[[nodiscard]] MillenniumDosStartupZeroContinuationBoundary
+parse_millennium_dos_startup_zero_continuation_boundary(
+    std::span<const std::uint8_t> game_executable);
+
+// The encoded successor of the conditional AH=$48 boundary.  It is reachable
+// only if the preceding local helper and DOS interrupt both return.  The
+// bytes store BX through a CS override, copy AX into ES, and then stop at the
+// following DOS interrupt.  This exposes no return value, allocation, segment
+// meaning, or DOS effect.
+struct MillenniumDosStartupPostAllocationBoundary {
+    std::string executable_sha256;
+    std::uint16_t entry_address = 0;
+    std::size_t byte_count = 0;
+    std::uint16_t cs_override_store_address = 0;
+    std::uint16_t cs_override_store_target_address = 0;
+    std::uint16_t es_from_ax_address = 0;
+    std::uint16_t first_external_interrupt_site = 0;
+    std::uint8_t first_external_interrupt = 0;
+    std::uint8_t first_external_service = 0;
+    std::string boundary_sha256;
+};
+
+[[nodiscard]] MillenniumDosStartupPostAllocationBoundary
+parse_millennium_dos_startup_post_allocation_boundary(
+    std::span<const std::uint8_t> game_executable);
+
+// The caller-side continuation immediately after the preceding AH=$49 DOS
+// boundary. It is conditional on that boundary returning, so this is a
+// hash-locked code trace only. The literal instructions restore the saved DX
+// register, load the same far pointer into DX and SI, then make three local
+// calls. The third is the already independently recorded GX loader; none of
+// the calls, pointer values, DOS result, or returns are interpreted.
+struct MillenniumDosStartupPostReleaseContinuation {
+    std::string executable_sha256;
+    std::uint16_t entry_address = 0;
+    std::size_t byte_count = 0;
+    std::uint16_t restore_dx_address = 0;
+    std::uint16_t first_far_pointer_load_address = 0;
+    std::uint16_t far_pointer_address = 0;
+    std::uint16_t second_far_pointer_load_address = 0;
+    std::uint16_t first_call_address = 0;
+    std::uint16_t first_call_target = 0;
+    std::uint16_t static_data_call_address = 0;
+    std::uint16_t static_data_call_target = 0;
+    std::uint16_t gx_loader_call_address = 0;
+    std::uint16_t gx_loader_call_target = 0;
+    std::string continuation_sha256;
+};
+
+[[nodiscard]] MillenniumDosStartupPostReleaseContinuation
+parse_millennium_dos_startup_post_release_continuation(
+    std::span<const std::uint8_t> game_executable);
+
+// This is the immediate caller continuation following the independently
+// bounded GX loader call.  It reinstates ES from CS, supplies two literal
+// register operands, and enters the already recorded private INT $91 wrapper.
+// Reaching it requires the prior loader to return; neither its parameters nor
+// the wrapper's result, interrupt effect, or return are assigned a host-side
+// meaning.
+struct MillenniumDosStartupPostGxLoaderBoundary {
+    std::string executable_sha256;
+    std::uint16_t entry_address = 0;
+    std::size_t byte_count = 0;
+    std::uint16_t push_cs_address = 0;
+    std::uint16_t pop_es_address = 0;
+    std::uint16_t bx_literal = 0;
+    std::uint16_t ax_literal = 0;
+    std::uint16_t private_call_address = 0;
+    std::uint16_t private_call_target = 0;
+    std::uint8_t private_interrupt = 0;
+    std::string boundary_sha256;
+};
+
+[[nodiscard]] MillenniumDosStartupPostGxLoaderBoundary
+parse_millennium_dos_startup_post_gx_loader_boundary(
+    std::span<const std::uint8_t> game_executable);
+
+// The `$0124` routine is the exact target of the post-GX-loader call above.
+// It is preserved as a raw, in-image wrapper: its stack operations, INT $91,
+// and RET are encoded instruction facts only.  In particular, this does not
+// assign an ABI, dispatch behavior, register effect, or return behavior to
+// the private interrupt.
+struct MillenniumDosPrivateInt91Wrapper {
+    std::string executable_sha256;
+    std::uint16_t entry_address = 0;
+    std::size_t byte_count = 0;
+    std::uint16_t caller_call_address = 0;
+    std::uint16_t caller_call_target = 0;
+    std::uint16_t push_ds_address = 0;
+    std::uint16_t push_si_address = 0;
+    std::uint16_t push_di_address = 0;
+    std::uint16_t push_bp_address = 0;
+    std::uint16_t push_es_address = 0;
+    std::uint16_t private_interrupt_site = 0;
+    std::uint8_t private_interrupt = 0;
+    std::uint16_t pop_es_address = 0;
+    std::uint16_t pop_bp_address = 0;
+    std::uint16_t pop_di_address = 0;
+    std::uint16_t pop_si_address = 0;
+    std::uint16_t pop_ds_address = 0;
+    std::uint16_t return_address = 0;
+    std::string wrapper_sha256;
+};
+
+[[nodiscard]] MillenniumDosPrivateInt91Wrapper
+parse_millennium_dos_private_int91_wrapper(
+    std::span<const std::uint8_t> game_executable);
+
+// The caller's encoded return site after the private INT $91 wrapper.  This
+// static prefix reads one original runtime byte, selects among four literal
+// DX/AX pairs, stores the selected DX word with a CS override, then calls an
+// in-image routine. It is conditional on the wrapper returning. Neither the
+// source byte, the selected registers' meaning, the store's runtime effect,
+// nor the callee/interrupt behavior is reconstructed by Project Eon.
+struct MillenniumDosPostInt91CallerSelector {
+    std::string executable_sha256;
+    std::uint16_t return_site_address = 0;
+    std::size_t byte_count = 0;
+    std::uint16_t source_byte_address = 0;
+    std::uint16_t first_compare_address = 0;
+    std::uint8_t first_compare_value = 0;
+    std::uint16_t second_compare_address = 0;
+    std::uint8_t second_compare_value = 0;
+    std::uint16_t third_compare_address = 0;
+    std::uint8_t third_compare_value = 0;
+    std::uint16_t shared_store_address = 0;
+    std::uint16_t shared_store_target_address = 0;
+    std::uint16_t first_call_address = 0;
+    std::uint16_t first_call_target = 0;
+    std::string selector_sha256;
+};
+
+[[nodiscard]] MillenniumDosPostInt91CallerSelector
+parse_millennium_dos_post_int91_caller_selector(
+    std::span<const std::uint8_t> game_executable);
+
+// This is the encoded caller continuation after the selector's overlay
+// adapter CALL. It is retained only as a conditional static code span: six
+// direct near CALLs precede a native-byte comparison, whose two locally
+// encoded routes converge on repeated CS-to-DS/ES setup. No call return,
+// comparison result, register state, or target behaviour is reconstructed.
+struct MillenniumDosPostOverlayAdapterContinuation {
+    std::string executable_sha256;
+    std::uint16_t return_site_address = 0;
+    std::size_t byte_count = 0;
+    std::array<std::uint16_t, 6> initial_call_addresses{};
+    std::array<std::uint16_t, 6> initial_call_targets{};
+    std::uint16_t mode_compare_address = 0;
+    std::uint16_t mode_byte_address = 0;
+    std::uint8_t mode_equal_value = 0;
+    std::uint16_t equal_branch_address = 0;
+    std::uint16_t equal_branch_target = 0;
+    std::uint16_t other_call_address = 0;
+    std::uint16_t other_call_target = 0;
+    std::uint16_t other_jump_address = 0;
+    std::uint16_t convergence_address = 0;
+    std::uint16_t equal_call_address = 0;
+    std::uint16_t equal_call_target = 0;
+    std::uint16_t first_push_cs_address = 0;
+    std::uint16_t first_pop_ds_address = 0;
+    std::uint16_t first_pop_es_address = 0;
+    std::uint16_t second_pop_es_address = 0;
+    std::string continuation_sha256;
+};
+
+[[nodiscard]] MillenniumDosPostOverlayAdapterContinuation
+parse_millennium_dos_post_overlay_adapter_continuation(
+    std::span<const std::uint8_t> game_executable);
+
+// This is the following encoded caller span after the preceding segment
+// setup. It contains fifteen local near CALL encodings, two AL tests, a
+// conditional branch, and an encoded one-byte read/flip/store sequence. Its
+// final branch targets the existing function-key dispatcher at $d3e2. This
+// is static code provenance only: no preceding return, byte value, branch,
+// register state, call return, or target effect is inferred by Project Eon.
+struct MillenniumDosPostOverlayAdapterLoop {
+    std::string executable_sha256;
+    std::uint16_t entry_address = 0;
+    std::size_t byte_count = 0;
+    std::array<std::uint16_t, 15> call_addresses{};
+    std::array<std::uint16_t, 15> call_targets{};
+    std::uint16_t first_al_test_address = 0;
+    std::uint16_t first_nonzero_branch_address = 0;
+    std::uint16_t first_nonzero_branch_target = 0;
+    std::uint16_t native_byte_load_address = 0;
+    std::uint16_t native_byte_address = 0;
+    std::uint16_t native_byte_xor_address = 0;
+    std::uint8_t native_byte_xor_literal = 0;
+    std::uint16_t native_byte_store_address = 0;
+    std::uint16_t loop_al_test_address = 0;
+    std::uint16_t loop_zero_branch_address = 0;
+    std::uint16_t loop_zero_branch_target = 0;
+    std::uint16_t following_dispatch_address = 0;
+    std::string loop_sha256;
+};
+
+[[nodiscard]] MillenniumDosPostOverlayAdapterLoop
+parse_millennium_dos_post_overlay_adapter_loop(
+    std::span<const std::uint8_t> game_executable);
+
+// The hash-identified main-loop dispatch prefix directly follows the
+// post-overlay loop's fall-through address. It records only the encoded
+// action comparisons, guard read, table normalization, and direct calls.
+// Native AL/CL values, branch choices, indirect-table contents, and all
+// callee behaviour remain outside the recovered runtime.
+struct MillenniumDosPostOverlayDispatchPrefix {
+    std::string executable_sha256;
+    std::uint16_t entry_address = 0;
+    std::size_t byte_count = 0;
+    std::uint16_t first_action_compare_address = 0;
+    std::uint8_t first_action_value = 0;
+    std::uint16_t first_action_branch_address = 0;
+    std::uint16_t first_action_branch_target = 0;
+    std::uint16_t guard_load_address = 0;
+    std::uint16_t guard_byte_address = 0;
+    std::uint16_t guard_test_address = 0;
+    std::uint16_t guard_nonzero_branch_address = 0;
+    std::uint16_t guard_nonzero_branch_target = 0;
+    std::uint16_t second_action_compare_address = 0;
+    std::uint8_t second_action_value = 0;
+    std::uint16_t second_action_unequal_branch_address = 0;
+    std::uint16_t second_action_unequal_branch_target = 0;
+    std::uint16_t second_action_call_address = 0;
+    std::uint16_t second_action_call_target = 0;
+    std::uint16_t action_base_subtract_address = 0;
+    std::uint8_t action_base_value = 0;
+    std::uint16_t action_limit_compare_address = 0;
+    std::uint8_t action_limit_value = 0;
+    std::uint16_t action_limit_branch_address = 0;
+    std::uint16_t action_limit_branch_target = 0;
+    std::uint16_t table_base_load_address = 0;
+    std::uint16_t table_base_address = 0;
+    std::uint16_t scaled_call_address = 0;
+    std::uint16_t scaled_call_target = 0;
+    std::uint16_t function_key_loop_jump_address = 0;
+    std::uint16_t function_key_loop_jump_target = 0;
+    std::uint16_t first_action_call_address = 0;
+    std::uint16_t first_action_call_target = 0;
+    std::uint16_t first_action_loop_jump_address = 0;
+    std::uint16_t first_action_loop_jump_target = 0;
+    std::string prefix_sha256;
+};
+
+[[nodiscard]] MillenniumDosPostOverlayDispatchPrefix
+parse_millennium_dos_post_overlay_dispatch_prefix(
+    std::span<const std::uint8_t> game_executable);
+
 // The DX-nonzero successor is a separate, hash-locked static route.  It
 // loads an immediate byte and short-jumps into an in-image continuation which
 // stores that byte with a CS override, restores SP from an original cell, and
@@ -668,6 +935,72 @@ parse_millennium_dos_gx_overlay_selector_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
     const MillenniumDosGxOverlayAdapterEvidence& adapter,
     const MillenniumDosGxOverlayDispatcherEvidence& dispatcher);
+
+// The English 2200AD.EXE startup's two local selector callees are bounded
+// independently from the broad main-loop profile.  Both retain the private
+// INT $91 wrapper call and their following local call as encoded targets
+// only; this parser never chooses a selector result, supplies either call's
+// return, or interprets a native byte read by the other route.
+struct MillenniumDosEnglishGameStartupCallees {
+    std::string executable_sha256;
+    std::uint16_t equal_entry_address = 0;
+    std::size_t equal_byte_count = 0;
+    std::string equal_sha256;
+    std::uint16_t equal_private_function = 0;
+    std::uint16_t equal_private_record_address = 0;
+    std::uint16_t equal_private_call_address = 0;
+    std::uint16_t equal_private_target_address = 0;
+    std::uint16_t equal_followup_call_address = 0;
+    std::uint16_t equal_followup_target_address = 0;
+    std::uint8_t equal_result_value = 0;
+    std::uint16_t equal_result_storage_address = 0;
+    std::uint16_t equal_return_address = 0;
+    std::uint16_t other_entry_address = 0;
+    std::size_t other_byte_count = 0;
+    std::string other_sha256;
+    std::uint16_t other_private_function = 0;
+    std::uint16_t other_private_record_address = 0;
+    std::uint16_t other_private_call_address = 0;
+    std::uint16_t other_private_target_address = 0;
+    std::uint16_t other_followup_call_address = 0;
+    std::uint16_t other_followup_target_address = 0;
+    std::uint16_t other_result_source_address = 0;
+    std::uint8_t other_compare_value = 0;
+    std::uint16_t other_equal_store_address = 0;
+    std::uint16_t other_return_address = 0;
+};
+
+[[nodiscard]] MillenniumDosEnglishGameStartupCallees
+parse_millennium_dos_english_game_startup_callees(
+    std::span<const std::uint8_t> game_executable);
+
+// The immediate English local follow-ups are separately hash-locked.  The
+// palette routine stops at its first BIOS interrupt; its initial CX literal
+// and loop are instruction facts, not a claimed number of executions.
+struct MillenniumDosEnglishGameStartupFollowups {
+    std::string executable_sha256;
+    std::uint16_t equal_entry_address = 0;
+    std::size_t equal_byte_count = 0;
+    std::string equal_sha256;
+    std::uint8_t equal_literal_value = 0;
+    std::uint16_t equal_storage_address = 0;
+    std::uint16_t equal_return_address = 0;
+    std::uint16_t palette_entry_address = 0;
+    std::size_t palette_byte_count = 0;
+    std::string palette_sha256;
+    std::uint16_t palette_table_address = 0;
+    std::array<std::uint8_t, 16> palette_table_values{};
+    std::string palette_table_sha256;
+    std::uint16_t palette_initial_cx = 0;
+    std::uint16_t bios_interrupt = 0;
+    std::uint16_t bios_ax = 0;
+    std::uint16_t palette_return_address = 0;
+};
+
+[[nodiscard]] MillenniumDosEnglishGameStartupFollowups
+parse_millennium_dos_english_game_startup_followups(
+    std::span<const std::uint8_t> game_executable,
+    const MillenniumDosEnglishGameStartupCallees& callees);
 
 // The Spanish FAT12 edition reaches its own TITLES.EXE and 2200AD.EXE through
 // IBM.COM, not the English MILL.COM path. This records only original names,

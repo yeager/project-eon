@@ -1,7 +1,11 @@
 #pragma once
 
+#include "data/zip_archive.hpp"
+
 #include <filesystem>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace eon {
@@ -55,6 +59,13 @@ private:
 
 [[nodiscard]] std::vector<ReleaseArchive> find_release_archives(
     const std::filesystem::path& directory);
+// Re-open an already discovered release only through its full manifest
+// identity. These helpers verify the exact in-memory outer bytes used for the
+// following archive walk, so recognised media cannot be swapped after scan.
+void verify_release_archive(const ReleaseArchive& release);
+[[nodiscard]] std::vector<ArchiveAsset> inventory_verified_release(const ReleaseArchive& release);
+[[nodiscard]] std::optional<std::vector<std::uint8_t>> extract_verified_release_asset(
+    const ReleaseArchive& release, std::string_view expected_asset_sha256);
 [[nodiscard]] std::string name(Game game);
 [[nodiscard]] std::string name(Platform platform);
 

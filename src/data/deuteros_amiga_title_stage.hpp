@@ -303,6 +303,23 @@ struct DeuterosAmigaTitlePostExecServiceBatchProfile {
 parse_deuteros_amiga_title_post_exec_service_batch_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// The fourth and final direct edge in the post-Exec service batch targets a
+// complete two-byte local RTS. It closes only this byte-exact call/return
+// edge: earlier calls and the enclosing return still depend on unresolved
+// original execution and ABI outcomes.
+struct DeuterosAmigaTitlePostExecFourthServiceProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t callee_address = 0;
+    std::uint32_t caller_return_address = 0;
+    std::uint32_t batch_return_address = 0;
+    std::string caller_sha256;
+    std::string callee_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecFourthServiceProfile
+parse_deuteros_amiga_title_post_exec_fourth_service_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // The first direct callee in the post-Exec service batch is complete local
 // setup for a single graphics-library vector.  Its vector call remains an
 // ABI boundary; this records only the literal register/address operands and
@@ -378,6 +395,202 @@ struct DeuterosAmigaTitlePostExecThirdServiceProfile {
 
 [[nodiscard]] DeuterosAmigaTitlePostExecThirdServiceProfile
 parse_deuteros_amiga_title_post_exec_third_service_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// `$1f37a` tail-jumps here only after its local graphics service returns.
+// This complete local dispatch preserves the four BSR operands and its final
+// RTS, but does not follow their targets: those routes contain graphics ABI
+// calls whose returns and effects are not present in the supplied media.
+struct DeuterosAmigaTitlePostExecTailDispatchProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t entry_address = 0;
+    std::array<std::uint32_t, 4> local_call_addresses{};
+    std::uint32_t return_address = 0;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailDispatchProfile
+parse_deuteros_amiga_title_post_exec_tail_dispatch_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// The first BSR in the recovered post-Exec tail dispatch enters this complete
+// local setup routine.  It reaches a graphics.library vector after loading
+// literal A0/A1 operands and externally initialized A2/A6 pointer cells.
+// The vector's return and effect remain explicit ABI boundaries: this profile
+// records no rendered result and does not claim that the caller continues.
+struct DeuterosAmigaTitlePostExecTailFirstCalleeProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t caller_continuation_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t a0_literal = 0;
+    std::uint32_t a1_literal = 0;
+    std::uint32_t a2_pointer_cell_address = 0;
+    std::uint32_t graphics_library_base_address = 0;
+    std::int16_t graphics_library_vector = 0;
+    std::uint32_t vector_return_address = 0;
+    std::uint32_t routine_return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailFirstCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_first_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// The second BSR in the recovered tail dispatch re-enters this wholly local
+// routine after the first graphics vector would have returned.  The routine
+// contains two mirrored, bounded word-selection blocks and one further
+// graphics-library vector.  Its input cells and vector result remain outside
+// the supplied media, so this is raw control-flow and operand provenance only.
+struct DeuterosAmigaTitlePostExecTailSecondCalleeProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t caller_continuation_address = 0;
+    std::uint32_t entry_address = 0;
+    std::array<std::uint32_t, 6> selection_cells{};
+    std::uint32_t a0_literal = 0;
+    std::uint32_t a1_literal = 0;
+    std::uint16_t d0_addend = 0;
+    std::uint16_t d1_adjustment_opcode = 0;
+    std::uint16_t d1_shift_opcode = 0;
+    std::uint32_t graphics_library_base_address = 0;
+    std::int16_t graphics_library_vector = 0;
+    std::uint32_t vector_return_address = 0;
+    std::uint32_t routine_return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailSecondCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_second_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// The third BSR in the same tail dispatch is a distinct caller-connected
+// re-entry of the preceding local routine.  It is kept separate so the
+// original control-flow edge is not collapsed into the earlier call site.
+// Its vector boundary, inputs, and effects remain outside the supplied media.
+struct DeuterosAmigaTitlePostExecTailThirdCalleeProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t caller_continuation_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t routine_return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailThirdCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_third_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// The fourth and last BSR in the same tail dispatch is another distinct edge
+// into a byte-identical local graphics-vector wrapper.  Keep the different
+// entry address and caller continuation visible: identical instructions are
+// not evidence that the original control-flow edges may be merged.  Pointer
+// cells, vector return, and all graphics effects remain ABI boundaries.
+struct DeuterosAmigaTitlePostExecTailFourthCalleeProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t caller_continuation_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t a0_literal = 0;
+    std::uint32_t a1_literal = 0;
+    std::uint32_t a2_pointer_cell_address = 0;
+    std::uint32_t graphics_library_base_address = 0;
+    std::int16_t graphics_library_vector = 0;
+    std::uint32_t vector_return_address = 0;
+    std::uint32_t routine_return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailFourthCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_fourth_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// When all four BSRs in the static post-Exec tail have returned, the original
+// batch itself returns to this exact continuation.  It transfers two
+// longwords from one literal table address, then calls a wholly local wrapper
+// whose final Exec vector is deliberately retained as an ABI boundary.  This
+// is byte provenance only: neither the table contents nor the vector result
+// is supplied or interpreted by Project Eon.
+struct DeuterosAmigaTitlePostExecTailReturnProfile {
+    std::uint32_t continuation_address = 0;
+    std::uint32_t source_table_address = 0;
+    std::array<std::uint32_t, 2> destination_addresses{};
+    std::uint32_t local_service_call_address = 0;
+    std::uint32_t local_service_address = 0;
+    std::uint32_t service_a1_literal = 0;
+    std::array<std::uint16_t, 4> service_a1_offsets{};
+    std::array<std::uint32_t, 2> service_long_literals{};
+    std::uint32_t exec_base_address = 0;
+    std::int16_t exec_vector = 0;
+    std::uint32_t vector_return_address = 0;
+    std::uint32_t routine_return_address = 0;
+    std::string continuation_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailReturnProfile
+parse_deuteros_amiga_title_post_exec_tail_return_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// This is the original caller continuation beginning immediately after the
+// post-Exec tail wrapper's RTS.  It is reachable only if the wrapper's final
+// Exec vector returns.  The profile records direct/indirect call operands and
+// local branch facts through the first later in-stage flag gate; it neither
+// enters any called code nor supplies results for any earlier ABI boundary.
+struct DeuterosAmigaTitlePostExecTailReturnContinuationProfile {
+    std::uint32_t continuation_address = 0;
+    std::uint32_t preceding_local_service_address = 0;
+    std::uint32_t preceding_exec_vector_return_address = 0;
+    std::uint32_t preceding_local_return_address = 0;
+    std::array<std::uint32_t, 13> direct_call_addresses{};
+    std::uint32_t indirect_call_pointer_literal = 0;
+    std::uint32_t indirect_call_address = 0;
+    std::uint32_t mode_cell_address = 0;
+    std::uint16_t mode_value = 0;
+    std::array<std::uint32_t, 2> mode_call_targets{};
+    std::uint32_t timer_counter_address = 0;
+    std::uint32_t timer_limit = 0;
+    std::uint32_t timer_inhibit_cell_address = 0;
+    std::uint16_t timer_inhibit_value = 0;
+    std::uint32_t timer_local_call_target = 0;
+    std::uint32_t terminal_flag_cell_address = 0;
+    std::uint32_t stop_before_address = 0;
+    std::string sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailReturnContinuationProfile
+parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+// `$40616` begins with the two opcode bytes retained at the end of the
+// preceding return-continuation evidence span.  This overlapping profile
+// binds the complete following conditional block through its local branch
+// back into the title loop.  It records operands only: calls, the absolute
+// jump, and the custom-chip word destination are never invoked, followed, or
+// written by Project Eon.
+struct DeuterosAmigaTitlePostExecTailFlagGateProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t preceding_profile_stop_address = 0;
+    std::array<std::uint32_t, 2> source_word_addresses{};
+    std::uint16_t first_compare_value = 0;
+    std::uint32_t first_branch_target = 0;
+    std::uint32_t second_branch_target = 0;
+    std::uint32_t absolute_jump_target = 0;
+    std::array<std::uint32_t, 3> direct_call_targets{};
+    std::uint16_t response_compare_value = 0;
+    std::uint32_t mode_cell_address = 0;
+    std::uint16_t mode_compare_value = 0;
+    std::array<std::uint16_t, 2> word_literals{};
+    std::uint32_t custom_chip_base_address = 0;
+    std::uint16_t custom_chip_word_offset = 0;
+    std::uint32_t local_loop_address = 0;
+    std::uint32_t exit_branch_target = 0;
+    std::uint32_t stop_after_address = 0;
+    std::string sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailFlagGateProfile
+parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // The first common internal setup callee opens the literal

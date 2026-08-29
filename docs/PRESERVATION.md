@@ -41,6 +41,35 @@ releases, and unreadable candidates. The report deliberately does not print
 unrecognised filenames or infer their platform: it makes admission and scanner
 failures auditable while preserving the strict content-addressed boundary.
 
+### Scan-to-use identity binding
+
+Recognition alone is not authority to parse a later version of a path. Before
+each inspection report, title/bootstrap load, or reference-trace report,
+Project Eon reopens the selected outer archive, verifies that exact in-memory
+byte stream against the `ReleaseArchive` SHA-256, and only then walks its ZIP
+directory or extracts a hash-addressed leaf. The release's game, platform and
+language must also still form one exact compiled manifest record. A renamed,
+replaced, truncated, or metadata-forged path is rejected rather than inheriting
+an earlier scanner result. The original archive is still read in place; this
+does not create a cache, unpacked copy, or mutation.
+
+The same binding applies to external trace admission. A valid trace manifest
+cannot lend provenance to an archive that changed after scanning: Project Eon
+re-verifies the trace's selected outer archive before emitting its report.
+
+### ZIP structural boundary
+
+After an outer archive has passed that byte-identity check, its classic ZIP
+directory is still treated as untrusted structure. Project Eon accepts only
+unique, relative `/`-separated entry names (no NUL, backslash, absolute,
+`.` or `..` component), and verifies every local header name, flags, sizes,
+CRC and payload range against the central record before any leaf is exposed.
+Local payloads and optional classic data descriptors must end before the
+central directory; descriptors must repeat the central CRC and sizes. This
+prevents a malformed archive from presenting ambiguous inventory paths or
+from treating directory metadata as disk data. ZIP64, multi-disk, encrypted
+and oversized records remain explicit unsupported boundaries.
+
 | Game | Platform | Lang. | Bytes | Outer archive SHA-256 |
 | --- | --- | --- | ---: | --- |
 | Deuteros | Amiga | en | 4,066,771 | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` |
@@ -298,6 +327,31 @@ interface. This proves only the static fall-through preparation: Project Eon
 does not decide whether `Fopen` succeeds, invoke either GEMDOS service,
 model a handle/result, or read/fill the target buffer.
 
+The immediate 14-byte suffix after that static Fread boundary is now
+hash-locked as the loader-to-configuration-buffer transfer boundary. At
+reconstructed target `+$34` (address `$77034`) its SHA-256 is
+`845d677c7c17d2152f0e89e0a396b6bbfb1ed6a75479a325b39310bbf0d99e58`.
+The original words are `TRAP #1`, `ADDA.L #12,SP`, and `JSR $2a500`; `$2a500`
+is exactly the Fread destination previously prepared in the same immutable
+target. This is an instruction-edge fact, not a successful loader model:
+Project Eon does not invoke Fread or the following trap, decide either return
+value, populate `$2a500`, or execute its JSR. The separately read FAT-chain
+configuration payload is preservation evidence only and is not substituted
+for the native buffer.
+
+The transfer target is deliberately **not** promoted to a proven configuration
+load base. The exact first six bytes of the supplied `MILL22A.INF` are
+`JMP $2aa88` (`4ef90002aa88`, SHA-256
+`5c2fb1d412ca66ba8928a77c22eb0351ab5d3d6fd9c04cff1b037f25a94c7829`).
+If file byte zero occupied the `$2a500` Fread/JSR destination, this jump would
+name file `+$588`. The independently hash-validated static candidate entry
+used elsewhere in this document is file `+$5aa` at `$2a4de`: a literal
+34-byte disagreement. Project Eon records both address calculations and
+rejects altered bytes, but does not choose an alternate destination, apply a
+hidden prebuffer adjustment, or claim that either entry is dynamically
+reached. Resolving this boundary requires native GEMDOS load-address evidence
+and remains outside the current non-executing recovery.
+
 The live Millennium Atari bootstrap session executes only the two proven
 in-memory copies from `MILENIUM.TOS`, materializing the original 514-byte
 target at `$77000`, then reaches the literal `Fopen` request above. It resolves
@@ -388,6 +442,17 @@ instruction/dataflow evidence. Project Eon stops before the ensuing loop body
 and does not dereference the pointers, execute its loops or traps, or infer a
 meaning for those registers and constants.
 
+The immediately preceding 34 bytes are independently hash-locked as a static
+adjacency anchor, not a newly claimed call path. At `0x2b426` (file `+0xf48`)
+their SHA-256 is
+`6f135d6e68a1b6c48826ae484223166f4e6061cd4b6b5cbc2d0dfcc2bc8fb550`.
+They set literal `D0=0` and `D1=7`, contain `DBF D1,-4` back to `0x2b430`,
+push `A3`, set `A5=0x2b3c8`, set word `D0=0x17`, and contain `DBF D0,-4`
+back to `0x2b442`, before falling through to `0x2b448`. This is an immutable
+68000 byte/control-flow fact only. No original callsite to `0x2b426`, loop
+entry, pointer contents, native-service effect, or game-state result is
+asserted or emulated.
+
 The first local loop after that setup is fully bounded as bytes at `0x2b464`
 (file `+0xf86`): a 22-byte original block ending in `DBF` opcode `0x51cd`
 with displacement `-20`. The taken backedge returns to `0x2b464` itself; the
@@ -445,6 +510,17 @@ in the independently verified entry block are established callsites. The
 other patterns remain preservation anchors until their surrounding control
 paths are proven from original bytes.
 
+One of those inventory-only targets is now retained as a complete bounded
+body, without promoting its caller to a live path. The original encoding at
+file `+0xdac` names target `$2b576` (file `+0x1098`). The contiguous span
+through `RTS` at `$2b5f8` is 132 bytes and has SHA-256
+`07e36fd52b00af1557c0da08efc7388d9d7cf6567e9c24102267db80b34adcd8`.
+It starts with original words `0x7000 0x47fa` and ends `0x4e75`. Project Eon
+records this only as immutable disassembly evidence: the inventory establishes
+an encoding, not reachability, register inputs, a calling convention, routine
+meaning, native-service behaviour, or a game-state effect. The bytes are not
+executed or translated into replacement logic.
+
 ### Millennium AmigaDOS filesystem evidence
 
 The Millennium archive contains six independently cracked images. The two
@@ -488,6 +564,18 @@ substituting any variant.
 | `0x24200` | `0x6e000` | `0x41000` | Call loaded stage |
 | `0x16400` | `0x2c000` | `0x68000` | Jump to `0x68000` |
 
+The exact caller-side continuation is now independently fail-closed as well.
+The 132 original bytes at loader address `$7029e` / ADF `+0x69e` hash to
+`b8ca18e61e5372ba4387abd69f6796435671465ddaf48cd3a3e4b41e2528efdc`.
+They contain the literal first read setup, indirect `JSR (A3)` at `$702e4`
+after `A3` is loaded with `$41000`, then the resident read setup and terminal
+indirect `JMP (A3)` at `$70320` after `A3` is loaded with `$68000`.
+`MillenniumAmigaBootstrapOpaqueInvocationBoundary` checks the complete span,
+both handoff addresses, and both already-bounded targets. It does not invoke
+either target, infer that the first opaque stage returns to `$702e6`, interpret
+the device calls, or treat the linear source bytes of the loaded stages as
+their executable runtime representation.
+
 The latter hand-off places `0xa8d398fb` in `d6` immediately before the jump.
 `MillenniumAmigaLoadPlan` recognizes the actual instruction sequence, derives
 the two lengths from its immediate values (`0x1600 * 0x50` and
@@ -525,6 +613,16 @@ absolute references in the raw bytes do not map to the source's nominal
 `$41000 + offset` address. Without an output mapping for the opaque invocation,
 they establish no entry point, scan-code mapping, input behavior, graphics
 resource, or display mode and are never used by the SDL runtime.
+
+`MillenniumAmigaFirstStageSourceAnchorBoundary` makes this source-only
+evidence fail closed. It requires the exact first-stage request
+`ADF +0x24200`, `0x6e000` bytes, nominal destination `$41000`, and the full
+source SHA-256 before checking the three NUL-terminated anchors at stage
+offsets `0x4a3dc`, `0x4a648`, and `0x4a936`. It also verifies the two cited
+source windows at `+0x4a5b0`/`0x160` and `+0x4a900`/`0x220` by their exact
+hashes. This does not convert the source into an executable stage, establish
+that the indirect call returns, model library/device calls, or expose an input
+layout to the runtime; it only preserves reproducible input-media evidence.
 
 The destination `0x68000` begins with a separate, directly verifiable resident
 entry gate: `JSR $787d4`, test byte `d3`, conditionally OR `0x0100` into `d0`,
@@ -927,6 +1025,16 @@ Slot 2's `$1f50` is a literal branch to `$1f1a`; slots 3 and 4 point directly
 to `$1f1a`. Thus all three aliases share only the already-proven state-0 raw
 arguments, without a new state interpretation.
 
+Within the third distinct table body (`+$152`, hash
+`eaee587850078d67a72dcf0da4b45e672c89a1352b040db580bedc0ba3b20e97`), the
+28-byte interval at `+$170` is independently hash-locked to
+`92cb6cf8a41c55df8459a9608c9626ff7cc831cceb69dd2b5531ac766b111552`.
+Its literal-pointer and loop encoding loads `$57a00` and `$b006`, sets the
+word counter to `$9392`, and contains `MOVE.B (A0)+,(A1)+` followed by a
+`DBF` backedge from `+$184` to `+$182`. This is an instruction-layout record
+only. It does not establish a table index, table call, loop execution, return,
+destination contents, disk operation, or game-state meaning.
+
 `build_deuteros_atari_state0_raw_load_plan` now models that one wholly static
 dispatch result without selecting it at runtime: destination `$13200`, length
 `$4800`, linear sector 4, represented as four original nine-sector reads from
@@ -1049,6 +1157,81 @@ machine-code facts. Project Eon does not select the comparison path, perform
 the raw read, infer a disk result, or follow code after that raw-reader/XBIOS
 boundary.
 
+That shared range wrapper is now independently bounded as 48 original
+track-2 bytes at `+$30`, SHA-256
+`132ce2473e3764453bba01308e1f5044dc748bbea8b01975b67a259aa57cea7e`.
+Its `DIVS.W #$1200,D7`, saved-register sequence, and `BSR.W +$24` statically
+target the raw reader at `+$60`. Later literal branches target `+$2a`,
+`+$5e`, and its save/call loop at `+$34`; `+$5e` itself branches to the
+six-byte `MOVE.W $1e28,D7; RTS` helper at `+$2a`. This is a verified control
+layout, not an interpretation of `$1e28`: Project Eon neither supplies a RAM
+value, infers an XBIOS/raw-reader result, nor claims that any caller reaches
+or returns through the wrapper.
+
+The wrapper's direct `BSR.W` target is also separately bound as the complete
+74-byte raw-reader call layout at track-2 `+$60..+$a9`, SHA-256
+`a5bec9d04daa8ce600add594f6325030acd2ad8535910dee62497da90d572c90`.
+Its literal setup begins with `MOVEQ #9,D2`, compares against `$1200`, and
+has byte branches to `+$72` and `+$82`; the later fixed ABI encoding has
+selector `$0008`, opcode `TRAP #14` at `+$9c`, literal cleanup `$14`, then
+the bytes `MOVE.W D0,$1e28; RTS`. These are hash-validated machine-code and
+branch-layout facts only. Project Eon neither executes the ABI call, asserts
+that it returns, treats `$1e28` as a particular status/result, nor performs a
+disk operation from this routine.
+
+The copied dispatch table's three distinct direct target bodies are now bound
+separately from the runtime-dependent `JSR (A1)`. Table slots 0, 1, and 5
+refer respectively to track-2 `+$11a..+$12d` (20 bytes, SHA-256
+`04c8eba86a6259f8d0b175fa18792cc64263863db51e76f9de839eec5c79ce0f`),
+`+$12e..+$14f` (34 bytes, SHA-256
+`0bc76b22089d008e4ce90d63216c75acbe0786b0a06127fbd66ef0dc252949ac`),
+and `+$152..+$1a5` (84 bytes, SHA-256
+`eaee587850078d67a72dcf0da4b45e672c89a1352b040db580bedc0ba3b20e97`).
+The 2-byte `BRA.B -$38` at `+$150` is likewise bound to the first body's
+start. These are direct table/linkage and byte-span facts only: Project Eon
+does not provide a table index, claim that an indirect call reaches or returns
+from any body, execute a raw read or ABI call, or assign a state/game meaning
+to the literal code.
+
+The 26-byte suffix after the third body's independently bounded transfer loop,
+track-2 `+$18c..+$1a5`, is SHA-256
+`45ac9d176b63fa93e16475543939d2f16b4e98cc839b44d2ce2ba9358e978083`.
+It contains two literal immediate-adjust encodings (`$b400`), a literal
+`MOVE.L #$4c800,D0`, then `BSR.W -$170` to the already bounded local range
+wrapper at `+$30`, and `BRA.W -$90` to the separately bounded dispatch-word
+return at `+$114`. Both 68000 word-branch targets are calculated from their
+extension-word address. This connects static byte boundaries only:
+Project Eon neither selects this vector, executes its transfer/call/branch,
+assigns a meaning to the registers or literals, nor performs raw-media I/O.
+
+The copied dispatcher also contains the first byte-proven state-selection
+mechanics, separated around the existing XBIOS boundary. Before that boundary,
+track-2 `+$c4..+$cf` is 12 bytes with SHA-256
+`03cf620d981a775fd1adabe55deea940e08760e3e49c62cd0643c22b5aa08082`:
+`MOVE.L $25fc,D0; MOVE.W D0,$1eaa; LEA $2478,A7`. This records only that the
+low word loaded from RAM `$25fc` is written to the dispatch word at `$1eaa`.
+It does not supply or identify the value at `$25fc`, or attach a game meaning
+to either address. A separate 22-byte table-lookup layout at track-2
+`+$f2..+$107` has SHA-256
+`8e8551a51a7b989e6d2b7d1535819dea658a4e3e64562737755125c13c8f0d3c`:
+it restores `A7`, loads table `$1eac`, reads `$1eaa`, shifts the word left by
+two, loads `0(A1,D0.W)` into `A1`, and encodes `JSR (A1)`. That block lies
+after the unmodelled supervisor-service boundary, so Project Eon does not
+assert that it is reached, that its JSR executes, that the index is bounded,
+or that any table vector is selected. The two independently hash-locked
+layouts make the original input-and-lookup relationship inspectable without
+inventing XBIOS, callback, or boot-state semantics.
+
+The 18 literal bytes immediately after that indirect call, track-2
+`+$108..+$119`, are independently hash-locked to
+`e9ae4bd51bb06c6cb57ac7f26e81497995f7639f99a12e2a149194a39589e16c`.
+They encode `MOVE.L D1,-(A7); ADDA.L #$1200,D4; MOVE.L D2,D7; BSR.W -$e2`
+to the local range wrapper at `+$30`, then `MOVE.W $1eaa,D0; RTS`. This is a
+post-indirect-call register and branch layout, not proof that any table
+handler returns, that D1/D2 carry a particular game meaning, or that the
+wrapper/raw reader is reached. Project Eon records the original `$1200`
+increment and branch target without executing or supplying their inputs.
+
 The byte-proven continuation after that wrapper boundary is retained without
 asserting that the raw reader returns. At track-2 `+$1138`, the next 38 bytes
 have SHA-256 `5b1480495df8defe3e1264dd083ec1c91134c01e56d3d94e060c583ee9b54a89`.
@@ -1059,6 +1242,15 @@ the preceding `MOVE.L (A0)+,(A1)+` at `+$1156`, giving a literal 8,000-longword
 layout if reached. Neither selector `$6`, the pointer's provenance, service
 return, copy outcome, nor the enclosing raw-reader return is inferred or
 executed by Project Eon.
+
+The other post-service layout is bounded independently. The first callee's
+literal `BRA.W +$08e8` at track-2 `+$82c` resolves from its extension word to
+track-2 `+$1116`. The 12 target bytes have SHA-256
+`8778c08ae16a5f66009dda8d60a0dacba267cca4d29211a11fd2e30c40a7796b`:
+`MOVE.L #$0000b000,D0; MOVE.L D0,$25f0; RTS`. This records a target which is
+encoded after the selector-5 `TRAP #14` boundary; it does not assert that the
+service returns, that the branch is taken, that the target executes, or that
+either RAM address/value has a game meaning.
 
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
@@ -1923,6 +2115,19 @@ composition and BIOS-visible output remain unknown. No post-key loading frame,
 transition, resource effect, process exit, launcher return, or game startup is
 executed or drawn by Project Eon.
 
+`MillenniumDosTitleExitClosure` now preserves the narrower local tail as its
+own hash-locked profile. `$1c54..$1c69` (file `+$1b54`, 22 bytes, SHA-256
+`d0981a03e0f8fdc9449e080668b7808952a48d0d3de4beb3a528ba5fc0f05951`) first
+calls `$1968`, then `$12c0`. Only if both native calls return do the following
+original instructions clear `$1a0e`, restore SP from `$1aa0`, and call `$0916`;
+the direct `JMP` at `$1c67` targets `$1a0f`. That 11-byte tail (file
+`+$190f`, SHA-256
+`b8160617c570a0dafcfea4e57187b7dd9182ced8da1153f6f77c63d5e7fe6a88`) calls
+`$112e` before the existing `INT 21h/AH=$4c` bytes at `$1a12`. The local-call
+returns, the process termination effect, and whether the program ever returns
+to `MILL.COM` remain explicit boundaries; the runtime does not perform any of
+them.
+
 The local helper `$1917` is now independently byte-locked. Each of its five
 calls starts a fixed 15-iteration selector loop. Selector `$18f9` adds the
 unknown word at `$1181` to accumulator `$18f7`, masks the result with `$03ff`,
@@ -2253,6 +2458,32 @@ These are control-flow operands only: Project Eon neither assumes either
 wrapper return nor interprets the register setup, follow-up calls, or their
 results.
 
+`MillenniumDosEnglishGameStartupCallees` now keeps those two English selector
+targets as their own hash-addressed preservation boundary rather than relying
+on the wider main-loop profile. The 20-byte equal block at `$d1a1` hashes to
+`6f59df77c567324b41dd6159a6fbac7d8970626fc40e8b908f9f58746a993a3e`; its
+private wrapper call is `$d1a9 → $0124`, its conditional local successor is
+`$d1ac → $044e`, and only after both encoded calls does it write literal `$01`
+to `$da05` and return at `$d1b4`. The 28-byte other block at `$d1b5` hashes to
+`2f61098eb45bb48ea7a38ab2fcc2e065ae0d0b2ad08ea9973e3fe464943fba9b`; it
+has `$d1bd → $0124` and `$d1c0 → $0466`, then reads native `$da05`, compares
+it with `$02`, and conditionally encodes the `$b800` store at `$0107` before
+its `$d1d0` return. These are bytes and operands, not a claim that the
+private interrupt returns, that either branch is chosen, or that the native
+comparison has a particular value.
+
+The immediate local successors are independently preserved by
+`MillenniumDosEnglishGameStartupFollowups`. `$044e` is the eight-byte literal
+store/RET sequence (SHA-256
+`38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f`).
+`$0466` through `$047c`, together with its table at `$0456`, is a 23-byte
+in-image BIOS palette-request prefix and a 16-byte table, SHA-256
+`b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779` and
+`ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a`.
+It loads initial `CX=$0010`, reads that table, encodes `AX=$1000`, and first
+reaches `INT $10` at `$0476`. The BIOS interrupt, any register effects, and
+any number of loop executions are explicitly outside this recovery.
+
 The later English startup continuation is independently hash-locked as well.
 If either selected private-wrapper path returns, `$d2e5` preserves DX,
 restores DS from CS, and calls `$d1fa` at `$d2e8`. The callee's first nine
@@ -2286,6 +2517,123 @@ before first reaching `INT $21` at `$0550` with `AH=$3d`, `AL=$02`.
 `328e11edf0653b0e0f21db3b61cf9ff95795ec9431f07c0198a700358f75ed74`) against
 the full original executable. This does not choose `$da05`, infer a selected
 name's use, invoke DOS, provide carry/AX, or claim the code path executes.
+
+There is a further caller-connected static continuation after that selector,
+but only if the selector and its DOS-facing loader both return. The 23 bytes
+at `$d2f8..$d30e` hash to
+`9c7b13c4e0b99e8529e78063b91ae92d967b9fc6de66ebeeaacec01563e4a9d9`.
+They load the encoded source address `$0082` through `CS:SI`, subtract literal
+`$30` from the resulting `AL`, store it at `$0122`, and call `$d305 → $d07a`.
+The subsequent literal `BX=$fa00`, `AH=$48`, `INT $21` reaches its next
+external DOS boundary at `$d30d`. `MillenniumDosStartupZeroContinuationBoundary`
+locks that exact span and near-call arithmetic against the complete English
+executable. It does not assert any byte read, local-call return, DOS result,
+or allocation; this is conditional instruction provenance only.
+
+There is one further conditional post-allocation boundary, anchored separately
+without interpreting the allocation call. Only if the preceding local helper
+and `INT $21/AH=$48` both return, `$d30f..$d318` encodes `CS:MOV [$d130],BX`,
+`MOV ES,AX`, `AH=$49`, and `INT $21`. Its ten bytes hash to
+`f583faad7bddba301c431adb94fa9d53d5b197dcba2f447b0b654df6f1b452ce`.
+`MillenniumDosStartupPostAllocationBoundary` records the encoded `$d130` store,
+the `$d314` register-transfer instruction, and the next DOS boundary at
+`$d318`; it does not treat AX or BX as a result, infer a segment, invoke DOS,
+or claim a return from this new boundary.
+
+There is a caller-connected continuation after that second DOS boundary, but
+only on the unproven condition that `INT $21/AH=$49` returns. The 30 bytes at
+`$d31a..$d337` hash to
+`4d94bf904471cf96a03ce6dd111c0720f396e08ebf2f4603469377db0dc669ef`.
+They restore DS from CS, pop the earlier saved DX, use `LDS` twice with the
+same encoded far-cell address `$1042` (first into DX, then into SI), and make
+three direct near calls: `$d32f → $6bf2`, `$d332 → $101a`, and
+`$d335 → $11ce`. The latter two targets are the separately preserved
+`2200AD4.BIN` and `2200GX.EXE` loaders; that relationship is raw static
+caller evidence only. `MillenniumDosStartupPostReleaseContinuation` validates
+the entire original English executable, this exact span, and all three
+16-bit wrapped call calculations. It does not assert that AH=$49 returns,
+that `$1042` holds a valid pointer, that any local call returns, or that DOS
+frees, loads, or transfers any host resource.
+
+The immediate encoded successor of the GX-loader call is separately bounded
+as well. Only if `$d335 → $11ce` returns, `$d338..$d342` restores ES from CS,
+loads literal `BX=$d1a0` and `AX=$0022`, then calls the existing private
+`INT $91` wrapper at `$d340 → $0124`. Those 11 bytes (file `+$d238`) hash to
+`64e7dddae2ca6942cddaa4c564d61203b26c469fc898bb923b2ba227d93876ab`.
+`MillenniumDosStartupPostGxLoaderBoundary` validates the full 54,391-byte
+English `2200AD.EXE`, the raw span, and its 16-bit wrapped call calculation.
+The literals are encoded operands, not a reconstructed private-runtime ABI:
+Project Eon does not assert that the loader or wrapper returns, interpret the
+arguments, invoke `INT $91`, or supply a result.
+
+The call target itself is now retained separately as
+`MillenniumDosPrivateInt91Wrapper`. In the same hash-identified English
+`2200AD.EXE`, its 13 bytes at `$0124..$0130` hash to
+`5d17daad68e9062dc6852ae76740db4afdcb81555ba9fb7d15d4e4aa8d088175`.
+The complete raw instruction sequence is `PUSH DS`, `PUSH SI`, `PUSH DI`,
+`PUSH BP`, `PUSH ES`, `INT $91`, `POP ES`, `POP BP`, `POP DI`, `POP SI`,
+`POP DS`, `RET`. The parser also validates the three caller bytes at `$d340`
+and their wrapped near-call target `$0124`; this ties the wrapper to the
+post-GX route without claiming that the loader returns. It deliberately does
+not infer a stack result, register preservation convention, private interrupt
+ABI, interrupt effect, or return from either the interrupt or the wrapper.
+
+The caller's immediate encoded return site is separately retained as
+`MillenniumDosPostInt91CallerSelector`, without treating that return as a
+runtime fact. In the same 54,391-byte English `2200AD.EXE`, the 51 bytes at
+`$d343..$d375` hash to
+`571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091`.
+They load the original byte at `$da05`, compare it with literals `$03`, `$04`,
+and `$02` at `$d34d`, `$d358`, and `$d363`, respectively, select among four
+encoded DX/AX pairs, store DX through a CS override to `$4b6e` at `$d36e`, and
+make the first direct local call `$d373 -> $6c52`. The parser validates the
+complete executable, the exact span/hash, and the wrapped near-call target.
+It does not assert that the private wrapper returns, read or assign a value to
+`$da05`, interpret the register pairs/store, run the callee, or infer any
+interrupt behavior.
+
+The encoded caller continuation after that adapter call is independently
+preserved as `MillenniumDosPostOverlayAdapterContinuation`. It is explicitly
+conditional: the adapter's `RETF` transfer need not return. If it does, the
+39 bytes at `$d376..$d39c` (file `+$d276`) hash to
+`1df4b30f14434eae3a44463402710bcd1b162200a923c0b9cc1f827faf3763ac`.
+They make six direct near calls, in order, to `$d152`, `$4f08`, `$4111`,
+`$40af`, `$42b2`, and `$107a`. The prefix then compares the original byte at
+`$da05` with `$01`: its encoded equal branch reaches `$d394 → $d1a1`; the
+other route calls `$d38f → $d1b5`, short-jumps to `$d397`, and the two paths
+converge on raw `PUSH CS`/`POP DS` and two `PUSH CS`/`POP ES` pairs. The parser
+validates the whole original executable, span hash, and every near-call target.
+It does not claim any call returns, choose the byte value or branch, assign a
+meaning to the segment setup, execute a target, or provide native state.
+
+The following 69-byte encoded caller span is separately preserved as
+`MillenniumDosPostOverlayAdapterLoop`. It begins at `$d39d`, directly after
+the prior segment-setup span, and hashes to
+`1bbb4fcc18668021306de1e0014a9baab1f526af1514fa7ce9d1a61780972cf0` in the
+same English 54,391-byte `2200AD.EXE`. It has fifteen direct near CALL
+encodings to `$446a`, `$5b1f`, `$6178`, `$799c`, `$52f9`, `$7b7f`, `$09e4`,
+`$11a4`, `$0b0c`, `$0ea4`, `$0b5b`, `$0ebb`, `$7601`, `$7bcb`, and `$0f05`.
+It contains AL tests at `$d3ba` and `$d3de`; the first encoded nonzero route
+goes from `$d3bc` to `$d3c6`, while the final encoded zero route goes from
+`$d3e0` to `$d3d2` before the existing dispatcher at `$d3e2`. Between them,
+the raw instructions load, XOR `$01`, and store the original byte at `$07f9`
+at `$d3be/$d3c1/$d3c3`. The parser validates the full executable, complete
+span hash, and every direct near target. It neither assumes the adapter or
+any call returns, reads the runtime byte, chooses either branch, interprets
+the encoded instructions, nor gives any target a host-side effect.
+
+The loop's fall-through target is separately fixed as
+`MillenniumDosPostOverlayDispatchPrefix`. The 49 bytes at `$d3e2..$d412`
+(file `+$d2e2`, SHA-256
+`7abec93ec23f7ca3c4b400e16b9e746da7b0b9a1dd4bec88ba891ef04b322065`) first
+compare AL with `$0b` and branch to `$d40e → $11a4`; otherwise they read and
+test native byte `$da3a`, compare AL with `$0c`, and encode `$d3f4 → $d570`.
+The remaining route subtracts `$3b`, bounds against `$0a`, loads table base
+`$2fbf`, and has direct calls `$d40a → $76f1` and `$d40e → $11a4`, each with
+an encoded jump back to `$d3d2`. This parser validates the full English
+executable, raw span and wrapped CALL targets. It does not supply AL or the
+guard byte, select a table item, dereference native state, assume any branch
+or call return, or attach an action to a host effect.
 
 The complementary DX-nonzero successor is independently bounded before its
 first mouse boundary. The static target `$d44b` loads `AL=$08` and its short
@@ -3025,3 +3373,124 @@ three spans and these operands. It does not call any vector, supply a vector
 result, write any title-stage cell, or execute the tail jump. Reaching this
 third edge requires the earlier graphics vector, state-init routine, and all
 prior original calls to return.
+
+The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
+call to `$40698` and hashes to
+`b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its
+complete target is exactly the two-byte `RTS` at `$40698..$40699` / ADF
+`+0x9b698`, SHA-256
+`1ceeabf0c6a5a30bad12cdac0e3ab015a7188a42e6aebb556aad00bb9cd693ad`.
+`DeuterosAmigaTitlePostExecFourthServiceProfile` also validates the enclosing
+batch `RTS` at `$4040c`, preserving caller return `$4040c` and batch return
+`$4040e` as byte facts. It does not assert that earlier calls return, cross
+the preceding Exec boundary, or execute either return.
+
+The third-service dispatcher only reaches its absolute `JMP $201d2` after the
+three graphics-library vectors in `$20094` return. The target `$201d2..$2021d`
+is a complete 76-byte local dispatch at ADF `+0x7b1d2`, SHA-256
+`6947fb7ffcbfaadd0ce420648741b46539f5dce188e4c26ba7fd18351852c658`. It
+saves A0/A6, has static BSR operands to `$200fa`, `$20118` (twice), and
+`$200dc`, then restores A0 and RTSes at `$2021c`. Those destinations contain
+further graphics ABI boundaries, so `DeuterosAmigaTitlePostExecTailDispatchProfile`
+records only the exact control-flow bytes and return `$2021e`; it neither
+executes a BSR, supplies a vector result, nor infers any title or display
+effect.
+
+The first of those BSRs is `$201d6..$201d9` / ADF `+0x7b1d6`, targeting
+`$200fa`. Its four-byte operand hashes to
+`fd55349ce2476b466426a5addfa7eedae100cddaac5a480512c6eff31a06a450`. The
+complete callee `$200fa..$20117` / ADF `+0x7b0fa` is 30 bytes and hashes to
+`6e36c860c280c651947ad0ea6ef868759fbc7bfac67d89af219135e4751e6e6f`. It
+loads A0/A1 from literals `$12e12`/`$1ffda`, A2 from pointer cell `$2008e`,
+and A6 from graphics-library base cell `$12fec`, then calls vector `-$1a4`.
+`DeuterosAmigaTitlePostExecTailFirstCalleeProfile` binds those exact bytes,
+the vector return `$20116`, local RTS boundary `$20118`, and caller
+continuation `$201da`. It does not call the vector, read the pointed-to A2
+value, assume a vector return, or infer any graphics effect.
+
+The following BSR in the same dispatcher is `$201fe..$20201` / ADF
+`+0x7b1fe`, which hashes to
+`8919a0658d9b7a79bca49d3ca3f38227e3ee6a043491ebac0dbb395504b33fd9` and
+targets `$20118`. Its complete 168-byte local routine `$20118..$201bf` / ADF
+`+0x7b118` hashes to
+`9b16e7cdc97495a1b52656d49c7a3612e7e1617ce88996e2c5e7138e3f183ec3`.
+It contains two mirrored bounded selection blocks over literal cells
+`$1ffc8/$1ffca/$1ffcc` and `$1ffce/$1ffd0/$1ffd2`, then loads A0/A1 from
+`$12e12/$1ffda`, applies literal opcodes `$0440 #$0010`, `$5d41`, and
+`$e248`, loads A6 from `$12fec`, and calls graphics-library vector `-$1aa`.
+`DeuterosAmigaTitlePostExecTailSecondCalleeProfile` records these byte facts,
+the vector return `$201ba`, RTS `$201c0`, and caller continuation `$20202`.
+It neither supplies input cells, invokes the vector, assumes any ABI return,
+nor labels the selection or graphics effect.
+
+The third BSR in that same dispatch is a separate, later call site at
+`$20212..$20215` / ADF `+0x7b212`. Its four-byte operand is
+`61 00 ff 04` (SHA-256
+`a760d59c7213517e7d3427b30915f9c586be5448e40a0a3980f9dded55f9f994`) and
+re-enters `$20118`; its caller continuation is `$20216`. The re-entered
+168-byte routine is the same hash-locked span already recorded above, ending
+at RTS `$201c0`; it must not be mistaken for the earlier call at `$201fe`.
+`DeuterosAmigaTitlePostExecTailThirdCalleeProfile` therefore binds this
+distinct caller edge to that existing local routine hash. It does not infer
+that any preceding graphics vector returns, execute the re-entry, or ascribe
+selection/display semantics to the code.
+
+The fourth and final BSR in `$201d2` is `$20216..$20219` / ADF `+0x7b216`:
+bytes `61 00 fe c4`, SHA-256
+`6b8c80452bd43c82d8ce91fa551b3067dfc33bb85e553d555aaec65ea6a8ce26`, target
+`$200dc`, continuation `$2021a`. Its target `$200dc..$200f9` / ADF `+0x7b0dc`
+is a separate 30-byte entry with SHA-256
+`6e36c860c280c651947ad0ea6ef868759fbc7bfac67d89af219135e4751e6e6f` (the
+same bytes as the independently reached `$200fa` wrapper). It loads literal
+A0/A1 `$12e12/$1ffda`, A2 from pointer cell `$2008e`, A6 from `$12fec`, calls
+graphics-library vector `-$1a4`, then has vector-return `$200f8` and local
+RTS boundary `$200fa`. `DeuterosAmigaTitlePostExecTailFourthCalleeProfile`
+binds the distinct caller and target spans without collapsing duplicate bytes
+into one edge. It does not read pointer cells, invoke the vector, assume that
+any BSR/vector returns, or infer a graphics/title effect.
+
+If—and only if—all four tail BSRs and their unresolved vector calls return,
+the enclosing `$403f4` batch returns to `$404d4`. The 28-byte continuation
+`$404d4..$404ef` / ADF `+0x9b4d4` hashes to
+`32a750150f115f5c012e99811313916078a8657c6100b50e92acadca0708965d`.
+It sets A0 to literal `$12ff4`, transfers two successive longwords into
+`$37ef2` and `$37ef6`, then calls local `$204c8`. The complete local span
+`$204c8..$204f9` / ADF `+0x7b4c8` is 50 bytes and hashes to
+`76f4163c15e6761168f1d267e3feae94f0430975efa75b1c3576d7b88947e596`.
+It loads A1 with `$204aa`, writes literals `$0002`/`$00c4` at offsets
+`$0008`/`$0009`, writes long literals `$204c0`/`$202ca` at `$000e`/`$0012`,
+loads D0 `$00000005`, then obtains the unknown Exec base from `$4` and calls
+vector `-$a8(A6)`. The vector-return instruction is `$204f8`; the local RTS
+ends at `$204fa`. `DeuterosAmigaTitlePostExecTailReturnProfile` records only
+these caller-connected byte facts. It does not read the table, perform the
+writes, invoke or identify the Exec vector, presume any return, or infer a
+display/title effect.
+
+Only if that final `-$a8(A6)` vector returns and the wrapper RTS at `$204f8`
+unwinds to `$204fa` does its caller continue at `$404f0`. The following
+296-byte span `$404f0..$40617` / ADF `+0x9b4f0` has SHA-256
+`10a96a2c80f83b32530ed9355cb2988bcac233c49f66d93484b31d0c0e3667c6`.
+It has direct absolute-long operands (in instruction order) to `$389e2`,
+`$1fb9a`, `$38912`, `$2022a`, `$41bb4` twice, `$20e18`, `$20ba8`, `$37180`,
+the `$4040e == 5` alternatives `$36a8c`/`$1fb9a`, `$222c0`, and `$23e4e`.
+Its one indirect `JSR (A0)` follows literal A0 `$20cfe`, which is not
+dereferenced. The same bounded span has raw timer operands `$40410`/`$ea60`,
+inhibit comparison `$22d34 == $11`, and local call `$4069a`; it ends before
+the next flag-gated instruction's operand at `$40618` (`$1bf36` is merely
+recorded as a cell operand). `DeuterosAmigaTitlePostExecTailReturnContinuationProfile`
+binds those bytes without entering calls, providing ABI results, or assigning
+game/display semantics.
+
+The next complete instruction starts at `$40616`, so
+`DeuterosAmigaTitlePostExecTailFlagGateProfile` deliberately overlaps the
+preceding span's final opcode word. Its 94-byte span `$40616..$40673` / ADF
+`+0x9b616` hashes to
+`fcf7c15552302b6b902352380a5b5d454eba190be2a7e89af9701822eac1f80e`.
+It records raw word operands `$1ffce`/`$1ffd4`, comparisons `$00b4`/`$0043`,
+the two branches to `$4063a`, absolute jump `$37f56`, calls `$1f3f8` and
+`$1f238` (twice), comparison `$1bf36 == $0101`, literals `$00f0`/`$0f00`,
+and the word destination `$dff000 + $0180`. Its local loop is `$40658`; the
+exit branch has raw target `$40576`. The profile stops before padding at
+`$40674`. It never reads cells, takes branches, follows calls/jumps, writes
+the custom-chip address, or attributes hardware/game semantics to these
+bytes.

@@ -29,6 +29,40 @@ struct MillenniumAmigaLoadPlan {
     std::uint32_t loader_magic = 0;
 };
 
+// The recovered bootstrap loader reaches both raw stages through A3.  This
+// is a byte-exact description of the caller-side handoff only: the first
+// stage is opaque and neither its return nor the terminal resident jump is
+// executed by Project Eon.
+struct MillenniumAmigaBootstrapOpaqueInvocationBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::uint32_t first_stage_invocation_address = 0;
+    std::uint32_t first_stage_target = 0;
+    std::uint32_t static_post_first_stage_address = 0;
+    std::uint32_t resident_stage_jump_address = 0;
+    std::uint32_t resident_stage_target = 0;
+};
+
+// Immutable source-only anchors inside the first range read by the bootstrap.
+// The JSR (A3) representation has no recovered source-to-RAM transform, so
+// this is deliberately a provenance record rather than decoded executable
+// code, an AmigaOS API model, or an input-map implementation.
+struct MillenniumAmigaFirstStageSourceAnchorBoundary {
+    std::size_t raw_disk_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::array<std::uint32_t, 3> anchor_stage_offsets{};
+    std::array<std::size_t, 2> window_stage_offsets{};
+    std::array<std::size_t, 2> window_byte_counts{};
+    std::array<std::string, 2> window_sha256{};
+};
+
+[[nodiscard]] MillenniumAmigaFirstStageSourceAnchorBoundary
+parse_millennium_amiga_first_stage_source_anchor_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&);
+
 // Several supplied Amiga variants differ in their bootstrap and opaque
 // first-stage raw representation but share this literal resident raw range. It is independently
 // hash-validated so callers can preserve common evidence without treating a
@@ -333,6 +367,14 @@ struct MillenniumAmigaResidentSeparatePostCallTailBranchBoundary {
 // intentionally does not decompress, write, or otherwise unpack game media.
 [[nodiscard]] MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(
     const AmigaAdf& disk);
+
+// Hash-locks the complete caller-side raw-loader continuation containing the
+// indirect first-stage JSR and terminal resident JMP. It proves neither that
+// the first stage returns nor that either opaque target is executable as a
+// direct linear ADF representation.
+[[nodiscard]] MillenniumAmigaBootstrapOpaqueInvocationBoundary
+parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
 
 // Validates the common raw resident interval directly from an ADF image byte
 // span. This deliberately accepts a shorter supplied image when the complete

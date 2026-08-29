@@ -305,6 +305,44 @@ MillenniumAtariFopenFallthrough parse_millennium_atari_fopen_fallthrough(
         entry_offset + 18U, read_be16(bytes, 20), read_be32(bytes, 22)};
 }
 
+MillenniumAtariFreadConfigTransferBoundary
+parse_millennium_atari_fread_config_transfer_boundary(
+    const MillenniumAtariMaterializedTarget& target,
+    const MillenniumAtariFopenFallthrough& fallthrough) {
+    // The preceding boundary ends its literal Fread preparation at +$2c and
+    // retains the following ADDA.L #12,SP at +$2e. The next original bytes
+    // execute TRAP #1, repeat that cleanup, then JSR to the literal Fread
+    // destination. Neither native call is made here, so this is deliberately
+    // an edge encoding rather than a runnable configuration transition.
+    constexpr std::size_t entry_offset = 0x34;
+    constexpr std::array<std::uint8_t, 14> entry_bytes{
+        0x4e, 0x41, 0xdf, 0xfc, 0x00, 0x00, 0x00, 0x0c,
+        0x4e, 0xb9, 0x00, 0x02, 0xa5, 0x00,
+    };
+    constexpr std::string_view expected_sha256 =
+        "845d677c7c17d2152f0e89e0a396b6bbfb1ed6a75479a325b39310bbf0d99e58";
+    if (target.target_address == 0
+        || fallthrough.target_address != target.target_address
+        || fallthrough.entry_offset != 0x1a
+        || fallthrough.byte_count != 26
+        || fallthrough.fread_trap_offset != 0x2c
+        || fallthrough.stack_cleanup_opcode != 0xdffc
+        || fallthrough.stack_cleanup_bytes != 12
+        || target.bytes.size() < entry_offset + entry_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(),
+            target.bytes.begin() + static_cast<std::ptrdiff_t>(entry_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fread configuration transfer boundary");
+    }
+    const auto bytes = std::span(target.bytes).subspan(entry_offset, entry_bytes.size());
+    const auto digest = to_hex(sha256(bytes));
+    if (digest != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fread configuration transfer boundary hash");
+    }
+    return {target.target_address, entry_offset, entry_bytes.size(), digest,
+        read_be16(bytes, 0), read_be16(bytes, 2), read_be32(bytes, 4), read_be16(bytes, 8),
+        read_be32(bytes, 10)};
+}
+
 MillenniumAtariConfigEvidence probe_millennium_atari_config(const Fat12Disk& disk) {
     constexpr std::string_view requested_filename = "MILL22A.inf";
     MillenniumAtariConfigEvidence result;
@@ -455,6 +493,49 @@ MillenniumAtariConfigEntry parse_millennium_atari_config_entry(
     result.final_trap_selector = 0x26;
     result.return_offset = static_cast<std::uint32_t>(entry_offset + entry_bytes.size() - 2U);
     return result;
+}
+
+MillenniumAtariFreadConfigLoadAddressBoundary
+parse_millennium_atari_fread_config_load_address_boundary(
+    const MillenniumAtariFreadConfigTransferBoundary& transfer,
+    const std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigEntry& independent_entry) {
+    // A literal Fread-to-$2a500 followed by JSR $2a500 establishes an
+    // original loader edge, but it does not establish the address at which
+    // disk-file bytes are resident after GEMDOS returns.  The supplied file's
+    // first six bytes are JMP $2aa88.  If its byte zero were at $2a500, that
+    // target would be file +$588; the independently byte-verified candidate
+    // entry is file +$5aa at base $2a4de.  Preserve that 34-byte mismatch as
+    // evidence and deliberately do not resolve it into an execution model.
+    constexpr std::uint32_t fread_destination = 0x2a500;
+    constexpr std::array<std::uint8_t, 6> initial_jump_bytes{
+        0x4e, 0xf9, 0x00, 0x02, 0xaa, 0x88,
+    };
+    constexpr std::uint32_t initial_jump_target = 0x2aa88;
+    constexpr std::uint32_t candidate_load_base = 0x2a4de;
+    constexpr std::uint32_t candidate_entry_offset = 0x5aa;
+    constexpr std::int32_t expected_delta = 34;
+    constexpr std::string_view expected_sha256 =
+        "5c2fb1d412ca66ba8928a77c22eb0351ab5d3d6fd9c04cff1b037f25a94c7829";
+    if (transfer.config_buffer_address != fread_destination
+        || transfer.config_jsr_opcode != 0x4eb9U
+        || payload.size() < initial_jump_bytes.size()
+        || !std::equal(initial_jump_bytes.begin(), initial_jump_bytes.end(), payload.begin())
+        || independent_entry.proven_load_base != candidate_load_base
+        || independent_entry.entry_address != initial_jump_target
+        || independent_entry.entry_file_offset != candidate_entry_offset) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fread configuration load-address boundary");
+    }
+    const auto header = payload.first(initial_jump_bytes.size());
+    const auto digest = to_hex(sha256(header));
+    const auto direct_offset = initial_jump_target - fread_destination;
+    const auto delta = static_cast<std::int32_t>(candidate_entry_offset)
+        - static_cast<std::int32_t>(direct_offset);
+    if (digest != expected_sha256 || direct_offset >= payload.size() || delta != expected_delta) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fread configuration load-address boundary hash");
+    }
+    return {fread_destination, read_be16(header, 0), read_be32(header, 2), direct_offset,
+        digest, candidate_load_base, candidate_entry_offset, delta};
 }
 
 MillenniumAtariConfigTrapArgumentStrings parse_millennium_atari_config_trap_argument_strings(
@@ -693,6 +774,45 @@ MillenniumAtariConfigFourthJsr parse_millennium_atari_config_fourth_jsr(
         read_be16(payload, target_offset + 26U)};
 }
 
+MillenniumAtariConfigFourthPrelude parse_millennium_atari_config_fourth_prelude(
+    std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthJsr& setup) {
+    // The 34 literal bytes directly before $2b448 establish two DBF
+    // backedges into the same local span, then fall through to the separately
+    // verified setup. No callsite or dynamic entry state for $2b426 is
+    // asserted here.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t prelude_address = 0x2b426;
+    constexpr std::size_t prelude_offset = prelude_address - load_base;
+    constexpr std::size_t prelude_bytes = 34;
+    constexpr std::uint32_t continuation_address = 0x2b448;
+    constexpr std::array<std::uint8_t, prelude_bytes> expected_bytes{
+        0x20, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x32, 0x3c, 0x00, 0x07,
+        0x2a, 0xc0, 0x51, 0xc9, 0xff, 0xfc, 0x2f, 0x0b, 0x2a, 0x7c,
+        0x00, 0x02, 0xb3, 0xc8, 0x30, 0x3c, 0x00, 0x17, 0x2a, 0xdc,
+        0x51, 0xc8, 0xff, 0xfc,
+    };
+    constexpr std::string_view expected_sha256 =
+        "6f135d6e68a1b6c48826ae484223166f4e6061cd4b6b5cbc2d0dfcc2bc8fb550";
+    if (setup.proven_load_base != load_base || setup.target_address != continuation_address
+        || setup.target_file_offset != prelude_offset + prelude_bytes
+        || payload.size() < prelude_offset + prelude_bytes) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf prelude");
+    }
+    const auto bytes = payload.subspan(prelude_offset, prelude_bytes);
+    const auto hash = to_hex(sha256(bytes));
+    if (hash != expected_sha256
+        || !std::equal(expected_bytes.begin(), expected_bytes.end(), bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Atari ST fourth MILL22A.inf prelude");
+    }
+    return {prelude_address, static_cast<std::uint32_t>(prelude_offset),
+        static_cast<std::uint32_t>(prelude_bytes), hash,
+        read_be16(bytes, 0), read_be32(bytes, 2), read_be16(bytes, 6), read_be16(bytes, 8),
+        read_be16(bytes, 12), static_cast<std::int16_t>(read_be16(bytes, 14)), 0x2b430,
+        read_be16(bytes, 16), read_be32(bytes, 20), read_be16(bytes, 24), read_be16(bytes, 26),
+        read_be16(bytes, 30), static_cast<std::int16_t>(read_be16(bytes, 32)), 0x2b442,
+        continuation_address};
+}
+
 MillenniumAtariConfigFourthLoop parse_millennium_atari_config_fourth_loop(
     std::span<const std::uint8_t> payload, const MillenniumAtariConfigFourthJsr& setup) {
     // The immediate post-setup body at $2b464 ends in DBF D5,-$14. On its
@@ -888,6 +1008,42 @@ MillenniumAtariConfigAbsoluteJsrInventory inventory_millennium_atari_config_abso
         throw std::runtime_error("Unexpected Millennium Atari ST MILL22A.inf absolute JSR inventory");
     }
     return result;
+}
+
+MillenniumAtariConfigResidualJsrBody parse_millennium_atari_config_residual_jsr_body(
+    const std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigAbsoluteJsrInventory& inventory) {
+    // This is the wholly static target of one inventory-only encoding. Its
+    // reachability and register inputs are unrecovered, so retain the body as
+    // hash-addressed bytes instead of assigning it a game or platform role.
+    constexpr std::uint32_t load_base = 0x2a4de;
+    constexpr std::uint32_t callsite_file_offset = 0xdac;
+    constexpr std::uint32_t target_address = 0x2b576;
+    constexpr std::size_t target_offset = target_address - load_base;
+    constexpr std::uint32_t terminal_return_address = 0x2b5f8;
+    constexpr std::size_t byte_count = terminal_return_address - target_address + 2U;
+    constexpr std::string_view expected_sha256 =
+        "07e36fd52b00af1557c0da08efc7388d9d7cf6567e9c24102267db80b34adcd8";
+    constexpr std::array<std::uint8_t, 4> first_bytes{0x70, 0x00, 0x47, 0xfa};
+    constexpr std::array<std::uint8_t, 2> return_bytes{0x4e, 0x75};
+    const auto callsite = std::pair{callsite_file_offset, target_address};
+    if (std::find(inventory.encodings.begin(), inventory.encodings.end(), callsite)
+            == inventory.encodings.end()
+        || payload.size() < target_offset + byte_count
+        || !std::equal(first_bytes.begin(), first_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset))
+        || !std::equal(return_bytes.begin(), return_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(target_offset + byte_count - return_bytes.size()))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST residual MILL22A.inf JSR body");
+    }
+    const auto bytes = payload.subspan(target_offset, byte_count);
+    const auto digest = to_hex(sha256(bytes));
+    if (digest != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST residual MILL22A.inf JSR body hash");
+    }
+    return {callsite_file_offset, target_address, static_cast<std::uint32_t>(target_offset),
+        terminal_return_address, static_cast<std::uint32_t>(byte_count), digest,
+        read_be16(bytes, 0), read_be16(bytes, byte_count - 2U)};
 }
 
 } // namespace eon
