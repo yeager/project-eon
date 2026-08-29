@@ -2156,6 +2156,13 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         << live_bootstrap.first_stage_sha256() << "/"
         << live_bootstrap.second_stage_sha256()
         << " (no XBIOS, callback, or state selection)\n";
+    const auto& entry_execution = live_bootstrap.entry_execution();
+    std::cout << "          executed local entry join: stage +0x" << std::hex
+        << entry_execution.join_offset << " +0x" << entry_execution.executed_byte_count
+        << " sets SP=0x" << entry_execution.application_stack << " then JMP 0x"
+        << entry_execution.dispatcher_entry << " (SHA-256 " << entry_execution.sha256
+        << "; stops before copied dispatcher +0x"
+        << entry_execution.stop_before_dispatcher_source_offset << std::dec << ")\n";
     if (stage.has_recovered_first_stage) {
         const auto first_stage = disk1.read_sectors(stage.first_stage_track, stage.first_stage_side,
             stage.first_stage_sector, stage.first_stage_sector_count);

@@ -35,6 +35,8 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
         throw std::runtime_error("Unsupported Deuteros Atari ST second raw stage");
     }
     second_stage_ = parse_deuteros_atari_second_stage(second_stage_bytes);
+    entry_execution_ = execute_deuteros_atari_second_stage_entry_prefix(
+        second_stage_bytes, second_stage_);
     dispatch_ = parse_deuteros_atari_dispatch(second_stage_bytes);
     state1_service_boundary_ = parse_deuteros_atari_state1_service_boundary(
         second_stage_bytes, second_stage_, dispatch_);
