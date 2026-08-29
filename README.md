@@ -139,9 +139,10 @@ start a game. The selected platform is carried into the launch request, so the
 menu never substitutes another platform's media. Original and Modern cards
 start directly. The Custom card is not a third runtime mode: it opens Modern's
 fine-tuning panel, then presents an explicit start action using those Modern
-settings. Keyboard and gamepad users can move through each card page with the
-D-pad or arrow keys and activate the highlighted card with Enter, Space,
-South/A, or Start; Escape returns to the preceding card page.
+settings. Mouse and iPad touch input activate the same card-admission route;
+keyboard and gamepad users can move through each card page with the D-pad or
+arrow keys and activate the highlighted card with Enter, Space, South/A, or
+Start; Escape returns to the preceding card page.
 
 Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right
 selects a card on the current page, and South/A or Start activates it. During

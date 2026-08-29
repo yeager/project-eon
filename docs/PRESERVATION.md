@@ -46,6 +46,13 @@ versioned, user-controlled cache contract is added; it must never be written
 into, beside, or in place of supplied game media. Project Eon does not commit,
 package, or redistribute original pixels or unlicensed derivatives.
 
+Delivery verification rejects both recognised release containers and common
+physical-media/archive variants (`.hfe`, `.ipf`, `.scp`, `.ctr`, `.lha`,
+`.lzh`, `.lzx`) from desktop packages and iPadOS IPAs. This is a packaging
+firewall, not a scanner admission rule: it prevents a future platform importer
+or archival convenience file from causing redistribution before it has any
+runtime meaning.
+
 ### External Modern asset-pack admission
 
 `modern_asset_pack` implements a read-only, opt-in admission boundary for a
@@ -3734,6 +3741,13 @@ launch action remain unavailable until one identity is selected. A card is
 directly startable only when it has exactly one verified language identity.
 This keeps an unrecognised, incomplete, or ambiguous real-media candidate
 from becoming an implicit Atari ST (or other platform) fallback.
+
+Mouse and touch cards share this exact admission route. On iPadOS an
+`SDL_EVENT_FINGER_DOWN` normalized coordinate is converted through the active
+letterboxed renderer before the same game/platform/release/profile handler is
+called. SDL's compatibility touch-mouse events are ignored, so one physical
+tap cannot advance two card pages. Touch never bypasses media hashing, release
+selection, or the Original/Modern profile choice.
 
 Verified Atari ST cards display **Atari bootstrap only** rather than implying
 full runtime parity. The label preserves their exact-media admission while

@@ -23,7 +23,8 @@ class DesktopPackagingTests(unittest.TestCase):
         if os.name != "nt":
             subprocess.run(["bash", "-n", str(VERIFIER)], check=True)
         source = VERIFIER.read_text(encoding="utf-8")
-        for extension in ("zip", "adf", "st", "msa", "stx", "img", "exe", "com"):
+        for extension in ("zip", "adf", "st", "msa", "stx", "img", "hfe", "ipf", "scp",
+                          "ctr", "lha", "lzh", "lzx", "exe", "com"):
             with self.subTest(extension=extension):
                 self.assertIn(extension, source)
         self.assertIn("assets/cards/millennium.png", source)

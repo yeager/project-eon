@@ -153,7 +153,7 @@ for package in "$@"; do
       exit 1
     fi
   done
-  if printf '%s\n' "$contents" | grep -Eqi '(^|/)(data)(/|$)|\.(zip|adf|adz|dms|st|msa|stx|img|exe|com)([[:space:]]|$)'; then
+  if printf '%s\n' "$contents" | grep -Eqi '(^|/)(data)(/|$)|\.(zip|adf|adz|dms|st|msa|stx|img|hfe|ipf|scp|ctr|lha|lzh|lzx|exe|com)([[:space:]]|$)'; then
     echo "$package contains a game-data path or prohibited original-media format" >&2
     exit 1
   fi

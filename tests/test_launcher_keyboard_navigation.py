@@ -119,6 +119,19 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("stop_millennium_title();\n                    screen = Screen::menu;", SOURCE)
         self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])
 
+    def test_touch_cards_share_the_verified_mouse_admission_route(self) -> None:
+        # iPad touch must activate the same game/platform/release/profile
+        # cards as a pointer click, without accepting SDL's compatibility
+        # touch-mouse event a second time.
+        handler = SOURCE.index("const auto handle_menu_pointer_down")
+        mouse = SOURCE.index("event.type == SDL_EVENT_MOUSE_BUTTON_DOWN", handler)
+        finger = SOURCE.index("event.type == SDL_EVENT_FINGER_DOWN", mouse)
+        self.assertIn("SDL_TOUCH_MOUSEID", SOURCE[mouse:finger])
+        self.assertIn("handle_menu_pointer_down(x, y);", SOURCE[mouse:finger])
+        self.assertIn("SDL_GetWindowSize(window", SOURCE[finger:finger + 700])
+        self.assertIn("SDL_RenderCoordinatesFromWindow", SOURCE[finger:finger + 700])
+        self.assertIn("handle_menu_pointer_down(x, y);", SOURCE[finger:finger + 700])
+
     def test_save_inspection_reports_recovered_original_columns(self) -> None:
         # --inspect-save must be useful to preservation work: expose the
         # executable-recovered positional records, while retaining its

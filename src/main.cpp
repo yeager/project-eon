@@ -3452,6 +3452,39 @@ int main(int argc, char** argv) {
             ? eon::Presentation::original : eon::Presentation::modern;
         launch_menu_selection();
     };
+    const auto handle_menu_pointer_down = [&](const float x, const float y) {
+        // SDL mouse and touch input share one card route. The latter is
+        // needed by the iPad build; both still pass through the same
+        // hash-verified platform/release admission checks as keyboard focus.
+        if (launcher_page == LauncherPage::games) {
+            for (std::size_t index = 0; index < cards.size(); ++index) {
+                if (inside(cards[index].bounds, x, y)) {
+                    focus_menu_card(static_cast<int>(index));
+                    launcher_page = LauncherPage::platforms;
+                }
+            }
+        } else if (launcher_page == LauncherPage::platforms) {
+            for (std::size_t index = 0; index < platform_cards.size(); ++index) {
+                if (inside(platform_cards[index].bounds, x, y)
+                    && choose_platform_card(static_cast<int>(index))) advance_after_platform_selection();
+            }
+        } else if (launcher_page == LauncherPage::releases) {
+            const auto language_cards = release_language_cards();
+            for (std::size_t index = 0; index < language_cards.size(); ++index) {
+                if (inside(language_cards[index].bounds, x, y)
+                    && choose_release_language_card(static_cast<int>(index))) {
+                    launcher_page = LauncherPage::profiles;
+                }
+            }
+        } else {
+            for (std::size_t index = 0; index < profile_cards.size(); ++index) {
+                if (!inside(profile_cards[index].bounds, x, y)) continue;
+                focused_profile_card = static_cast<int>(index);
+                if (index == 2 && custom_profile_ready) launch_menu_selection();
+                else choose_profile_card(profile_cards[index].choice);
+            }
+        }
+    };
     if (screen == Screen::launching && selected == eon::Game::millennium) {
         start_millennium_title();
     }
@@ -3690,37 +3723,21 @@ int main(int argc, char** argv) {
                     else choose_profile_card(profile_cards[static_cast<std::size_t>(focused_profile_card)].choice);
                 }
             }
-            if (screen == Screen::menu && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+            if (screen == Screen::menu && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN
+                && event.button.which != SDL_TOUCH_MOUSEID) {
                 float x = 0, y = 0;
                 SDL_RenderCoordinatesFromWindow(renderer, event.button.x, event.button.y, &x, &y);
-                if (launcher_page == LauncherPage::games) {
-                    for (std::size_t index = 0; index < cards.size(); ++index) {
-                        if (inside(cards[index].bounds, x, y)) {
-                            focus_menu_card(static_cast<int>(index));
-                            launcher_page = LauncherPage::platforms;
-                        }
-                    }
-                } else if (launcher_page == LauncherPage::platforms) {
-                    for (std::size_t index = 0; index < platform_cards.size(); ++index) {
-                        if (inside(platform_cards[index].bounds, x, y)
-                            && choose_platform_card(static_cast<int>(index))) advance_after_platform_selection();
-                    }
-                } else if (launcher_page == LauncherPage::releases) {
-                    const auto language_cards = release_language_cards();
-                    for (std::size_t index = 0; index < language_cards.size(); ++index) {
-                        if (inside(language_cards[index].bounds, x, y)
-                            && choose_release_language_card(static_cast<int>(index))) {
-                            launcher_page = LauncherPage::profiles;
-                        }
-                    }
-                } else {
-                    for (std::size_t index = 0; index < profile_cards.size(); ++index) {
-                        if (!inside(profile_cards[index].bounds, x, y)) continue;
-                        focused_profile_card = static_cast<int>(index);
-                        if (index == 2 && custom_profile_ready) launch_menu_selection();
-                        else choose_profile_card(profile_cards[index].choice);
-                    }
-                }
+                handle_menu_pointer_down(x, y);
+            }
+            if (screen == Screen::menu && event.type == SDL_EVENT_FINGER_DOWN) {
+                int window_width = 0;
+                int window_height = 0;
+                SDL_GetWindowSize(window, &window_width, &window_height);
+                float x = 0, y = 0;
+                SDL_RenderCoordinatesFromWindow(renderer,
+                    event.tfinger.x * static_cast<float>(window_width),
+                    event.tfinger.y * static_cast<float>(window_height), &x, &y);
+                handle_menu_pointer_down(x, y);
             }
         }
 

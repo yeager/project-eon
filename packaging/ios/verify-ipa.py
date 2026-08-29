@@ -28,7 +28,8 @@ FONTS = (
 )
 ROOT = "Payload/ProjectEon.app/"
 MEDIA_SUFFIXES = (
-    ".zip", ".adf", ".adz", ".dms", ".st", ".msa", ".stx", ".img", ".exe", ".com",
+    ".zip", ".adf", ".adz", ".dms", ".st", ".msa", ".stx", ".img", ".hfe", ".ipf",
+    ".scp", ".ctr", ".lha", ".lzh", ".lzx", ".exe", ".com",
 )
 
 

@@ -98,6 +98,12 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn("UIFileSharingEnabled", plist)
         self.assertIn("LSSupportsOpeningDocumentsInPlace", plist)
         self.assertIn("Files sharing for user media", verifier)
+
+    def test_ios_verifier_rejects_archive_and_physical_media_variants(self):
+        verifier = VERIFY.read_text(encoding="utf-8")
+        for suffix in (".hfe", ".ipf", ".scp", ".ctr", ".lha", ".lzh", ".lzx"):
+            with self.subTest(suffix=suffix):
+                self.assertIn(f'"{suffix}"', verifier)
         self.assertIn("opening user media in place", verifier)
 
     def test_creates_payload_with_relative_output(self):
