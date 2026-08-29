@@ -81,11 +81,19 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
     constexpr auto mcga_six_prefix = std::to_array<std::uint8_t>({
         0xb8, 0x40, 0x01, 0x26, 0x2b, 0x47, 0x08, 0x26, 0x3b,
         0x47, 0x10, 0x73, 0x04, 0x26, 0x89, 0x47, 0x10});
+    constexpr auto ega_six_source_pointer_load = std::to_array<std::uint8_t>({0x26, 0xc5, 0x3f});
+    constexpr auto mcga_six_source_pointer_load = std::to_array<std::uint8_t>({0x26, 0xc5, 0x37});
+    constexpr auto ega_six_source_pointer_load_offset = 0x33U;
+    constexpr auto mcga_six_source_pointer_load_offset = 0x29U;
     if (!has_bytes(bytes, function_zero, zero_prefix)
         || (ega && !has_bytes(bytes, function_four, ega_four_prefix))
         || (!ega && !has_bytes(bytes, function_four, mcga_four_prefix))
         || (ega && !has_bytes(bytes, function_six, ega_six_prefix))
         || (!ega && !has_bytes(bytes, function_six, mcga_six_prefix))
+        || (ega && !has_bytes(bytes, function_six + ega_six_source_pointer_load_offset,
+                              ega_six_source_pointer_load))
+        || (!ega && !has_bytes(bytes, function_six + mcga_six_source_pointer_load_offset,
+                               mcga_six_source_pointer_load))
         || !has_bytes(bytes, function_thirteen, thirteen_prefix)
         || !has_bytes(bytes, function_thirty_one, thirty_one_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver ABI profile");
@@ -110,6 +118,9 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         .function_four_input_mask = 3,
         .function_four_state_address = state,
         .function_six_address = function_six,
+        .function_six_source_pointer_offset = 0,
+        .function_six_source_pointer_load_address = static_cast<std::uint16_t>(
+            function_six + (ega ? ega_six_source_pointer_load_offset : mcga_six_source_pointer_load_offset)),
         .function_six_screen_width = 0x140,
         .function_six_horizontal_offset = 8,
         .function_six_height_offset = 0x10,

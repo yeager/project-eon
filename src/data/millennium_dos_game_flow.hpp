@@ -581,8 +581,9 @@ parse_millennium_dos_gx_overlay_selector_evidence(
 
 // The Spanish FAT12 edition reaches its own TITLES.EXE and 2200AD.EXE through
 // IBM.COM, not the English MILL.COM path. This records only original names,
-// hashes and direct local control flow; DOS execution, AL results and either
-// target program's ABI remain unmodelled.
+// hashes and direct local control flow.  The hash-locked local callee also
+// exposes the literal DOS EXEC register setup, but execution, carry/AL
+// results and either target program's ABI remain unmodelled.
 struct MillenniumDosSpanishIbmHandoffEvidence {
     std::string ibm_sha256;
     std::string titles_sha256;
@@ -596,6 +597,13 @@ struct MillenniumDosSpanishIbmHandoffEvidence {
     std::uint16_t first_nonzero_branch_address = 0;
     std::uint16_t second_nonzero_branch_address = 0;
     std::uint16_t callee_return_address = 0;
+    std::uint16_t exec_parameter_block_address = 0;
+    std::uint16_t exec_ax = 0;
+    std::uint8_t exec_interrupt = 0;
+    std::uint16_t carry_branch_address = 0;
+    std::uint16_t carry_branch_target_address = 0;
+    std::uint8_t child_status_ah = 0;
+    std::uint8_t child_status_interrupt = 0;
     std::string caller_sha256;
     std::string callee_sha256;
 };

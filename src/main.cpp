@@ -520,7 +520,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << ibm_handoff.first_call_address << "/0x" << ibm_handoff.second_call_address
             << " -> 0x" << ibm_handoff.callee_address << "; JNE 0x"
             << ibm_handoff.first_nonzero_branch_address << "/0x"
-            << ibm_handoff.second_nonzero_branch_address << "; SHA-256 "
+            << ibm_handoff.second_nonzero_branch_address << "; DOS EXEC AX=0x"
+            << ibm_handoff.exec_ax << " INT 0x" << static_cast<unsigned>(ibm_handoff.exec_interrupt)
+            << " ES:BX=CS:0x" << ibm_handoff.exec_parameter_block_address
+            << "; carry branch 0x" << ibm_handoff.carry_branch_address << " -> 0x"
+            << ibm_handoff.carry_branch_target_address << "; SHA-256 "
             << ibm_handoff.ibm_sha256 << std::dec
             << " (static only; no DOS call, result, title, or game ABI executed)\n";
         std::cout << "          Spanish isolation boundary: only this image's IBM.COM, TITLES.EXE, "

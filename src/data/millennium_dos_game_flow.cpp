@@ -1142,8 +1142,13 @@ MillenniumDosSpanishIbmHandoffEvidence parse_millennium_dos_spanish_ibm_handoff_
         || to_hex(sha256(ibm_executable.subspan(offset(callee_address), callee.size()))) != callee_sha256) {
         throw std::runtime_error("Unexpected Millennium Spanish IBM.COM handoff evidence");
     }
+    // The static callee uses DS:DX inherited from the caller for the filename,
+    // and establishes ES:BX = CS:0708 before INT 21h AX=4b00.  Carry after
+    // that interrupt is not a host-side result: its taken branch skips the
+    // local child-status query and RET, to the next byte after this span.
     return {ibm_sha256, titles_sha256, game_sha256, caller_address, 0x071d, 0x0728,
         0x0240, 0x024c, callee_address, 0x0245, 0x0251, 0x0368,
+        0x0708, 0x4b00, 0x21, 0x0362, 0x0369, 0x4d, 0x21,
         caller_sha256, callee_sha256};
 }
 

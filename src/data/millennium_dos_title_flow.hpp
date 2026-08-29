@@ -55,6 +55,10 @@ struct MillenniumDosTitleFlow {
     std::uint16_t input_exit_helper_position_stride = 0;
     std::uint16_t input_exit_helper_private_driver_function = 0;
     std::uint16_t input_exit_helper_driver_record_address = 0;
+    // The function-$06 drivers read a far source pointer at record +$00.
+    // TITLES.EXE establishes only its segment word (+$02) locally; the offset
+    // remains an explicit ABI boundary.
+    std::uint16_t input_exit_helper_driver_record_source_offset_cell_address = 0;
     std::uint16_t input_exit_helper_driver_record_segment_cell_address = 0;
     std::uint16_t input_exit_helper_driver_record_table_second_cell_address = 0;
     std::uint16_t input_exit_helper_driver_record_table_first_cell_address = 0;

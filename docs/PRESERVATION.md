@@ -1334,10 +1334,18 @@ registration body (`$1ef74..$1f051`, ADF `+$79f74`, 222 bytes, SHA-256
 `f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27`) and
 the callback. Direct instructions establish request `$1eefa + $1c = 9`,
 `$1eefa + $28 = $1ef48`, descriptor `$1ef48 + $12 = $1f056`, and the call to
-Exec base `$4`, vector `-$1ce`. The callback's producer route begins only for
+Exec base `$4`, vector `-$1ce`. The immediately following original instruction
+at `$1f052` is `RTS`, so the local routine does not inspect a service result
+before returning; this still does not identify the service ABI or establish
+that it returns. The callback's producer route begins only for
 the byte-one comparison at caller-owned `A0 + $4`; its direct bounds are word
 `A0 + $6 < $50` and pending word `$1eed6 < $14`, after which it indexes
-`$1ee20` and writes `$1eec0 + [$1eed6]`. These are an ABI-shaped data path,
+the exact 160-byte original interval `$1ee20..$1eebf` (SHA-256
+`2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265`) and
+writes `$1eec0 + [$1eed6]`. The `$50` bound plus the original conditional
+`+$50` adjustment proves this is the complete locally addressable source
+interval; it does not prove the meaning of any byte. These are an ABI-shaped
+data path,
 not proof of the request type, callback event names, input device, or any
 runtime value supplied by Exec.
 
@@ -1766,9 +1774,15 @@ The complete direct-reference audit separates this record from nearby buffer
 state. `$135e` loads one of the original far pointers at `$010c`/`$0110` and
 writes its offset/segment to `$1341/$1343`; `$1712` later replaces only the
 offset word. `$135e` also writes CS to `$134b`. In contrast, no direct local
-writer of `$1349` occurs in the hash-identified `TITLES.EXE`; the first source
-word consumed by the function-$06 driver is therefore an explicit ABI boundary,
-not a reconstructed pointer.
+writer of `$1349` occurs in the hash-identified `TITLES.EXE`.
+
+Both independently hash-identified AX=`$0006` drivers make that unknown
+word an explicit ABI boundary: EGA640 executes `LDS DI, ES:[BX]` at `$08d9`;
+MCGA executes `LDS SI, ES:[BX]` at `$072e`. Thus record `+$00` is a far-source
+pointer's offset word and record `+$02` is its segment word. This proves the
+driver's direct input field, not who owns the offset, the pointed-to byte
+format, or any drawing result. Project Eon records neither a reconstructed
+pointer nor a host-side transfer for it.
 
 The supplied driver images add one ABI-independent local fact for that exact
 function number. In both hash-identified `EGA640.BIN` (dispatch target `$0d37`)
@@ -2365,9 +2379,14 @@ hash-locked caller `$023d..$0252` first loads literal `TITLES.EXE` from
 Spanish FAT12 targets are independently hash-identified as `TITLES.EXE`
 `02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7` and
 `2200AD.EXE` `9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6`.
-This is a genuine caller-connected title-to-game request chain, not a DOS
-execution model: Project Eon does not invoke `$0339`, choose an AL result,
-assume a return, or run either target's unrecovered ABI.
+The local callee has now been decoded through its complete 48-byte span. It
+inherits the caller's `DS:DX` filename, establishes `ES:BX = CS:$0708`, then
+issues `INT 21h` with `AX=$4b00`; after restoring its segment/stack setup, its
+carry branch at `$0362` targets `$0369`, skipping the local `AH=$4d` child
+status request and `RET` at `$0368`. These are register and control-flow
+facts anchored in the original COM bytes, not an emulation contract: Project
+Eon does not invoke either DOS service, supply a carry or AL result, assume a
+child return, or run either target's unrecovered ABI.
 
 Spanish `TITLES.EXE` is separately accepted only at its own SHA-256 above. Its
 own bytes retain entry `$1b80`, private wrapper `$0122`, and post-title

@@ -364,6 +364,7 @@ struct DeuterosAmigaTitleCallbackRegistrationProfile {
     std::uint16_t request_command_value = 0;
     std::uint32_t exec_base_address = 0;
     std::int16_t exec_vector = 0;
+    std::uint32_t registration_return_address = 0;
     std::uint16_t callback_a0_event_offset = 0;
     std::array<std::uint8_t, 3> callback_early_return_values{};
     std::uint8_t callback_producer_value = 0;
@@ -371,6 +372,8 @@ struct DeuterosAmigaTitleCallbackRegistrationProfile {
     std::uint16_t callback_pending_limit = 0;
     std::uint32_t callback_pending_word_address = 0;
     std::uint32_t callback_source_table_address = 0;
+    std::uint32_t callback_source_table_byte_count = 0;
+    std::string callback_source_table_sha256;
     std::uint32_t callback_destination_address = 0;
     std::string registration_sha256;
     std::string callback_sha256;

@@ -430,6 +430,7 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_exit_helper_position_stride = 4,
         .input_exit_helper_private_driver_function = 6,
         .input_exit_helper_driver_record_address = 0x1349,
+        .input_exit_helper_driver_record_source_offset_cell_address = 0x1349,
         .input_exit_helper_driver_record_segment_cell_address = 0x134b,
         .input_exit_helper_driver_record_table_second_cell_address = 0x134f,
         .input_exit_helper_driver_record_table_first_cell_address = 0x1351,
