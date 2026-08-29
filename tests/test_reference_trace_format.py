@@ -126,6 +126,8 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertIn("nor authorizes an Eon runtime transition", research)
         self.assertIn("emulator/configuration\nfailure observation", research)
         self.assertIn("not a statement about original-game behavior", research)
+        self.assertIn("automated Xvfb key injection was not observed by the guest", research)
+        self.assertIn("does not validate that\nconfiguration as a remedy", research)
 
 
 if __name__ == "__main__":
