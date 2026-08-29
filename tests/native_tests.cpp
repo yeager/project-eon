@@ -7050,7 +7050,7 @@ int main() {
     assert(paired_local_route.high_block_return_address == 0x41f30);
     assert(paired_local_route.sha256[3] == "765489ec36d727a326bfae44e34918cb85070d4ed3ef959cdcba9c41a102dd7e");
     const auto service_route = eon::parse_deuteros_amiga_title_post_exec_service_route_profile(system_disk, load_plan);
-    assert(service_route.caller_address == 0x4052c && service_route.entry_address == 0x20e18);
+    assert(service_route.caller_address == 0x4052a && service_route.entry_address == 0x20e18);
     assert((service_route.external_call_targets == std::array<std::uint32_t, 3>{{0x1fb9a, 0x1ff08, 0x22bca}}));
     assert(service_route.nested_return_address == 0x20bf0 && service_route.continuation_target == 0x20bf2);
     const auto post_exec_tail_flag_gate =
@@ -7209,6 +7209,22 @@ int main() {
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_paired_local_route_disk));
             static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_paired_local_route_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    // The post-Exec service route binds its caller, the external-call prefix,
+    // and its locally bounded subroute independently. Any change to one of
+    // those original spans must reject the complete profile.
+    for (const auto disk_offset : std::array<std::size_t, 3>{{0x9b51e, 0x7be18, 0x7bba8}}) {
+        auto altered_service_route_disk = *amiga_disk1;
+        altered_service_route_disk[disk_offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_service_route_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_service_route_profile(
                 altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;

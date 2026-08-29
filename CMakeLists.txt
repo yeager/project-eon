@@ -318,11 +318,18 @@ if(BUILD_TESTING)
     # every supported platform path.
     if(EON_REAL_DATA_DIR)
         find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        # Keep test-only manifests and fixture media out of /tmp as well as
+        # out of user-supplied original media. The test script rejects a
+        # missing value rather than falling back to the system temp directory.
+        set(EON_TEST_TMPDIR "${CMAKE_BINARY_DIR}/eon-test-tmp")
+        file(MAKE_DIRECTORY "${EON_TEST_TMPDIR}")
         add_test(NAME cli-real-platform-starts
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_launch_test.py"
                 "$<TARGET_FILE:project-eon>"
                 "${EON_REAL_DATA_DIR}")
+        set_tests_properties(cli-real-platform-starts PROPERTIES
+            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     endif()
 endif()
 
