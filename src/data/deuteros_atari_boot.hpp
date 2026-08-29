@@ -661,6 +661,15 @@ struct DeuterosAtariState1SkippedAsciiBlock {
     std::size_t ascii_relative_offset = 0;
     std::size_t ascii_byte_count = 0;
     std::size_t printable_run_count = 0;
+    // These runs identify the supplied Replicants presentation block as
+    // non-game provenance.  They are hashes and offsets only: their text is
+    // never returned to the UI, translated, or used as title data.
+    std::size_t presentation_marker_offset = 0;
+    std::size_t presentation_marker_byte_count = 0;
+    std::string presentation_marker_sha256;
+    std::array<std::size_t, 2> game_name_marker_offsets{};
+    std::size_t game_name_marker_byte_count = 0;
+    std::string game_name_marker_sha256;
     std::string ascii_sha256;
 };
 

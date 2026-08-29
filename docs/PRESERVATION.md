@@ -1270,6 +1270,16 @@ printable runs. This is crack-era raw-media metadata, not recovered original
 game presentation: Project Eon neither displays, translates, parses, nor
 assigns a consumer or control-flow target to it.
 
+The classification is now itself byte-addressed rather than being inferred
+from a printable-byte count. The first 55-byte run at state-1 `+$4800a`
+hashes to `785ebbc9d234032ee38c1cb5444ac1b5d46db21151ffad08d7b1898d6e6ce52a`;
+the two following 55-byte game-name marker runs at `+$48046` and `+$48082`
+share hash `f0eb99896cde59d36a075e624092cbf02de3ce0d201ca3c5050c13f9c65720dc`.
+`DeuterosAtariState1SkippedAsciiBlock` retains only their offsets, lengths and
+hashes. It does not expose their strings to the launcher or treat those names
+as title assets: the surrounding unconditional branch remains the evidence
+that this is a skipped presentation block in the supplied cracked release.
+
 The sixth vector (`$1f52`) makes two further static calls to `$70030`.
 `build_deuteros_atari_state5_raw_load_plan` records its first as ten complete
 nine-sector reads from Disk 1 `+$55800` (length `$b400`) to `$b000`, SHA-256
