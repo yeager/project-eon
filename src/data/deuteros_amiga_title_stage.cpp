@@ -2141,6 +2141,55 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
         0x40658, 0x40576, stop_after_address, std::string(profile_hash)};
 }
 
+DeuterosAmigaTitlePostExecTailFlagGateFirstCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // `$40632` is the first direct JSR in the flag gate.  The target has two
+    // short backward polling branches and two distinct RTS instructions.  Do
+    // not choose values for either tested cell or enter either loop.
+    constexpr std::uint32_t caller_address = 0x40632;
+    constexpr std::uint32_t entry_address = 0x1f3f8;
+    constexpr std::array<std::uint8_t, 6> caller_bytes{{
+        0x4e, 0xb9, 0x00, 0x01, 0xf3, 0xf8,
+    }};
+    constexpr std::array<std::uint8_t, 34> routine_bytes{{
+        0x4a, 0x39, 0x00, 0x01, 0xee, 0x16, 0x67, 0x02, 0x4e, 0x75,
+        0x32, 0x39, 0x00, 0x01, 0xff, 0xd4, 0x02, 0x01, 0x00, 0x03,
+        0x66, 0xf4, 0x32, 0x39, 0x00, 0x01, 0xff, 0xd4, 0xe2, 0x49,
+        0x64, 0xf6, 0x4e, 0x75,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash =
+        "c3998d07f8e89408b9332ae19f449256087b1eb8843256751c03e52700cbbec4";
+    constexpr std::string_view routine_hash =
+        "101f4026b51a3c0bef3758f4244fffd3fe12c93d76e37b44d0728295b5e27aa6";
+    const auto& stage = plan.title_stage;
+    const auto contains = [&stage](std::uint32_t address, std::size_t length) {
+        return address >= stage.destination && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (stage.length == 0 || !contains(caller_address, caller_bytes.size())
+        || !contains(entry_address, routine_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec tail flag-gate first callee lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
+    const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || to_hex(sha256(caller)) != caller_hash
+        || to_hex(sha256(routine)) != routine_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec tail flag-gate first-callee profile");
+    }
+    return {caller_address, caller_address + static_cast<std::uint32_t>(caller_bytes.size()),
+        entry_address, 0x1ee16, entry_address + 8U, 0x1ffd4, 3,
+        entry_address + 20U, entry_address + 10U, 0x1ffd4, 1,
+        entry_address + 30U, entry_address + 22U, entry_address + 34U,
+        std::string(caller_hash), std::string(routine_hash)};
+}
+
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     // $37f56 reaches this copy only if the two preceding original calls

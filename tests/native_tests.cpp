@@ -2729,6 +2729,50 @@ int main() {
     }
     assert(rejected_altered_f10_handler);
     eon::MillenniumDosGameSession game_session(game_flow);
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(game_session.observe_first_special_action(0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    eon::MillenniumDosGameSession observed_game_session(game_flow, *game_executable);
+    const auto observed_first_special = observed_game_session.observe_first_special_action(0x5a);
+    assert(observed_first_special.action == 0x0b);
+    assert(observed_game_session.last_special_action() == std::optional<std::uint8_t>{0x0b});
+    assert(observed_game_session.last_first_special_action_trace());
+    assert(observed_game_session.last_special_runtime_byte_effect());
+    assert(observed_game_session.last_special_runtime_byte_effect()->address == 0x07f9);
+    assert(observed_game_session.last_special_runtime_byte_effect()->previous
+        == std::optional<std::uint8_t>{0x5a});
+    assert(observed_game_session.last_special_runtime_byte_effect()->value == 0x5b);
+    assert(observed_game_session.reconstructed_runtime_byte(0x07f9)
+        == std::optional<std::uint8_t>{0x5b});
+    const auto observed_second_special = observed_game_session.observe_second_special_action(1);
+    assert(observed_second_special.action == 0x0c);
+    assert(observed_second_special.outcome
+        == eon::MillenniumDosSecondSpecialActionOutcome::blocked_by_runtime_byte);
+    assert(observed_game_session.last_special_action() == std::optional<std::uint8_t>{0x0c});
+    assert(observed_game_session.last_second_special_action_trace());
+    assert(!observed_game_session.last_special_runtime_byte_effect());
+    // The prior observed write remains a private in-memory trace, but action
+    // $0c itself cannot supply a replacement for either native byte.
+    assert(observed_game_session.reconstructed_runtime_byte(0x07f9)
+        == std::optional<std::uint8_t>{0x5b});
+    {
+        auto altered_special_handler = *game_executable;
+        altered_special_handler[0x11a4 - 0x100] ^= 0x01;
+        eon::MillenniumDosGameSession altered_session(game_flow, altered_special_handler);
+        bool rejected = false;
+        try {
+            static_cast<void>(altered_session.observe_first_special_action(0));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(!game_session.observe_action(0));
     assert(!game_session.last_function_key_index());
     assert(game_session.observe_action(0x3b) == std::optional<std::size_t>{0});
@@ -5230,6 +5274,27 @@ int main() {
     assert(post_exec_tail_flag_gate.stop_after_address == 0x40674);
     assert(post_exec_tail_flag_gate.sha256
         == "fcf7c15552302b6b902352380a5b5d454eba190be2a7e89af9701822eac1f80e");
+    const auto post_exec_tail_flag_gate_first_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
+            system_disk, load_plan);
+    assert(post_exec_tail_flag_gate_first_callee.caller_address == 0x40632);
+    assert(post_exec_tail_flag_gate_first_callee.caller_continuation_address == 0x40638);
+    assert(post_exec_tail_flag_gate_first_callee.entry_address == 0x1f3f8);
+    assert(post_exec_tail_flag_gate_first_callee.tested_byte_address == 0x1ee16);
+    assert(post_exec_tail_flag_gate_first_callee.zero_return_address == 0x1f400);
+    assert(post_exec_tail_flag_gate_first_callee.first_loop_word_address == 0x1ffd4);
+    assert(post_exec_tail_flag_gate_first_callee.first_loop_mask == 3);
+    assert(post_exec_tail_flag_gate_first_callee.first_loop_branch_address == 0x1f40c);
+    assert(post_exec_tail_flag_gate_first_callee.first_loop_branch_target == 0x1f402);
+    assert(post_exec_tail_flag_gate_first_callee.second_loop_word_address == 0x1ffd4);
+    assert(post_exec_tail_flag_gate_first_callee.second_loop_shift_count == 1);
+    assert(post_exec_tail_flag_gate_first_callee.second_loop_branch_address == 0x1f416);
+    assert(post_exec_tail_flag_gate_first_callee.second_loop_branch_target == 0x1f40e);
+    assert(post_exec_tail_flag_gate_first_callee.terminal_return_address == 0x1f41a);
+    assert(post_exec_tail_flag_gate_first_callee.caller_sha256
+        == "c3998d07f8e89408b9332ae19f449256087b1eb8843256751c03e52700cbbec4");
+    assert(post_exec_tail_flag_gate_first_callee.routine_sha256
+        == "101f4026b51a3c0bef3758f4244fffd3fe12c93d76e37b44d0728295b5e27aa6");
     {
         auto altered_tail_flag_gate_disk = *amiga_disk1;
         altered_tail_flag_gate_disk[0x9b616] ^= 0x01;
@@ -5238,6 +5303,20 @@ int main() {
             const eon::AmigaAdf altered_disk(std::move(altered_tail_flag_gate_disk));
             static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
                 altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    for (const auto disk_offset : {0x9b632U, 0x7a3f8U}) {
+        auto altered_tail_flag_gate_first_callee_disk = *amiga_disk1;
+        altered_tail_flag_gate_first_callee_disk[disk_offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_tail_flag_gate_first_callee_disk));
+            static_cast<void>(
+                eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
+                    altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

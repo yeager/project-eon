@@ -41,6 +41,12 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("installed package must not create a game-data directory", workflow)
         self.assertIn("installed Project Eon executable did not load and print its CLI usage", workflow)
 
+    def test_ci_discovers_cmake_generated_runtime_dlls_before_ctest(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        self.assertIn("generatedRuntimeDirectories", workflow)
+        self.assertIn("Get-ChildItem -Path build -Recurse -File -Filter *.dll", workflow)
+        self.assertIn("STATUS_DLL_NOT_FOUND", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -138,7 +138,22 @@ jobs:
       - name: Test native code without proprietary game data
         shell: pwsh
         run: |
-          $env:PATH = "${{ github.workspace }}/SDL3-install/bin;${{ github.workspace }}/libpng-install/bin;${{ github.workspace }}/zlib-install/bin;$env:PATH"
+          # CTest launches the test binary from its build directory.  The
+          # SDL3_ttf and SDL3_image DLLs fetched by CMake live below that
+          # tree, not beside the separately installed SDL3 SDK.  Add every
+          # generated DLL directory so Windows performs the same dynamic-load
+          # closure as the staged installer, instead of failing with
+          # STATUS_DLL_NOT_FOUND before the preservation tests start.
+          $generatedRuntimeDirectories = @(Get-ChildItem -Path build -Recurse -File -Filter *.dll |
+            ForEach-Object { $_.DirectoryName } | Sort-Object -Unique)
+          if ($generatedRuntimeDirectories.Count -eq 0) {
+            throw "CMake build produced no runtime DLL directories"
+          }
+          $env:PATH = (($generatedRuntimeDirectories + @(
+            "${{ github.workspace }}/SDL3-install/bin",
+            "${{ github.workspace }}/libpng-install/bin",
+            "${{ github.workspace }}/zlib-install/bin",
+            $env:PATH)) -join ';')
           ctest --test-dir build -C Release -j4 --output-on-failure
       - name: Test preservation tooling
         run: python -m unittest discover -s tests -v
@@ -255,6 +270,16 @@ jobs:
                 return 0
               fi
             done < <(rpaths_for "$binary")
+            # SDL_image built from source can retain an @rpath reference to
+            # Homebrew's SDL3 even when its own build-tree rpath is absent.
+            # Resolve that known, reviewed build dependency here only so it is
+            # copied and rewritten into the bundle below; the final verifier
+            # still rejects any Homebrew reference in the artifact.
+            if brew_prefix=$(brew --prefix sdl3 2>/dev/null) \
+                && [ -f "$brew_prefix/lib/$suffix" ]; then
+              printf '%s\n' "$brew_prefix/lib/$suffix"
+              return 0
+            fi
             echo "unable to resolve $reference referenced by $binary" >&2
             return 1
           }
@@ -559,6 +584,18 @@ jobs:
         run: |
           APP=$(find build-ios -name 'project-eon.app' -type d -print -quit)
           test -n "$APP"
+          # Ninja's iOS bundle generator does not consistently materialize
+          # MACOSX_PACKAGE_LOCATION resources from target sources. Stage the
+          # same reviewed launcher-only resources explicitly into the final
+          # app bundle before the IPA safety check. No original game data is
+          # selected, copied, or created here.
+          mkdir -p "$APP/Resources/assets/cards" "$APP/Resources/assets/fonts" "$APP/Resources/po"
+          cp assets/cards/millennium.png assets/cards/deuteros.png "$APP/Resources/assets/cards/"
+          cp assets/fonts/NotoSans-Regular.ttf assets/fonts/NotoSansArabic-Regular.ttf \
+            assets/fonts/NotoSansDevanagari-Regular.ttf assets/fonts/NotoSansJP-Regular.otf \
+            assets/fonts/NotoSansKR-Regular.otf assets/fonts/NotoSansSC-Regular.otf \
+            assets/fonts/OFL-1.1.txt "$APP/Resources/assets/fonts/"
+          cp po/{ar,de,el,en_GB,es,fi,fr,hi,it,ja,ko,nl,no,pl,pt_BR,ru,sv,tr,uk,zh_CN}.po "$APP/Resources/po/"
           bash packaging/ios/package-ipa.sh "$APP" "$GITHUB_WORKSPACE/project-eon-ipados-arm64-unsigned.ipa"
           # Validate the finished archive, not only the app bundle passed to
           # the packager, before it can enter the artifact manifest/upload.

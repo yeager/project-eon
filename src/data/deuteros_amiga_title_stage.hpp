@@ -593,6 +593,33 @@ struct DeuterosAmigaTitlePostExecTailFlagGateProfile {
 parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// The first direct call in the post-Exec tail flag gate reaches a wholly
+// local, return-bounded polling routine.  Its two loops read original runtime
+// cells, whose values remain unavailable to Project Eon; this profile records
+// only the caller-connected instruction layout and both RTS boundaries.
+struct DeuterosAmigaTitlePostExecTailFlagGateFirstCalleeProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t caller_continuation_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t tested_byte_address = 0;
+    std::uint32_t zero_return_address = 0;
+    std::uint32_t first_loop_word_address = 0;
+    std::uint8_t first_loop_mask = 0;
+    std::uint32_t first_loop_branch_address = 0;
+    std::uint32_t first_loop_branch_target = 0;
+    std::uint32_t second_loop_word_address = 0;
+    std::uint8_t second_loop_shift_count = 0;
+    std::uint32_t second_loop_branch_address = 0;
+    std::uint32_t second_loop_branch_target = 0;
+    std::uint32_t terminal_return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailFlagGateFirstCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // The first common internal setup callee opens the literal
 // `graphics.library` name through an Exec vector.  Its return is an explicit
 // ABI input: zero enters the original self-loop and any nonzero longword is
