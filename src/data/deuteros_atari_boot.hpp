@@ -79,6 +79,27 @@ struct DeuterosAtariKillerBootHandoff {
 [[nodiscard]] DeuterosAtariKillerBootHandoff parse_deuteros_atari_killer_boot_handoff(
     std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile);
 
+// The KILLER_BOOT continuation is the only supplied Disk 2 path whose next
+// instructions are wholly local after its literal relocation. This records
+// its ten original longword copies and one iteration of its eight-longword
+// clear loop as isolated emulated-RAM facts. It never reads the reset vector
+// at $4, invokes a trap, touches host memory, or treats the loop as a game
+// bootstrap.
+struct DeuterosAtariKillerBootExecutionPrefix {
+    std::uint32_t relocation_destination = 0;
+    std::vector<std::uint8_t> relocated_bytes;
+    std::array<std::uint32_t, 10> relocated_longwords{};
+    std::uint32_t continuation_address = 0;
+    std::uint32_t first_clear_address = 0;
+    std::array<std::uint32_t, 8> cleared_longword_addresses{};
+    std::uint32_t next_clear_address = 0;
+    std::uint32_t loop_target_address = 0;
+};
+
+[[nodiscard]] DeuterosAtariKillerBootExecutionPrefix
+execute_deuteros_atari_killer_boot_prefix(
+    std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile);
+
 // This is the control-flow boundary within the verified Disk 1 raw stage.
 // Field names describe instructions and physical media only; it is not yet a
 // claim about the original game's title or simulation.

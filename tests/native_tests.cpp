@@ -1641,6 +1641,42 @@ int main() {
     assert(defjam_post_negative_d3.negative_return_address == 0x68618);
     assert(defjam_post_negative_d3.raw_sha256
         == "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc");
+    // Execute only the fully local $685fe prefix after binding it to the
+    // supplied Defjam bytes.  These are controlled register inputs, not a
+    // claim that an original caller reaches this independent entry.
+    const auto local_zero = eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
+        defjam_post_negative_d3, {0xaabbccdd, 0x11220000, 0x33445566});
+    assert(local_zero.d0 == 0xaabb0000);
+    assert(local_zero.d1 == 0x11225566);
+    assert(local_zero.d2 == 0x33445566);
+    assert((local_zero.absolute_byte_writes == std::array<std::uint8_t, 2>{{0, 0}}));
+    assert(local_zero.stop == eon::MillenniumAmigaResidentPostNegativeD3TerminalStop::zero_return);
+    assert(local_zero.next_address == 0x68614);
+    const auto local_negative = eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
+        defjam_post_negative_d3, {0, 0x12348001, 0x56789abc});
+    assert(local_negative.d0 == 0x00008001);
+    assert(local_negative.d1 == 0x12349abc);
+    assert(local_negative.stop
+        == eon::MillenniumAmigaResidentPostNegativeD3TerminalStop::negative_return);
+    assert(local_negative.next_address == 0x68618);
+    const auto local_continue = eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
+        defjam_post_negative_d3, {0, 0x12340001, 0x56789abc});
+    assert(local_continue.stop
+        == eon::MillenniumAmigaResidentPostNegativeD3TerminalStop::nonnegative_continuation_boundary);
+    assert(local_continue.next_address == 0x6861a);
+    {
+        auto detached_terminal = defjam_post_negative_d3;
+        detached_terminal.raw_sha256[0] = '0';
+        bool rejected = false;
+        try {
+            static_cast<void>(
+                eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
+                    detached_terminal, {}));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto defjam_post_negative_d3_continuation =
         eon::parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
             defjam_loader_disk, defjam_plan, defjam_post_negative_d3);
@@ -5364,12 +5400,37 @@ int main() {
     assert(deuteros_killer_handoff.vector_jump_relocated_offset == 8);
     assert(deuteros_killer_handoff.vector_jump_opcode == 0x4ed0);
     assert(deuteros_killer_handoff.vector_jump_pointer_address == 0x4);
+    const auto deuteros_killer_execution = eon::execute_deuteros_atari_killer_boot_prefix(
+        deuteros_disk2_boot, deuteros_disk2.boot_profile());
+    assert(deuteros_killer_execution.relocation_destination == 0x8);
+    assert(deuteros_killer_execution.relocated_bytes == std::vector<std::uint8_t>(
+        deuteros_disk2_boot.begin() + 0xf0, deuteros_disk2_boot.begin() + 0x118));
+    assert(deuteros_killer_execution.relocated_longwords[0] == 0x0000000c);
+    assert(deuteros_killer_execution.relocated_longwords[2] == 0x4ed041fa);
+    assert(deuteros_killer_execution.continuation_address == 0x12);
+    assert(deuteros_killer_execution.first_clear_address == 0x32);
+    assert((deuteros_killer_execution.cleared_longword_addresses
+        == std::array<std::uint32_t, 8>{{0x32, 0x36, 0x3a, 0x3e, 0x42, 0x46, 0x4a, 0x4e}}));
+    assert(deuteros_killer_execution.next_clear_address == 0x52);
+    assert(deuteros_killer_execution.loop_target_address == 0x30);
     {
         auto altered_boot = deuteros_disk2_boot;
         altered_boot[0xd8] ^= 0x01;
         bool rejected = false;
         try {
             static_cast<void>(eon::parse_deuteros_atari_killer_boot_handoff(
+                altered_boot, deuteros_disk2.boot_profile()));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_boot = deuteros_disk2_boot;
+        altered_boot[0x116] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::execute_deuteros_atari_killer_boot_prefix(
                 altered_boot, deuteros_disk2.boot_profile()));
         } catch (const std::runtime_error&) {
             rejected = true;
@@ -7176,6 +7237,33 @@ int main() {
     assert(materialized_title_entry.writes[1].address == live_title_entry_state.writes[1].address);
     assert(materialized_title_entry.writes[1].width_bytes == live_title_entry_state.writes[1].width_bytes);
     assert(materialized_title_entry.writes[1].value == live_title_entry_state.writes[1].value);
+    // Exactly one additional instruction is wholly local after the sparse
+    // prefix: the literal A7 setup. The next instruction reads the unknown
+    // Exec base, so recovered execution stops before that read.
+    const auto& live_exec_prelude = live_title_stage->exec_prelude();
+    assert(live_exec_prelude.incoming_profile == 1);
+    assert(live_exec_prelude.entry_address == 0x40450);
+    assert(live_exec_prelude.stack_pointer_value == 0x40b62);
+    assert(live_exec_prelude.stop_before_exec_base_read_address == 0x40456);
+    const auto materialized_exec_prelude =
+        eon::execute_deuteros_amiga_title_exec_prelude(system_disk, load_plan, 1);
+    assert(materialized_exec_prelude.entry_address == live_exec_prelude.entry_address);
+    assert(materialized_exec_prelude.stack_pointer_value == live_exec_prelude.stack_pointer_value);
+    assert(materialized_exec_prelude.stop_before_exec_base_read_address
+        == live_exec_prelude.stop_before_exec_base_read_address);
+    {
+        auto altered_exec_prelude_disk = *amiga_disk1;
+        altered_exec_prelude_disk[0x9b450] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_exec_prelude_disk));
+            static_cast<void>(eon::execute_deuteros_amiga_title_exec_prelude(
+                altered_disk, load_plan, 1));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto mode_five_entry = eon::execute_deuteros_amiga_title_entry_mode_five_prefix(
         system_disk, load_plan, 0x0105);
     assert(mode_five_entry.mode_word_value == 0x0105);

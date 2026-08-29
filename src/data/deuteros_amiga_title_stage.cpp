@@ -1386,6 +1386,33 @@ materialize_deuteros_amiga_title_entry_prefix_state(
     }}, prefix.stop_before_exec_address};
 }
 
+DeuterosAmigaTitleExecPrelude execute_deuteros_amiga_title_exec_prelude(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::uint16_t incoming_profile) {
+    // The preceding parser is the complete, caller-connected validation of
+    // the profile-one route, including the exact boundary bytes. Do not make
+    // this a weaker second acceptance path.
+    const auto prefix = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
+    constexpr std::array<std::uint8_t, 6> stack_setup{{
+        0x2e, 0x7c, 0x00, 0x04, 0x0b, 0x62,
+    }};
+    constexpr std::uint32_t entry = 0x40450;
+    constexpr std::uint32_t stop = 0x40456;
+    const auto& stage = plan.title_stage;
+    if (prefix.stop_before_exec_address != entry || entry < stage.destination
+        || entry - stage.destination > stage.length
+        || stack_setup.size() > stage.length - (entry - stage.destination)) {
+        throw std::runtime_error("Deuteros title Exec prelude lies outside original stage");
+    }
+    const auto bytes = disk.bytes(stage.disk_offset + entry - stage.destination, stack_setup.size());
+    if (!std::equal(stack_setup.begin(), stack_setup.end(), bytes.begin())
+        || to_hex(sha256(bytes))
+            != "5751cf8005bff79d636488a9e0292ecb5821879b1cb2c432e7a5332a0f7b5e3a") {
+        throw std::runtime_error("Unsupported Deuteros title Exec prelude");
+    }
+    return {prefix.incoming_profile, entry, 0x40b62, stop};
+}
+
 DeuterosAmigaTitleEntryModeFivePrefix execute_deuteros_amiga_title_entry_mode_five_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t incoming_profile) {

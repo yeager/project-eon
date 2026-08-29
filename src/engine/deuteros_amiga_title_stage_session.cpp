@@ -28,6 +28,7 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     entry_prefix_ = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
     entry_prefix_state_ = materialize_deuteros_amiga_title_entry_prefix_state(
         disk, plan, incoming_profile);
+    exec_prelude_ = execute_deuteros_amiga_title_exec_prelude(disk, plan, incoming_profile);
     if (entry_prefix_state_.incoming_profile != entry_prefix_.incoming_profile
         || entry_prefix_state_.stop_before_exec_address != entry_prefix_.stop_before_exec_address
         || entry_prefix_state_.writes[0].address != entry_prefix_.mode_word_address
@@ -37,6 +38,12 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
         || entry_prefix_state_.writes[1].width_bytes != 1
         || entry_prefix_state_.writes[1].value != entry_prefix_.normal_mode_byte_value) {
         throw std::runtime_error("Deuteros title prefix state detached from original entry evidence");
+    }
+    if (exec_prelude_.incoming_profile != entry_prefix_.incoming_profile
+        || exec_prelude_.entry_address != entry_prefix_.stop_before_exec_address
+        || exec_prelude_.stack_pointer_value != 0x40b62
+        || exec_prelude_.stop_before_exec_base_read_address != 0x40456) {
+        throw std::runtime_error("Deuteros title Exec prelude detached from original entry evidence");
     }
 }
 

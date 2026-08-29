@@ -31,6 +31,11 @@ public:
     [[nodiscard]] const DeuterosAmigaTitleEntryPrefixState& entry_prefix_state() const noexcept {
         return entry_prefix_state_;
     }
+    // The next literal instruction initializes A7 and then stops before the
+    // original reads the unknown Exec base. This is a register fact only.
+    [[nodiscard]] const DeuterosAmigaTitleExecPrelude& exec_prelude() const noexcept {
+        return exec_prelude_;
+    }
     [[nodiscard]] std::span<const std::uint8_t> original_bytes() const;
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
 
@@ -40,6 +45,7 @@ private:
     DeuterosAmigaTitleStageProfile profile_;
     DeuterosAmigaTitleEntryPrefix entry_prefix_;
     DeuterosAmigaTitleEntryPrefixState entry_prefix_state_;
+    DeuterosAmigaTitleExecPrelude exec_prelude_;
     std::string original_sha256_;
 };
 

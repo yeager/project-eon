@@ -16,6 +16,16 @@ std::uint16_t be16(std::span<const std::uint8_t> bytes, std::size_t offset) {
         | bytes[offset + 1]);
 }
 
+std::uint32_t be32(std::span<const std::uint8_t> bytes, std::size_t offset) {
+    if (offset > bytes.size() || bytes.size() - offset < 4) {
+        throw std::runtime_error("Truncated Deuteros Atari ST longword");
+    }
+    return (static_cast<std::uint32_t>(bytes[offset]) << 24U)
+        | (static_cast<std::uint32_t>(bytes[offset + 1]) << 16U)
+        | (static_cast<std::uint32_t>(bytes[offset + 2]) << 8U)
+        | static_cast<std::uint32_t>(bytes[offset + 3]);
+}
+
 std::uint16_t le16(std::span<const std::uint8_t> bytes, std::size_t offset) {
     if (offset > bytes.size() || bytes.size() - offset < 2) {
         throw std::runtime_error("Truncated Deuteros Atari ST BPB field");
@@ -181,6 +191,52 @@ DeuterosAtariKillerBootHandoff parse_deuteros_atari_killer_boot_handoff(
         continuation_relocated_offset, be16(relocated, continuation_relocated_offset),
         vector_jump_relocated_offset, be16(relocated, vector_jump_relocated_offset),
         be16(relocated, vector_jump_relocated_offset - 2U)};
+}
+
+DeuterosAtariKillerBootExecutionPrefix execute_deuteros_atari_killer_boot_prefix(
+    const std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile) {
+    // Bind the caller-connected DBF copy and its direct relocated entry. The
+    // separate JMP (A0) vector-cell path at relocated +$8 is not followed.
+    const auto handoff = parse_deuteros_atari_killer_boot_handoff(boot_sector, profile);
+    constexpr std::array<std::uint8_t, 30> continuation_bytes{{
+        0x41, 0xfa, 0x00, 0x1c, 0x70, 0x00,
+        0x22, 0x00, 0x24, 0x00, 0x26, 0x00, 0x28, 0x00,
+        0x2a, 0x00, 0x2c, 0x00, 0x2e, 0x00,
+        0x48, 0xd0, 0x00, 0xff, 0xd0, 0xfc, 0x00, 0x20,
+        0x60, 0xf6,
+    }};
+    constexpr std::uint32_t first_clear_address = 0x32;
+    constexpr std::uint32_t loop_target_address = 0x30;
+    const auto relocated = boot_sector.subspan(handoff.source_offset, handoff.byte_count);
+    if (handoff.destination != 0x8U || handoff.continuation_address != 0x12U
+        || handoff.continuation_relocated_offset != 10U
+        || continuation_bytes.size() != relocated.size() - handoff.continuation_relocated_offset
+        || !std::equal(continuation_bytes.begin(), continuation_bytes.end(),
+            relocated.begin() + static_cast<std::ptrdiff_t>(handoff.continuation_relocated_offset))) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT local continuation");
+    }
+
+    DeuterosAtariKillerBootExecutionPrefix result;
+    result.relocation_destination = handoff.destination;
+    result.relocated_bytes.resize(relocated.size());
+    for (std::size_t index = 0; index < result.relocated_longwords.size(); ++index) {
+        const auto offset = index * 4U;
+        std::copy_n(relocated.begin() + static_cast<std::ptrdiff_t>(offset), 4,
+            result.relocated_bytes.begin() + static_cast<std::ptrdiff_t>(offset));
+        result.relocated_longwords[index] = be32(relocated, offset);
+    }
+    if (!std::equal(result.relocated_bytes.begin(), result.relocated_bytes.end(), relocated.begin())) {
+        throw std::runtime_error("Deuteros Atari ST KILLER_BOOT relocation lost original bytes");
+    }
+    result.continuation_address = handoff.continuation_address;
+    result.first_clear_address = first_clear_address;
+    for (std::size_t index = 0; index < result.cleared_longword_addresses.size(); ++index) {
+        result.cleared_longword_addresses[index] = first_clear_address
+            + static_cast<std::uint32_t>(index * 4U);
+    }
+    result.next_clear_address = first_clear_address + 0x20U;
+    result.loop_target_address = loop_target_address;
+    return result;
 }
 
 std::vector<std::uint8_t> DeuterosAtariDisk::read_sectors(
