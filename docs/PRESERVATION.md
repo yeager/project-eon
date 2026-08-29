@@ -2737,3 +2737,17 @@ The original mode-cell comparison at `$4040e` statically selects `$36a8c` for
 low word `$0005` and `$1fb9a` otherwise. Calls, returns, cell values, target
 semantics, and display effects are unmodelled; this records no executable
 title-stage path.
+
+Within that continuation, the first direct wholly local callee that has a
+complete, caller-connected byte path is `$403e6`. Its call site is
+`$404c2..$404cd` / ADF `+0x9b4c2`, which loads D1 with literal `$00013000`
+then executes `JSR $403e6`; its twelve bytes hash to
+`a617235dd94a6c0b3f5fb9f9e078652ed8f1e45213e85c80b10ec165a6b7216f`.
+The callee prefix `$403e6..$403f1` / ADF `+0x9b3e6` hashes to
+`1e1ccdae97d5849873d3d2e785f5a8be585ffa0e104b5c550ecade6bc37a33a2` and
+contains `MOVE.L #$1c482,D0` and `MOVE.L D0,$1f97c`; the separately validated
+following word at `$403f2` is RTS.
+`DeuterosAmigaTitlePostExecPointerSeedProfile` hash-locks both spans and
+reports their literal operands. Reaching the call still requires the two Exec
+vectors and all earlier original calls to have returned, so Project Eon does
+not execute it, materialize D0/D1, write `$1f97c`, or claim startup progress.

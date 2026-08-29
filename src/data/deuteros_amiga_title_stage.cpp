@@ -2,6 +2,7 @@
 
 #include "data/sha256.hpp"
 
+#include <algorithm>
 #include <span>
 #include <stdexcept>
 #include <string_view>
@@ -1404,6 +1405,59 @@ DeuterosAmigaTitleEntryModeFivePrefix execute_deuteros_amiga_title_entry_mode_fi
     }
     return {incoming_profile, 0x206a0, 0x4040e, incoming_profile, 0x3717e,
         static_cast<std::uint8_t>(incoming_profile), 0x38092, 0x0101, 0x40450};
+}
+
+DeuterosAmigaTitlePostExecPointerSeedProfile
+parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // `$404c2` is in the static continuation after SuperState/UserState and
+    // several unresolved direct calls.  Keep that reachability condition out
+    // of the result: this function validates only original bytes, never a
+    // returned ABI value or a title-stage write.
+    constexpr std::uint32_t call_site_address = 0x404c2;
+    constexpr std::uint32_t callee_address = 0x403e6;
+    constexpr std::array<std::uint8_t, 12> call_site_bytes{{
+        0x22, 0x3c, 0x00, 0x01, 0x30, 0x00,
+        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xe6,
+    }};
+    constexpr std::array<std::uint8_t, 12> callee_bytes{{
+        0x20, 0x3c, 0x00, 0x01, 0xc4, 0x82,
+        0x23, 0xc0, 0x00, 0x01, 0xf9, 0x7c,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view call_site_hash =
+        "a617235dd94a6c0b3f5fb9f9e078652ed8f1e45213e85c80b10ec165a6b7216f";
+    constexpr std::string_view callee_hash =
+        "1e1ccdae97d5849873d3d2e785f5a8be585ffa0e104b5c550ecade6bc37a33a2";
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](const std::uint32_t address, const std::size_t length) {
+        return stage.length != 0 && address >= stage.destination
+            && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (!in_stage(call_site_address, call_site_bytes.size())
+        || !in_stage(callee_address, callee_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec pointer-seed code lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto call_site = stage_bytes.subspan(call_site_address - stage.destination, call_site_bytes.size());
+    const auto callee = stage_bytes.subspan(callee_address - stage.destination, callee_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(call_site_bytes.begin(), call_site_bytes.end(), call_site.begin())
+        || !std::equal(callee_bytes.begin(), callee_bytes.end(), callee.begin())
+        || to_hex(sha256(call_site)) != call_site_hash
+        || to_hex(sha256(callee)) != callee_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec pointer-seed profile");
+    }
+    const auto return_offset = callee_address - stage.destination + callee_bytes.size();
+    if (return_offset > stage_bytes.size() || stage_bytes.size() - return_offset < 2
+        || stage_bytes[return_offset] != 0x4e || stage_bytes[return_offset + 1] != 0x75) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec pointer-seed return");
+    }
+    return {call_site_address, 0x13000, callee_address, 0x1c482, 0x1f97c,
+        callee_address + static_cast<std::uint32_t>(callee_bytes.size()),
+        std::string(call_site_hash), std::string(callee_hash)};
 }
 
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
