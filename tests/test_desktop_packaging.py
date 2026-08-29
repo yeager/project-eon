@@ -113,7 +113,10 @@ fi
             file_command.write_text("#!/usr/bin/env bash\nprintf '%s\\n' 'Mach-O 64-bit executable'\n", encoding="utf-8")
             otool.chmod(0o755)
             file_command.chmod(0o755)
-            environment = os.environ | {"PATH": f"{tool_dir}{os.pathsep}{os.environ['PATH']}"}
+            # The verifier is executed by Bash even on Windows. Bash's PATH
+            # parser always uses colons, while Python's os.pathsep is a
+            # semicolon on Windows and would hide these fixture tools.
+            environment = os.environ | {"PATH": f"{tool_dir}:{os.environ['PATH']}"}
 
             result = subprocess.run(
                 ["bash", str(MACOS_CLOSURE_VERIFIER), str(app)],

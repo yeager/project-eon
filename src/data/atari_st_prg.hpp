@@ -99,6 +99,13 @@ struct MillenniumAtariBootstrapExecution {
     std::uint32_t second_copy_words = 0;
     std::uint32_t target_address = 0;
     std::uint32_t stop_before_trap_address = 0;
+    // The three fixed instructions at the materialized target create the
+    // Fopen argument frame before the first GEMDOS boundary.  This is a
+    // relative, byte-addressed record only: no initial A7 value, host stack,
+    // trap invocation, or D0 result is selected by Project Eon.
+    std::uint32_t target_prefix_bytes_executed = 0;
+    std::int32_t relative_stack_pointer_delta = 0;
+    std::vector<std::uint8_t> fopen_frame_bytes;
     std::vector<std::uint8_t> copied_stage_bytes;
     MillenniumAtariMaterializedTarget target;
 };

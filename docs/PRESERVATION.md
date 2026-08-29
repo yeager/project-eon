@@ -270,6 +270,23 @@ result/carry flag/register, replays a trace, or changes original media, saves,
 or runtime state. This keeps recorded observation useful for preservation
 without promoting an external capture into an emulator or synthetic game path.
 
+### English Millennium DOS startup prefix
+
+The clean English `2200AD.EXE` has a caller-connected, hash-locked startup
+prefix at `$d2b0`. Project Eon applies its local `SS=CS`/`SP=$da00` setup and
+then stops at the original private `INT 91h` wrapper (`$0124`, interrupt at
+`$0129`). A continuation requires an explicitly recorded returned `AX` word:
+the original bytes store that word at `$d128`, copy its `AH` to `$4368` and
+`$da05`, snapshot `$da00` at `$d12c`, and select `$d1a1` only when that
+observed byte is one. A second observed private-interrupt return permits the
+equal route's literal `$da05=1` store and RET. Other observed selector values
+reach the first `INT 10h` palette request at `$0476`; selector two additionally
+performs its encoded `$0107=$b800` word store. Eon reports that first request
+as register zero/value zero and does not invoke BIOS, infer further loop
+iterations, fabricate either interrupt result, or modify executable/save
+media. This is a recovery boundary, not a claim that the original private ABI
+has been reimplemented.
+
 ### Stable evidence anchors
 
 | Artifact | Bytes | SHA-256 |
@@ -577,6 +594,17 @@ entry plus the explicit 34-byte Fread/load-address disagreement for diagnostics.
 That source read is never represented as a native Fread buffer. The session
 stops before `TRAP #1`: no host file handle, D0 result, config execution, or
 Atari display state is fabricated.
+
+The caller-connected local path also executes the target's complete 14-byte
+Fopen prefix before that boundary. Its three original pre-decrement writes—
+access mode `$0002`, pathname pointer `$0001d6e4`, and selector `$003d`—are
+recorded as eight relative stack bytes in final memory order: `$003d`,
+`$0001d6e4`, `$0002`. The record has stack delta `-8` but no chosen initial
+A7 address: Project Eon does not allocate a host stack, invoke GEMDOS, choose
+a file handle, or follow either result path. Execution stops at the original
+`TRAP #1` at `$7700e`; this adds only byte-proven local 68000 effects between
+the BSS jump and the existing operating-system boundary.
+
 The SDL launcher creates this bounded session only for the exact identified
 Equinox image when the Atari ST Millennium card or CLI target is selected; it
 does not reuse the DOS title flow for that platform.
@@ -3444,10 +3472,14 @@ semantics.
 The original-media selector is separate from Project Eon's launcher locale:
 `--release-language es` with `--game millennium --platform dos` selects only
 this FAT12 edition. It never maps a Spanish UI locale onto English media or
-falls back to English if the Spanish hash is absent. The current card menu
-retains its English-first default when both DOS editions are installed; its
-language-card work remains explicitly open rather than being represented as a
-Spanish runtime path.
+falls back to English if the Spanish hash is absent. When both DOS editions
+are installed, the card menu presents an explicit original-release card and
+does not select either language until the user makes that choice.
+
+The same selector is strict for read-only provenance inspection: `--inspect
+--game millennium --platform dos --release-language es` reports only the
+Spanish hash-verified release. If that exact identity is absent, inspection
+returns no verified release rather than listing a sibling language as fallback.
 
 The first Modern pack profile is explicitly English-only. Combining
 `--modern-pack` with `--release-language es` is rejected before scanner, SDL,

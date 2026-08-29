@@ -287,9 +287,25 @@ MillenniumAtariBootstrapExecution execute_millennium_atari_bootstrap_prefix(
     if (result.target.bytes != bss_source.bytes || result.target.target_address != entry.jump_address) {
         throw std::runtime_error("Millennium Atari ST second copy did not reach expected target");
     }
-    // The fixed target prefix reaches TRAP #1 at byte +14. Do not execute it
-    // or construct the preceding A7 service frame.
+    // The fixed target prefix reaches TRAP #1 at byte +14. Execute its three
+    // fixed pre-decrement stack writes as a relative byte record; the initial
+    // A7 value and the GEMDOS service remain external inputs.  The final
+    // memory order is selector, pathname pointer, then access mode.
+    constexpr std::array<std::uint8_t, 14> fopen_prefix{
+        0x3f, 0x3c, 0x00, 0x02, 0x2f, 0x3c, 0x00, 0x01, 0xd6, 0xe4,
+        0x3f, 0x3c, 0x00, 0x3d,
+    };
+    constexpr std::array<std::uint8_t, 8> fopen_frame{
+        0x00, 0x3d, 0x00, 0x01, 0xd6, 0xe4, 0x00, 0x02,
+    };
+    if (result.target.bytes.size() < fopen_prefix.size()
+        || !std::equal(fopen_prefix.begin(), fopen_prefix.end(), result.target.bytes.begin())) {
+        throw std::runtime_error("Unexpected Millennium Atari ST local Fopen prefix");
+    }
     result.target_address = result.target.target_address;
+    result.target_prefix_bytes_executed = static_cast<std::uint32_t>(fopen_prefix.size());
+    result.relative_stack_pointer_delta = -static_cast<std::int32_t>(fopen_frame.size());
+    result.fopen_frame_bytes.assign(fopen_frame.begin(), fopen_frame.end());
     result.stop_before_trap_address = result.target_address + 14U;
     return result;
 }

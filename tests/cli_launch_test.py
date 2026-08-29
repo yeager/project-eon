@@ -170,6 +170,36 @@ def main() -> int:
             f"{targeted_inspection.stdout}\n{targeted_inspection.stderr}"
         )
 
+    # This flag identifies the original release, not the launcher UI. Shell
+    # integrations use --inspect to discover exact media, so Spanish must not
+    # list a sibling English release as an implicit fallback.
+    spanish_inspection = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--inspect", "--game", "millennium",
+            "--platform", "dos", "--release-language", "es"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    spanish_lines = [line for line in spanish_inspection.stdout.splitlines()
+        if line.startswith("VERIFIED  ")]
+    if (spanish_inspection.returncode != 0
+            or spanish_lines != ["VERIFIED  Millennium 2.2 / DOS / es"]):
+        raise SystemExit(
+            "release-language inspection did not select exactly the Spanish original:\n"
+            f"{spanish_inspection.stdout}\n{spanish_inspection.stderr}"
+        )
+    unavailable_language_inspection = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--inspect", "--game", "deuteros",
+            "--platform", "amiga", "--release-language", "es"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (unavailable_language_inspection.returncode != 5
+            or "No recognised original release matches the requested inspection filters."
+                not in unavailable_language_inspection.stderr
+            or "VERIFIED  " in unavailable_language_inspection.stdout):
+        raise SystemExit(
+            "unavailable release-language inspection silently selected another original:\n"
+            f"{unavailable_language_inspection.stdout}\n{unavailable_language_inspection.stderr}"
+        )
+
     source_match = re.search(
         r"VERIFIED  Millennium 2\.2 / DOS / [^\n]+\n\s*([0-9a-f]{64})",
         targeted_inspection.stdout,
@@ -451,7 +481,8 @@ def main() -> int:
             ),
             ("millennium", "atari-st"): (
                 "bounded launcher bootstrap: executed 54 original longword copies and 257 original word "
-                "copies to target 0x77000, stops before TRAP #1 at 0x7700e; Fopen boundary MILL22A.inf"
+                "copies to target 0x77000, stops before TRAP #1 at 0x7700e after 14 original "
+                "Fopen-prefix bytes / 8 relative stack bytes; Fopen boundary MILL22A.inf"
             ),
             ("deuteros", "amiga"): (
                 "Channel-request static continuation: ADF 0x7092, entry 0x21892; BSR 0x2189a -> 0x2229c, "

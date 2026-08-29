@@ -1075,6 +1075,52 @@ parse_millennium_dos_english_game_startup_followups(
     std::span<const std::uint8_t> game_executable,
     const MillenniumDosEnglishGameStartupCallees& callees);
 
+// A byte-exact, caller-connected prefix of the clean English 2200AD.EXE
+// startup.  The two INT $91 results are observations supplied by a reference
+// run, never host-created values.  If an observation is absent, evaluation
+// stops at that exact native ABI boundary.  When both returns are observed,
+// only the local stores encoded before the next ABI boundary are reported.
+enum class MillenniumDosEnglishStartupPrefixOutcome {
+    first_private_interrupt_boundary,
+    selected_private_interrupt_boundary,
+    equal_return,
+    palette_bios_interrupt_boundary,
+};
+
+struct MillenniumDosEnglishStartupPrefixWrite {
+    std::uint16_t address = 0;
+    std::uint16_t value = 0;
+    // Width is one or two bytes, matching the original MOV encoding.
+    std::uint8_t width = 0;
+    constexpr bool operator==(const MillenniumDosEnglishStartupPrefixWrite&) const = default;
+};
+
+struct MillenniumDosEnglishStartupPrefix {
+    MillenniumDosEnglishStartupPrefixOutcome outcome =
+        MillenniumDosEnglishStartupPrefixOutcome::first_private_interrupt_boundary;
+    std::uint16_t entry_address = 0;
+    std::uint16_t stack_pointer = 0;
+    std::uint16_t first_private_call_address = 0;
+    std::uint16_t private_wrapper_address = 0;
+    std::uint8_t private_interrupt = 0;
+    std::optional<std::uint16_t> first_private_return_ax;
+    std::optional<std::uint16_t> selected_private_return_ax;
+    std::uint8_t selector_byte = 0;
+    std::uint16_t selected_entry_address = 0;
+    std::uint16_t selected_private_call_address = 0;
+    std::vector<MillenniumDosEnglishStartupPrefixWrite> local_writes;
+    // Present only for the non-equal route after its second observed private
+    // return.  It is the first INT $10 request; Eon does not invoke it.
+    std::optional<MillenniumDosEgaPaletteRegisterWrite> first_palette_request;
+    std::uint16_t boundary_address = 0;
+};
+
+[[nodiscard]] MillenniumDosEnglishStartupPrefix
+evaluate_millennium_dos_english_startup_prefix(
+    std::span<const std::uint8_t> game_executable,
+    std::optional<std::uint16_t> first_private_return_ax = std::nullopt,
+    std::optional<std::uint16_t> selected_private_return_ax = std::nullopt);
+
 // The Spanish FAT12 edition reaches its own TITLES.EXE and 2200AD.EXE through
 // IBM.COM, not the English MILL.COM path. This records only original names,
 // hashes and direct local control flow.  The hash-locked local callee also

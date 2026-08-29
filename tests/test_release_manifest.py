@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ReleaseManifestTests(unittest.TestCase):
     def test_profile_spans_are_bounded_and_hash_addressed(self):
-        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["schema"], "project-eon.release-manifest/v1")
         releases = {entry["sha256"]: entry for entry in manifest["releases"]}
         # The real-media fixture has six top-level catalogue archives. The
@@ -34,8 +34,8 @@ class ReleaseManifestTests(unittest.TestCase):
 
     def test_compiled_profile_table_exactly_matches_json(self):
         """Keep runtime admission and preservation interchange in lockstep."""
-        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
-        source = (ROOT / "src" / "data" / "release_manifest.cpp").read_text()
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
+        source = (ROOT / "src" / "data" / "release_manifest.cpp").read_text(encoding="utf-8")
         rows = re.findall(
             r'\{"([a-z0-9-]+)", "([0-9a-f]{64})", "([0-9a-f]{64})", '
             r"([0-9']+), (0x[0-9a-f]+|[0-9']+), (0x[0-9a-f]+|[0-9']+)\}",
@@ -55,7 +55,7 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertEqual(compiled, manifest["parser_profiles"])
 
     def test_manifest_explicitly_keeps_variant_profiles_separate(self):
-        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
         profiles = {profile["id"]: profile for profile in manifest["parser_profiles"]}
         self.assertNotEqual(
             profiles["millennium-dos-title-flow"]["release_sha256"],
@@ -67,7 +67,7 @@ class ReleaseManifestTests(unittest.TestCase):
         )
 
     def test_hash_locked_parser_families_have_media_profiles(self):
-        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
         profiles = {profile["id"]: profile for profile in manifest["parser_profiles"]}
         # These families accept a parser input recovered from an image rather
         # than a standalone archive member.  Their manifest identity is thus

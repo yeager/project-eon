@@ -1759,7 +1759,11 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         << live_bootstrap.execution().first_copy_longwords << " original longword copies and "
         << live_bootstrap.execution().second_copy_words << " original word copies to target 0x"
         << std::hex << live_bootstrap.target().target_address << ", stops before TRAP #1 at 0x"
-        << live_bootstrap.execution().stop_before_trap_address << "; Fopen boundary "
+        << live_bootstrap.execution().stop_before_trap_address << " after " << std::dec
+        << live_bootstrap.execution().target_prefix_bytes_executed
+        << " original Fopen-prefix bytes / "
+        << -live_bootstrap.execution().relative_stack_pointer_delta
+        << " relative stack bytes; Fopen boundary "
         << live_bootstrap.fopen_boundary().fopen_filename << std::dec
         << " (no GEMDOS call)\n";
     if (const auto physical_disk = eon::extract_verified_release_asset(release, disk1_stx_sha256)) {
@@ -2771,6 +2775,12 @@ int main(int argc, char** argv) {
             if (request.verify_game && release.game != *request.verify_game) continue;
             if (request.inspect_data && request.game && release.game != *request.game) continue;
             if (request.inspect_data && request.platform && release.platform != *request.platform) continue;
+            // A release language is an immutable original-media identity,
+            // not a display locale. Inspection applies the same exact filter
+            // as a direct launch, so a Spanish request cannot report English
+            // evidence as an invisible edition fallback.
+            if (request.inspect_data && request.release_language
+                && release.language != *request.release_language) continue;
             try {
                 eon::verify_release_archive(release);
             } catch (const std::exception& error) {

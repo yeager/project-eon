@@ -1808,6 +1808,86 @@ parse_millennium_dos_english_game_startup_followups(
         0x0456, palette_table, std::string(palette_table_sha256), 16, 0x10, 0x1000, 0x047c};
 }
 
+MillenniumDosEnglishStartupPrefix evaluate_millennium_dos_english_startup_prefix(
+    const std::span<const std::uint8_t> game_executable,
+    const std::optional<std::uint16_t> first_private_return_ax,
+    const std::optional<std::uint16_t> selected_private_return_ax) {
+    // Validate each participating original span before connecting it.  This
+    // deliberately has no fallback for another DOS language or executable.
+    const auto flow = parse_millennium_dos_game_flow(game_executable);
+    const auto callees = parse_millennium_dos_english_game_startup_callees(game_executable);
+    const auto followups = parse_millennium_dos_english_game_startup_followups(
+        game_executable, callees);
+    if (flow.entry_address != 0xd2b0 || flow.startup_address != 0xd2b4
+        || flow.startup_stack_pointer != 0xda00 || flow.startup_first_call_address != 0x0124
+        || flow.startup_first_call_interrupt != 0x91 || flow.startup_first_call_return_site != 0xd2c8
+        || callees.equal_entry_address != flow.startup_equal_call_address
+        || callees.other_entry_address != flow.startup_other_call_address
+        || followups.equal_entry_address != callees.equal_followup_target_address
+        || followups.palette_entry_address != callees.other_followup_target_address
+        || followups.bios_interrupt != 0x10 || followups.bios_ax != 0x1000) {
+        throw std::runtime_error("Unsupported Millennium English DOS startup-prefix connection");
+    }
+
+    MillenniumDosEnglishStartupPrefix result;
+    result.entry_address = flow.entry_address;
+    result.stack_pointer = flow.startup_stack_pointer;
+    result.first_private_call_address = flow.startup_address + 0x11; // $d2c5
+    result.private_wrapper_address = flow.startup_first_call_address;
+    result.private_interrupt = flow.startup_first_call_interrupt;
+    result.first_private_return_ax = first_private_return_ax;
+    result.selected_private_return_ax = selected_private_return_ax;
+    if (!first_private_return_ax) {
+        if (selected_private_return_ax) {
+            throw std::runtime_error("Millennium English DOS startup needs first INT 91h return first");
+        }
+        result.boundary_address = 0x0129;
+        return result;
+    }
+
+    // `$d2c8` stores AX, then copies AH into the two byte cells that drive
+    // the selector. These writes are encoded after the observed first return.
+    const auto selector = static_cast<std::uint8_t>(*first_private_return_ax >> 8U);
+    result.selector_byte = selector;
+    result.local_writes = {
+        {flow.startup_result_word_address, *first_private_return_ax, 2},
+        {flow.startup_result_high_byte_first_address, selector, 1},
+        {flow.startup_result_high_byte_second_address, selector, 1},
+        {flow.startup_stack_snapshot_address, flow.startup_stack_pointer, 2},
+    };
+    const auto equal = selector == flow.startup_mode_equal_value;
+    result.selected_entry_address = equal ? callees.equal_entry_address : callees.other_entry_address;
+    result.selected_private_call_address = equal ? callees.equal_private_call_address
+                                                 : callees.other_private_call_address;
+    if (!selected_private_return_ax) {
+        result.outcome = MillenniumDosEnglishStartupPrefixOutcome::selected_private_interrupt_boundary;
+        result.boundary_address = 0x0129;
+        return result;
+    }
+
+    if (equal) {
+        // `$044e`: MOV AL,1; CS:MOV [$da05],AL; RET.
+        result.local_writes.push_back({followups.equal_storage_address,
+            followups.equal_literal_value, 1});
+        result.outcome = MillenniumDosEnglishStartupPrefixOutcome::equal_return;
+        result.boundary_address = followups.equal_return_address;
+        return result;
+    }
+
+    // `$d1d2` stores B800h only if the caller-owned selector byte equals two,
+    // then `$0466` reaches its first INT $10 after loading palette entry zero.
+    if (selector == callees.other_compare_value) {
+        result.local_writes.push_back({callees.other_equal_store_address, 0xb800, 2});
+    }
+    result.first_palette_request = MillenniumDosEgaPaletteRegisterWrite{
+        .register_index = 0,
+        .color_value = followups.palette_table_values[0],
+    };
+    result.outcome = MillenniumDosEnglishStartupPrefixOutcome::palette_bios_interrupt_boundary;
+    result.boundary_address = 0x0476;
+    return result;
+}
+
 MillenniumDosSpanishIbmHandoffEvidence parse_millennium_dos_spanish_ibm_handoff_evidence(
     const std::span<const std::uint8_t> ibm_executable,
     const std::span<const std::uint8_t> titles_executable,

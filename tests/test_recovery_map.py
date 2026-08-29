@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class RecoveryMapTests(unittest.TestCase):
     def test_map_is_hash_bound_to_existing_profiles(self):
-        release_manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
-        recovery_map = json.loads((ROOT / "docs" / "recovery-map.json").read_text())
+        release_manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
+        recovery_map = json.loads((ROOT / "docs" / "recovery-map.json").read_text(encoding="utf-8"))
         self.assertEqual(recovery_map["schema"], "project-eon.recovery-map/v1")
         self.assertIn("no patches", recovery_map["purpose"])
         self.assertIn("Modern presentation", recovery_map["mode_boundary"])
@@ -31,7 +31,7 @@ class RecoveryMapTests(unittest.TestCase):
         self.assertEqual(len(mapped_profiles), len(set(mapped_profiles)))
         self.assertEqual(set(mapped_profiles), profiles)
         headings = re.findall(r"^#{2,6}\s+(.+)$",
-                              (ROOT / "docs" / "PRESERVATION.md").read_text(), re.MULTILINE)
+                              (ROOT / "docs" / "PRESERVATION.md").read_text(encoding="utf-8"), re.MULTILINE)
         anchors = {
             re.sub(r"[^a-z0-9 -]", "", heading.lower()).replace(" ", "-")
             for heading in headings
@@ -46,8 +46,8 @@ class RecoveryMapTests(unittest.TestCase):
             self.assertIn(entry["documentation_anchor"].split("#", 1)[1], anchors)
 
     def test_compiled_map_exactly_matches_json(self):
-        recovery_map = json.loads((ROOT / "docs" / "recovery-map.json").read_text())
-        source = (ROOT / "src" / "data" / "recovery_map.cpp").read_text()
+        recovery_map = json.loads((ROOT / "docs" / "recovery-map.json").read_text(encoding="utf-8"))
+        source = (ROOT / "src" / "data" / "recovery_map.cpp").read_text(encoding="utf-8")
         rows = re.findall(
             r'\{"([a-z0-9-]+)", "([0-9a-f]{64})", "([a-z0-9-]+)", '
             r'Game::(deuteros|millennium), Platform::(amiga|atari_st|dos), "([a-z]+)", '
