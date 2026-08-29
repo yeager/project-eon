@@ -663,6 +663,16 @@ struct DeuterosAmigaTitlePostExecPairedLocalRouteProfile {
 parse_deuteros_amiga_title_post_exec_paired_local_route_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+struct DeuterosAmigaTitlePostExecServiceRouteProfile {
+    std::uint32_t caller_address = 0, entry_address = 0, nested_entry_address = 0;
+    std::array<std::uint32_t, 3> external_call_targets{};
+    std::uint32_t nested_branch_target = 0, nested_return_address = 0, continuation_target = 0;
+    std::string caller_sha256, entry_sha256, nested_sha256;
+};
+[[nodiscard]] DeuterosAmigaTitlePostExecServiceRouteProfile
+parse_deuteros_amiga_title_post_exec_service_route_profile(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan);
+
 // `$40616` begins with the two opcode bytes retained at the end of the
 // preceding return-continuation evidence span.  This overlapping profile
 // binds the complete following conditional block through its local branch

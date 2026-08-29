@@ -2325,6 +2325,26 @@ parse_deuteros_amiga_title_post_exec_paired_local_route_profile(
             std::string(hashes[3]), std::string(hashes[4])}};
 }
 
+DeuterosAmigaTitlePostExecServiceRouteProfile
+parse_deuteros_amiga_title_post_exec_service_route_profile(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::string_view stage_hash = "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash = "98306b421ce3f0216642ad091dc72ffb63ab1325b68c839b8814d4e4fc25dac6";
+    constexpr std::string_view entry_hash = "037c48dd824e064d3734fb4b72b6e649bfda6b9a7a764147a76690f4ce9506e0";
+    constexpr std::string_view nested_hash = "25dcfad3d1b9298771e33cab73a4de86cd8ff9c27d7fdef787be5ef750f7035b";
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](std::uint32_t a, std::size_t n) { return stage.length && a >= stage.destination && a - stage.destination <= stage.length && n <= stage.length - (a - stage.destination); };
+    if (!in_stage(0x4051e, 20) || !in_stage(0x20e18, 140) || !in_stage(0x20ba8, 74)) throw std::runtime_error("Deuteros post-Exec service route lies outside original stage");
+    const auto all = disk.bytes(stage.disk_offset, stage.length);
+    const auto span = [&](std::uint32_t a, std::size_t n) { return all.subspan(a - stage.destination, n); };
+    const auto caller = span(0x4051e, 20); const auto entry = span(0x20e18, 140); const auto nested = span(0x20ba8, 74);
+    require_word(caller, 0, 0x23fc); require_long(caller, 2, 0x0002151a); require_long(caller, 6, 0x000222ae); require_word(caller, 14, 0x4eb9); require_long(caller, 16, 0x00020e18);
+    require_word(entry, 82, 0x4eb9); require_long(entry, 84, 0x0001fb9a); require_word(entry, 98, 0x4eb9); require_long(entry, 100, 0x0001ff08); require_word(entry, 126, 0x4eb9); require_long(entry, 128, 0x00022bca); require_word(entry, 132, 0x6100); require_word(entry, 136, 0x6000);
+    require_word(nested, 26, 0xe20f); require_word(nested, 46, 0x4eb9); require_long(nested, 48, 0x00041a68); require_word(nested, 64, 0x4eb9); require_long(nested, 66, 0x00041a68); require_word(nested, 72, 0x4e75);
+    if (to_hex(sha256(all)) != stage_hash || to_hex(sha256(caller)) != caller_hash || to_hex(sha256(entry)) != entry_hash || to_hex(sha256(nested)) != nested_hash) throw std::runtime_error("Unsupported Deuteros post-Exec service-route profile");
+    return {0x4052c, 0x20e18, 0x20ba8, {{0x1fb9a, 0x1ff08, 0x22bca}}, 0x41a68, 0x20bf0, 0x20bf2, std::string(caller_hash), std::string(entry_hash), std::string(nested_hash)};
+}
+
 DeuterosAmigaTitlePostExecTailFlagGateProfile
 parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
