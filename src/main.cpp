@@ -735,6 +735,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto gx_overlay = eon::extract_asset_by_sha256(release.path, gx_overlay_sha256);
     if (!gx_overlay) throw std::runtime_error("Verified Millennium DOS GX overlay missing");
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game);
+    const auto startup_allocation = eon::parse_millennium_dos_startup_allocation_boundary(*game);
     const auto gx_overlay_load = eon::parse_millennium_dos_gx_overlay_load_evidence(
         *game, *gx_overlay);
     const auto gx_overlay_adapter = eon::parse_millennium_dos_gx_overlay_adapter_evidence(
@@ -767,6 +768,14 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << static_cast<unsigned>(game_flow.startup_other_followup_video_subfunction) << "); DX!=0 -> 0x"
         << game_flow.startup_nonzero_dx_branch_address << std::dec
         << " (validated boundary only; no native calls executed)\n";
+    std::cout << "          2200AD startup continuation: 0x" << std::hex
+        << startup_allocation.continuation_entry_address << " CALL 0x"
+        << startup_allocation.allocator_entry_address << " reaches INT 0x"
+        << static_cast<unsigned>(startup_allocation.allocator_first_external_interrupt)
+        << " at 0x" << startup_allocation.allocator_first_external_interrupt_site
+        << "; post-call DX==0 -> 0x" << startup_allocation.dx_zero_branch_target
+        << ", DX!=0 -> 0x" << startup_allocation.dx_nonzero_jump_target << std::dec
+        << " (static boundary only; no DOS result or branch chosen)\n";
     std::cout << "          2200GX.EXE overlay evidence: name 0x" << std::hex
         << gx_overlay_load.source_name_address << ", loader 0x"
         << gx_overlay_load.loader_entry_address << " reads segment cell 0x"

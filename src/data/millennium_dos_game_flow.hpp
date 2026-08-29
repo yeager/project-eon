@@ -485,6 +485,35 @@ struct MillenniumDosGameFlow {
 [[nodiscard]] MillenniumDosGameFlow parse_millennium_dos_game_flow(
     std::span<const std::uint8_t> game_executable);
 
+// The caller-side continuation after the English startup mode selector. It is
+// reachable only if the selected private-$0124 path returns. The local callee
+// begins with an INT 21h boundary, so this profile stops there and records
+// neither DOS effects nor an assumed return. The later DX split is likewise a
+// static branch fact, not a host-side startup decision.
+struct MillenniumDosStartupAllocationBoundary {
+    std::string executable_sha256;
+    std::uint16_t continuation_entry_address = 0;
+    std::uint16_t allocator_call_address = 0;
+    std::uint16_t allocator_entry_address = 0;
+    std::uint16_t allocator_first_external_interrupt_site = 0;
+    std::uint8_t allocator_first_external_interrupt = 0;
+    std::uint8_t allocator_first_external_service = 0;
+    std::uint16_t post_allocator_result_storage_address = 0;
+    std::uint16_t dx_test_address = 0;
+    std::uint16_t dx_zero_branch_address = 0;
+    std::uint16_t dx_zero_branch_target = 0;
+    std::uint16_t dx_nonzero_jump_address = 0;
+    std::uint16_t dx_nonzero_jump_target = 0;
+    std::uint16_t dx_zero_path_first_call_address = 0;
+    std::uint16_t dx_zero_path_first_call_target = 0;
+    std::string continuation_sha256;
+    std::string allocator_prefix_sha256;
+};
+
+[[nodiscard]] MillenniumDosStartupAllocationBoundary
+parse_millennium_dos_startup_allocation_boundary(
+    std::span<const std::uint8_t> game_executable);
+
 // Hash-locked raw evidence for 2200AD.EXE loading the original 2200GX.EXE
 // overlay. Both executables are immutable inputs. These are only encoded
 // loader/transfer facts: no DOS service, segment value, call return, overlay
