@@ -96,6 +96,16 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         for literal in ("2200ad.exe", "0x0124", "0x001f", "0xd19e"):
             self.assertIn(literal, validator)
 
+    def test_deuteros_amiga_next_step_capture_contract_keeps_unknown_abi_external(self):
+        documented = FORMAT.read_text(encoding="utf-8")
+        self.assertIn("Required capture contract before a Deuteros Amiga runtime increment", documented)
+        for literal in ("$40450", "$1ed80", "$1ef74", "$1f056", "$1fe7a", "$1feaa",
+                        "$1eec0..$1eed3", "$1eed6", "$1ee20..$1eebf", "$1f98c"):
+            with self.subTest(literal=literal):
+                self.assertIn(literal, documented)
+        self.assertIn("**not** an extension of the accepted\nv2 grammar", documented)
+        self.assertIn("are not\nruntime inputs", documented)
+
     def test_research_protocol_distinguishes_generic_v1_from_strict_v2_adapters(self):
         research = (ROOT / "docs" / "research.md").read_text(encoding="utf-8")
         self.assertIn("Generic v1 verifies", research)

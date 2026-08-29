@@ -253,6 +253,35 @@ switches privilege/state, writes custom hardware, invokes a callback, maps
 `incoming_a0`, or treats an observed raw result as a service ABI, input,
 timing, screen or title-stage execution result.
 
+### Required capture contract before a Deuteros Amiga runtime increment
+
+The current adapter is intentionally insufficient to advance the title stage:
+its result fields establish only that an observation occurred at a hash-pinned
+call site.  A future runtime adapter must not infer the missing state from a
+successful `exec`, `open-library`, `graphics`, or callback record.  Before it
+can model even one additional original title iteration, a retained external
+capture must provide all of the following as ordered, raw observations bound
+to this same clean system ADF and title-stage hash:
+
+- both `$40450` Exec-vector returns, the subsequent `$1ed80` OpenLibrary
+  return, and the exact graphics-vector/custom-register call and return order;
+- the callback-registration result at `$1ef74`, then one actual callback
+  entry at `$1f056` with the complete caller-owned A0 frame bytes read by the
+  recovered local arms (`+4`, `+6`, `+8`, `+a`, and `+c`), not merely an A0
+  address;
+- the pre/post values of the title response queue at `$1eec0..$1eed3` and
+  pending word `$1eed6`, plus the exact callback-table selection source at
+  `$1ee20..$1eebf` identified by its existing source hash;
+- the incoming D0 at `$1fe7a`, both local `$1feaa` call/return observations,
+  and the pre/post dispatch cells `$1f98c`, `$1f98e`, `$1f99c`, `$1f974`,
+  `$1f970`, `$1f96c`, `$1f994`, and `$1f998`.
+
+This is a capture-retention contract, **not** an extension of the accepted
+v2 grammar. The records must remain outside the repository and are not
+runtime inputs. A future adapter must first define bounded field encodings,
+source-site ordering, frame lengths and hash checks, then independently prove
+the external service and caller ABIs before it can consume any observation.
+
 ## Command-line boundary
 
 Use a trace only with an explicit original-media location, game and platform:

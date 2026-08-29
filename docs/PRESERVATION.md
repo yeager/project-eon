@@ -2782,6 +2782,34 @@ Leaving an interactive launcher title visit also stops host text input and
 discards that one-shot session. A later visit constructs a new boundary from
 the same verified title profile; no observed hand-off, host text state, or
 original media state is carried across visits.
+
+#### Required dynamic trace contract for the next playable DOS increment
+
+No supplied archive contains this trace. A future recorder may extend the
+English DOS adapter only after retaining the existing outer-release and event
+file hashes and adding ordered, exact observations of all of the following:
+
+1. The `$0d0a` `INT 21h/AH=$06,DL=$ff` return at `$1c28`, including the
+   returned `AL` and flags, followed by the actual `$1c54` branch decision.
+   The input character itself must not be promoted to a host control name.
+2. Every return from the five `$0122` private `INT $91` calls reached by
+   `$1968/$1931`, with full AX, flags, ES:BX input record identity and the
+   visible destination/write ranges produced by each call.
+3. The return/flags from `$12c0`, `$0916`, and DOS `INT 21h/AH=$4c`, then
+   the parent `MILL.COM` child-status observation that determines whether its
+   next EXEC request is `2200ad.exe`.
+4. For `2200AD.EXE`, the exact first `$0124` private-wrapper return (AX and
+   flags), the resulting `$d128/$da05` bytes, and each selected driver/file
+   operation through the first presentation write. Any INT 91 return must
+   identify the already hash-bound EGA640 or MCGA driver and its complete
+   record read/write ranges.
+
+The capture must preserve loaded image identity, program-counter addresses,
+ordered ticks, register inputs/outputs, flags, and memory ranges as hashes or
+bounded byte observations. It must not replace unknown results with zero,
+derive a frame from P01–P25, or record host-generated pixels as original
+writes. Only such a trace can authorize a new bounded runtime evaluator; until
+then, Project Eon deliberately stops at the title availability boundary.
 The static exit chain reaches `$1968`
 and embedded bytes at `$1884` spelling `    LOADING    2`. `$1968` loads AX=5
 and calls `$1931`; that local loop runs five times, loading AX=`$0013`, calling
