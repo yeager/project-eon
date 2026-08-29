@@ -90,8 +90,10 @@ preferred when both are declared, so a pack can offer a genuine 4× redraw
 without any filename-based override rule. After normal manifest admission,
 Eon reads the selected file again, hashes the exact in-memory bytes, validates
 the PNG signature, checksum of every chunk, terminal IEND, consecutive IDAT
-sequence and constrained IHDR, and asks SDL_image to decode those bytes from
-memory. A bad checksum is rejected before SDL_image sees the bytes. SDL_image
+sequence and constrained IHDR, then inflates IDAT into the exact bounded
+non-interlaced RGBA scanline size. Every scanline filter byte must be one of
+PNG's five defined values; truncated streams, trailing compressed payload and
+inflated-size surprises are rejected before SDL_image sees the bytes. SDL_image
 failure or a post-decode dimension mismatch rejects the external surface. It is
 displayed only as the Modern replacement for the recovered English P00 title;
 Original always uses the recovered original pixels. The runtime label displays

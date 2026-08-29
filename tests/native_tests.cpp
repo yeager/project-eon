@@ -581,9 +581,10 @@ void assert_modern_asset_pack_admission() {
     const auto render_root = root / "render-title";
     std::filesystem::create_directories(render_root);
     const auto png = render_root / "title.png";
-    // The runtime's mapping is decoder-independent, so construct a small
-    // structurally valid PNG with correct CRCs here.  Its empty IDAT is not
-    // sent to SDL_image; this only exercises the pre-decoder admission gate.
+    // The runtime's mapping is decoder-independent, so construct bounded,
+    // fully decodable external PNG grammar bytes with correct CRCs here.
+    // These are not game data or replacement art: each pixel is transparent
+    // and the fixture only exercises pack admission before SDL_image.
     const auto mapped_png = [](const std::uint32_t width, const std::uint32_t height) {
         std::vector<std::uint8_t> bytes{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a};
         const auto append_u32 = [&bytes](const std::uint32_t value) {
@@ -613,7 +614,14 @@ void assert_modern_asset_pack_admission() {
         append_header_u32(height);
         header.insert(header.end(), {8U, 6U, 0U, 0U, 0U});
         append_chunk({'I', 'H', 'D', 'R'}, header);
-        append_chunk({'I', 'D', 'A', 'T'}, {});
+        const auto row_size = static_cast<std::size_t>(width) * 4U + 1U;
+        std::vector<std::uint8_t> raw(row_size * height, 0U);
+        uLongf compressed_size = compressBound(static_cast<uLong>(raw.size()));
+        std::vector<std::uint8_t> compressed(compressed_size);
+        assert(compress2(compressed.data(), &compressed_size, raw.data(),
+            static_cast<uLong>(raw.size()), Z_BEST_COMPRESSION) == Z_OK);
+        compressed.resize(compressed_size);
+        append_chunk({'I', 'D', 'A', 'T'}, compressed);
         append_chunk({'I', 'E', 'N', 'D'}, {});
         return bytes;
     };
@@ -624,14 +632,16 @@ void assert_modern_asset_pack_admission() {
             static_cast<std::streamsize>(png_bytes.size()));
     }
     const auto release_hash = "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
-    const auto write_render_manifest = [&](const std::string_view asset_id, const std::string_view hash) {
+    const auto write_render_manifest = [&](const std::string_view asset_id, const std::size_t asset_size,
+                                           const std::string_view hash) {
         std::ofstream output(render_root / "pack.eonmodern", std::ios::binary | std::ios::trunc);
         output << "schema\tproject-eon.modern-asset-pack/v1\nid\trender-title\nversion\t1\n"
                << "license\tCC0-1.0\nprovenance\tindependently-created\ngame\tmillennium\nplatform\tdos\n"
                << "source_release_sha256\t" << release_hash << "\nasset\t" << asset_id
-               << " title.png " << png_bytes.size() << ' ' << hash << '\n';
+               << " title.png " << asset_size << ' ' << hash << '\n';
     };
-    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(png_bytes)));
+    write_render_manifest("millennium.dos.title.png-640x400", png_bytes.size(),
+        eon::to_hex(eon::sha256(png_bytes)));
     const auto surface = eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", release_hash);
     assert(surface.pack_id == "render-title" && surface.asset_id == "millennium.dos.title.png-640x400"
@@ -643,7 +653,8 @@ void assert_modern_asset_pack_admission() {
         output.write(reinterpret_cast<const char*>(png_4x.data()),
             static_cast<std::streamsize>(png_4x.size()));
     }
-    write_render_manifest("millennium.dos.title.png-1280x800", eon::to_hex(eon::sha256(png_4x)));
+    write_render_manifest("millennium.dos.title.png-1280x800", png_4x.size(),
+        eon::to_hex(eon::sha256(png_4x)));
     const auto surface_4x = eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", release_hash);
     assert(surface_4x.asset_id == "millennium.dos.title.png-1280x800"
@@ -678,19 +689,21 @@ void assert_modern_asset_pack_admission() {
         output.write(reinterpret_cast<const char*>(png_bytes.data()),
             static_cast<std::streamsize>(png_bytes.size()));
     }
-    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(png_bytes)));
+    write_render_manifest("millennium.dos.title.png-640x400", png_bytes.size(),
+        eon::to_hex(eon::sha256(png_bytes)));
     bool wrong_release_rejected = false;
     try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
     } catch (const std::runtime_error&) { wrong_release_rejected = true; }
     assert(wrong_release_rejected);
-    write_render_manifest("millennium.dos.title.not-supported", eon::to_hex(eon::sha256(png_bytes)));
+    write_render_manifest("millennium.dos.title.not-supported", png_bytes.size(),
+        eon::to_hex(eon::sha256(png_bytes)));
     bool wrong_id_rejected = false;
     try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", release_hash));
     } catch (const std::runtime_error&) { wrong_id_rejected = true; }
     assert(wrong_id_rejected);
-    write_render_manifest("millennium.dos.title.png-640x400",
+    write_render_manifest("millennium.dos.title.png-640x400", png_bytes.size(),
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     bool wrong_hash_rejected = false;
     try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
@@ -703,7 +716,8 @@ void assert_modern_asset_pack_admission() {
         output.write(reinterpret_cast<const char*>(malformed_png.data()),
             static_cast<std::streamsize>(malformed_png.size()));
     }
-    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(malformed_png)));
+    write_render_manifest("millennium.dos.title.png-640x400", malformed_png.size(),
+        eon::to_hex(eon::sha256(malformed_png)));
     bool malformed_rejected = false;
     try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", release_hash));
@@ -719,12 +733,44 @@ void assert_modern_asset_pack_admission() {
         output.write(reinterpret_cast<const char*>(bad_crc_png.data()),
             static_cast<std::streamsize>(bad_crc_png.size()));
     }
-    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(bad_crc_png)));
+    write_render_manifest("millennium.dos.title.png-640x400", bad_crc_png.size(),
+        eon::to_hex(eon::sha256(bad_crc_png)));
     bool bad_crc_rejected = false;
     try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", release_hash));
     } catch (const std::runtime_error&) { bad_crc_rejected = true; }
     assert(bad_crc_rejected);
+    // Correct PNG chunk checksums cannot stand in for a decodable, bounded
+    // RGBA image. Break the zlib header and recompute IDAT's CRC so this
+    // reaches the new pre-SDL decompression gate rather than the CRC gate.
+    auto bad_deflate_png = png_bytes;
+    constexpr std::size_t idat_type_offset = 37;
+    constexpr std::size_t idat_data_offset = 41;
+    const auto idat_length = (static_cast<std::size_t>(bad_deflate_png[33]) << 24U)
+        | (static_cast<std::size_t>(bad_deflate_png[34]) << 16U)
+        | (static_cast<std::size_t>(bad_deflate_png[35]) << 8U) | bad_deflate_png[36];
+    assert(idat_length != 0U && idat_data_offset + idat_length + 4U <= bad_deflate_png.size());
+    bad_deflate_png[idat_data_offset] = 0U;
+    uLong idat_crc = crc32(0L, Z_NULL, 0);
+    idat_crc = crc32(idat_crc, bad_deflate_png.data() + idat_type_offset,
+        static_cast<uInt>(4U + idat_length));
+    const auto idat_crc_offset = idat_data_offset + idat_length;
+    bad_deflate_png[idat_crc_offset] = static_cast<std::uint8_t>(idat_crc >> 24U);
+    bad_deflate_png[idat_crc_offset + 1U] = static_cast<std::uint8_t>(idat_crc >> 16U);
+    bad_deflate_png[idat_crc_offset + 2U] = static_cast<std::uint8_t>(idat_crc >> 8U);
+    bad_deflate_png[idat_crc_offset + 3U] = static_cast<std::uint8_t>(idat_crc);
+    {
+        std::ofstream output(png, std::ios::binary | std::ios::trunc);
+        output.write(reinterpret_cast<const char*>(bad_deflate_png.data()),
+            static_cast<std::streamsize>(bad_deflate_png.size()));
+    }
+    write_render_manifest("millennium.dos.title.png-640x400", bad_deflate_png.size(),
+        eon::to_hex(eon::sha256(bad_deflate_png)));
+    bool bad_deflate_rejected = false;
+    try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
+        render_root / "pack.eonmodern", release_hash));
+    } catch (const std::runtime_error&) { bad_deflate_rejected = true; }
+    assert(bad_deflate_rejected);
     auto trailing_png = png_bytes;
     trailing_png.push_back(0);
     {
@@ -732,7 +778,8 @@ void assert_modern_asset_pack_admission() {
         output.write(reinterpret_cast<const char*>(trailing_png.data()),
             static_cast<std::streamsize>(trailing_png.size()));
     }
-    write_render_manifest("millennium.dos.title.png-640x400", eon::to_hex(eon::sha256(trailing_png)));
+    write_render_manifest("millennium.dos.title.png-640x400", trailing_png.size(),
+        eon::to_hex(eon::sha256(trailing_png)));
     bool trailing_rejected = false;
     try { static_cast<void>(eon::load_millennium_dos_title_modern_surface(
         render_root / "pack.eonmodern", release_hash));
@@ -4819,6 +4866,20 @@ int main() {
     assert(atari_fopen_fallthrough.fread_trap_offset == 0x2c);
     assert(atari_fopen_fallthrough.stack_cleanup_opcode == 0xdffc);
     assert(atari_fopen_fallthrough.stack_cleanup_bytes == 12);
+    const auto atari_fread_frame_prefix = eon::execute_millennium_atari_fread_frame_prefix(
+        atari_target, atari_fopen_fallthrough);
+    assert(atari_fread_frame_prefix.target_address == 0x77000);
+    assert(atari_fread_frame_prefix.entry_offset == 0x1a);
+    assert(atari_fread_frame_prefix.byte_count == 18);
+    assert(atari_fread_frame_prefix.sha256
+        == "663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0");
+    assert(atari_fread_frame_prefix.buffer_address == 0x2a500);
+    assert(atari_fread_frame_prefix.byte_count_argument == 0x20000);
+    assert(atari_fread_frame_prefix.function == 0x3f);
+    assert(atari_fread_frame_prefix.opaque_handle_frame_offset == 2);
+    assert(atari_fread_frame_prefix.opaque_handle_frame_bytes == 2);
+    assert(atari_fread_frame_prefix.relative_stack_pointer_delta == -12);
+    assert(atari_fread_frame_prefix.stop_before_trap_offset == 0x2c);
     const auto atari_fread_config_transfer = eon::parse_millennium_atari_fread_config_transfer_boundary(
         atari_target, atari_fopen_fallthrough);
     assert(atari_fread_config_transfer.target_address == 0x77000);
@@ -4855,6 +4916,8 @@ int main() {
     assert(atari_session.fopen_result_gate().nonnegative_successor_offset == 0x1a);
     assert(atari_session.fopen_fallthrough().fread_function == 0x3f);
     assert(atari_session.fopen_fallthrough().fread_buffer_address == 0x2a500);
+    assert(atari_session.fread_frame_prefix().opaque_handle_frame_bytes == 2);
+    assert(atari_session.fread_frame_prefix().stop_before_trap_offset == 0x2c);
     assert(atari_session.fread_config_transfer().config_buffer_address == 0x2a500);
     assert(atari_session.root_inventory().files.size() == 13);
     assert(atari_session.root_inventory().files[11].name == "DATA12.BIN");
@@ -5355,6 +5418,16 @@ int main() {
         invalid_atari_fopen_fallthrough_rejected = true;
     }
     assert(invalid_atari_fopen_fallthrough_rejected);
+    auto invalid_atari_fread_frame_prefix = atari_target;
+    invalid_atari_fread_frame_prefix.bytes[0x2a] ^= 0x01;
+    bool invalid_atari_fread_frame_prefix_rejected = false;
+    try {
+        static_cast<void>(eon::execute_millennium_atari_fread_frame_prefix(
+            invalid_atari_fread_frame_prefix, atari_fopen_fallthrough));
+    } catch (const std::runtime_error&) {
+        invalid_atari_fread_frame_prefix_rejected = true;
+    }
+    assert(invalid_atari_fread_frame_prefix_rejected);
     auto invalid_atari_fread_config_transfer = atari_target;
     invalid_atari_fread_config_transfer.bytes[0x34] ^= 0x01;
     bool invalid_atari_fread_config_transfer_rejected = false;
@@ -7112,6 +7185,35 @@ int main() {
         callback_producer_rejected = true;
     }
     assert(callback_producer_rejected);
+    // The independent byte-two arm accepts only explicit original-frame and
+    // gate values. Its service route remains a reported boundary.
+    const auto callback_second_event_service =
+        eon::evaluate_deuteros_amiga_title_callback_second_event(
+            system_disk, load_plan, {true, 0x00ff, 0, 0x1234, 0xabcd});
+    assert(callback_second_event_service.mirrored_event_address == 0x1ef2e);
+    assert(callback_second_event_service.mirrored_event_value == 2);
+    assert((callback_second_event_service.copied_word_destinations
+        == std::array<std::uint32_t, 2>{{0x1ee10, 0x1ee12}}));
+    assert((callback_second_event_service.copied_word_values
+        == std::array<std::uint16_t, 2>{{0x1234, 0xabcd}}));
+    assert(callback_second_event_service.copied_words_written);
+    assert(callback_second_event_service.stop
+        == eon::DeuterosAmigaTitleCallbackSecondEventStop::external_service_boundary);
+    assert(callback_second_event_service.next_address == 0x20118);
+    const auto callback_second_event_transform =
+        eon::evaluate_deuteros_amiga_title_callback_second_event(
+            system_disk, load_plan, {true, 0x0068, 0x6000, 0, 0});
+    assert(callback_second_event_transform.transformed_word_destination == 0x1ffd4);
+    assert(callback_second_event_transform.transformed_word_value == 3);
+    assert(callback_second_event_transform.transformed_word_written);
+    assert(callback_second_event_transform.stop
+        == eon::DeuterosAmigaTitleCallbackSecondEventStop::ordinary_return);
+    const auto callback_second_event_gate =
+        eon::evaluate_deuteros_amiga_title_callback_second_event(
+            system_disk, load_plan, {false, 0x0068, 0x6000, 0, 0});
+    assert(callback_second_event_gate.stop
+        == eon::DeuterosAmigaTitleCallbackSecondEventStop::gate_return);
+    assert(!callback_second_event_gate.transformed_word_written);
     assert(title_callback.callback_destination_address == 0x1eec0);
     assert(title_callback.registration_sha256
         == "f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27");

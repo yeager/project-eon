@@ -188,6 +188,29 @@ struct MillenniumAtariFopenFallthrough {
 [[nodiscard]] MillenniumAtariFopenFallthrough parse_millennium_atari_fopen_fallthrough(
     const MillenniumAtariMaterializedTarget& target, const MillenniumAtariTrapEntry& trap);
 
+// Symbolically executes the wholly local Fread argument writes reached by
+// Fopen's nonnegative successor.  The handle word is deliberately opaque D0
+// output from the prior GEMDOS call; it is represented as a reserved slot,
+// not fabricated stack data.  Execution stops immediately before Fread's
+// original TRAP #1.
+struct MillenniumAtariFreadFramePrefixExecution {
+    std::uint32_t target_address = 0;
+    std::size_t entry_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::uint32_t buffer_address = 0;
+    std::uint32_t byte_count_argument = 0;
+    std::uint16_t function = 0;
+    std::size_t opaque_handle_frame_offset = 0;
+    std::size_t opaque_handle_frame_bytes = 0;
+    std::int32_t relative_stack_pointer_delta = 0;
+    std::size_t stop_before_trap_offset = 0;
+};
+
+[[nodiscard]] MillenniumAtariFreadFramePrefixExecution
+execute_millennium_atari_fread_frame_prefix(const MillenniumAtariMaterializedTarget& target,
+    const MillenniumAtariFopenFallthrough& fallthrough);
+
 // The original continuation immediately after the statically prepared Fread
 // boundary. It begins with the still-uninvoked GEMDOS trap and ends at an
 // absolute JSR into the Fread destination. This proves a loader-to-buffer

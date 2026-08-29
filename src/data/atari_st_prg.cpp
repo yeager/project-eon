@@ -427,6 +427,39 @@ MillenniumAtariFopenFallthrough parse_millennium_atari_fopen_fallthrough(
         entry_offset + 18U, read_be16(bytes, 20), read_be32(bytes, 22)};
 }
 
+MillenniumAtariFreadFramePrefixExecution execute_millennium_atari_fread_frame_prefix(
+    const MillenniumAtariMaterializedTarget& target,
+    const MillenniumAtariFopenFallthrough& fallthrough) {
+    // Nonnegative Fopen fall-through: MOVE.L #$2a500,-(A7);
+    // MOVE.L #$20000,-(A7); MOVE.W D0,-(A7); MOVE.W #$3f,-(A7); TRAP #1.
+    // The third write is intentionally an opaque D0 slot; this routine does
+    // not choose a Fopen result or write a proxy handle into the frame.
+    constexpr std::size_t entry_offset = 0x1a;
+    constexpr std::array<std::uint8_t, 18> frame_prefix{
+        0x2f, 0x3c, 0x00, 0x02, 0xa5, 0x00,
+        0x2f, 0x3c, 0x00, 0x02, 0x00, 0x00,
+        0x3f, 0x00, 0x3f, 0x3c, 0x00, 0x3f,
+    };
+    constexpr std::string_view expected_fallthrough_sha256 =
+        "663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0";
+    if (target.target_address == 0 || fallthrough.target_address != target.target_address
+        || fallthrough.entry_offset != entry_offset || fallthrough.byte_count != 26
+        || fallthrough.sha256 != expected_fallthrough_sha256
+        || fallthrough.fread_buffer_address != 0x2a500
+        || fallthrough.fread_byte_count != 0x20000
+        || fallthrough.handle_push_opcode != 0x3f00
+        || fallthrough.fread_function != 0x3f
+        || fallthrough.fread_trap_offset != entry_offset + frame_prefix.size()
+        || target.bytes.size() < entry_offset + frame_prefix.size()
+        || !std::equal(frame_prefix.begin(), frame_prefix.end(),
+            target.bytes.begin() + static_cast<std::ptrdiff_t>(entry_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST local Fread frame prefix");
+    }
+    return {target.target_address, entry_offset, frame_prefix.size(), fallthrough.sha256,
+        fallthrough.fread_buffer_address, fallthrough.fread_byte_count, fallthrough.fread_function,
+        2, 2, -12, fallthrough.fread_trap_offset};
+}
+
 MillenniumAtariFreadConfigTransferBoundary
 parse_millennium_atari_fread_config_transfer_boundary(
     const MillenniumAtariMaterializedTarget& target,

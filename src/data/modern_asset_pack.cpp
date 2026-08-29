@@ -182,6 +182,33 @@ bool png_chunk_crc_matches(const std::vector<std::uint8_t>& bytes,
     return static_cast<std::uint32_t>(crc) == big32(bytes, data + length);
 }
 
+// A valid IHDR alone does not bound a decoder's interpretation of IDAT. The
+// two admitted targets have a fixed non-interlaced RGBA scanline size, so
+// decode their zlib stream into that exact bounded buffer before SDL_image
+// sees it. This rejects empty/truncated streams, trailing compressed payload,
+// inflated-size surprises, and unsupported PNG filter bytes.
+bool rgba_png_scanlines_valid(const std::vector<std::uint8_t>& idat,
+                              const MillenniumTitlePngTarget& target) {
+    if (idat.empty()) return false;
+    const auto row_bytes = static_cast<std::size_t>(target.width) * 4U + 1U;
+    const auto decoded_size = row_bytes * static_cast<std::size_t>(target.height);
+    std::vector<std::uint8_t> decoded(decoded_size);
+    z_stream stream{};
+    stream.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(idat.data()));
+    stream.avail_in = static_cast<uInt>(idat.size());
+    stream.next_out = decoded.data();
+    stream.avail_out = static_cast<uInt>(decoded.size());
+    if (inflateInit(&stream) != Z_OK) return false;
+    const auto result = inflate(&stream, Z_FINISH);
+    const bool complete = result == Z_STREAM_END && stream.avail_in == 0U && stream.avail_out == 0U;
+    inflateEnd(&stream);
+    if (!complete) return false;
+    for (std::size_t offset = 0; offset < decoded.size(); offset += row_bytes) {
+        if (decoded[offset] > 4U) return false;
+    }
+    return true;
+}
+
 bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
                                  const MillenniumTitlePngTarget& target) {
     constexpr std::array<std::uint8_t, 8> signature{{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}};
@@ -190,6 +217,7 @@ bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
     bool first_chunk = true;
     bool saw_idat = false;
     bool closed_idat = false;
+    std::vector<std::uint8_t> idat;
     while (offset <= bytes.size() && bytes.size() - offset >= 12U) {
         const auto length = big32(bytes, offset);
         const auto type = offset + 4U;
@@ -208,9 +236,12 @@ bool millennium_title_png_layout(const std::vector<std::uint8_t>& bytes,
         } else if (png_chunk_type(bytes, type, 'I', 'D', 'A', 'T')) {
             if (closed_idat) return false; // PNG IDAT chunks must be consecutive.
             saw_idat = true;
+            idat.insert(idat.end(), bytes.begin() + static_cast<std::ptrdiff_t>(data),
+                bytes.begin() + static_cast<std::ptrdiff_t>(data + length));
         } else if (png_chunk_type(bytes, type, 'I', 'E', 'N', 'D')) {
             // IEND is terminal and cannot be followed by a hidden payload.
-            return saw_idat && length == 0U && next == bytes.size();
+            return saw_idat && length == 0U && next == bytes.size()
+                && rgba_png_scanlines_valid(idat, target);
         } else {
             if (saw_idat) closed_idat = true;
             // Unknown critical chunks can change decode semantics. Future
