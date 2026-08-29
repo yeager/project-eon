@@ -43,13 +43,23 @@ MillenniumDosSpanishTitleBoundary parse_millennium_dos_spanish_title_boundary(
     constexpr std::array<std::uint8_t, 16> post_title_loop{
         0x89, 0xc1, 0x51, 0xb8, 0x13, 0x00, 0xe8, 0xe8,
         0xe7, 0xe8, 0xda, 0xff, 0x59, 0xe2, 0xf3, 0xc3};
+    constexpr std::array<std::uint8_t, 7> input_poll{
+        0xb4, 0x06, 0xb2, 0xff, 0xcd, 0x21, 0xc3};
+    // The local exit begins at loaded $1c54.  Its preceding condition is the
+    // original `AND AL,AL` / `JNZ`, so this anchor establishes the title's
+    // availability-only hand-off without interpreting a DOS character.
+    constexpr std::array<std::uint8_t, 8> input_nonzero_exit{
+        0x22, 0xc0, 0x75, 0x25, 0xb8, 0x13, 0x00, 0xe8};
     if (titles_executable.size() != 7022 || to_hex(sha256(titles_executable)) != spanish_sha256
         || !has_bytes(titles_executable, 0, entry)
         || !has_bytes(titles_executable, 0x0122 - 0x100, wrapper)
-        || !has_bytes(titles_executable, 0x1931 - 0x100, post_title_loop)) {
+        || !has_bytes(titles_executable, 0x1931 - 0x100, post_title_loop)
+        || require_unique(titles_executable, input_poll, "Spanish title input poll") != 0x0d0a - 0x100
+        || !has_bytes(titles_executable, 0x1c2b - 0x100, input_nonzero_exit)) {
         throw std::runtime_error("Unsupported Millennium Spanish DOS title boundary");
     }
-    return {spanish_sha256, 0x1b80, 0x0122, 0x1968, 0x0013, 5, 0x1917};
+    return {spanish_sha256, 0x1b80, 0x21, 0x06, 0xff, 0x1c54,
+        0x0122, 0x1968, 0x0013, 5, 0x1917};
 }
 
 MillenniumDosTitleFlow parse_millennium_dos_title_flow(

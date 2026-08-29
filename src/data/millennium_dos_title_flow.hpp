@@ -176,6 +176,13 @@ struct MillenniumDosTitleFlow {
 struct MillenniumDosSpanishTitleBoundary {
     std::string sha256;
     std::uint16_t title_entry_address = 0;
+    // These are the same raw DOS console-poll operands found in this exact
+    // Spanish executable.  They are not a key map: a nonzero result only
+    // proves that TITLES.EXE takes its local exit path.
+    std::uint8_t input_interrupt = 0;
+    std::uint8_t input_service = 0;
+    std::uint8_t input_parameter = 0;
+    std::uint16_t input_nonzero_exit_address = 0;
     std::uint16_t private_wrapper_address = 0;
     std::uint16_t post_title_entry_address = 0;
     std::uint16_t private_driver_function = 0;

@@ -255,6 +255,31 @@ struct DeuterosAmigaTitleEntryPrefix {
     std::uint32_t stop_before_exec_address = 0;
 };
 
+// The title-entry instructions before the first Exec vector make exactly two
+// caller-proven writes for the live profile-one route.  Retain them as a
+// sparse, in-memory result instead of allocating an imagined Amiga address
+// space or changing the source ADF.  `width_bytes` is deliberately explicit:
+// the mode store is a word and the normal-mode store is a byte.
+struct DeuterosAmigaTitleEntryWrite {
+    std::uint32_t address = 0;
+    std::uint8_t width_bytes = 0;
+    std::uint16_t value = 0;
+};
+
+struct DeuterosAmigaTitleEntryPrefixState {
+    std::uint16_t incoming_profile = 0;
+    std::array<DeuterosAmigaTitleEntryWrite, 2> writes{};
+    std::uint32_t stop_before_exec_address = 0;
+};
+
+// Materializes only the two direct stores described above.  This is the last
+// wholly local execution result at the title handoff; it never supplies the
+// bootstrap A1/controller value, calls Exec, or models an Amiga OS state.
+[[nodiscard]] DeuterosAmigaTitleEntryPrefixState
+materialize_deuteros_amiga_title_entry_prefix_state(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::uint16_t incoming_profile);
+
 // The title-entry CMP.B arm for observed low byte five. It records literal
 // instruction operands only and stops before the first Exec vector.
 struct DeuterosAmigaTitleEntryModeFivePrefix {

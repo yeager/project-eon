@@ -3858,9 +3858,30 @@ int main() {
     const auto spanish_title_boundary = eon::parse_millennium_dos_spanish_title_boundary(
         disk.read(*spanish_titles));
     assert(spanish_title_boundary.sha256 == "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7");
+    assert(spanish_title_boundary.input_interrupt == 0x21);
+    assert(spanish_title_boundary.input_service == 0x06);
+    assert(spanish_title_boundary.input_parameter == 0xff);
+    assert(spanish_title_boundary.input_nonzero_exit_address == 0x1c54);
     assert(spanish_title_boundary.post_title_entry_address == 0x1968);
     assert(spanish_title_boundary.private_driver_function == 0x13);
     assert(spanish_title_boundary.private_driver_call_count == 5);
+    eon::MillenniumDosTitleSession spanish_title_session(spanish_title_boundary);
+    assert(!spanish_title_session.handed_off());
+    assert(!spanish_title_session.poll_console(false));
+    assert(spanish_title_session.poll_console(true));
+    assert(spanish_title_session.handed_off());
+    assert(!spanish_title_session.poll_console(true));
+    {
+        auto altered_boundary = spanish_title_boundary;
+        altered_boundary.input_service = 0x05;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::MillenniumDosTitleSession(altered_boundary));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(graphics && graphics->size == 311'420);
     const auto* spanish_ega = disk.find("EGA640.BIN");
     const auto* spanish_mcga = disk.find("MCGA.BIN");
@@ -4356,6 +4377,17 @@ int main() {
     assert(atari_target.first_immediate_word == 0x0002);
     assert(atari_target.first_immediate_longword == 0x1d6e4);
     assert(atari_target.bytes == atari_bss_source.bytes);
+    const auto atari_execution = eon::execute_millennium_atari_bootstrap_prefix(
+        atari_disk.read(*atari_executable), atari_prg, atari_bootstrap, atari_bss_entry);
+    assert(atari_execution.initial_pc_offset == 0);
+    assert(atari_execution.branch_pc_offset == 0x24);
+    assert(atari_execution.first_copy_longwords == 0x36);
+    assert(atari_execution.bss_entry_address == 0x1d636);
+    assert(atari_execution.second_copy_words == 0x101);
+    assert(atari_execution.target_address == 0x77000);
+    assert(atari_execution.stop_before_trap_address == 0x7700e);
+    assert(atari_execution.copied_stage_bytes.size() == 0xd8);
+    assert(atari_execution.target.bytes == atari_target.bytes);
     const auto atari_trap = eon::parse_millennium_atari_trap_entry(atari_bss_source, atari_target);
     assert(atari_trap.target_address == 0x77000);
     assert(atari_trap.fopen_filename_address == 0x1d6e4);
@@ -4406,6 +4438,7 @@ int main() {
     const eon::MillenniumAtariBootstrapSession atari_session(
         atari_disk, atari_disk.read(*atari_executable));
     assert(atari_session.target().target_address == 0x77000);
+    assert(atari_session.execution().stop_before_trap_address == 0x7700e);
     assert(atari_session.bss_source().original_data_bytes == 0xbc);
     assert(atari_session.bss_source().bss_zero_bytes == 0x146);
     assert(atari_session.fopen_boundary().fopen_filename == "MILL22A.inf");
@@ -7123,6 +7156,26 @@ int main() {
     assert(live_title_entry.normal_mode_byte_address == 0x19d52);
     assert(live_title_entry.normal_mode_byte_value == 1);
     assert(live_title_entry.stop_before_exec_address == 0x40450);
+    // The live handoff now retains its complete, local pre-Exec RAM effect
+    // as sparse original instruction writes. It does not allocate or expose
+    // a guessed title-stage address space.
+    const auto& live_title_entry_state = live_title_stage->entry_prefix_state();
+    assert(live_title_entry_state.incoming_profile == 1);
+    assert(live_title_entry_state.stop_before_exec_address == 0x40450);
+    assert(live_title_entry_state.writes[0].address == 0x4040e);
+    assert(live_title_entry_state.writes[0].width_bytes == 2);
+    assert(live_title_entry_state.writes[0].value == 1);
+    assert(live_title_entry_state.writes[1].address == 0x19d52);
+    assert(live_title_entry_state.writes[1].width_bytes == 1);
+    assert(live_title_entry_state.writes[1].value == 1);
+    const auto materialized_title_entry =
+        eon::materialize_deuteros_amiga_title_entry_prefix_state(system_disk, load_plan, 1);
+    assert(materialized_title_entry.writes[0].address == live_title_entry_state.writes[0].address);
+    assert(materialized_title_entry.writes[0].width_bytes == live_title_entry_state.writes[0].width_bytes);
+    assert(materialized_title_entry.writes[0].value == live_title_entry_state.writes[0].value);
+    assert(materialized_title_entry.writes[1].address == live_title_entry_state.writes[1].address);
+    assert(materialized_title_entry.writes[1].width_bytes == live_title_entry_state.writes[1].width_bytes);
+    assert(materialized_title_entry.writes[1].value == live_title_entry_state.writes[1].value);
     const auto mode_five_entry = eon::execute_deuteros_amiga_title_entry_mode_five_prefix(
         system_disk, load_plan, 0x0105);
     assert(mode_five_entry.mode_word_value == 0x0105);

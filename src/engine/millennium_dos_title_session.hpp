@@ -15,6 +15,7 @@ namespace eon {
 class MillenniumDosTitleSession {
 public:
     explicit MillenniumDosTitleSession(MillenniumDosTitleFlow flow);
+    explicit MillenniumDosTitleSession(MillenniumDosSpanishTitleBoundary flow);
 
     // `character_available` is the DOS non-blocking console-poll result, not
     // an interpretation of a particular SDL key.  Returns true only once,
@@ -26,7 +27,15 @@ public:
     [[nodiscard]] const MillenniumDosTitleFlow& flow() const { return flow_; }
 
 private:
+    struct InputBoundary {
+        std::uint8_t interrupt = 0;
+        std::uint8_t service = 0;
+        std::uint8_t parameter = 0;
+        std::uint16_t nonzero_exit_address = 0;
+    };
+
     MillenniumDosTitleFlow flow_;
+    InputBoundary input_boundary_;
     bool handed_off_ = false;
 };
 

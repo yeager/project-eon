@@ -418,7 +418,8 @@ def main() -> int:
                 "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e"
             ),
             ("millennium", "atari-st"): (
-                "bounded launcher bootstrap: target 0x77000, Fopen boundary MILL22A.inf"
+                "bounded launcher bootstrap: executed 54 original longword copies and 257 original word "
+                "copies to target 0x77000, stops before TRAP #1 at 0x7700e; Fopen boundary MILL22A.inf"
             ),
             ("deuteros", "amiga"): (
                 "Channel-request static continuation: ADF 0x7092, entry 0x21892; BSR 0x2189a -> 0x2229c, "

@@ -1373,6 +1373,19 @@ DeuterosAmigaTitleEntryPrefix execute_deuteros_amiga_title_entry_prefix(
     return {1, 0x206a0, 0x4040e, 1, 0x19d52, 1, 0x40450};
 }
 
+DeuterosAmigaTitleEntryPrefixState
+materialize_deuteros_amiga_title_entry_prefix_state(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::uint16_t incoming_profile) {
+    // Reuse the complete hash/opcode-locked parser rather than copying its
+    // acceptance conditions into a second, weaker runtime path.
+    const auto prefix = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
+    return {prefix.incoming_profile, {{
+        {prefix.mode_word_address, 2, prefix.mode_word_value},
+        {prefix.normal_mode_byte_address, 1, prefix.normal_mode_byte_value},
+    }}, prefix.stop_before_exec_address};
+}
+
 DeuterosAmigaTitleEntryModeFivePrefix execute_deuteros_amiga_title_entry_mode_five_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t incoming_profile) {

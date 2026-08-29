@@ -10,7 +10,8 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     bootstrap_ = parse_millennium_atari_bootstrap(program, prg);
     bss_entry_ = parse_millennium_atari_bss_entry(program, prg, bootstrap_);
     bss_source_ = materialize_millennium_atari_bss_source(program, prg, bootstrap_, bss_entry_);
-    target_ = materialize_millennium_atari_target(bss_source_, bss_entry_);
+    execution_ = execute_millennium_atari_bootstrap_prefix(program, prg, bootstrap_, bss_entry_);
+    target_ = execution_.target;
     trap_ = parse_millennium_atari_trap_entry(bss_source_, target_);
     fopen_fallthrough_ = parse_millennium_atari_fopen_fallthrough(target_, trap_);
     fread_config_transfer_ = parse_millennium_atari_fread_config_transfer_boundary(
