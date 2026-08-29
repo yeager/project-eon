@@ -12,7 +12,10 @@ class ReleaseManifestTests(unittest.TestCase):
         manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
         self.assertEqual(manifest["schema"], "project-eon.release-manifest/v1")
         releases = {entry["sha256"]: entry for entry in manifest["releases"]}
-        self.assertEqual(len(releases), 6)
+        # The real-media fixture has six top-level catalogue archives. The
+        # manifest additionally accepts two exact single-disk ZIP containers
+        # embedded in that genuine corpus when a user supplies one directly.
+        self.assertEqual(len(releases), 8)
         self.assertEqual(set(releases), {entry["sha256"] for entry in manifest["releases"]})
         for entry in manifest["releases"]:
             self.assertEqual(len(entry["sha256"]), 64)

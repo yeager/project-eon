@@ -2351,7 +2351,8 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
 
 std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
     const std::vector<eon::ReleaseArchive>& releases,
-    const std::optional<eon::Platform> requested_platform) {
+    const std::optional<eon::Platform> requested_platform,
+    const std::optional<std::string>& requested_release_language) {
     // The following executable and library profile is verified solely for
     // English DOS media. Never substitute it when the caller explicitly chose
     // the Amiga or Atari ST release.
@@ -2380,9 +2381,17 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
             && candidate.language == "es";
     });
+    if (requested_release_language && *requested_release_language != "en"
+        && *requested_release_language != "es") return std::nullopt;
     if (release == releases.end() && spanish_release == releases.end()) return std::nullopt;
     try {
-        if (release == releases.end()) {
+        // A requested original language is a media identity, not a UI
+        // translation preference.  It selects only that hash-verified
+        // edition and never falls back across editions.
+        const bool use_spanish = requested_release_language
+            ? *requested_release_language == "es" : release == releases.end();
+        if (use_spanish) {
+            if (spanish_release == releases.end()) return std::nullopt;
             // The Spanish edition is an original FAT12 floppy. Its P00
             // resource is independently verified, but no executable handoff
             // ABI has been recovered, so expose only this authentic title.
@@ -2738,6 +2747,17 @@ int main(int argc, char** argv) {
         }
         return found ? 0 : 5;
     }
+    if (request.game && request.release_language) {
+        const auto selected_release = std::find_if(releases.begin(), releases.end(), [&](const auto& release) {
+            return release.game == *request.game && release.platform == *request.platform
+                && release.language == *request.release_language;
+        });
+        if (selected_release == releases.end()) {
+            std::cerr << "Requested original release language is not present for the selected game and platform. "
+                         "Use --inspect to list hash-recognised releases; no edition fallback was selected.\n";
+            return 4;
+        }
+    }
     if (request.game && !eon::release_available(releases, *request.game, request.platform)) {
         std::cerr << "Requested original release is not present for the selected platform. "
                      "Use --inspect to list hash-recognised releases; no platform fallback was selected.\n";
@@ -2746,7 +2766,8 @@ int main(int argc, char** argv) {
     // A CLI platform request is fixed.  The start menu can otherwise choose
     // among the hash-verified platform releases it has actually discovered.
     std::optional<eon::Platform> active_platform = request.platform;
-    auto millennium_assets = load_millennium_launch_assets(releases, active_platform);
+    auto millennium_assets = load_millennium_launch_assets(releases, active_platform,
+        request.release_language);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -2896,10 +2917,12 @@ int main(int argc, char** argv) {
     // only when the scanner has actually found the selected original media.
     const auto load_millennium_assets_if_available = [&] {
         if (!millennium_assets) {
-            millennium_assets = load_millennium_launch_assets(releases, active_platform);
+            millennium_assets = load_millennium_launch_assets(releases, active_platform,
+                request.release_language);
             create_millennium_textures();
         }
-        if (!millennium_assets || millennium_external_modern_attempted || !request.modern_pack_manifest
+        if (!millennium_assets || millennium_assets->language != "en"
+            || millennium_external_modern_attempted || !request.modern_pack_manifest
             || request.presentation != eon::Presentation::modern
             || active_platform != eon::Platform::dos) return;
         millennium_external_modern_attempted = true;
