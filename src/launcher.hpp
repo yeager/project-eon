@@ -36,6 +36,10 @@ struct LaunchRequest {
     std::optional<std::filesystem::path> modern_pack_manifest;
     bool inspect_data = false;
     std::optional<Platform> platform;
+    // Language of the immutable original release, distinct from the launcher
+    // UI locale above.  A release selection must never infer this from the
+    // user's desktop locale or substitute another edition.
+    std::optional<std::string> release_language;
     Presentation presentation = Presentation::original;
     DisplayPreferences display;
     std::string language;

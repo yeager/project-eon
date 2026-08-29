@@ -111,8 +111,25 @@ authorises unlabelled Modern changes.
 
 ## Corpus identity
 
-The initial corpus has six outer ZIP archives and 67 leaf assets. Native
-recognition uses complete archive SHA-256 and size, never filenames.
+The initial supplied catalogue corpus has six outer ZIP archives and 67 leaf
+assets. Native recognition uses complete archive SHA-256 and size, never
+filenames.
+
+### Direct-container recognition
+
+The supplied catalogue archives also contain two exact single-disk ZIP
+containers that are meaningful user-facing inputs in their own right. Eon
+recognises the 425,912-byte Millennium Amiga Defjam container
+`ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd` and
+the 299,516-byte Millennium Atari ST Equinox container
+`0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69`.
+They respectively contain the same hash-addressed 901,120-byte ADF and
+819,200-byte ST image already recovered from the catalogue wrappers, so the
+existing bounded Amiga loader and Atari FAT12/STX readers apply without a
+byte-level substitution. They are accepted only by their complete container
+hashes; sibling crack, alternate, save-disk, multi-disk and filename-similar
+containers remain distinct, unrecognised preservation evidence until their
+own complete media set and runtime path are recovered.
 
 ### Scanner admission and duplicate accounting
 
@@ -168,6 +185,8 @@ and oversized records remain explicit unsupported boundaries.
 | Millennium 2.2 | Atari ST | en | 1,524,836 | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` |
 | Millennium 2.2 | DOS | en | 328,383 | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` |
 | Millennium 2.2 | DOS | es | 330,050 | `b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4` |
+| Millennium 2.2 | Amiga | en | 425,912 | `ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd` |
+| Millennium 2.2 | Atari ST | en | 299,516 | `0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69` |
 
 Leaf counts are 17 Amiga ADFs, 18 Atari ST disks, one DOS floppy, three
 DOS flat executables, one DOS COM program, 14 audio files, 12 game resources,
@@ -1665,8 +1684,9 @@ not yet been proved. Project Eon therefore plays the authentic initial DMA
 span and stops at its original `AUDxLEN × 2` byte boundary. Sound index zero
 is also rejected for playback because `$22abc` selects the private `$22aaa`
 descriptor rather than source PCM from the bundle. SDL receives at most one
-20 ms host queue of this verified output, so it cannot be padded with made-up
-silence. The unresolved control-word service timing remains a preservation
+20 ms host queue of this verified output. The mixer returns a short final
+buffer at an original DMA boundary rather than padding a host callback with
+made-up silence. The unresolved control-word service timing remains a preservation
 research item, rather than a reason to invent looping or modulation.
 
 #### Deeper first-DMA driver boundary
@@ -3372,6 +3392,20 @@ to both Original and Modern presentation modes without altering Original
 semantics.
 
 ### Millennium Spanish DOS floppy evidence
+
+The original-media selector is separate from Project Eon's launcher locale:
+`--release-language es` with `--game millennium --platform dos` selects only
+this FAT12 edition. It never maps a Spanish UI locale onto English media or
+falls back to English if the Spanish hash is absent. The current card menu
+retains its English-first default when both DOS editions are installed; its
+language-card work remains explicitly open rather than being represented as a
+Spanish runtime path.
+
+The first Modern pack profile is explicitly English-only. Combining
+`--modern-pack` with `--release-language es` is rejected before scanner, SDL,
+or external-pack I/O. This prevents an enhanced English title image from
+being used as a fallback for Spanish pixels; a Spanish pack needs its own
+source-release and renderer mapping evidence.
 
 The verified Spanish outer archive contains one 737,280-byte FAT12 image
 (SHA-256 `1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d`).

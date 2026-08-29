@@ -118,6 +118,22 @@ def main() -> int:
             "--data-dir did not inspect the supplied original media:\n"
             f"{data_dir_inspection.stderr}"
         )
+
+    # The Modern PNG profile is bound to the English title resource. A
+    # process-level parse failure proves a Spanish FAT12 selection cannot
+    # quietly admit English renderer art before any SDL or media operation.
+    cross_edition_pack = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--release-language", "es", "--presentation", "modern",
+            "--modern-pack", "pack.eonmodern"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (cross_edition_pack.returncode != 2
+            or "no cross-edition art fallback is permitted" not in cross_edition_pack.stderr):
+        raise SystemExit(
+            "Spanish media selection did not reject an English-only Modern pack:\n"
+            f"{cross_edition_pack.stdout}\n{cross_edition_pack.stderr}"
+        )
     if "INSPECTION  read-only provenance scan; original media stays in place" not in data_dir_inspection.stdout:
         raise SystemExit("--inspect did not identify its read-only provenance boundary")
     if "RECOVERY MAP  " not in data_dir_inspection.stdout:

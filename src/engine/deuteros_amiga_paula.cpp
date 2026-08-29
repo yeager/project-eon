@@ -25,6 +25,7 @@ bool DeuterosAmigaPaulaMixer::submit(const DeuterosAmigaSoundEvent& event) {
 }
 
 std::vector<float> DeuterosAmigaPaulaMixer::render(std::size_t frames) {
+    if (!has_active_channels()) return {};
     std::vector<float> result(frames * 2U, 0.0F);
     for (std::size_t frame = 0; frame < frames; ++frame) {
         for (std::size_t channel = 0; channel < channels_.size(); ++channel) {
@@ -51,6 +52,15 @@ std::vector<float> DeuterosAmigaPaulaMixer::render(std::size_t frames) {
                 state.phase -= threshold;
                 ++state.sample_index;
             }
+        }
+
+        // Do not turn the end of an original DMA pass into host-generated
+        // silence. The sample just written is the final hardware-held PCM
+        // value; subsequent frames have no active AUDx DMA and belong to the
+        // unrecovered driver/service boundary.
+        if (!has_active_channels()) {
+            result.resize((frame + 1U) * 2U);
+            break;
         }
     }
     return result;

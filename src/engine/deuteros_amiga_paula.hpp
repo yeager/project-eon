@@ -36,9 +36,10 @@ public:
     // whose bytes are not game-media PCM; it must not be invented here.
     [[nodiscard]] bool submit(const DeuterosAmigaSoundEvent& event);
 
-    // Interleaved stereo float frames.  This is a lossless numerical view of
+    // Interleaved stereo float frames. This is a lossless numerical view of
     // original signed PCM plus the AUDxVOL scale; no generated waveform,
-    // filtering, looping, or clipping is introduced.
+    // filtering, looping, clipping, or end-of-DMA padding is introduced. The
+    // returned frame count may therefore be smaller than `frames`.
     [[nodiscard]] std::vector<float> render(std::size_t frames);
     [[nodiscard]] const std::array<ChannelState, 4>& channels() const { return channels_; }
     [[nodiscard]] std::uint32_t output_sample_rate() const { return output_sample_rate_; }

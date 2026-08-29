@@ -893,6 +893,25 @@ int main() {
             direct_game_without_platform_args);
         assert(!direct_game_without_platform.request);
         assert(direct_game_without_platform.error.find("requires --platform") != std::string::npos);
+        char release_language_option[] = "--release-language";
+        char spanish_release[] = "es";
+        char* spanish_release_args[] = {program, game_option, millennium, platform_option, dos,
+            release_language_option, spanish_release};
+        const auto spanish_release_request = eon::parse_command_line(7, spanish_release_args);
+        assert(spanish_release_request.request
+            && spanish_release_request.request->release_language == "es");
+        char invalid_release[] = "sv";
+        char* invalid_release_args[] = {program, game_option, millennium, platform_option, dos,
+            release_language_option, invalid_release};
+        assert(!eon::parse_command_line(7, invalid_release_args).request);
+        char* missing_release_scope_args[] = {program, release_language_option, spanish_release};
+        assert(!eon::parse_command_line(3, missing_release_scope_args).request);
+        char* spanish_pack_args[] = {program, game_option, millennium, platform_option, dos,
+            presentation_option, modern, release_language_option, spanish_release,
+            modern_pack_option, modern_manifest};
+        const auto spanish_pack = eon::parse_command_line(11, spanish_pack_args);
+        assert(!spanish_pack.request
+            && spanish_pack.error.find("no cross-edition art fallback") != std::string::npos);
         char verify_option[] = "--verify-data";
         char* conflicting_args[] = {program, inspect_option, verify_option, millennium};
         const auto conflict = eon::parse_command_line(4, conflicting_args);
@@ -1193,12 +1212,21 @@ int main() {
     assert(kind_counts[eon::AssetKind::unknown] == 1);
     // The profile manifest is an executable preservation contract: every
     // admitted span must belong to its exact leaf in its exact outer archive.
+    std::set<std::string> absent_direct_profile_releases;
     for (const auto& profile : eon::parser_profile_manifest()) {
         assert(profile.offset <= profile.leaf_size);
         assert(profile.length <= profile.leaf_size - profile.offset);
         const auto release = std::find_if(releases.begin(), releases.end(),
             [&profile](const auto& candidate) { return candidate.sha256 == profile.release_sha256; });
-        assert(release != releases.end());
+        // The manifest also accepts two exact direct containers embedded in
+        // the supplied catalogue archives. They are not top-level files in
+        // this fixture, so verify their compiled identity without extracting
+        // or copying commercial bytes merely to manufacture an occurrence.
+        if (release == releases.end()) {
+            absent_direct_profile_releases.emplace(profile.release_sha256);
+            assert(eon::release_has_parser_profile(profile.release_sha256, profile.id));
+            continue;
+        }
         const auto leaves = eon::inventory_zip(release->path);
         const auto leaf = std::find_if(leaves.begin(), leaves.end(), [&profile](const auto& candidate) {
             return candidate.sha256 == profile.leaf_sha256 && candidate.size == profile.leaf_size;
@@ -1206,6 +1234,9 @@ int main() {
         assert(leaf != leaves.end());
         assert(eon::release_has_parser_profile(release->sha256, profile.id));
     }
+    assert((absent_direct_profile_releases == std::set<std::string>{
+        "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69",
+        "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd"}));
     assert(!eon::release_has_parser_profile(
         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
         "millennium-dos-spanish-startup"));
@@ -1226,10 +1257,22 @@ int main() {
         assert(eon::release_has_recovery_map_entry(entry.release_sha256, entry.id));
         const auto mapped_release = std::find_if(releases.begin(), releases.end(),
             [&entry](const auto& candidate) { return candidate.sha256 == entry.release_sha256; });
-        assert(mapped_release != releases.end());
-        assert(mapped_release->game == entry.game);
-        assert(mapped_release->platform == entry.platform);
-        assert(mapped_release->language == entry.language);
+        if (mapped_release != releases.end()) {
+            assert(mapped_release->game == entry.game);
+            assert(mapped_release->platform == entry.platform);
+            assert(mapped_release->language == entry.language);
+        } else {
+            // As above, direct containers are admissible but absent from the
+            // six physical catalogue files exercised by this fixture.
+            const auto manifest_release = std::find_if(eon::release_manifest().begin(),
+                eon::release_manifest().end(), [&entry](const auto& candidate) {
+                    return candidate.sha256 == entry.release_sha256;
+                });
+            assert(manifest_release != eon::release_manifest().end());
+            assert(manifest_release->game == entry.game);
+            assert(manifest_release->platform == entry.platform);
+            assert(manifest_release->language == entry.language);
+        }
     }
     assert(!eon::release_has_recovery_map_entry(
         "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4",
@@ -6816,6 +6859,17 @@ int main() {
     static_cast<void>(paula.render(1));
     assert(paula.channels()[0].sample_index == 1);
     assert(paula.channels()[1].sample_index == 1);
+
+    // At the source DMA boundary render must return only original held PCM
+    // frames; it must not pad a host audio callback with invented silence.
+    // A 1 Hz host rate makes the genuine entry's original AUDxPER consume its
+    // full 0x40bc-word DMA span in a handful of frames.
+    eon::DeuterosAmigaPaulaMixer boundary_paula(sound_bank, 1);
+    assert(boundary_paula.submit({1, 1}));
+    const auto boundary_audio = boundary_paula.render(100);
+    assert(boundary_audio.size() == 10);
+    assert(!boundary_paula.has_active_channels());
+    assert(boundary_paula.render(100).empty());
     // Sound zero uses the private $22aaa descriptor rather than bundle PCM;
     // an out-of-range or empty mask must fail closed.
     assert(!paula.submit({0, 1}));

@@ -75,6 +75,7 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>]\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --game millennium|deuteros\n"
         "               --platform dos|amiga|atari-st\n"
+        "               [--release-language en|es]\n"
         "               [--presentation original|modern] [--modern-pack <pack.eonmodern>]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
@@ -126,6 +127,11 @@ ParseResult parse_command_line(int argc, char** argv) {
         } else if (argument == "--platform") {
             request.platform = parse_platform(value);
             if (!request.platform) return {{}, "Unknown platform: " + std::string(value), false};
+        } else if (argument == "--release-language") {
+            if (value != "en" && value != "es") {
+                return {{}, "Unknown original release language: " + std::string(value), false};
+            }
+            request.release_language = std::string(value);
         } else if (argument == "--presentation") {
             if (value == "original") request.presentation = Presentation::original;
             else if (value == "modern") request.presentation = Presentation::modern;
@@ -158,6 +164,14 @@ ParseResult parse_command_line(int argc, char** argv) {
         || !request.game || !request.platform)) {
         return {{}, "--modern-pack requires --game, --platform, and --presentation modern; it cannot be used with --inspect", false};
     }
+    // The only renderer pack admitted today targets the hash-identified
+    // English P00.  Refuse the combination at parse time instead of letting
+    // an English asset become an optional or invisible fallback for Spanish
+    // FAT12 media.
+    if (request.modern_pack_manifest && request.release_language
+        && *request.release_language != "en") {
+        return {{}, "--modern-pack currently supports only --release-language en; no cross-edition art fallback is permitted", false};
+    }
     if (request.reference_trace) {
         if (request.data_directory_is_default) {
             return {{}, "--reference-trace requires an explicit --data or --data-dir path", false};
@@ -170,6 +184,9 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
     }
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
+    if (request.release_language && (!request.game || !request.platform)) {
+        return {{}, "--release-language requires both --game and --platform", false};
+    }
     // The graphical flow records a platform card before a profile can start
     // a game. A direct CLI launch needs the same unambiguous release choice:
     // never let an omitted flag choose a different platform's recovered path.
