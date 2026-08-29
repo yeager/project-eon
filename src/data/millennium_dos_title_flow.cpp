@@ -1,4 +1,5 @@
 #include "data/millennium_dos_title_flow.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -31,6 +32,25 @@ std::size_t require_unique(std::span<const std::uint8_t> bytes,
 }
 
 } // namespace
+
+MillenniumDosSpanishTitleBoundary parse_millennium_dos_spanish_title_boundary(
+    const std::span<const std::uint8_t> titles_executable) {
+    constexpr auto spanish_sha256 =
+        "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7";
+    constexpr std::array<std::uint8_t, 7> entry{0x0e, 0x1f, 0x0e, 0x07, 0xe9, 0x79, 0x1a};
+    constexpr std::array<std::uint8_t, 13> wrapper{
+        0x1e, 0x56, 0x57, 0x55, 0x06, 0xcd, 0x91, 0x07, 0x5d, 0x5f, 0x5e, 0x1f, 0xc3};
+    constexpr std::array<std::uint8_t, 16> post_title_loop{
+        0x89, 0xc1, 0x51, 0xb8, 0x13, 0x00, 0xe8, 0xe8,
+        0xe7, 0xe8, 0xda, 0xff, 0x59, 0xe2, 0xf3, 0xc3};
+    if (titles_executable.size() != 7022 || to_hex(sha256(titles_executable)) != spanish_sha256
+        || !has_bytes(titles_executable, 0, entry)
+        || !has_bytes(titles_executable, 0x0122 - 0x100, wrapper)
+        || !has_bytes(titles_executable, 0x1931 - 0x100, post_title_loop)) {
+        throw std::runtime_error("Unsupported Millennium Spanish DOS title boundary");
+    }
+    return {spanish_sha256, 0x1b80, 0x0122, 0x1968, 0x0013, 5, 0x1917};
+}
 
 MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     std::span<const std::uint8_t> titles_executable,
