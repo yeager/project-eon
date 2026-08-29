@@ -93,6 +93,9 @@ Start the graphical card menu:
 In the card menu, Left/Right selects a game and Up/Down selects one of that
 game's hash-verified original platforms. The selected platform is carried into
 the launch request: the menu never substitutes a different platform's media.
+When changing card, the platform is retained only if it is verified for the
+newly focused game; otherwise the menu selects that game's first verified
+platform. A card without a verified platform remains unavailable.
 Enter, Space, or a card click starts the selected original release.
 
 Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right

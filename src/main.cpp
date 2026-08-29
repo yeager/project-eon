@@ -1771,7 +1771,8 @@ int main(int argc, char** argv) {
         return found ? 0 : 5;
     }
     if (request.game && !eon::release_available(releases, *request.game, request.platform)) {
-        std::cerr << "Requested original release is not present.\n";
+        std::cerr << "Requested original release is not present for the selected platform. "
+                     "Use --inspect to list hash-recognised releases; no platform fallback was selected.\n";
         return 4;
     }
     // A CLI platform request is fixed.  The start menu can otherwise choose
@@ -1885,6 +1886,16 @@ int main(int argc, char** argv) {
     std::size_t millennium_state_page = 0;
     const auto menu_platforms_for = [&](const eon::Game game) {
         return eon::available_platforms(releases, game);
+    };
+    const auto focus_menu_card = [&](const int next_focus) {
+        focused = next_focus;
+        if (request.platform) return;
+        const auto next_platform = eon::select_available_platform(
+            releases, cards[static_cast<std::size_t>(focused)].game, active_platform);
+        if (next_platform != active_platform) {
+            active_platform = next_platform;
+            discard_millennium_assets();
+        }
     };
     const auto start_millennium_title = [&] {
         millennium_atari_session = load_millennium_atari_bootstrap(releases, active_platform);
@@ -2015,7 +2026,9 @@ int main(int argc, char** argv) {
                 show_scanner = !show_scanner;
             }
             if (!show_modern_graphics_settings && screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN) {
-                if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) focused = 1 - focused;
+                if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
+                    focus_menu_card(1 - focused);
+                }
                 if (!request.platform
                     && (event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
                     const auto game = cards[static_cast<std::size_t>(focused)].game;
@@ -2048,7 +2061,7 @@ int main(int argc, char** argv) {
                 const auto button = event.gbutton.button;
                 if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
                     || button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
-                    focused = 1 - focused;
+                    focus_menu_card(1 - focused);
                 }
                 if (!request.platform && (button == SDL_GAMEPAD_BUTTON_DPAD_UP
                     || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN)) {
@@ -2082,7 +2095,7 @@ int main(int argc, char** argv) {
                 SDL_RenderCoordinatesFromWindow(renderer, event.button.x, event.button.y, &x, &y);
                 for (std::size_t index = 0; index < cards.size(); ++index) {
                     if (inside(cards[index].bounds, x, y)) {
-                        focused = static_cast<int>(index);
+                        focus_menu_card(static_cast<int>(index));
                         if (eon::release_available(releases, cards[index].game, active_platform)) {
                             selected = cards[index].game;
                             screen = Screen::launching;
@@ -2097,6 +2110,7 @@ int main(int argc, char** argv) {
         if (!scanner.done()) {
             static_cast<void>(scanner.advance(show_scanner ? 32 : 1));
             releases = scanner.releases();
+            if (screen == Screen::menu && !request.platform) focus_menu_card(focused);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && !deuteros_opening && eon::deuteros_amiga_opening_supported(active_platform)) {
@@ -2196,7 +2210,8 @@ int main(int argc, char** argv) {
                 // launcher prose; all surrounding UI remains translated.
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, card.title);
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, card.subtitle);
-                const auto available = eon::release_available(releases, card.game, std::nullopt);
+                const auto available = eon::release_available(releases, card.game,
+                    index == static_cast<std::size_t>(focused) ? active_platform : std::nullopt);
                 draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
                     available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
                     ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));

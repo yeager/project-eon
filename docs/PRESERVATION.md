@@ -1762,6 +1762,14 @@ height and width at `$1357`/`$1359` (record `+$0e`/`+$10`). The remaining
 record words, pointer provenance, interpretation of the table words, and all
 driver writes are deliberately unrecovered.
 
+The complete direct-reference audit separates this record from nearby buffer
+state. `$135e` loads one of the original far pointers at `$010c`/`$0110` and
+writes its offset/segment to `$1341/$1343`; `$1712` later replaces only the
+offset word. `$135e` also writes CS to `$134b`. In contrast, no direct local
+writer of `$1349` occurs in the hash-identified `TITLES.EXE`; the first source
+word consumed by the function-$06 driver is therefore an explicit ABI boundary,
+not a reconstructed pointer.
+
 The supplied driver images add one ABI-independent local fact for that exact
 function number. In both hash-identified `EGA640.BIN` (dispatch target `$0d37`)
 and `MCGA.BIN` (target `$0905`), AX=`$0013` loads DX=`$03da`, repeatedly reads
