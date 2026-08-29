@@ -28,6 +28,13 @@ public:
     opaque_invocation_boundary() const {
         return opaque_invocation_boundary_;
     }
+    // The relocator is retained as a stop boundary. Its final source byte is
+    // outside the verified boot I/O request, so this session never exposes a
+    // relocated executable image or treats either reported PC as runnable.
+    [[nodiscard]] const MillenniumAmigaBootstrapRelocationBoundary&
+    relocation_boundary() const {
+        return relocation_boundary_;
+    }
     // These anchors belong to the exact bytes requested by the opaque first
     // stage. They are source provenance only and are not a decoded first
     // stage, API model, input map, or renderer input.
@@ -41,6 +48,7 @@ private:
     MillenniumAmigaSharedResidentLayout shared_resident_;
     MillenniumAmigaResidentEntry resident_entry_;
     MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary_;
+    MillenniumAmigaBootstrapRelocationBoundary relocation_boundary_;
     MillenniumAmigaFirstStageSourceAnchorBoundary first_stage_source_anchors_;
 };
 
