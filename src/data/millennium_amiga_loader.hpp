@@ -312,6 +312,33 @@ struct MillenniumAmigaResidentPostNegativeD3Terminal {
     std::string raw_sha256;
 };
 
+// The complete, call-free prefix at $685fe has no hidden memory reads: it
+// clears/stores the low byte of D0, transfers the low words of D1 and D2, and
+// takes one of two RTS instructions or arrives at the next separately checked
+// boundary.  These types make that bounded operation available without
+// pretending that an original caller, stack, or following routine is known.
+struct MillenniumAmigaResidentPostNegativeD3TerminalInput {
+    std::uint32_t d0 = 0;
+    std::uint32_t d1 = 0;
+    std::uint32_t d2 = 0;
+};
+
+enum class MillenniumAmigaResidentPostNegativeD3TerminalStop {
+    zero_return,
+    negative_return,
+    nonnegative_continuation_boundary,
+};
+
+struct MillenniumAmigaResidentPostNegativeD3TerminalExecution {
+    std::uint32_t d0 = 0;
+    std::uint32_t d1 = 0;
+    std::uint32_t d2 = 0;
+    std::array<std::uint8_t, 2> absolute_byte_writes{};
+    MillenniumAmigaResidentPostNegativeD3TerminalStop stop =
+        MillenniumAmigaResidentPostNegativeD3TerminalStop::zero_return;
+    std::uint32_t next_address = 0;
+};
+
 // The BPL target from the immediately preceding local terminal is itself a
 // complete static selector prefix.  It has two unresolved local branches and
 // a terminal external JMP, so this deliberately records encodings and raw
@@ -557,6 +584,11 @@ parse_millennium_amiga_resident_negative_d3_terminal(
 parse_millennium_amiga_resident_post_negative_d3_terminal(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentNegativeD3Terminal& terminal);
+
+[[nodiscard]] MillenniumAmigaResidentPostNegativeD3TerminalExecution
+execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
+    const MillenniumAmigaResidentPostNegativeD3Terminal& terminal,
+    MillenniumAmigaResidentPostNegativeD3TerminalInput input);
 
 [[nodiscard]] MillenniumAmigaResidentPostNegativeD3ContinuationBoundary
 parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(

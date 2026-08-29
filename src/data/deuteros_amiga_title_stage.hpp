@@ -272,11 +272,31 @@ struct DeuterosAmigaTitleEntryPrefixState {
     std::uint32_t stop_before_exec_address = 0;
 };
 
+// The first instruction after the profile-one entry stores a literal stack
+// address in A7.  It is still wholly local: the very next instruction reads
+// the unknown Exec base from address $4.  Keep this one-register result
+// separate from the sparse title-RAM writes so callers cannot mistake it for
+// an emulated Amiga stack or an Exec transition.
+struct DeuterosAmigaTitleExecPrelude {
+    std::uint16_t incoming_profile = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t stack_pointer_value = 0;
+    std::uint32_t stop_before_exec_base_read_address = 0;
+};
+
 // Materializes only the two direct stores described above.  This is the last
 // wholly local execution result at the title handoff; it never supplies the
 // bootstrap A1/controller value, calls Exec, or models an Amiga OS state.
 [[nodiscard]] DeuterosAmigaTitleEntryPrefixState
 materialize_deuteros_amiga_title_entry_prefix_state(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    std::uint16_t incoming_profile);
+
+// Executes exactly `MOVEA.L #$40b62,A7` after the observed profile-one title
+// prefix.  It stops before `MOVEA.L $4.W,A6`; no Exec base, vector, stack
+// memory, graphics library, or custom hardware is supplied or touched.
+[[nodiscard]] DeuterosAmigaTitleExecPrelude
+execute_deuteros_amiga_title_exec_prelude(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint16_t incoming_profile);
 

@@ -2326,8 +2326,11 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")
         << ", branch 0x" << std::hex << continuation.boot_branch_target << std::dec << '\n';
     if (continuation.has_killer_boot_continuation_profile) {
+        const auto disk2_boot = disk2.read_sectors(0, 0, 1, 1);
         const auto killer_handoff = eon::parse_deuteros_atari_killer_boot_handoff(
-            disk2.read_sectors(0, 0, 1, 1), continuation);
+            disk2_boot, continuation);
+        const auto killer_execution = eon::execute_deuteros_atari_killer_boot_prefix(
+            disk2_boot, continuation);
         std::cout << "          Disk 2 relocated continuation: boot +0x" << std::hex
             << continuation.killer_boot_vector_source_offset << " +0x"
             << continuation.killer_boot_relocated_byte_count << " -> RAM 0x"
@@ -2346,7 +2349,16 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << killer_handoff.vector_jump_relocated_offset << " is JMP (A0) through RAM $"
             << killer_handoff.vector_jump_pointer_address << "; setup/relocated SHA-256 "
             << killer_handoff.setup_sha256 << "/" << killer_handoff.relocated_sha256 << std::dec
-            << " (byte-proven relocation only; neither vector cell nor path executes)\n";
+            << " (the indirect vector-cell path does not execute)\n";
+        std::cout << "          Disk 2 local execution prefix: copied "
+            << killer_execution.relocated_longwords.size() << " original longwords to RAM 0x"
+            << std::hex << killer_execution.relocation_destination << ", direct continuation 0x"
+            << killer_execution.continuation_address << " clears 8 longwords at 0x"
+            << killer_execution.first_clear_address << "..0x"
+            << killer_execution.cleared_longword_addresses.back() << ", then branches to 0x"
+            << killer_execution.loop_target_address << " with A0=0x"
+            << killer_execution.next_clear_address << std::dec
+            << " (isolated writes; no vector, ABI, or unbounded loop execution)\n";
     }
     std::cout << "          Atari ST trace boundary: next evidence must identify the XBIOS Floprd result, "
         << "callback entry/return frame, dispatch word at RAM 0x1eaa, and selected vector D1/D2 "

@@ -983,8 +983,16 @@ all six supplied Amiga variants. It encodes two absolute byte stores to
 `$7b3b5/$7b3bc`, copies D1/D2, tests D0, then records `BNE.S $68612 →
 $68616` with the zero `RTS` at `$68614`. The target encodes `BPL.S $68616 →
 $6861a` and the alternate `RTS` at `$68618`. Project Eon does not choose
-either predicate, assign meaning to registers or absolute cells, or perform
-stores.
+either predicate for a live game, assign gameplay meaning to registers or
+absolute cells, or follow `$6861a` automatically. It does execute this exact
+call-free prefix as a separately opt-in in-memory operation after validating
+the hash-bound terminal record: `CLR.W D0`, its two zero-byte stores,
+`MOVE.W D1,D0`, `MOVE.W D2,D1`, and the two local predicates. The operation
+returns the virtual byte writes, resulting register low words, and exactly one
+stop: zero RTS `$68614`, negative RTS `$68618`, or the unexecuted
+non-negative continuation boundary `$6861a`. Its inputs are caller-supplied
+register values; no original caller, stack, RAM image, or reachability is
+claimed, and it never mutates source media or a host-side Amiga memory map.
 
 The BPL target is bounded independently. The 54 original bytes at
 `$6861a..$6864f` map to ADF `+$16a1a` and hash to
@@ -1590,9 +1598,14 @@ $000e(PC)` at `$de` resolves from its extension word at `$e2`) to RAM `$8`,
 then jumps to relocated address `$12`. The 40 copied bytes have SHA-256
 `21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d`.
 There, the relocated continuation clears eight longwords at a time beginning
-at `$30`, advances by `$20`, and loops without a counter or return. Project
-Eon records the copy and loop profile but does not execute it, wipe host
-memory, or infer any resource/title semantics. The runtime reports these
+at `$32`, advances by `$20`, and loops without a counter or return. Project
+Eon executes one bounded, local-only prefix of this exact protection path in
+an isolated sparse-write record: it copies the ten original longwords to
+emulated `$8..$2c`, enters the direct relocated `$12` continuation, records
+the first eight zero longword writes at `$32..$4e`, and stops at the proven
+backedge to `$30` with the next address `$52`. It never reads the separate
+reset-vector cell at `$4`, follows `JMP (A0)`, invokes an ABI, wipes host
+memory, or infers any resource/title semantics. The runtime reports these
 boundaries rather than inventing a GEMDOS title path or unpacking media.
 
 `DeuterosAtariKillerBootHandoff` now binds the complete caller-connected
@@ -1606,9 +1619,10 @@ is within the relocated source span: `$12 - $8 = +$a`, whose first word is
 `JMP (A0)` (`$4ed0`) after `MOVEA.L $0004.w,A0`; this is a vector-cell boundary,
 not evidence that Project Eon may read or follow RAM `$4`. The parser validates
 both hashes, the direct relocation relationship, the relocated continuation,
-and the distinct indirect-jump layout. It neither chooses a reset vector nor
-executes either branch, clears memory, or attaches game semantics to the
-protection code.
+and the distinct indirect-jump layout. `execute_deuteros_atari_killer_boot_prefix`
+adds the bounded direct `$12` branch described above; it neither chooses a
+reset vector nor executes the indirect branch or unbounded loop, and it
+attaches no game semantics to the protection code.
 
 ### Deuteros Amiga execution chain
 
@@ -3784,8 +3798,14 @@ and `$40448..$4044f` byte spans hash to
 `833374022042225f1bfeeedd56c05d7011168531fa121494cef04174453e5387` and
 `8d15b73f389c05fc214b9440c0a0b77df33782c6400d455cef96f338aa5f1211`.
 The preceding `A1 -> $206a0` transfer remains deliberately unmaterialized:
-its controller pointer is unknown. Execution stops at `$40450`, before its
-first Exec vector; that 16-byte boundary hash is
+its controller pointer is unknown. The next instruction is nevertheless
+wholly local and now executes as a register fact only: `MOVEA.L #$00040b62,A7`
+at `$40450` (ADF `+$9b450`, six bytes, SHA-256
+`5751cf8005bff79d636488a9e0292ecb5821879b1cb2c432e7a5332a0f7b5e3a`).
+`DeuterosAmigaTitleExecPrelude` exposes that literal A7 value and stops at
+`$40456`, before `MOVEA.L $4.W,A6` reads the unknown Exec base. It does not
+allocate stack memory, invoke Exec, or cross into graphics/custom hardware.
+The following 16-byte Exec boundary hash is
 `f0c847a4d443e26fc08f6c6864afeca3b33da514f8708f76f2f05314a4c88067`.
 
 The wider hard-ABI span `$40450..$4046b` is 28 bytes at ADF `+0x9b450`

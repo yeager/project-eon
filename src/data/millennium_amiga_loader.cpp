@@ -910,6 +910,52 @@ parse_millennium_amiga_resident_post_negative_d3_terminal(
         expected_hash};
 }
 
+MillenniumAmigaResidentPostNegativeD3TerminalExecution
+execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
+    const MillenniumAmigaResidentPostNegativeD3Terminal& terminal,
+    const MillenniumAmigaResidentPostNegativeD3TerminalInput input) {
+    // $685fe..$68619 is entirely local once its already hash-checked bytes
+    // have been identified.  Model only its observable register/absolute-byte
+    // effects; do not invent a caller, stack, or execution beyond $6861a.
+    constexpr std::uint32_t entry = 0x685fe;
+    if (terminal.entry_address != entry
+        || terminal.absolute_byte_store_addresses != std::array<std::uint32_t, 2>{0x7b3b5, 0x7b3bc}
+        || terminal.copied_d1_address != entry + 14
+        || terminal.copied_d2_address != entry + 16
+        || terminal.d0_test_address != entry + 18
+        || terminal.nonzero_branch_address != entry + 20
+        || terminal.zero_return_address != entry + 22
+        || terminal.nonnegative_branch_address != entry + 24
+        || terminal.nonnegative_branch_target != entry + 28
+        || terminal.negative_return_address != entry + 26
+        || terminal.raw_sha256
+            != "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc") {
+        throw std::runtime_error("Detached Millennium Amiga local terminal evidence");
+    }
+
+    MillenniumAmigaResidentPostNegativeD3TerminalExecution result;
+    // CLR.W D0; MOVE.B D0,$7b3b5; MOVE.B D0,$7b3bc.
+    result.d0 = input.d0 & 0xffff0000U;
+    result.absolute_byte_writes = {0, 0};
+    // MOVE.W D1,D0; MOVE.W D2,D1.  The high words remain untouched.
+    result.d0 = (result.d0 & 0xffff0000U) | (input.d1 & 0xffffU);
+    result.d1 = (input.d1 & 0xffff0000U) | (input.d2 & 0xffffU);
+    result.d2 = input.d2;
+
+    const auto tested_word = static_cast<std::uint16_t>(input.d1);
+    if (tested_word == 0) {
+        result.stop = MillenniumAmigaResidentPostNegativeD3TerminalStop::zero_return;
+        result.next_address = terminal.zero_return_address;
+    } else if ((tested_word & 0x8000U) != 0) {
+        result.stop = MillenniumAmigaResidentPostNegativeD3TerminalStop::negative_return;
+        result.next_address = terminal.negative_return_address;
+    } else {
+        result.stop = MillenniumAmigaResidentPostNegativeD3TerminalStop::nonnegative_continuation_boundary;
+        result.next_address = terminal.nonnegative_branch_target;
+    }
+    return result;
+}
+
 MillenniumAmigaResidentPostNegativeD3ContinuationBoundary
 parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
