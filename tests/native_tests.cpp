@@ -585,12 +585,13 @@ int main() {
             "event\t1 10 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000\n"
             "event\t2 20 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin\n"
             "event\t3 30 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=titles.exe\n"
-            "event\t4 40 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n";
+            "event\t4 40 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n"
+            "event\t5 50 interrupt image=2200ad.exe pc=0x0124 int=0x91 ax=0x001f es=cs bx=0xd19e\n";
         eon::MillenniumDosEnglishReferenceTraceDiagnostics diagnostics;
         std::string trace_error;
         assert(eon::validate_millennium_dos_english_reference_events(
             valid_events, diagnostics, trace_error));
-        assert(diagnostics.event_count == 4 && diagnostics.interrupt_count == 2
+        assert(diagnostics.event_count == 5 && diagnostics.interrupt_count == 3
             && diagnostics.file_count == 1 && diagnostics.exec_count == 1);
         assert(!eon::validate_millennium_dos_english_reference_events(
             "event\t1 10 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0001\n",
@@ -598,6 +599,9 @@ int main() {
         assert(!eon::validate_millennium_dos_english_reference_events(
             "event\t1 10 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=titles.exe\n"
             "event\t1 20 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=2200ad.exe\n",
+            diagnostics, trace_error));
+        assert(!eon::validate_millennium_dos_english_reference_events(
+            "event\t1 10 interrupt image=2200ad.exe pc=0x0124 int=0x91 ax=0x001f es=cs bx=0xd19f\n",
             diagnostics, trace_error));
     }
     // These two records name only the verified caller-side handoffs. They do
@@ -4131,6 +4135,21 @@ int main() {
     assert(atari_config_load_address_boundary.independent_entry_load_base == 0x2a4de);
     assert(atari_config_load_address_boundary.independent_entry_file_offset == 0x5aa);
     assert(atari_config_load_address_boundary.independent_entry_offset_delta == 34);
+    const auto atari_fread_mapped_prelude = eon::parse_millennium_atari_fread_mapped_config_prelude(
+        atari_fread_config_transfer, atari_config_payload, atari_config_entry);
+    assert(atari_fread_mapped_prelude.fread_destination_address == 0x2a500);
+    assert(atari_fread_mapped_prelude.mapped_entry_address == 0x2aa88);
+    assert(atari_fread_mapped_prelude.mapped_entry_file_offset == 0x588);
+    assert(atari_fread_mapped_prelude.continuation_address == 0x2aaaa);
+    assert(atari_fread_mapped_prelude.byte_count == 34);
+    assert(atari_fread_mapped_prelude.sha256
+        == "dede20eddbd8015da1d1a4f2f5e53424c2bc2195bff238d830ea24c9f522ea59");
+    assert(atari_fread_mapped_prelude.initial_opcode == 0x40c0);
+    assert(atari_fread_mapped_prelude.conditional_branch_opcode == 0x6714);
+    assert(atari_fread_mapped_prelude.conditional_branch_target_address == 0x2aaa4);
+    assert(atari_fread_mapped_prelude.converged_jsr_address == 0x2aaa4);
+    assert(atari_fread_mapped_prelude.converged_jsr_opcode == 0x4eb9);
+    assert(atari_fread_mapped_prelude.converged_jsr_target_address == 0x2a51c);
     const auto atari_trap_argument_strings = eon::parse_millennium_atari_config_trap_argument_strings(
         atari_config_payload, atari_config_entry);
     assert(atari_trap_argument_strings.proven_load_base == 0x2a4de);
@@ -4345,6 +4364,17 @@ int main() {
         invalid_atari_config_load_address_rejected = true;
     }
     assert(invalid_atari_config_load_address_rejected);
+    auto invalid_atari_fread_mapped_prelude_payload = atari_config_payload;
+    invalid_atari_fread_mapped_prelude_payload[0x588] ^= 0x01;
+    bool invalid_atari_fread_mapped_prelude_rejected = false;
+    try {
+        static_cast<void>(eon::parse_millennium_atari_fread_mapped_config_prelude(
+            atari_fread_config_transfer, invalid_atari_fread_mapped_prelude_payload,
+            atari_config_entry));
+    } catch (const std::runtime_error&) {
+        invalid_atari_fread_mapped_prelude_rejected = true;
+    }
+    assert(invalid_atari_fread_mapped_prelude_rejected);
     auto invalid_atari_trap_argument_payload = atari_config_payload;
     invalid_atari_trap_argument_payload[0x134] ^= 0x01;
     bool invalid_atari_trap_argument_rejected = false;

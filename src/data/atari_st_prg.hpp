@@ -174,6 +174,33 @@ parse_millennium_atari_fread_config_load_address_boundary(
     std::span<const std::uint8_t> payload,
     const MillenniumAtariConfigEntry& independent_entry);
 
+// Conditional original-code evidence at the destination named by the Fread
+// boundary.  If native Fread returned with file byte zero at that literal
+// address, the file's leading JMP lands at this 34-byte prefix, whose two
+// local branches converge at one JSR and then fall through to the separately
+// bounded candidate entry.  This does not make Fread return, run the code, or
+// assign platform meaning to its SR/register/memory instructions.
+struct MillenniumAtariFreadMappedConfigPrelude {
+    std::uint32_t fread_destination_address = 0;
+    std::uint32_t mapped_entry_address = 0;
+    std::uint32_t mapped_entry_file_offset = 0;
+    std::uint32_t continuation_address = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::uint16_t initial_opcode = 0;
+    std::uint16_t conditional_branch_opcode = 0;
+    std::uint32_t conditional_branch_target_address = 0;
+    std::uint32_t converged_jsr_address = 0;
+    std::uint16_t converged_jsr_opcode = 0;
+    std::uint32_t converged_jsr_target_address = 0;
+};
+
+[[nodiscard]] MillenniumAtariFreadMappedConfigPrelude
+parse_millennium_atari_fread_mapped_config_prelude(
+    const MillenniumAtariFreadConfigTransferBoundary& transfer,
+    std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigEntry& independent_entry);
+
 // Evidence for the exact configuration filename requested by the recovered
 // Fopen boundary.  The profile retains only filesystem facts, a whole-payload
 // hash and the literal leading instruction word(s); it never projects the

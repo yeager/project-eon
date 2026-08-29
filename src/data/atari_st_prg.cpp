@@ -538,6 +538,51 @@ parse_millennium_atari_fread_config_load_address_boundary(
         digest, candidate_load_base, candidate_entry_offset, delta};
 }
 
+MillenniumAtariFreadMappedConfigPrelude parse_millennium_atari_fread_mapped_config_prelude(
+    const MillenniumAtariFreadConfigTransferBoundary& transfer,
+    const std::span<const std::uint8_t> payload,
+    const MillenniumAtariConfigEntry& independent_entry) {
+    // The Fread boundary literally names $2a500 and the supplied payload
+    // begins JMP $2aa88.  Under that *conditional* byte-zero mapping, the
+    // target is file +$588, not +$5aa.  The intervening 34 bytes are complete
+    // original code: their SR-dependent branch and fall-through converge at
+    // JSR $2a51c, then the return site falls through to file +$5aa.  We bind
+    // the relationship without turning the unrecovered Fread return or JSR
+    // into an executable host path.
+    constexpr std::uint32_t fread_destination = 0x2a500;
+    constexpr std::uint32_t mapped_entry = 0x2aa88;
+    constexpr std::size_t mapped_offset = mapped_entry - fread_destination;
+    constexpr std::size_t byte_count = 34;
+    constexpr std::uint32_t branch_target = 0x2aaa4;
+    constexpr std::uint32_t jsr_address = 0x2aaa4;
+    constexpr std::array<std::uint8_t, byte_count> expected_bytes{
+        0x40, 0xc0, 0x08, 0x80, 0x00, 0x0d, 0x67, 0x14,
+        0x41, 0xf8, 0x88, 0x00, 0x30, 0x3c, 0x07, 0xff,
+        0x01, 0x88, 0x00, 0x00, 0x10, 0xbc, 0x00, 0x0e,
+        0x46, 0xfc, 0x03, 0x00, 0x4e, 0xb9, 0x00, 0x02,
+        0xa5, 0x1c,
+    };
+    constexpr std::string_view expected_sha256 =
+        "dede20eddbd8015da1d1a4f2f5e53424c2bc2195bff238d830ea24c9f522ea59";
+    if (transfer.config_buffer_address != fread_destination
+        || transfer.config_jsr_opcode != 0x4eb9U
+        || payload.size() < mapped_offset + byte_count
+        || independent_entry.entry_file_offset != 0x5aaU
+        || !std::equal(expected_bytes.begin(), expected_bytes.end(),
+            payload.begin() + static_cast<std::ptrdiff_t>(mapped_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fread-mapped configuration prelude");
+    }
+    const auto bytes = payload.subspan(mapped_offset, byte_count);
+    const auto digest = to_hex(sha256(bytes));
+    if (digest != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fread-mapped configuration prelude hash");
+    }
+    return {fread_destination, mapped_entry, static_cast<std::uint32_t>(mapped_offset),
+        fread_destination + independent_entry.entry_file_offset, byte_count, digest,
+        read_be16(bytes, 0), read_be16(bytes, 6), branch_target, jsr_address,
+        read_be16(bytes, 28), read_be32(bytes, 30)};
+}
+
 MillenniumAtariConfigTrapArgumentStrings parse_millennium_atari_config_trap_argument_strings(
     const std::span<const std::uint8_t> payload, const MillenniumAtariConfigEntry& entry) {
     // The entry's second literal TRAP argument is $2a612. At the established
