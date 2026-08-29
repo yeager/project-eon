@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -33,6 +34,48 @@ private:
     std::vector<std::uint8_t> image_;
     std::size_t track_count_ = 0;
     std::vector<AtariStStxSector> sectors_;
+};
+
+// A deliberately narrow FAT12 view over identified physical STX sectors. It
+// never constructs a flat .st image or returns file contents: its purpose is
+// to establish whether the on-media BPB, mirrored FATs and root records form
+// a credible sector-backed namespace for later, separately proven readers.
+struct AtariStStxFat12RootEntry {
+    std::string name;
+    std::uint8_t attributes = 0;
+    std::uint16_t first_cluster = 0;
+    std::uint32_t size = 0;
+};
+
+class AtariStStxFat12Root {
+public:
+    explicit AtariStStxFat12Root(const AtariStStxPhysicalDisk& disk);
+
+    [[nodiscard]] std::uint16_t bytes_per_sector() const { return bytes_per_sector_; }
+    [[nodiscard]] std::uint8_t sectors_per_cluster() const { return sectors_per_cluster_; }
+    [[nodiscard]] std::uint16_t total_sectors() const { return total_sectors_; }
+    [[nodiscard]] std::uint16_t root_start_lba() const { return root_start_lba_; }
+    [[nodiscard]] std::uint16_t root_sector_count() const { return root_sector_count_; }
+    [[nodiscard]] const std::vector<AtariStStxFat12RootEntry>& entries() const { return entries_; }
+
+private:
+    std::span<const std::uint8_t> logical_sector(std::uint16_t lba) const;
+    std::uint16_t next_cluster(std::uint16_t cluster) const;
+    void validate_file_chain(const AtariStStxFat12RootEntry& entry) const;
+
+    const AtariStStxPhysicalDisk& disk_;
+    std::uint16_t bytes_per_sector_ = 0;
+    std::uint8_t sectors_per_cluster_ = 0;
+    std::uint16_t reserved_sectors_ = 0;
+    std::uint8_t fat_count_ = 0;
+    std::uint16_t sectors_per_fat_ = 0;
+    std::uint16_t sectors_per_track_ = 0;
+    std::uint16_t head_count_ = 0;
+    std::uint16_t total_sectors_ = 0;
+    std::uint16_t root_start_lba_ = 0;
+    std::uint16_t root_sector_count_ = 0;
+    std::uint16_t data_start_lba_ = 0;
+    std::vector<AtariStStxFat12RootEntry> entries_;
 };
 
 } // namespace eon
