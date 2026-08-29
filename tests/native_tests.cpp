@@ -7042,6 +7042,13 @@ int main() {
         == "ce9c44a0a83e370fdf54b5ec8ef0ffd72c170b007419176403293d2a54f91188");
     assert(post_exec_pointer_route.routine_sha256
         == "a7f7c0c3efa60284b3d292249b3560da4d832ff0c5dfa34711b72604760b39a9");
+    const auto paired_local_route = eon::parse_deuteros_amiga_title_post_exec_paired_local_route_profile(system_disk, load_plan);
+    assert((paired_local_route.caller_addresses == std::array<std::uint32_t, 2>{{0x4050e, 0x40518}}));
+    assert((paired_local_route.d0_literals == std::array<std::uint16_t, 2>{{0x004d, 0x004e}}));
+    assert(paired_local_route.entry_address == 0x41bb4);
+    assert(paired_local_route.clear_bit_branch_target == 0x41c32);
+    assert(paired_local_route.high_block_return_address == 0x41f30);
+    assert(paired_local_route.sha256[3] == "765489ec36d727a326bfae44e34918cb85070d4ed3ef959cdcba9c41a102dd7e");
     const auto post_exec_tail_flag_gate =
         eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(system_disk, load_plan);
     assert(post_exec_tail_flag_gate.entry_address == 0x40616);

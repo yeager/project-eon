@@ -869,6 +869,15 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << post_exec_pointer_route.selected_branch_target << "/0x"
         << post_exec_pointer_route.alternate_branch_target
         << " (conditions and ABI returns unmodelled)" << std::dec << '\n';
+    const auto paired_local_route =
+        eon::parse_deuteros_amiga_title_post_exec_paired_local_route_profile(disk, plan);
+    std::cout << "          Paired local route: D0 0x" << std::hex
+        << paired_local_route.d0_literals[0] << "/0x" << paired_local_route.d0_literals[1]
+        << " calls 0x" << paired_local_route.entry_address << "; branches 0x"
+        << paired_local_route.clear_bit_branch_target << "/0x"
+        << paired_local_route.high_block_entry_address << ", RTS 0x"
+        << paired_local_route.high_block_return_address
+        << " (cells and writes unmodelled)" << std::dec << '\n';
     const auto post_exec_tail_flag_gate =
         eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(disk, plan);
     std::cout << "          Conditional tail flag gate: 0x" << std::hex

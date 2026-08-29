@@ -639,6 +639,30 @@ struct DeuterosAmigaTitlePostExecPointerRouteProfile {
 parse_deuteros_amiga_title_post_exec_pointer_route_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// Two consecutive post-Exec callers supply distinct D0 literals to one wholly
+// local title-stage routine. The bounded branches and loops are provenance
+// only: no source cells, destinations, or display effect is modelled.
+struct DeuterosAmigaTitlePostExecPairedLocalRouteProfile {
+    std::array<std::uint32_t, 2> caller_addresses{};
+    std::array<std::uint16_t, 2> d0_literals{};
+    std::array<std::uint32_t, 2> caller_continuations{};
+    std::uint32_t entry_address = 0;
+    std::uint32_t table_literal = 0;
+    std::uint8_t tested_bit = 0;
+    std::uint32_t clear_bit_branch_target = 0;
+    std::uint32_t set_bit_local_call_target = 0;
+    std::uint32_t set_bit_continuation_target = 0;
+    std::array<std::uint32_t, 2> low_block_return_addresses{};
+    std::uint32_t low_block_jump_target = 0;
+    std::uint32_t high_block_entry_address = 0;
+    std::uint32_t high_block_return_address = 0;
+    std::array<std::string, 5> sha256{};
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecPairedLocalRouteProfile
+parse_deuteros_amiga_title_post_exec_paired_local_route_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // `$40616` begins with the two opcode bytes retained at the end of the
 // preceding return-continuation evidence span.  This overlapping profile
 // binds the complete following conditional block through its local branch
