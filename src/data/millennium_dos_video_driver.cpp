@@ -83,6 +83,13 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         0x47, 0x10, 0x73, 0x04, 0x26, 0x89, 0x47, 0x10});
     constexpr auto ega_six_source_pointer_load = std::to_array<std::uint8_t>({0x26, 0xc5, 0x3f});
     constexpr auto mcga_six_source_pointer_load = std::to_array<std::uint8_t>({0x26, 0xc5, 0x37});
+    constexpr auto ega_six_source_prefix = std::to_array<std::uint8_t>({
+        0x26, 0xc5, 0x3f, 0x03, 0x6d, 0x04, 0x8b, 0x45, 0x02,
+        0x05, 0x03, 0x00, 0xd1, 0xe8, 0xd1, 0xe8, 0x8b, 0xf0,
+        0xf7, 0x25});
+    constexpr auto mcga_six_source_prefix = std::to_array<std::uint8_t>({
+        0x1e, 0x26, 0xc5, 0x37, 0x8b, 0x44, 0x02, 0x8b, 0xf8,
+        0xc5, 0x74, 0x04});
     constexpr auto ega_six_source_pointer_load_offset = 0x33U;
     constexpr auto mcga_six_source_pointer_load_offset = 0x29U;
     if (!has_bytes(bytes, function_zero, zero_prefix)
@@ -94,6 +101,10 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
                               ega_six_source_pointer_load))
         || (!ega && !has_bytes(bytes, function_six + mcga_six_source_pointer_load_offset,
                                mcga_six_source_pointer_load))
+        || (ega && !has_bytes(bytes, function_six + ega_six_source_pointer_load_offset,
+                              ega_six_source_prefix))
+        || (!ega && !has_bytes(bytes, function_six + mcga_six_source_pointer_load_offset - 1,
+                               mcga_six_source_prefix))
         || !has_bytes(bytes, function_thirteen, thirteen_prefix)
         || !has_bytes(bytes, function_thirty_one, thirty_one_prefix)) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver ABI profile");
@@ -121,6 +132,14 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         .function_six_source_pointer_offset = 0,
         .function_six_source_pointer_load_address = static_cast<std::uint16_t>(
             function_six + (ega ? ega_six_source_pointer_load_offset : mcga_six_source_pointer_load_offset)),
+        .function_six_source_word_zero_read_address = static_cast<std::uint16_t>(
+            ega ? function_six + 0x45 : 0),
+        .function_six_source_word_two_read_address = static_cast<std::uint16_t>(
+            ega ? function_six + 0x39 : function_six + 0x2c),
+        .function_six_source_word_four_read_address = static_cast<std::uint16_t>(
+            ega ? function_six + 0x36 : 0),
+        .function_six_source_nested_pointer_load_address = static_cast<std::uint16_t>(
+            ega ? 0 : function_six + 0x31),
         .function_six_screen_width = 0x140,
         .function_six_horizontal_offset = 8,
         .function_six_height_offset = 0x10,

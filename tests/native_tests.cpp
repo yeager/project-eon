@@ -1059,6 +1059,10 @@ int main() {
     assert(ega_profile.function_six_address == 0x8a6);
     assert(ega_profile.function_six_source_pointer_offset == 0);
     assert(ega_profile.function_six_source_pointer_load_address == 0x8d9);
+    assert(ega_profile.function_six_source_word_zero_read_address == 0x8eb);
+    assert(ega_profile.function_six_source_word_two_read_address == 0x8df);
+    assert(ega_profile.function_six_source_word_four_read_address == 0x8dc);
+    assert(ega_profile.function_six_source_nested_pointer_load_address == 0);
     assert(ega_profile.function_six_screen_width == 0x140);
     assert(ega_profile.function_six_horizontal_offset == 8);
     assert(ega_profile.function_six_height_offset == 0x10);
@@ -1086,6 +1090,10 @@ int main() {
     assert(mcga_profile.function_six_address == 0x705);
     assert(mcga_profile.function_six_source_pointer_offset == 0);
     assert(mcga_profile.function_six_source_pointer_load_address == 0x72e);
+    assert(mcga_profile.function_six_source_word_zero_read_address == 0);
+    assert(mcga_profile.function_six_source_word_two_read_address == 0x731);
+    assert(mcga_profile.function_six_source_word_four_read_address == 0);
+    assert(mcga_profile.function_six_source_nested_pointer_load_address == 0x736);
     assert(mcga_profile.function_six_screen_width == 0x140);
     assert(mcga_profile.function_thirteen_address == 0x905);
     assert(mcga_profile.function_thirteen_status_port == 0x3da);
@@ -3549,8 +3557,26 @@ int main() {
     assert(title_callback.registration_return_address == 0x1f052);
     assert(title_callback.callback_a0_event_offset == 4);
     assert((title_callback.callback_early_return_values == std::array<std::uint8_t, 3>{{6, 15, 16}}));
+    assert(title_callback.callback_event_mirror_address == 0x1ef2e);
+    assert(title_callback.callback_second_event_value == 2);
+    assert(title_callback.callback_second_event_gate_address == 0x1ee16);
+    assert(title_callback.callback_second_event_a0_word_offset == 6);
+    assert(title_callback.callback_second_event_special_word == 0x00ff);
+    assert((title_callback.callback_second_event_copy_source_offsets
+        == std::array<std::uint16_t, 2>{{0x000a, 0x000c}}));
+    assert((title_callback.callback_second_event_copy_destinations
+        == std::array<std::uint32_t, 2>{{0x1ee10, 0x1ee12}}));
+    assert(title_callback.callback_second_event_service_address == 0x20118);
+    assert(title_callback.callback_second_event_mask == 0x007f);
+    assert((title_callback.callback_second_event_accepted_values
+        == std::array<std::uint8_t, 2>{{0x68, 0x69}}));
+    assert(title_callback.callback_second_event_transform_source_offset == 8);
+    assert(title_callback.callback_second_event_transform_destination_address == 0x1ffd4);
     assert(title_callback.callback_producer_value == 1);
     assert(title_callback.callback_a0_word_offset == 6);
+    assert(title_callback.callback_producer_selector_offset == 8);
+    assert(title_callback.callback_producer_selector_mask == 7);
+    assert(title_callback.callback_producer_second_half_adjustment == 0x50);
     assert(title_callback.callback_pending_limit == 0x14);
     assert(title_callback.callback_pending_word_address == 0x1eed6);
     assert(title_callback.callback_source_table_address == 0x1ee20);

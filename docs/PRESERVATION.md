@@ -1349,6 +1349,19 @@ data path,
 not proof of the request type, callback event names, input device, or any
 runtime value supplied by Exec.
 
+The same hash-locked callback has two additional locally bounded routes. Before
+its branch checks it mirrors caller byte `A0+$4` into `$1ef2e`. The byte-two
+route first rejects nonzero `$1ee16`; with word `A0+$6 = $00ff`, it copies
+words `A0+$a` and `A0+$c` to `$1ee10` and `$1ee12` then reaches unresolved
+service `$20118`. Otherwise it masks `A0+$6` with `$007f`, accepts only `$68`
+or `$69`, derives a two-bit value from word `A0+$8`, and stores it at `$1ffd4`.
+The byte-one producer stores word `A0+$8` at `$1ee0e`; its low three bits select
+whether the bounded source index from `A0+$6` addresses the first `$50` bytes
+of `$1ee20..$1eebf` or the second `$50`. Project Eon records these exact
+operands and bounds only. It neither supplies an A0 frame nor calls `$20118`,
+Exec, or a device, and does not give the bytes, words, or destinations a
+presumed control/input meaning.
+
 The third helper's concrete next boundary is also recovered. At `$1fe7a`, the
 raw title image masks `D0` to `$0000ffff`, performs original unsigned divides
 by `$0064` and `$000a` (with the two intervening original subroutine calls),
@@ -1783,6 +1796,14 @@ pointer's offset word and record `+$02` is its segment word. This proves the
 driver's direct input field, not who owns the offset, the pointed-to byte
 format, or any drawing result. Project Eon records neither a reconstructed
 pointer nor a host-side transfer for it.
+
+The next original instructions give a stricter but still format-neutral
+boundary on that pointer. EGA640 reads words at source `+$04` (`$08dc`),
+`+$02` (`$08df`), and `+$00` (`$08eb`). MCGA reads the word at source `+$02`
+(`$0731`) and executes `LDS SI,[SI+$04]` at `$0736`, making source `+$04` a
+second far-pointer operand on that path. These verified operand accesses do
+not establish that the two driver paths share a header format, identify any
+pointer owner, or authorize a host-side copy, decode, or draw.
 
 The supplied driver images add one ABI-independent local fact for that exact
 function number. In both hash-identified `EGA640.BIN` (dispatch target `$0d37`)

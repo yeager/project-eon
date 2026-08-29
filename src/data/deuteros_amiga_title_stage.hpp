@@ -349,10 +349,10 @@ struct DeuterosAmigaTitleResponseQueueProfile {
     std::string sha256;
 };
 
-// Hash-locked facts from the original title callback registration and the
-// callback's byte-one producer route. These record only the descriptor and
-// caller-owned A0 offsets seen in the instructions; they do not identify the
-// Exec service, callback ABI, device, or event meanings.
+// Hash-locked facts from the original title callback registration and its
+// locally visible event-one/event-two routes. These record only descriptor
+// operands and caller-owned A0 offsets seen in instructions; they do not
+// identify the Exec service, callback ABI, device, or event meanings.
 struct DeuterosAmigaTitleCallbackRegistrationProfile {
     std::uint32_t registration_entry_address = 0;
     std::uint32_t descriptor_address = 0;
@@ -367,8 +367,23 @@ struct DeuterosAmigaTitleCallbackRegistrationProfile {
     std::uint32_t registration_return_address = 0;
     std::uint16_t callback_a0_event_offset = 0;
     std::array<std::uint8_t, 3> callback_early_return_values{};
+    std::uint32_t callback_event_mirror_address = 0;
+    std::uint8_t callback_second_event_value = 0;
+    std::uint32_t callback_second_event_gate_address = 0;
+    std::uint16_t callback_second_event_a0_word_offset = 0;
+    std::uint16_t callback_second_event_special_word = 0;
+    std::array<std::uint16_t, 2> callback_second_event_copy_source_offsets{};
+    std::array<std::uint32_t, 2> callback_second_event_copy_destinations{};
+    std::uint32_t callback_second_event_service_address = 0;
+    std::uint16_t callback_second_event_mask = 0;
+    std::array<std::uint8_t, 2> callback_second_event_accepted_values{};
+    std::uint16_t callback_second_event_transform_source_offset = 0;
+    std::uint32_t callback_second_event_transform_destination_address = 0;
     std::uint8_t callback_producer_value = 0;
     std::uint16_t callback_a0_word_offset = 0;
+    std::uint16_t callback_producer_selector_offset = 0;
+    std::uint16_t callback_producer_selector_mask = 0;
+    std::uint16_t callback_producer_second_half_adjustment = 0;
     std::uint16_t callback_pending_limit = 0;
     std::uint32_t callback_pending_word_address = 0;
     std::uint32_t callback_source_table_address = 0;

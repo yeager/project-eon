@@ -987,10 +987,63 @@ parse_deuteros_amiga_title_callback_registration_profile(
     require_word(callback, 236, 0x5279);
     require_long(callback, 238, 0x0001eed6);
 
+    // The callback mirrors the caller-owned event byte before its four
+    // locally visible branches. Its complete event-two route either forwards
+    // two caller words to a still-unresolved service, or derives a two-bit
+    // value from a caller word after accepting only two masked values. These
+    // are data-flow facts, not callback/input semantics.
+    require_word(callback, 30, 0x43f9); // lea $1ef2a,a1
+    require_long(callback, 32, 0x0001ef2a);
+    require_word(callback, 36, 0x1368); // move.b 4(a0),4(a1)
+    if (big16(callback, 38) != 4 || big16(callback, 40) != 4) {
+        throw std::runtime_error("Unexpected Deuteros callback event mirror");
+    }
+    require_word(callback, 54, 0xb03c); // event byte 2
+    if (big16(callback, 56) != 2) {
+        throw std::runtime_error("Unexpected Deuteros callback second event gate");
+    }
+    require_word(callback, 62, 0x4a39);
+    require_long(callback, 64, 0x0001ee16);
+    require_word(callback, 72, 0x3028); // move.w 6(a0),d0
+    if (big16(callback, 74) != 6) throw std::runtime_error("Unexpected Deuteros callback second-event word");
+    require_word(callback, 76, 0xb03c);
+    if (big16(callback, 78) != 0x00ff) throw std::runtime_error("Unexpected Deuteros callback second-event special word");
+    require_word(callback, 82, 0x33e8);
+    if (big16(callback, 84) != 0x000a) throw std::runtime_error("Unexpected Deuteros callback first copy source");
+    require_long(callback, 86, 0x0001ee10);
+    require_word(callback, 90, 0x33e8);
+    if (big16(callback, 92) != 0x000c) throw std::runtime_error("Unexpected Deuteros callback second copy source");
+    require_long(callback, 94, 0x0001ee12);
+    require_word(callback, 98, 0x4eb9);
+    require_long(callback, 100, 0x00020118);
+    require_word(callback, 106, 0x0240);
+    if (big16(callback, 108) != 0x007f) throw std::runtime_error("Unexpected Deuteros callback second-event mask");
+    require_word(callback, 110, 0xb03c);
+    if (big16(callback, 112) != 0x0068) throw std::runtime_error("Unexpected Deuteros callback first accepted value");
+    require_word(callback, 116, 0xb03c);
+    if (big16(callback, 118) != 0x0069) throw std::runtime_error("Unexpected Deuteros callback second accepted value");
+    require_word(callback, 124, 0x3228);
+    if (big16(callback, 126) != 8) throw std::runtime_error("Unexpected Deuteros callback transform source");
+    require_word(callback, 142, 0x33c0);
+    require_long(callback, 144, 0x0001ffd4);
+
+    // Event one supplies the queue producer. The original selector is the
+    // low three bits of caller word +8: zero indexes $1ee20..$1ee6f, and any
+    // nonzero selector adds $50 to the independently bounded source index.
+    require_word(callback, 154, 0x33e8);
+    if (big16(callback, 156) != 8) throw std::runtime_error("Unexpected Deuteros callback producer selector");
+    require_long(callback, 158, 0x0001ee0e);
+    require_word(callback, 214, 0x0241);
+    if (big16(callback, 216) != 7) throw std::runtime_error("Unexpected Deuteros callback producer selector mask");
+    require_word(callback, 220, 0x0640);
+    if (big16(callback, 222) != 0x0050) throw std::runtime_error("Unexpected Deuteros callback producer second-half adjustment");
+
     return {registration_entry, descriptor_address, 0x12, callback_address,
         request_address, 0x1c, 0x28, 9, 4, static_cast<std::int16_t>(-0x1ce),
         registration_entry + registration_length,
-        4, {6, 15, 16}, 1, 6, 0x14, 0x1eed6, source_table_address,
+        4, {6, 15, 16}, 0x1ef2e, 2, 0x1ee16, 6, 0x00ff, {0x000a, 0x000c},
+        {0x1ee10, 0x1ee12}, 0x20118, 0x007f, {0x68, 0x69}, 8, 0x1ffd4,
+        1, 6, 8, 7, 0x50, 0x14, 0x1eed6, source_table_address,
         source_table_length, std::string(source_table_hash), 0x1eec0,
         std::string(registration_hash), std::string(callback_hash)};
 }
