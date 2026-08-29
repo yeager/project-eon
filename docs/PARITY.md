@@ -52,3 +52,7 @@ Before expanding any row into a broader runtime path, add all of the following:
 
 Until those gates are met, the launcher must retain the explicit boundary
 instead of fabricating a screen, save, input action, or game rule.
+
+Reference traces are external, hash-addressed evidence. Their validation-only
+admission format is documented in [REFERENCE_TRACE_FORMAT.md](REFERENCE_TRACE_FORMAT.md);
+generic trace acceptance is not emulator replay or parity evidence by itself.

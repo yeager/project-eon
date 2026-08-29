@@ -2647,6 +2647,19 @@ and tests.
 Git history records interpretation changes. Corrections must explain their new
 evidence instead of rewriting earlier uncertainty away.
 
+## Reference trace admission
+
+A genuine execution trace is admitted only as external, hash-addressed
+preservation evidence. It must bind a manifest and event stream to one exact
+scanner-recognised outer release, including game, platform, language, byte
+size and SHA-256; a similarly named archive or another platform is rejected.
+Project Eon validates that provenance and event ordering only, then reports it
+without replaying an event or creating a platform return value. The full
+bounded grammar, required capture hashes and rejection rules are in
+[REFERENCE_TRACE_FORMAT.md](REFERENCE_TRACE_FORMAT.md). Trace artefacts,
+emulator snapshots, ROMs and all game media remain user-owned and excluded
+from Git and packages.
+
 ## Current boundary
 
 Release recognition, archive traversal, selected FAT12 content, Deuteros ADF

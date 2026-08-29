@@ -218,6 +218,11 @@ No dynamic trace is claimed from that tool: driver installation, BIOS results,
 private-vector lifetime, DOS EXEC return/status, and `2200AD` startup remain
 explicit boundaries until the above protocol can be met.
 
+Project Eon's external trace admission format is specified in
+[`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md). Its first version
+verifies a trace's hash, capture provenance and exact recognised source release
+only; it does not replay events or manufacture a platform-service result.
+
 `--inspect` repeats release-specific collection prerequisites without turning
 them into an execution request. The Spanish Millennium report requires a trace
 of that image's own DOS child return/AL, file operations, and CPU/interrupt

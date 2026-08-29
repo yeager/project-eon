@@ -19,6 +19,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Every source-built CI dependency is fetched by immutable Git object ID.
+# Each object ID resolves to the respective upstream release tag: SDL
+# release-3.4.14, zlib v1.3.1, and libpng v1.6.50.  Do not replace them with
+# branch names or tag names: upstream refs are mutable.
+env:
+  SDL3_REF: 147a8ee32dbf9ac02f3794964490687b6bbda1bc
+  ZLIB_REF: 51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf
+  LIBPNG_REF: 2b978915d82377df13fcbb1fb56660195ded868a
+
 jobs:
   gitleaks:
     name: Gitleaks
@@ -49,7 +58,10 @@ jobs:
             libgbm-dev libpulse-dev libasound2-dev
       - name: Build SDL3
         run: |
-          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          git init SDL3-src
+          git -C SDL3-src remote add origin https://github.com/libsdl-org/SDL.git
+          git -C SDL3-src fetch --depth 1 --filter=blob:none origin "$SDL3_REF"
+          git -C SDL3-src checkout --detach FETCH_HEAD
           cmake -S SDL3-src -B SDL3-build -DCMAKE_INSTALL_PREFIX=/usr/local \
             -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
           ninja -C SDL3-build
@@ -90,21 +102,30 @@ jobs:
       - name: Build zlib
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/madler/zlib.git zlib-src
+          git init zlib-src
+          git -C zlib-src remote add origin https://github.com/madler/zlib.git
+          git -C zlib-src fetch --depth 1 origin $env:ZLIB_REF
+          git -C zlib-src checkout --detach FETCH_HEAD
           cmake -S zlib-src -B zlib-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/zlib-install"
           cmake --build zlib-build --config Release --parallel 2
           cmake --install zlib-build --config Release
       - name: Build libpng for SDL3_image
         shell: pwsh
         run: |
-          git clone --depth 1 --branch v1.6.50 https://github.com/pnggroup/libpng.git libpng-src
+          git init libpng-src
+          git -C libpng-src remote add origin https://github.com/pnggroup/libpng.git
+          git -C libpng-src fetch --depth 1 origin $env:LIBPNG_REF
+          git -C libpng-src checkout --detach FETCH_HEAD
           cmake -S libpng-src -B libpng-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/libpng-install" -DPNG_SHARED=ON -DPNG_STATIC=OFF -DZLIB_ROOT="${{ github.workspace }}/zlib-install"
           cmake --build libpng-build --config Release --parallel 2
           cmake --install libpng-build --config Release
       - name: Build SDL3
         shell: pwsh
         run: |
-          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          git init SDL3-src
+          git -C SDL3-src remote add origin https://github.com/libsdl-org/SDL.git
+          git -C SDL3-src fetch --depth 1 --filter=blob:none origin $env:SDL3_REF
+          git -C SDL3-src checkout --detach FETCH_HEAD
           cmake -S SDL3-src -B SDL3-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/SDL3-install" -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
           cmake --build SDL3-build --config Release --parallel 2
           cmake --install SDL3-build --config Release
@@ -138,7 +159,10 @@ jobs:
             libpulse-dev libasound2-dev
       - name: Build SDL3
         run: |
-          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          git init SDL3-src
+          git -C SDL3-src remote add origin https://github.com/libsdl-org/SDL.git
+          git -C SDL3-src fetch --depth 1 --filter=blob:none origin "$SDL3_REF"
+          git -C SDL3-src checkout --detach FETCH_HEAD
           cmake -S SDL3-src -B SDL3-build -DCMAKE_INSTALL_PREFIX=/usr/local -G Ninja \
             -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
           ninja -C SDL3-build
@@ -271,15 +295,24 @@ jobs:
       - name: Build zlib and SDL3
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/madler/zlib.git zlib-src
+          git init zlib-src
+          git -C zlib-src remote add origin https://github.com/madler/zlib.git
+          git -C zlib-src fetch --depth 1 origin $env:ZLIB_REF
+          git -C zlib-src checkout --detach FETCH_HEAD
           cmake -S zlib-src -B zlib-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/zlib-install"
           cmake --build zlib-build --config Release --parallel 2
           cmake --install zlib-build --config Release
-          git clone --depth 1 --branch v1.6.50 https://github.com/pnggroup/libpng.git libpng-src
+          git init libpng-src
+          git -C libpng-src remote add origin https://github.com/pnggroup/libpng.git
+          git -C libpng-src fetch --depth 1 origin $env:LIBPNG_REF
+          git -C libpng-src checkout --detach FETCH_HEAD
           cmake -S libpng-src -B libpng-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/libpng-install" -DPNG_SHARED=ON -DPNG_STATIC=OFF -DZLIB_ROOT="${{ github.workspace }}/zlib-install"
           cmake --build libpng-build --config Release --parallel 2
           cmake --install libpng-build --config Release
-          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          git init SDL3-src
+          git -C SDL3-src remote add origin https://github.com/libsdl-org/SDL.git
+          git -C SDL3-src fetch --depth 1 --filter=blob:none origin $env:SDL3_REF
+          git -C SDL3-src checkout --detach FETCH_HEAD
           cmake -S SDL3-src -B SDL3-build -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/SDL3-install" -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
           cmake --build SDL3-build --config Release --parallel 2
           cmake --install SDL3-build --config Release
@@ -396,14 +429,23 @@ jobs:
           brew install cmake ninja
           IOS_ARGS="-G Ninja -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_BUILD_TYPE=Release"
           IOS_PREFIX="${{ github.workspace }}/ios-deps"
-          git clone --depth 1 https://github.com/madler/zlib.git zlib-src
+          git init zlib-src
+          git -C zlib-src remote add origin https://github.com/madler/zlib.git
+          git -C zlib-src fetch --depth 1 origin "$ZLIB_REF"
+          git -C zlib-src checkout --detach FETCH_HEAD
           cmake -S zlib-src -B zlib-build $IOS_ARGS -DCMAKE_INSTALL_PREFIX="$IOS_PREFIX"
           cmake --build zlib-build --config Release --target install
-          git clone --depth 1 --branch v1.6.50 https://github.com/pnggroup/libpng.git libpng-src
+          git init libpng-src
+          git -C libpng-src remote add origin https://github.com/pnggroup/libpng.git
+          git -C libpng-src fetch --depth 1 origin "$LIBPNG_REF"
+          git -C libpng-src checkout --detach FETCH_HEAD
           cmake -S libpng-src -B libpng-build $IOS_ARGS -DCMAKE_INSTALL_PREFIX="$IOS_PREFIX" \
             -DZLIB_ROOT="$IOS_PREFIX" -DPNG_SHARED=OFF -DPNG_STATIC=ON
           cmake --build libpng-build --config Release --target install
-          git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
+          git init SDL3-src
+          git -C SDL3-src remote add origin https://github.com/libsdl-org/SDL.git
+          git -C SDL3-src fetch --depth 1 --filter=blob:none origin "$SDL3_REF"
+          git -C SDL3-src checkout --detach FETCH_HEAD
           cmake -S SDL3-src -B SDL3-build $IOS_ARGS \
             -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
             -DSDL_SHARED=OFF -DSDL_STATIC=ON \

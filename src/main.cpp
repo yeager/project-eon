@@ -30,6 +30,7 @@
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
+#include "data/reference_trace.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
@@ -1786,7 +1787,7 @@ int main(int argc, char** argv) {
     // Direct launches and command-line verification intentionally wait for a
     // complete answer. The graphical menu instead advances this scanner after
     // its first frame, mirroring OpenCaptive's non-blocking data scanner.
-    if (request.verify_game || request.inspect_data || request.game) {
+    if (request.verify_game || request.inspect_data || request.game || request.reference_trace) {
         while (!scanner.advance(64)) {
         }
         releases = scanner.releases();
@@ -1794,6 +1795,23 @@ int main(int argc, char** argv) {
             std::cerr << "No recognised original release archives found.\n";
             return 3;
         }
+    }
+    if (request.reference_trace) {
+        const auto validation = eon::validate_reference_trace(*request.reference_trace, releases,
+            *request.game, *request.platform);
+        if (!validation.trace) {
+            std::cerr << "Reference trace rejected: " << validation.error << '\n';
+            return 6;
+        }
+        const auto& trace = *validation.trace;
+        std::cout << "REFERENCE TRACE VERIFIED  provenance-only; no replay performed\n"
+            << "          " << eon::name(trace.source_release.game) << " / "
+            << eon::name(trace.source_release.platform) << " / " << trace.source_release.language << '\n'
+            << "          source " << trace.source_release.sha256 << '\n'
+            << "          events " << trace.event_sha256 << " (" << trace.event_count << " ordered events)\n"
+            << "          capture " << trace.capture_start_utc << " to " << trace.capture_end_utc << '\n'
+            << "          emulator " << trace.emulator_name << " " << trace.emulator_version << '\n';
+        return 0;
     }
     if (request.verify_game || request.inspect_data) {
         if (request.inspect_data) {
