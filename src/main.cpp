@@ -55,6 +55,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -83,35 +84,70 @@ namespace {
     return bytes;
 }
 
+int report_millennium_dos_save_inspection(
+    const std::span<const std::uint8_t> bytes, const std::string_view source_description) {
+    const eon::MillenniumDosSaveSession save(bytes);
+    std::cout << "SAVE INSPECTION  read-only; source stays in place\n"
+        << "          Millennium 2.2 / DOS structure: version 0x" << std::hex
+        << save.layout().version << std::dec << ", " << save.serialized_bytes().size()
+        << " bytes, " << save.layout().state_table.size()
+        << " recovered positional records\n          source " << save.sha256() << '\n'
+        << "          source path: " << source_description << '\n';
+    try {
+        static_cast<void>(eon::authenticate_millennium_save(
+            eon::MillenniumSavePlatform::dos, "2200SAVE.I", save.serialized_bytes()));
+        std::cout << "          reference identity: supplied English DOS 2200SAVE.I\n";
+    } catch (const std::runtime_error&) {
+        std::cout << "          reference identity: not present in supplied media; "
+                     "structure-only observation, never imported into runtime\n";
+    }
+    // The executable reconstructs these four columns into 38 records.
+    // Print the verified positional fields rather than assigning game
+    // meanings, so a user can compare a supplied original save without
+    // Eon copying, modifying, or attempting to load it into a runtime.
+    for (std::size_t index = 0; index < save.layout().state_table.size(); ++index) {
+        const auto& record = save.state_record(index);
+        std::cout << "          [" << index << "] +00=0x" << std::hex
+            << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
+            << " +06=0x" << record.runtime_offset_6 << " +08=0x"
+            << record.runtime_offset_8 << std::dec << '\n';
+    }
+    return 0;
+}
+
 int inspect_millennium_dos_save(const std::filesystem::path& path) {
     try {
-        const auto bytes = read_save_for_inspection(path);
-        const eon::MillenniumDosSaveSession save(bytes);
-        std::cout << "SAVE INSPECTION  read-only; source stays in place\n"
-            << "          Millennium 2.2 / DOS structure: version 0x" << std::hex
-            << save.layout().version << std::dec << ", " << save.serialized_bytes().size()
-            << " bytes, " << save.layout().state_table.size()
-            << " recovered positional records\n          source " << save.sha256() << '\n';
-        try {
-            static_cast<void>(eon::authenticate_millennium_save(
-                eon::MillenniumSavePlatform::dos, "2200SAVE.I", save.serialized_bytes()));
-            std::cout << "          reference identity: supplied English DOS 2200SAVE.I\n";
-        } catch (const std::runtime_error&) {
-            std::cout << "          reference identity: not present in supplied media; "
-                         "structure-only observation, never imported into runtime\n";
+        std::error_code error;
+        if (!std::filesystem::is_regular_file(path, error) || error) {
+            throw std::runtime_error("Save inspection input is not a regular file");
         }
-        // The executable reconstructs these four columns into 38 records.
-        // Print the verified positional fields rather than assigning game
-        // meanings, so a user can compare a supplied original save without
-        // Eon copying, modifying, or attempting to load it into a runtime.
-        for (std::size_t index = 0; index < save.layout().state_table.size(); ++index) {
-            const auto& record = save.state_record(index);
-            std::cout << "          [" << index << "] +00=0x" << std::hex
-                << record.runtime_offset_0 << " +04=0x" << record.runtime_offset_4
-                << " +06=0x" << record.runtime_offset_6 << " +08=0x"
-                << record.runtime_offset_8 << std::dec << '\n';
+        const auto size = std::filesystem::file_size(path, error);
+        if (error) throw std::runtime_error("Unable to determine save inspection input size");
+        if (size == eon::MillenniumDosSaveLayout::serialized_size) {
+            const auto bytes = read_save_for_inspection(path);
+            return report_millennium_dos_save_inspection(bytes, path.string());
         }
-        return 0;
+        // An archive is admitted only after its full hash selects the English
+        // DOS release. The save is then read directly in memory: no unpack,
+        // copy, or filename-based archive lookup is permitted.
+        eon::ReleaseScanner scanner(path);
+        while (!scanner.advance(64)) {
+        }
+        const auto& releases = scanner.releases();
+        const auto release = std::find_if(releases.begin(), releases.end(), [](const auto& candidate) {
+            return candidate.game == eon::Game::millennium
+                && candidate.platform == eon::Platform::dos && candidate.language == "en";
+        });
+        if (release == releases.end()) {
+            throw std::runtime_error("Save inspection requires a 9,538-byte DOS save or a verified English Millennium DOS archive");
+        }
+        eon::verify_release_archive(*release);
+        constexpr std::string_view save_sha256 =
+            "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
+        const auto bytes = eon::extract_verified_release_asset(*release, save_sha256);
+        if (!bytes) throw std::runtime_error("Verified English DOS archive has no expected 2200SAVE.I");
+        return report_millennium_dos_save_inspection(*bytes,
+            "verified English Millennium DOS archive " + release->sha256);
     } catch (const std::exception& error) {
         std::cerr << "Save inspection rejected: " << error.what() << '\n';
         return 6;
@@ -3800,7 +3836,8 @@ int main(int argc, char** argv) {
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46,
                         tr(card.title));
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
-                        status == eon::PlatformCardStatus::release_selection_required
+                        selectable && card.platform == eon::Platform::atari_st
+                        ? tr("ATARI BOOTSTRAP ONLY") : status == eon::PlatformCardStatus::release_selection_required
                         ? tr("RELEASE SELECTION REQUIRED") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }
@@ -4118,6 +4155,19 @@ int main(int argc, char** argv) {
                         tr("TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"));
                     draw_text(renderer, 64, 312,
                         tr("ORIGINAL TITLE STAGE SHA-256: ") + title_stage->original_sha256());
+                    // This compact row is machine-state provenance, not
+                    // launcher prose or a simulated title display. These
+                    // are the only caller-proven title writes before the
+                    // unresolved Exec read, followed by its local A7 setup.
+                    const auto& prefix_state = title_stage->entry_prefix_state();
+                    const auto& exec_prelude = title_stage->exec_prelude();
+                    std::ostringstream prefix_provenance;
+                    prefix_provenance << "0x" << std::hex << prefix_state.writes[0].address
+                                      << ".w=0x" << prefix_state.writes[0].value
+                                      << "; 0x" << prefix_state.writes[1].address
+                                      << ".b=0x" << prefix_state.writes[1].value
+                                      << "; A7=0x" << exec_prelude.stack_pointer_value;
+                    draw_text(renderer, 64, 326, prefix_provenance.str());
                     const auto palette = title_stage->graphics_setup_palette_evidence();
                     for (std::size_t index = 0; index < palette.size(); ++index) {
                         const auto& color = palette[index];
@@ -4130,7 +4180,7 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (const auto& trace = deuteros_opening->alternate_renderer_trace()) {
-                    draw_text(renderer, 64, title_stage ? 328 : 284, tr("ORIGINAL $20580 STREAM: +0x")
+                    draw_text(renderer, 64, title_stage ? 342 : 284, tr("ORIGINAL $20580 STREAM: +0x")
                         + [&] { std::ostringstream stream; stream << std::hex << trace->stream_offset;
                             return stream.str(); }()
                         + " - " + std::to_string(trace->glyph_codes.size()));

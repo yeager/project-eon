@@ -231,6 +231,28 @@ def main() -> int:
         for relative, digest in before.items()
         if digest.startswith("file:") and relative.suffix.lower() == ".zip"
     }
+    dos_archive = archive_by_sha256.get(
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123"
+    )
+    if dos_archive is None:
+        raise SystemExit("The real-media fixture lacks the verified English Millennium DOS archive")
+    # Save inspection can consume the original archive directly. This is the
+    # practical preservation route when a user has only their supplied ZIP:
+    # the runtime verifies the complete archive, reads the known leaf in
+    # memory, and must not materialize a commercial save beside it.
+    archive_save_report = subprocess.run(
+        (str(executable), "--inspect-save", str(dos_archive)),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (archive_save_report.returncode != 0
+            or "verified English Millennium DOS archive" not in archive_save_report.stdout
+            or "[0] +00=0x8100 +04=0x0 +06=0x0 +08=0x2292" not in archive_save_report.stdout
+            or "[37] +00=0x8600 +04=0x0 +06=0x0 +08=0x0" not in archive_save_report.stdout
+            or media_snapshot(data_directory) != before):
+        raise SystemExit(
+            "archive-backed DOS save inspection did not remain hash-bound and read-only:\n"
+            f"{archive_save_report.stdout}\n{archive_save_report.stderr}"
+        )
     trace_specs = (
         (
             "millennium", "dos", "millennium-dos-en-startup-v1",

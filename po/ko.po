@@ -241,3 +241,6 @@ msgstr "판본 식별 정보는 실행 시 고정됩니다"
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "릴리스 선택 필요"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "ATARI 부트스트랩 전용"

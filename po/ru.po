@@ -241,3 +241,6 @@ msgstr "ИДЕНТИЧНОСТЬ ИЗДАНИЯ ФИКСИРУЕТСЯ ПРИ З
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "ТРЕБУЕТСЯ ВЫБОР ИЗДАНИЯ"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "ТОЛЬКО ЗАГРУЗКА ATARI"

@@ -241,3 +241,6 @@ msgstr "版本身份会在启动时固定"
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "需要选择版本"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "仅限 ATARI 引导"

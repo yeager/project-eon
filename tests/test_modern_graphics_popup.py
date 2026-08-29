@@ -68,6 +68,16 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("unrecovered Exec/graphics boundary", scheduler_block)
         self.assertIn("SDL_ClearAudioStream(deuteros_audio_stream)", scheduler_block)
 
+    def test_deuteros_title_panel_shows_only_session_provenance_before_exec(self) -> None:
+        panel = SOURCE.index("const auto& title_stage = deuteros_opening->title_stage_session();")
+        palette = SOURCE.index("graphics_setup_palette_evidence()", panel)
+        handoff_panel = SOURCE[panel:palette]
+        self.assertIn("title_stage->entry_prefix_state()", handoff_panel)
+        self.assertIn("title_stage->exec_prelude()", handoff_panel)
+        self.assertIn('prefix_provenance << "0x"', handoff_panel)
+        self.assertIn("unresolved Exec read", handoff_panel)
+        self.assertNotIn("title_stage->tick", handoff_panel)
+
     def test_popup_is_modal_for_gamepad_navigation(self) -> None:
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_UP", SOURCE)
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_DOWN", SOURCE)

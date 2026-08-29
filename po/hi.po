@@ -203,3 +203,6 @@ msgstr "संस्करण की पहचान शुरू होने �
 
 msgid "RELEASE SELECTION REQUIRED"
 msgstr "रिलीज़ चयन आवश्यक"
+
+msgid "ATARI BOOTSTRAP ONLY"
+msgstr "केवल अटारी बूटस्ट्रैप"
