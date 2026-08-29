@@ -25,6 +25,12 @@ public:
     [[nodiscard]] const DeuterosAmigaTitleEntryPrefix& entry_prefix() const noexcept {
         return entry_prefix_;
     }
+    // These two writes are the complete caller-proven title RAM effect before
+    // the first unresolved Exec vector. They are sparse records only; no
+    // synthetic address space is allocated or exposed.
+    [[nodiscard]] const DeuterosAmigaTitleEntryPrefixState& entry_prefix_state() const noexcept {
+        return entry_prefix_state_;
+    }
     [[nodiscard]] std::span<const std::uint8_t> original_bytes() const;
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
 
@@ -33,6 +39,7 @@ private:
     AmigaLoadStage stage_;
     DeuterosAmigaTitleStageProfile profile_;
     DeuterosAmigaTitleEntryPrefix entry_prefix_;
+    DeuterosAmigaTitleEntryPrefixState entry_prefix_state_;
     std::string original_sha256_;
 };
 

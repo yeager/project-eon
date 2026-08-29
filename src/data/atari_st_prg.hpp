@@ -87,6 +87,32 @@ struct MillenniumAtariMaterializedTarget {
     std::vector<std::uint8_t> bytes;
 };
 
+// Result of executing the two wholly local 68000 copy loops at the start of
+// the verified Equinox loader. This is intentionally not a general 68000 or
+// GEMDOS emulator: it performs only fixed, byte-validated transfers and stops
+// at the address of the first TRAP #1 instruction.
+struct MillenniumAtariBootstrapExecution {
+    std::uint32_t initial_pc_offset = 0;
+    std::uint32_t branch_pc_offset = 0;
+    std::uint32_t first_copy_longwords = 0;
+    std::uint32_t bss_entry_address = 0;
+    std::uint32_t second_copy_words = 0;
+    std::uint32_t target_address = 0;
+    std::uint32_t stop_before_trap_address = 0;
+    std::vector<std::uint8_t> copied_stage_bytes;
+    MillenniumAtariMaterializedTarget target;
+};
+
+// Executes exactly the two original copy loops whose inputs are fully local:
+// the PRG DATA interval into loader BSS, then the proved DATA/BSS source to
+// $77000. The established zeroed BSS tail is represented in memory only.
+// Execution stops before the first GEMDOS instruction; no service frame or
+// return value is created.
+[[nodiscard]] MillenniumAtariBootstrapExecution
+execute_millennium_atari_bootstrap_prefix(std::span<const std::uint8_t> bytes,
+    const AtariStPrg& prg, const MillenniumAtariBootstrap& bootstrap,
+    const MillenniumAtariBssEntry& entry);
+
 // The first GEMDOS boundary reached by the verified BSS materialization.
 // These are literal stack arguments and control-flow facts from the original
 // bytes.  `fopen_result_negative_branch_target_offset` is deliberately an

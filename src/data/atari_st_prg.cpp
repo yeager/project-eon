@@ -228,6 +228,72 @@ MillenniumAtariMaterializedTarget materialize_millennium_atari_target(
     return result;
 }
 
+MillenniumAtariBootstrapExecution execute_millennium_atari_bootstrap_prefix(
+    std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
+    const MillenniumAtariBootstrap& bootstrap, const MillenniumAtariBssEntry& entry) {
+    // The entry uses MOVE.L (A0)+,(A2)+ followed by a BGE backedge. Its
+    // source/last-longword relation has already been validated, but execute
+    // each original longword instead of treating this as opaque host copying.
+    constexpr std::size_t header_bytes = 28;
+    if (bootstrap.entry_offset != 0 || bootstrap.branch_target_offset != 0x24
+        || bootstrap.stage_bytes == 0 || bootstrap.stage_bytes % 4U != 0U
+        || header_bytes + static_cast<std::size_t>(bootstrap.stage_source_offset) > bytes.size()
+        || bootstrap.stage_bytes > bytes.size() - header_bytes - bootstrap.stage_source_offset) {
+        throw std::runtime_error("Unsupported Millennium Atari ST local bootstrap execution");
+    }
+    MillenniumAtariBootstrapExecution result;
+    result.initial_pc_offset = bootstrap.entry_offset;
+    result.branch_pc_offset = bootstrap.branch_target_offset;
+    result.first_copy_longwords = bootstrap.stage_bytes / 4U;
+    result.bss_entry_address = bootstrap.stage_destination_offset;
+    result.copied_stage_bytes.resize(bootstrap.stage_bytes);
+    const auto source = bytes.subspan(header_bytes + bootstrap.stage_source_offset,
+        bootstrap.stage_bytes);
+    for (std::size_t longword = 0; longword < result.first_copy_longwords; ++longword) {
+        const auto offset = longword * 4U;
+        std::copy_n(source.begin() + static_cast<std::ptrdiff_t>(offset), 4,
+            result.copied_stage_bytes.begin() + static_cast<std::ptrdiff_t>(offset));
+    }
+    if (!std::equal(result.copied_stage_bytes.begin(), result.copied_stage_bytes.end(), source.begin())) {
+        throw std::runtime_error("Millennium Atari ST first copy did not preserve original bytes");
+    }
+
+    const auto bss_source = materialize_millennium_atari_bss_source(bytes, prg, bootstrap, entry);
+    const auto source_into_stage = entry.copy_source_address - bootstrap.stage_destination_offset;
+    if (entry.entry_offset != bootstrap.stage_destination_offset
+        || source_into_stage > result.copied_stage_bytes.size()
+        || bss_source.original_data_bytes > result.copied_stage_bytes.size() - source_into_stage
+        || bss_source.bytes.size() != static_cast<std::size_t>(entry.copied_words) * 2U) {
+        throw std::runtime_error("Unsupported Millennium Atari ST second local copy execution");
+    }
+    if (!std::equal(bss_source.bytes.begin(),
+            bss_source.bytes.begin() + static_cast<std::ptrdiff_t>(bss_source.original_data_bytes),
+            result.copied_stage_bytes.begin() + static_cast<std::ptrdiff_t>(source_into_stage))) {
+        throw std::runtime_error("Millennium Atari ST BSS source lost original DATA provenance");
+    }
+
+    result.second_copy_words = entry.copied_words;
+    result.target.source_address = entry.copy_source_address;
+    result.target.target_address = entry.copy_destination_address;
+    result.target.bytes.resize(bss_source.bytes.size());
+    for (std::size_t word = 0; word < result.second_copy_words; ++word) {
+        const auto offset = word * 2U;
+        result.target.bytes[offset] = bss_source.bytes[offset];
+        result.target.bytes[offset + 1U] = bss_source.bytes[offset + 1U];
+    }
+    result.target.first_opcode = read_be16(result.target.bytes, 0);
+    result.target.first_immediate_word = read_be16(result.target.bytes, 2);
+    result.target.first_immediate_longword = read_be32(result.target.bytes, 6);
+    if (result.target.bytes != bss_source.bytes || result.target.target_address != entry.jump_address) {
+        throw std::runtime_error("Millennium Atari ST second copy did not reach expected target");
+    }
+    // The fixed target prefix reaches TRAP #1 at byte +14. Do not execute it
+    // or construct the preceding A7 service frame.
+    result.target_address = result.target.target_address;
+    result.stop_before_trap_address = result.target_address + 14U;
+    return result;
+}
+
 MillenniumAtariTrapEntry parse_millennium_atari_trap_entry(
     const MillenniumAtariBssSource& source, const MillenniumAtariMaterializedTarget& target) {
     // MOVE.W #2,-(A7); MOVE.L #$1d6e4,-(A7); MOVE.W #$3d,-(A7); TRAP #1;

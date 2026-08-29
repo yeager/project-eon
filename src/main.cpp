@@ -156,6 +156,7 @@ struct MillenniumDosLaunchAssets {
     std::string language;
     std::optional<PreviewAnimation> gx_canvas;
     std::optional<eon::MillenniumDosTitleFlow> title_flow;
+    std::optional<eon::MillenniumDosSpanishTitleBoundary> spanish_title_boundary;
     std::optional<eon::MillenniumDosGameFlow> game_flow;
     // Both private video drivers are loaded from the same verified DOS
     // release as the launcher. Keeping their parsed ABI profiles alongside
@@ -1703,8 +1704,11 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto fopen_fallthrough = eon::parse_millennium_atari_fopen_fallthrough(target, trap_entry);
     const auto fread_config_transfer = eon::parse_millennium_atari_fread_config_transfer_boundary(
         target, fopen_fallthrough);
-    std::cout << "          bounded launcher bootstrap: target 0x" << std::hex
-        << live_bootstrap.target().target_address << ", Fopen boundary "
+    std::cout << "          bounded launcher bootstrap: executed " << std::dec
+        << live_bootstrap.execution().first_copy_longwords << " original longword copies and "
+        << live_bootstrap.execution().second_copy_words << " original word copies to target 0x"
+        << std::hex << live_bootstrap.target().target_address << ", stops before TRAP #1 at 0x"
+        << live_bootstrap.execution().stop_before_trap_address << "; Fopen boundary "
         << live_bootstrap.fopen_boundary().fopen_filename << std::dec
         << " (no GEMDOS call)\n";
     if (const auto physical_disk = eon::extract_verified_release_asset(release, disk1_stx_sha256)) {
@@ -2401,7 +2405,8 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
             if (!image) return std::nullopt;
             const eon::Fat12Disk disk(*image);
             const auto* title_entry = disk.find("TITLE.LIB");
-            if (!title_entry) return std::nullopt;
+            const auto* titles_entry = disk.find("TITLES.EXE");
+            if (!title_entry || !titles_entry) return std::nullopt;
             const eon::MillenniumDosLib title_lib(disk.read(*title_entry));
             const auto* p00 = title_lib.find("P00");
             if (!p00) return std::nullopt;
@@ -2414,6 +2419,8 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
                 .language = "es",
                 .gx_canvas = std::nullopt,
                 .title_flow = std::nullopt,
+                .spanish_title_boundary = eon::parse_millennium_dos_spanish_title_boundary(
+                    disk.read(*titles_entry)),
                 .game_flow = std::nullopt,
                 .ega_video_driver = std::nullopt,
                 .mcga_video_driver = std::nullopt,
@@ -2445,6 +2452,7 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
             .language = "en",
             .gx_canvas = PreviewAnimation{gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
             .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
+            .spanish_title_boundary = std::nullopt,
             .game_flow = eon::parse_millennium_dos_game_flow(*game),
             .ega_video_driver = eon::parse_millennium_dos_video_driver(*ega640,
                 eon::MillenniumDosVideoDriverKind::ega640),
@@ -2992,6 +3000,10 @@ int main(int argc, char** argv) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
                 *millennium_assets->title_flow);
             millennium_state_page = 0;
+        } else if (millennium_assets && millennium_assets->spanish_title_boundary) {
+            millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
+                *millennium_assets->spanish_title_boundary);
+            millennium_state_page = 0;
         }
     };
     const auto start_deuteros = [&] {
@@ -3445,8 +3457,10 @@ int main(int argc, char** argv) {
                     if (millennium_assets->language == "es") {
                         draw_text(renderer, 64, 220,
                             tr("AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC"));
-                        draw_text(renderer, 64, 238,
-                            tr("The simulation is incomplete; no synthetic substitute will run."));
+                        draw_text(renderer, 64, 238, millennium_title_session
+                                && millennium_title_session->handed_off()
+                            ? tr("The simulation is incomplete; no synthetic substitute will run.")
+                            : tr("PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
                     } else {
                         draw_text(renderer, 64, 220, tr("AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"));
                         draw_text(renderer, 64, 238, millennium_title_session

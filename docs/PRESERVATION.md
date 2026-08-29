@@ -553,9 +553,14 @@ hidden prebuffer adjustment, or claim that either entry is dynamically
 reached. Resolving this boundary requires native GEMDOS load-address evidence
 and remains outside the current non-executing recovery.
 
-The live Millennium Atari bootstrap session executes only the two proven
-in-memory copies from `MILENIUM.TOS`, materializing the original 514-byte
-target at `$77000`, then reaches the literal `Fopen` request above. It resolves
+The live Millennium Atari bootstrap session now executes a deliberately tiny
+local interpreter for only the two proven in-memory copy loops from
+`MILENIUM.TOS`: 54 original longword copies to the BSS bootstrap, followed by
+257 original word copies that materialize the 514-byte target at `$77000`.
+The execution record pins entry PC `$0`, branch PC `$24`, BSS entry `$1d636`,
+and stop address `$7700e`, immediately before the original `TRAP #1`. It has
+no general 68000 decoder, host stack, relocation result, or GEMDOS
+implementation. It resolves
 the same read-only FAT12 entry and retains its independently verified candidate
 entry plus the explicit 34-byte Fread/load-address disagreement for diagnostics.
 That source read is never represented as a native Fread buffer. The session
@@ -1882,6 +1887,12 @@ cross unrecovered Exec and graphics-library vector boundaries.
 The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
 the passed mode word at `$4040e`, and comparing its low byte with five. The
 meaning of those mode values and the later gameplay dispatch remain unknown.
+For the live profile-one handoff, `DeuterosAmigaTitleStageSession` now exposes
+the two direct pre-Exec stores as an immutable sparse state record:
+`$4040e.w = $0001` and `$19d52.b = $01`. This is a direct result of the
+hash-validated entry instructions, not a title-stage RAM image: the incoming
+controller longword is still unavailable, no other title RAM is initialized,
+and neither the source ADF nor a host-side Amiga memory map is changed.
 For mode five it copies the byte to `$3717e` and writes `$0101` to `$38092`;
 every other path writes byte one to `$19d52`. The shared prefix is now
 opcode-validated through `$40574`: it installs stack `$40b62`, loads Exec base
@@ -3455,8 +3466,13 @@ child return, or run either target's unrecovered ABI.
 Spanish `TITLES.EXE` is separately accepted only at its own SHA-256 above. Its
 own bytes retain entry `$1b80`, private wrapper `$0122`, and post-title
 `$1968 -> $1931`: five AX=`$0013` private calls followed by helper `$1917`.
-This locks shared machine-code facts without substituting English resources,
-drivers, ABI effects, or frames.
+The exact Spanish binary also contains one unique `INT $21/AH=$06/DL=$ff`
+console-availability poll at `$0d0a`; its `AND AL,AL` / `JNZ` path enters the
+same local exit at `$1c54`. Eon therefore permits a host key event to record
+this strictly availability-only Spanish title hand-off. It neither assigns a
+DOS character nor executes the following private driver, DOS return, IBM.COM
+child status, or `2200AD.EXE`. This locks a real local input/control path
+without substituting English resources, drivers, ABI effects, or frames.
 
 Spanish `2200AD.EXE` has a separately recovered COM startup prefix, not an
 English substitute. Its entry preserves `DS=CS` and `ES=CS`, then jumps to

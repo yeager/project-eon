@@ -26,6 +26,18 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     // Keep the caller-proven bootstrap profile joined to the exact loaded
     // stage. The helper models only local writes and stops before Exec.
     entry_prefix_ = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
+    entry_prefix_state_ = materialize_deuteros_amiga_title_entry_prefix_state(
+        disk, plan, incoming_profile);
+    if (entry_prefix_state_.incoming_profile != entry_prefix_.incoming_profile
+        || entry_prefix_state_.stop_before_exec_address != entry_prefix_.stop_before_exec_address
+        || entry_prefix_state_.writes[0].address != entry_prefix_.mode_word_address
+        || entry_prefix_state_.writes[0].width_bytes != 2
+        || entry_prefix_state_.writes[0].value != entry_prefix_.mode_word_value
+        || entry_prefix_state_.writes[1].address != entry_prefix_.normal_mode_byte_address
+        || entry_prefix_state_.writes[1].width_bytes != 1
+        || entry_prefix_state_.writes[1].value != entry_prefix_.normal_mode_byte_value) {
+        throw std::runtime_error("Deuteros title prefix state detached from original entry evidence");
+    }
 }
 
 std::span<const std::uint8_t> DeuterosAmigaTitleStageSession::original_bytes() const {

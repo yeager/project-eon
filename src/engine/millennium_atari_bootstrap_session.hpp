@@ -21,6 +21,7 @@ public:
     [[nodiscard]] const MillenniumAtariBssEntry& bss_entry() const { return bss_entry_; }
     [[nodiscard]] const MillenniumAtariBssSource& bss_source() const { return bss_source_; }
     [[nodiscard]] const MillenniumAtariMaterializedTarget& target() const { return target_; }
+    [[nodiscard]] const MillenniumAtariBootstrapExecution& execution() const { return execution_; }
     [[nodiscard]] const MillenniumAtariTrapEntry& fopen_boundary() const { return trap_; }
     [[nodiscard]] const MillenniumAtariFopenFallthrough& fopen_fallthrough() const {
         return fopen_fallthrough_;
@@ -49,6 +50,7 @@ private:
     MillenniumAtariBssEntry bss_entry_;
     MillenniumAtariBssSource bss_source_;
     MillenniumAtariMaterializedTarget target_;
+    MillenniumAtariBootstrapExecution execution_;
     MillenniumAtariTrapEntry trap_;
     MillenniumAtariFopenFallthrough fopen_fallthrough_;
     MillenniumAtariFreadConfigTransferBoundary fread_config_transfer_;
