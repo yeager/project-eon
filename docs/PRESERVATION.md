@@ -1042,9 +1042,16 @@ encode local `BCC.S $68636 → $6863a`, `BCS.S $68642 → $68650`, and `BMI.S
 $68644 → $68694` branches. The unbranched suffix restores the saved registers
 and encodes `JMP $7bef0` at `$6864a`.
 `MillenniumAmigaResidentPostNegativeD3ContinuationBoundary` hash-locks this
-complete raw span and the literal branch/jump targets. It does not evaluate
-registers or flags, choose a route, restore state, follow either local target,
-or execute the external jump; those effects remain runtime boundaries.
+complete raw span and the literal branch/jump targets.
+`execute_millennium_amiga_resident_post_negative_d3_continuation_prefix`
+now models the 54-byte call-free sequence for controlled register inputs only:
+the three word additions, word-width pair comparison, optional `EXG`/`SUB`/
+`ADDQ`, and the two range tests. It stops at `$68650` or `$68694` when either
+branch leaves the verified span; on the sole fallthrough it reports the exact
+`MOVEM`-restored D0–D3/A5 image and stops before external `$7bef0`. No original
+caller, stack, RAM image, branch target, or external callee is supplied. The
+same two contiguous records are retained by the exact Defjam bootstrap session
+so that this local execution cannot be detached from its hash-verified media.
 
 At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
 $68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control
