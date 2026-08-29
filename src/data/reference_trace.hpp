@@ -65,6 +65,22 @@ struct ReferenceTrace {
     std::size_t adapter_open_library_count = 0;
     std::size_t adapter_graphics_count = 0;
     std::size_t adapter_custom_register_count = 0;
+    // Version 3 title-bridge captures retain call and return observations
+    // separately. These counters are diagnostics only; they do not provide
+    // values to the recovered title-stage runtime.
+    std::size_t adapter_exec_return_count = 0;
+    std::size_t adapter_open_library_return_count = 0;
+    std::size_t adapter_graphics_call_count = 0;
+    std::size_t adapter_graphics_return_count = 0;
+    std::size_t adapter_custom_register_call_count = 0;
+    std::size_t adapter_custom_register_return_count = 0;
+    std::size_t adapter_callback_registration_return_count = 0;
+    std::size_t adapter_queue_snapshot_count = 0;
+    std::size_t adapter_callback_entry_count = 0;
+    std::size_t adapter_selector_entry_count = 0;
+    std::size_t adapter_local_call_count = 0;
+    std::size_t adapter_local_return_count = 0;
+    std::size_t adapter_dispatch_snapshot_count = 0;
 };
 
 struct ReferenceTraceValidation {
