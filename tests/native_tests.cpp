@@ -961,6 +961,12 @@ int main() {
     assert(title_flow.input_exit_helper_position_count == 15);
     assert(title_flow.input_exit_helper_position_stride == 4);
     assert(title_flow.input_exit_helper_private_driver_function == 6);
+    assert(title_flow.input_exit_helper_driver_record_address == 0x1349);
+    assert(title_flow.input_exit_helper_driver_record_segment_cell_address == 0x134b);
+    assert(title_flow.input_exit_helper_driver_record_table_second_cell_address == 0x134f);
+    assert(title_flow.input_exit_helper_driver_record_table_first_cell_address == 0x1351);
+    assert(title_flow.input_exit_helper_decoded_height_cell_address == 0x1357);
+    assert(title_flow.input_exit_helper_decoded_width_cell_address == 0x1359);
     assert(title_flow.exit_code == 0);
     assert(title_flow.launcher_title_program_address == 0x68f);
     assert(title_flow.launcher_game_program_address == 0x69a);

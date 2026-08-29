@@ -167,6 +167,13 @@ verified reports are printed; it never selects a fallback platform or language.
 Inspection neither extracts files to disk nor creates, alters, or substitutes
 game data.
 
+When a report reaches a platform boundary, it also states the minimum missing
+reference-trace inputs. Those lines are a collection checklist, not an
+emulation request: use a hash-identified original release and a trace-capable,
+read-only emulator setup. In particular, the Spanish Millennium DOS handoff
+never borrows English executable/state evidence, and Atari ST reports never
+substitute DOS or Amiga resources for missing GEMDOS/XBIOS/callback results.
+
 The current SDL application is deliberately an incremental reimplementation,
 not a mock game. It lists detected real releases and proves the Original/Modern
 presentation boundary while reverse engineering proceeds. Selecting Deuteros

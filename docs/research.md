@@ -218,6 +218,17 @@ No dynamic trace is claimed from that tool: driver installation, BIOS results,
 private-vector lifetime, DOS EXEC return/status, and `2200AD` startup remain
 explicit boundaries until the above protocol can be met.
 
+`--inspect` repeats release-specific collection prerequisites without turning
+them into an execution request. The Spanish Millennium report requires a trace
+of that image's own DOS child return/AL, file operations, and CPU/interrupt
+events; English executables, state, and title behavior are never substituted.
+Millennium Atari ST requires GEMDOS `Fopen` D0/handle behavior, TRAP #14 and
+Line-A returns, configuration load address, and any codec/palette/planar
+destination. Deuteros Atari ST requires the XBIOS `Floprd` result, callback
+entry/return frame, dispatch word, and selected vector D1/D2 returns. These
+are evidence-collection lists only: Project Eon does not fabricate their
+values, perform the reported raw loads, or use another platform's assets.
+
 ### Deuteros Amiga title-stage protocol
 
 The first title-stage hard ABI boundary is `$40450`. Its vectors are

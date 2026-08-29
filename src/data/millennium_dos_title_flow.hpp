@@ -54,6 +54,12 @@ struct MillenniumDosTitleFlow {
     std::uint16_t input_exit_helper_position_count = 0;
     std::uint16_t input_exit_helper_position_stride = 0;
     std::uint16_t input_exit_helper_private_driver_function = 0;
+    std::uint16_t input_exit_helper_driver_record_address = 0;
+    std::uint16_t input_exit_helper_driver_record_segment_cell_address = 0;
+    std::uint16_t input_exit_helper_driver_record_table_second_cell_address = 0;
+    std::uint16_t input_exit_helper_driver_record_table_first_cell_address = 0;
+    std::uint16_t input_exit_helper_decoded_height_cell_address = 0;
+    std::uint16_t input_exit_helper_decoded_width_cell_address = 0;
     std::uint8_t exit_code = 0;
     // The title entry makes a direct function-$00 request through the already
     // installed private INT 91h vector. These fields are byte-level operands;

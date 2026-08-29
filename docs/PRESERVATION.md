@@ -1754,6 +1754,14 @@ its two words to local cells, and calls private INT 91 wrapper `$0122` with
 AX=`$0006`. This proves original offset setup and table identity only—not a
 resource name, visual coordinates, blit ABI, or visible pixel result.
 
+The caller fixes only part of the AX=`$0006` ES:BX record. `$1712` sets
+ES=CS and BX=`$1349`; `$174a` writes the two words of the current `$1768`
+table entry to `$134f` (record `+6`) and `$1351` (record `+8`). The related
+local segment cell is `$134b` (record `+2`), while codec-2 setup stores decoded
+height and width at `$1357`/`$1359` (record `+$0e`/`+$10`). The remaining
+record words, pointer provenance, interpretation of the table words, and all
+driver writes are deliberately unrecovered.
+
 The supplied driver images add one ABI-independent local fact for that exact
 function number. In both hash-identified `EGA640.BIN` (dispatch target `$0d37`)
 and `MCGA.BIN` (target `$0905`), AX=`$0013` loads DX=`$03da`, repeatedly reads
