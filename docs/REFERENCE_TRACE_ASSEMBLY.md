@@ -30,9 +30,10 @@ python3 tools/record_reference_trace.py \
 ```
 
 The assembler opens the original release read-only without following a
-symbolic link, records its SHA-256 and byte length before copying the external
-event stream, then rehashes the same open file descriptor. It refuses to issue
-an output directory if the recognised source identity changed. This protects
+symbolic link, identity-checks every opened metadata and event input, records
+the original release SHA-256 and byte length before copying the external event
+stream, then rehashes the same open file descriptor. It refuses to issue an
+output directory if the recognised source identity changed. This protects
 the assembler's path and detects concurrent changes; it is not a claim that it
 can prevent a privileged third party from modifying the user's file.
 
@@ -70,7 +71,8 @@ that do not match that one recognised release.
 
 For v2, metadata must additionally name exactly one registered `adapter`. The
 tool accepts only the four adapters in the public trace format and enforces
-their game/platform/language identity. The two physical-media adapters also
+each adapter's full outer-release hash/size plus game/platform/language
+identity. The two physical-media adapters also
 require their exact `source_media_sha256` and `source_stage_sha256` metadata.
 The assembler checks manifest provenance and file bounds; the Project Eon CLI
 remains the authority for full event-schema validation and trace admission.
