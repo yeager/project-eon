@@ -26,6 +26,7 @@
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
 #include "data/millennium_dos_title_flow.hpp"
+#include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
 #include "data/zip_archive.hpp"
@@ -561,6 +562,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto launcher = eon::extract_asset_by_sha256(release.path, launcher_sha256);
     if (!titles || !launcher) throw std::runtime_error("Verified Millennium title flow assets missing");
     const auto flow = eon::parse_millennium_dos_title_flow(*titles, *launcher);
+    const auto transition = eon::parse_millennium_dos_title_transition(title_lib, flow);
     std::cout << "          TITLES.EXE: resource " << flow.title_resource_index
         << ", " << flow.intro_transition_steps << " transition steps, key poll INT 0x"
         << std::hex << static_cast<unsigned>(flow.input_interrupt) << "; selection JLE 0x"
@@ -606,6 +608,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_private_interrupt_saved_offset_cell << "/0x"
         << flow.launcher_private_interrupt_saved_segment_cell << ", restore 0x"
         << flow.launcher_private_interrupt_restore_address << std::dec << "))\n";
+    std::cout << "          TITLE.LIB P01-P25: " << transition.patches.size()
+        << " decoded " << transition.patches.front().bitmap.width << 'x'
+        << transition.patches.front().bitmap.height
+        << " patches (static order only; no timing, composition, or frame claimed)\n";
     const auto ega640 = eon::extract_asset_by_sha256(release.path,
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a");
     const auto mcga = eon::extract_asset_by_sha256(release.path,

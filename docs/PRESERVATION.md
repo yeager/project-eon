@@ -101,6 +101,14 @@ physical-dump leaf, not an STX filesystem claim, executable entry point, or
 SDL mapping.  It remains inspection-only until physical-track decoding and a
 caller-connected control trace establish its use.
 
+`MillenniumAtariPhysicalControlTextEvidence` accepts only that full
+physical-dump SHA-256 and the exact 368-byte span. It locates the five
+printable literals at raw offsets `$12425` (`SAVE GAME`), `$12436` (`LOAD
+GAME`), `$12445` (`press left button to continue...`), `$1255d` (`MOUSE
+MODE`), and `$12572` (`KEYBOARD MODE`). This is a bounded preservation parser,
+not an STX decoder, a menu model, or a control map: it neither assigns a key
+or mouse action nor attempts to execute the protected physical media.
+
 ### Millennium Atari ST relocation evidence
 
 The Equinox FAT12 `MILL22B.INF` chain is separately hash-identified (84,720
@@ -1184,6 +1192,17 @@ The 40 source bytes hash to
 not resolve `$12ff4`, write title-stage memory, open a library, or turn those
 palette words into an SDL title screen.
 
+The immediately following caller-connected local callee is now bounded too.
+`$1f182..$1f195` (ADF `+$7a182`, 20 bytes, SHA-256
+`9b02afb723e201cacb93d18d87613dee0f56369707867989209a41d9430ec5f3`) loads
+its destination only from the externally established `$1f168` cell, clears D1,
+and uses original `DBRA D0,-4` with initial D0 `$1f3f`.  It therefore encodes
+exactly `$1f40` sequential four-byte zero writes followed by RTS `$1f194`.
+`DeuterosAmigaTitleDisplayClearProfile` preserves that loop and its source
+hash, but does not resolve `$1f168`, allocate or clear host memory, name the
+target a screen, or treat the preceding graphics-library call as having
+returned.
+
 When that counter reaches the verified threshold, the call at `$405b6` enters
 `$4069a`. This transition sets byte `$202c6`, saves and clears word `$202b8`,
 then copies exactly sixteen RGB4 words from `$1ed24` to `$40678`. Each copied
@@ -1626,9 +1645,16 @@ transition (SHA-256
 advances original runtime offsets by 368 and requests P01 through P25. Those
 37 records occupy `TITLE.LIB` `$2941..$4813` (7,890 bytes, SHA-256
 `f0ecbfd374b1c6122b407b29a6fe4a872a45a0a21e9ef6584e74829e06b5514d`), but
-write only to runtime buffers. Their segment setup, private-driver effects,
-composition, color handling and host-visible transfer are unrecovered; Project
-Eon does not draw an inferred transition.
+write only to runtime buffers. Project Eon decodes them as a read-only patch
+sequence: P01 through P25 are codec-2 16x23 (368-index) records, matching the
+`$0170` stride. P01's decoded index hash is
+`330db310a838487f4afea0011c1ba5f381e4ed7ad97d95e4745e7be2d2d8aaa1` and
+P25's is `d7e44c796aed167010cdef9ab7ccef38b3b260854b51b2fba818972f30dd35dd`.
+The static mode-2 path bounds each post-stream XLAT range (P02: `00 cc 00`),
+but does not establish a selected display mode. Segment setup, private-driver
+effects, composition, color handling, cadence and host-visible transfer remain
+unrecovered; Project Eon does not draw an inferred transition or claim extra
+title frames.
 
 The main title loop polls DOS `INT 21h`, `AH=$06`, `DL=$ff` through helper
 `$0d0a`; at `$1c28` it branches out of the loop only after the returned `AL`
@@ -2277,6 +2303,21 @@ the independently validated FAT12 `2200AD4.BIN`. These literals are available
 to inspection as original data only. No caller-connected code proves which
 input selects a mode or continues a prompt, so Project Eon does not convert
 them into SDL mappings or a reconstructed keyboard reference.
+
+For the verified English source specifically,
+`MillenniumDosControlTextEvidence` hash-locks the pointer-table selections and
+the surrounding raw records: indices 271, 350, 390, 398, and 399 select records
+at `$12a7`, `$1d88`, `$2aef`, `$2bcd`, and `$2be3` respectively. Their raw
+record hashes are `4ff26c46bfaba03c12a1a29271499c81d044ce2cccc8db06ad3e07535ad5445c`,
+`ab5a128110d288c166213ef0e64b8593d1945ab8e9624363c573fe8ef942f818`,
+`b0676d538a2ef6b07cdf467bb10a4dbea34af96fccafc90180a01825935c1d4f`,
+`220c3cd2cb86c2353f8f9320e6ec7c469007e4bd31e11dce52c847f8c510c5cc`, and
+`0951952248daef3634e418d0bed0cfa2ea8cd58f7975ee5e77880c54ad731f2d`.
+The parser returns these exact printable substrings while retaining each raw
+record's native prefix and boundary as provenance. The original static-data
+loader establishes that the file is requested, but its runtime destination and
+any input-dispatch caller remain unrecovered; these texts are therefore not
+host controls.
 
 ### Millennium DOS GX canvas
 
