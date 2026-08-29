@@ -85,6 +85,19 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(modal_continue, title_input)
         self.assertLess(modal_continue, menu_input)
 
+    def test_dos_title_handoff_uses_text_availability_not_raw_keydown(self) -> None:
+        # INT 21h/AH=06h branches only on a nonzero console character result.
+        # SDL text input is the narrow host availability analogue; a physical
+        # key event must not be treated as a made-up DOS character.
+        title_poll = SOURCE.index("millennium_title_session->poll_console(true)")
+        self.assertIn("SDL_StartTextInput(window)", SOURCE)
+        self.assertIn("SDL_StopTextInput(window)", SOURCE)
+        text_event = SOURCE.rfind("event.type == SDL_EVENT_TEXT_INPUT", 0, title_poll)
+        self.assertGreaterEqual(text_event, 0)
+        self.assertIn("event.text.text && event.text.text[0] != '\\0'", SOURCE[text_event:title_poll])
+        self.assertNotIn("event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat",
+            SOURCE[text_event:title_poll])
+
 
 if __name__ == "__main__":
     unittest.main()

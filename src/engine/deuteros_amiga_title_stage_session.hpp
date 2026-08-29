@@ -1,6 +1,7 @@
 #pragma once
 
 #include "data/amiga_adf.hpp"
+#include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
 
@@ -37,6 +38,10 @@ public:
         return exec_prelude_;
     }
     [[nodiscard]] std::span<const std::uint8_t> original_bytes() const;
+    // The first sixteen RGB4 words at the hash-validated title transition's
+    // source address, exposed only as original palette evidence. This is not
+    // a decoded title screen and does not cross graphics.library.
+    [[nodiscard]] std::array<RgbColor, 16> transition_palette_evidence() const;
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
 
 private:

@@ -665,6 +665,15 @@ def main() -> int:
                     "Millennium Atari ST auxiliary resource-name evidence did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
+            expected_config_census = (
+                "supplied ST config scan: 7 images, 5 valid FAT12 volumes, 4 files named "
+                "MILL22A.inf; 4 exact config hash and 1 exact MILENIUM.TOS hash"
+            )
+            if expected_config_census not in inspected.stdout:
+                raise SystemExit(
+                    "Millennium Atari ST exact launch-pair census did not match supplied media:\n"
+                    f"{inspected.stdout}"
+                )
             expected_stx = (
                 "physical Disk 1 STX: SHA-256 "
                 "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd; "
