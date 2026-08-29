@@ -32,6 +32,7 @@
 #include "data/millennium_dos_title_exit.hpp"
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
+#include "data/millennium_dos_sound_driver.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -1887,6 +1888,38 @@ int main() {
     assert(title_flow.launcher_private_interrupt_handler_other_selector == 2);
     assert(title_flow.launcher_private_interrupt_handler_other_program_address == 0x5f9);
     assert(title_flow.launcher_private_interrupt_handler_other_program == "mcga.bin");
+    const auto sound_selection = eon::parse_millennium_dos_sound_selection(*mill_bytes);
+    assert(sound_selection.selector_entry_address == 0x511);
+    assert(sound_selection.selector_byte_count == 100);
+    assert(sound_selection.prompt_address == 0x407);
+    assert(sound_selection.filename_table_address == 0x62a);
+    assert(sound_selection.selection_table_address == 0x66e);
+    assert(sound_selection.ibm_speaker_table_slot == 0);
+    assert(sound_selection.sound_blaster_table_slot == 3);
+    assert(sound_selection.covox_table_slot == 4);
+    assert(sound_selection.ibm_speaker_filename == "sibm.drv");
+    assert(sound_selection.sound_blaster_filename == "ssbl.drv");
+    assert(sound_selection.covox_filename == "scvx.drv");
+    assert(sound_selection.missing_srol_table_slot == 2);
+    assert(sound_selection.missing_srol_filename == "srol.drv");
+    const auto sound_blaster = eon::extract_asset_by_sha256(english_dos->path,
+        "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72");
+    const auto covox = eon::extract_asset_by_sha256(english_dos->path,
+        "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4");
+    assert(sound_blaster && covox);
+    const auto sound_blaster_leaf = eon::admit_millennium_dos_sound_driver_leaf(*sound_blaster);
+    const auto covox_leaf = eon::admit_millennium_dos_sound_driver_leaf(*covox);
+    assert(sound_blaster_leaf.kind == eon::MillenniumDosSoundDriverKind::sound_blaster);
+    assert(sound_blaster_leaf.original_filename == "ssbl.drv" && sound_blaster_leaf.byte_size == 9194);
+    assert(covox_leaf.kind == eon::MillenniumDosSoundDriverKind::covox_sound_master);
+    assert(covox_leaf.original_filename == "scvx.drv" && covox_leaf.byte_size == 4053);
+    bool rejected_sound_leaf = false;
+    try {
+        static_cast<void>(eon::admit_millennium_dos_sound_driver_leaf(*mill_bytes));
+    } catch (const std::runtime_error&) {
+        rejected_sound_leaf = true;
+    }
+    assert(rejected_sound_leaf);
     const auto ega640 = eon::extract_asset_by_sha256(english_dos->path,
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a");
     const auto mcga = eon::extract_asset_by_sha256(english_dos->path,

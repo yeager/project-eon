@@ -221,3 +221,55 @@ msgstr ""
 
 msgid "WIDESCREEN 16:9"
 msgstr ""
+
+#: src/main.cpp
+msgid "CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"
+msgstr ""
+
+#: src/main.cpp
+msgid "SELECT A GAME"
+msgstr ""
+
+#: src/main.cpp
+msgid "SELECT A VERIFIED PLATFORM"
+msgstr ""
+
+#: src/main.cpp
+msgid "UNAVAILABLE PLATFORM CARDS CANNOT START A GAME"
+msgstr ""
+
+#: src/main.cpp
+msgid "SELECT A PRESENTATION PROFILE"
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL AND MODERN START DIRECTLY. CUSTOM TUNES MODERN FIRST."
+msgstr ""
+
+#: src/main.cpp
+msgid "CUSTOM SETTINGS READY — ENTER / CLICK TO START MODERN"
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL"
+msgstr ""
+
+#: src/main.cpp
+msgid "PRESERVATION PROFILE"
+msgstr ""
+
+#: src/main.cpp
+msgid "MODERN"
+msgstr ""
+
+#: src/main.cpp
+msgid "ENHANCED PROFILE"
+msgstr ""
+
+#: src/main.cpp
+msgid "CUSTOM"
+msgstr ""
+
+#: src/main.cpp
+msgid "TUNE MODERN SETTINGS"
+msgstr ""

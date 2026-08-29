@@ -18,7 +18,7 @@ constexpr std::array<ReleaseManifestEntry, 6> releases{{
     {"b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", Game::millennium, Platform::dos, "es", 330'050},
 }};
 
-constexpr std::array<ParserProfileManifestEntry, 31> profiles{{
+constexpr std::array<ParserProfileManifestEntry, 34> profiles{{
     {"deuteros-amiga-clean-main-stage", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x5800, 0x4200},
     {"deuteros-amiga-clean-title-handoff", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x6e000, 0x6ca00},
     {"deuteros-amiga-bundle-0", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x1b800, 0x2f3f4},
@@ -45,6 +45,9 @@ constexpr std::array<ParserProfileManifestEntry, 31> profiles{{
     {"millennium-dos-last-screen", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510", 18'117, 0x0, 18'117},
     {"millennium-dos-title-library", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678", 18'907, 0x0, 18'907},
     {"millennium-dos-launcher", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e", 1'445, 0x0, 1'445},
+    {"millennium-dos-sound-selection", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e", 1'445, 0x411, 100},
+    {"millennium-dos-sound-blaster-driver", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72", 9'194, 0x0, 9'194},
+    {"millennium-dos-covox-driver", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4", 4'053, 0x0, 4'053},
     {"millennium-dos-sfx1-voice", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88", 771, 0x0, 771},
     {"millennium-dos-spanish-startup", "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d", 737'280, 0x0, 0x200},
     {"millennium-dos-spanish-title-boundary", "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d", 737'280, 0x0, 737'280},

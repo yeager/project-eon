@@ -102,7 +102,12 @@ for package in "$@"; do
 
   # The generated cards and a catalog prove that the launcher can render and
   # localize after installation.  The original data directory stays absent.
-  for required in "assets/cards/millennium.png" "assets/cards/deuteros.png"; do
+  for required in \
+      "assets/cards/millennium.png" "assets/cards/deuteros.png" \
+      "assets/cards/dos-platform-v1.png" "assets/cards/amiga-platform-v1.png" \
+      "assets/cards/atari-st-platform-v1.png" \
+      "assets/cards/original-profile-v1.png" "assets/cards/modern-profile-v1.png" \
+      "assets/cards/custom-profile-v1.png"; do
     if ! printf '%s\n' "$contents" | grep -Fq "$required"; then
       echo "$package lacks required Project Eon resource: $required" >&2
       exit 1

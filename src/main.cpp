@@ -30,6 +30,7 @@
 #include "data/millennium_dos_title_exit.hpp"
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
+#include "data/millennium_dos_sound_driver.hpp"
 #include "data/sha256.hpp"
 #include "data/reference_trace.hpp"
 #include "data/recovery_map.hpp"
@@ -55,16 +56,36 @@
 namespace {
 
 enum class Screen { menu, launching };
-// The launcher has three independently reachable controls.  Keep this host
-// focus separate from a recovered game input state: it only determines which
-// read-only launch request control receives a keyboard command.
-enum class MenuFocus { cards, platform, start };
+// The launcher deliberately separates the three choices into pages.  A game
+// card cannot accidentally start whichever platform happened to be selected:
+// the platform page records an explicit, hash-verified choice first, then the
+// profile page records Original, Modern, or a user-tuned Modern launch.
+enum class LauncherPage { games, platforms, profiles };
 
 const eon::Translator* active_translator = nullptr;
 std::unique_ptr<eon::UnicodeTextRenderer> active_text_renderer;
 
 struct Card {
     eon::Game game;
+    const char* title;
+    const char* subtitle;
+    const char* filename;
+    SDL_FRect bounds;
+    SDL_Texture* texture = nullptr;
+};
+
+struct PlatformCard {
+    eon::Platform platform;
+    const char* title;
+    const char* filename;
+    SDL_FRect bounds;
+    SDL_Texture* texture = nullptr;
+};
+
+enum class ProfileChoice { original, modern, custom };
+
+struct ProfileCard {
+    ProfileChoice choice;
     const char* title;
     const char* subtitle;
     const char* filename;
@@ -845,6 +866,16 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto launcher = eon::extract_verified_release_asset(release, launcher_sha256);
     if (!titles || !launcher) throw std::runtime_error("Verified Millennium title flow assets missing");
     const auto flow = eon::parse_millennium_dos_title_flow(*titles, *launcher);
+    const auto sound_selection = eon::parse_millennium_dos_sound_selection(*launcher);
+    const auto sound_blaster = eon::extract_verified_release_asset(release,
+        "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72");
+    const auto covox = eon::extract_verified_release_asset(release,
+        "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4");
+    if (!sound_blaster || !covox) {
+        throw std::runtime_error("Verified Millennium sound-driver leaves missing");
+    }
+    const auto sound_blaster_leaf = eon::admit_millennium_dos_sound_driver_leaf(*sound_blaster);
+    const auto covox_leaf = eon::admit_millennium_dos_sound_driver_leaf(*covox);
     const auto title_exit = eon::parse_millennium_dos_title_exit_closure(*titles);
     const auto transition = eon::parse_millennium_dos_title_transition(title_lib, flow);
     std::cout << "          TITLES.EXE: resource " << flow.title_resource_index
@@ -892,6 +923,17 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << flow.launcher_private_interrupt_saved_offset_cell << "/0x"
         << flow.launcher_private_interrupt_saved_segment_cell << ", restore 0x"
         << flow.launcher_private_interrupt_restore_address << std::dec << "))\n";
+    std::cout << "          MILL.COM sound selection: routine 0x" << std::hex
+        << sound_selection.selector_entry_address << " accepts 0/1/2 -> table slots "
+        << static_cast<unsigned>(sound_selection.ibm_speaker_table_slot) << "/"
+        << static_cast<unsigned>(sound_selection.sound_blaster_table_slot) << "/"
+        << static_cast<unsigned>(sound_selection.covox_table_slot) << " ("
+        << sound_selection.ibm_speaker_filename << "/" << sound_blaster_leaf.original_filename
+        << "/" << covox_leaf.original_filename << "); admitted original leaves "
+        << std::dec << sound_blaster_leaf.byte_size << "/" << covox_leaf.byte_size
+        << " bytes; table slot " << static_cast<unsigned>(sound_selection.missing_srol_table_slot) << " "
+        << sound_selection.missing_srol_filename
+        << " is absent (no fallback or sound-driver execution)\n" << std::dec;
     std::cout << "          TITLES.EXE local exit: 0x" << std::hex
         << title_exit.nonzero_entry_address << " calls 0x"
         << title_exit.private_driver_target_address << "/0x"
@@ -2502,6 +2544,18 @@ int main(int argc, char** argv) {
         {eon::Game::deuteros, "DEUTEROS", "THE NEXT MILLENNIUM", "deuteros.png", {664, 170, 552, 310}},
     }};
     for (auto& card : cards) card.texture = load_card(renderer, card.filename);
+    std::array<PlatformCard, 3> platform_cards{{
+        {eon::Platform::dos, "DOS", "dos-platform-v1.png", {64, 188, 352, 308}},
+        {eon::Platform::amiga, "AMIGA", "amiga-platform-v1.png", {464, 188, 352, 308}},
+        {eon::Platform::atari_st, "ATARI ST", "atari-st-platform-v1.png", {864, 188, 352, 308}},
+    }};
+    for (auto& card : platform_cards) card.texture = load_card(renderer, card.filename);
+    std::array<ProfileCard, 3> profile_cards{{
+        {ProfileChoice::original, "ORIGINAL", "PRESERVATION PROFILE", "original-profile-v1.png", {64, 188, 352, 308}},
+        {ProfileChoice::modern, "MODERN", "ENHANCED PROFILE", "modern-profile-v1.png", {464, 188, 352, 308}},
+        {ProfileChoice::custom, "CUSTOM", "TUNE MODERN SETTINGS", "custom-profile-v1.png", {864, 188, 352, 308}},
+    }};
+    for (auto& card : profile_cards) card.texture = load_card(renderer, card.filename);
     std::unique_ptr<eon::DeuterosAmigaOpening> deuteros_opening;
     std::unique_ptr<eon::DeuterosAmigaPaulaMixer> deuteros_paula;
     SDL_AudioStream* deuteros_audio_stream = nullptr;
@@ -2576,9 +2630,14 @@ int main(int argc, char** argv) {
     };
 
     Screen screen = request.game ? Screen::launching : Screen::menu;
+    LauncherPage launcher_page = LauncherPage::games;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     int focused = 0;
-    MenuFocus menu_focus = MenuFocus::cards;
+    int focused_platform_card = 0;
+    int focused_profile_card = 0;
+    bool custom_profile_ready = false;
+    bool show_scanner = false;
+    bool show_modern_graphics_settings = false;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
     std::optional<std::uint32_t> deuteros_title_resource;
@@ -2588,9 +2647,6 @@ int main(int argc, char** argv) {
     // launcher until a genuine DOS return/startup path is recovered.
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
-    const auto menu_platforms_for = [&](const eon::Game game) {
-        return eon::available_platforms(releases, game);
-    };
     const auto focus_menu_card = [&](const int next_focus) {
         focused = next_focus;
         if (request.platform) return;
@@ -2599,43 +2655,6 @@ int main(int argc, char** argv) {
         if (next_platform != active_platform) {
             active_platform = next_platform;
             discard_millennium_assets();
-        }
-    };
-    const auto change_menu_platform = [&](const int direction) {
-        if (request.platform) return;
-        const auto game = cards[static_cast<std::size_t>(focused)].game;
-        const auto platforms = menu_platforms_for(game);
-        if (platforms.empty()) return;
-        const auto current = std::find(platforms.begin(), platforms.end(), active_platform);
-        const auto index = current == platforms.end()
-            ? 0U : static_cast<unsigned>(std::distance(platforms.begin(), current));
-        const auto next = direction < 0
-            ? (index + platforms.size() - 1U) % platforms.size()
-            : (index + 1U) % platforms.size();
-        if (!active_platform || *active_platform != platforms[next]) {
-            active_platform = platforms[next];
-            discard_millennium_assets();
-        }
-    };
-    const auto select_menu_platform_endpoint = [&](const bool last) {
-        if (request.platform) return;
-        const auto platforms = menu_platforms_for(cards[static_cast<std::size_t>(focused)].game);
-        if (platforms.empty()) return;
-        const auto platform = platforms[last ? platforms.size() - 1U : 0U];
-        if (!active_platform || *active_platform != platform) {
-            active_platform = platform;
-            discard_millennium_assets();
-        }
-    };
-    const auto advance_menu_focus = [&](const int direction) {
-        // Do not stop the keyboard on a platform control which has no
-        // verified release to select.  A CLI-fixed platform is also not a
-        // launcher-editable control.
-        for (int attempts = 0; attempts < 3; ++attempts) {
-            const auto raw = (static_cast<int>(menu_focus) + direction + 3) % 3;
-            menu_focus = static_cast<MenuFocus>(raw);
-            if (menu_focus != MenuFocus::platform || request.platform
-                || !menu_platforms_for(cards[static_cast<std::size_t>(focused)].game).empty()) return;
         }
     };
     const auto start_millennium_title = [&] {
@@ -2658,12 +2677,42 @@ int main(int argc, char** argv) {
         deuteros_last_tick = SDL_GetTicks();
         deuteros_title_resource.reset();
     };
+    const auto launch_menu_selection = [&] {
+        const auto game = cards[static_cast<std::size_t>(focused)].game;
+        if (!eon::release_available(releases, game, active_platform)) return;
+        selected = game;
+        screen = Screen::launching;
+        if (selected == eon::Game::millennium) start_millennium_title();
+        if (selected == eon::Game::deuteros) start_deuteros();
+    };
+    const auto choose_platform_card = [&](const int index) {
+        focused_platform_card = std::clamp(index, 0, static_cast<int>(platform_cards.size() - 1U));
+        const auto platform = platform_cards[static_cast<std::size_t>(focused_platform_card)].platform;
+        const auto game = cards[static_cast<std::size_t>(focused)].game;
+        if (!eon::release_available(releases, game, platform)) return false;
+        if (!active_platform || *active_platform != platform) {
+            active_platform = platform;
+            discard_millennium_assets();
+        }
+        return true;
+    };
+    const auto choose_profile_card = [&](const ProfileChoice choice) {
+        if (choice == ProfileChoice::custom) {
+            // Custom is not a third runtime mode. It is the deliberate
+            // launcher route for tuning Modern's renderer-only options.
+            request.presentation = eon::Presentation::modern;
+            custom_profile_ready = false;
+            show_modern_graphics_settings = true;
+            return;
+        }
+        request.presentation = choice == ProfileChoice::original
+            ? eon::Presentation::original : eon::Presentation::modern;
+        launch_menu_selection();
+    };
     if (screen == Screen::launching && selected == eon::Game::millennium) {
         start_millennium_title();
     }
     if (screen == Screen::launching && selected == eon::Game::deuteros) start_deuteros();
-    bool show_scanner = false;
-    bool show_modern_graphics_settings = false;
     ModernGraphicsSettings modern_graphics_settings;
     modern_graphics_settings.output_resolution_index = output_resolution_index_for(request.display);
     modern_graphics_settings.aspect_ratio_index = request.display.aspect_ratio_index;
@@ -2701,6 +2750,9 @@ int main(int argc, char** argv) {
                 // the future in-game Modern-presentation entry point.
                 request.presentation = eon::Presentation::modern;
                 show_modern_graphics_settings = !show_modern_graphics_settings;
+                if (!show_modern_graphics_settings && screen == Screen::menu
+                    && launcher_page == LauncherPage::profiles
+                    && focused_profile_card == 2) custom_profile_ready = true;
                 continue;
             }
             if (show_modern_graphics_settings) {
@@ -2710,6 +2762,8 @@ int main(int argc, char** argv) {
                 if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.key == SDLK_ESCAPE) {
                         show_modern_graphics_settings = false;
+                        if (screen == Screen::menu && launcher_page == LauncherPage::profiles
+                            && focused_profile_card == 2) custom_profile_ready = true;
                     } else if (event.key.key == SDLK_UP) {
                         modern_graphics_settings.focused_option =
                             (modern_graphics_settings.focused_option + 4) % 5;
@@ -2722,6 +2776,8 @@ int main(int argc, char** argv) {
                 } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
                     if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
                         show_modern_graphics_settings = false;
+                        if (screen == Screen::menu && launcher_page == LauncherPage::profiles
+                            && focused_profile_card == 2) custom_profile_ready = true;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                         modern_graphics_settings.focused_option =
                             (modern_graphics_settings.focused_option + 4) % 5;
@@ -2738,6 +2794,10 @@ int main(int argc, char** argv) {
             }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
                 if (screen == Screen::launching && !request.game) screen = Screen::menu;
+                else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
+                    launcher_page = launcher_page == LauncherPage::profiles
+                        ? LauncherPage::platforms : LauncherPage::games;
+                }
                 else running = false;
             }
             if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
@@ -2780,84 +2840,77 @@ int main(int argc, char** argv) {
                 deuteros_input_pressed = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
-                && event.key.key == SDLK_D && !event.key.repeat) {
-                show_scanner = !show_scanner;
-            }
+                && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
-                if (event.key.key == SDLK_TAB) {
-                    advance_menu_focus((event.key.mod & SDL_KMOD_SHIFT) ? -1 : 1);
-                } else if (event.key.key == SDLK_HOME) {
-                    if (menu_focus == MenuFocus::cards) focus_menu_card(0);
-                    else if (menu_focus == MenuFocus::platform) select_menu_platform_endpoint(false);
-                } else if (event.key.key == SDLK_END) {
-                    if (menu_focus == MenuFocus::cards) {
-                        focus_menu_card(static_cast<int>(cards.size() - 1U));
-                    } else if (menu_focus == MenuFocus::platform) {
-                        select_menu_platform_endpoint(true);
+                const bool previous = event.key.key == SDLK_LEFT || event.key.key == SDLK_UP;
+                const bool next = event.key.key == SDLK_RIGHT || event.key.key == SDLK_DOWN;
+                if (event.key.key == SDLK_ESCAPE && launcher_page != LauncherPage::games) {
+                    launcher_page = launcher_page == LauncherPage::profiles
+                        ? LauncherPage::platforms : LauncherPage::games;
+                } else if (launcher_page == LauncherPage::games) {
+                    if (previous || next) focus_menu_card(next ? 1 - focused : 1 - focused);
+                    else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
+                        launcher_page = LauncherPage::platforms;
                     }
-                } else if (menu_focus == MenuFocus::cards
-                    && (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT)) {
-                    focus_menu_card(1 - focused);
-                } else if (menu_focus == MenuFocus::platform
-                    && (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT
-                        || event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
-                    change_menu_platform(event.key.key == SDLK_LEFT || event.key.key == SDLK_UP ? -1 : 1);
-                } else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                    const auto game = cards[static_cast<std::size_t>(focused)].game;
-                    if (eon::release_available(releases, game, active_platform)) {
-                        selected = game;
-                        screen = Screen::launching;
-                        if (selected == eon::Game::millennium) start_millennium_title();
-                        if (selected == eon::Game::deuteros) start_deuteros();
+                } else if (launcher_page == LauncherPage::platforms) {
+                    if (previous || next) {
+                        focused_platform_card = (focused_platform_card + (previous ? 2 : 1)) % 3;
+                    } else if (event.key.key == SDLK_HOME) focused_platform_card = 0;
+                    else if (event.key.key == SDLK_END) focused_platform_card = 2;
+                    else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
+                        if (choose_platform_card(focused_platform_card)) launcher_page = LauncherPage::profiles;
+                    }
+                } else {
+                    if (previous || next) {
+                        focused_profile_card = (focused_profile_card + (previous ? 2 : 1)) % 3;
+                        custom_profile_ready = false;
+                    } else if (event.key.key == SDLK_HOME) focused_profile_card = 0;
+                    else if (event.key.key == SDLK_END) focused_profile_card = 2;
+                    else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
+                        if (focused_profile_card == 2 && custom_profile_ready) launch_menu_selection();
+                        else choose_profile_card(profile_cards[static_cast<std::size_t>(focused_profile_card)].choice);
                     }
                 }
             }
-            if (!show_modern_graphics_settings && screen == Screen::menu
-                && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+            if (screen == Screen::menu && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
                 const auto button = event.gbutton.button;
-                if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
-                    || button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
-                    focus_menu_card(1 - focused);
-                }
-                if (!request.platform && (button == SDL_GAMEPAD_BUTTON_DPAD_UP
-                    || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN)) {
-                    const auto game = cards[static_cast<std::size_t>(focused)].game;
-                    const auto platforms = menu_platforms_for(game);
-                    if (!platforms.empty()) {
-                        const auto current = std::find(platforms.begin(), platforms.end(), active_platform);
-                        const auto index = current == platforms.end()
-                            ? 0U : static_cast<unsigned>(std::distance(platforms.begin(), current));
-                        const auto next = button == SDL_GAMEPAD_BUTTON_DPAD_UP
-                            ? (index + platforms.size() - 1U) % platforms.size()
-                            : (index + 1U) % platforms.size();
-                        if (!active_platform || *active_platform != platforms[next]) {
-                            active_platform = platforms[next];
-                            discard_millennium_assets();
-                        }
-                    }
-                }
-                if (button == SDL_GAMEPAD_BUTTON_SOUTH || button == SDL_GAMEPAD_BUTTON_START) {
-                    const auto game = cards[static_cast<std::size_t>(focused)].game;
-                    if (eon::release_available(releases, game, active_platform)) {
-                        selected = game;
-                        screen = Screen::launching;
-                        if (selected == eon::Game::millennium) start_millennium_title();
-                        if (selected == eon::Game::deuteros) start_deuteros();
-                    }
+                if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT || button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
+                    if (launcher_page == LauncherPage::games) focus_menu_card(1 - focused);
+                    else if (launcher_page == LauncherPage::platforms) focused_platform_card = (focused_platform_card + 2) % 3;
+                    else { focused_profile_card = (focused_profile_card + 2) % 3; custom_profile_ready = false; }
+                } else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
+                    if (launcher_page == LauncherPage::games) focus_menu_card(1 - focused);
+                    else if (launcher_page == LauncherPage::platforms) focused_platform_card = (focused_platform_card + 1) % 3;
+                    else { focused_profile_card = (focused_profile_card + 1) % 3; custom_profile_ready = false; }
+                } else if (button == SDL_GAMEPAD_BUTTON_SOUTH || button == SDL_GAMEPAD_BUTTON_START) {
+                    if (launcher_page == LauncherPage::games) launcher_page = LauncherPage::platforms;
+                    else if (launcher_page == LauncherPage::platforms) {
+                        if (choose_platform_card(focused_platform_card)) launcher_page = LauncherPage::profiles;
+                    } else if (focused_profile_card == 2 && custom_profile_ready) launch_menu_selection();
+                    else choose_profile_card(profile_cards[static_cast<std::size_t>(focused_profile_card)].choice);
                 }
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 float x = 0, y = 0;
                 SDL_RenderCoordinatesFromWindow(renderer, event.button.x, event.button.y, &x, &y);
-                for (std::size_t index = 0; index < cards.size(); ++index) {
-                    if (inside(cards[index].bounds, x, y)) {
-                        focus_menu_card(static_cast<int>(index));
-                        if (eon::release_available(releases, cards[index].game, active_platform)) {
-                            selected = cards[index].game;
-                            screen = Screen::launching;
-                            if (selected == eon::Game::millennium) start_millennium_title();
-                            if (selected == eon::Game::deuteros) start_deuteros();
+                if (launcher_page == LauncherPage::games) {
+                    for (std::size_t index = 0; index < cards.size(); ++index) {
+                        if (inside(cards[index].bounds, x, y)) {
+                            focus_menu_card(static_cast<int>(index));
+                            launcher_page = LauncherPage::platforms;
                         }
+                    }
+                } else if (launcher_page == LauncherPage::platforms) {
+                    for (std::size_t index = 0; index < platform_cards.size(); ++index) {
+                        if (inside(platform_cards[index].bounds, x, y)
+                            && choose_platform_card(static_cast<int>(index))) launcher_page = LauncherPage::profiles;
+                    }
+                } else {
+                    for (std::size_t index = 0; index < profile_cards.size(); ++index) {
+                        if (!inside(profile_cards[index].bounds, x, y)) continue;
+                        focused_profile_card = static_cast<int>(index);
+                        if (index == 2 && custom_profile_ready) launch_menu_selection();
+                        else choose_profile_card(profile_cards[index].choice);
                     }
                 }
             }
@@ -2950,59 +3003,61 @@ int main(int argc, char** argv) {
 
         if (screen == Screen::menu) {
             draw_text(renderer, 64, 56, tr("PROJECT EON"));
-            draw_text(renderer, 64, 82, tr(
-                "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"));
-            for (std::size_t index = 0; index < cards.size(); ++index) {
-                auto& card = cards[index];
-                if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
-                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 185);
-                SDL_FRect label{card.bounds.x, card.bounds.y + card.bounds.h - 62, card.bounds.w, 62};
-                SDL_RenderFillRect(renderer, &label);
-                const bool selected_card = index == static_cast<std::size_t>(focused);
-                const bool card_has_keyboard_focus = selected_card && menu_focus == MenuFocus::cards;
-                SDL_SetRenderDrawColor(renderer, card_has_keyboard_focus ? 255 : selected_card ? 190 : 130,
-                    card_has_keyboard_focus ? 195 : selected_card ? 210 : 150,
-                    card_has_keyboard_focus ? 80 : selected_card ? 135 : 80, 255);
-                SDL_RenderRect(renderer, &card.bounds);
-                // Official game titles are immutable product identifiers, not
-                // launcher prose; all surrounding UI remains translated.
-                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, card.title);
-                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, card.subtitle);
-                const auto available = eon::release_available(releases, card.game,
-                    index == static_cast<std::size_t>(focused) ? active_platform : std::nullopt);
-                draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
-                    available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
-                    ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
-            }
-            const SDL_FRect start_focus_bounds{56, 518, 276, 28};
-            const SDL_FRect platform_focus_bounds{56, 540, 780, 28};
-            if (menu_focus == MenuFocus::start) {
-                SDL_SetRenderDrawColor(renderer, 255, 195, 80, 255);
-                SDL_RenderRect(renderer, &start_focus_bounds);
-            }
-            draw_text(renderer, 64, 530, tr("ENTER / CLICK: START"));
-            const auto focused_game = cards[static_cast<std::size_t>(focused)].game;
-            const auto menu_platforms = menu_platforms_for(focused_game);
-            std::string platform_text = tr("PLATFORM: ");
-            if (active_platform) {
-                platform_text += eon::name(*active_platform);
-            } else {
-                platform_text += tr("AUTO");
-            }
-            if (!menu_platforms.empty()) {
-                platform_text += "  (";
-                for (std::size_t index = 0; index < menu_platforms.size(); ++index) {
-                    if (index != 0) platform_text += ", ";
-                    platform_text += eon::name(menu_platforms[index]);
+            const auto draw_card_border = [&](const SDL_FRect& bounds, const bool active, const bool enabled) {
+                SDL_SetRenderDrawColor(renderer, active ? 255 : enabled ? 185 : 85,
+                    active ? 195 : enabled ? 210 : 90, active ? 80 : enabled ? 135 : 90, 255);
+                SDL_RenderRect(renderer, &bounds);
+            };
+            if (launcher_page == LauncherPage::games) {
+                draw_text(renderer, 64, 82, tr("SELECT A GAME"));
+                draw_text(renderer, 64, 108, tr("CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"));
+                for (std::size_t index = 0; index < cards.size(); ++index) {
+                    auto& card = cards[index];
+                    if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
+                    const bool available = eon::release_available(releases, card.game, std::nullopt);
+                    draw_card_border(card.bounds, index == static_cast<std::size_t>(focused), available);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 45, card.title);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25, card.subtitle);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
+                        available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
+                        ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }
-                platform_text += ')';
+            } else if (launcher_page == LauncherPage::platforms) {
+                const auto game = cards[static_cast<std::size_t>(focused)].game;
+                draw_text(renderer, 64, 82, tr("SELECT A VERIFIED PLATFORM"));
+                draw_text(renderer, 64, 108, tr("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME"));
+                for (std::size_t index = 0; index < platform_cards.size(); ++index) {
+                    auto& card = platform_cards[index];
+                    const bool available = eon::release_available(releases, game, card.platform);
+                    if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
+                    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                    if (!available) {
+                        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 155);
+                        SDL_RenderFillRect(renderer, &card.bounds);
+                    }
+                    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+                    draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_platform_card), available);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46, card.title);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
+                        available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
+                        ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
+                }
+            } else {
+                draw_text(renderer, 64, 82, tr("SELECT A PRESENTATION PROFILE"));
+                draw_text(renderer, 64, 108, tr("ORIGINAL AND MODERN START DIRECTLY. CUSTOM TUNES MODERN FIRST."));
+                for (std::size_t index = 0; index < profile_cards.size(); ++index) {
+                    auto& card = profile_cards[index];
+                    if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
+                    draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_profile_card), true);
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46,
+                        tr(card.title));
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
+                        tr(card.subtitle));
+                }
+                if (focused_profile_card == 2 && custom_profile_ready) {
+                    draw_text(renderer, 64, 530, tr("CUSTOM SETTINGS READY — ENTER / CLICK TO START MODERN"));
+                }
             }
-            if (menu_focus == MenuFocus::platform) {
-                SDL_SetRenderDrawColor(renderer, 255, 195, 80, 255);
-                SDL_RenderRect(renderer, &platform_focus_bounds);
-            }
-            draw_text(renderer, 64, 552, platform_text);
             if (show_scanner) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);

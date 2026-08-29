@@ -340,7 +340,13 @@ jobs:
           # fallbacks are not available to an installed application.
           for required in \
             "$APP/Contents/MacOS/assets/cards/millennium.png" \
-            "$APP/Contents/MacOS/assets/cards/deuteros.png"; do
+            "$APP/Contents/MacOS/assets/cards/deuteros.png" \
+            "$APP/Contents/MacOS/assets/cards/dos-platform-v1.png" \
+            "$APP/Contents/MacOS/assets/cards/amiga-platform-v1.png" \
+            "$APP/Contents/MacOS/assets/cards/atari-st-platform-v1.png" \
+            "$APP/Contents/MacOS/assets/cards/original-profile-v1.png" \
+            "$APP/Contents/MacOS/assets/cards/modern-profile-v1.png" \
+            "$APP/Contents/MacOS/assets/cards/custom-profile-v1.png"; do
             test -f "$required"
           done
           for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
@@ -363,7 +369,13 @@ jobs:
           listing=$(unzip -Z1 "project-eon-macos-${{ matrix.arch }}.zip")
           for required in \
             "ProjectEon.app/Contents/MacOS/assets/cards/millennium.png" \
-            "ProjectEon.app/Contents/MacOS/assets/cards/deuteros.png"; do
+            "ProjectEon.app/Contents/MacOS/assets/cards/deuteros.png" \
+            "ProjectEon.app/Contents/MacOS/assets/cards/dos-platform-v1.png" \
+            "ProjectEon.app/Contents/MacOS/assets/cards/amiga-platform-v1.png" \
+            "ProjectEon.app/Contents/MacOS/assets/cards/atari-st-platform-v1.png" \
+            "ProjectEon.app/Contents/MacOS/assets/cards/original-profile-v1.png" \
+            "ProjectEon.app/Contents/MacOS/assets/cards/modern-profile-v1.png" \
+            "ProjectEon.app/Contents/MacOS/assets/cards/custom-profile-v1.png"; do
             printf '%s\n' "$listing" | grep -Fxq "$required"
           done
           for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
@@ -451,7 +463,7 @@ jobs:
           # Validate the exact staging tree supplied to Inno Setup. In
           # particular, SDL3_image is linked against the shared libpng built
           # above, so that DLL must reach the installer as well.
-          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png")
+          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "assets/cards/dos-platform-v1.png", "assets/cards/amiga-platform-v1.png", "assets/cards/atari-st-platform-v1.png", "assets/cards/original-profile-v1.png", "assets/cards/modern-profile-v1.png", "assets/cards/custom-profile-v1.png")
           $fonts = @("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanagari-Regular.ttf", "NotoSansJP-Regular.otf", "NotoSansKR-Regular.otf", "NotoSansSC-Regular.otf", "OFL-1.1.txt")
           foreach ($font in $fonts) { $required += "assets/fonts/$font" }
           $catalogs = @("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
@@ -599,7 +611,7 @@ jobs:
           # app bundle before the IPA safety check. No original game data is
           # selected, copied, or created here.
           mkdir -p "$APP/Resources/assets/cards" "$APP/Resources/assets/fonts" "$APP/Resources/po"
-          cp assets/cards/millennium.png assets/cards/deuteros.png "$APP/Resources/assets/cards/"
+          cp assets/cards/*.png "$APP/Resources/assets/cards/"
           cp assets/fonts/NotoSans-Regular.ttf assets/fonts/NotoSansArabic-Regular.ttf \
             assets/fonts/NotoSansDevanagari-Regular.ttf assets/fonts/NotoSansJP-Regular.otf \
             assets/fonts/NotoSansKR-Regular.otf assets/fonts/NotoSansSC-Regular.otf \
