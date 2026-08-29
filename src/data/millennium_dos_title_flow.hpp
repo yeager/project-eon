@@ -166,4 +166,17 @@ struct MillenniumDosTitleFlow {
     std::span<const std::uint8_t> titles_executable,
     std::span<const std::uint8_t> mill_launcher);
 
+struct MillenniumDosSpanishTitleBoundary {
+    std::string sha256;
+    std::uint16_t title_entry_address = 0;
+    std::uint16_t private_wrapper_address = 0;
+    std::uint16_t post_title_entry_address = 0;
+    std::uint16_t private_driver_function = 0;
+    std::uint16_t private_driver_call_count = 0;
+    std::uint16_t local_helper_address = 0;
+};
+
+[[nodiscard]] MillenniumDosSpanishTitleBoundary parse_millennium_dos_spanish_title_boundary(
+    std::span<const std::uint8_t> titles_executable);
+
 } // namespace eon

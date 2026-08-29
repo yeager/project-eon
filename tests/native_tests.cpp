@@ -1945,6 +1945,12 @@ int main() {
     const auto* spanish_static_data = disk.find("2200AD4.BIN");
     const auto* spanish_manual = disk.find("MILL.BAT");
     assert(executable && ibm && spanish_titles && spanish_manual && executable->size == 54'566);
+    const auto spanish_title_boundary = eon::parse_millennium_dos_spanish_title_boundary(
+        disk.read(*spanish_titles));
+    assert(spanish_title_boundary.sha256 == "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7");
+    assert(spanish_title_boundary.post_title_entry_address == 0x1968);
+    assert(spanish_title_boundary.private_driver_function == 0x13);
+    assert(spanish_title_boundary.private_driver_call_count == 5);
     assert(graphics && graphics->size == 311'420);
     assert(spanish_title && spanish_title->size == 18'998);
     assert(spanish_static_data && spanish_static_data->size == 13'254);

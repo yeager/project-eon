@@ -2361,6 +2361,12 @@ This is a genuine caller-connected title-to-game request chain, not a DOS
 execution model: Project Eon does not invoke `$0339`, choose an AL result,
 assume a return, or run either target's unrecovered ABI.
 
+Spanish `TITLES.EXE` is separately accepted only at its own SHA-256 above. Its
+own bytes retain entry `$1b80`, private wrapper `$0122`, and post-title
+`$1968 -> $1931`: five AX=`$0013` private calls followed by helper `$1917`.
+This locks shared machine-code facts without substituting English resources,
+drivers, ABI effects, or frames.
+
 The English DOS `TITLE.LIB` (18,907 bytes, SHA-256
 `6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678`)
 and `GX.LIB` (312,748 bytes, SHA-256
