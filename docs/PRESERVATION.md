@@ -4479,6 +4479,17 @@ DBF loop has RTS `$20bf0`. After its return the parent branches `$20bf2`.
 entering any external call, reading source cells, selecting loop branches, or
 writing original state.
 
+The verified BSR return joins a caller-owned continuation at `$20bf2`. Its
+200-byte span `$20bf2..$20cb9` / ADF `+0x7bbf2` hashes to
+`98f43a011e13678af312563611740122ee9eb4fc163d1290a2c5e3dc66315385`.
+It calls `$1f9b8`, then conditionally calls `$41bb4` twice and `$41ad2` up to
+three times before RTS `$20cb8`. Raw table operands are `$20a3c` and `$20a6c`;
+the two display-word destinations are `$417a2` and `$416b4`; the later object
+pointer cell is `$19d1e`. `DeuterosAmigaTitlePostExecServiceContinuationProfile`
+records these literal boundaries only. It does not take predicates, dereference
+the pointer/table cells, enter an external service, dispatch graphics, write
+display words, or infer a title/display result.
+
 The next complete instruction starts at `$40616`, so
 `DeuterosAmigaTitlePostExecTailFlagGateProfile` deliberately overlaps the
 preceding span's final opcode word. Its 94-byte span `$40616..$40673` / ADF

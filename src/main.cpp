@@ -889,6 +889,17 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << service_route.nested_branch_target << ", continuation 0x"
         << service_route.continuation_target
         << " (calls, branches, and writes unmodelled)" << std::dec << '\n';
+    const auto service_continuation =
+        eon::parse_deuteros_amiga_title_post_exec_service_continuation_profile(disk, plan);
+    std::cout << "          Service continuation: 0x" << std::hex
+        << service_continuation.entry_address << " calls 0x"
+        << service_continuation.first_external_call_target << ", local 0x"
+        << service_continuation.local_service_call_targets[0] << ", dispatch 0x"
+        << service_continuation.graphics_dispatch_target << "; tables 0x"
+        << service_continuation.table_addresses[0] << "/0x"
+        << service_continuation.table_addresses[1] << ", RTS 0x"
+        << service_continuation.return_address
+        << " (call results, predicates, and writes unmodelled)" << std::dec << '\n';
     const auto post_exec_tail_flag_gate =
         eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(disk, plan);
     std::cout << "          Conditional tail flag gate: 0x" << std::hex

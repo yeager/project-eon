@@ -2345,6 +2345,39 @@ parse_deuteros_amiga_title_post_exec_service_route_profile(const AmigaAdf& disk,
     return {0x4052a, 0x20e18, 0x20ba8, {{0x1fb9a, 0x1ff08, 0x22bca}}, 0x41a68, 0x20bf0, 0x20bf2, std::string(caller_hash), std::string(entry_hash), std::string(nested_hash)};
 }
 
+DeuterosAmigaTitlePostExecServiceContinuationProfile
+parse_deuteros_amiga_title_post_exec_service_continuation_profile(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t entry_address = 0x20bf2;
+    constexpr std::size_t span_length = 200;
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view profile_hash =
+        "98f43a011e13678af312563611740122ee9eb4fc163d1290a2c5e3dc66315385";
+    const auto& stage = plan.title_stage;
+    if (stage.length == 0 || entry_address < stage.destination
+        || entry_address - stage.destination > stage.length
+        || span_length > stage.length - (entry_address - stage.destination)) {
+        throw std::runtime_error("Deuteros post-Exec service continuation lies outside original stage");
+    }
+    const auto all = disk.bytes(stage.disk_offset, stage.length);
+    const auto bytes = all.subspan(entry_address - stage.destination, span_length);
+    require_word(bytes, 0, 0x700f); require_word(bytes, 2, 0x4eb9);
+    require_long(bytes, 4, 0x0001f9b8); require_word(bytes, 26, 0x49f9);
+    require_long(bytes, 28, 0x000417a2); require_word(bytes, 52, 0x4eb9);
+    require_long(bytes, 54, 0x00041bb4); require_word(bytes, 92, 0x4eb9);
+    require_long(bytes, 94, 0x00041ad2); require_word(bytes, 136, 0x4eb9);
+    require_long(bytes, 138, 0x00041bb4); require_word(bytes, 182, 0x4eb9);
+    require_long(bytes, 184, 0x00041ad2); require_word(bytes, 192, 0x4eb9);
+    require_long(bytes, 194, 0x00041ad2); require_word(bytes, 198, 0x4e75);
+    if (to_hex(sha256(all)) != stage_hash || to_hex(sha256(bytes)) != profile_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec service-continuation profile");
+    }
+    return {entry_address, 0x1f9b8, {{0x41bb4, 0x41bb4}}, 0x41ad2,
+        {{0x20a3c, 0x20a6c}}, {{0x417a2, 0x416b4}}, 0x19d1e, 0x20cb8,
+        std::string(profile_hash)};
+}
+
 DeuterosAmigaTitlePostExecTailFlagGateProfile
 parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
