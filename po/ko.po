@@ -105,8 +105,8 @@ msgstr "실행 파일 인계는 아직 복원되지 않았으며, 영어 상태�
 msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
 msgstr "정통 DOS 타이틀 - P00 인덱스 + VGA RGB6 DAC"
 
-msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
-msgstr "아무 키나 누르세요: 원본 INT 21h/AH=06h 타이틀 인계"
+msgid "TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr "문자를 입력하세요: 원본 INT 21h/AH=06h 타이틀 인계"
 
 msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
 msgstr "복원된 위치 단어만 사용하며, 추정한 게임 의미는 없습니다"
@@ -182,6 +182,9 @@ msgstr "설정은 SDL 렌더링에만 적용됩니다."
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
 msgstr "위/아래: 선택   왼쪽/오른쪽: 변경   F10: 닫기"
+
+msgid "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"
+msgstr "터치: 행을 탭하여 변경   바깥을 탭하여 닫기"
 
 msgid "CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"
 msgstr "게임 카드를 클릭하거나 왼쪽/오른쪽을 누른 뒤 Enter를 누르세요"

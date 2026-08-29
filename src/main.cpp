@@ -238,6 +238,13 @@ constexpr std::array<const char*, 3> display_aspect_names{{
     "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",
 }};
 
+// These renderer-space bounds are shared by drawing and touch handling.  A
+// Custom profile must remain usable on an iPad even when no hardware F10 key
+// is attached; they are Eon's own chrome, never a game input surface.
+constexpr SDL_FRect modern_graphics_popup_bounds{356, 142, 568, 430};
+constexpr float modern_graphics_option_first_baseline = 272.0F;
+constexpr float modern_graphics_option_stride = 42.0F;
+
 std::size_t output_resolution_index_for(const eon::DisplayPreferences& display) {
     for (std::size_t index = 0; index < output_resolutions.size(); ++index) {
         if (output_resolutions[index].width == display.width
@@ -421,13 +428,13 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     };
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 3, 10, 20, 240);
-    SDL_FRect panel{356, 142, 568, 430};
-    SDL_RenderFillRect(renderer, &panel);
+    SDL_RenderFillRect(renderer, &modern_graphics_popup_bounds);
     SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
-    SDL_RenderRect(renderer, &panel);
+    SDL_RenderRect(renderer, &modern_graphics_popup_bounds);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
     draw_text(renderer, 390, 174, tr("MODERN GRAPHICS SETTINGS"));
     draw_text(renderer, 390, 212, tr("UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"));
+    draw_text(renderer, 390, 232, tr("TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"));
     constexpr std::array<const char*, 6> names{{
         "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
     }};
@@ -444,9 +451,11 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(settings.focused_option)
                 ? 255 : 205, index == static_cast<std::size_t>(settings.focused_option) ? 195 : 225,
             index == static_cast<std::size_t>(settings.focused_option) ? 80 : 235, 255);
-        draw_text(renderer, 390, 256.0F + static_cast<float>(index) * 42.0F,
+        draw_text(renderer, 390, modern_graphics_option_first_baseline
+            + static_cast<float>(index) * modern_graphics_option_stride,
             std::string(index == static_cast<std::size_t>(settings.focused_option) ? "> " : "  ") + tr(names[index]));
-        draw_text(renderer, 690, 256.0F + static_cast<float>(index) * 42.0F, values[index]);
+        draw_text(renderer, 690, modern_graphics_option_first_baseline
+            + static_cast<float>(index) * modern_graphics_option_stride, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
     draw_text(renderer, 390, 546, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
@@ -3516,6 +3525,11 @@ int main(int argc, char** argv) {
         default: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
         }
     };
+    const auto close_modern_graphics_settings = [&] {
+        show_modern_graphics_settings = false;
+        if (screen == Screen::menu && launcher_page == LauncherPage::profiles
+            && focused_profile_card == 2) custom_profile_ready = true;
+    };
     bool running = true;
     while (running) {
         SDL_Event event;
@@ -3542,9 +3556,7 @@ int main(int argc, char** argv) {
                 // recovered opening or DOS availability poll behind it.
                 if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.key == SDLK_ESCAPE) {
-                        show_modern_graphics_settings = false;
-                        if (screen == Screen::menu && launcher_page == LauncherPage::profiles
-                            && focused_profile_card == 2) custom_profile_ready = true;
+                        close_modern_graphics_settings();
                     } else if (event.key.key == SDLK_UP) {
                         modern_graphics_settings.focused_option =
                             (modern_graphics_settings.focused_option + 5) % 6;
@@ -3556,9 +3568,7 @@ int main(int argc, char** argv) {
                     }
                 } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
                     if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
-                        show_modern_graphics_settings = false;
-                        if (screen == Screen::menu && launcher_page == LauncherPage::profiles
-                            && focused_profile_card == 2) custom_profile_ready = true;
+                        close_modern_graphics_settings();
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                         modern_graphics_settings.focused_option =
                             (modern_graphics_settings.focused_option + 5) % 6;
@@ -3569,6 +3579,30 @@ int main(int argc, char** argv) {
                         || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
                         change_modern_graphics_option(
                             event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT ? -1 : 1);
+                    }
+                } else if (event.type == SDL_EVENT_FINGER_DOWN) {
+                    // Touch is needed to complete the Custom route on iPad.
+                    // Resolve it in renderer space, just as card input does,
+                    // and consume the event before it can become a recovered
+                    // opening signal.  A row cycles its renderer-only value;
+                    // tapping outside closes the launcher-owned modal.
+                    int window_width = 0;
+                    int window_height = 0;
+                    SDL_GetWindowSize(window, &window_width, &window_height);
+                    float x = 0, y = 0;
+                    SDL_RenderCoordinatesFromWindow(renderer,
+                        event.tfinger.x * static_cast<float>(window_width),
+                        event.tfinger.y * static_cast<float>(window_height), &x, &y);
+                    if (!inside(modern_graphics_popup_bounds, x, y)) {
+                        close_modern_graphics_settings();
+                    } else {
+                        const auto first_row_top = modern_graphics_option_first_baseline - 22.0F;
+                        const auto row = static_cast<int>((y - first_row_top)
+                            / modern_graphics_option_stride);
+                        if (row >= 0 && row < 6) {
+                            modern_graphics_settings.focused_option = row;
+                            change_modern_graphics_option(1);
+                        }
                     }
                 }
                 continue;
@@ -3956,13 +3990,13 @@ int main(int argc, char** argv) {
                         draw_text(renderer, 64, 238, millennium_title_session
                                 && millennium_title_session->handed_off()
                             ? tr("The simulation is incomplete; no synthetic substitute will run.")
-                            : tr("PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
+                            : tr("TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
                     } else {
                         draw_text(renderer, 64, 220, tr("AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"));
                         draw_text(renderer, 64, 238, millennium_title_session
                                 && millennium_title_session->handed_off()
                             ? tr("The simulation is incomplete; no synthetic substitute will run.")
-                            : tr("PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
+                            : tr("TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
                     }
                 }
                 SDL_SetTextureScaleMode(texture,

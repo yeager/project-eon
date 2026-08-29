@@ -368,7 +368,9 @@ jobs:
           if find "$APP" -type d -name data -print -quit | grep -q . \
               || find "$APP" -type f \( -iname '*.zip' -o -iname '*.adf' -o -iname '*.adz' \
                   -o -iname '*.dms' -o -iname '*.st' -o -iname '*.msa' -o -iname '*.stx' \
-                  -o -iname '*.img' -o -iname '*.exe' -o -iname '*.com' \) -print -quit | grep -q .; then
+                  -o -iname '*.img' -o -iname '*.hfe' -o -iname '*.ipf' -o -iname '*.scp' \
+                  -o -iname '*.ctr' -o -iname '*.lha' -o -iname '*.lzh' -o -iname '*.lzx' \
+                  -o -iname '*.exe' -o -iname '*.com' \) -print -quit | grep -q .; then
             echo "refusing macOS artifact with possible original game data" >&2
             exit 1
           fi
@@ -488,7 +490,7 @@ jobs:
             throw "Windows package stage lacks zlib runtime DLL"
           }
           $media = Get-ChildItem dist -Recurse -File | Where-Object {
-            $_.Extension -match '^(?i:\.(zip|adf|adz|dms|st|msa|stx|img|exe|com))$' -and $_.Name -ne "project-eon.exe"
+            $_.Extension -match '^(?i:\.(zip|adf|adz|dms|st|msa|stx|img|hfe|ipf|scp|ctr|lha|lzh|lzx|exe|com))$' -and $_.Name -ne "project-eon.exe"
           }
           if ($media) {
             throw "refusing Windows package stage with possible original game data: $($media.FullName -join ', ')"
@@ -530,7 +532,7 @@ jobs:
             throw "installed package must not create a game-data directory"
           }
           $media = Get-ChildItem $installRoot -Recurse -File | Where-Object {
-            $_.Extension -match '^(?i:\.(zip|adf|adz|dms|st|msa|stx|img|exe|com))$' -and
+            $_.Extension -match '^(?i:\.(zip|adf|adz|dms|st|msa|stx|img|hfe|ipf|scp|ctr|lha|lzh|lzx|exe|com))$' -and
               $_.Name -ne "project-eon.exe" -and $_.Name -notlike "unins*.exe"
           }
           if ($media) {

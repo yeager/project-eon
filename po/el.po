@@ -68,8 +68,8 @@ msgid "EXECUTABLE HANDOFF NOT YET RECOVERED; NO ENGLISH STATE IS SUBSTITUTED"
 msgstr "Η ΠΑΡΑΔΟΣΗ ΤΟΥ ΕΚΤΕΛΕΣΙΜΟΥ ΔΕΝ ΕΧΕΙ ΑΚΟΜΗ ΑΝΑΚΤΗΘΕΙ· ΚΑΜΙΑ ΑΓΓΛΙΚΗ ΚΑΤΑΣΤΑΣΗ ΔΕΝ ΥΠΟΚΑΘΙΣΤΑΤΑΙ"
 msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
 msgstr "ΑΥΘΕΝΤΙΚΟΣ ΤΙΤΛΟΣ DOS - ΔΕΙΚΤΕΣ P00 + VGA RGB6 DAC"
-msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
-msgstr "ΠΑΤΗΣΤΕ ΟΠΟΙΟΔΗΠΟΤΕ ΠΛΗΚΤΡΟ: ΑΡΧΙΚΗ ΠΑΡΑΔΟΣΗ ΤΙΤΛΟΥ INT 21h/AH=06h"
+msgid "TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr "ΠΛΗΚΤΡΟΛΟΓΗΣΤΕ ΕΝΑΝ ΧΑΡΑΚΤΗΡΑ: ΑΡΧΙΚΗ ΠΑΡΑΔΟΣΗ ΤΙΤΛΟΥ INT 21h/AH=06h"
 msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
 msgstr "ΜΟΝΟ ΑΝΑΚΤΗΜΕΝΕΣ ΛΕΞΕΙΣ ΘΕΣΗΣ· ΚΑΜΙΑ ΣΥΝΑΓΟΜΕΝΗ ΣΗΜΑΣΙΟΛΟΓΙΑ ΠΑΙΧΝΙΔΙΟΥ"
 msgid "VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION"
@@ -133,6 +133,9 @@ msgstr "ΟΙ ΡΥΘΜΙΣΕΙΣ ΕΦΑΡΜΟΖΟΝΤΑΙ ΜΟΝΟ ΣΤΗΝ ΑΠ�
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
 msgstr "ΠΑΝΩ/ΚΑΤΩ: ΕΠΙΛΟΓΗ   ΑΡΙΣΤΕΡΑ/ΔΕΞΙΑ: ΑΛΛΑΓΗ   F10: ΚΛΕΙΣΙΜΟ"
+
+msgid "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"
+msgstr "ΑΦΗ: ΠΑΤΗΣΤΕ ΓΡΑΜΜΗ ΓΙΑ ΑΛΛΑΓΗ   ΕΞΩ ΓΙΑ ΚΛΕΙΣΙΜΟ"
 
 msgid "OUTPUT RESOLUTION"
 msgstr "ΑΝΑΛΥΣΗ ΕΞΟΔΟΥ"

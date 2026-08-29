@@ -105,8 +105,8 @@ msgstr "可执行文件交接尚未恢复；不会以英语状态替代"
 msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
 msgstr "原始 DOS 标题 - P00 索引 + VGA RGB6 DAC"
 
-msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
-msgstr "按任意键：原始 INT 21h/AH=06h 标题交接"
+msgid "TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr "输入一个字符：原始 INT 21h/AH=06h 标题交接"
 
 msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
 msgstr "仅限已恢复的位置词；不推断游戏语义"
@@ -182,6 +182,9 @@ msgstr "设置仅应用于 SDL 渲染。"
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
 msgstr "上/下：选择   左/右：更改   F10：关闭"
+
+msgid "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"
+msgstr "触控：点按行以更改   点按外部以关闭"
 
 msgid "CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"
 msgstr "点击游戏卡片或使用左/右键，然后按回车"

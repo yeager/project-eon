@@ -154,7 +154,9 @@ The profile card fixes Original or Modern before a game starts; F1 deliberately
 does not switch an active session. F10 opens Modern graphics settings only for
 a Modern or Custom launch; Up/Down and Left/Right (or the gamepad D-pad)
 select and change its renderer-only options, while Escape or gamepad Back
-closes the panel. Resolution presets control the SDL window only. Aspect-ratio
+closes the panel. On touch devices, tap an option row to cycle it or tap
+outside the dialog to close it; this uses the same renderer-space coordinates
+as the card menu and stays modal. Resolution presets control the SDL window only. Aspect-ratio
 presets are Original 4:3 (the default), Square Pixels 8:5, and Widescreen
 16:9. The renderer fits and centres its viewport within the available region;
 it never crops a recovered frame or independently stretches width and height.

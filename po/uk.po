@@ -105,8 +105,8 @@ msgstr "ПЕРЕДАЧУ ВИКОНУВАНОГО ФАЙЛУ ЩЕ НЕ ВІДН�
 msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
 msgstr "АВТЕНТИЧНИЙ ТИТУЛ DOS — ІНДЕКСИ P00 + VGA RGB6 DAC"
 
-msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
-msgstr "НАТИСНІТЬ БУДЬ-ЯКУ КЛАВІШУ: ОРИГІНАЛЬНА ПЕРЕДАЧА ТИТУЛУ INT 21h/AH=06h"
+msgid "TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr "ВВЕДІТЬ СИМВОЛ: ОРИГІНАЛЬНА ПЕРЕДАЧА ТИТУЛУ INT 21h/AH=06h"
 
 msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
 msgstr "ЛИШЕ ВІДНОВЛЕНІ ПОЗИЦІЙНІ СЛОВА; ЖОДНОЇ ВИВЕДЕНОЇ СЕМАНТИКИ ГРИ"
@@ -182,6 +182,9 @@ msgstr "НАЛАШТУВАННЯ ЗАСТОСОВУЮТЬСЯ ЛИШЕ ДО РЕ
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
 msgstr "ВГОРУ/ВНИЗ: ВИБРАТИ   ЛІВОРУЧ/ПРАВОРУЧ: ЗМІНИТИ   F10: ЗАКРИТИ"
+
+msgid "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"
+msgstr "ДОТИК: ТОРКНІТЬСЯ РЯДКА, ЩОБ ЗМІНИТИ   ТОРКНІТЬСЯ ЗОВНІ, ЩОБ ЗАКРИТИ"
 
 msgid "CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"
 msgstr "КЛАЦНІТЬ КАРТКУ ГРИ АБО НАТИСНІТЬ ЛІВОРУЧ/ПРАВОРУЧ, ПОТІМ ENTER"

@@ -25,6 +25,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         for message in (
             "MODERN GRAPHICS SETTINGS",
             "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE",
+            "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE",
             "SETTINGS APPLY TO SDL RENDERING ONLY.",
         ):
             with self.subTest(message=message):
@@ -100,6 +101,17 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("SDL_GAMEPAD_BUTTON_BACK", SOURCE[modal:])
         self.assertIn("                continue;", SOURCE[modal:])
         self.assertLess(modal, SOURCE.index("millennium_title_session->poll_console(true)"))
+
+    def test_popup_makes_custom_settings_usable_with_touch_without_game_input(self) -> None:
+        """A Custom card opened by touch must be dismissible on an iPad."""
+        modal = SOURCE.index("if (show_modern_graphics_settings) {")
+        touch = SOURCE.index("event.type == SDL_EVENT_FINGER_DOWN", modal)
+        handler = SOURCE[touch:SOURCE.index("                continue;", touch)]
+        self.assertIn("SDL_RenderCoordinatesFromWindow", handler)
+        self.assertIn("modern_graphics_popup_bounds", handler)
+        self.assertIn("close_modern_graphics_settings();", handler)
+        self.assertIn("modern_graphics_settings.focused_option = row;", handler)
+        self.assertIn("change_modern_graphics_option(1);", handler)
 
     def test_f10_modal_cancels_a_held_deuteros_opening_signal(self) -> None:
         """Renderer chrome must not pass an old held key to `$14` behind it."""

@@ -105,8 +105,8 @@ msgstr "ПЕРЕДАЧА ИСПОЛНЯЕМОГО ФАЙЛА ЕЩЁ НЕ ВОС�
 msgid "AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"
 msgstr "АУТЕНТИЧНЫЙ ТИТУЛ DOS — ИНДЕКСЫ P00 + VGA RGB6 DAC"
 
-msgid "PRESS ANY KEY: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
-msgstr "НАЖМИТЕ ЛЮБУЮ КЛАВИШУ: ОРИГИНАЛЬНАЯ ПЕРЕДАЧА ТИТУЛА INT 21h/AH=06h"
+msgid "TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"
+msgstr "ВВЕДИТЕ СИМВОЛ: ОРИГИНАЛЬНАЯ ПЕРЕДАЧА ТИТУЛА INT 21h/AH=06h"
 
 msgid "RECOVERED POSITIONAL WORDS ONLY; NO INFERRED GAME SEMANTICS"
 msgstr "ТОЛЬКО ВОССТАНОВЛЕННЫЕ ПОЗИЦИОННЫЕ СЛОВА; НИКАКОЙ ВЫВЕДЕННОЙ СЕМАНТИКИ ИГРЫ"
@@ -182,6 +182,9 @@ msgstr "НАСТРОЙКИ ПРИМЕНЯЮТСЯ ТОЛЬКО К РЕНДЕРИ
 
 msgid "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"
 msgstr "ВВЕРХ/ВНИЗ: ВЫБРАТЬ   ВЛЕВО/ВПРАВО: ИЗМЕНИТЬ   F10: ЗАКРЫТЬ"
+
+msgid "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"
+msgstr "КАСАНИЕ: НАЖМИТЕ СТРОКУ ДЛЯ ИЗМЕНЕНИЯ   НАЖМИТЕ СНАРУЖИ, ЧТОБЫ ЗАКРЫТЬ"
 
 msgid "CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"
 msgstr "ЩЁЛКНИТЕ КАРТОЧКУ ИГРЫ ИЛИ НАЖМИТЕ ВЛЕВО/ВПРАВО, ЗАТЕМ ENTER"
