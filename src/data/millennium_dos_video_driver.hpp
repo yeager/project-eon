@@ -40,6 +40,13 @@ struct MillenniumDosVideoDriverProfile {
     // ownership and pointed-to format remain outside this profile.
     std::uint16_t function_six_source_pointer_offset = 0;
     std::uint16_t function_six_source_pointer_load_address = 0;
+    // These are raw accesses after the first far-pointer load, not a shared
+    // source format.  EGA reads words at +$04, +$02 and +$00; MCGA reads the
+    // +$02 word and then uses +$04 as another far pointer.
+    std::uint16_t function_six_source_word_zero_read_address = 0;
+    std::uint16_t function_six_source_word_two_read_address = 0;
+    std::uint16_t function_six_source_word_four_read_address = 0;
+    std::uint16_t function_six_source_nested_pointer_load_address = 0;
     std::uint16_t function_six_screen_width = 0;
     std::uint16_t function_six_horizontal_offset = 0;
     std::uint16_t function_six_height_offset = 0;
