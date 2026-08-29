@@ -85,6 +85,7 @@ std::string usage() {
         "               --platform dos|amiga|atari-st --reference-trace <manifest.eontrace>\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
         "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
+        "               [--release-language en|es]\n"
         "               [--modern-packs <explicit-pack-root>]\n\n"
         "  project-eon --inspect-save <2200SAVE.I>\n\n"
 #if defined(__APPLE__) && TARGET_OS_IPHONE

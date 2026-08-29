@@ -916,6 +916,11 @@ int main() {
         const auto spanish_release_request = eon::parse_command_line(7, spanish_release_args);
         assert(spanish_release_request.request
             && spanish_release_request.request->release_language == "es");
+        char* spanish_inspect_args[] = {program, inspect_option, game_option, millennium,
+            platform_option, dos, release_language_option, spanish_release};
+        const auto spanish_inspect = eon::parse_command_line(8, spanish_inspect_args);
+        assert(spanish_inspect.request && spanish_inspect.request->inspect_data
+            && spanish_inspect.request->release_language == "es");
         char invalid_release[] = "sv";
         char* invalid_release_args[] = {program, game_option, millennium, platform_option, dos,
             release_language_option, invalid_release};
@@ -2953,6 +2958,53 @@ int main() {
     assert(english_startup_followups.bios_interrupt == 0x10);
     assert(english_startup_followups.bios_ax == 0x1000);
     assert(english_startup_followups.palette_return_address == 0x047c);
+    // The connected English startup evaluator runs only bytes following
+    // explicitly observed private-INT returns.  It stops at each unobserved
+    // ABI boundary and reports local stores without touching original media.
+    const auto english_initial_boundary = eon::evaluate_millennium_dos_english_startup_prefix(
+        *game_executable);
+    assert(english_initial_boundary.outcome
+        == eon::MillenniumDosEnglishStartupPrefixOutcome::first_private_interrupt_boundary);
+    assert(english_initial_boundary.entry_address == 0xd2b0);
+    assert(english_initial_boundary.stack_pointer == 0xda00);
+    assert(english_initial_boundary.first_private_call_address == 0xd2c5);
+    assert(english_initial_boundary.private_wrapper_address == 0x0124);
+    assert(english_initial_boundary.private_interrupt == 0x91);
+    assert(english_initial_boundary.boundary_address == 0x0129);
+    const auto english_selected_boundary = eon::evaluate_millennium_dos_english_startup_prefix(
+        *game_executable, 0x0100);
+    assert(english_selected_boundary.outcome
+        == eon::MillenniumDosEnglishStartupPrefixOutcome::selected_private_interrupt_boundary);
+    assert(english_selected_boundary.selector_byte == 1);
+    assert(english_selected_boundary.selected_entry_address == 0xd1a1);
+    assert(english_selected_boundary.selected_private_call_address == 0xd1a9);
+    assert((english_selected_boundary.local_writes == std::vector<eon::MillenniumDosEnglishStartupPrefixWrite>{
+        {0xd128, 0x0100, 2}, {0x4368, 1, 1}, {0xda05, 1, 1}, {0xd12c, 0xda00, 2}}));
+    const auto english_equal_return = eon::evaluate_millennium_dos_english_startup_prefix(
+        *game_executable, 0x0100, 0xffff);
+    assert(english_equal_return.outcome
+        == eon::MillenniumDosEnglishStartupPrefixOutcome::equal_return);
+    assert(english_equal_return.boundary_address == 0x0455);
+    assert((english_equal_return.local_writes.back()
+        == eon::MillenniumDosEnglishStartupPrefixWrite{0xda05, 1, 1}));
+    const auto english_palette_boundary = eon::evaluate_millennium_dos_english_startup_prefix(
+        *game_executable, 0x0200, 0);
+    assert(english_palette_boundary.outcome
+        == eon::MillenniumDosEnglishStartupPrefixOutcome::palette_bios_interrupt_boundary);
+    assert(english_palette_boundary.selected_entry_address == 0xd1b5);
+    assert(english_palette_boundary.boundary_address == 0x0476);
+    assert((english_palette_boundary.first_palette_request
+        == eon::MillenniumDosEgaPaletteRegisterWrite{0, 0}));
+    assert((english_palette_boundary.local_writes.back()
+        == eon::MillenniumDosEnglishStartupPrefixWrite{0x0107, 0xb800, 2}));
+    bool rejected_out_of_order_startup_observation = false;
+    try {
+        static_cast<void>(eon::evaluate_millennium_dos_english_startup_prefix(
+            *game_executable, std::nullopt, 0));
+    } catch (const std::runtime_error&) {
+        rejected_out_of_order_startup_observation = true;
+    }
+    assert(rejected_out_of_order_startup_observation);
     {
         auto altered_startup_allocation = *game_executable;
         altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;
@@ -4452,6 +4504,10 @@ int main() {
     assert(atari_execution.second_copy_words == 0x101);
     assert(atari_execution.target_address == 0x77000);
     assert(atari_execution.stop_before_trap_address == 0x7700e);
+    assert(atari_execution.target_prefix_bytes_executed == 14);
+    assert(atari_execution.relative_stack_pointer_delta == -8);
+    assert((atari_execution.fopen_frame_bytes == std::vector<std::uint8_t>{
+        0x00, 0x3d, 0x00, 0x01, 0xd6, 0xe4, 0x00, 0x02}));
     assert(atari_execution.copied_stage_bytes.size() == 0xd8);
     assert(atari_execution.target.bytes == atari_target.bytes);
     const auto atari_trap = eon::parse_millennium_atari_trap_entry(atari_bss_source, atari_target);
@@ -4505,6 +4561,8 @@ int main() {
         atari_disk, atari_disk.read(*atari_executable));
     assert(atari_session.target().target_address == 0x77000);
     assert(atari_session.execution().stop_before_trap_address == 0x7700e);
+    assert(atari_session.execution().target_prefix_bytes_executed == 14);
+    assert(atari_session.execution().relative_stack_pointer_delta == -8);
     assert(atari_session.bss_source().original_data_bytes == 0xbc);
     assert(atari_session.bss_source().bss_zero_bytes == 0x146);
     assert(atari_session.fopen_boundary().fopen_filename == "MILL22A.inf");
