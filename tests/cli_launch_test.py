@@ -37,6 +37,62 @@ def media_snapshot(directory: Path) -> dict[Path, str]:
     return snapshot
 
 
+def write_reference_trace(
+    directory: Path,
+    source_archive: Path,
+    source_sha256: str,
+    game: str,
+    platform: str,
+    adapter: str,
+    events: str,
+    *,
+    source_media_sha256: str | None = None,
+    source_stage_sha256: str | None = None,
+) -> Path:
+    """Create a temporary, provenance-bound CLI trace-validation input.
+
+    The event records below exercise only the declared external grammar. They
+    are not game data, a captured session, or an emulation/replay request;
+    the source identity and size always come from a supplied original archive.
+    """
+    events_path = directory / f"{adapter}-events.eontrace"
+    events_path.write_text(events, encoding="ascii")
+    event_bytes = events_path.read_bytes()
+    fields = [
+        ("format", "project-eon-reference-trace-v2"),
+        ("adapter", adapter),
+        ("event_file", events_path.name),
+        ("event_size", str(len(event_bytes))),
+        ("event_sha256", hashlib.sha256(event_bytes).hexdigest()),
+        ("game", game),
+        ("platform", platform),
+        ("language", "en"),
+        ("source_release_sha256", source_sha256),
+        ("source_release_size", str(source_archive.stat().st_size)),
+    ]
+    if source_media_sha256 is not None and source_stage_sha256 is not None:
+        fields.extend((
+            ("source_media_sha256", source_media_sha256),
+            ("source_stage_sha256", source_stage_sha256),
+        ))
+    zero_sha256 = "0" * 64
+    fields.extend((
+        ("capture_start_utc", "2026-08-29T00:00:00Z"),
+        ("capture_end_utc", "2026-08-29T00:00:01Z"),
+        ("emulator_name", "project-eon-cli-test"),
+        ("emulator_version", "1"),
+        ("emulator_sha256", zero_sha256),
+        ("config_sha256", zero_sha256),
+        ("command_tail_sha256", zero_sha256),
+        ("input_timeline_sha256", zero_sha256),
+    ))
+    manifest_path = directory / f"{adapter}-manifest.eontrace"
+    manifest_path.write_text(
+        "".join(f"{key}\t{value}\n" for key, value in fields), encoding="ascii"
+    )
+    return manifest_path
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         raise SystemExit("usage: cli_launch_test.py <project-eon> <real-data-dir>")
@@ -104,6 +160,84 @@ def main() -> int:
     )
     if source_match is None:
         raise SystemExit("targeted inspection did not print its hash-bound DOS source identity")
+
+    # Exercise every v2 adapter through the public CLI with its exact original
+    # source archive. This covers the generic and stage-pinned manifest
+    # variants together with adapter-specific reporting; no trace is replayed.
+    archive_by_sha256 = {
+        digest.removeprefix("file:"): data_directory / relative
+        for relative, digest in before.items()
+        if digest.startswith("file:") and relative.suffix.lower() == ".zip"
+    }
+    trace_specs = (
+        (
+            "millennium", "dos", "millennium-dos-en-startup-v1",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "event\t1 10 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000\n"
+            "event\t2 20 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin\n"
+            "event\t3 30 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=titles.exe\n"
+            "event\t4 40 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n",
+            None, None, "2 interrupt, 1 file, 1 EXEC observations; diagnostics only)",
+        ),
+        (
+            "millennium", "amiga", "millennium-amiga-en-defjam-bootstrap-v1",
+            "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
+            "event\t1 10 cpu image=bootstrap-loader pc=0x702e4 op=jsr-indirect a3=0x41000\n"
+            "event\t2 20 cpu image=bootstrap-loader pc=0x70320 op=jmp-indirect a3=0x68000 d6=0xa8d398fb\n",
+            None, None, "2 CPU handoff observations; diagnostics only)",
+        ),
+        (
+            "deuteros", "atari-st", "deuteros-atari-st-boot-v1",
+            "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+            "event\t1 10 trap pc=0x00001edc incoming_a7=0x00001000 incoming_sr=0x2700 selector=0x0026 callback=0x00001fa6 return_pc=0x00001ede return_a7=0x0000100c return_sr=0x2000 return_d0=0x00000000\n"
+            "event\t2 20 callback entry_pc=0x00001fa6 incoming_a7=0x00001000 stack_longword=0x00001ede outgoing_a7=0x0007b000 return_pc=0x00001ede return_a7=0x0007affc return_sr=0x2000 return_d0=0x00001ede\n"
+            "event\t3 30 state ram_25f4=0x00071100 ram_25f4_provenance=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ram_25fc=0x00000001 ram_25fc_provenance=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb branch_pc=0x00001ef2 state_word=0x0001\n"
+            "event\t4 40 table base=0x00001eac shifted_index=0x0002 target_a1=0x00001f50 entry_pc=0x00001f50 return_pc=0x00001f08 return_d1=0x00000000 return_d2=0x00000000\n"
+            "event\t5 50 frame site=0x00001e9c input_frame=0008 result_frame=00000000\n"
+            "event\t6 60 raw-reader entry_pc=0x00001e60 trap_pc=0x00001e9c call_a7=0x00002000 return_pc=0x00001e9e return_a7=0x00002014 return_sr=0x2000 return_d0=0x00000000\n",
+            "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee",
+            "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7",
+            "1 TRAP, 1 callback, 1 frame, 1 state, 1 table, 1 raw-reader observations; diagnostics only)",
+        ),
+        (
+            "deuteros", "amiga", "deuteros-amiga-en-title-stage-v1",
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            "event\t1 10 exec site=0x00040450 exec_base_address=0x00000004 vector=-0x0096 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t2 20 open-library site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=0x00012fec result_sr=0x2000\n"
+            "event\t3 30 graphics site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t4 40 custom-register site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t5 50 callback site=0x0001ef74 callback=0x0001f056 exec_base_address=0x00000004 vector=-0x01ce result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t6 60 callback site=0x0001f056 incoming_a0=0x00001000 result_d0=0x00000001 result_sr=0x2000\n",
+            "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+            "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
+            "1 Exec, 1 OpenLibrary, 1 graphics, 1 custom-register, 2 callback observations; diagnostics only)",
+        ),
+    )
+    with tempfile.TemporaryDirectory() as temporary_trace_root:
+        trace_root = Path(temporary_trace_root)
+        for (game, platform, adapter, source_sha256, events, media_sha256,
+             stage_sha256, expected_diagnostics) in trace_specs:
+            source_archive = archive_by_sha256.get(source_sha256)
+            if source_archive is None:
+                raise SystemExit(f"The real-media fixture lacks {adapter}'s exact source archive")
+            manifest = write_reference_trace(
+                trace_root, source_archive, source_sha256, game, platform, adapter, events,
+                source_media_sha256=media_sha256, source_stage_sha256=stage_sha256,
+            )
+            trace_report = subprocess.run(
+                (str(executable), "--data", str(data_directory), "--game", game,
+                    "--platform", platform, "--reference-trace", str(manifest)),
+                env=environment, check=False, capture_output=True, text=True,
+            )
+            if (trace_report.returncode != 0
+                    or "REFERENCE TRACE VERIFIED  provenance-only; no replay performed" not in trace_report.stdout
+                    or f"adapter {adapter} (" not in trace_report.stdout
+                    or expected_diagnostics not in trace_report.stdout):
+                raise SystemExit(
+                    f"{adapter} was not admitted and reported through the public CLI:\n"
+                    f"{trace_report.stdout}\n{trace_report.stderr}"
+                )
+
     # Pack bytes are deliberately temporary test fixtures, outside supplied
     # media. They prove the CLI invokes the real read-only admission reader;
     # neither this test nor the runtime writes a Modern-pack cache.

@@ -143,7 +143,11 @@ bool parse_key_value_file(const std::filesystem::path& path, const std::uintmax_
         const std::string value = line.substr(tab + 1);
         if (!ascii_printable(key) || !ascii_printable(value)
             || !std::all_of(key.begin(), key.end(), [](const unsigned char character) {
-                return (character >= 'a' && character <= 'z') || character == '_';
+                // Versioned checksum field names (for example event_sha256)
+                // are part of the fixed manifest contract. Keep the key
+                // grammar bounded while admitting those decimal digits.
+                return (character >= 'a' && character <= 'z')
+                    || (character >= '0' && character <= '9') || character == '_';
             }) || !fields.emplace(key, value).second) {
             error = "Reference trace manifest has an invalid or duplicate field";
             return false;
@@ -283,7 +287,7 @@ bool validate_millennium_dos_english_events(const std::filesystem::path& path,
         return false;
     }
     std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (!stream.eof()) {
+    if (stream.bad()) {
         error = "Unable to read reference trace events";
         return false;
     }
@@ -326,7 +330,7 @@ bool validate_deuteros_atari_events(const std::filesystem::path& path,
         return false;
     }
     const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (!stream.eof()) {
+    if (stream.bad()) {
         error = "Unable to read reference trace events";
         return false;
     }
@@ -369,7 +373,10 @@ bool validate_deuteros_amiga_events(const std::filesystem::path& path,
         return false;
     }
     const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (!stream.eof()) {
+    // Reading through istreambuf_iterator may finish with a clean stream on
+    // some standard-library implementations, so only a real I/O failure
+    // rejects this already bounded and hashed file.
+    if (stream.bad()) {
         error = "Unable to read reference trace events";
         return false;
     }
@@ -412,7 +419,8 @@ bool validate_millennium_amiga_events(const std::filesystem::path& path,
         return false;
     }
     const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (!stream.eof()) {
+    // See the corresponding DOS adapter reader above.
+    if (stream.bad()) {
         error = "Unable to read reference trace events";
         return false;
     }
