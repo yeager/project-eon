@@ -3750,6 +3750,15 @@ caller return site `$d376`. No missing return is fabricated, and all writes
 remain offsets in a disposable host overlay: no original executable, archive,
 save, screen, layout, resource, or display state is modified or inferred.
 
+`MillenniumDosGxStartupSession` exposes the same suffix to runtime code only
+through ordered trace observations: a private-return AX word, the original
+`$da05` byte, then a separately observed adapter return. It begins at boundary
+`$0129`, stops at adapter call `$d373`, and reaches `$d376` only after the
+last observation. The transient overlay retains only bytes written by the
+verified evaluator; it owns no original media bytes. Out-of-order or repeated
+observations are rejected, and the session neither starts from the launcher
+nor emulates DOS, private calls, overlay loading, or a title handoff.
+
 ### Millennium DOS GX dispatcher slot 13 boundary
 
 The already hash-identified `2200GX.EXE` dispatcher table maps raw selector

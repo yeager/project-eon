@@ -41,7 +41,12 @@ class RecoveryMapTests(unittest.TestCase):
             self.assertIn((entry["release_sha256"], entry["parser_profile_id"]), profiles)
             self.assertIn(entry["cpu"], {"m68000", "i8086"})
             self.assertEqual(entry["evidence_level"], "verified-static")
-            self.assertEqual(entry["runtime_status"], "read-only parser and diagnostics")
+            expected_runtime_status = (
+                "trace-gated sparse GX startup session"
+                if entry["parser_profile_id"] == "millennium-dos-gx-overlay"
+                else "read-only parser and diagnostics"
+            )
+            self.assertEqual(entry["runtime_status"], expected_runtime_status)
             self.assertTrue(entry["documentation_anchor"].startswith("PRESERVATION.md#"))
             self.assertIn(entry["documentation_anchor"].split("#", 1)[1], anchors)
 
