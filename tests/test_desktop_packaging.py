@@ -43,7 +43,8 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('HOME="$isolated_home" "$executable" --inspect', source)
         self.assertIn("created its default game-data directory during lookup", source)
         self.assertIn("isolated missing default game-data path", source)
-        self.assertIn("cpio zlib1g-dev", WORKFLOW.read_text(encoding="utf-8"))
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("rpm cpio desktop-file-utils zlib1g-dev", workflow)
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
