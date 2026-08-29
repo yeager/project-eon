@@ -5,11 +5,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 VERIFIER = ROOT / "packaging" / "verify-desktop-package.sh"
+MACOS_CLOSURE_VERIFIER = ROOT / "packaging" / "macos" / "verify-dylib-closure.sh"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 
@@ -45,6 +47,82 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("Windows package stage lacks zlib runtime DLL", workflow)
         self.assertIn("refusing Windows package stage with possible original game data", workflow)
         self.assertIn("Verify installed Inno Setup package and runtime closure", workflow)
+
+    def test_macos_bundle_closure_verifier_checks_rpaths_and_host_libraries(self) -> None:
+        if os.name != "nt":
+            subprocess.run(["bash", "-n", str(MACOS_CLOSURE_VERIFIER)], check=True)
+        source = MACOS_CLOSURE_VERIFIER.read_text(encoding="utf-8")
+        self.assertIn("otool -L", source)
+        self.assertIn("LC_RPATH", source)
+        self.assertIn("@rpath", source)
+        self.assertIn("@loader_path", source)
+        self.assertIn("@executable_path", source)
+        self.assertIn("/System/*|/usr/lib/*", source)
+        self.assertIn("non-system dynamic library", source)
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('bash packaging/macos/verify-dylib-closure.sh "$APP"', workflow)
+        self.assertIn("resolve_rpath_reference", workflow)
+
+    def test_macos_closure_verifier_resolves_rpath_and_rejects_homebrew(self) -> None:
+        # Linux CI cannot execute Apple's inspection tools.  Model their small,
+        # documented text interface here so the verifier's decision logic is
+        # covered without needing a macOS runner or any game media.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            app = root / "ProjectEon.app"
+            executable = app / "Contents" / "MacOS" / "ProjectEon"
+            framework = app / "Contents" / "Frameworks" / "libexample.dylib"
+            tool_dir = root / "tools"
+            executable.parent.mkdir(parents=True)
+            framework.parent.mkdir(parents=True)
+            tool_dir.mkdir()
+            executable.touch()
+            framework.touch()
+            otool = tool_dir / "otool"
+            otool.write_text(
+                """#!/usr/bin/env bash
+if [ \"$1\" = -L ]; then
+  case \"$2\" in
+    */ProjectEon) printf '%s\\n' \"$2:\" '@rpath/libexample.dylib (compatibility version 0.0.0, current version 0.0.0)' ;;
+    *) printf '%s\\n' \"$2:\" '/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1.0.0)' ;;
+  esac
+else
+  printf '%s\\n' 'Load command 1' '          cmd LC_RPATH' '      cmdsize 56' '         path @executable_path/../Frameworks (offset 12)'
+fi
+""",
+                encoding="utf-8",
+            )
+            file_command = tool_dir / "file"
+            file_command.write_text("#!/usr/bin/env bash\nprintf '%s\\n' 'Mach-O 64-bit executable'\n", encoding="utf-8")
+            otool.chmod(0o755)
+            file_command.chmod(0o755)
+            environment = os.environ | {"PATH": f"{tool_dir}{os.pathsep}{os.environ['PATH']}"}
+
+            result = subprocess.run(
+                ["bash", str(MACOS_CLOSURE_VERIFIER), str(app)],
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            otool.write_text(
+                """#!/usr/bin/env bash
+if [ \"$1\" = -L ]; then
+  printf '%s\\n' \"$2:\" '/opt/homebrew/lib/libhost.dylib (compatibility version 0.0.0, current version 0.0.0)'
+fi
+""",
+                encoding="utf-8",
+            )
+            otool.chmod(0o755)
+            rejected = subprocess.run(
+                ["bash", str(MACOS_CLOSURE_VERIFIER), str(app)],
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("non-system dynamic library", rejected.stderr)
 
 
 if __name__ == "__main__":
