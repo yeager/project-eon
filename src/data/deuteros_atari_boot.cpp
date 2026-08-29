@@ -239,6 +239,77 @@ DeuterosAtariKillerBootExecutionPrefix execute_deuteros_atari_killer_boot_prefix
     return result;
 }
 
+DeuterosAtariKillerBootDecoderBoundary parse_deuteros_atari_killer_boot_decoder_boundary(
+    const std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile) {
+    // $106c loads the first byte source into A0 and immediately BSRs to the
+    // local routine at $10c6.  The helper's bytewise EORI loop stops when the
+    // transformed byte is zero, then pushes GEMDOS selector 9 and traps. Its
+    // caller's condition is deliberately not emulated here.
+    constexpr std::size_t caller_offset = 0x6c;
+    constexpr auto caller_bytes = std::to_array<std::uint8_t>({
+        0x41, 0xfa, 0x00, 0xe8, // lea $1156(pc),a0
+        0x61, 0x00, 0x00, 0x54, // bsr.w $10c6
+    });
+    constexpr std::string_view caller_sha256 =
+        "5e21bb3b7a3bc300d36f330a3112efbc5388515eb0441f23d9205bcc26df3d95";
+    constexpr std::size_t decoder_offset = 0xc6;
+    constexpr auto decoder_bytes = std::to_array<std::uint8_t>({
+        0x2f, 0x08,             // move.l a0,-(a7)
+        0x0a, 0x18, 0x00, 0xb9, // eori.b #$b9,(a0)+
+        0x66, 0xfa,             // bne.b $10c8
+        0x3f, 0x3c, 0x00, 0x09, // move.w #9,-(a7)
+        0x4e, 0x41,             // trap #1
+        0x5c, 0x8f,             // addq.l #6,a7
+        0x4e, 0x75,             // rts
+    });
+    constexpr std::string_view decoder_sha256 =
+        "218908b4c5751ffa0b5b19aaebd278df41e29a8f70cd6285a0e05ee9e07f5c04";
+    constexpr std::uint32_t source_address = 0x1156;
+    constexpr std::size_t source_offset = source_address - 0x1000U;
+    constexpr std::size_t encoded_byte_count = 52;
+    constexpr std::string_view encoded_sha256 =
+        "56ca6d45903d6cd36809ebbba04adcf398197a84e1e41e1bf0e1e3d53de9e7f2";
+    if (boot_sector.size() != 512U || !profile.killer_boot_signature
+        || profile.boot_branch_target != 0x22U
+        || !starts_with(boot_sector, caller_offset, caller_bytes)
+        || !starts_with(boot_sector, decoder_offset, decoder_bytes)) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT decoder boundary");
+    }
+    const auto caller = boot_sector.subspan(caller_offset, caller_bytes.size());
+    const auto decoder = boot_sector.subspan(decoder_offset, decoder_bytes.size());
+    const auto encoded = boot_sector.subspan(source_offset, encoded_byte_count);
+    if (to_hex(sha256(caller)) != caller_sha256 || to_hex(sha256(decoder)) != decoder_sha256
+        || to_hex(sha256(encoded)) != encoded_sha256 || encoded.back() != 0xb9U) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT decoder bytes");
+    }
+    return {caller_offset, caller_bytes.size(), std::string(caller_sha256), decoder_offset,
+        decoder_bytes.size(), std::string(decoder_sha256), source_address, source_offset,
+        encoded_byte_count, std::string(encoded_sha256), 0xb9U, 9U, 0x4e41U};
+}
+
+std::vector<std::uint8_t> decode_deuteros_atari_killer_boot_message(
+    const std::span<const std::uint8_t> boot_sector,
+    const DeuterosAtariKillerBootDecoderBoundary& boundary) {
+    if (boot_sector.size() != 512U || boundary.source_address != 0x1156U
+        || boundary.source_offset != 0x156U || boundary.encoded_byte_count != 52U
+        || boundary.xor_immediate != 0xb9U || boundary.gemdos_selector != 9U
+        || boundary.trap_opcode != 0x4e41U
+        || boundary.source_offset > boot_sector.size()
+        || boundary.encoded_byte_count > boot_sector.size() - boundary.source_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT decoder evaluation");
+    }
+    const auto encoded = boot_sector.subspan(boundary.source_offset, boundary.encoded_byte_count);
+    if (to_hex(sha256(encoded)) != boundary.encoded_sha256 || encoded.back() != boundary.xor_immediate) {
+        throw std::runtime_error("Deuteros Atari ST KILLER_BOOT decoder source changed");
+    }
+    std::vector<std::uint8_t> decoded(encoded.begin(), encoded.end());
+    for (auto& byte : decoded) byte ^= boundary.xor_immediate;
+    if (decoded.back() != 0U) {
+        throw std::runtime_error("Deuteros Atari ST KILLER_BOOT decoder has no terminator");
+    }
+    return decoded;
+}
+
 std::vector<std::uint8_t> DeuterosAtariDisk::read_sectors(
     std::uint16_t track, std::uint8_t side, std::uint8_t first_sector,
     std::uint16_t sector_count) const {

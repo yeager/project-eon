@@ -421,6 +421,23 @@ struct MillenniumAmigaResidentIndependentBranchPreparationBoundary {
     std::uint32_t unknown_call_address = 0;
     std::uint32_t unknown_call_target = 0;
 };
+
+// The caller-side bytes immediately after the independent preparation's
+// unknown JSR are a complete call-free raw tail. It is deliberately static
+// evidence only: the JSR may not return and the tail reads live absolute
+// cells, so this does not model registers, memory, or either return path.
+struct MillenniumAmigaResidentIndependentPostCallTailBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::array<std::uint32_t, 6> absolute_byte_addresses{};
+    std::uint32_t external_jump_address = 0;
+    std::uint32_t external_jump_target = 0;
+    std::uint32_t negative_path_address = 0;
+    std::uint32_t negative_path_return_address = 0;
+    std::uint32_t nonnegative_return_address = 0;
+};
 struct MillenniumAmigaResidentSeparateEntryGate {
     std::uint32_t entry_address = 0;
     std::uint32_t branch_address = 0;
@@ -657,6 +674,10 @@ parse_millennium_amiga_resident_independent_branch_target_boundary(
 parse_millennium_amiga_resident_independent_branch_preparation_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
     const MillenniumAmigaResidentIndependentBranchTargetBoundary& boundary);
+[[nodiscard]] MillenniumAmigaResidentIndependentPostCallTailBoundary
+parse_millennium_amiga_resident_independent_post_call_tail_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentIndependentBranchPreparationBoundary& boundary);
 [[nodiscard]] MillenniumAmigaResidentSeparateEntryGate
 parse_millennium_amiga_resident_separate_entry_gate(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);

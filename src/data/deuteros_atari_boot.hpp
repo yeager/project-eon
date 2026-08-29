@@ -100,6 +100,35 @@ struct DeuterosAtariKillerBootExecutionPrefix {
 execute_deuteros_atari_killer_boot_prefix(
     std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile);
 
+// The Disk 2 boot entry has one static caller-connected route to a local
+// bytewise decoder.  The routine mutates bytes in its original boot buffer
+// and then crosses GEMDOS via TRAP #1, so Project Eon records and evaluates
+// only the bounded XOR transform in a separate vector.  It never invokes the
+// service, displays the decoded bytes, or writes them back into game media.
+struct DeuterosAtariKillerBootDecoderBoundary {
+    std::size_t caller_offset = 0;
+    std::size_t caller_byte_count = 0;
+    std::string caller_sha256;
+    std::size_t decoder_offset = 0;
+    std::size_t decoder_byte_count = 0;
+    std::string decoder_sha256;
+    std::uint32_t source_address = 0;
+    std::size_t source_offset = 0;
+    std::size_t encoded_byte_count = 0;
+    std::string encoded_sha256;
+    std::uint8_t xor_immediate = 0;
+    std::uint16_t gemdos_selector = 0;
+    std::uint16_t trap_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariKillerBootDecoderBoundary
+parse_deuteros_atari_killer_boot_decoder_boundary(
+    std::span<const std::uint8_t> boot_sector, const DeuterosAtariBootProfile& profile);
+
+[[nodiscard]] std::vector<std::uint8_t> decode_deuteros_atari_killer_boot_message(
+    std::span<const std::uint8_t> boot_sector,
+    const DeuterosAtariKillerBootDecoderBoundary& boundary);
+
 // This is the control-flow boundary within the verified Disk 1 raw stage.
 // Field names describe instructions and physical media only; it is not yet a
 // claim about the original game's title or simulation.
