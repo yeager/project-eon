@@ -42,8 +42,9 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // be presented as a title handoff.
     if (!title_stage_session_ && events.alternate_resources.size() == 1
         && events.alternate_resources.front() == 0x0b38) {
-        title_stage_session_.emplace(disk_, load_plan_);
-        title_entry_prefix_ = execute_deuteros_amiga_title_entry_prefix(disk_, load_plan_, 1);
+        // `$21982` returned bootstrap profile one through `$12ffc`; bind the
+        // caller-proven value to the title stage before its Exec boundary.
+        title_stage_session_.emplace(disk_, load_plan_, 1);
         events.title_handoff = true;
     }
     ++ticks_;

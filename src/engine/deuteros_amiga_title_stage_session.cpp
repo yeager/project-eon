@@ -8,7 +8,8 @@
 namespace eon {
 
 DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
-    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan)
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const std::uint16_t incoming_profile)
     : disk_(&disk), stage_(plan.title_stage), profile_(parse_deuteros_amiga_title_stage(disk, plan)) {
     if (stage_.length == 0 || stage_.disk_offset > AmigaAdf::standard_size
         || stage_.length > AmigaAdf::standard_size - stage_.disk_offset
@@ -22,6 +23,9 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     if (original_sha256_ != clean_title_stage_sha256) {
         throw std::runtime_error("Unexpected Deuteros Amiga title-stage media");
     }
+    // Keep the caller-proven bootstrap profile joined to the exact loaded
+    // stage. The helper models only local writes and stops before Exec.
+    entry_prefix_ = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
 }
 
 std::span<const std::uint8_t> DeuterosAmigaTitleStageSession::original_bytes() const {
