@@ -673,6 +673,25 @@ struct DeuterosAmigaTitlePostExecServiceRouteProfile {
 parse_deuteros_amiga_title_post_exec_service_route_profile(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan);
 
+// The service route's local BSR returns directly into this caller-owned
+// continuation. It includes calls and branch predicates, but does not model
+// their values, side effects, or display semantics.
+struct DeuterosAmigaTitlePostExecServiceContinuationProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t first_external_call_target = 0;
+    std::array<std::uint32_t, 2> local_service_call_targets{};
+    std::uint32_t graphics_dispatch_target = 0;
+    std::array<std::uint32_t, 2> table_addresses{};
+    std::array<std::uint32_t, 2> display_word_addresses{};
+    std::uint32_t object_pointer_address = 0;
+    std::uint32_t return_address = 0;
+    std::string sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecServiceContinuationProfile
+parse_deuteros_amiga_title_post_exec_service_continuation_profile(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan);
+
 // `$40616` begins with the two opcode bytes retained at the end of the
 // preceding return-continuation evidence span.  This overlapping profile
 // binds the complete following conditional block through its local branch
