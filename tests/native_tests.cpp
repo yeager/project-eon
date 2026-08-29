@@ -7198,6 +7198,19 @@ int main() {
         }
         assert(rejected);
     }
+    for (const auto disk_offset : std::array<std::size_t, 4>{{0x9b50a, 0x9cbb4, 0x9cc32, 0x9ceb0}}) {
+        auto altered_paired_local_route_disk = *amiga_disk1;
+        altered_paired_local_route_disk[disk_offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_paired_local_route_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_paired_local_route_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_tail_return_disk = *amiga_disk1;
         altered_tail_return_disk[0x9b4d4] ^= 0x01;
