@@ -81,6 +81,15 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::array<std::uint8_t, 16> input_exit_private_driver_loop{
         0x89, 0xc1, 0x51, 0xb8, 0x13, 0x00, 0xe8, 0xe8,
         0xe7, 0xe8, 0xda, 0xff, 0x59, 0xe2, 0xf3, 0xc3};
+    constexpr std::array<std::uint8_t, 25> input_exit_helper_loop{
+        0x0e, 0x1f, 0xb9, 0x0f, 0x00, 0xbe, 0x68, 0x17, 0x51,
+        0x56, 0xe8, 0xd5, 0xff, 0xfe, 0xc0, 0xe8, 0xe9, 0xfd,
+        0x5e, 0x59, 0x83, 0xc6, 0x04, 0xe2, 0xef};
+    constexpr std::array<std::uint8_t, 29> input_exit_helper_selector{
+        0x56, 0xa1, 0x81, 0x11, 0x03, 0x06, 0xf7, 0x18, 0x25,
+        0xff, 0x03, 0xa3, 0xf7, 0x18, 0x8b, 0xf0, 0xac, 0x5e,
+        0x25, 0x3f, 0x00, 0x3c, 0x24, 0x72, 0x04, 0x2c, 0x18,
+        0xeb, 0xf8};
     constexpr std::array<std::uint8_t, 10> clean_exit{
         0x32, 0xc0, 0x2e, 0xa2, 0x0e, 0x1a, 0x8b, 0x26,
         0xa0, 0x1a};
@@ -111,7 +120,9 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         || !has_bytes(titles_executable, 0x1ac4 - file_to_load_bias, title_driver_record)
         || !has_bytes(titles_executable, 0x1884 - file_to_load_bias, input_exit_loading_text)
         || !has_bytes(titles_executable, 0x1968 - file_to_load_bias, input_exit_private_driver_entry)
-        || !has_bytes(titles_executable, 0x1931 - file_to_load_bias, input_exit_private_driver_loop)) {
+        || !has_bytes(titles_executable, 0x1931 - file_to_load_bias, input_exit_private_driver_loop)
+        || !has_bytes(titles_executable, 0x1917 - file_to_load_bias, input_exit_helper_loop)
+        || !has_bytes(titles_executable, 0x18f9 - file_to_load_bias, input_exit_helper_selector)) {
         throw std::runtime_error("Unsupported Millennium DOS title control flow");
     }
     constexpr std::size_t title_selection_callee_address = 0x1725;
@@ -362,6 +373,14 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_exit_private_driver_function = 0x0013,
         .input_exit_private_driver_call_count = 5,
         .input_exit_private_driver_helper_address = 0x1917,
+        .input_exit_helper_selector_iterations = 15,
+        .input_exit_helper_selector_state_address = 0x1181,
+        .input_exit_helper_selector_accumulator_address = 0x18f7,
+        .input_exit_helper_selector_mask = 0x03ff,
+        .input_exit_helper_selector_range = 0x24,
+        .input_exit_helper_selector_subtract = 0x18,
+        .input_exit_helper_resource_index_bias = 1,
+        .input_exit_helper_resource_loader_address = 0x1712,
         .exit_code = 0,
         .title_private_interrupt_wrapper_address = 0x0122,
         .title_private_interrupt_record_address = 0x1ac4,
