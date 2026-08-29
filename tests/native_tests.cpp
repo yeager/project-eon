@@ -4301,6 +4301,25 @@ int main() {
     assert(text_catalog.pointers[402].target_offset == 0x2c0c);
     assert(text_catalog.records.front().source_offset == 0x366);
     assert(text_catalog.records.front().bytes == std::vector<std::uint8_t>({0x20, 0x00}));
+    const auto static_data_evidence = eon::parse_millennium_dos_static_data_evidence(*static_data);
+    assert(static_data_evidence.source_size == 12'494);
+    assert(static_data_evidence.celestial_table_offset == 0x3d2);
+    assert(static_data_evidence.celestial_label_count == 41);
+    assert(static_data_evidence.pointer_count == 435);
+    assert(static_data_evidence.raw_record_count == 434);
+    assert(static_data_evidence.topology_anchors[2].table_index == 251);
+    assert(static_data_evidence.topology_anchors[2].target_offset == 0x0ff1);
+    {
+        auto altered_static_data = *static_data;
+        altered_static_data[251 * 2] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_static_data_evidence(altered_static_data));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto dos_control_text = eon::parse_millennium_dos_control_text_evidence(*static_data);
     assert((dos_control_text.pointer_indices
         == std::array<std::size_t, 5>{{271, 350, 390, 398, 399}}));
@@ -4682,6 +4701,13 @@ int main() {
     assert(spanish_text_catalog.pointers.size() == eon::MillenniumDosStaticTextCatalog::pointer_count);
     assert(spanish_text_catalog.records.size() == 434);
     assert(spanish_text_catalog.pointers[2].target_offset == 0x36a);
+    const auto spanish_static_evidence = eon::parse_millennium_dos_static_data_evidence(
+        disk.read(*spanish_static_data));
+    assert(spanish_static_evidence.source_size == 13'254);
+    assert(spanish_static_evidence.celestial_table_offset == 0x3db);
+    assert(spanish_static_evidence.pointer_count == 435);
+    assert(spanish_static_evidence.raw_record_count == 434);
+    assert(spanish_static_evidence.topology_anchors[4].table_index == 401);
     const auto spanish_control_text = eon::parse_millennium_dos_control_text_evidence(
         disk.read(*spanish_static_data));
     assert(spanish_control_text.source_sha256
@@ -4702,6 +4728,18 @@ int main() {
         try {
             static_cast<void>(eon::parse_millennium_dos_control_text_evidence(
                 altered_spanish_control_text));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_spanish_static_data = disk.read(*spanish_static_data);
+        altered_spanish_static_data[0x03db] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_static_data_evidence(
+                altered_spanish_static_data));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

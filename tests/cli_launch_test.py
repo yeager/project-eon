@@ -118,6 +118,22 @@ def main() -> int:
             "--data-dir did not inspect the supplied original media:\n"
             f"{data_dir_inspection.stderr}"
         )
+    # Both hash-recognised DOS editions expose their own immutable 2200AD4.BIN
+    # topology and original-text provenance. The report must not omit Spanish
+    # diagnostics or silently reuse the English offsets/hashes.
+    required_static_data_reports = (
+        "2200AD4.BIN static text: 435 original pointers to 434 raw records; source SHA-256 "
+        "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d",
+        "Spanish 2200AD4.BIN static text: 435 original pointers to 434 raw records; source SHA-256 "
+        "8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31",
+        "Control-text provenance: pointers 0x12a7/0x12ac",
+        "Spanish control-text provenance: pointers 0x1351/0x1359",
+    )
+    if any(report not in data_dir_inspection.stdout for report in required_static_data_reports):
+        raise SystemExit(
+            "DOS static-data inspection did not retain distinct English/Spanish provenance:\n"
+            f"{data_dir_inspection.stdout}"
+        )
 
     # The Modern PNG profile is bound to the English title resource. A
     # process-level parse failure proves a Spanish FAT12 selection cannot

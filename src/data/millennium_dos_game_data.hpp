@@ -46,6 +46,20 @@ struct MillenniumDosStaticTextCatalog {
     std::vector<MillenniumDosStaticTextRecord> records;
 };
 
+// A release-specific admission record for the two hash-recognised DOS
+// 2200AD4.BIN editions.  It keeps the shared pointer-table topology and each
+// edition's real celestial-table location inspectable without treating either
+// raw record collection as a UI, control map, or mutable game state.
+struct MillenniumDosStaticDataEvidence {
+    std::string source_sha256;
+    std::size_t source_size = 0;
+    std::size_t celestial_table_offset = 0;
+    std::size_t celestial_label_count = 0;
+    std::size_t pointer_count = 0;
+    std::size_t raw_record_count = 0;
+    std::array<MillenniumDosStaticTextPointer, 5> topology_anchors{};
+};
+
 // The supplied Spanish FAT12 release contains the only live standalone
 // launcher documentation in the recognised corpus: MILL.BAT. Its text is
 // preserved verbatim after identity validation; it establishes command-tail
@@ -93,6 +107,12 @@ struct MillenniumDosSaveLayout {
 // data. No text is normalized, decoded as a UI command, or assigned gameplay
 // meaning; callers can only inspect bytes read from supplied media.
 [[nodiscard]] MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
+    std::span<const std::uint8_t> static_data);
+
+// Accepts only the exact English or Spanish static-data leaf currently
+// recognised by Project Eon. It is a forensic diagnostic, never a format
+// fallback: a changed byte or unrecognised edition fails closed.
+[[nodiscard]] MillenniumDosStaticDataEvidence parse_millennium_dos_static_data_evidence(
     std::span<const std::uint8_t> static_data);
 
 [[nodiscard]] MillenniumDosLaunchManual parse_millennium_dos_spanish_launch_manual(
