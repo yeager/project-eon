@@ -2069,6 +2069,28 @@ int main() {
     assert(spanish_game_startup_callees.other_compare_value == 2);
     assert(spanish_game_startup_callees.other_equal_store_address == 0x0107);
     assert(spanish_game_startup_callees.other_return_address == 0xd1ed);
+    const auto spanish_game_startup_followups = eon::parse_millennium_dos_spanish_game_startup_followups(
+        disk.read(*executable), spanish_game_startup_callees);
+    assert(spanish_game_startup_followups.equal_entry_address == 0x044e);
+    assert(spanish_game_startup_followups.equal_byte_count == 8);
+    assert(spanish_game_startup_followups.equal_sha256
+        == "38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f");
+    assert(spanish_game_startup_followups.equal_literal_value == 1);
+    assert(spanish_game_startup_followups.equal_storage_address == 0xda05);
+    assert(spanish_game_startup_followups.equal_return_address == 0x0455);
+    assert(spanish_game_startup_followups.palette_entry_address == 0x0466);
+    assert(spanish_game_startup_followups.palette_byte_count == 23);
+    assert(spanish_game_startup_followups.palette_sha256
+        == "b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779");
+    assert(spanish_game_startup_followups.palette_table_address == 0x0456);
+    assert((spanish_game_startup_followups.palette_table_values
+        == std::array<std::uint8_t, 16>{0, 1, 2, 3, 4, 5, 6, 7, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f}));
+    assert(spanish_game_startup_followups.palette_table_sha256
+        == "ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a");
+    assert(spanish_game_startup_followups.palette_initial_cx == 16);
+    assert(spanish_game_startup_followups.bios_interrupt == 0x10);
+    assert(spanish_game_startup_followups.bios_ax == 0x1000);
+    assert(spanish_game_startup_followups.palette_return_address == 0x047c);
     {
         auto altered_spanish_game = disk.read(*executable);
         altered_spanish_game[0xd1cd] ^= 0x01;
@@ -2076,6 +2098,18 @@ int main() {
         try {
             static_cast<void>(eon::parse_millennium_dos_spanish_game_startup_evidence(
                 altered_spanish_game));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_spanish_game = disk.read(*executable);
+        altered_spanish_game[0x034e] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_spanish_game_startup_followups(
+                altered_spanish_game, spanish_game_startup_callees));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

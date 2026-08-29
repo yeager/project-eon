@@ -521,6 +521,10 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             disk.read(*ibm_entry), disk.read(*titles_entry), disk.read(*game_entry));
         const auto game_startup = eon::parse_millennium_dos_spanish_game_startup_evidence(
             disk.read(*game_entry));
+        const auto game_startup_callees = eon::parse_millennium_dos_spanish_game_startup_callees(
+            disk.read(*game_entry), game_startup);
+        const auto game_startup_followups = eon::parse_millennium_dos_spanish_game_startup_followups(
+            disk.read(*game_entry), game_startup_callees);
         std::cout << "          Spanish IBM.COM handoff: caller 0x" << std::hex
             << ibm_handoff.caller_entry_address << " names 0x" << ibm_handoff.title_name_address
             << "/0x" << ibm_handoff.game_name_address << "; calls 0x"
@@ -543,6 +547,30 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             << " calls 0x" << game_startup.equal_call_target_address << ", otherwise 0x"
             << game_startup.other_call_target_address << "; SHA-256 " << game_startup.startup_sha256
             << std::dec << " (static only; no private result, branch, or game state is supplied)\n";
+        std::cout << "          Spanish startup callees: AL==0x1 path 0x" << std::hex
+            << game_startup_callees.equal_entry_address << " -> private 0x"
+            << game_startup_callees.equal_private_target_address << ", local 0x"
+            << game_startup_callees.equal_followup_target_address << ", then stores 0x1 at 0x"
+            << game_startup_callees.equal_result_storage_address << "; other path 0x"
+            << game_startup_callees.other_entry_address << " -> private 0x"
+            << game_startup_callees.other_private_target_address << ", local 0x"
+            << game_startup_callees.other_followup_target_address << ", compares 0x"
+            << game_startup_callees.other_compare_value << " at 0x"
+            << game_startup_callees.other_result_source_address << "; SHA-256 "
+            << game_startup_callees.equal_sha256 << "/" << game_startup_callees.other_sha256
+            << std::dec << " (call returns and predicates remain unmodeled)\n";
+        std::cout << "          Spanish startup follow-ups: 0x" << std::hex
+            << game_startup_followups.equal_entry_address << " stores 0x"
+            << static_cast<unsigned>(game_startup_followups.equal_literal_value) << " at 0x"
+            << game_startup_followups.equal_storage_address << "; 0x"
+            << game_startup_followups.palette_entry_address << " initializes CX=0x" << std::hex
+            << game_startup_followups.palette_initial_cx << " before original AX=0x"
+            << game_startup_followups.bios_ax << " INT 0x"
+            << game_startup_followups.bios_interrupt << " palette table 0x"
+            << game_startup_followups.palette_table_address << "; SHA-256 "
+            << game_startup_followups.palette_sha256 << "/"
+            << game_startup_followups.palette_table_sha256 << std::dec
+            << " (static only; no BIOS call, branch, or presentation is executed)\n";
         std::cout << "          Spanish isolation boundary: only this image's IBM.COM, TITLES.EXE, "
             << "and 2200AD.EXE are reported; no English executable, state, or title path is "
             << "substituted. Next trace inputs: hash-locked DOS child return/AL, file operations, "

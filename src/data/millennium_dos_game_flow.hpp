@@ -640,6 +640,71 @@ struct MillenniumDosSpanishGameStartupEvidence {
 [[nodiscard]] MillenniumDosSpanishGameStartupEvidence
 parse_millennium_dos_spanish_game_startup_evidence(std::span<const std::uint8_t> game_executable);
 
+// The two local callees selected after the Spanish startup's private $0124
+// result are fully bounded until their next private/follow-up call boundaries.
+// The parser does not choose either caller branch or model any callee return.
+struct MillenniumDosSpanishGameStartupCallees {
+    std::uint16_t equal_entry_address = 0;
+    std::size_t equal_byte_count = 0;
+    std::string equal_sha256;
+    std::uint16_t equal_private_function = 0;
+    std::uint16_t equal_private_record_address = 0;
+    std::uint16_t equal_private_call_address = 0;
+    std::uint16_t equal_private_target_address = 0;
+    std::uint16_t equal_followup_call_address = 0;
+    std::uint16_t equal_followup_target_address = 0;
+    std::uint8_t equal_result_value = 0;
+    std::uint16_t equal_result_storage_address = 0;
+    std::uint16_t equal_return_address = 0;
+    std::uint16_t other_entry_address = 0;
+    std::size_t other_byte_count = 0;
+    std::string other_sha256;
+    std::uint16_t other_private_function = 0;
+    std::uint16_t other_private_record_address = 0;
+    std::uint16_t other_private_call_address = 0;
+    std::uint16_t other_private_target_address = 0;
+    std::uint16_t other_followup_call_address = 0;
+    std::uint16_t other_followup_target_address = 0;
+    std::uint16_t other_result_source_address = 0;
+    std::uint8_t other_compare_value = 0;
+    std::uint16_t other_equal_store_address = 0;
+    std::uint16_t other_return_address = 0;
+};
+
+[[nodiscard]] MillenniumDosSpanishGameStartupCallees
+parse_millennium_dos_spanish_game_startup_callees(
+    std::span<const std::uint8_t> game_executable,
+    const MillenniumDosSpanishGameStartupEvidence& startup);
+
+// The two direct local follow-ups reached after the Spanish startup callees.
+// One writes a literal byte and returns; the other initializes CX to 16 and
+// contains a BIOS palette-request loop. The external interrupt's register
+// effects are unrecovered, so the initial count is not a claimed number of
+// runtime iterations. Neither path is selected or executed here.
+struct MillenniumDosSpanishGameStartupFollowups {
+    std::uint16_t equal_entry_address = 0;
+    std::size_t equal_byte_count = 0;
+    std::string equal_sha256;
+    std::uint8_t equal_literal_value = 0;
+    std::uint16_t equal_storage_address = 0;
+    std::uint16_t equal_return_address = 0;
+    std::uint16_t palette_entry_address = 0;
+    std::size_t palette_byte_count = 0;
+    std::string palette_sha256;
+    std::uint16_t palette_table_address = 0;
+    std::array<std::uint8_t, 16> palette_table_values{};
+    std::string palette_table_sha256;
+    std::uint16_t palette_initial_cx = 0;
+    std::uint16_t bios_interrupt = 0;
+    std::uint16_t bios_ax = 0;
+    std::uint16_t palette_return_address = 0;
+};
+
+[[nodiscard]] MillenniumDosSpanishGameStartupFollowups
+parse_millennium_dos_spanish_game_startup_followups(
+    std::span<const std::uint8_t> game_executable,
+    const MillenniumDosSpanishGameStartupCallees& callees);
+
 [[nodiscard]] MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     std::span<const std::uint8_t> game_executable,
