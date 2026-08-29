@@ -1,4 +1,5 @@
 #include "data/millennium_dos_video_driver.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -23,12 +24,18 @@ std::uint16_t little16(const std::span<const std::uint8_t> bytes, const std::siz
 
 } // namespace
 
-MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
-    const std::span<const std::uint8_t> bytes, const MillenniumDosVideoDriverKind kind) {
+namespace {
+
+MillenniumDosVideoDriverProfile parse_driver_profile(
+    const std::span<const std::uint8_t> bytes, const MillenniumDosVideoDriverKind kind,
+    const bool spanish) {
     const bool ega = kind == MillenniumDosVideoDriverKind::ega640;
     const auto dispatch = static_cast<std::uint16_t>(ega ? 0x20 : 0x32);
-    const auto expected_size = static_cast<std::size_t>(ega ? 4632 : 4366);
-    if (bytes.size() != expected_size) throw std::runtime_error("Unsupported Millennium DOS video-driver size");
+    const auto english_size = static_cast<std::size_t>(ega ? 4632 : 4366);
+    const auto spanish_size = static_cast<std::size_t>(ega ? 4630 : 4346);
+    if (bytes.size() != (spanish ? spanish_size : english_size)) {
+        throw std::runtime_error("Unsupported Millennium DOS video-driver size");
+    }
     constexpr auto entry = std::to_array<std::uint8_t>({
         0xfb, 0x0e, 0x1f, 0xd1, 0xe0, 0x3d, 0x4e, 0x00, 0x90, 0x73});
     if (!has_bytes(bytes, 0, entry)) throw std::runtime_error("Unsupported Millennium DOS video-driver entry");
@@ -115,6 +122,24 @@ MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
         .function_thirty_one_state_address = static_cast<std::uint16_t>(ega ? 0x8a : 0xac),
         .function_thirty_one_return_ah = static_cast<std::uint8_t>(ega ? 0x04 : 0x01),
     };
+}
+
+} // namespace
+
+MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
+    const std::span<const std::uint8_t> bytes, const MillenniumDosVideoDriverKind kind) {
+    return parse_driver_profile(bytes, kind, false);
+}
+
+MillenniumDosVideoDriverProfile parse_millennium_dos_spanish_video_driver(
+    const std::span<const std::uint8_t> bytes, const MillenniumDosVideoDriverKind kind) {
+    const auto expected = kind == MillenniumDosVideoDriverKind::ega640
+        ? "ef031b0b6e720ab2dafc1eb6373ddb76e0ff15f7b59ac785265c5136be153daf"
+        : "3fb76b2ccccffc304b0525cd410b940bbb61e3d1a7a90340d72e5683d7f0211d";
+    if (to_hex(sha256(bytes)) != expected) {
+        throw std::runtime_error("Unsupported Millennium Spanish DOS video driver");
+    }
+    return parse_driver_profile(bytes, kind, true);
 }
 
 } // namespace eon

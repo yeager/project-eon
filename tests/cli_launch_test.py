@@ -64,6 +64,23 @@ def main() -> int:
         )
     if "INSPECTION  read-only provenance scan; original media stays in place" not in data_dir_inspection.stdout:
         raise SystemExit("--inspect did not identify its read-only provenance boundary")
+    reported_releases = {
+        line.removeprefix("VERIFIED  ") for line in data_dir_inspection.stdout.splitlines()
+        if line.startswith("VERIFIED  ")
+    }
+    expected_reported_releases = {
+        "Millennium 2.2 / DOS / en",
+        "Millennium 2.2 / DOS / es",
+        "Millennium 2.2 / Amiga / en",
+        "Millennium 2.2 / Atari ST / en",
+        "Deuteros / Amiga / en",
+        "Deuteros / Atari ST / en",
+    }
+    if reported_releases != expected_reported_releases:
+        raise SystemExit(
+            "full --inspect report did not cover exactly the supported releases:\n"
+            f"expected {sorted(expected_reported_releases)}, got {sorted(reported_releases)}"
+        )
 
     targeted_inspection = subprocess.run(
         (str(executable), "--data", str(data_directory), "--inspect", "--game", "millennium",
@@ -77,6 +94,22 @@ def main() -> int:
         raise SystemExit(
             "targeted inspection did not report only the requested original release:\n"
             f"{targeted_inspection.stdout}\n{targeted_inspection.stderr}"
+        )
+
+    # A syntactically valid but unavailable platform filter must fail clearly;
+    # it is never permission to replace Atari ST with an Amiga/DOS report.
+    unavailable_filter = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--inspect", "--game", "deuteros",
+            "--platform", "dos"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (unavailable_filter.returncode != 5
+            or "No recognised original release matches the requested inspection filters."
+                not in unavailable_filter.stderr
+            or "VERIFIED  " in unavailable_filter.stdout):
+        raise SystemExit(
+            "unavailable inspect filter did not fail without platform substitution:\n"
+            f"{unavailable_filter.stdout}\n{unavailable_filter.stderr}"
         )
     starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
     for presentation in ("original", "modern"):
@@ -371,6 +404,21 @@ def main() -> int:
                     "Project Eon did not fail cleanly for a missing default data directory:\n"
                     f"{completed.stderr}"
                 )
+    # An existing but empty directory is distinct from a missing default path:
+    # recognition completes, reports no release, and leaves that directory
+    # untouched instead of preparing a placeholder collection.
+    with tempfile.TemporaryDirectory() as empty_directory:
+        completed = subprocess.run(
+            (str(executable), "--data", empty_directory, "--inspect"), env=environment,
+            check=False, capture_output=True, text=True,
+        )
+        if (completed.returncode != 3
+                or "No recognised original release archives found." not in completed.stderr
+                or list(Path(empty_directory).iterdir())):
+            raise SystemExit(
+                "Project Eon did not reject an empty data directory without mutation:\n"
+                f"{completed.stdout}\n{completed.stderr}"
+            )
     return 0
 
 
