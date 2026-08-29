@@ -886,6 +886,13 @@ int main() {
         assert(targeted_inspect.request && targeted_inspect.request->inspect_data);
         assert(targeted_inspect.request->game == eon::Game::millennium);
         assert(targeted_inspect.request->platform == eon::Platform::dos);
+        char* inspect_game_only_args[] = {program, inspect_option, game_option, millennium};
+        assert(eon::parse_command_line(4, inspect_game_only_args).request);
+        char* direct_game_without_platform_args[] = {program, game_option, millennium};
+        const auto direct_game_without_platform = eon::parse_command_line(3,
+            direct_game_without_platform_args);
+        assert(!direct_game_without_platform.request);
+        assert(direct_game_without_platform.error.find("requires --platform") != std::string::npos);
         char verify_option[] = "--verify-data";
         char* conflicting_args[] = {program, inspect_option, verify_option, millennium};
         const auto conflict = eon::parse_command_line(4, conflicting_args);

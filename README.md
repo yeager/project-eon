@@ -196,12 +196,15 @@ Or select a game directly from the CLI:
 ./build/project-eon --data "$HOME/Hämtningar" --game millennium \
   --platform amiga --presentation original --resolution 1600x900 --aspect original
 ./build/project-eon --data "$HOME/Hämtningar" --game deuteros \
-  --presentation modern --resolution 1920x1080 --aspect widescreen
+  --platform amiga --presentation modern --resolution 1920x1080 --aspect widescreen
 ```
 
 `--resolution` accepts the same 1280x720, 1600x900, and 1920x1080 presets as
 F10. `--aspect` accepts `original` (4:3), `square-pixels` (8:5), or
-`widescreen` (16:9). Both are renderer-only preferences.
+`widescreen` (16:9). Both are renderer-only preferences. A direct `--game`
+launch always requires `--platform`: Project Eon will not select a different
+platform's release when the choice is omitted. Use the card menu or
+`--inspect --game <game>` to see the hash-verified choices first.
 
 Verify genuine release archives by SHA-256 without opening SDL:
 

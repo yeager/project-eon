@@ -332,6 +332,19 @@ def main() -> int:
             "unavailable direct launch did not explain its no-fallback boundary:\n"
             f"{unavailable_start.stdout}\n{unavailable_start.stderr}"
         )
+    # The CLI has no platform-card page, so it must not silently reproduce the
+    # old implicit DOS/Amiga preference when a direct game request omits it.
+    ambiguous_start = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (ambiguous_start.returncode != 2
+            or "--game requires --platform for a direct launch" not in ambiguous_start.stderr
+            or "SDL_Init" in ambiguous_start.stderr):
+        raise SystemExit(
+            "ambiguous direct launch did not stop before selecting a platform:\n"
+            f"{ambiguous_start.stdout}\n{ambiguous_start.stderr}"
+        )
     starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
     for presentation in ("original", "modern"):
         for game, platform in (

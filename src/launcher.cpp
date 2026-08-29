@@ -74,7 +74,7 @@ std::string usage() {
         "Usage:\n"
         "  project-eon [--data|--data-dir <directory-or-archive>]\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --game millennium|deuteros\n"
-        "               [--platform dos|amiga|atari-st]\n"
+        "               --platform dos|amiga|atari-st\n"
         "               [--presentation original|modern] [--modern-pack <pack.eonmodern>]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
@@ -170,6 +170,13 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
     }
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
+    // The graphical flow records a platform card before a profile can start
+    // a game. A direct CLI launch needs the same unambiguous release choice:
+    // never let an omitted flag choose a different platform's recovered path.
+    // Inspection remains a filter and therefore may name a game alone.
+    if (request.game && !request.inspect_data && !request.platform) {
+        return {{}, "--game requires --platform for a direct launch; use --inspect to list verified platforms", false};
+    }
     return {request, {}, false};
 }
 
