@@ -63,6 +63,32 @@ class ReleaseManifestTests(unittest.TestCase):
             profiles["millennium-dos-spanish-startup"]["leaf_sha256"],
         )
 
+    def test_hash_locked_parser_families_have_media_profiles(self):
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text())
+        profiles = {profile["id"]: profile for profile in manifest["parser_profiles"]}
+        # These families accept a parser input recovered from an image rather
+        # than a standalone archive member.  Their manifest identity is thus
+        # the complete, hash-addressed original image; no filename is used as
+        # a release identity or as a fallback selector.
+        self.assertTrue({
+            "millennium-atari-equinox-prg-chain",
+            "millennium-atari-equinox-config-chain",
+            "millennium-atari-equinox-auxiliary-resource",
+            "millennium-atari-physical-control-text",
+            "millennium-dos-spanish-title-boundary",
+            "millennium-dos-spanish-static-text",
+            "millennium-dos-spanish-launch-manual",
+        }.issubset(profiles))
+        atari_image = "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7"
+        for profile_id in (
+            "millennium-atari-equinox-prg-chain",
+            "millennium-atari-equinox-config-chain",
+            "millennium-atari-equinox-auxiliary-resource",
+        ):
+            self.assertEqual(profiles[profile_id]["leaf_sha256"], atari_image)
+            self.assertEqual(profiles[profile_id]["offset"], 0)
+            self.assertEqual(profiles[profile_id]["length"], 819200)
+
 
 if __name__ == "__main__":
     unittest.main()

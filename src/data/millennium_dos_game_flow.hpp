@@ -546,6 +546,35 @@ struct MillenniumDosStartupZeroPathBoundary {
 parse_millennium_dos_startup_zero_path_boundary(
     std::span<const std::uint8_t> game_executable);
 
+// The DX-nonzero successor is a separate, hash-locked static route.  It
+// loads an immediate byte and short-jumps into an in-image continuation which
+// stores that byte with a CS override, restores SP from an original cell, and
+// calls a local routine.  That routine immediately reaches INT 33h.  This
+// records encoded operands only: the predecessor's DX, the value in AH, the
+// local call return, and all mouse-interrupt behaviour remain native and are
+// not supplied or executed by Project Eon.
+struct MillenniumDosStartupNonzeroPathBoundary {
+    std::string executable_sha256;
+    std::uint16_t nonzero_entry_address = 0;
+    std::uint8_t immediate_al_value = 0;
+    std::uint16_t short_jump_address = 0;
+    std::uint16_t continuation_entry_address = 0;
+    std::uint16_t continuation_byte_storage_address = 0;
+    std::uint16_t continuation_stack_source_address = 0;
+    std::uint16_t continuation_first_call_address = 0;
+    std::uint16_t continuation_first_call_target = 0;
+    std::uint16_t first_external_interrupt_site = 0;
+    std::uint8_t first_external_interrupt = 0;
+    std::uint8_t first_external_service = 0;
+    std::string nonzero_entry_sha256;
+    std::string continuation_sha256;
+    std::string local_callee_prefix_sha256;
+};
+
+[[nodiscard]] MillenniumDosStartupNonzeroPathBoundary
+parse_millennium_dos_startup_nonzero_path_boundary(
+    std::span<const std::uint8_t> game_executable);
+
 // Hash-locked raw evidence for 2200AD.EXE loading the original 2200GX.EXE
 // overlay. Both executables are immutable inputs. These are only encoded
 // loader/transfer facts: no DOS service, segment value, call return, overlay

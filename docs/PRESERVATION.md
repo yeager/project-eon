@@ -75,6 +75,14 @@ static data, overlay, both video drivers, last screen, title library, launcher
 and first decoded voice), alongside narrower instruction/resource windows where
 a parser intentionally has a smaller evidence boundary.
 
+It also records whole-image evidence for parser families whose inputs are
+recovered from an original FAT12 image rather than exposed as an archive leaf:
+the Millennium Atari ST PRG, configuration and auxiliary-resource chains, and
+the separate physical control-text dump. Spanish DOS title, static-text and
+launch-manual parsing is likewise anchored to its original floppy image. These
+full-image spans are explicit preservation boundaries; a future sector-accurate
+span may replace one only with a measured mapping and a regression test.
+
 ### Stable evidence anchors
 
 | Artifact | Bytes | SHA-256 |
@@ -1030,6 +1038,17 @@ XBIOS-facing raw-reader at `+$60`. Those values are only caller-side
 machine-code facts. Project Eon does not select the comparison path, perform
 the raw read, infer a disk result, or follow code after that raw-reader/XBIOS
 boundary.
+
+The byte-proven continuation after that wrapper boundary is retained without
+asserting that the raw reader returns. At track-2 `+$1138`, the next 38 bytes
+have SHA-256 `5b1480495df8defe3e1264dd083ec1c91134c01e56d3d94e060c583ee9b54a89`.
+They place RAM `$20000` and literal selector `$0006` before `TRAP #14`, then
+lay out `ADDA.L #6,A7`; a copy loop from `$20020` through the longword pointer
+at `$25f4`; and `RTS`. The loop begins with `D7 = $1f3f`; its `DBF -4` targets
+the preceding `MOVE.L (A0)+,(A1)+` at `+$1156`, giving a literal 8,000-longword
+layout if reached. Neither selector `$6`, the pointer's provenance, service
+return, copy outcome, nor the enclosing raw-reader return is inferred or
+executed by Project Eon.
 
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
@@ -2257,6 +2276,21 @@ before first reaching `INT $21` at `$0550` with `AH=$3d`, `AL=$02`.
 `328e11edf0653b0e0f21db3b61cf9ff95795ec9431f07c0198a700358f75ed74`) against
 the full original executable. This does not choose `$da05`, infer a selected
 name's use, invoke DOS, provide carry/AX, or claim the code path executes.
+
+The complementary DX-nonzero successor is independently bounded before its
+first mouse boundary. The static target `$d44b` loads `AL=$08` and its short
+jump at `$d44d` lands at `$d41b`, deliberately skipping the adjacent `$d419`
+`XOR AX,AX`. The target's 11-byte prefix stores AL through a CS override to
+`$2fb2`, restores SP from `$d12c`, then calls `$d423 → $09e4`. That callee
+starts with `MOV AX,$0000` and reaches `INT $33` at `$09e7`. The five-byte
+four-byte nonzero entry, 11-byte continuation, and five-byte callee prefix have SHA-256
+values `92252049901ece1d56c7b17fdd7450ce8ade576650b4f7b032f61dd1e4e59522`,
+`7fb9d6276e557976c68a02e9900531347fd95ecbfbd6fc3fa60cd0c176ca5c5d`, and
+`d84b931c90a3b7e1baf2a0a6caf2c67fc5834ed6a160750ba6991b77fdb11909`,
+respectively. `MillenniumDosStartupNonzeroPathBoundary` validates all three
+against the original English executable and rejects mutations. It does not
+decide DX, infer AH on entry, call the local routine, supply a return, or
+emulate any mouse-interrupt state or result.
 
 The direct follow-up targets are also bounded by original bytes. `$044e`
 loads literal `$01`, writes it to `$da05`, and returns. `$0466` sets `DS=CS`,

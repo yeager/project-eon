@@ -755,6 +755,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game);
     const auto startup_allocation = eon::parse_millennium_dos_startup_allocation_boundary(*game);
     const auto startup_zero_path = eon::parse_millennium_dos_startup_zero_path_boundary(*game);
+    const auto startup_nonzero_path = eon::parse_millennium_dos_startup_nonzero_path_boundary(*game);
     const auto gx_overlay_load = eon::parse_millennium_dos_gx_overlay_load_evidence(
         *game, *gx_overlay);
     const auto gx_overlay_adapter = eon::parse_millennium_dos_gx_overlay_adapter_evidence(
@@ -807,6 +808,16 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << static_cast<unsigned>(startup_zero_path.first_external_service) << ", AL=0x"
         << static_cast<unsigned>(startup_zero_path.first_external_access_mode) << std::dec
         << "; static boundary only, no mode or DOS result supplied)\n";
+    std::cout << "          2200AD DX-nonzero successor: 0x" << std::hex
+        << startup_nonzero_path.nonzero_entry_address << " loads AL=0x"
+        << static_cast<unsigned>(startup_nonzero_path.immediate_al_value) << " then jumps to 0x"
+        << startup_nonzero_path.continuation_entry_address << "; local CALL 0x"
+        << startup_nonzero_path.continuation_first_call_address << " -> 0x"
+        << startup_nonzero_path.continuation_first_call_target << " reaches INT 0x"
+        << static_cast<unsigned>(startup_nonzero_path.first_external_interrupt) << " at 0x"
+        << startup_nonzero_path.first_external_interrupt_site << " (AH=0x"
+        << static_cast<unsigned>(startup_nonzero_path.first_external_service) << std::dec
+        << "; static boundary only, no mouse state or return supplied)\n";
     std::cout << "          2200GX.EXE overlay evidence: name 0x" << std::hex
         << gx_overlay_load.source_name_address << ", loader 0x"
         << gx_overlay_load.loader_entry_address << " reads segment cell 0x"
@@ -1503,6 +1514,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto& state5_plan = live_bootstrap.state5_raw_load_plan();
         const auto& state5_return = live_bootstrap.state5_return();
         const auto& supervisor_callback = live_bootstrap.supervisor_callback();
+        const auto& second_callee_continuation = live_bootstrap.second_callee_continuation();
         std::cout << "          Disk 1 XBIOS first stage: track " << stage.first_stage_track
             << ", side " << static_cast<unsigned>(stage.first_stage_side) << ", sectors "
             << static_cast<unsigned>(stage.first_stage_sector) << ".."
@@ -1619,6 +1631,15 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << supervisor_callback.callback_stack_address << ", pushes D0, RTS; SHA-256 "
             << supervisor_callback.callback_sha256 << std::dec
             << " (ABI boundary only; no XBIOS/callback execution)\n";
+        std::cout << "          Post-raw-reader continuation: stage +0x" << std::hex
+            << second_callee_continuation.continuation_offset << " -> XBIOS selector 0x"
+            << second_callee_continuation.trap_selector << " with pointer 0x"
+            << second_callee_continuation.trap_argument_address << "; SHA-256 "
+            << second_callee_continuation.continuation_sha256 << "; post-service layout copies "
+            << std::dec << (static_cast<std::uint32_t>(second_callee_continuation.copy_loop_counter) + 1U)
+            << " longwords from RAM 0x" << std::hex << second_callee_continuation.copy_source
+            << " through pointer at 0x" << second_callee_continuation.copy_destination_pointer_address
+            << " then RTS (not reached or executed without raw-reader/service return evidence)\n";
     }
     std::cout << "          Disk 2 boot continuation: "
         << (continuation.killer_boot_signature ? "KILLER_BOOT signature" : "unclassified")

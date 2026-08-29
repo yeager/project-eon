@@ -532,6 +532,47 @@ DeuterosAtariPostCallbackCalleeProfiles parse_deuteros_atari_post_callback_calle
         static_cast<std::int16_t>(be16(second_window, 20)), second_bsr_target};
 }
 
+DeuterosAtariSecondCalleeContinuation parse_deuteros_atari_second_callee_continuation(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariPostCallbackCalleeProfiles& callees) {
+    // The second callee's BSR.W at +$1134 enters the known local wrapper at
+    // +$30. Its return continuation begins at +$1138, but that return is not
+    // assumed: the wrapper reaches the XBIOS-facing raw reader at +$60.
+    constexpr std::size_t continuation_offset = 0x1138;
+    constexpr auto continuation_bytes = std::to_array<std::uint8_t>({
+        0x43, 0xf9, 0x00, 0x02, 0x00, 0x00, 0x2f, 0x09,
+        0x3f, 0x3c, 0x00, 0x06, 0x4e, 0x4e, 0x5c, 0x8f,
+        0x41, 0xf9, 0x00, 0x02, 0x00, 0x20, 0x22, 0x78,
+        0x25, 0xf4, 0x3e, 0x3c, 0x1f, 0x3f, 0x22, 0xd8,
+        0x51, 0xcf, 0xff, 0xfc, 0x4e, 0x75,
+    });
+    constexpr std::string_view continuation_sha256 =
+        "5b1480495df8defe3e1264dd083ec1c91134c01e56d3d94e060c583ee9b54a89";
+    if (stage.raw_read_routine_offset != 0x60 || callees.second_callee_offset != 0x1122
+        || callees.second_callee_bsr_target_offset != 0x30
+        || callees.second_callee_prefix_byte_count != 22) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST second-callee continuation topology");
+    }
+    require_bytes(bytes, continuation_offset, continuation_bytes,
+        "Unexpected Deuteros Atari ST second-callee continuation");
+    const auto window = bytes.subspan(continuation_offset, continuation_bytes.size());
+    if (to_hex(sha256(window)) != continuation_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST second-callee continuation hash");
+    }
+    // DBF uses the extension-word address as its displacement base, so its
+    // -4 target is the preceding MOVE.L (A0)+,(A1)+ at +$1156.
+    const auto copy_loop_target = continuation_offset + 34U
+        + static_cast<std::int16_t>(be16(window, 34));
+    if (copy_loop_target != 0x1156U) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST second-callee copy loop");
+    }
+    return {continuation_offset, continuation_bytes.size(), std::string(continuation_sha256),
+        be32(window, 2), be16(window, 10), continuation_offset + 12U, be16(window, 12),
+        be16(window, 14), 6, be32(window, 18), be16(window, 24), be16(window, 28),
+        be16(window, 30), be16(window, 32), static_cast<std::int16_t>(be16(window, 34)),
+        copy_loop_target, be16(window, 36)};
+}
+
 DeuterosAtariState0DuplicateStagePrefix
 parse_deuteros_atari_state0_duplicate_stage_prefix(const std::span<const std::uint8_t> state0_bytes,
     const std::span<const std::uint8_t> second_stage_bytes) {

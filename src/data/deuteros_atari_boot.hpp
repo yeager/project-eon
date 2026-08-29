@@ -304,6 +304,37 @@ parse_deuteros_atari_post_callback_callee_profiles(
     std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
     const DeuterosAtariSupervisorCallbackContinuation& continuation);
 
+// The second post-callback callee reaches the local raw-reader wrapper first.
+// If that unknown external/raw-reader path returns, its next 38 bytes perform
+// another literal TRAP #14 setup, then copy a fixed longword range and RTS.
+// This records the post-boundary byte layout only; it does not infer that the
+// wrapper or either service returns, what selector $6 means, or that the copy
+// takes place.
+struct DeuterosAtariSecondCalleeContinuation {
+    std::size_t continuation_offset = 0;
+    std::size_t continuation_byte_count = 0;
+    std::string continuation_sha256;
+    std::uint32_t trap_argument_address = 0;
+    std::uint16_t trap_selector = 0;
+    std::size_t trap_offset = 0;
+    std::uint16_t trap_opcode = 0;
+    std::uint16_t stack_cleanup_opcode = 0;
+    std::uint32_t stack_cleanup_bytes = 0;
+    std::uint32_t copy_source = 0;
+    std::uint16_t copy_destination_pointer_address = 0;
+    std::uint16_t copy_loop_counter = 0;
+    std::uint16_t copy_move_opcode = 0;
+    std::uint16_t copy_dbf_opcode = 0;
+    std::int16_t copy_dbf_displacement = 0;
+    std::size_t copy_loop_target_offset = 0;
+    std::uint16_t return_opcode = 0;
+};
+
+[[nodiscard]] DeuterosAtariSecondCalleeContinuation
+parse_deuteros_atari_second_callee_continuation(
+    std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariPostCallbackCalleeProfiles& callees);
+
 // The state-0 load begins with a byte-identical duplicate of the recovered
 // second boot stage. This records identity only: no original return path is
 // known to enter the duplicate at its `$13200` load address.
