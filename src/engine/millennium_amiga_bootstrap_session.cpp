@@ -19,6 +19,7 @@ MillenniumAmigaBootstrapSession::MillenniumAmigaBootstrapSession(
     resident_entry_ = parse_millennium_amiga_resident_entry(disk, plan_);
     opaque_invocation_boundary_ =
         parse_millennium_amiga_bootstrap_opaque_invocation_boundary(disk, plan_);
+    relocation_boundary_ = parse_millennium_amiga_bootstrap_relocation_boundary(disk, plan_);
     first_stage_source_anchors_ =
         parse_millennium_amiga_first_stage_source_anchor_boundary(disk, plan_);
 
@@ -27,6 +28,8 @@ MillenniumAmigaBootstrapSession::MillenniumAmigaBootstrapSession(
     // a continuation/anchor record derived from another image or range.
     if (opaque_invocation_boundary_.first_stage_target != plan_.first_stage.destination
         || opaque_invocation_boundary_.resident_stage_target != plan_.resident_entry
+        || relocation_boundary_.raw_continuation_source_address
+            != opaque_invocation_boundary_.entry_address
         || first_stage_source_anchors_.raw_disk_offset != plan_.first_stage.disk_offset
         || first_stage_source_anchors_.byte_count != plan_.first_stage.length
         || first_stage_source_anchors_.sha256 != plan_.first_stage.raw_sha256) {

@@ -160,6 +160,53 @@ parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
         plan.resident_stage.destination};
 }
 
+MillenniumAmigaBootstrapRelocationBoundary
+parse_millennium_amiga_bootstrap_relocation_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    // The $70000 bootstrap was read as exactly $400 bytes from disk +$400.
+    // Its local DBRA relocator starts at source $70032 and executes D1+1
+    // copies after deriving D1 = $66400 - $66032 = $3ce. That last source
+    // byte is $70400, one byte beyond the established half-open I/O range.
+    // Preserve this instead of silently taking the following ADF byte.
+    constexpr std::uint32_t entry_address = 0x70000;
+    constexpr std::uint32_t loaded_end = 0x70400;
+    constexpr std::uint32_t copy_source = 0x70032;
+    constexpr std::uint32_t copy_destination = 0x66032;
+    constexpr std::uint32_t copy_count = 0x3cf;
+    constexpr std::uint32_t copy_end = 0x70400;
+    constexpr std::uint32_t relocated_continuation = 0x6629e;
+    constexpr std::uint32_t raw_continuation = 0x7029e;
+    constexpr std::size_t raw_disk_offset = 0x400;
+    constexpr std::array<std::uint8_t, 66> expected{{
+        0x33,0xfc,0x00,0x24,0x00,0xdf,0xf1,0x04,0x4e,0x71,0x4e,0x71,
+        0x26,0x7c,0x00,0x06,0x60,0x32,0x22,0x3c,0x00,0x06,0x64,0x00,
+        0x04,0x81,0x00,0x06,0x60,0x32,0x23,0xcf,0x00,0x07,0xff,0x00,
+        0x2e,0x7c,0x00,0x07,0xfe,0x00,0x48,0xe7,0x00,0xfe,0x48,0x7a,
+        0x00,0x00,0x2a,0x5f,0x54,0x8d,0x16,0xdd,0x51,0xc9,0xff,0xfc,
+        0x4e,0xf9,0x00,0x06,0x62,0x9e,
+    }};
+    constexpr std::string_view expected_hash =
+        "341e6cff049ff9cda953ad0c91f9a064ed2d2cdc1782b417f27ecad7c9b279b4";
+    if (plan.bootstrap_loader.disk_offset != raw_disk_offset
+        || plan.bootstrap_loader.length != 0x400
+        || plan.bootstrap_loader.destination != entry_address) {
+        throw std::runtime_error("Unexpected Millennium Amiga bootstrap relocation plan");
+    }
+    const auto bytes = disk.bytes(raw_disk_offset, expected.size());
+    const auto digest = to_hex(sha256(bytes));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || digest != expected_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga bootstrap relocator");
+    }
+    if (copy_source + copy_count - 1U != copy_end
+        || copy_end != loaded_end
+        || copy_source + (relocated_continuation - copy_destination) != raw_continuation) {
+        throw std::runtime_error("Invalid Millennium Amiga bootstrap relocation boundary");
+    }
+    return {entry_address, entry_address, loaded_end, copy_source, copy_destination,
+        copy_count, copy_end, relocated_continuation, raw_continuation, raw_disk_offset,
+        static_cast<std::uint32_t>(expected.size()), digest};
+}
+
 MillenniumAmigaFirstStageSourceAnchorBoundary
 parse_millennium_amiga_first_stage_source_anchor_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {

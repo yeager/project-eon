@@ -1341,6 +1341,36 @@ int main() {
     assert(defjam_opaque_invocation.static_post_first_stage_address == 0x702e6);
     assert(defjam_opaque_invocation.resident_stage_jump_address == 0x70320);
     assert(defjam_opaque_invocation.resident_stage_target == 0x68000);
+    const auto defjam_relocation =
+        eon::parse_millennium_amiga_bootstrap_relocation_boundary(
+            defjam_loader_disk, defjam_plan);
+    assert(defjam_relocation.entry_address == 0x70000);
+    assert(defjam_relocation.verified_loaded_start == 0x70000);
+    assert(defjam_relocation.verified_loaded_end_exclusive == 0x70400);
+    assert(defjam_relocation.copy_source_address == 0x70032);
+    assert(defjam_relocation.copy_destination_address == 0x66032);
+    assert(defjam_relocation.copy_byte_count == 0x3cf);
+    assert(defjam_relocation.copy_source_end_inclusive == 0x70400);
+    assert(defjam_relocation.relocated_continuation_address == 0x6629e);
+    assert(defjam_relocation.raw_continuation_source_address == 0x7029e);
+    assert(defjam_relocation.raw_continuation_source_address
+        == defjam_opaque_invocation.entry_address);
+    assert(defjam_relocation.sha256
+        == "341e6cff049ff9cda953ad0c91f9a064ed2d2cdc1782b417f27ecad7c9b279b4");
+    assert(defjam_session.relocation_boundary().copy_source_end_inclusive
+        == defjam_session.relocation_boundary().verified_loaded_end_exclusive);
+    {
+        auto altered = *defjam_adf;
+        altered[0x436] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_amiga_bootstrap_relocation_boundary(
+                eon::AmigaAdf(std::move(altered)), defjam_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto defjam_first_stage_anchors =
         eon::parse_millennium_amiga_first_stage_source_anchor_boundary(
             defjam_loader_disk, defjam_plan);

@@ -45,6 +45,27 @@ struct MillenniumAmigaBootstrapOpaqueInvocationBoundary {
     std::uint32_t resident_stage_target = 0;
 };
 
+// The bootstrap block starts at $70000, then contains a byte-copy relocator
+// for its later loader continuation. The original DBRA count copies one byte
+// beyond the preceding, independently recovered $400-byte boot I/O request.
+// This record makes that mismatch explicit. It is a fail-closed preservation
+// boundary, not permission to fabricate the missing byte, materialize the
+// relocated loader, or call the later continuation at its apparent RAM PC.
+struct MillenniumAmigaBootstrapRelocationBoundary {
+    std::uint32_t entry_address = 0;
+    std::uint32_t verified_loaded_start = 0;
+    std::uint32_t verified_loaded_end_exclusive = 0;
+    std::uint32_t copy_source_address = 0;
+    std::uint32_t copy_destination_address = 0;
+    std::uint32_t copy_byte_count = 0;
+    std::uint32_t copy_source_end_inclusive = 0;
+    std::uint32_t relocated_continuation_address = 0;
+    std::uint32_t raw_continuation_source_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::uint32_t byte_count = 0;
+    std::string sha256;
+};
+
 // Immutable source-only anchors inside the first range read by the bootstrap.
 // The JSR (A3) representation has no recovered source-to-RAM transform, so
 // this is deliberately a provenance record rather than decoded executable
@@ -396,6 +417,14 @@ struct MillenniumAmigaResidentSeparatePostCallTailBranchBoundary {
 // direct linear ADF representation.
 [[nodiscard]] MillenniumAmigaBootstrapOpaqueInvocationBoundary
 parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
+
+// Validates the exact relocator before the raw-loader continuation. It proves
+// the static source/destination correspondence and fails closed because the
+// final DBRA iteration needs $70400 while the boot I/O request has only
+// established [$70000, $70400). No relocated bytes are returned.
+[[nodiscard]] MillenniumAmigaBootstrapRelocationBoundary
+parse_millennium_amiga_bootstrap_relocation_boundary(
     const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan);
 
 // Validates the common raw resident interval directly from an ADF image byte

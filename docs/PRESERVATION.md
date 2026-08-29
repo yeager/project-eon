@@ -774,6 +774,27 @@ either target, infer that the first opaque stage returns to `$702e6`, interpret
 the device calls, or treat the linear source bytes of the loaded stages as
 their executable runtime representation.
 
+An earlier relocator in that same bootstrap makes the distinction between raw
+source addresses and runtime addresses material. The 66 original bytes at ADF
+`+$400..+$441` hash to
+`341e6cff049ff9cda953ad0c91f9a064ed2d2cdc1782b417f27ecad7c9b279b4`.
+They derive `D1 = $66400 - $66032 = $3ce`, start a `MOVE.B (A5)+,(A3)+`
+loop with `A5=$70032` and `A3=$66032`, then use `DBRA D1` before `JMP
+$6629e`. A 68000 `DBRA` runs the loop for the initial low word plus one, so
+the literal transfer comprises `0x3cf` bytes and reads through source
+`$70400` inclusive. The preceding boot I/O request established only the
+half-open range `$70000..$70400` (exactly `0x400` bytes), making that final
+source byte unproven.
+
+`MillenniumAmigaBootstrapRelocationBoundary` validates the exact bytes and
+records the otherwise useful static correspondence `$6629e ← $7029e`: the
+latter is the source address of the already documented raw continuation.
+It deliberately returns no relocated image and does not report `$6629e` as a
+runnable PC. Project Eon must not take the adjacent ADF byte, assume a
+trackdisk over-read/allocation convention, or fabricate the missing value.
+Recovering an emulator trace or a fully documented device-buffer contract for
+that byte is required before this relocation can become executable evidence.
+
 The latter hand-off places `0xa8d398fb` in `d6` immediately before the jump.
 `MillenniumAmigaLoadPlan` recognizes the actual instruction sequence, derives
 the two lengths from its immediate values (`0x1600 * 0x50` and
