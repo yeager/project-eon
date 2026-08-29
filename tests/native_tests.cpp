@@ -3974,6 +3974,40 @@ int main() {
         && stx_root.entries()[0].size == 221);
     assert(stx_root.entries()[2].name == "MILL22B.INF" && stx_root.entries()[2].first_cluster == 11
         && stx_root.entries()[2].size == 84'720);
+    // These mutations retain a structurally indexable STX container but must
+    // fail the narrower sector-backed FAT12 boundary rather than being treated
+    // as a usable namespace.
+    auto invalid_stx_bpb = *atari_physical_dump;
+    invalid_stx_bpb[0xcb] ^= 0x01; // T0/H0/S1 BPB bytes-per-sector low byte.
+    bool invalid_stx_bpb_rejected = false;
+    try {
+        const eon::AtariStStxPhysicalDisk disk(std::move(invalid_stx_bpb));
+        static_cast<void>(eon::AtariStStxFat12Root(disk));
+    } catch (const std::runtime_error&) {
+        invalid_stx_bpb_rejected = true;
+    }
+    assert(invalid_stx_bpb_rejected);
+    auto invalid_stx_root_name = *atari_physical_dump;
+    invalid_stx_root_name[0x1b70] = 0x01; // LBA 11 / T1/H0/S2, first root name byte.
+    bool invalid_stx_root_name_rejected = false;
+    try {
+        const eon::AtariStStxPhysicalDisk disk(std::move(invalid_stx_root_name));
+        static_cast<void>(eon::AtariStStxFat12Root(disk));
+    } catch (const std::runtime_error&) {
+        invalid_stx_root_name_rejected = true;
+    }
+    assert(invalid_stx_root_name_rejected);
+    auto cyclic_stx_chain = *atari_physical_dump;
+    cyclic_stx_chain[0x2d0] = 0xb0; // FAT12 cluster 11 -> 11 (odd packed entry).
+    cyclic_stx_chain[0x2d1] = 0x00;
+    bool cyclic_stx_chain_rejected = false;
+    try {
+        const eon::AtariStStxPhysicalDisk disk(std::move(cyclic_stx_chain));
+        static_cast<void>(eon::AtariStStxFat12Root(disk));
+    } catch (const std::runtime_error&) {
+        cyclic_stx_chain_rejected = true;
+    }
+    assert(cyclic_stx_chain_rejected);
     auto invalid_stx_header = *atari_physical_dump;
     invalid_stx_header[0] = 0;
     bool invalid_stx_header_rejected = false;

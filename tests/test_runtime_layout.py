@@ -51,6 +51,12 @@ class RuntimeLayoutTests(unittest.TestCase):
         self.assertIn('executable_directory / "Resources" / "po"', I18N)
         self.assertIn('mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/Resources/po"', WORKFLOW)
 
+    def test_public_docs_distinguish_stx_metadata_reads_from_flattening(self) -> None:
+        self.assertIn("physical media such as STX remain in their original container form", README)
+        self.assertIn("file-payload extraction, boot interpretation", PRESERVATION)
+        self.assertIn("read-only metadata traversal", PRESERVATION)
+        self.assertNotIn("STX flattening, filesystem traversal, boot interpretation", PRESERVATION)
+
     def test_windows_stage_matches_runtime_search_order_without_data_directory(self) -> None:
         self.assertIn('Copy-Item po/*.po dist/po/', WORKFLOW)
         self.assertIn('Copy-Item $sdlTtf.FullName dist/SDL3_ttf.dll', WORKFLOW)
