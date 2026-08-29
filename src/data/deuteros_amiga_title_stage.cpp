@@ -1512,6 +1512,57 @@ parse_deuteros_amiga_title_post_exec_service_batch_profile(
         std::string(call_site_hash), std::string(callee_hash)};
 }
 
+DeuterosAmigaTitlePostExecGraphicsVectorProfile
+parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    // This is the first call in the already hash-locked $403f4 batch.  It is
+    // locally straight-line through RTS, but the graphics-library vector is
+    // intentionally neither called nor given a higher-level interpretation.
+    constexpr std::uint32_t caller_address = 0x403f4;
+    constexpr std::uint32_t entry_address = 0x403c8;
+    constexpr std::array<std::uint8_t, 6> caller_bytes{{
+        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xc8,
+    }};
+    constexpr std::array<std::uint8_t, 30> routine_bytes{{
+        0x22, 0x7c, 0x00, 0x01, 0xed, 0x24,
+        0x20, 0x7c, 0x00, 0x01, 0x2e, 0x12,
+        0x20, 0x3c, 0x00, 0x00, 0x00, 0x14,
+        0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
+        0x4e, 0xae, 0xff, 0x40,
+        0x4e, 0x75,
+    }};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash =
+        "2a90f1020af64bd1a6f7f6e7e7503bea4133a2a569bba55987f6edb23442cec3";
+    constexpr std::string_view routine_hash =
+        "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f";
+    const auto& stage = plan.title_stage;
+    const auto in_stage = [&](const std::uint32_t address, const std::size_t length) {
+        return stage.length != 0 && address >= stage.destination
+            && address - stage.destination <= stage.length
+            && length <= stage.length - (address - stage.destination);
+    };
+    if (!in_stage(caller_address, caller_bytes.size())
+        || !in_stage(entry_address, routine_bytes.size())) {
+        throw std::runtime_error("Deuteros post-Exec graphics-vector code lies outside original stage");
+    }
+    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
+    const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
+    if (to_hex(sha256(stage_bytes)) != stage_hash
+        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || to_hex(sha256(caller)) != caller_hash
+        || to_hex(sha256(routine)) != routine_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-Exec graphics-vector profile");
+    }
+    return {caller_address, entry_address, 0x1ed24, 0x12e12, 0x14,
+        0x12fec, -0xc0,
+        entry_address + static_cast<std::uint32_t>(routine_bytes.size()),
+        std::string(caller_hash), std::string(routine_hash)};
+}
+
 DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     // $37f56 reaches this copy only if the two preceding original calls

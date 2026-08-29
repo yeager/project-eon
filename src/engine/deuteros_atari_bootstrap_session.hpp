@@ -37,6 +37,9 @@ public:
     [[nodiscard]] const DeuterosAtariSupervisorCallbackContinuation& supervisor_callback_continuation() const {
         return supervisor_callback_continuation_;
     }
+    [[nodiscard]] const DeuterosAtariPostCallbackCalleeProfiles& post_callback_callees() const {
+        return post_callback_callees_;
+    }
     [[nodiscard]] const std::string& first_stage_sha256() const { return first_stage_sha256_; }
     [[nodiscard]] const std::string& second_stage_sha256() const { return second_stage_sha256_; }
 
@@ -51,6 +54,7 @@ private:
     DeuterosAtariState5ReturnProfile state5_return_;
     DeuterosAtariSupervisorCallbackProfile supervisor_callback_;
     DeuterosAtariSupervisorCallbackContinuation supervisor_callback_continuation_;
+    DeuterosAtariPostCallbackCalleeProfiles post_callback_callees_;
     std::string first_stage_sha256_;
     std::string second_stage_sha256_;
 };

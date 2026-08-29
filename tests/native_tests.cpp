@@ -51,6 +51,53 @@
 #include <stdexcept>
 #include <set>
 #include <span>
+#include <vector>
+
+namespace {
+
+void assert_deuteros_atari_post_callback_callees(const std::vector<std::uint8_t>& second_stage,
+    const eon::DeuterosAtariSecondStageProfile& stage,
+    const eon::DeuterosAtariSupervisorCallbackContinuation& continuation) {
+    const auto callees = eon::parse_deuteros_atari_post_callback_callee_profiles(
+        second_stage, stage, continuation);
+    assert(callees.first_callee_offset == 0x800);
+    assert(callees.first_callee_byte_count == 48);
+    assert(callees.first_callee_sha256
+        == "bb662ff9f02861d2bc40c9d3d2ca97a662abc494ec20a4037807a81b22ca95a6");
+    assert(callees.first_callee_literal == 0x71100);
+    assert(callees.first_callee_ram_address == 0x25f4);
+    assert(callees.first_callee_trap_selector == 5);
+    assert(callees.first_callee_trap_offset == 36);
+    assert(callees.first_callee_trap_opcode == 0x4e4e);
+    assert(callees.first_callee_stack_cleanup_opcode == 0xdffc);
+    assert(callees.first_callee_stack_cleanup_bytes == 12);
+    assert(callees.first_callee_post_trap_branch_offset == 44);
+    assert(callees.first_callee_post_trap_branch_displacement == 0x08e8);
+    assert(callees.first_callee_post_trap_branch_target_offset == 0x1116);
+    assert(callees.second_callee_offset == 0x1122);
+    assert(callees.second_callee_prefix_byte_count == 22);
+    assert(callees.second_callee_prefix_sha256
+        == "c74fb6b1e03cf6a123698e0356f3c9dbc45e637d9ce2a9479fef37eec6cbfd8c");
+    assert(callees.second_callee_byte_count == 0x7e00);
+    assert(callees.second_callee_destination == 0x20000);
+    assert(callees.second_callee_raw_reader_argument == 0x9000);
+    assert(callees.second_callee_bsr_opcode == 0x6100);
+    assert(callees.second_callee_bsr_displacement == -0x1106);
+    assert(callees.second_callee_bsr_target_offset == 0x30);
+
+    auto altered_second_stage = second_stage;
+    altered_second_stage[0x800] ^= 0x01;
+    bool rejected = false;
+    try {
+        static_cast<void>(eon::parse_deuteros_atari_post_callback_callee_profiles(
+            altered_second_stage, stage, continuation));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
+} // namespace
 
 int main() {
     {
@@ -258,6 +305,17 @@ int main() {
     }
     assert(incremental_scanner.done());
     assert(incremental_scanner.releases().size() == 6);
+    assert(incremental_scanner.report().candidates == incremental_scanner.candidate_count());
+    // Other user files may share a release's byte length, so only the hash
+    // identity count is corpus-fixed. Every size-admitted candidate is either
+    // completely hashed or explicitly accounted as unreadable.
+    assert(incremental_scanner.report().size_candidates >= 6);
+    assert(incremental_scanner.report().hashed_candidates
+        + incremental_scanner.report().unreadable_candidates
+        == incremental_scanner.report().size_candidates);
+    assert(incremental_scanner.report().verified_occurrences == 6);
+    assert(incremental_scanner.report().duplicate_occurrences == 0);
+    assert(incremental_scanner.report().unreadable_candidates == 0);
     const auto releases = eon::find_release_archives(data_directory);
     // Six genuine outer archives: five platform/game pairs plus Spanish DOS.
     assert(releases.size() == 6);
@@ -921,6 +979,12 @@ int main() {
     assert(direct_archive_scanner.advance());
     assert(direct_archive_scanner.releases().size() == 1);
     assert(direct_archive_scanner.releases().front().sha256 == english_dos->sha256);
+    assert(direct_archive_scanner.report().candidates == 1);
+    assert(direct_archive_scanner.report().size_candidates == 1);
+    assert(direct_archive_scanner.report().hashed_candidates == 1);
+    assert(direct_archive_scanner.report().verified_occurrences == 1);
+    assert(direct_archive_scanner.report().duplicate_occurrences == 0);
+    assert(direct_archive_scanner.report().unreadable_candidates == 0);
     const auto sfx1_bytes = eon::extract_asset_by_sha256(english_dos->path,
         "5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88");
     assert(sfx1_bytes);
@@ -2885,6 +2949,8 @@ int main() {
         == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
     assert(deuteros_atari_session.first_stage().next_destination == 0x70000);
     assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
+    assert(deuteros_atari_session.post_callback_callees().first_callee_offset == 0x800);
+    assert(deuteros_atari_session.post_callback_callees().second_callee_bsr_target_offset == 0x30);
     assert(deuteros_atari_session.dispatch().state0_destination == 0x13200);
     assert(deuteros_atari_session.state0_raw_load_plan().source_offset == 0x4800);
     assert(deuteros_atari_session.state0_raw_load_plan().requests.size() == 4);
@@ -3131,6 +3197,8 @@ int main() {
     assert(deuteros_supervisor_callback_continuation.second_bsr_opcode == 0x6100);
     assert(deuteros_supervisor_callback_continuation.second_bsr_displacement == 0x1032);
     assert(deuteros_supervisor_callback_continuation.second_bsr_target_offset == 0x1122);
+    assert_deuteros_atari_post_callback_callees(deuteros_second_stage, deuteros_second_stage_profile,
+        deuteros_supervisor_callback_continuation);
     {
         auto altered_second_stage = deuteros_second_stage;
         altered_second_stage[0xde] ^= 0x01;
@@ -3799,6 +3867,20 @@ int main() {
         == "555513267ef304f2a5cec2303f8565db8e4ed9ecb2abd7bc87b73dbe5d6c0976");
     assert(post_exec_service_batch.callee_sha256
         == "5353ab8b18d63a51e12ef2f586a68d872981fa491ca13531198f18a2a38edf07");
+    const auto post_exec_graphics_vector =
+        eon::parse_deuteros_amiga_title_post_exec_graphics_vector_profile(system_disk, load_plan);
+    assert(post_exec_graphics_vector.caller_address == 0x403f4);
+    assert(post_exec_graphics_vector.entry_address == 0x403c8);
+    assert(post_exec_graphics_vector.a1_literal == 0x1ed24);
+    assert(post_exec_graphics_vector.a0_literal == 0x12e12);
+    assert(post_exec_graphics_vector.d0_literal == 0x14);
+    assert(post_exec_graphics_vector.graphics_library_base_address == 0x12fec);
+    assert(post_exec_graphics_vector.graphics_library_vector == -0xc0);
+    assert(post_exec_graphics_vector.return_address == 0x403e6);
+    assert(post_exec_graphics_vector.caller_sha256
+        == "2a90f1020af64bd1a6f7f6e7e7503bea4133a2a569bba55987f6edb23442cec3");
+    assert(post_exec_graphics_vector.routine_sha256
+        == "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f");
     {
         auto altered_pointer_seed_disk = *amiga_disk1;
         altered_pointer_seed_disk[0x9b4c2] ^= 0x01;
@@ -3858,6 +3940,32 @@ int main() {
         try {
             const eon::AmigaAdf altered_disk(std::move(altered_service_batch_disk));
             static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_service_batch_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_graphics_vector_disk = *amiga_disk1;
+        altered_graphics_vector_disk[0x9b3f4] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_graphics_vector_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
+                altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_graphics_vector_disk = *amiga_disk1;
+        altered_graphics_vector_disk[0x9b3c8] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_graphics_vector_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
                 altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;

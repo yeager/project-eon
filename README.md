@@ -180,6 +180,13 @@ verified reports are printed; it never selects a fallback platform or language.
 Inspection neither extracts files to disk nor creates, alters, or substitutes
 game data.
 
+The final aggregate `SCAN SUMMARY` makes recognition reviewable without
+turning unknown files into a catalogue: it records candidate, size-match,
+hash, verified-occurrence, duplicate-occurrence, unique-release, and read
+failure counts. Identical verified archives found more than once are one
+release, with the lexically first path used as the deterministic read-only
+source.
+
 For scripts, `--inspect` exits `0` after one or more matching reports, `3`
 when the supplied path has no recognised original archive, and `5` when a
 valid game/platform filter has no matching supported release. In the latter

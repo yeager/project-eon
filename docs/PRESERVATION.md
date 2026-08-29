@@ -24,6 +24,23 @@ content identities are authoritative.
 The initial corpus has six outer ZIP archives and 67 leaf assets. Native
 recognition uses complete archive SHA-256 and size, never filenames.
 
+### Scanner admission and duplicate accounting
+
+The direct-media scanner first enumerates regular files in lexical path order,
+then hashes only files whose byte length occurs in the outer-release manifest.
+It never opens a ZIP, extracts a leaf, or selects a game by name during
+recognition. A digest match is one *verified occurrence*. Equal digest matches
+at multiple locations (including a user-created link) are deduplicated to one
+release card and one CLI launch target; the first lexical path is retained as
+the deterministic in-place source and later occurrences are counted, not
+silently treated as separate editions.
+
+`--inspect` prints aggregate `SCAN SUMMARY` counters: candidates, manifest-size
+matches, hashed candidates, verified and duplicate occurrences, unique
+releases, and unreadable candidates. The report deliberately does not print
+unrecognised filenames or infer their platform: it makes admission and scanner
+failures auditable while preserving the strict content-addressed boundary.
+
 | Game | Platform | Lang. | Bytes | Outer archive SHA-256 |
 | --- | --- | --- | ---: | --- |
 | Deuteros | Amiga | en | 4,066,771 | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` |
@@ -939,6 +956,27 @@ and `BSR.W +$1032`, resolving from their extension words to `+$800` and
 `+$1122`. This is deliberately recorded as a post-service control gate, not
 as an XBIOS or callback return value: the read is a distinct RAM location and
 neither its provenance nor either subroutine's effect has been recovered.
+
+The not-equal branch's two local BSR targets are now individually
+hash-validated, but remain behind that runtime-dependent comparison. The first
+target at track-2 `+$800` is 48 bytes, SHA-256
+`bb662ff9f02861d2bc40c9d3d2ca97a662abc494ec20a4037807a81b22ca95a6`.
+It loads `$00071100`, stores it at `$25f4`, prepares literal stack words
+including selector `$0005`, then reaches `TRAP #14` at `+$824`. The following
+`ADDA.L #12,A7` and `BRA.W +$08e8` (to `+$1116`, calculated from the branch
+extension word) are recorded only as post-trap byte layout; Project Eon does
+not claim that the trap returns, invoke it, assign a service meaning, or
+execute the branch.
+
+The second target at `+$1122` has a 22-byte prefix, SHA-256
+`c74fb6b1e03cf6a123698e0356f3c9dbc45e637d9ce2a9479fef37eec6cbfd8c`.
+It loads literal words `$7e00`, `$20000`, and `$9000` into the original
+register setup, then its `BSR.W -$1106` resolves from its extension word to
+the local range wrapper at `+$30`; that wrapper reaches the already bounded
+XBIOS-facing raw-reader at `+$60`. Those values are only caller-side
+machine-code facts. Project Eon does not select the comparison path, perform
+the raw read, infer a disk result, or follow code after that raw-reader/XBIOS
+boundary.
 
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
@@ -2810,3 +2848,14 @@ validates the caller, complete callee, and return address `$4040e`. This does
 not establish that any nested call returns, or assign effects to their code;
 the profile records only the caller-connected static call batch after the
 unexecuted Exec boundary.
+
+The first nested call of that batch is independently bounded at
+`$403f4..$403f9` / ADF `+0x9b3f4` (6 bytes, SHA-256
+`2a90f1020af64bd1a6f7f6e7e7503bea4133a2a569bba55987f6edb23442cec3`). Its
+complete callee `$403c8..$403e5` / ADF `+0x9b3c8` is 30 bytes, SHA-256
+`3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f`:
+it assigns `$1ed24` to A1, `$12e12` to A0, literal D0 `$14`, and A6 from
+`$12fec`, then executes `JSR -$c0(A6)` and RTS. `DeuterosAmigaTitlePostExecGraphicsVectorProfile`
+hash-locks the caller and routine, including return `$403e6`, but does not
+call the graphics-library vector, establish its ABI or return, or name any
+visual/title effect.

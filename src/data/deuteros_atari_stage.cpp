@@ -473,6 +473,65 @@ parse_deuteros_atari_supervisor_callback_continuation(
         static_cast<std::int16_t>(be16(bytes, continuation_offset + 18U)), second_bsr_target_offset};
 }
 
+DeuterosAtariPostCallbackCalleeProfiles parse_deuteros_atari_post_callback_callee_profiles(
+    const std::span<const std::uint8_t> bytes, const DeuterosAtariSecondStageProfile& stage,
+    const DeuterosAtariSupervisorCallbackContinuation& continuation) {
+    // The first BSR target sets $25f4 to $71100, pushes literal arguments,
+    // then reaches TRAP #14. Its cleanup and BRA.W are preserved as layout
+    // only: they lie after an external boundary, so reachability is unknown.
+    constexpr std::size_t first_offset = 0x800;
+    constexpr auto first_bytes = std::to_array<std::uint8_t>({
+        0x20, 0x3c, 0x00, 0x07, 0x11, 0x00, 0x21, 0xc0, 0x25, 0xf4,
+        0x3f, 0x3c, 0xff, 0xff, 0x2f, 0x00, 0x2f, 0x00, 0x3f, 0x3c,
+        0x00, 0x05, 0x20, 0x40, 0x70, 0x00, 0x3e, 0x3c, 0x1f, 0x3f,
+        0x20, 0xc0, 0x51, 0xcf, 0xff, 0xfc, 0x4e, 0x4e, 0xdf, 0xfc,
+        0x00, 0x00, 0x00, 0x0c, 0x60, 0x00, 0x08, 0xe8,
+    });
+    constexpr std::string_view first_sha256 =
+        "bb662ff9f02861d2bc40c9d3d2ca97a662abc494ec20a4037807a81b22ca95a6";
+    constexpr std::size_t second_offset = 0x1122;
+    constexpr auto second_bytes = std::to_array<std::uint8_t>({
+        0x20, 0x3c, 0x00, 0x00, 0x7e, 0x00, 0x22, 0x3c, 0x00, 0x02,
+        0x00, 0x00, 0x2e, 0x3c, 0x00, 0x00, 0x90, 0x00, 0x61, 0x00,
+        0xee, 0xfa,
+    });
+    constexpr std::string_view second_sha256 =
+        "c74fb6b1e03cf6a123698e0356f3c9dbc45e637d9ce2a9479fef37eec6cbfd8c";
+    if (stage.direct_entry_source_offset != 0xc4 || stage.raw_read_routine_offset != 0x60
+        || continuation.first_bsr_target_offset != first_offset
+        || continuation.second_bsr_target_offset != second_offset
+        || continuation.first_bsr_opcode != 0x6100 || continuation.second_bsr_opcode != 0x6100) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST post-callback callee topology");
+    }
+    require_bytes(bytes, first_offset, first_bytes,
+        "Unexpected Deuteros Atari ST first post-callback callee");
+    require_bytes(bytes, second_offset, second_bytes,
+        "Unexpected Deuteros Atari ST second post-callback callee");
+    const auto first_window = bytes.subspan(first_offset, first_bytes.size());
+    const auto second_window = bytes.subspan(second_offset, second_bytes.size());
+    if (to_hex(sha256(first_window)) != first_sha256 || to_hex(sha256(second_window)) != second_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST post-callback callee hash");
+    }
+    // 68000 BSR/BRA word displacements are relative to their extension word.
+    const auto first_branch_target = first_offset + 46U
+        + static_cast<std::int16_t>(be16(first_window, 46));
+    const auto second_bsr_target = second_offset + 20U
+        + static_cast<std::int16_t>(be16(second_window, 20));
+    // The BSR reaches the local range wrapper at +$30; that wrapper in turn
+    // calls the known XBIOS-facing routine at +$60. Do not collapse the two
+    // boundaries or presume either one returns.
+    if (first_branch_target != 0x1116U || second_bsr_target != 0x30U) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST post-callback callee target");
+    }
+    return {first_offset, first_bytes.size(), std::string(first_sha256), be32(first_window, 2),
+        be16(first_window, 8), be16(first_window, 20), 36, be16(first_window, 36),
+        be16(first_window, 38), be32(first_window, 40), 44,
+        static_cast<std::int16_t>(be16(first_window, 46)), first_branch_target,
+        second_offset, second_bytes.size(), std::string(second_sha256), be32(second_window, 2),
+        be32(second_window, 8), be32(second_window, 14), be16(second_window, 18),
+        static_cast<std::int16_t>(be16(second_window, 20)), second_bsr_target};
+}
+
 DeuterosAtariState0DuplicateStagePrefix
 parse_deuteros_atari_state0_duplicate_stage_prefix(const std::span<const std::uint8_t> state0_bytes,
     const std::span<const std::uint8_t> second_stage_bytes) {
