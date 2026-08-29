@@ -243,6 +243,18 @@ sound mapping, a valid title hand-off, or a license to select that value in
 Eon's runtime. Further capture requires a separately validated machine/
 driver configuration and the complete raw trace contract.
 
+A second, deliberately independent probe used `core=normal`, `cputype=386`,
+`cycles=fixed 12000`, and DOSBox-X's documented
+`mcb corruption becomes application free memory=true` option against the same
+Archivemount/FUSE read-only view. It reached the same original sound-selection
+prompt, but the automated Xvfb key injection was not observed by the guest.
+It therefore supplies no post-selection behavior and does not validate that
+configuration as a remedy for the earlier interrupt loop. The next experiment
+is a real interactive X/Wayland or DOSBox-X mapper input run with a
+one-variable CPU-core matrix (`normal`, then `full`), retaining the read-only
+mount and archive rehash before and after each run. Its logs remain external
+evidence, not game data or a runtime input.
+
 Project Eon's external trace admission format is specified in
 [`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md). Generic v1 verifies
 only a trace's hash, capture provenance and exact recognised source release.
