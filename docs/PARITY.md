@@ -31,7 +31,13 @@ The portable entry points are:
 ./build/project-eon --data /path/to/original-media --game millennium --platform amiga
 ./build/project-eon --data /path/to/original-media --game deuteros --platform atari-st
 ./build/project-eon --data /path/to/original-media --inspect
+./build/project-eon --data /path/to/original-media --inspect --game millennium --platform dos
 ```
+
+`--inspect` is a non-SDL, read-only provenance view. The optional game and
+platform filters restrict the reports printed after recognition; they do not
+change, unpack, or otherwise prepare the supplied media, and they cannot cause
+a platform or language fallback.
 
 ## Evidence gates for a new playable path
 

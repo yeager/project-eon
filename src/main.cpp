@@ -1706,9 +1706,14 @@ int main(int argc, char** argv) {
         }
     }
     if (request.verify_game || request.inspect_data) {
+        if (request.inspect_data) {
+            std::cout << "INSPECTION  read-only provenance scan; original media stays in place\n";
+        }
         bool found = false;
         for (const auto& release : releases) {
             if (request.verify_game && release.game != *request.verify_game) continue;
+            if (request.inspect_data && request.game && release.game != *request.game) continue;
+            if (request.inspect_data && request.platform && release.platform != *request.platform) continue;
             found = true;
             std::cout << "VERIFIED  " << eon::name(release.game) << " / "
                 << eon::name(release.platform) << " / " << release.language << '\n'

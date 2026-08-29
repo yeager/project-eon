@@ -46,7 +46,8 @@ std::string usage() {
         "               [--presentation original|modern]\n\n"
         "               [--language <language>]\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --verify-data millennium|deuteros\n\n"
-        "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n\n"
+        "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
+        "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n\n"
         "Without --data/--data-dir, game data is read from ~/.projecteon on Linux/macOS\n"
         "or <install directory>/data on Windows. Without --game, the graphical\n"
         "start menu is shown.\n";
@@ -88,9 +89,11 @@ ParseResult parse_command_line(int argc, char** argv) {
             return {{}, "Unknown option: " + std::string(argument), false};
         }
     }
-    if ((request.game && request.verify_game) || (request.game && request.inspect_data)
-        || (request.verify_game && request.inspect_data)) {
-        return {{}, "--game, --verify-data, and --inspect cannot be combined", false};
+    if (request.game && request.verify_game) {
+        return {{}, "--game and --verify-data cannot be combined", false};
+    }
+    if (request.verify_game && request.inspect_data) {
+        return {{}, "--verify-data and --inspect cannot be combined", false};
     }
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
     return {request, {}, false};

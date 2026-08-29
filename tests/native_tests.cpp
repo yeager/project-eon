@@ -67,11 +67,20 @@ int main() {
         assert(explicit_directory.request && !explicit_directory.request->data_directory_is_default);
         assert(explicit_directory.request->data_directory == "original-media");
         char inspect_option[] = "--inspect";
+        char millennium[] = "millennium";
         char* inspect_args[] = {program, inspect_option};
         const auto inspect = eon::parse_command_line(2, inspect_args);
         assert(inspect.request && inspect.request->inspect_data);
+        char game_option[] = "--game";
+        char platform_option[] = "--platform";
+        char dos[] = "dos";
+        char* targeted_inspect_args[] = {
+            program, inspect_option, game_option, millennium, platform_option, dos};
+        const auto targeted_inspect = eon::parse_command_line(6, targeted_inspect_args);
+        assert(targeted_inspect.request && targeted_inspect.request->inspect_data);
+        assert(targeted_inspect.request->game == eon::Game::millennium);
+        assert(targeted_inspect.request->platform == eon::Platform::dos);
         char verify_option[] = "--verify-data";
-        char millennium[] = "millennium";
         char* conflicting_args[] = {program, inspect_option, verify_option, millennium};
         const auto conflict = eon::parse_command_line(4, conflicting_args);
         assert(!conflict.request);

@@ -62,6 +62,22 @@ def main() -> int:
             "--data-dir did not inspect the supplied original media:\n"
             f"{data_dir_inspection.stderr}"
         )
+    if "INSPECTION  read-only provenance scan; original media stays in place" not in data_dir_inspection.stdout:
+        raise SystemExit("--inspect did not identify its read-only provenance boundary")
+
+    targeted_inspection = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--inspect", "--game", "millennium",
+            "--platform", "dos"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    targeted_lines = [line for line in targeted_inspection.stdout.splitlines()
+        if line.startswith("VERIFIED  ")]
+    if (targeted_inspection.returncode != 0 or not targeted_lines
+            or any("Millennium 2.2 / DOS / " not in line for line in targeted_lines)):
+        raise SystemExit(
+            "targeted inspection did not report only the requested original release:\n"
+            f"{targeted_inspection.stdout}\n{targeted_inspection.stderr}"
+        )
     starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
     for presentation in ("original", "modern"):
         for game, platform in (

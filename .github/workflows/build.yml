@@ -214,7 +214,32 @@ jobs:
           <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleVersion</key><string>0.1.0</string></dict></plist>
           PLIST
           codesign --force --deep -s - "$APP"
+          # Check the assembled bundle before zipping it. Source-tree asset
+          # fallbacks are not available to an installed application.
+          for required in \
+            "$APP/Contents/MacOS/assets/cards/millennium.png" \
+            "$APP/Contents/MacOS/assets/cards/deuteros.png" \
+            "$APP/Contents/Resources/po/sv.po" \
+            "$APP/Contents/Resources/po/en_GB.po"; do
+            test -f "$required"
+          done
+          if find "$APP" -type d -name data -print -quit | grep -q . \
+              || find "$APP" -type f \( -iname '*.zip' -o -iname '*.adf' -o -iname '*.adz' \
+                  -o -iname '*.dms' -o -iname '*.st' -o -iname '*.msa' -o -iname '*.stx' \
+                  -o -iname '*.img' -o -iname '*.exe' -o -iname '*.com' \) -print -quit | grep -q .; then
+            echo "refusing macOS artifact with possible original game data" >&2
+            exit 1
+          fi
           ditto -c -k --sequesterRsrc --keepParent "$APP" "project-eon-macos-${{ matrix.arch }}.zip"
+          unzip -t "project-eon-macos-${{ matrix.arch }}.zip" >/dev/null
+          listing=$(unzip -Z1 "project-eon-macos-${{ matrix.arch }}.zip")
+          for required in \
+            "ProjectEon.app/Contents/MacOS/assets/cards/millennium.png" \
+            "ProjectEon.app/Contents/MacOS/assets/cards/deuteros.png" \
+            "ProjectEon.app/Contents/Resources/po/sv.po" \
+            "ProjectEon.app/Contents/Resources/po/en_GB.po"; do
+            printf '%s\n' "$listing" | grep -Fxq "$required"
+          done
       - uses: actions/upload-artifact@v7
         with:
           name: macos-${{ matrix.arch }}-app
@@ -261,6 +286,24 @@ jobs:
           Copy-Item assets/cards/*.png dist/assets/cards/
           Copy-Item po/*.po dist/po/
           Copy-Item README.md,LICENSE dist/
+          # Validate the exact staging tree supplied to Inno Setup. In
+          # particular, SDL3_image is linked against the shared libpng built
+          # above, so that DLL must reach the installer as well.
+          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "po/sv.po", "po/en_GB.po")
+          foreach ($path in $required) {
+            if (-not (Test-Path (Join-Path dist $path))) {
+              throw "Windows package stage lacks required resource: $path"
+            }
+          }
+          if (-not (Get-ChildItem dist -Filter "libpng*.dll" -File | Select-Object -First 1)) {
+            throw "Windows package stage lacks libpng runtime DLL"
+          }
+          $media = Get-ChildItem dist -Recurse -File | Where-Object {
+            $_.Extension -match '^(?i:\.(zip|adf|adz|dms|st|msa|stx|img|exe|com))$' -and $_.Name -ne "project-eon.exe"
+          }
+          if ($media) {
+            throw "refusing Windows package stage with possible original game data: $($media.FullName -join ', ')"
+          }
       - name: Create Inno Setup installer
         shell: pwsh
         run: iscc "/DMyAppVersion=0.1.0-ci.${{ github.run_number }}" packaging/windows/project-eon.iss
