@@ -658,6 +658,72 @@ parse_millennium_dos_startup_allocation_boundary(
         std::string(allocator_prefix_sha256)};
 }
 
+MillenniumDosStartupZeroPathBoundary
+parse_millennium_dos_startup_zero_path_boundary(
+    const std::span<const std::uint8_t> game_executable) {
+    // The preceding allocation result is native state.  This parser exposes
+    // only the raw DX-zero successor and stops at the first DOS boundary in
+    // its second in-image callee; it does not select a mode or open a file.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr auto executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr auto zero_path = std::to_array<std::uint8_t>({
+        0xe8, 0x69, 0x3e});
+    constexpr auto selector = std::to_array<std::uint8_t>({
+        0xba, 0x31, 0x11, 0xa0, 0x05, 0xda, 0x3c, 0x01, 0x74, 0x11,
+        0xba, 0x3d, 0x11, 0x3c, 0x03, 0x74, 0x0a, 0xba, 0x55, 0x11,
+        0x3c, 0x02, 0x74, 0x03, 0xba, 0x49, 0x11, 0xe8, 0xbb, 0xf3});
+    constexpr auto security_loader_prefix = std::to_array<std::uint8_t>({
+        0x1e, 0x06, 0x1e, 0x0e, 0x1f, 0xeb, 0x08, 0x1e, 0x06, 0x1e,
+        0x0e, 0x1f, 0xba, 0x6a, 0x2f, 0xb0, 0x02, 0xb4, 0x3d, 0xcd,
+        0x21, 0x89, 0x06, 0x00});
+    constexpr auto selector_names = std::to_array<std::uint8_t>({
+        0x56, 0x47, 0x41, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00,
+        0x45, 0x47, 0x33, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00,
+        0x45, 0x47, 0x36, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00,
+        0x54, 0x44, 0x59, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00});
+    constexpr auto security_name = std::to_array<std::uint8_t>({
+        0x41, 0x3a, 0x5c, 0x32, 0x32, 0x30, 0x30, 0x41, 0x44, 0x5c, 0x53,
+        0x45, 0x43, 0x55, 0x52, 0x49, 0x54, 0x59, 0x2e, 0x48, 0x49, 0x44, 0x00});
+    constexpr auto zero_path_sha256 =
+        "798bd5318e00348848f0ca4b876d687fec5c606abe88236ff4e922a77fe08b65";
+    constexpr auto selector_sha256 =
+        "fffa1b0e03e9abf90bfde3bfb86bf1125ae579ede767eea68223e098d641992f";
+    constexpr auto security_loader_prefix_sha256 =
+        "328e11edf0653b0e0f21db3b61cf9ff95795ec9431f07c0198a700358f75ed74";
+    constexpr auto selector_names_sha256 =
+        "153a0b62bdec1702cdd36ff6e7dc33ec4ed6673ad5d3f5f8bc07b748f7e06d76";
+    constexpr auto security_name_sha256 =
+        "1a95edb6109f3db1af0c0389f1aa5d597a184f26725e095f771b6622f654ec6a";
+    constexpr auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(0xd2f5), zero_path)
+        || !has_bytes(game_executable, offset(0x1161), selector)
+        || !has_bytes(game_executable, offset(0x053a), security_loader_prefix)
+        || !has_bytes(game_executable, offset(0x1131), selector_names)
+        || !has_bytes(game_executable, offset(0x2f6a), security_name)
+        || to_hex(sha256(game_executable.subspan(offset(0xd2f5), zero_path.size())))
+            != zero_path_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0x1161), selector.size())))
+            != selector_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0x053a), security_loader_prefix.size())))
+            != security_loader_prefix_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0x1131), selector_names.size())))
+            != selector_names_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0x2f6a), security_name.size())))
+            != security_name_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS startup zero-path boundary");
+    }
+    return {std::string(executable_sha256), 0xd2f5, 0x1161, 0xda05,
+        {0x01, 0x03, 0x02}, {0x1131, 0x113d, 0x1155, 0x1149}, 0x117c, 0x053a,
+        0x2f6a, 0x0550, 0x21, 0x3d, 0x02, std::string(zero_path_sha256),
+        std::string(selector_sha256), std::string(security_loader_prefix_sha256),
+        std::string(selector_names_sha256), std::string(security_name_sha256)};
+}
+
 MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     const std::span<const std::uint8_t> game_executable,

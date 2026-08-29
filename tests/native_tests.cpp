@@ -820,6 +820,40 @@ int main() {
     assert(defjam_separate_byte_gate_fallthrough.other_path_branch_address == 0x68f26);
     assert(defjam_separate_byte_gate_fallthrough.other_path_branch_target == 0x68f48);
     assert(defjam_separate_byte_gate_fallthrough.convergence_address == 0x68f48);
+    const auto defjam_post_external_call =
+        eon::parse_millennium_amiga_resident_separate_post_external_call_boundary(
+            defjam_loader_disk, defjam_plan, defjam_separate_byte_gate_taken_branch);
+    assert(defjam_post_external_call.entry_address == 0x68f4e);
+    assert(defjam_post_external_call.raw_disk_offset == 0x1734e);
+    assert(defjam_post_external_call.byte_count == 42);
+    assert(defjam_post_external_call.sha256
+        == "3220d65f197163401c649a36d756ecf3005d2f342b81de5a7d4528f9a45da851");
+    assert((defjam_post_external_call.call_addresses
+        == std::array<std::uint32_t, 3>{{0x68f4e, 0x68f5a, 0x68f6c}}));
+    assert((defjam_post_external_call.call_targets
+        == std::array<std::uint32_t, 3>{{0x7d6d2, 0x7780a, 0x77b34}}));
+    assert((defjam_post_external_call.call_target_raw_disk_offsets
+        == std::array<std::size_t, 3>{{0x2bad2, 0x25c0a, 0x25f34}}));
+    assert((defjam_post_external_call.address_literals
+        == std::array<std::uint32_t, 2>{{0x7c21b, 0x7c25c}}));
+    assert(defjam_post_external_call.terminal_jump_address == 0x68f72);
+    assert(defjam_post_external_call.terminal_jump_target == 0x7c54e);
+    assert(defjam_post_external_call.terminal_jump_target_raw_disk_offset == 0x2a94e);
+    assert(defjam_post_external_call.terminal_jump_target_prefix_sha256
+        == "502069bdbda2f35899d16237fd1d2aa477be20f0c950231fb71f32583f23de14");
+    auto invalid_post_external_call_disk_bytes = *defjam_adf;
+    invalid_post_external_call_disk_bytes[0x1734e] ^= 0x01;
+    bool invalid_post_external_call_rejected = false;
+    try {
+        const eon::AmigaAdf invalid_post_external_call_disk(
+            std::move(invalid_post_external_call_disk_bytes));
+        static_cast<void>(eon::parse_millennium_amiga_resident_separate_post_external_call_boundary(
+            invalid_post_external_call_disk, defjam_plan,
+            defjam_separate_byte_gate_taken_branch));
+    } catch (const std::runtime_error&) {
+        invalid_post_external_call_rejected = true;
+    }
+    assert(invalid_post_external_call_rejected);
     // Every supplied Millennium Amiga image shares the verified resident raw
     // range. One image is shorter than a standard ADF, so check the common
     // raw bytes directly rather than incorrectly forcing it through the ADF
@@ -860,6 +894,17 @@ int main() {
             == defjam_separate_byte_gate_fallthrough.sha256);
         assert(eon::to_hex(eon::sha256(bytes.subspan(0x1731e, 12)))
             == defjam_separate_byte_gate_fallthrough.other_path_sha256);
+        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1734e, 42)))
+            == defjam_post_external_call.sha256);
+        for (std::size_t index = 0;
+             index < defjam_post_external_call.call_target_raw_disk_offsets.size(); ++index) {
+            assert(eon::to_hex(eon::sha256(bytes.subspan(
+                defjam_post_external_call.call_target_raw_disk_offsets[index], 32)))
+                == defjam_post_external_call.call_target_prefix_sha256[index]);
+        }
+        assert(eon::to_hex(eon::sha256(bytes.subspan(
+            defjam_post_external_call.terminal_jump_target_raw_disk_offset, 32)))
+            == defjam_post_external_call.terminal_jump_target_prefix_sha256);
         for (std::size_t index = 0;
              index < defjam_separate_post_call_tail.target_raw_disk_offsets.size(); ++index) {
             assert(eon::to_hex(eon::sha256(bytes.subspan(
@@ -1371,6 +1416,24 @@ int main() {
     assert(startup_allocation.dx_nonzero_jump_target == 0xd44b);
     assert(startup_allocation.dx_zero_path_first_call_address == 0xd2f5);
     assert(startup_allocation.dx_zero_path_first_call_target == 0x1161);
+    const auto startup_zero_path = eon::parse_millennium_dos_startup_zero_path_boundary(
+        *game_executable);
+    assert(startup_zero_path.executable_sha256
+        == "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57");
+    assert(startup_zero_path.zero_path_entry_address == 0xd2f5);
+    assert(startup_zero_path.selector_entry_address == 0x1161);
+    assert(startup_zero_path.selector_mode_byte_address == 0xda05);
+    assert((startup_zero_path.selector_matching_values
+        == std::array<std::uint8_t, 3>{{0x01, 0x03, 0x02}}));
+    assert((startup_zero_path.selector_name_addresses
+        == std::array<std::uint16_t, 4>{{0x1131, 0x113d, 0x1155, 0x1149}}));
+    assert(startup_zero_path.selector_call_address == 0x117c);
+    assert(startup_zero_path.selector_call_target == 0x053a);
+    assert(startup_zero_path.security_name_address == 0x2f6a);
+    assert(startup_zero_path.first_external_interrupt_site == 0x0550);
+    assert(startup_zero_path.first_external_interrupt == 0x21);
+    assert(startup_zero_path.first_external_service == 0x3d);
+    assert(startup_zero_path.first_external_access_mode == 0x02);
     {
         auto altered_startup_allocation = *game_executable;
         altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;
@@ -1378,6 +1441,18 @@ int main() {
         try {
             static_cast<void>(eon::parse_millennium_dos_startup_allocation_boundary(
                 altered_startup_allocation));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_startup_zero_path = *game_executable;
+        altered_startup_zero_path[0x117c - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_startup_zero_path_boundary(
+                altered_startup_zero_path));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

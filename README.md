@@ -329,6 +329,12 @@ create GitHub branches. The Windows installer also does not pre-create its
 `data` path: a missing default directory remains a read-only runtime boundary.
 Releases are made only when the maintainer explicitly requests one.
 
+Every uploaded CI artifact is accompanied by a deterministic JSON integrity
+manifest. It names the full source commit and records each downloadable file's
+byte size and SHA-256, so a maintainer can verify a downloaded package without
+trusting a workspace path or unpacking any game media. The workflow itself and
+its third-party actions are pinned to immutable Git commit IDs.
+
 ## Repository
 
 Development lives at <https://github.com/yeager/project-eon>.
