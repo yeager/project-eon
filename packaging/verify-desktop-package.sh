@@ -62,11 +62,20 @@ for package in "$@"; do
       fi
       ;;
     *.rpm)
-      contents=$(rpm -qlp "$package")
+      # RPM queries normally consult the host RPM database even for a package
+      # file query. Give this verifier a fresh database under the same
+      # disposable extraction root so it neither locks nor depends on the
+      # workstation's package-manager state.
+      temporary=$(mktemp -d)
+      temporary_directories+=("$temporary")
+      rpm_database="$temporary/rpmdb"
+      mkdir -p "$rpm_database"
+      rpm_query=(rpm --dbpath "$rpm_database")
+      contents=$("${rpm_query[@]}" -qlp "$package")
       # RPM calculates ELF requirements by default. Keep that metadata visible
       # as a contract. The payload is exercised below without installing it on
       # the Ubuntu CI host, so an RPM repository is not needed for this test.
-      dependencies=$(rpm -qp --requires "$package")
+      dependencies=$("${rpm_query[@]}" -qp --requires "$package")
       if ! printf '%s\n' "$dependencies" | grep -Fq 'libc.so.6'; then
         echo "$package lacks generated RPM runtime dependencies" >&2
         exit 1
@@ -76,8 +85,6 @@ for package in "$@"; do
       # artifact into an isolated directory and run the installed executable,
       # just as the DEB path does. This catches a missing private SDL library,
       # a lost $ORIGIN runpath, or a package layout regression before upload.
-      temporary=$(mktemp -d)
-      temporary_directories+=("$temporary")
       rpm2cpio "$package" | (cd "$temporary" && cpio --quiet -idm)
       executable="$temporary/usr/bin/project-eon"
       if [ ! -x "$executable" ]; then
@@ -122,6 +129,19 @@ for package in "$@"; do
 
   # The generated cards and a catalog prove that the launcher can render and
   # localize after installation.  The original data directory stays absent.
+  desktop_entry="${temporary}/usr/share/applications/project-eon.desktop"
+  if [ ! -f "$desktop_entry" ]; then
+    echo "$package lacks its installed desktop launcher entry" >&2
+    exit 1
+  fi
+  if ! desktop-file-validate "$desktop_entry"; then
+    echo "$package has an invalid desktop launcher entry" >&2
+    exit 1
+  fi
+  if ! grep -Fxq 'Exec=project-eon' "$desktop_entry"; then
+    echo "$package desktop launcher does not start the installed runtime" >&2
+    exit 1
+  fi
   for required in \
       "assets/cards/millennium.png" "assets/cards/deuteros.png" \
       "assets/cards/dos-platform-v1.png" "assets/cards/amiga-platform-v1.png" \
