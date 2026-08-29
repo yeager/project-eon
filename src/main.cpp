@@ -402,6 +402,22 @@ void report_platform_admission(const std::vector<eon::ReleaseArchive>& releases)
     }
 }
 
+// The scanner deliberately avoids treating names as release identity.  This
+// explicit preservation report is different: after the complete outer archive
+// has been rehashed, it exposes a bounded (two nested ZIP levels) leaf manifest
+// so archival work can cite the exact original bytes without extracting or
+// copying them to the filesystem.
+void report_verified_release_inventory(const eon::ReleaseArchive& release) {
+    const auto assets = eon::inventory_verified_release(release);
+    std::cout << "          ARCHIVE INVENTORY  " << assets.size()
+        << " hash-addressed leaf asset" << (assets.size() == 1 ? "" : "s")
+        << "; read in place only\n";
+    for (const auto& asset : assets) {
+        std::cout << "            " << eon::name(asset.kind) << "  " << asset.size
+            << " bytes  " << asset.sha256 << "  " << asset.path << '\n';
+    }
+}
+
 SDL_FRect aspect_viewport(const float x, const float y, const float maximum_width,
     const float maximum_height, const ModernGraphicsSettings& settings) {
     const auto ratio = display_aspect_ratios.at(settings.aspect_ratio_index);
@@ -3040,6 +3056,7 @@ int main(int argc, char** argv) {
                 && release.language == "en") {
                 report_millennium_atari_st(release);
             }
+            if (request.inventory_assets) report_verified_release_inventory(release);
         }
         if (request.modern_pack_root) {
             report_modern_asset_packs(*request.modern_pack_root, inspected_releases);

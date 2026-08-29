@@ -39,6 +39,9 @@ struct LaunchRequest {
     // original release before the external bytes are used.
     std::optional<std::filesystem::path> modern_pack_manifest;
     bool inspect_data = false;
+    // Preservation-only leaf manifest. It is intentionally opt-in because
+    // `--inspect` normally reports recovered structure, not every filename.
+    bool inventory_assets = false;
     std::optional<Platform> platform;
     // Language of the immutable original release, distinct from the launcher
     // UI locale above.  A release selection must never infer this from the
