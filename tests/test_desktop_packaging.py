@@ -42,7 +42,9 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('Copy-Item assets/fonts dist/assets/fonts -Recurse', workflow)
         self.assertIn("refusing macOS artifact with possible original game data", workflow)
         self.assertIn("Windows package stage lacks libpng runtime DLL", workflow)
+        self.assertIn("Windows package stage lacks zlib runtime DLL", workflow)
         self.assertIn("refusing Windows package stage with possible original game data", workflow)
+        self.assertIn("Verify installed Inno Setup package and runtime closure", workflow)
 
 
 if __name__ == "__main__":

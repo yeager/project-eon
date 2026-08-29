@@ -298,7 +298,7 @@ jobs:
           if ($null -eq $sdlTtf) { throw "SDL3_ttf.dll was not produced" }
           Copy-Item $sdlTtf.FullName dist/SDL3_ttf.dll
           Get-ChildItem "${{ github.workspace }}/libpng-install/bin/libpng*.dll" | Copy-Item -Destination dist
-          Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" -ErrorAction SilentlyContinue | Copy-Item -Destination dist
+          Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" | Copy-Item -Destination dist
           Copy-Item assets/cards/*.png dist/assets/cards/
           Copy-Item assets/fonts dist/assets/fonts -Recurse
           Copy-Item po/*.po dist/po/
@@ -319,6 +319,9 @@ jobs:
           if (-not (Get-ChildItem dist -Filter "libpng*.dll" -File | Select-Object -First 1)) {
             throw "Windows package stage lacks libpng runtime DLL"
           }
+          if (-not (Get-ChildItem dist -Filter "zlib*.dll" -File | Select-Object -First 1)) {
+            throw "Windows package stage lacks zlib runtime DLL"
+          }
           $media = Get-ChildItem dist -Recurse -File | Where-Object {
             $_.Extension -match '^(?i:\.(zip|adf|adz|dms|st|msa|stx|img|exe|com))$' -and $_.Name -ne "project-eon.exe"
           }
@@ -328,6 +331,54 @@ jobs:
       - name: Create Inno Setup installer
         shell: pwsh
         run: iscc "/DMyAppVersion=0.1.0-ci.${{ github.run_number }}" packaging/windows/project-eon.iss
+      - name: Verify installed Inno Setup package and runtime closure
+        shell: pwsh
+        run: |
+          # Check the installer itself, not merely its source staging tree.
+          # A unique temporary destination avoids sharing state with a prior
+          # runner job and deliberately contains no original game media.
+          $installers = @(Get-ChildItem installer -Filter "Project-Eon-*-windows-x64.exe" -File)
+          if ($installers.Count -ne 1) {
+            throw "expected exactly one generated Windows installer, found $($installers.Count)"
+          }
+          $installRoot = Join-Path $env:RUNNER_TEMP ("project-eon-inno-" + [guid]::NewGuid().ToString("N"))
+          & $installers[0].FullName /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- "/DIR=$installRoot"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup installer failed with exit status $LASTEXITCODE"
+          }
+
+          # Inno must preserve every staged Project Eon file byte-for-byte.
+          # The uninstaller is intentionally extra, but no staged file may be
+          # absent, renamed, or changed during the installer round trip.
+          foreach ($source in Get-ChildItem dist -Recurse -File) {
+            $relative = $source.FullName.Substring((Resolve-Path dist).Path.Length).TrimStart('\', '/')
+            $installed = Join-Path $installRoot $relative
+            if (-not (Test-Path -LiteralPath $installed -PathType Leaf)) {
+              throw "installed package lacks staged file: $relative"
+            }
+            if ((Get-FileHash -Algorithm SHA256 $source).Hash -ne
+                (Get-FileHash -Algorithm SHA256 $installed).Hash) {
+              throw "installed package changed staged file: $relative"
+            }
+          }
+          if (Test-Path -LiteralPath (Join-Path $installRoot "data")) {
+            throw "installed package must not create a game-data directory"
+          }
+          $media = Get-ChildItem $installRoot -Recurse -File | Where-Object {
+            $_.Extension -match '^(?i:\.(zip|adf|adz|dms|st|msa|stx|img|exe|com))$' -and
+              $_.Name -ne "project-eon.exe" -and $_.Name -notlike "unins*.exe"
+          }
+          if ($media) {
+            throw "installed package contains possible original game media: $($media.FullName -join ', ')"
+          }
+
+          # --help returns before SDL initialization or any data scan.  It is
+          # a real Windows loader smoke test for the executable and all of its
+          # packaged DLL dependencies, without supplying synthetic game data.
+          $usage = & (Join-Path $installRoot "project-eon.exe") --help 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0 -or $usage -notmatch "Without --data/--data-dir") {
+            throw "installed Project Eon executable did not load and print its CLI usage: $usage"
+          }
       - uses: actions/upload-artifact@v7
         with:
           name: windows-x64-installer

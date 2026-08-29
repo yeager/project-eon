@@ -25,6 +25,22 @@ class WindowsPackagingTests(unittest.TestCase):
         source = INSTALLER.read_text(encoding="utf-8")
         self.assertIn('Source: "{#StagingDir}\\libpng*.dll"', source)
 
+    def test_load_time_runtime_libraries_are_not_optional(self) -> None:
+        source = INSTALLER.read_text(encoding="utf-8")
+        for runtime in ("SDL3_image.dll", "SDL3_ttf.dll", "libpng*.dll", "zlib*.dll"):
+            with self.subTest(runtime=runtime):
+                entry = next(line for line in source.splitlines() if runtime in line)
+                self.assertNotIn("skipifsourcedoesntexist", entry)
+
+    def test_ci_installs_the_final_artifact_and_smoke_tests_the_loader(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        self.assertIn("Verify installed Inno Setup package and runtime closure", workflow)
+        self.assertIn("/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-", workflow)
+        self.assertIn("installed package lacks staged file", workflow)
+        self.assertIn("Get-FileHash -Algorithm SHA256", workflow)
+        self.assertIn("installed package must not create a game-data directory", workflow)
+        self.assertIn("installed Project Eon executable did not load and print its CLI usage", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

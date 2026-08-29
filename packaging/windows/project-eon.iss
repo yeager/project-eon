@@ -23,10 +23,13 @@ SolidCompression=yes
 [Files]
 Source: "{#StagingDir}\project-eon.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\SDL3.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#StagingDir}\SDL3_image.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "{#StagingDir}\SDL3_ttf.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "{#StagingDir}\libpng*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "{#StagingDir}\zlib*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+; These are load-time dependencies of the supplied executable.  Do not make
+; them optional: a missing runtime must fail the package build rather than
+; produce an installer that succeeds but cannot start Project Eon.
+Source: "{#StagingDir}\SDL3_image.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StagingDir}\SDL3_ttf.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StagingDir}\libpng*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#StagingDir}\zlib*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\assets\*"; DestDir: "{app}\assets"; Flags: recursesubdirs ignoreversion
 Source: "{#StagingDir}\po\*"; DestDir: "{app}\po"; Flags: recursesubdirs ignoreversion
 Source: "{#StagingDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
