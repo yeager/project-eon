@@ -1341,9 +1341,11 @@ The release-wide scanner classifies every supplied Atari leaf before selecting
 the single hash-bound recovery chain. The present archive has 11 Atari leaves:
 10 are 720 KiB protected-media candidates; nine have the exact checksum/BPB
 boot envelope; three contain the Replicants first-stage shape; two contain a
-`KILLER_BOOT` marker; and one is nonstandard geometry. These are census facts,
-not editions to merge: Eon never borrows a first stage, marker, boot branch,
-or raw resource from one variant when launching another. The scanner does not
+`KILLER_BOOT` marker; and one is nonstandard geometry. Of the ten 720 KiB
+candidates, one fails the first 68000 boot-branch envelope; none fail the
+BPB or word-checksum gate. These are census facts, not editions to merge: Eon
+never borrows a first stage, marker, boot branch, or raw resource from one
+variant when launching another. The scanner does not
 interpret a FAT namespace, execute a branch, invoke XBIOS, or load a sector.
 
 Both verified evidence disks retain the Atari boot-sector word checksum of
@@ -2090,7 +2092,9 @@ palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
 literal 12-bit colours from the original in-place stage after range checking;
 it does not invoke graphics.library, allocate a display, use the palette to
 colour a reconstructed bitmap, or present the strip as an original title
-screen. The surrounding launcher text explicitly preserves that boundary.
+screen. The launcher uses all twenty words copied by the graphics-setup
+routine, while the separately modeled transition only consumes its first
+sixteen. The surrounding launcher text explicitly preserves that boundary.
 
 The immediately following caller-connected local callee is now bounded too.
 `$1f182..$1f195` (ADF `+$7a182`, 20 bytes, SHA-256
@@ -2675,6 +2679,14 @@ sequence: P01 through P25 are codec-2 16x23 (368-index) records, matching the
 `$0170` stride. P01's decoded index hash is
 `330db310a838487f4afea0011c1ba5f381e4ed7ad97d95e4745e7be2d2d8aaa1` and
 P25's is `d7e44c796aed167010cdef9ab7ccef38b3b260854b51b2fba818972f30dd35dd`.
+The preservation parser additionally records each unmodified source span,
+requires P01 through P25 to be contiguous, and exposes the bank identity in
+inspection diagnostics. For the supplied release, P01 is `+$2941`, 213 bytes,
+SHA-256 `ed4cf68627d93c10545d741facfa43701774e0bb8fa28c14292877dc81b556b2`;
+P25 is `+$473e`, 213 bytes, SHA-256
+`b523a32da572fe7e5e93ad5f8b51675c04d85053934e051d03223a9fa1e19ba1`.
+This improves provenance of genuine transition resources without treating
+their decoded 16×23 regions as independently displayable frames.
 The static mode-2 path bounds each post-stream XLAT range (P02: `00 cc 00`),
 but does not establish a selected display mode. Segment setup, private-driver
 effects, composition, color handling, cadence and host-visible transfer remain

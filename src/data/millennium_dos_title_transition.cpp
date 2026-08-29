@@ -1,4 +1,5 @@
 #include "data/millennium_dos_title_transition.hpp"
+#include "data/sha256.hpp"
 
 #include <cstddef>
 #include <stdexcept>
@@ -21,11 +22,19 @@ MillenniumDosTitleTransitionSequence parse_millennium_dos_title_transition(
     MillenniumDosTitleTransitionSequence result;
     result.original_step_stride = flow.intro_step_stride;
     result.patches.reserve(flow.intro_transition_steps);
+    std::vector<std::uint8_t> source_bank;
     for (std::uint16_t index = 1; index <= flow.intro_transition_steps; ++index) {
         const auto name = name_for(index);
         const auto* entry = title_library.find(name);
         if (!entry) throw std::runtime_error("Missing Millennium DOS title patch " + name);
         const auto record = title_library.read(*entry);
+        if (result.patches.empty()) {
+            result.source_bank_offset = entry->offset;
+        } else if (entry->offset != result.source_bank_offset + result.source_bank_size) {
+            throw std::runtime_error("Non-contiguous Millennium DOS title patch bank");
+        }
+        result.source_bank_size += entry->size;
+        source_bank.insert(source_bank.end(), record.begin(), record.end());
         const auto bitmap = decode_millennium_dos_bitmap(record);
         if (bitmap.pixels.size() != flow.intro_step_stride) {
             throw std::runtime_error("Millennium DOS title patch differs from verified stride");
@@ -44,10 +53,11 @@ MillenniumDosTitleTransitionSequence parse_millennium_dos_title_transition(
         if (offset > record.size() || count > record.size() - offset) {
             throw std::runtime_error("Truncated Millennium DOS title patch XLAT table");
         }
-        result.patches.push_back({index, name, bitmap,
+        result.patches.push_back({index, name, entry->offset, entry->size, to_hex(sha256(record)), bitmap,
             {record.begin() + static_cast<std::ptrdiff_t>(offset),
              record.begin() + static_cast<std::ptrdiff_t>(offset + count)}});
     }
+    result.source_bank_sha256 = to_hex(sha256(source_bank));
     return result;
 }
 

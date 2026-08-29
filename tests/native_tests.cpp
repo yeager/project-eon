@@ -2436,7 +2436,15 @@ int main() {
     assert(title_flow.intro_step_stride == 0x170);
     assert(millennium_title_transition.original_step_stride == 0x170);
     assert(millennium_title_transition.patches.size() == 37);
+    assert(millennium_title_transition.source_bank_offset == 0x2941);
+    assert(millennium_title_transition.source_bank_size == 7'890);
+    assert(millennium_title_transition.source_bank_sha256
+        == "f0ecbfd374b1c6122b407b29a6fe4a872a45a0a21e9ef6584e74829e06b5514d");
     assert(millennium_title_transition.patches.front().resource_name == "P01");
+    assert(millennium_title_transition.patches.front().source_offset == 0x2941);
+    assert(millennium_title_transition.patches.front().source_size == 213);
+    assert(millennium_title_transition.patches.front().source_sha256
+        == "ed4cf68627d93c10545d741facfa43701774e0bb8fa28c14292877dc81b556b2");
     assert(millennium_title_transition.patches.front().bitmap.width == 16);
     assert(millennium_title_transition.patches.front().bitmap.height == 23);
     assert(eon::to_hex(eon::sha256(millennium_title_transition.patches.front().bitmap.pixels))
@@ -2444,6 +2452,10 @@ int main() {
     assert((millennium_title_transition.patches[1].mode_two_logical_to_dac
         == std::vector<std::uint8_t>{0x00, 0xcc, 0x00}));
     assert(millennium_title_transition.patches.back().resource_name == "P25");
+    assert(millennium_title_transition.patches.back().source_offset == 0x473e);
+    assert(millennium_title_transition.patches.back().source_size == 213);
+    assert(millennium_title_transition.patches.back().source_sha256
+        == "b523a32da572fe7e5e93ad5f8b51675c04d85053934e051d03223a9fa1e19ba1");
     assert(eon::to_hex(eon::sha256(millennium_title_transition.patches.back().bitmap.pixels)
         ) == "d7e44c796aed167010cdef9ab7ccef38b3b260854b51b2fba818972f30dd35dd");
     assert(title_flow.input_interrupt == 0x21);
@@ -5503,6 +5515,9 @@ int main() {
     std::size_t deuteros_atari_replicants_boot_count = 0;
     std::size_t deuteros_atari_killer_boot_count = 0;
     std::size_t deuteros_atari_nonstandard_leaf_count = 0;
+    std::size_t deuteros_atari_invalid_branch_count = 0;
+    std::size_t deuteros_atari_invalid_bpb_count = 0;
+    std::size_t deuteros_atari_invalid_checksum_count = 0;
     for (const auto& asset : eon::inventory_verified_release(*deuteros_atari)) {
         if (asset.kind != eon::AssetKind::atari_st_disk) continue;
         ++deuteros_atari_leaf_count;
@@ -5515,7 +5530,23 @@ int main() {
             continue;
         }
         ++deuteros_atari_protected_geometry_count;
+        switch (evidence.boot_envelope_status) {
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_branch:
+            ++deuteros_atari_invalid_branch_count;
+            break;
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_bpb:
+            ++deuteros_atari_invalid_bpb_count;
+            break;
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::invalid_checksum:
+            ++deuteros_atari_invalid_checksum_count;
+            break;
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::nonstandard_geometry:
+        case eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::valid:
+            break;
+        }
         if (!evidence.valid_boot_profile) continue;
+        assert(evidence.boot_envelope_status
+            == eon::DeuterosAtariMediaEvidence::BootEnvelopeStatus::valid);
         ++deuteros_atari_valid_boot_profile_count;
         assert(evidence.boot_checksum == 0x1234);
         if (evidence.recovered_replicants_first_stage) ++deuteros_atari_replicants_boot_count;
@@ -5527,6 +5558,9 @@ int main() {
     assert(deuteros_atari_replicants_boot_count == 3);
     assert(deuteros_atari_killer_boot_count == 2);
     assert(deuteros_atari_nonstandard_leaf_count == 1);
+    assert(deuteros_atari_invalid_branch_count == 1);
+    assert(deuteros_atari_invalid_bpb_count == 0);
+    assert(deuteros_atari_invalid_checksum_count == 0);
     const auto deuteros_st_disk1 = eon::extract_asset_by_sha256(deuteros_atari->path,
         "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee");
     const auto deuteros_st_disk2 = eon::extract_asset_by_sha256(deuteros_atari->path,
@@ -6198,6 +6232,10 @@ int main() {
     const auto title_palette_evidence = title_stage_session.transition_palette_evidence();
     assert((title_palette_evidence[0] == eon::RgbColor{0, 0, 0}));
     assert((title_palette_evidence[1] == eon::RgbColor{153, 170, 119}));
+    const auto title_graphics_setup_palette = title_stage_session.graphics_setup_palette_evidence();
+    assert((title_graphics_setup_palette[0] == eon::RgbColor{0, 0, 0}));
+    assert((title_graphics_setup_palette[1] == eon::RgbColor{153, 170, 119}));
+    assert((title_graphics_setup_palette[19] == eon::RgbColor{204, 204, 0}));
     assert(title_stage_session.entry_prefix().incoming_profile == 1);
     assert(title_stage_session.entry_prefix().stop_before_exec_address == 0x40450);
     {

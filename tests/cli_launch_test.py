@@ -692,7 +692,7 @@ def main() -> int:
             expected_variant_census = (
                 "protected-media variant census: 11 supplied ST leaves, 10 720 KiB candidates, "
                 "9 valid checksum/BPB boot profiles, 3 Replicants first-stage shapes, "
-                "2 KILLER_BOOT markers, 1 nonstandard leaves"
+                "2 KILLER_BOOT markers, 1 nonstandard leaves; invalid envelope branch/BPB/checksum 1/0/0"
             )
             if expected_variant_census not in inspected.stdout:
                 raise SystemExit(
