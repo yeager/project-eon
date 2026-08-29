@@ -605,6 +605,16 @@ a file handle, or follow either result path. Execution stops at the original
 `TRAP #1` at `$7700e`; this adds only byte-proven local 68000 effects between
 the BSS jump and the existing operating-system boundary.
 
+The immediate post-`Fopen` result gate is separately symbolically executed,
+without supplying a GEMDOS result. Its ten original bytes at target `+$10`
+(SHA-256 `d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7`)
+encode `MOVE.W D0,-(A7)`, `MOVE.W #$003e,-(A7)`, `TST.L D0`, and `BMI.S -2`.
+The first saved word remains an opaque D0 dependency; Eon records only the
+known additional stack delta of `-4` and both original successors: the
+negative self-loop at `+$18` and the nonnegative static Fread-preparation
+entry at `+$1a`. It does not choose D0's sign, materialize a handle, invoke
+Fclose/Fread, or treat either successor as dynamically taken.
+
 The SDL launcher creates this bounded session only for the exact identified
 Equinox image when the Atari ST Millennium card or CLI target is selected; it
 does not reuse the DOS title flow for that platform.

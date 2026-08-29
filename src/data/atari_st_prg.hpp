@@ -139,6 +139,35 @@ struct MillenniumAtariTrapEntry {
     std::uint32_t fopen_result_negative_branch_target_offset = 0;
 };
 
+// The short original-code result gate immediately after Fopen's TRAP #1.
+// This is a symbolic local execution record: D0 remains an opaque GEMDOS
+// output, so it deliberately exposes both encoded successors rather than
+// selecting either an error retry or the Fread fall-through. The saved handle
+// word is therefore recorded as a D0 dependency, never as invented stack
+// bytes or a host file handle.
+struct MillenniumAtariFopenResultGateExecution {
+    std::uint32_t target_address = 0;
+    std::size_t entry_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::uint16_t opaque_handle_push_opcode = 0;
+    std::uint16_t fclose_selector_push_opcode = 0;
+    std::uint16_t fclose_selector = 0;
+    std::uint16_t result_test_opcode = 0;
+    std::uint16_t negative_branch_opcode = 0;
+    std::int8_t negative_branch_displacement = 0;
+    std::size_t negative_successor_offset = 0;
+    std::size_t nonnegative_successor_offset = 0;
+    std::int32_t relative_stack_pointer_delta = 0;
+};
+
+// Symbolically executes only the post-TRAP local instructions that preserve
+// an unknown original D0 and form the branch. It requires no GEMDOS result,
+// never calls the trap, and returns both possible original-code successors.
+[[nodiscard]] MillenniumAtariFopenResultGateExecution
+execute_millennium_atari_fopen_result_gate(const MillenniumAtariMaterializedTarget& target,
+    const MillenniumAtariTrapEntry& trap);
+
 // The static fall-through after the Fopen negative-result loop prepares one
 // further documented GEMDOS interface. This is a byte-level call boundary;
 // neither Fopen's D0 result nor the following Fread service is invoked.

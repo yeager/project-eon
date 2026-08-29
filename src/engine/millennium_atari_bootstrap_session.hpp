@@ -23,6 +23,9 @@ public:
     [[nodiscard]] const MillenniumAtariMaterializedTarget& target() const { return target_; }
     [[nodiscard]] const MillenniumAtariBootstrapExecution& execution() const { return execution_; }
     [[nodiscard]] const MillenniumAtariTrapEntry& fopen_boundary() const { return trap_; }
+    [[nodiscard]] const MillenniumAtariFopenResultGateExecution& fopen_result_gate() const {
+        return fopen_result_gate_;
+    }
     [[nodiscard]] const MillenniumAtariFopenFallthrough& fopen_fallthrough() const {
         return fopen_fallthrough_;
     }
@@ -52,6 +55,7 @@ private:
     MillenniumAtariMaterializedTarget target_;
     MillenniumAtariBootstrapExecution execution_;
     MillenniumAtariTrapEntry trap_;
+    MillenniumAtariFopenResultGateExecution fopen_result_gate_;
     MillenniumAtariFopenFallthrough fopen_fallthrough_;
     MillenniumAtariFreadConfigTransferBoundary fread_config_transfer_;
     MillenniumAtariRootInventory root_inventory_;
