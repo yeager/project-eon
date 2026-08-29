@@ -22,6 +22,8 @@ class IosPackagingTests(unittest.TestCase):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("package-ipados:", workflow)
         self.assertIn("-DCMAKE_SYSTEM_NAME=iOS", workflow)
+        self.assertIn("-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0", workflow)
+        self.assertIn("-DSDL_SHARED=OFF -DSDL_STATIC=ON", workflow)
         self.assertIn("github.com/madler/zlib.git", workflow)
         self.assertIn("github.com/pnggroup/libpng.git", workflow)
         self.assertIn("-DZLIB_ROOT=\"$IOS_PREFIX\"", workflow)
@@ -30,6 +32,8 @@ class IosPackagingTests(unittest.TestCase):
     def test_ios_bundle_has_an_install_destination(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertIn('install(TARGETS project-eon BUNDLE DESTINATION ".")', cmake)
+        self.assertIn('set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)', cmake)
+        self.assertIn('set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "" FORCE)', cmake)
 
     def test_ios_resource_locations_match_runtime_lookups(self):
         main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")

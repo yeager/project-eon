@@ -343,7 +343,7 @@ jobs:
       - name: Build arm64 SDL3 and Project Eon iPad application
         run: |
           brew install cmake ninja
-          IOS_ARGS="-G Ninja -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_BUILD_TYPE=Release"
+          IOS_ARGS="-G Ninja -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_BUILD_TYPE=Release"
           IOS_PREFIX="${{ github.workspace }}/ios-deps"
           git clone --depth 1 https://github.com/madler/zlib.git zlib-src
           cmake -S zlib-src -B zlib-build $IOS_ARGS -DCMAKE_INSTALL_PREFIX="$IOS_PREFIX"
@@ -355,6 +355,7 @@ jobs:
           git clone --depth 1 --filter=blob:none https://github.com/libsdl-org/SDL.git SDL3-src
           cmake -S SDL3-src -B SDL3-build $IOS_ARGS \
             -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
+            -DSDL_SHARED=OFF -DSDL_STATIC=ON \
             -DCMAKE_INSTALL_PREFIX="$IOS_PREFIX" -DCMAKE_PREFIX_PATH="$IOS_PREFIX"
           cmake --build SDL3-build --config Release --target install
           cmake -S . -B build-ios $IOS_ARGS \
