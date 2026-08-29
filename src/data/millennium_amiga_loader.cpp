@@ -1276,4 +1276,64 @@ parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
         other_path, other_hash, 0x68f26, convergence, convergence};
 }
 
+MillenniumAmigaResidentSeparatePostExternalCallBoundary
+parse_millennium_amiga_resident_separate_post_external_call_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan,
+    const MillenniumAmigaResidentSeparateByteGateTakenBranchBoundary& boundary) {
+    constexpr std::uint32_t entry = 0x68f4e;
+    constexpr std::array<std::uint8_t, 42> expected{{
+        0x4e, 0xb9, 0x00, 0x07, 0xd6, 0xd2, // jsr $7d6d2
+        0x28, 0x7c, 0x00, 0x07, 0xc2, 0x1b, // movea.l #$7c21b,a4
+        0x4e, 0xb9, 0x00, 0x07, 0x78, 0x0a, // jsr $7780a
+        0x2a, 0x7c, 0x00, 0x07, 0xc2, 0x5c, // movea.l #$7c25c,a5
+        0x54, 0x8d,                         // addq.l #2,(a5)
+        0x30, 0x2d, 0x00, 0x10,             // move.w $10(a5),d0
+        0x4e, 0xb9, 0x00, 0x07, 0x7b, 0x34, // jsr $77b34
+        0x4e, 0xf9, 0x00, 0x07, 0xc5, 0x4e, // jmp $7c54e
+    }};
+    constexpr std::array<std::uint32_t, 3> call_targets{{0x7d6d2, 0x7780a, 0x77b34}};
+    constexpr std::array<std::uint32_t, 3> call_addresses{{0x68f4e, 0x68f5a, 0x68f6c}};
+    constexpr std::array<std::size_t, 3> target_offsets{{0x2bad2, 0x25c0a, 0x25f34}};
+    constexpr std::array<std::string_view, 3> target_hashes{{
+        "4e2f8f40d56a7d2a46f654be0fe5df4edaf4ca6d3d0864cc2c6d41355fa8c5b4",
+        "dc67f3a81c04fbfb92bfdf7a8b88679dc07e3f61e90708198467ce3877ab5beb",
+        "cfe704f22abb52092c496fdd49802da1d0a461f95474889a35c259cd47ca42c8",
+    }};
+    constexpr std::uint32_t terminal_target = 0x7c54e;
+    constexpr std::size_t terminal_target_offset = 0x2a94e;
+    constexpr std::string_view expected_hash =
+        "3220d65f197163401c649a36d756ecf3005d2f342b81de5a7d4528f9a45da851";
+    constexpr std::string_view terminal_target_hash =
+        "502069bdbda2f35899d16237fd1d2aa477be20f0c950231fb71f32583f23de14";
+    if (boundary.external_call_address != 0x68f48 || boundary.external_call_target != 0x7caa6
+        || entry < plan.resident_stage.destination) {
+        throw std::runtime_error("Unexpected Millennium Amiga post-external-call placement");
+    }
+    const auto relative = entry - plan.resident_stage.destination;
+    if (expected.size() > plan.resident_stage.length - relative) {
+        throw std::runtime_error("Millennium Amiga post-external-call boundary is outside raw range");
+    }
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto hash = to_hex(sha256(bytes));
+    std::array<std::string, 3> observed_hashes{};
+    for (std::size_t index = 0; index < target_offsets.size(); ++index) {
+        if (target_offsets[index] > AmigaAdf::standard_size
+            || 32U > AmigaAdf::standard_size - target_offsets[index]) {
+            throw std::runtime_error("Millennium Amiga post-external-call target is outside ADF");
+        }
+        observed_hashes[index] = to_hex(sha256(disk.bytes(target_offsets[index], 32)));
+        if (observed_hashes[index] != target_hashes[index]) {
+            throw std::runtime_error("Unexpected Millennium Amiga post-external-call target");
+        }
+    }
+    const auto observed_terminal_hash = to_hex(sha256(disk.bytes(terminal_target_offset, 32)));
+    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash
+        || observed_terminal_hash != terminal_target_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga post-external-call boundary");
+    }
+    return {entry, plan.resident_stage.disk_offset + relative, expected.size(), hash,
+        call_addresses, call_targets, target_offsets, observed_hashes, {0x7c21b, 0x7c25c},
+        0x68f72, terminal_target, terminal_target_offset, observed_terminal_hash};
+}
+
 } // namespace eon

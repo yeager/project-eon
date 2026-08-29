@@ -514,6 +514,38 @@ struct MillenniumDosStartupAllocationBoundary {
 parse_millennium_dos_startup_allocation_boundary(
     std::span<const std::uint8_t> game_executable);
 
+// The DX-zero successor of the allocation boundary has a separately bounded
+// local route.  It selects one of four in-image names using the already
+// native-populated $da05 byte, then calls a second local routine.  That
+// routine replaces DX with the hash-locked SECURITY.HID name before reaching
+// DOS INT 21h/AH=3Dh.  This is strictly instruction/data provenance: neither
+// a DX value, a file-open result, carry, nor any subsequent code is supplied
+// or executed by Project Eon.
+struct MillenniumDosStartupZeroPathBoundary {
+    std::string executable_sha256;
+    std::uint16_t zero_path_entry_address = 0;
+    std::uint16_t selector_entry_address = 0;
+    std::uint16_t selector_mode_byte_address = 0;
+    std::array<std::uint8_t, 3> selector_matching_values{};
+    std::array<std::uint16_t, 4> selector_name_addresses{};
+    std::uint16_t selector_call_address = 0;
+    std::uint16_t selector_call_target = 0;
+    std::uint16_t security_name_address = 0;
+    std::uint16_t first_external_interrupt_site = 0;
+    std::uint8_t first_external_interrupt = 0;
+    std::uint8_t first_external_service = 0;
+    std::uint8_t first_external_access_mode = 0;
+    std::string zero_path_sha256;
+    std::string selector_sha256;
+    std::string security_loader_prefix_sha256;
+    std::string selector_names_sha256;
+    std::string security_name_sha256;
+};
+
+[[nodiscard]] MillenniumDosStartupZeroPathBoundary
+parse_millennium_dos_startup_zero_path_boundary(
+    std::span<const std::uint8_t> game_executable);
+
 // Hash-locked raw evidence for 2200AD.EXE loading the original 2200GX.EXE
 // overlay. Both executables are immutable inputs. These are only encoded
 // loader/transfer facts: no DOS service, segment value, call return, overlay

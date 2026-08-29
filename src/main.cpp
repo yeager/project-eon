@@ -740,6 +740,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     if (!gx_overlay) throw std::runtime_error("Verified Millennium DOS GX overlay missing");
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game);
     const auto startup_allocation = eon::parse_millennium_dos_startup_allocation_boundary(*game);
+    const auto startup_zero_path = eon::parse_millennium_dos_startup_zero_path_boundary(*game);
     const auto gx_overlay_load = eon::parse_millennium_dos_gx_overlay_load_evidence(
         *game, *gx_overlay);
     const auto gx_overlay_adapter = eon::parse_millennium_dos_gx_overlay_adapter_evidence(
@@ -780,6 +781,18 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << "; post-call DX==0 -> 0x" << startup_allocation.dx_zero_branch_target
         << ", DX!=0 -> 0x" << startup_allocation.dx_nonzero_jump_target << std::dec
         << " (static boundary only; no DOS result or branch chosen)\n";
+    std::cout << "          2200AD DX-zero successor: 0x" << std::hex
+        << startup_zero_path.zero_path_entry_address << " -> selector 0x"
+        << startup_zero_path.selector_entry_address << " reads 0x"
+        << startup_zero_path.selector_mode_byte_address << "; local CALL 0x"
+        << startup_zero_path.selector_call_address << " -> 0x"
+        << startup_zero_path.selector_call_target << " replaces DX with name 0x"
+        << startup_zero_path.security_name_address << " before INT 0x"
+        << static_cast<unsigned>(startup_zero_path.first_external_interrupt) << " at 0x"
+        << startup_zero_path.first_external_interrupt_site << " (AH=0x"
+        << static_cast<unsigned>(startup_zero_path.first_external_service) << ", AL=0x"
+        << static_cast<unsigned>(startup_zero_path.first_external_access_mode) << std::dec
+        << "; static boundary only, no mode or DOS result supplied)\n";
     std::cout << "          2200GX.EXE overlay evidence: name 0x" << std::hex
         << gx_overlay_load.source_name_address << ", loader 0x"
         << gx_overlay_load.loader_entry_address << " reads segment cell 0x"

@@ -34,11 +34,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      # v6.1.0; pin the action itself as well as source-built dependencies.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
       - name: Scan repository history for secrets
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -47,7 +48,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -81,7 +82,7 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install dependencies
         run: brew install cmake ninja sdl3 zlib libpng
       - name: Build Project Eon
@@ -98,7 +99,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Build zlib
         shell: pwsh
         run: |
@@ -148,7 +149,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install packaging dependencies
         run: |
           sudo apt-get update
@@ -176,12 +177,19 @@ jobs:
           cpack --config build/CPackConfig.cmake -G RPM -B package/rpm
       - name: Verify package contents contain no game media
         run: bash packaging/verify-desktop-package.sh package/deb/*.deb package/rpm/*.rpm
-      - uses: actions/upload-artifact@v7
+      - name: Write artifact integrity manifest
+        run: >-
+          python3 packaging/write-artifact-manifest.py
+          --source-revision "$GITHUB_SHA"
+          --output package/project-eon-linux-artifacts.json
+          package/deb/*.deb package/rpm/*.rpm
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: linux-packages-x86_64
           path: |
             package/deb/*.deb
             package/rpm/*.rpm
+            package/project-eon-linux-artifacts.json
 
   package-macos:
     name: macOS app (${{ matrix.arch }})
@@ -197,7 +205,7 @@ jobs:
           - arch: x86_64
             runner: macos-13
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install dependencies
         run: brew install cmake ninja sdl3 zlib libpng
       - name: Build native application bundle
@@ -326,10 +334,18 @@ jobs:
           for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
             printf '%s\n' "$listing" | grep -Fxq "ProjectEon.app/Contents/Resources/po/$catalog.po"
           done
-      - uses: actions/upload-artifact@v7
+      - name: Write artifact integrity manifest
+        run: >-
+          python3 packaging/write-artifact-manifest.py
+          --source-revision "$GITHUB_SHA"
+          --output project-eon-macos-${{ matrix.arch }}-artifacts.json
+          project-eon-macos-${{ matrix.arch }}.zip
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: macos-${{ matrix.arch }}-app
-          path: project-eon-macos-${{ matrix.arch }}.zip
+          path: |
+            project-eon-macos-${{ matrix.arch }}.zip
+            project-eon-macos-${{ matrix.arch }}-artifacts.json
 
   package-windows:
     name: Windows Inno Setup
@@ -337,7 +353,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
@@ -461,10 +477,23 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $usage -notmatch "Without --data/--data-dir") {
             throw "installed Project Eon executable did not load and print its CLI usage: $usage"
           }
-      - uses: actions/upload-artifact@v7
+      - name: Write artifact integrity manifest
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem installer -Filter "Project-Eon-*-windows-x64.exe" -File)
+          if ($installer.Count -ne 1) {
+            throw "expected exactly one generated Windows installer for integrity manifest"
+          }
+          python packaging/write-artifact-manifest.py `
+            --source-revision "$env:GITHUB_SHA" `
+            --output installer/project-eon-windows-artifacts.json `
+            $installer[0].FullName
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-x64-installer
-          path: installer/Project-Eon-*-windows-x64.exe
+          path: |
+            installer/Project-Eon-*-windows-x64.exe
+            installer/project-eon-windows-artifacts.json
 
   package-ipados:
     name: iPadOS sideload IPA
@@ -472,7 +501,7 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Build arm64 SDL3 and Project Eon iPad application
         run: |
           brew install cmake ninja
@@ -510,7 +539,15 @@ jobs:
           APP=$(find build-ios -name 'project-eon.app' -type d -print -quit)
           test -n "$APP"
           bash packaging/ios/package-ipa.sh "$APP" "$GITHUB_WORKSPACE/project-eon-ipados-arm64-unsigned.ipa"
-      - uses: actions/upload-artifact@v7
+      - name: Write artifact integrity manifest
+        run: >-
+          python3 packaging/write-artifact-manifest.py
+          --source-revision "$GITHUB_SHA"
+          --output project-eon-ipados-arm64-unsigned-artifacts.json
+          project-eon-ipados-arm64-unsigned.ipa
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ipados-arm64-unsigned-ipa
-          path: project-eon-ipados-arm64-unsigned.ipa
+          path: |
+            project-eon-ipados-arm64-unsigned.ipa
+            project-eon-ipados-arm64-unsigned-artifacts.json

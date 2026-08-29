@@ -610,4 +610,28 @@ parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
     const AmigaAdf&, const MillenniumAmigaLoadPlan&,
     const MillenniumAmigaResidentSeparateByteGateConvergenceBoundary&);
 
+// This is the fixed raw continuation only if the unknown JSR at $68f48
+// returns. It records subsequent call/jump operands and raw target prefixes;
+// it does not establish that any call returns or that an absolute cell exists.
+struct MillenniumAmigaResidentSeparatePostExternalCallBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::size_t byte_count = 0;
+    std::string sha256;
+    std::array<std::uint32_t, 3> call_addresses{};
+    std::array<std::uint32_t, 3> call_targets{};
+    std::array<std::size_t, 3> call_target_raw_disk_offsets{};
+    std::array<std::string, 3> call_target_prefix_sha256{};
+    std::array<std::uint32_t, 2> address_literals{};
+    std::uint32_t terminal_jump_address = 0;
+    std::uint32_t terminal_jump_target = 0;
+    std::size_t terminal_jump_target_raw_disk_offset = 0;
+    std::string terminal_jump_target_prefix_sha256;
+};
+
+[[nodiscard]] MillenniumAmigaResidentSeparatePostExternalCallBoundary
+parse_millennium_amiga_resident_separate_post_external_call_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&,
+    const MillenniumAmigaResidentSeparateByteGateTakenBranchBoundary&);
+
 } // namespace eon

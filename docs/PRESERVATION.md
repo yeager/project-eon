@@ -639,6 +639,27 @@ evidence and are not treated as interchangeable executable provenance. One
 shorter supplied dump is checked by direct bounded raw spans, not forced into
 the standard-ADF reader it does not satisfy.
 
+The later common convergence at `$68f48` begins with unknown `JSR $7caa6`.
+Only if that call returns, the following 42 immutable bytes at
+`$68f4e..$68f77` / ADF `+0x1734e` hash to
+`3220d65f197163401c649a36d756ecf3005d2f342b81de5a7d4528f9a45da851`.
+They encode direct calls to `$7d6d2`, `$7780a`, and `$77b34` at `$68f4e`,
+`$68f5a`, and `$68f6c`; literal address loads `$7c21b` and `$7c25c`; and a
+terminal `JMP $7c54e` at `$68f72`. Their respective 32-byte linear raw-prefix
+fingerprints are ADF `+0x2bad2` /
+`4e2f8f40d56a7d2a46f654be0fe5df4edaf4ca6d3d0864cc2c6d41355fa8c5b4`,
+`+0x25c0a` /
+`dc67f3a81c04fbfb92bfdf7a8b88679dc07e3f61e90708198467ce3877ab5beb`,
+`+0x25f34` /
+`cfe704f22abb52092c496fdd49802da1d0a461f95474889a35c259cd47ca42c8`,
+and ADF `+0x2a94e` /
+`502069bdbda2f35899d16237fd1d2aa477be20f0c950231fb71f32583f23de14` for
+the jump target. `MillenniumAmigaResidentSeparatePostExternalCallBoundary`
+validates the raw continuation and all four correspondences for every supplied
+variant. It does not claim `$7caa6` returns, that any later call returns, that
+the absolute cells are live, that the target bytes are their runtime code, or
+that the final jump occurs.
+
 The next local static control-flow prefix begins at `$68dc0` / ADF `+0x171c0`.
 Its 14 bytes, SHA-256
 `ef2fe6161118a1b0ac6cee838be9a4dc2b0483ba274a213d3ac653ea6f334e3b`, load
@@ -2185,6 +2206,26 @@ prefix are both SHA-256-validated by
 `MillenniumDosStartupAllocationBoundary` against the full original English
 `2200AD.EXE`; mutations are rejected before the facts are exposed.
 
+The DX-zero successor is now independently bounded as a separate static
+chain. `$d2f5` calls `$1161`, which reads the native byte `$da05`; literal
+comparisons `$01/$03/$02` select the in-image name addresses
+`$1131/$113d/$1155`, respectively, while the default sets `$1149`. Those four
+NUL-padded names are `VGATXT.BIN`, `EG3TXT.BIN`, `EG6TXT.BIN`, and
+`TDYTXT.BIN`, in raw storage order `$1131/$113d/$1149/$1155` (48 bytes,
+SHA-256 `153a0b62bdec1702cdd36ff6e7dc33ec4ed6673ad5d3f5f8bc07b748f7e06d76`).
+The selector then has direct call `$117c → $053a`. That callee's fixed prefix
+replaces DX with the in-image `A:\\2200AD\\SECURITY.HID` name at `$2f6a`
+(23 bytes, SHA-256 `1a95edb6109f3db1af0c0389f1aa5d597a184f26725e095f771b6622f654ec6a`)
+before first reaching `INT $21` at `$0550` with `AH=$3d`, `AL=$02`.
+`MillenniumDosStartupZeroPathBoundary` locks the three-byte zero successor
+(SHA-256 `798bd5318e00348848f0ca4b876d687fec5c606abe88236ff4e922a77fe08b65`),
+30-byte selector (SHA-256
+`fffa1b0e03e9abf90bfde3bfb86bf1125ae579ede767eea68223e098d641992f`), and
+24-byte callee prefix (SHA-256
+`328e11edf0653b0e0f21db3b61cf9ff95795ec9431f07c0198a700358f75ed74`) against
+the full original executable. This does not choose `$da05`, infer a selected
+name's use, invoke DOS, provide carry/AX, or claim the code path executes.
+
 The direct follow-up targets are also bounded by original bytes. `$044e`
 loads literal `$01`, writes it to `$da05`, and returns. `$0466` sets `DS=CS`,
 points `SI` at the verified 16-byte in-image sequence `$00..$07`, `$38..$3f`
@@ -2684,6 +2725,15 @@ on Linux, macOS, and Windows. It handles no releases, tags, or publication. It
 uploads non-published verification artifacts (packages and platform builds) for
 CI inspection only. Releases require an explicit maintainer request outside CI;
 normal development is pushed directly to `main`.
+
+All action invocations are pinned to full Git object IDs, with the reviewed
+release label preserved in a comment; the same immutable-reference rule already
+applies to SDL3, zlib, and libpng source fetches. Each platform upload also
+contains an adjacent schema-1 JSON integrity manifest. The manifest is generated
+after that platform's artifact validation and records the source commit, artifact
+basename, byte length, and SHA-256. It is a transport-verification ledger only:
+it neither signs nor publishes a release, includes no workspace path, and never
+opens or embeds user-supplied game media.
 
 ## Evidence levels
 
