@@ -32,6 +32,13 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("Verify package contents contain no game media", workflow)
         self.assertIn("bash packaging/verify-desktop-package.sh package/deb/*.deb package/rpm/*.rpm", workflow)
 
+    def test_ci_validates_macos_archive_and_windows_runtime_stage(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('unzip -t "project-eon-macos-${{ matrix.arch }}.zip"', workflow)
+        self.assertIn("refusing macOS artifact with possible original game data", workflow)
+        self.assertIn("Windows package stage lacks libpng runtime DLL", workflow)
+        self.assertIn("refusing Windows package stage with possible original game data", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

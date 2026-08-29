@@ -148,9 +148,19 @@ Inspect every recognised original release in one read-only scan:
 ./build/project-eon --data "$HOME/Hämtningar" --inspect
 ```
 
+Narrow that same non-SDL inspection to one requested original release when
+recording or comparing preservation evidence:
+
+```sh
+./build/project-eon --data "$HOME/Hämtningar" --inspect --game millennium --platform dos
+```
+
 `--inspect` reports each detected game/platform archive and its recovered
-preservation evidence directly from the supplied media. It neither extracts
-files to disk nor creates, alters, or substitutes game data.
+preservation evidence directly from the supplied media. Its `INSPECTION`
+header identifies the read-only provenance mode. Filtering changes only which
+verified reports are printed; it never selects a fallback platform or language.
+Inspection neither extracts files to disk nor creates, alters, or substitutes
+game data.
 
 The current SDL application is deliberately an incremental reimplementation,
 not a mock game. It lists detected real releases and proves the Original/Modern

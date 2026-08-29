@@ -62,6 +62,45 @@ dumps are preferred as semantic baselines.
 - Deuteros identifiers are `DOS\0` (system) and `DEU\0` (custom data). Logical
   block 880 is game code/data rather than a normal AmigaDOS root directory.
 
+### Amiga and Atari ST corpus boundary census
+
+The platform labels in outer and inner archive names are catalogue metadata,
+not release identity.  The following census is anchored in the complete leaf
+image hashes and container bytes, rather than treating a `cr`, `a`, or `save`
+name as a semantic property of the original program.
+
+| Corpus | Supplied leaf media | Container fact | Admitted entry evidence | Documentation/control status |
+| --- | --- | --- | --- | --- |
+| Millennium Amiga | Six ADFs: five 901,120-byte images and one 698,368-byte image | `DOS\0` is present, but the usable program path is raw-sector data; the valid Razor filesystem has no game files. | The Defjam-family bootstrap requests `$24200..$923ff` to `$41000`, then `$16400..$423ff` to `$68000`; the shared resident span is hash-identified. | There is no live standalone manual recognised by the bounded filesystem readers.  Visible function-key trainer text occurs only in altered variants and is not original control evidence. |
+| Deuteros Amiga | Clean system/data ADFs plus comparative alternate, save, and modified images | The clean system disk is `DOS\0`; clean data disk is `DEU\0`, whose logical block 880 is custom raw data rather than an AmigaDOS root. | The clean system boot path loads `$5800` to `$20000` and has entry `$21734`; title-stage transfer remains separately bounded. | A genuine on-disk text block contains load/save prompts, but no caller-connected input binding is yet recovered. |
+| Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits `MILENIUM.TOS` and the `$77000` bootstrap only; its initial `MILL22A.inf` `Fopen` remains a GEMDOS boundary. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
+| Deuteros Atari ST | Eleven 737,280/1,056,768-byte `.st` images | The 737,280-byte game-media candidates have a BPB-shaped boot sector, but their apparent root records are not a live FAT12 namespace: entries carry impossible cluster/size combinations.  The raw protected boot chain is authoritative. | The hash-identified raw chain reaches the first and second stages through explicit nine-sector reads; its XBIOS callback and state selection remain boundaries. | The supplied game-media variants contain no standalone manual.  Embedded prompts are preserved as raw text only; a separate 1,056,768-byte development/tools disk is excluded from game-control evidence. |
+
+This protects two easy-to-make mistakes: a structurally plausible BPB does not
+prove a usable FAT filesystem, and a printable string does not prove an input
+binding.  A future decoder must preserve the original container selected by
+its hash, read it in place, and reject rather than substitute a different
+platform's filesystem or executable.
+
+The clean Deuteros Amiga system ADF has a directly observed embedded text
+region at ADF `$78bc0..$78d0f` (336 bytes, SHA-256
+`66b312b5e7b148bdfe0e43af4d6cc6f4b451ed05f83be8edd7a1e11f17264680`).
+It includes the original byte sequences `LOAD`, `Press 'L'`, `SAVE`, and
+`Press 'S'`, followed by the original data-disk prompt.  The raw text is
+retained unchanged, but neither its record framing nor a code reference from
+the input dispatcher to this block has been demonstrated.  Project Eon
+therefore does not expose `L`/`S` as reconstructed gameplay controls.
+
+The Millennium Atari ST Disk 1 physical dump has a separate raw text
+span at `$12420..$1258f` (368 bytes, SHA-256
+`6330b762858bb4b1fb0bc17f4f577eca3b1e8de4c078fd3fc01192bcd05a89f7`).  It
+contains `SAVE GAME`, `LOAD GAME`, `press left button to continue...`,
+`MOUSE MODE`, and `KEYBOARD MODE`.  This is direct content evidence from the
+SHA-256 `081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd`
+physical-dump leaf, not an STX filesystem claim, executable entry point, or
+SDL mapping.  It remains inspection-only until physical-track decoding and a
+caller-connected control trace establish its use.
+
 ### Millennium Atari ST relocation evidence
 
 The Equinox FAT12 `MILL22B.INF` chain is separately hash-identified (84,720
