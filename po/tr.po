@@ -153,6 +153,15 @@ msgstr "SOL/SAĞ: DEĞİŞTİR"
 msgid "SMOOTH SCALING"
 msgstr "YUMUŞAK ÖLÇEKLEME"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "PİKSEL YENİDEN OLUŞTURMA"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X (YALNIZCA BELLEK)"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "KAPALI (ÖZGÜN PİKSELLER)"
+
 msgid "SCANLINES"
 msgstr "TARAMA ÇİZGİLERİ"
 

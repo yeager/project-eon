@@ -46,6 +46,23 @@ versioned, user-controlled cache contract is added; it must never be written
 into, beside, or in place of supplied game media. Project Eon does not commit,
 package, or redistribute original pixels or unlicensed derivatives.
 
+### Transient Scale2x pixel reconstruction (Modern)
+
+The current Modern path provides a deterministic, edge-aware RGBA **Scale2x**
+reconstruction for Eon's already decoded, verified Millennium DOS title and
+Deuteros Amiga opening surfaces. This differs from SDL nearest or linear
+sampling: every output pixel is selected from the original pixel and its four
+direct neighbours, so hard pixel-art edges can be continued without inventing
+an interpolated colour. It is an explicit Modern graphics-popup setting;
+Original always presents the original decoded texture path.
+
+`reconstruct_rgba_scale2x` accepts a bounded, tightly packed RGBA span and
+returns a separate in-memory buffer. It has no archive, file, cache, encoder,
+or save API. The source span is const, the renderer discards the derived SDL
+texture on exit, and native tests cover input immutability and malformed
+surface rejection. This is a reversible presentation enhancement—not a new
+game asset, a change to supplied media, or evidence about original rendering.
+
 Both modes read supplied media in place. Neither mode may modify, replace,
 unpack, redistribute, or use an original asset as a writable runtime cache.
 Modern must not alter an original save file; any future Eon-native save or

@@ -153,6 +153,15 @@ msgstr "ВЛЕВО/ВПРАВО: ИЗМЕНИТЬ"
 msgid "SMOOTH SCALING"
 msgstr "ПЛАВНОЕ МАСШТАБИРОВАНИЕ"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "РЕКОНСТРУКЦИЯ ПИКСЕЛЕЙ"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X (ТОЛЬКО ПАМЯТЬ)"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "ВЫКЛ. (ОРИГИНАЛЬНЫЕ ПИКСЕЛИ)"
+
 msgid "SCANLINES"
 msgstr "СТРОКИ РАЗВЁРТКИ"
 

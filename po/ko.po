@@ -153,6 +153,15 @@ msgstr "왼쪽/오른쪽: 변경"
 msgid "SMOOTH SCALING"
 msgstr "부드러운 크기 조절"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "픽셀 재구성"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X(메모리 전용)"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "끔(원본 픽셀)"
+
 msgid "SCANLINES"
 msgstr "스캔라인"
 

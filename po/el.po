@@ -104,6 +104,15 @@ msgstr "ΑΡΙΣΤΕΡΑ/ΔΕΞΙΑ: ΑΛΛΑΓΗ"
 msgid "SMOOTH SCALING"
 msgstr "ΟΜΑΛΗ ΚΛΙΜΑΚΩΣΗ"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "ΑΝΑΚΑΤΑΣΚΕΥΗ ΕΙΚΟΝΟΣΤΟΙΧΕΙΩΝ"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X (ΜΟΝΟ ΜΝΗΜΗ)"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "ΑΝΕΝΕΡΓΟ (ΑΡΧΙΚΑ ΕΙΚΟΝΟΣΤΟΙΧΕΙΑ)"
+
 msgid "SCANLINES"
 msgstr "ΓΡΑΜΜΕΣ ΣΑΡΩΣΗΣ"
 

@@ -189,6 +189,15 @@ msgstr ""
 msgid "SMOOTH SCALING"
 msgstr ""
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr ""
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr ""
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr ""
+
 msgid "SCANLINES"
 msgstr ""
 

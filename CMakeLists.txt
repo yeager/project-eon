@@ -122,6 +122,7 @@ add_executable(project-eon
     src/data/millennium_dos_game_flow.cpp
     src/data/millennium_dos_gameplay_screen.cpp
     src/data/millennium_dos_last_screen.cpp
+    src/data/modern_pixel_reconstruction.cpp
     src/data/millennium_dos_lib.cpp
     src/data/millennium_dos_title_flow.cpp
     src/data/millennium_dos_title_exit.cpp
@@ -264,6 +265,7 @@ if(BUILD_TESTING)
         src/data/millennium_dos_game_flow.cpp
         src/data/millennium_dos_gameplay_screen.cpp
         src/data/millennium_dos_last_screen.cpp
+        src/data/modern_pixel_reconstruction.cpp
         src/data/millennium_dos_lib.cpp
         src/data/millennium_dos_title_flow.cpp
         src/data/millennium_dos_title_exit.cpp

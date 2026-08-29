@@ -104,6 +104,15 @@ msgstr "يسار/يمين: تغيير"
 msgid "SMOOTH SCALING"
 msgstr "تحجيم سلس"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "إعادة بناء البكسل"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X (الذاكرة فقط)"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "إيقاف (البكسلات الأصلية)"
+
 msgid "SCANLINES"
 msgstr "خطوط المسح"
 

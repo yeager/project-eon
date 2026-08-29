@@ -115,6 +115,15 @@ msgstr "左/右: 変更"
 msgid "SMOOTH SCALING"
 msgstr "スムーズスケーリング"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "ピクセル再構成"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X（メモリ内のみ）"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "オフ（オリジナルピクセル）"
+
 msgid "SCANLINES"
 msgstr "走査線"
 

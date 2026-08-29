@@ -115,6 +115,15 @@ msgstr "बायाँ/दायाँ: बदलें"
 msgid "SMOOTH SCALING"
 msgstr "मुलायम स्केलिंग"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "पिक्सेल पुनर्निर्माण"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X (केवल मेमोरी)"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "बंद (मूल पिक्सेल)"
+
 msgid "SCANLINES"
 msgstr "स्कैनलाइनें"
 

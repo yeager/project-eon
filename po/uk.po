@@ -153,6 +153,15 @@ msgstr "ЛІВОРУЧ/ПРАВОРУЧ: ЗМІНИТИ"
 msgid "SMOOTH SCALING"
 msgstr "ПЛАВНЕ МАСШТАБУВАННЯ"
 
+msgid "PIXEL RECONSTRUCTION"
+msgstr "РЕКОНСТРУКЦІЯ ПІКСЕЛІВ"
+
+msgid "SCALE2X (MEMORY ONLY)"
+msgstr "SCALE2X (ЛИШЕ ПАМ’ЯТЬ)"
+
+msgid "OFF (ORIGINAL PIXELS)"
+msgstr "ВИМК. (ОРИГІНАЛЬНІ ПІКСЕЛІ)"
+
 msgid "SCANLINES"
 msgstr "РЯДКИ РОЗГОРТКИ"
 

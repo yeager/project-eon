@@ -291,8 +291,12 @@ verified banked resource directory, exposing 38 title resources and 180
 gameplay resources directly from the hash-identified original archive.
 `TITLE.LIB` resource `P00` now decodes into its authentic 320×200 indexed title
 image and its original 256-entry VGA RGB6 DAC table plus 36-entry logical
-index translation. The SDL launch view shows this user-supplied original title:
-nearest-neighbour in Original mode and linear scaling only in Modern mode.
+index translation. Original uses this user-supplied decoded-pixel title texture
+unchanged with nearest-neighbour scaling. Modern can instead opt into transient,
+deterministic edge-aware Scale2x reconstruction from those same decoded pixels
+(or retain the original-pixel texture), then choose nearest or linear output
+sampling. Reconstruction is memory-only: it never writes, caches, replaces, or
+packages game media.
 When its recovered DOS console poll observes a key, the launch view records
 only the title executable's local input/exit boundary and keeps displaying the
 original P00 frame. The subsequent `MILL.COM` return, DOS EXEC result,
