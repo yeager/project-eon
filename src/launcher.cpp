@@ -68,7 +68,8 @@ std::string usage() {
         "  project-eon --data <directory-or-archive> --game millennium|deuteros\n"
         "               --platform dos|amiga|atari-st --reference-trace <manifest.eontrace>\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
-        "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n\n"
+        "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
+        "               [--modern-packs <explicit-pack-root>]\n\n"
         "Without --data/--data-dir, game data is read from ~/.projecteon on Linux/macOS\n"
         "or <install directory>/data on Windows. Without --game, the graphical\n"
         "start menu is shown.\n";
@@ -98,6 +99,8 @@ ParseResult parse_command_line(int argc, char** argv) {
             if (!request.verify_game) return {{}, "Unknown game: " + std::string(value), false};
         } else if (argument == "--reference-trace") {
             request.reference_trace = std::filesystem::path(value);
+        } else if (argument == "--modern-packs") {
+            request.modern_pack_root = std::filesystem::path(value);
         } else if (argument == "--platform") {
             request.platform = parse_platform(value);
             if (!request.platform) return {{}, "Unknown platform: " + std::string(value), false};
@@ -125,6 +128,9 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.verify_game && request.inspect_data) {
         return {{}, "--verify-data and --inspect cannot be combined", false};
+    }
+    if (request.modern_pack_root && !request.inspect_data) {
+        return {{}, "--modern-packs requires --inspect; it is diagnostics-only and never selects a renderer pack", false};
     }
     if (request.reference_trace) {
         if (request.data_directory_is_default) {

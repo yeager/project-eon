@@ -218,6 +218,19 @@ recording or comparing preservation evidence:
 ./build/project-eon --data "$HOME/Hämtningar" --inspect --game millennium --platform dos
 ```
 
+Audit separately installed Modern art packs only when explicitly requested:
+
+```sh
+./build/project-eon --data "$HOME/Hämtningar" --inspect --modern-packs /path/to/eon-modern-packs
+```
+
+`--modern-packs` is valid only with `--inspect` and never has a default search
+path. It reports each direct-child pack as eligible or rejected after the
+selected original releases have been rehashed. Eligibility is diagnostic only:
+the command neither selects, decodes, nor renders a pack, and it creates no
+directory or cache. See [the Modern asset-pack format](docs/MODERN_ASSET_PACK_FORMAT.md)
+for the external, separately installed format.
+
 `--inspect` reports each detected game/platform archive and its recovered
 preservation evidence directly from the supplied media. Its `INSPECTION`
 header identifies the read-only provenance mode. Filtering changes only which

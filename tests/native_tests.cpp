@@ -651,6 +651,14 @@ int main() {
         char* inspect_args[] = {program, inspect_option};
         const auto inspect = eon::parse_command_line(2, inspect_args);
         assert(inspect.request && inspect.request->inspect_data);
+        char modern_packs_option[] = "--modern-packs";
+        char pack_root[] = "separately-installed-modern-packs";
+        char* modern_pack_args[] = {program, inspect_option, modern_packs_option, pack_root};
+        const auto modern_packs = eon::parse_command_line(4, modern_pack_args);
+        assert(modern_packs.request && modern_packs.request->modern_pack_root
+            && *modern_packs.request->modern_pack_root == pack_root);
+        char* modern_pack_without_inspect_args[] = {program, modern_packs_option, pack_root};
+        assert(!eon::parse_command_line(3, modern_pack_without_inspect_args).request);
         char game_option[] = "--game";
         char platform_option[] = "--platform";
         char dos[] = "dos";

@@ -12,6 +12,19 @@ non-recursive, follows no symbolic links, creates no directory, and has no
 default search path. A pack root must be kept separate from supplied game
 media: admission never writes to either location.
 
+Use the reader explicitly with a rehashing preservation scan:
+
+```sh
+project-eon --data /path/to/original-media --inspect --modern-packs /path/to/modern-packs
+```
+
+The command reports `MODERN PACK ELIGIBLE` only after the manifest and every
+external asset verify *and* the pack's release identity appears in this
+invocation's reverified original reports. It reports malformed, changed, and
+wrong-release candidates as `MODERN PACK REJECTED`. This is diagnostics only:
+neither result selects, decodes, nor renders a pack. `--modern-packs` is not a
+launch option and is rejected unless paired with `--inspect`.
+
 ## Manifest syntax
 
 `pack.eonmodern` is a UTF-8-compatible ASCII text file. Each non-empty line
