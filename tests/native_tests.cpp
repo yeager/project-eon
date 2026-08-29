@@ -19,6 +19,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "data/deuteros_atari_boot.hpp"
+#include "data/deuteros_atari_reference_trace.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_control_text.hpp"
@@ -35,6 +36,7 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
 #include "data/millennium_dos_reference_trace.hpp"
+#include "data/millennium_amiga_reference_trace.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
 #include "data/modern_asset_pack.hpp"
 #include "engine/millennium_dos_title_session.hpp"
@@ -595,6 +597,45 @@ int main() {
         assert(!eon::validate_millennium_dos_english_reference_events(
             "event\t1 10 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=titles.exe\n"
             "event\t1 20 exec image=mill.com pc=0x0337 int=0x21 ax=0x4b00 path=2200ad.exe\n",
+            diagnostics, trace_error));
+    }
+    // These two records name only the verified caller-side handoffs. They do
+    // not model execution, read completion, or a return from the opaque stage.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 10 cpu image=bootstrap-loader pc=0x702e4 op=jsr-indirect a3=0x41000\n"
+            "event\t2 20 cpu image=bootstrap-loader pc=0x70320 op=jmp-indirect a3=0x68000 d6=0xa8d398fb\n";
+        eon::MillenniumAmigaReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_millennium_amiga_english_reference_events(
+            valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 2 && diagnostics.cpu_count == 2);
+        assert(!eon::validate_millennium_amiga_english_reference_events(
+            "event\t1 10 cpu image=bootstrap-loader pc=0x702e4 op=jsr-indirect a3=0x41001\n",
+            diagnostics, trace_error));
+    }
+    // These synthetic strings exercise the external-record grammar only.
+    // They are not Atari media, an emulator trace fixture, or a request to
+    // call XBIOS or replay any boot state.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 10 trap pc=0x00001edc incoming_a7=0x00001000 incoming_sr=0x2700 selector=0x0026 callback=0x00001fa6 return_pc=0x00001ede return_a7=0x0000100c return_sr=0x2000 return_d0=0x00000000\n"
+            "event\t2 20 callback entry_pc=0x00001fa6 incoming_a7=0x00001000 stack_longword=0x00001ede outgoing_a7=0x0007b000 return_pc=0x00001ede return_a7=0x0007affc return_sr=0x2000 return_d0=0x00001ede\n"
+            "event\t3 30 state ram_25f4=0x00071100 ram_25f4_provenance=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ram_25fc=0x00000001 ram_25fc_provenance=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb branch_pc=0x00001ef2 state_word=0x0001\n"
+            "event\t4 40 table base=0x00001eac shifted_index=0x0002 target_a1=0x00001f50 entry_pc=0x00001f50 return_pc=0x00001f08 return_d1=0x00000000 return_d2=0x00000000\n"
+            "event\t5 50 frame site=0x00001e9c input_frame=0008 result_frame=00000000\n"
+            "event\t6 60 raw-reader entry_pc=0x00001e60 trap_pc=0x00001e9c call_a7=0x00002000 return_pc=0x00001e9e return_a7=0x00002014 return_sr=0x2000 return_d0=0x00000000\n";
+        eon::DeuterosAtariReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_deuteros_atari_reference_events(valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 6 && diagnostics.trap_count == 1 && diagnostics.callback_count == 1
+            && diagnostics.frame_count == 1 && diagnostics.state_count == 1 && diagnostics.table_count == 1
+            && diagnostics.raw_reader_count == 1);
+        assert(!eon::validate_deuteros_atari_reference_events(
+            "event\t1 10 trap pc=0x00001edc incoming_a7=0x00001000 incoming_sr=0x2700 selector=0x0026 callback=0x00001fa6 return_pc=0x00001ede return_a7=0x0000100c return_sr=0x2000 return_d0=0x00000000 extra=forbidden\n",
+            diagnostics, trace_error));
+        assert(!eon::validate_deuteros_atari_reference_events(
+            "event\t1 10 table base=0x00001eac shifted_index=0x0002 target_a1=0x00001f51 entry_pc=0x00001f51 return_pc=0x00001f08 return_d1=0x00000000 return_d2=0x00000000\n",
             diagnostics, trace_error));
     }
     assert_modern_asset_pack_admission();

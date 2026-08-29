@@ -1450,6 +1450,14 @@ preservation evidence, but cannot choose a dispatch vector or justify a
 runtime implementation. No current parser, test, or launcher path supplies
 these values, calls XBIOS, or synthesizes a fallback screen.
 
+`deuteros-atari-st-boot-v1` is now a reference-trace v2 diagnostics adapter
+for exactly this acquisition contract. It pins the outer archive, Replicants
+Disk 1, and copied second-stage interval hashes, then accepts only the raw
+`trap`, `callback`, `state`, `table`, `frame`, and `raw-reader` observations
+specified in `REFERENCE_TRACE_FORMAT.md`. Admission reports counts only; it
+does not replay values, invoke XBIOS, install a callback, choose a dispatch
+target, or treat a captured frame/result as a runtime input.
+
 The byte-proven continuation after that wrapper boundary is retained without
 asserting that the raw reader returns. At track-2 `+$1138`, the next 38 bytes
 have SHA-256 `5b1480495df8defe3e1264dd083ec1c91134c01e56d3d94e060c583ee9b54a89`.
