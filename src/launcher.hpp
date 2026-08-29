@@ -9,6 +9,9 @@
 
 namespace eon {
 
+// Original is the preservation contract. Modern is explicitly opt-in and may
+// enable host-side improvements; it must never silently become the default
+// presentation for a supplied original release.
 enum class Presentation { original, modern };
 
 // Renderer-only preferences shared by CLI startup and the F10 overlay. They

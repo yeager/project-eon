@@ -32,6 +32,7 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
 #include "data/reference_trace.hpp"
+#include "data/recovery_map.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
@@ -184,6 +185,25 @@ void draw_scanlines(SDL_Renderer* renderer, const SDL_FRect& bounds) {
         SDL_RenderLine(renderer, bounds.x, y, bounds.x + bounds.w, y);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+// This report is intentionally shared by every platform inspector. The map
+// has already been bounded by the rehashed outer archive and parser-profile
+// manifest; printing it neither extracts more media nor dispatches any guest
+// code. It is a diagnostic equivalent of a symbol map, not a hook table.
+void report_recovery_map(const eon::ReleaseArchive& release) {
+    const auto entries = eon::recovery_map_for_release(release.sha256);
+    if (entries.empty()) return;
+    std::cout << "          RECOVERY MAP  " << entries.size()
+        << " hash-bound static path" << (entries.size() == 1 ? "" : "s") << '\n';
+    for (const auto& entry : entries) {
+        if (!eon::release_has_recovery_map_entry(release.sha256, entry.id)) {
+            throw std::runtime_error("Recovery-map entry lost its parser-profile binding");
+        }
+        std::cout << "            " << entry.id << ": profile " << entry.parser_profile_id
+            << ", " << entry.cpu << " " << entry.source_address << ", "
+            << entry.evidence_level << "; " << entry.runtime_status << '\n';
+    }
 }
 
 SDL_FRect aspect_viewport(const float x, const float y, const float maximum_width,
@@ -962,6 +982,8 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto gx_overlay_startup_records =
         eon::parse_millennium_dos_gx_overlay_startup_record_evidence(
             *gx_overlay, gx_overlay_selector);
+    const auto gx_overlay_dispatch13 = eon::parse_millennium_dos_gx_overlay_dispatch13_evidence(
+        *gx_overlay, gx_overlay_dispatcher);
     std::cout << "          2200AD.EXE startup: entry 0x" << std::hex
         << game_flow.entry_address << ", SS=CS, SP=0x" << game_flow.startup_stack_pointer
         << ", first CALL 0x" << game_flow.startup_first_call_address
@@ -1143,6 +1165,15 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " words to +0x" << std::hex << gx_overlay_startup_records.copy_destination_offset
         << "; SHA-256 " << gx_overlay_startup_records.entry_span_sha256 << std::dec
         << " (raw startup provenance only; no record meaning, state, or display inferred)\n";
+    std::cout << "          2200GX dispatcher slot 13: entry +0x" << std::hex
+        << gx_overlay_dispatch13.entry_offset << " resets words +0x"
+        << gx_overlay_dispatch13.zeroed_word_storage_offsets[0] << "/+0x"
+        << gx_overlay_dispatch13.zeroed_word_storage_offsets[1] << "/+0x"
+        << gx_overlay_dispatch13.zeroed_word_storage_offsets[2] << ", compares AL with 0x"
+        << static_cast<unsigned>(gx_overlay_dispatch13.first_result_compare_value)
+        << ", and returns/loops via +0x" << gx_overlay_dispatch13.local_back_edge_target_offset
+        << "; SHA-256 " << gx_overlay_dispatch13.span_sha256 << std::dec
+        << " (conditional static span only; no selector, calls, results, or state supplied)\n";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     const auto initial_save = eon::extract_verified_release_asset(release, initial_save_sha256);
@@ -2395,6 +2426,7 @@ int main(int argc, char** argv) {
                 << eon::name(release.platform) << " / " << release.language << '\n'
                 << "          " << release.sha256 << '\n'
                 << "          " << release.path << '\n';
+            report_recovery_map(release);
             if (release.game == eon::Game::deuteros
                 && release.platform == eon::Platform::amiga) {
                 report_deuteros_amiga(release);
@@ -2666,7 +2698,7 @@ int main(int argc, char** argv) {
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
                 // F10 is consumed by Project Eon's renderer chrome, never by
                 // original DOS/Amiga input. It is available now and remains
-                // the future in-game modern-presentation entry point.
+                // the future in-game Modern-presentation entry point.
                 request.presentation = eon::Presentation::modern;
                 show_modern_graphics_settings = !show_modern_graphics_settings;
                 continue;

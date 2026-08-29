@@ -937,6 +937,33 @@ struct MillenniumDosGxOverlayStartupRecordEvidence {
     std::string record_bank_sha256;
 };
 
+// Hash-locked continuation of dispatcher table slot 13 (+$08d0) in the
+// original GX overlay. The dispatcher selects this raw target only after its
+// native selector calculation. This describes the following literal setup,
+// conditional return, and local back edge; it does not assign meaning to the
+// reset cells, choose a selector, or execute a native callee.
+struct MillenniumDosGxOverlayDispatch13Evidence {
+    std::string overlay_sha256;
+    std::uint16_t entry_offset = 0;
+    std::size_t byte_count = 0;
+    std::array<std::uint16_t, 7> call_offsets{};
+    std::array<std::uint16_t, 7> call_targets{};
+    std::array<std::uint16_t, 3> zeroed_word_storage_offsets{};
+    std::uint16_t first_result_compare_offset = 0;
+    std::uint8_t first_result_compare_value = 0;
+    std::uint16_t first_result_equal_branch_offset = 0;
+    std::uint16_t first_result_equal_target_offset = 0;
+    std::uint16_t state_flag_test_offset = 0;
+    std::uint16_t conditional_return_branch_offset = 0;
+    std::uint16_t conditional_return_target_offset = 0;
+    std::uint16_t state_index_increment_offset = 0;
+    std::uint16_t state_index_mask_literal = 0;
+    std::uint16_t state_index_stride_literal = 0;
+    std::uint16_t local_back_edge_offset = 0;
+    std::uint16_t local_back_edge_target_offset = 0;
+    std::string span_sha256;
+};
+
 [[nodiscard]] MillenniumDosGxOverlayLoadEvidence
 parse_millennium_dos_gx_overlay_load_evidence(
     std::span<const std::uint8_t> game_executable,
@@ -962,6 +989,10 @@ parse_millennium_dos_gx_overlay_selector_evidence(
 parse_millennium_dos_gx_overlay_startup_record_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
     const MillenniumDosGxOverlaySelectorEvidence& selector);
+[[nodiscard]] MillenniumDosGxOverlayDispatch13Evidence
+parse_millennium_dos_gx_overlay_dispatch13_evidence(
+    std::span<const std::uint8_t> gx_overlay_executable,
+    const MillenniumDosGxOverlayDispatcherEvidence& dispatcher);
 
 // The English 2200AD.EXE startup's two local selector callees are bounded
 // independently from the broad main-loop profile.  Both retain the private
