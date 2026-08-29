@@ -7,9 +7,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(SDL3 CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
+include(FetchContent)
 find_package(SDL3_image CONFIG QUIET)
 if(NOT SDL3_image_FOUND)
-    include(FetchContent)
     set(SDLIMAGE_INSTALL OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_SAMPLES OFF CACHE BOOL "" FORCE)
     set(SDLIMAGE_TESTS OFF CACHE BOOL "" FORCE)
@@ -36,8 +36,50 @@ if(NOT SDL3_image_FOUND)
     FetchContent_MakeAvailable(SDL3_image)
 endif()
 
+# SDL_ttf's source archive intentionally omits its FreeType/HarfBuzz gitlinks.
+# Fetch all three source snapshots by immutable object ID and SHA-256, then
+# stage the two explicitly pinned dependencies in SDL_ttf's expected source
+# tree. This avoids CMake's `GIT_SHALLOW` fallback to `--no-single-branch`,
+# which fetches the whole SDL_ttf history when resolving a raw commit. Every
+# target, including iPadOS and Windows, therefore builds the same shaping
+# stack without consulting host font libraries.
+set(SDLTTF_VENDORED ON CACHE BOOL "" FORCE)
+set(SDLTTF_HARFBUZZ ON CACHE BOOL "" FORCE)
+set(SDLTTF_PLUTOSVG OFF CACHE BOOL "" FORCE)
+set(SDLTTF_SAMPLES OFF CACHE BOOL "" FORCE)
+set(SDLTTF_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(SDL3_ttf
+    URL https://codeload.github.com/libsdl-org/SDL_ttf/tar.gz/a1ce3670aec736ecbf0936c43f2f0cc53aa61e5b
+    URL_HASH SHA256=5024f953a5ce207e87ae73e09644ec3e5357d9907952209035b88bdaeac7edeb
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_Declare(eon_sdl3_ttf_freetype
+    URL https://codeload.github.com/libsdl-org/freetype/tar.gz/9973564cfa63763a3e4ac67c09147899539b1e07
+    URL_HASH SHA256=026a05a49d114a1235d2926f4c03a9330e4b1a6efe7c217ec9607904c32907d4
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_Declare(eon_sdl3_ttf_harfbuzz
+    URL https://codeload.github.com/libsdl-org/harfbuzz/tar.gz/564bf9818a18709776856533829c0c04950773d6
+    URL_HASH SHA256=a448dd6c22d8e1e1cf39438c662251c1f97f810b8780eed4a6d6ada948c99ddc
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+# FetchContent_MakeAvailable would add SDL_ttf before its gitlinks can be
+# staged. Populate the three verified archives first, then add SDL_ttf once.
+if(POLICY CMP0169)
+    cmake_policy(SET CMP0169 OLD)
+endif()
+FetchContent_Populate(SDL3_ttf)
+FetchContent_Populate(eon_sdl3_ttf_freetype)
+FetchContent_Populate(eon_sdl3_ttf_harfbuzz)
+file(COPY "${eon_sdl3_ttf_freetype_SOURCE_DIR}/"
+    DESTINATION "${sdl3_ttf_SOURCE_DIR}/external/freetype")
+file(COPY "${eon_sdl3_ttf_harfbuzz_SOURCE_DIR}/"
+    DESTINATION "${sdl3_ttf_SOURCE_DIR}/external/harfbuzz")
+add_subdirectory("${sdl3_ttf_SOURCE_DIR}" "${sdl3_ttf_BINARY_DIR}" EXCLUDE_FROM_ALL)
+
 add_executable(project-eon
     src/main.cpp
+    src/launcher_text.cpp
     src/i18n.cpp
     src/launcher.cpp
     src/engine/deuteros_amiga_opening.cpp
@@ -81,8 +123,9 @@ add_executable(project-eon
 target_include_directories(project-eon PRIVATE src)
 target_compile_definitions(project-eon PRIVATE
     EON_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    EON_FONT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
     EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
-target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image ZLIB::ZLIB)
+target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf ZLIB::ZLIB)
 
 # iPadOS uses the same SDL3 code as the desktop builds, with Project Eon's
 # own cards and catalogs embedded as resources. Supplied game archives are
@@ -102,6 +145,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
             MACOSX_PACKAGE_LOCATION "Resources/assets/cards")
         target_sources(project-eon PRIVATE "${resource}")
     endforeach()
+    # The UI bundle is licensed separately from original game media. Keep the
+    # exact reviewed font files in the app resource directory so iPadOS never
+    # resolves text through a host font installation.
+    foreach(font IN ITEMS
+        assets/fonts/NotoSans-Regular.ttf
+        assets/fonts/NotoSansArabic-Regular.ttf
+        assets/fonts/NotoSansDevanagari-Regular.ttf
+        assets/fonts/NotoSansJP-Regular.otf
+        assets/fonts/NotoSansKR-Regular.otf
+        assets/fonts/NotoSansSC-Regular.otf
+        assets/fonts/OFL-1.1.txt
+        assets/fonts/README.md)
+        set_source_files_properties("${font}" PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources/assets/fonts")
+        target_sources(project-eon PRIVATE "${font}")
+    endforeach()
     foreach(catalog IN ITEMS ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN)
         set_source_files_properties("po/${catalog}.po" PROPERTIES
             MACOSX_PACKAGE_LOCATION "Resources/po")
@@ -120,6 +179,9 @@ add_custom_command(TARGET project-eon POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/assets/cards/deuteros.png"
         "$<TARGET_FILE_DIR:project-eon>/assets/cards/deuteros.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
+        "$<TARGET_FILE_DIR:project-eon>/assets/fonts"
 )
 
 if(MSVC)
@@ -132,6 +194,7 @@ include(CTest)
 if(BUILD_TESTING)
     add_executable(eon-native-tests
         tests/native_tests.cpp
+        src/launcher_text.cpp
         src/i18n.cpp
         src/launcher.cpp
         src/engine/deuteros_amiga_opening.cpp
@@ -173,7 +236,7 @@ if(BUILD_TESTING)
         src/platform/game_data.cpp
     )
     target_include_directories(eon-native-tests PRIVATE src)
-    target_link_libraries(eon-native-tests PRIVATE ZLIB::ZLIB)
+    target_link_libraries(eon-native-tests PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf ZLIB::ZLIB)
     target_compile_definitions(eon-native-tests PRIVATE
         EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po"
         EON_REAL_DATA_DIR="${EON_REAL_DATA_DIR}"
@@ -223,9 +286,12 @@ if(UNIX AND NOT APPLE)
         "$<TARGET_SONAME_FILE:SDL3::SDL3>"
         "$<TARGET_FILE:SDL3_image::SDL3_image>"
         "$<TARGET_SONAME_FILE:SDL3_image::SDL3_image>"
+        "$<TARGET_FILE:SDL3_ttf::SDL3_ttf>"
+        "$<TARGET_SONAME_FILE:SDL3_ttf::SDL3_ttf>"
         DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
 install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
 install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")
 install(FILES README.md LICENSE DESTINATION "${CMAKE_INSTALL_DOCDIR}")
 

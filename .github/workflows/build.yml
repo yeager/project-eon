@@ -185,6 +185,7 @@ jobs:
           mkdir -p "$APP/Contents/Frameworks"
           cp build/project-eon "$APP/Contents/MacOS/ProjectEon"
           cp assets/cards/*.png "$APP/Contents/MacOS/assets/cards/"
+          cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"
           cp po/*.po "$APP/Contents/Resources/po/"
           cp README.md LICENSE "$APP/Contents/Resources/"
           bundle_dylib() {
@@ -221,6 +222,11 @@ jobs:
             "$APP/Contents/MacOS/assets/cards/deuteros.png"; do
             test -f "$required"
           done
+          for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
+              NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
+              NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do
+            test -f "$APP/Contents/MacOS/assets/fonts/$font"
+          done
           for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
             test -f "$APP/Contents/Resources/po/$catalog.po"
           done
@@ -238,6 +244,11 @@ jobs:
             "ProjectEon.app/Contents/MacOS/assets/cards/millennium.png" \
             "ProjectEon.app/Contents/MacOS/assets/cards/deuteros.png"; do
             printf '%s\n' "$listing" | grep -Fxq "$required"
+          done
+          for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
+              NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
+              NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do
+            printf '%s\n' "$listing" | grep -Fxq "ProjectEon.app/Contents/MacOS/assets/fonts/$font"
           done
           for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
             printf '%s\n' "$listing" | grep -Fxq "ProjectEon.app/Contents/Resources/po/$catalog.po"
@@ -283,15 +294,21 @@ jobs:
           $sdlImage = Get-ChildItem build -Recurse -Filter SDL3_image.dll | Select-Object -First 1
           if ($null -eq $sdlImage) { throw "SDL3_image.dll was not produced" }
           Copy-Item $sdlImage.FullName dist/SDL3_image.dll
+          $sdlTtf = Get-ChildItem build -Recurse -Filter SDL3_ttf.dll | Select-Object -First 1
+          if ($null -eq $sdlTtf) { throw "SDL3_ttf.dll was not produced" }
+          Copy-Item $sdlTtf.FullName dist/SDL3_ttf.dll
           Get-ChildItem "${{ github.workspace }}/libpng-install/bin/libpng*.dll" | Copy-Item -Destination dist
           Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" -ErrorAction SilentlyContinue | Copy-Item -Destination dist
           Copy-Item assets/cards/*.png dist/assets/cards/
+          Copy-Item assets/fonts dist/assets/fonts -Recurse
           Copy-Item po/*.po dist/po/
           Copy-Item README.md,LICENSE dist/
           # Validate the exact staging tree supplied to Inno Setup. In
           # particular, SDL3_image is linked against the shared libpng built
           # above, so that DLL must reach the installer as well.
-          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png")
+          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png")
+          $fonts = @("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanagari-Regular.ttf", "NotoSansJP-Regular.otf", "NotoSansKR-Regular.otf", "NotoSansSC-Regular.otf", "OFL-1.1.txt")
+          foreach ($font in $fonts) { $required += "assets/fonts/$font" }
           $catalogs = @("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
           foreach ($catalog in $catalogs) { $required += "po/$catalog.po" }
           foreach ($path in $required) {

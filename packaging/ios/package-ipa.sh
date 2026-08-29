@@ -23,6 +23,15 @@ for required in \
     exit 1
   fi
 done
+for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
+    NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
+    NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do
+  required="Resources/assets/fonts/$font"
+  if [ ! -f "$app/$required" ]; then
+    echo "refusing to package incomplete iPad application: missing $required" >&2
+    exit 1
+  fi
+done
 for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN; do
   required="Resources/po/$catalog.po"
   if [ ! -f "$app/$required" ]; then
@@ -38,6 +47,15 @@ unzip -tq "$ipa" >/dev/null
 for required in \
   Payload/ProjectEon.app/Resources/assets/cards/millennium.png \
   Payload/ProjectEon.app/Resources/assets/cards/deuteros.png; do
+  if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
+    echo "IPA validation failed: missing $required" >&2
+    exit 1
+  fi
+done
+for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
+    NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
+    NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do
+  required="Payload/ProjectEon.app/Resources/assets/fonts/$font"
   if ! unzip -Z1 "$ipa" | grep -Fqx "$required"; then
     echo "IPA validation failed: missing $required" >&2
     exit 1

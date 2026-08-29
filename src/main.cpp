@@ -1,4 +1,5 @@
 #include "launcher.hpp"
+#include "launcher_text.hpp"
 #include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
@@ -53,6 +54,7 @@ namespace {
 enum class Screen { menu, launching };
 
 const eon::Translator* active_translator = nullptr;
+std::unique_ptr<eon::UnicodeTextRenderer> active_text_renderer;
 
 struct Card {
     eon::Game game;
@@ -103,11 +105,10 @@ struct MillenniumDosLaunchAssets {
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
     const auto translated = active_translator ? active_translator->translate(text) : std::string_view(text);
     const std::string localized(translated);
-    // SDL_RenderDebugText is deliberately retained only as the current
-    // development renderer. SDL3 documents it as ASCII-only, so this path is
-    // not evidence that non-ASCII launcher catalogs are presentable. Do not
-    // replace localized UTF-8 with transliterations or synthetic text: a
-    // packageable Unicode font renderer is required for that next step.
+    if (active_text_renderer && active_text_renderer->draw(x, y, localized)) return;
+    // SDL_RenderDebugText is an emergency diagnostic only. SDL3 documents it
+    // as ASCII-only; a renderer setup failure must not replace localized UTF-8
+    // with transliterations or synthetic text.
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
@@ -194,6 +195,20 @@ SDL_Texture* load_card(SDL_Renderer* renderer, const char* filename) {
     }
     std::cerr << "Unable to load card " << filename << ": " << SDL_GetError() << '\n';
     return nullptr;
+}
+
+std::optional<std::filesystem::path> find_font_directory() {
+    const auto base = std::filesystem::path(SDL_GetBasePath());
+    const std::array<std::filesystem::path, 4> candidates{{
+        base / "assets" / "fonts",
+        base / "Resources" / "assets" / "fonts",
+        std::filesystem::path(EON_FONT_DIR),
+        std::filesystem::path("assets") / "fonts",
+    }};
+    for (const auto& candidate : candidates) {
+        if (std::filesystem::is_regular_file(candidate / "NotoSans-Regular.ttf")) return candidate;
+    }
+    return std::nullopt;
 }
 
 void report_deuteros_amiga(const eon::ReleaseArchive& release) {
@@ -1849,6 +1864,9 @@ int main(int argc, char** argv) {
     }
     SDL_SetRenderLogicalPresentation(renderer, 1280, 720, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     SDL_SetRenderVSync(renderer, 1);
+    if (const auto font_directory = find_font_directory()) {
+        active_text_renderer = eon::UnicodeTextRenderer::create(renderer, *font_directory);
+    }
 
     std::array<Card, 2> cards{{
         {eon::Game::millennium, "MILLENNIUM 2.2", "RETURN TO EARTH", "millennium.png", {64, 170, 552, 310}},
@@ -2591,6 +2609,7 @@ int main(int argc, char** argv) {
     SDL_DestroyTexture(millennium_gx_canvas_texture);
     SDL_DestroyTexture(preview_texture);
     SDL_DestroyAudioStream(deuteros_audio_stream);
+    active_text_renderer.reset();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();

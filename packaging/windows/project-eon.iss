@@ -24,6 +24,7 @@ SolidCompression=yes
 Source: "{#StagingDir}\project-eon.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\SDL3.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#StagingDir}\SDL3_image.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#StagingDir}\SDL3_ttf.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#StagingDir}\libpng*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#StagingDir}\zlib*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#StagingDir}\assets\*"; DestDir: "{app}\assets"; Flags: recursesubdirs ignoreversion

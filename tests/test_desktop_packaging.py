@@ -25,6 +25,8 @@ class DesktopPackagingTests(unittest.TestCase):
             with self.subTest(extension=extension):
                 self.assertIn(extension, source)
         self.assertIn("assets/cards/millennium.png", source)
+        self.assertIn("NotoSansSC-Regular.otf", source)
+        self.assertIn("OFL-1.1.txt", source)
         self.assertIn('for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh_CN', source)
         self.assertIn("localization catalog", source)
 
@@ -36,6 +38,8 @@ class DesktopPackagingTests(unittest.TestCase):
     def test_ci_validates_macos_archive_and_windows_runtime_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('unzip -t "project-eon-macos-${{ matrix.arch }}.zip"', workflow)
+        self.assertIn('cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"', workflow)
+        self.assertIn('Copy-Item assets/fonts dist/assets/fonts -Recurse', workflow)
         self.assertIn("refusing macOS artifact with possible original game data", workflow)
         self.assertIn("Windows package stage lacks libpng runtime DLL", workflow)
         self.assertIn("refusing Windows package stage with possible original game data", workflow)
