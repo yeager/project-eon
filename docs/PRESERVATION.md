@@ -518,6 +518,17 @@ positions (common prefix/suffix 22/6); Atari `III`/`IV` share 6,607 (4/8).
 These are reproducible byte facts, not an inferred save schema. Any altered,
 wrong-sized, wrong-named, or unrecognised save is rejected before comparison.
 
+`project-eon --inspect-save <path>` is a separate, read-only diagnostic for a
+user-supplied Millennium DOS `2200SAVE.I` file. It accepts only the recovered
+9,538-byte `$0056` envelope and reports its SHA-256 plus the 38-entry
+columnar-table structure. A hash matching the supplied English DOS initial
+save is explicitly labelled as that reference artifact. Any other
+structure-valid input remains **unverified provenance** and is reported only
+as a structure observation: it is not selected as a release, persisted,
+converted, loaded into a runtime, or written anywhere. This makes later
+user-save preservation work auditable without confusing file-format validity
+with an assertion of original-media identity or save compatibility.
+
 The nonnegative fall-through after the self-loop is also byte-verified, but
 is not executed. At reconstructed target `+$1a`, 26 original bytes have
 SHA-256 `663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0`.
@@ -1912,8 +1923,12 @@ six original command bytes at ADF `+$1c28a` (`00 0f 00 00 0b 38`, SHA-256
 `9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41`) and
 to the verified main-stage return cell `$12ffc` with profile value one. Its
 resulting original pointer is `$32a24 + $0b38 = $3355c`. This is a narrow
-caller-to-session admission check: another `$0f` event, an equal operand in
-another bundle, or altered command bytes cannot open the title stage.
+caller-to-session admission check: the VM retains the `$0f` command's exact
+bundle stream offset, absolute ADF offset, and channel index. The session
+requires the original command at ADF `+$1c28a` (bundle `+0x0a8a`, channel 3)
+as well as its `$0b38` operand, so another `$0f` event, an equal operand in
+another bundle or channel, or altered command bytes cannot open the title
+stage.
 For mode five it copies the byte to `$3717e` and writes `$0101` to `$38092`;
 every other path writes byte one to `$19d52`. The shared prefix is now
 opcode-validated through `$40574`: it installs stack `$40b62`, loads Exec base

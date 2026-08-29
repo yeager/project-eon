@@ -86,6 +86,7 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
         "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
         "               [--modern-packs <explicit-pack-root>]\n\n"
+        "  project-eon --inspect-save <2200SAVE.I>\n\n"
 #if defined(__APPLE__) && TARGET_OS_IPHONE
         "Without --data/--data-dir, iPadOS reads user-supplied media from Documents/ProjectEon.\n"
 #else
@@ -120,6 +121,8 @@ ParseResult parse_command_line(int argc, char** argv) {
             if (!request.verify_game) return {{}, "Unknown game: " + std::string(value), false};
         } else if (argument == "--reference-trace") {
             request.reference_trace = std::filesystem::path(value);
+        } else if (argument == "--inspect-save") {
+            request.inspect_save = std::filesystem::path(value);
         } else if (argument == "--modern-packs") {
             request.modern_pack_root = std::filesystem::path(value);
         } else if (argument == "--modern-pack") {
@@ -136,6 +139,7 @@ ParseResult parse_command_line(int argc, char** argv) {
             if (value == "original") request.presentation = Presentation::original;
             else if (value == "modern") request.presentation = Presentation::modern;
             else return {{}, "Unknown presentation: " + std::string(value), false};
+            request.presentation_explicit = true;
         } else if (argument == "--resolution") {
             if (!parse_display_resolution(value, request.display)) {
                 return {{}, "Unsupported resolution: " + std::string(value), false};
@@ -153,6 +157,11 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.game && request.verify_game) {
         return {{}, "--game and --verify-data cannot be combined", false};
+    }
+    if (request.inspect_save && (!request.data_directory_is_default || request.game || request.verify_game || request.inspect_data
+        || request.reference_trace || request.modern_pack_root || request.modern_pack_manifest
+        || request.platform || request.release_language || request.presentation_explicit)) {
+        return {{}, "--inspect-save is standalone; it never selects game data, a release, or runtime", false};
     }
     if (request.verify_game && request.inspect_data) {
         return {{}, "--verify-data and --inspect cannot be combined", false};

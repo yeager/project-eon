@@ -3,6 +3,7 @@
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -34,6 +35,17 @@ struct DeuterosAmigaSoundEvent {
     std::uint16_t channels = 0;
 };
 
+// `$0f` has no general title/menu meaning.  Retain both its immediate value
+// and the exact original command site so a caller may bind a recovered route
+// to a particular channel instruction instead of to a coincidentally equal
+// resource number.
+struct DeuterosAmigaAlternateResourceEvent {
+    std::uint32_t resource_relative_offset = 0;
+    std::uint32_t command_stream_offset = 0;
+    std::uint32_t command_disk_offset = 0;
+    std::size_t channel_index = 0;
+};
+
 struct DeuterosAmigaVmInputs {
     std::uint32_t audio_position = 0;
     std::uint16_t audio_limit = 0;
@@ -49,7 +61,7 @@ struct DeuterosAmigaVmEvents {
     // Command $0f installs this bundle-relative pointer in the channel state.
     // Expose the exact stored value to the session layer; it is not a decoded
     // gameplay label or a request to fabricate a replacement resource.
-    std::vector<std::uint32_t> alternate_resources;
+    std::vector<DeuterosAmigaAlternateResourceEvent> alternate_resources;
     // The opening session marks only the verified $0f,$00000b38 resource as
     // its terminal bootstrap handoff. The raw channel VM itself intentionally
     // does not attach a stage meaning to arbitrary $0f operands.
@@ -101,8 +113,8 @@ public:
     [[nodiscard]] DeuterosAmigaVmEvents tick(const DeuterosAmigaVmInputs& inputs = {});
 
 private:
-    bool execute(DeuterosAmigaChannelState& state, DeuterosAmigaVmEvents& events,
-        const DeuterosAmigaVmInputs& inputs);
+    bool execute(DeuterosAmigaChannelState& state, std::size_t channel_index,
+        DeuterosAmigaVmEvents& events, const DeuterosAmigaVmInputs& inputs);
 
     const AmigaAdf& disk_;
     const DeuterosAmigaBundle& bundle_;

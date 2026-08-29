@@ -93,6 +93,28 @@ manifest has no `adapter` record.  The documentation table is regression
 checked against the accepted adapter identifiers and release manifest so it
 cannot silently lose a current source boundary.
 
+### Declarative diagnostic boundary map
+
+After a v2 event stream has passed both its own grammar and the complete
+outer-release rehash, Eon reports the following exact recovery-map rows. This
+is an inspectable declarative function-map-style cross-reference: it says
+which documented original-byte boundaries the adapter is allowed to describe.
+It does not add a hook, emulate a call, or give the trace authority over the
+runtime. A missing or mismatched row rejects the trace rather than printing a
+similar platform's evidence.
+
+| Adapter | Reported recovery-map rows |
+| --- | --- |
+| `millennium-dos-en-startup-v1` | `millennium-dos-launcher`, `millennium-dos-title-flow`, `millennium-dos-game-flow` |
+| `deuteros-atari-st-boot-v1` | `deuteros-atari-protected-boot`, `deuteros-atari-first-stage` |
+| `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-shared-resident` |
+| `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
+
+For the two physical-media adapters, the CLI also prints their already
+validated `source media` and `source stage` hashes. This makes an independent
+reviewer's retained trace report complete enough to identify the bounded disk
+input without reading or copying any original data.
+
 ### Capture retention and review procedure
 
 The trace pair is intentionally insufficient on its own to reproduce an

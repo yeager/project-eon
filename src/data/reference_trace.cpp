@@ -4,6 +4,7 @@
 #include "data/deuteros_amiga_reference_trace.hpp"
 #include "data/millennium_amiga_reference_trace.hpp"
 #include "data/millennium_dos_reference_trace.hpp"
+#include "data/recovery_map.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include <map>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 namespace eon {
 namespace {
@@ -22,6 +24,61 @@ namespace {
 constexpr std::uintmax_t maximum_manifest_size = 16U * 1024U * 1024U;
 constexpr std::uintmax_t maximum_events_size = 256U * 1024U * 1024U;
 constexpr std::size_t maximum_line_size = 4096;
+
+// Keep capture admission diagnostics declarative.  The event parsers below
+// remain deliberately adapter-specific, but this small map makes the
+// relationship from a validated capture to hash-bound recovery evidence
+// inspectable without turning the map into a hook or execution mechanism.
+struct AdapterRecoveryMap {
+    std::string_view adapter;
+    std::array<std::string_view, 3> entry_ids;
+    std::size_t entry_count;
+};
+
+constexpr std::array adapter_recovery_maps{
+    AdapterRecoveryMap{"millennium-dos-en-startup-v1",
+        {"millennium-dos-launcher", "millennium-dos-title-flow", "millennium-dos-game-flow"}, 3},
+    AdapterRecoveryMap{"deuteros-atari-st-boot-v1",
+        {"deuteros-atari-protected-boot", "deuteros-atari-first-stage", ""}, 2},
+    AdapterRecoveryMap{"millennium-amiga-en-defjam-bootstrap-v1",
+        {"millennium-amiga-defjam-bootstrap", "millennium-amiga-shared-resident", ""}, 2},
+    AdapterRecoveryMap{"deuteros-amiga-en-title-stage-v1",
+        {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
+};
+
+const AdapterRecoveryMap* adapter_recovery_map(const std::string_view adapter) {
+    const auto found = std::find_if(adapter_recovery_maps.begin(), adapter_recovery_maps.end(),
+        [adapter](const auto& candidate) { return candidate.adapter == adapter; });
+    return found == adapter_recovery_maps.end() ? nullptr : &*found;
+}
+
+bool trace_recovery_boundaries(const std::string_view adapter,
+                               const std::string_view release_sha256,
+                               std::vector<ReferenceTraceBoundary>& boundaries,
+                               std::string& error) {
+    boundaries.clear();
+    if (adapter.empty()) return true;
+    const auto* mapping = adapter_recovery_map(adapter);
+    if (mapping == nullptr) {
+        error = "Reference trace adapter has no declarative recovery-map binding";
+        return false;
+    }
+    for (std::size_t index = 0; index < mapping->entry_count; ++index) {
+        const auto entry_id = mapping->entry_ids[index];
+        const auto found = std::find_if(recovery_map().begin(), recovery_map().end(),
+            [release_sha256, entry_id](const auto& entry) {
+                return entry.release_sha256 == release_sha256 && entry.id == entry_id;
+            });
+        if (found == recovery_map().end()
+                || !release_has_recovery_map_entry(release_sha256, entry_id)) {
+            error = "Reference trace adapter recovery-map binding is not admitted for its source release";
+            return false;
+        }
+        boundaries.push_back({std::string(found->id), std::string(found->source_address),
+            std::string(found->documentation_anchor)});
+    }
+    return true;
+}
 
 bool lowercase_sha256(const std::string_view value) {
     if (value.size() != 64) return false;
@@ -612,6 +669,11 @@ ReferenceTraceValidation validate_reference_trace(
     if (!events_valid) {
         return {{}, error};
     }
+    std::vector<ReferenceTraceBoundary> recovery_boundaries;
+    if (!trace_recovery_boundaries(v1 ? std::string_view{} : std::string_view(fields.at("adapter")),
+            source->sha256, recovery_boundaries, error)) {
+        return {{}, error};
+    }
     if (millennium_dos_v2) event_count = diagnostics.event_count;
     if (deuteros_atari_v2) event_count = deuteros_diagnostics.event_count;
     if (millennium_amiga_v2) event_count = amiga_diagnostics.event_count;
@@ -621,6 +683,9 @@ ReferenceTraceValidation validate_reference_trace(
         fields.at("emulator_version"), fields.at("emulator_sha256"), fields.at("config_sha256"),
         fields.at("command_tail_sha256"), fields.at("input_timeline_sha256"), fields.at("format"),
         v1 ? "" : fields.at("adapter"), event_count, event_size, fields.at("event_sha256"),
+        (deuteros_atari_v2 || deuteros_amiga_v2) ? fields.at("source_media_sha256") : "",
+        (deuteros_atari_v2 || deuteros_amiga_v2) ? fields.at("source_stage_sha256") : "",
+        std::move(recovery_boundaries),
         diagnostics.interrupt_count, diagnostics.file_count,
         millennium_dos_v2 ? diagnostics.exec_count : deuteros_amiga_diagnostics.exec_count,
         deuteros_diagnostics.trap_count,

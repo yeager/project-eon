@@ -229,6 +229,20 @@ def main() -> int:
             "1 Exec, 1 OpenLibrary, 1 graphics, 1 custom-register, 2 callback observations; diagnostics only)",
         ),
     )
+    trace_recovery_boundaries = {
+        "millennium-dos-en-startup-v1": (
+            "millennium-dos-launcher", "millennium-dos-title-flow", "millennium-dos-game-flow",
+        ),
+        "millennium-amiga-en-defjam-bootstrap-v1": (
+            "millennium-amiga-defjam-bootstrap", "millennium-amiga-shared-resident",
+        ),
+        "deuteros-atari-st-boot-v1": (
+            "deuteros-atari-protected-boot", "deuteros-atari-first-stage",
+        ),
+        "deuteros-amiga-en-title-stage-v1": (
+            "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
+        ),
+    }
     with tempfile.TemporaryDirectory() as temporary_trace_root:
         trace_root = Path(temporary_trace_root)
         for (game, platform, adapter, source_sha256, events, media_sha256,
@@ -251,7 +265,12 @@ def main() -> int:
                         + " command-tail=" + "0" * 64
                         + " input-timeline=" + "0" * 64) not in trace_report.stdout
                     or f"adapter {adapter} (" not in trace_report.stdout
-                    or expected_diagnostics not in trace_report.stdout):
+                    or expected_diagnostics not in trace_report.stdout
+                    or any(f"RECOVERY MAP {boundary} at " not in trace_report.stdout
+                           for boundary in trace_recovery_boundaries[adapter])
+                    or ((media_sha256 is not None)
+                        and (f"source media {media_sha256}" not in trace_report.stdout
+                             or f"source stage {stage_sha256}" not in trace_report.stdout))):
                 raise SystemExit(
                     f"{adapter} was not admitted and reported through the public CLI:\n"
                     f"{trace_report.stdout}\n{trace_report.stderr}"

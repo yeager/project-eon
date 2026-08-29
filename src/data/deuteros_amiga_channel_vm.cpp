@@ -67,7 +67,8 @@ DeuterosAmigaChannelVm::DeuterosAmigaChannelVm(
 
 DeuterosAmigaVmEvents DeuterosAmigaChannelVm::tick(const DeuterosAmigaVmInputs& inputs) {
     DeuterosAmigaVmEvents events;
-    for (auto& state : channels_) {
+    for (std::size_t channel_index = 0; channel_index < channels_.size(); ++channel_index) {
+        auto& state = channels_[channel_index];
         if (!state.active) continue;
         constexpr std::size_t maximum_commands_per_tick = 4096;
         std::size_t commands = 0;
@@ -112,7 +113,7 @@ DeuterosAmigaVmEvents DeuterosAmigaChannelVm::tick(const DeuterosAmigaVmInputs& 
                 if (++commands > maximum_commands_per_tick) {
                     throw std::runtime_error("Deuteros channel command limit exceeded");
                 }
-                yielded = execute(state, events, inputs);
+                yielded = execute(state, channel_index, events, inputs);
             }
             // Opcode $00 (and the verified $10 tail) returns after clearing
             // selector +6. The original program pointer remains installed
@@ -127,7 +128,8 @@ DeuterosAmigaVmEvents DeuterosAmigaChannelVm::tick(const DeuterosAmigaVmInputs& 
 }
 
 bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
-    DeuterosAmigaVmEvents& events, const DeuterosAmigaVmInputs& inputs) {
+    const std::size_t channel_index, DeuterosAmigaVmEvents& events,
+    const DeuterosAmigaVmInputs& inputs) {
     const auto start = state.stream_offset;
     const auto command = decode_deuteros_amiga_channel_command(disk_, bundle_, start);
     state.stream_offset += command.encoded_size;
@@ -196,7 +198,8 @@ bool DeuterosAmigaChannelVm::execute(DeuterosAmigaChannelState& state,
         state.alternate_resource = command.operands[0];
         state.mode_data = channel_resource_base_address + command.operands[0];
         state.bitmap_selector = 0xfe;
-        events.alternate_resources.push_back(command.operands[0]);
+        events.alternate_resources.push_back({command.operands[0], start,
+            bundle_.disk_offset + start, channel_index});
         break;
     case 0x10:
         // $2162a writes $ffff to raw main-loop cell $210f4. This event is

@@ -49,6 +49,7 @@
 #include <algorithm>
 #include <array>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -61,6 +62,50 @@
 #include <vector>
 
 namespace {
+
+[[nodiscard]] std::vector<std::uint8_t> read_save_for_inspection(
+    const std::filesystem::path& path) {
+    std::error_code error;
+    if (!std::filesystem::is_regular_file(path, error) || error) {
+        throw std::runtime_error("Save inspection input is not a regular file");
+    }
+    const auto size = std::filesystem::file_size(path, error);
+    if (error || size != eon::MillenniumDosSaveLayout::serialized_size) {
+        throw std::runtime_error("Unsupported Millennium DOS save size");
+    }
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) throw std::runtime_error("Unable to read save inspection input");
+    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
+    stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (stream.gcount() != static_cast<std::streamsize>(bytes.size())) {
+        throw std::runtime_error("Truncated save inspection input");
+    }
+    return bytes;
+}
+
+int inspect_millennium_dos_save(const std::filesystem::path& path) {
+    try {
+        const auto bytes = read_save_for_inspection(path);
+        const eon::MillenniumDosSaveSession save(bytes);
+        std::cout << "SAVE INSPECTION  read-only; source stays in place\n"
+            << "          Millennium 2.2 / DOS structure: version 0x" << std::hex
+            << save.layout().version << std::dec << ", " << save.serialized_bytes().size()
+            << " bytes, " << save.layout().state_table.size()
+            << " recovered positional records\n          source " << save.sha256() << '\n';
+        try {
+            static_cast<void>(eon::authenticate_millennium_save(
+                eon::MillenniumSavePlatform::dos, "2200SAVE.I", save.serialized_bytes()));
+            std::cout << "          reference identity: supplied English DOS 2200SAVE.I\n";
+        } catch (const std::runtime_error&) {
+            std::cout << "          reference identity: not present in supplied media; "
+                         "structure-only observation, never imported into runtime\n";
+        }
+        return 0;
+    } catch (const std::exception& error) {
+        std::cerr << "Save inspection rejected: " << error.what() << '\n';
+        return 6;
+    }
+}
 
 enum class Screen { menu, launching };
 // The launcher deliberately separates the three choices into pages.  A game
@@ -2638,6 +2683,7 @@ int main(int argc, char** argv) {
     const auto tr = [&translator](std::string_view message) {
         return std::string(translator.translate(message));
     };
+    if (request.inspect_save) return inspect_millennium_dos_save(*request.inspect_save);
     if (!std::filesystem::is_directory(request.data_directory)
         && !std::filesystem::is_regular_file(request.data_directory)) {
         std::cerr << "Data path does not exist: " << request.data_directory << '\n';
@@ -2686,6 +2732,10 @@ int main(int argc, char** argv) {
             << " command-tail=" << trace.command_tail_sha256
             << " input-timeline=" << trace.input_timeline_sha256 << '\n';
         if (!trace.adapter.empty()) {
+            if (!trace.source_media_sha256.empty()) {
+                std::cout << "          source media " << trace.source_media_sha256 << '\n'
+                    << "          source stage " << trace.source_stage_sha256 << '\n';
+            }
             std::cout << "          adapter " << trace.adapter << " (";
             if (trace.adapter == "deuteros-atari-st-boot-v1") {
                 std::cout << trace.adapter_trap_count << " TRAP, " << trace.adapter_callback_count
@@ -2703,6 +2753,10 @@ int main(int argc, char** argv) {
             } else {
                 std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
                     << " file, " << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
+            }
+            for (const auto& boundary : trace.recovery_boundaries) {
+                std::cout << "          RECOVERY MAP " << boundary.id << " at "
+                    << boundary.source_address << " (" << boundary.documentation_anchor << ")\n";
             }
         }
         return 0;
@@ -3432,7 +3486,7 @@ int main(int argc, char** argv) {
                     // Opcode $0f exposes this original bundle-relative target.
                     // It is retained as evidence for the subsequent verified
                     // stage, not given an invented title/menu interpretation.
-                    deuteros_title_resource = events.alternate_resources.front();
+                    deuteros_title_resource = events.alternate_resources.front().resource_relative_offset;
                 }
                 if (events.title_handoff) {
                     // The original opening returns to bootstrap here. Drop

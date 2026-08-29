@@ -11,6 +11,16 @@
 
 namespace eon {
 
+// A trace adapter is anchored to a deliberately small subset of the
+// declarative recovery map.  This is a diagnostic cross-reference, not a
+// guest-to-host dispatch table: the entries identify documented original-byte
+// boundaries that a capture observed, but never cause them to execute.
+struct ReferenceTraceBoundary {
+    std::string id;
+    std::string source_address;
+    std::string documentation_anchor;
+};
+
 // An external reference trace is preservation evidence, not a save state or
 // an instruction stream for the runtime.  Version 1 deliberately retains
 // only identity and event ordering: Project Eon validates it and reports its
@@ -36,6 +46,12 @@ struct ReferenceTrace {
     std::size_t event_count = 0;
     std::uint64_t event_size = 0;
     std::string event_sha256;
+    // The two disk-stage hashes are required by the adapters that name a
+    // subrange of a physical image. They remain empty for adapters whose
+    // outer archive identity is their complete source boundary.
+    std::string source_media_sha256;
+    std::string source_stage_sha256;
+    std::vector<ReferenceTraceBoundary> recovery_boundaries;
     std::size_t adapter_interrupt_count = 0;
     std::size_t adapter_file_count = 0;
     std::size_t adapter_exec_count = 0;

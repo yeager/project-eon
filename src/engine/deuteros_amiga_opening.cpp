@@ -42,7 +42,10 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // the original title-stage interval; another alternate resource must not
     // be presented as a title handoff.
     if (!title_stage_session_ && events.alternate_resources.size() == 1
-        && events.alternate_resources.front() == title_handoff_route_.resource_relative_offset) {
+        && events.alternate_resources.front().resource_relative_offset
+            == title_handoff_route_.resource_relative_offset
+        && events.alternate_resources.front().command_disk_offset
+            == title_handoff_route_.resource_command_disk_offset) {
         // Bind only the exact raw $0f command to the caller-side profile
         // written through the verified bootstrap return cell.  Do not treat a
         // coincidentally equal resource operand from another bundle path as a
