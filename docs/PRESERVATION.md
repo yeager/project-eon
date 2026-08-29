@@ -1537,6 +1537,32 @@ descriptor rather than source PCM from the bundle. SDL receives at most one
 silence. The unresolved control-word service timing remains a preservation
 research item, rather than a reason to invent looping or modulation.
 
+#### Deeper first-DMA driver boundary
+
+The two descriptors which the genuine opening emits on scheduler tick two are
+not plain one-shot records: entries 1 and 2 both carry control word `$0202`,
+with parameter words `$01c4` and `$0554` respectively. This is direct
+on-media evidence that the subsequent service cannot safely be replaced by a
+generic SDL looping rule. The initial descriptor copier and its following
+control path are independently located at `$22bea..$2301a` (system ADF
+`+0x83ea`, 1,072 bytes, SHA-256
+`204033c2290a8457ed1b7c84191ed1794219d24278753be58c7173269e67a7a8`). The
+control-only portion begins at `$22c08` (ADF `+0x8408`, 1,042 bytes, SHA-256
+`0db998f5fa68023e02c6e1010d55618877da84c07723f3622e6ee835d5bf38c9`).
+
+Its four repeated channel lanes read the descriptor's offset-10 control word,
+branch on individual bits 8, 9, 11, 12, and 13, and consume mutable original
+state including `$22a20`, `$22a16`, `$22a30`, and the per-channel AUD block.
+The opening VM proves neither the writer/cadence for those state cells nor the
+DMA-completion / register observation that selects each branch. In particular,
+the two nonzero initial parameter words are not sufficient evidence for a host
+loop length, modulation interval, period slide, or volume envelope. Project
+Eon therefore keeps the raw fields in `DeuterosAmigaSoundRecord`, hash-locks
+the descriptor table, records the observed code hashes above, and stops playback at the original initial DMA
+length. Advancing that behavior requires a caller-connected trace which
+captures those state values and service timing; no synthetic silence, loop,
+or envelope is introduced meanwhile.
+
 ### Deuteros channel programs
 
 Each non-null channel pointer begins with ten bytes copied verbatim into the
