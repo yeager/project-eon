@@ -127,6 +127,7 @@ add_executable(project-eon
     src/data/millennium_dos_title_exit.cpp
     src/data/millennium_dos_title_transition.cpp
     src/data/millennium_dos_video_driver.cpp
+    src/data/millennium_dos_sound_driver.cpp
     src/data/millennium_amiga_loader.cpp
     src/data/reference_trace.cpp
     src/data/recovery_map.cpp
@@ -155,7 +156,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0"
         XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
     )
-    foreach(resource IN ITEMS assets/cards/millennium.png assets/cards/deuteros.png)
+    foreach(resource IN ITEMS
+        assets/cards/millennium.png
+        assets/cards/deuteros.png
+        assets/cards/dos-platform-v1.png
+        assets/cards/amiga-platform-v1.png
+        assets/cards/atari-st-platform-v1.png
+        assets/cards/original-profile-v1.png
+        assets/cards/modern-profile-v1.png
+        assets/cards/custom-profile-v1.png)
         set_source_files_properties("${resource}" PROPERTIES
             MACOSX_PACKAGE_LOCATION "Resources/assets/cards")
         target_sources(project-eon PRIVATE "${resource}")
@@ -188,12 +197,9 @@ endif()
 add_custom_command(TARGET project-eon POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
         "$<TARGET_FILE_DIR:project-eon>/assets/cards"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/assets/cards/millennium.png"
-        "$<TARGET_FILE_DIR:project-eon>/assets/cards/millennium.png"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/assets/cards/deuteros.png"
-        "$<TARGET_FILE_DIR:project-eon>/assets/cards/deuteros.png"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/cards"
+        "$<TARGET_FILE_DIR:project-eon>/assets/cards"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
         "$<TARGET_FILE_DIR:project-eon>/assets/fonts"
@@ -263,6 +269,7 @@ if(BUILD_TESTING)
         src/data/millennium_dos_title_exit.cpp
         src/data/millennium_dos_title_transition.cpp
         src/data/millennium_dos_video_driver.cpp
+        src/data/millennium_dos_sound_driver.cpp
         src/data/millennium_amiga_loader.cpp
         src/data/reference_trace.cpp
         src/data/recovery_map.cpp

@@ -17,7 +17,13 @@ if find "$app" -type d -name data -print -quit | grep -q . \
 fi
 for required in \
   Resources/assets/cards/millennium.png \
-  Resources/assets/cards/deuteros.png; do
+  Resources/assets/cards/deuteros.png \
+  Resources/assets/cards/dos-platform-v1.png \
+  Resources/assets/cards/amiga-platform-v1.png \
+  Resources/assets/cards/atari-st-platform-v1.png \
+  Resources/assets/cards/original-profile-v1.png \
+  Resources/assets/cards/modern-profile-v1.png \
+  Resources/assets/cards/custom-profile-v1.png; do
   if [ ! -f "$app/$required" ]; then
     echo "refusing to package incomplete iPad application: missing $required" >&2
     exit 1

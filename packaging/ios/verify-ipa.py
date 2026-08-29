@@ -70,6 +70,12 @@ def required_paths() -> set[str]:
         ROOT + "project-eon",
         ROOT + "Resources/assets/cards/millennium.png",
         ROOT + "Resources/assets/cards/deuteros.png",
+        ROOT + "Resources/assets/cards/dos-platform-v1.png",
+        ROOT + "Resources/assets/cards/amiga-platform-v1.png",
+        ROOT + "Resources/assets/cards/atari-st-platform-v1.png",
+        ROOT + "Resources/assets/cards/original-profile-v1.png",
+        ROOT + "Resources/assets/cards/modern-profile-v1.png",
+        ROOT + "Resources/assets/cards/custom-profile-v1.png",
     }
     required.update(ROOT + "Resources/assets/fonts/" + font for font in FONTS)
     required.update(ROOT + "Resources/po/" + catalog + ".po" for catalog in CATALOGS)

@@ -1,4 +1,4 @@
-"""Guard the launcher keyboard-focus and modal-input accessibility contract."""
+"""Guard the staged card-launch and modal-input accessibility contracts."""
 
 from pathlib import Path
 import unittest
@@ -6,37 +6,35 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
-README = (ROOT / "README.md").read_text(encoding="utf-8")
-
-
 class LauncherKeyboardNavigationTests(unittest.TestCase):
-    def test_keyboard_focus_has_cards_platform_and_start_controls(self) -> None:
-        self.assertIn("enum class MenuFocus { cards, platform, start }", SOURCE)
-        self.assertIn("SDLK_TAB", SOURCE)
-        self.assertIn("SDL_KMOD_SHIFT", SOURCE)
-        self.assertIn("SDLK_HOME", SOURCE)
-        self.assertIn("SDLK_END", SOURCE)
-        self.assertIn("advance_menu_focus", SOURCE)
+    def test_menu_has_three_explicit_card_pages(self) -> None:
+        self.assertIn("enum class LauncherPage { games, platforms, profiles }", SOURCE)
+        self.assertIn("std::array<PlatformCard, 3>", SOURCE)
+        self.assertIn("std::array<ProfileCard, 3>", SOURCE)
+        self.assertIn("LauncherPage::platforms", SOURCE)
+        self.assertIn("LauncherPage::profiles", SOURCE)
 
-    def test_focus_is_visible_without_new_untranslated_launcher_prose(self) -> None:
-        self.assertIn("card_has_keyboard_focus", SOURCE)
-        self.assertIn("start_focus_bounds", SOURCE)
-        self.assertIn("platform_focus_bounds", SOURCE)
-        self.assertIn("SDL_RenderRect(renderer, &platform_focus_bounds)", SOURCE)
+    def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
+        self.assertIn("eon::release_available(releases, game, card.platform)", SOURCE)
+        self.assertIn("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME", SOURCE)
+        self.assertIn("if (!eon::release_available(releases, game, platform)) return false;", SOURCE)
+        self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
+
+    def test_profiles_have_two_runtime_modes_and_a_custom_tuning_route(self) -> None:
+        self.assertIn("enum class ProfileChoice { original, modern, custom }", SOURCE)
+        self.assertIn("Custom is not a third runtime mode", SOURCE)
+        self.assertIn("request.presentation = eon::Presentation::modern", SOURCE)
+        self.assertIn("custom_profile_ready", SOURCE)
+        self.assertIn("CUSTOM SETTINGS READY", SOURCE)
 
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:
         modal = SOURCE.index("if (show_modern_graphics_settings) {")
         modal_continue = SOURCE.index("                continue;", modal)
         title_input = SOURCE.index("millennium_title_session->poll_console(true)")
-        menu_input = SOURCE.index("advance_menu_focus", modal_continue)
+        menu_input = SOURCE.index("LauncherPage::games", modal_continue)
         self.assertLess(modal, modal_continue)
         self.assertLess(modal_continue, title_input)
         self.assertLess(modal_continue, menu_input)
-
-    def test_readme_documents_keyboard_focus_and_modal_behavior(self) -> None:
-        self.assertIn("Tab and Shift+Tab", README)
-        self.assertIn("Home/End", README)
-        self.assertIn("input-modal", README)
 
 
 if __name__ == "__main__":

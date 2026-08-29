@@ -2381,6 +2381,28 @@ This proves original input-to-request control flow, not a host policy: Project
 Eon does not read a host command tail as original hardware detection, select a
 driver, or assume the loader/DOS/vector calls succeed.
 
+The same hash-identified `MILL.COM` contains a distinct sound-effect choice
+routine at loaded `$0511..$0574` (file `+$0411`, 100 bytes, SHA-256
+`f9e63fc4c7c590fc57abef4a0154a2399f714951c787f98d2f7d64eee86a7434`). Its
+literal prompt admits only input values `$00`, `$01`, and `$02`; after a
+nonzero value it adds `$02` before indexing the original word table at `$066e`.
+Thus the source table slots are `$00` `sibm.drv`, `$03` `ssbl.drv`, and `$04`
+`scvx.drv`. The six-name byte table `$062a..$065f` (54 bytes, SHA-256
+`a5a3260fdf7a7018df0f34b0e9ba6f74a03e157f6d97cfb8f2f70407d8791185`) and
+the seven-word table `$066e..$067b` (14 bytes, SHA-256
+`c49071bf0db7a712437ca74d2e9effe9222665f2ab154db1f5d748f540e10ef8`) are
+both parser-validated. `srol.drv` remains the literal table slot `$02`, but
+is absent from this supplied archive; it is recorded as missing rather than
+being aliased to another driver.
+
+Only the supplied `SSBL.DRV` (9,194 bytes, SHA-256
+`be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72`) and
+`SCVX.DRV` (4,053 bytes, SHA-256
+`99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4`) are
+admitted as external sound-driver leaves, by full content identity only. This
+admission does not parse or execute their private ABI, perform sound playback,
+invent hardware routing, or admit an `SROL.DRV`/matching-name substitute.
+
 The `$1f` query's low byte is also not a fixed profile constant. EGA function
 `$00` writes its derived allocation count to local `$008a` at `$022f`, and
 function `$1e` can write a clamped caller byte there at `$0259`; MCGA function

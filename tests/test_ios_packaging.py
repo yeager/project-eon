@@ -15,6 +15,9 @@ CATALOGS = ("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko",
             "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
 FONTS = ("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanagari-Regular.ttf",
          "NotoSansJP-Regular.otf", "NotoSansKR-Regular.otf", "NotoSansSC-Regular.otf", "OFL-1.1.txt")
+CARDS = ("millennium.png", "deuteros.png", "dos-platform-v1.png", "amiga-platform-v1.png",
+         "atari-st-platform-v1.png", "original-profile-v1.png", "modern-profile-v1.png",
+         "custom-profile-v1.png")
 
 
 @unittest.skipUnless(os.name != "nt" and shutil.which("bash") and shutil.which("unzip"),
@@ -36,8 +39,7 @@ class IosPackagingTests(unittest.TestCase):
 <key>UIDeviceFamily</key><array><integer>2</integer></array>
 <key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
 </dict></plist>""", encoding="utf-8")
-        for resource in ("Resources/assets/cards/millennium.png",
-                         "Resources/assets/cards/deuteros.png",
+        for resource in (*(f"Resources/assets/cards/{card}" for card in CARDS),
                          *(f"Resources/assets/fonts/{font}" for font in FONTS),
                          *(f"Resources/po/{catalog}.po" for catalog in CATALOGS)):
             path = app / resource
@@ -64,7 +66,7 @@ class IosPackagingTests(unittest.TestCase):
     def test_ci_stages_reviewed_resources_when_ninja_omits_ios_bundle_sources(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('mkdir -p "$APP/Resources/assets/cards"', workflow)
-        self.assertIn('cp assets/cards/millennium.png assets/cards/deuteros.png', workflow)
+        self.assertIn('cp assets/cards/*.png "$APP/Resources/assets/cards/"', workflow)
         self.assertIn('cp po/{ar,de,el,en_GB,es,fi,fr,hi,it,ja,ko,nl,no,pl,pt_BR,ru,sv,tr,uk,zh_CN}.po', workflow)
 
     def test_ios_bundle_has_an_install_destination(self):
@@ -90,6 +92,7 @@ class IosPackagingTests(unittest.TestCase):
             listing = subprocess.check_output(["unzip", "-l", str(ipa)], text=True)
             self.assertIn("Payload/ProjectEon.app/project-eon", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/millennium.png", listing)
+            self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/custom-profile-v1.png", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/fonts/NotoSansSC-Regular.otf", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/sv.po", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/zh_CN.po", listing)

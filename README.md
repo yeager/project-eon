@@ -119,22 +119,21 @@ Start the graphical card menu:
 ./build/project-eon
 ```
 
-In the card menu, Tab and Shift+Tab move the keyboard focus between game cards,
-the platform control, and Start; the gold outline always identifies that focus.
-With the game-card control focused, Left/Right selects a game. With the
-platform control focused, the arrow keys select one of that game's
-hash-verified original platforms; Home/End chooses the first/last card or
-platform in the focused control. Enter or Space starts the selected original
-release from any launcher control. The selected platform is carried into the
-launch request: the menu never substitutes a different platform's media.
-When changing card, the platform is retained only if it is verified for the
-newly focused game; otherwise the menu selects that game's first verified
-platform. A card without a verified platform remains unavailable.
-Enter, Space, or a card click starts the selected original release.
+The start menu is a three-card journey: click a game card, then choose one of
+that game's DOS, Amiga, or Atari ST platform cards, then choose a presentation
+card. Every platform card visibly reports whether hash-verified original media
+is currently available; unavailable cards are dimmed and cannot proceed or
+start a game. The selected platform is carried into the launch request, so the
+menu never substitutes another platform's media. Original and Modern cards
+start directly. The Custom card is not a third runtime mode: it opens Modern's
+fine-tuning panel, then presents an explicit start action using those Modern
+settings. Keyboard and gamepad users can move through each card page with the
+D-pad or arrow keys and activate the highlighted card with Enter, Space,
+South/A, or Start; Escape returns to the preceding card page.
 
 Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right
-selects a card, D-pad Up/Down chooses a platform, and South/A or Start launches
-the selection. During the recovered Deuteros Amiga opening, hold South/A for
+selects a card on the current page, and South/A or Start activates it. During
+the recovered Deuteros Amiga opening, hold South/A for
 the same verified physical input signal as Space/Enter; it is not mapped to any
 invented title or gameplay action.
 
