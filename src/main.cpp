@@ -3033,6 +3033,16 @@ int main(int argc, char** argv) {
                     << " OpenLibrary, " << trace.adapter_graphics_count << " graphics, "
                     << trace.adapter_custom_register_count << " custom-register, "
                     << trace.adapter_callback_count << " callback observations; diagnostics only)\n";
+            } else if (trace.adapter == "deuteros-amiga-en-title-bridge-v3") {
+                std::cout << trace.adapter_exec_return_count << " Exec return, "
+                    << trace.adapter_open_library_return_count << " OpenLibrary return, "
+                    << trace.adapter_graphics_call_count << "/" << trace.adapter_graphics_return_count
+                    << " graphics call/return, " << trace.adapter_custom_register_call_count << "/"
+                    << trace.adapter_custom_register_return_count << " custom-register call/return, "
+                    << trace.adapter_queue_snapshot_count << " queue snapshot, "
+                    << trace.adapter_callback_entry_count << " callback entry, "
+                    << trace.adapter_dispatch_snapshot_count
+                    << " dispatch snapshot observations; diagnostics only)\n";
             } else {
                 std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
                     << " file, " << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";

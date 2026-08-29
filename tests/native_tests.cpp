@@ -20,6 +20,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "data/deuteros_amiga_reference_trace.hpp"
+#include "data/deuteros_amiga_title_bridge_reference_trace.hpp"
 #include "data/deuteros_atari_boot.hpp"
 #include "data/deuteros_atari_reference_trace.hpp"
 #include "data/fat12.hpp"
@@ -932,6 +933,45 @@ int main() {
             && diagnostics.custom_register_count == 1 && diagnostics.callback_count == 2);
         assert(!eon::validate_deuteros_amiga_title_reference_events(
             "event\t1 10 graphics site=0x0004069a graphics_base_address=0x00012fed vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
+            diagnostics, trace_error));
+    }
+    // These synthetic records exercise the v3 title-bridge capture grammar
+    // only. They are neither Amiga media nor an executable ABI transcript.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 10 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x0096 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t2 20 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x009c result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t3 30 open-library-return site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=0x00012fec result_sr=0x2000\n"
+            "event\t4 40 graphics-call site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0\n"
+            "event\t5 50 custom-register-call site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff\n"
+            "event\t6 60 custom-register-return site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t7 70 graphics-return site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t8 80 callback-registration-return site=0x0001ef74 callback=0x0001f056 exec_base_address=0x00000004 vector=-0x01ce result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t9 90 queue-snapshot phase=pre queue_address=0x0001eec0 queue_bytes=0000000000000000000000000000000000000000 pending_address=0x0001eed6 pending_word=0x0000 source_table_address=0x0001ee20 source_table_size=160 source_table_sha256=2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265\n"
+            "event\t10 100 callback-entry site=0x0001f056 incoming_a0=0x00001000 frame_04_0d=00000000000000000000\n"
+            "event\t11 110 queue-snapshot phase=post queue_address=0x0001eec0 queue_bytes=0000000000000000000000000000000000000000 pending_address=0x0001eed6 pending_word=0x0000 source_table_address=0x0001ee20 source_table_size=160 source_table_sha256=2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265\n"
+            "event\t12 120 selector-entry site=0x0001fe7a incoming_d0=0x00000000\n"
+            "event\t13 130 local-call call_site=0x0001fe84 callee=0x0001feaa return_pc=0x0001fe88\n"
+            "event\t14 140 local-return call_site=0x0001fe84 callee=0x0001feaa return_pc=0x0001fe88 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t15 150 local-call call_site=0x0001fe92 callee=0x0001feaa return_pc=0x0001fe96\n"
+            "event\t16 160 local-return call_site=0x0001fe92 callee=0x0001feaa return_pc=0x0001fe96 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t17 170 dispatch-snapshot phase=pre site=0x0001fbe6 cell_1f98c=0x00 cell_1f98e=0x00 cell_1f99c=0x00000000 cell_1f974=0x00000000 cell_1f970=0x00000000 cell_1f96c=0x00000000 cell_1f994=0x00000000 cell_1f998=0x00000000\n"
+            "event\t18 180 dispatch-snapshot phase=post site=0x0001fbe6 cell_1f98c=0x00 cell_1f98e=0x00 cell_1f99c=0x00000000 cell_1f974=0x00000000 cell_1f970=0x00000000 cell_1f96c=0x00000000 cell_1f994=0x00000000 cell_1f998=0x00000000\n";
+        eon::DeuterosAmigaTitleBridgeReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_deuteros_amiga_title_bridge_reference_events(valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 18 && diagnostics.exec_return_count == 2
+            && diagnostics.open_library_return_count == 1 && diagnostics.graphics_call_count == 1
+            && diagnostics.graphics_return_count == 1 && diagnostics.custom_register_call_count == 1
+            && diagnostics.custom_register_return_count == 1 && diagnostics.callback_registration_return_count == 1
+            && diagnostics.queue_snapshot_count == 2 && diagnostics.callback_entry_count == 1
+            && diagnostics.selector_entry_count == 1 && diagnostics.local_call_count == 2
+            && diagnostics.local_return_count == 2 && diagnostics.dispatch_snapshot_count == 2);
+        assert(!eon::validate_deuteros_amiga_title_bridge_reference_events(
+            "event\t1 10 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x0096 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t2 20 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x009c result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t3 30 open-library-return site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=0x00012fec result_sr=0x2000\n"
+            "event\t4 40 graphics-return site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
             diagnostics, trace_error));
     }
     assert_modern_asset_pack_admission();

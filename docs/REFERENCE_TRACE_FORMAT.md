@@ -287,6 +287,34 @@ runtime inputs. A future adapter must first define bounded field encodings,
 source-site ordering, frame lengths and hash checks, then independently prove
 the external service and caller ABIs before it can consume any observation.
 
+### Deuteros Amiga title-bridge v3 capture profile
+
+`project-eon-reference-trace-v3` with adapter
+`deuteros-amiga-en-title-bridge-v3` is the machine-checked retention form of
+the preceding contract. It binds the same exact English Amiga outer archive,
+source-media hash, and title-stage hash as v2. It is a diagnostic evidence
+profile only: validation records ordered raw observations but never supplies
+them to a title-stage session, calls an Exec or graphics vector, or advances a
+game/runtime state.
+
+Every event uses the existing LF-only `event<TAB>sequence tick type fields`
+envelope with strictly increasing sequence and tick. Its required ordered
+segments are two `exec-return` records at `$40450`, one
+`open-library-return` at `$1ed80`, one or more nested `graphics-call` /
+`graphics-return` or `custom-register-call` / `custom-register-return` pairs,
+and `callback-registration-return` at `$1ef74`. It then requires a pre queue
+snapshot at `$1eec0`, a callback entry at `$1f056` with the full ten raw bytes
+at A0 `+4..+d`, and a post queue snapshot. Finally it requires the `$1fe7a`
+selector input, the two observed `$1feaa` local call/return pairs, and pre/post
+snapshots of every documented dispatch cell at `$1fbe6`.
+
+Queue records pin the 20 queue bytes, pending word, and the 160-byte
+`$1ee20` source-table SHA-256. Graphics/custom pairs preserve their exact
+call nesting; a return cannot be reassigned to a different observed call. All
+addresses, vectors, widths, raw results, source-table hash, and allowed custom
+register/value pairs are checked by the adapter. This admits neither an
+emulator's undocumented service semantics nor a replay input.
+
 ## Command-line boundary
 
 Use a trace only with an explicit original-media location, game and platform:
