@@ -4666,6 +4666,22 @@ int main() {
     assert(atari_trap.fopen_result_test_offset == 22);
     assert(atari_trap.fopen_result_negative_branch_offset == 24);
     assert(atari_trap.fopen_result_negative_branch_target_offset == 24);
+    const auto atari_fopen_result_gate = eon::execute_millennium_atari_fopen_result_gate(
+        atari_target, atari_trap);
+    assert(atari_fopen_result_gate.target_address == 0x77000);
+    assert(atari_fopen_result_gate.entry_offset == 0x10);
+    assert(atari_fopen_result_gate.byte_count == 10);
+    assert(atari_fopen_result_gate.sha256
+        == "d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7");
+    assert(atari_fopen_result_gate.opaque_handle_push_opcode == 0x3f00);
+    assert(atari_fopen_result_gate.fclose_selector_push_opcode == 0x3f3c);
+    assert(atari_fopen_result_gate.fclose_selector == 0x3e);
+    assert(atari_fopen_result_gate.result_test_opcode == 0x4a80);
+    assert(atari_fopen_result_gate.negative_branch_opcode == 0x6bfe);
+    assert(atari_fopen_result_gate.negative_branch_displacement == -2);
+    assert(atari_fopen_result_gate.negative_successor_offset == 0x18);
+    assert(atari_fopen_result_gate.nonnegative_successor_offset == 0x1a);
+    assert(atari_fopen_result_gate.relative_stack_pointer_delta == -4);
     const auto atari_fopen_fallthrough = eon::parse_millennium_atari_fopen_fallthrough(
         atari_target, atari_trap);
     assert(atari_fopen_fallthrough.target_address == 0x77000);
@@ -4712,6 +4728,8 @@ int main() {
     assert(atari_session.fopen_boundary().fopen_filename == "MILL22A.inf");
     assert(atari_session.fopen_boundary().fopen_access_mode == 2);
     assert(atari_session.fopen_boundary().fopen_function == 0x3d);
+    assert(atari_session.fopen_result_gate().negative_successor_offset == 0x18);
+    assert(atari_session.fopen_result_gate().nonnegative_successor_offset == 0x1a);
     assert(atari_session.fopen_fallthrough().fread_function == 0x3f);
     assert(atari_session.fopen_fallthrough().fread_buffer_address == 0x2a500);
     assert(atari_session.fread_config_transfer().config_buffer_address == 0x2a500);
@@ -5194,6 +5212,16 @@ int main() {
         invalid_atari_trap_rejected = true;
     }
     assert(invalid_atari_trap_rejected);
+    auto invalid_atari_fopen_result_gate = atari_target;
+    invalid_atari_fopen_result_gate.bytes[0x18] ^= 0x01;
+    bool invalid_atari_fopen_result_gate_rejected = false;
+    try {
+        static_cast<void>(eon::execute_millennium_atari_fopen_result_gate(
+            invalid_atari_fopen_result_gate, atari_trap));
+    } catch (const std::runtime_error&) {
+        invalid_atari_fopen_result_gate_rejected = true;
+    }
+    assert(invalid_atari_fopen_result_gate_rejected);
     auto invalid_atari_fopen_fallthrough = atari_target;
     invalid_atari_fopen_fallthrough.bytes[0x1a] ^= 0x01;
     bool invalid_atari_fopen_fallthrough_rejected = false;

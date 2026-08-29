@@ -353,6 +353,46 @@ MillenniumAtariTrapEntry parse_millennium_atari_trap_entry(
     return result;
 }
 
+MillenniumAtariFopenResultGateExecution execute_millennium_atari_fopen_result_gate(
+    const MillenniumAtariMaterializedTarget& target, const MillenniumAtariTrapEntry& trap) {
+    // The original post-TRAP code is MOVE.W D0,-(A7); MOVE.W #$3e,-(A7);
+    // TST.L D0; BMI.S -2. We execute the known stack delta and decode both
+    // branch successors, but D0 is owned by GEMDOS: its word is not projected
+    // into memory and its sign is not selected.
+    constexpr std::size_t entry_offset = 0x10;
+    constexpr std::array<std::uint8_t, 10> entry_bytes{
+        0x3f, 0x00, 0x3f, 0x3c, 0x00, 0x3e, 0x4a, 0x80, 0x6b, 0xfe,
+    };
+    constexpr std::string_view expected_sha256 =
+        "d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7";
+    if (target.target_address == 0 || trap.target_address != target.target_address
+        || trap.fopen_trap_offset != 0x0e || trap.fopen_result_test_offset != 0x16
+        || trap.fopen_result_negative_branch_offset != 0x18
+        || trap.fopen_result_negative_branch_target_offset != 0x18
+        || target.bytes.size() < entry_offset + entry_bytes.size()
+        || !std::equal(entry_bytes.begin(), entry_bytes.end(),
+            target.bytes.begin() + static_cast<std::ptrdiff_t>(entry_offset))) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fopen result gate");
+    }
+    const auto bytes = std::span(target.bytes).subspan(entry_offset, entry_bytes.size());
+    const auto digest = to_hex(sha256(bytes));
+    if (digest != expected_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fopen result gate hash");
+    }
+    constexpr auto branch_displacement = static_cast<std::int8_t>(-2);
+    constexpr std::size_t branch_offset = entry_offset + 8U;
+    constexpr std::size_t branch_next_offset = branch_offset + 2U;
+    const auto negative_successor = static_cast<std::ptrdiff_t>(branch_next_offset) + branch_displacement;
+    if (negative_successor < 0
+        || static_cast<std::size_t>(negative_successor) != trap.fopen_result_negative_branch_target_offset) {
+        throw std::runtime_error("Unexpected Millennium Atari ST Fopen result branch target");
+    }
+    return {target.target_address, entry_offset, entry_bytes.size(), digest,
+        read_be16(bytes, 0), read_be16(bytes, 2), read_be16(bytes, 4), read_be16(bytes, 6),
+        read_be16(bytes, 8), branch_displacement, static_cast<std::size_t>(negative_successor),
+        branch_next_offset, -4};
+}
+
 MillenniumAtariFopenFallthrough parse_millennium_atari_fopen_fallthrough(
     const MillenniumAtariMaterializedTarget& target, const MillenniumAtariTrapEntry& trap) {
     // The negative Fopen branch is self-referential at +$18. Its nonnegative
