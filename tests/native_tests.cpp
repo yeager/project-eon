@@ -36,6 +36,7 @@
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "data/sha256.hpp"
+#include "data/release_manifest.hpp"
 
 #include <algorithm>
 #include <array>
@@ -264,6 +265,24 @@ int main() {
     assert(kind_counts[eon::AssetKind::audio] == 14);
     assert(kind_counts[eon::AssetKind::game_resource] == 12);
     assert(kind_counts[eon::AssetKind::unknown] == 1);
+    // The profile manifest is an executable preservation contract: every
+    // admitted span must belong to its exact leaf in its exact outer archive.
+    for (const auto& profile : eon::parser_profile_manifest()) {
+        assert(profile.offset <= profile.leaf_size);
+        assert(profile.length <= profile.leaf_size - profile.offset);
+        const auto release = std::find_if(releases.begin(), releases.end(),
+            [&profile](const auto& candidate) { return candidate.sha256 == profile.release_sha256; });
+        assert(release != releases.end());
+        const auto leaves = eon::inventory_zip(release->path);
+        const auto leaf = std::find_if(leaves.begin(), leaves.end(), [&profile](const auto& candidate) {
+            return candidate.sha256 == profile.leaf_sha256 && candidate.size == profile.leaf_size;
+        });
+        assert(leaf != leaves.end());
+        assert(eon::release_has_parser_profile(release->sha256, profile.id));
+    }
+    assert(!eon::release_has_parser_profile(
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        "millennium-dos-spanish-startup"));
 
     const auto amiga_millennium = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium && release.platform == eon::Platform::amiga;
@@ -1232,6 +1251,48 @@ int main() {
     assert((ega_writes[8] == eon::MillenniumDosEgaPaletteRegisterWrite{8, 0x38}));
     assert((ega_writes[15] == eon::MillenniumDosEgaPaletteRegisterWrite{15, 0x3f}));
     assert(game_flow.startup_nonzero_dx_branch_address == 0xd44b);
+    const auto startup_allocation = eon::parse_millennium_dos_startup_allocation_boundary(
+        *game_executable);
+    assert(startup_allocation.executable_sha256
+        == "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57");
+    assert(startup_allocation.continuation_entry_address == 0xd2e5);
+    assert(startup_allocation.allocator_call_address == 0xd2e8);
+    assert(startup_allocation.allocator_entry_address == 0xd1fa);
+    assert(startup_allocation.allocator_first_external_interrupt_site == 0xd201);
+    assert(startup_allocation.allocator_first_external_interrupt == 0x21);
+    assert(startup_allocation.allocator_first_external_service == 0x4a);
+    assert(startup_allocation.post_allocator_result_storage_address == 0xd128);
+    assert(startup_allocation.dx_test_address == 0xd2ee);
+    assert(startup_allocation.dx_zero_branch_address == 0xd2f0);
+    assert(startup_allocation.dx_zero_branch_target == 0xd2f5);
+    assert(startup_allocation.dx_nonzero_jump_address == 0xd2f2);
+    assert(startup_allocation.dx_nonzero_jump_target == 0xd44b);
+    assert(startup_allocation.dx_zero_path_first_call_address == 0xd2f5);
+    assert(startup_allocation.dx_zero_path_first_call_target == 0x1161);
+    {
+        auto altered_startup_allocation = *game_executable;
+        altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_startup_allocation_boundary(
+                altered_startup_allocation));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_allocator_prefix = *game_executable;
+        altered_allocator_prefix[0xd201 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_startup_allocation_boundary(
+                altered_allocator_prefix));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(game_flow.main_loop_address == 0xd3d2);
     assert(game_flow.action_poll_address == 0x0f05);
     assert(game_flow.special_action_0 == 0x0b && game_flow.special_action_1 == 0x0c);

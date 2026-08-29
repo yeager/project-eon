@@ -620,6 +620,44 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     };
 }
 
+MillenniumDosStartupAllocationBoundary
+parse_millennium_dos_startup_allocation_boundary(
+    const std::span<const std::uint8_t> game_executable) {
+    // All addresses below are COM load addresses. This continuation follows
+    // one of the native selector calls at $d2dd/$d2e2 only if it returns.
+    // Its first callee reaches INT $21 at $d201; retain the encoded request
+    // but never invoke it or decide its result.
+    constexpr std::size_t load_bias = 0x100;
+    constexpr auto executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr auto continuation = std::to_array<std::uint8_t>({
+        0x52, 0x0e, 0x1f, 0xe8, 0x0f, 0xff, 0xa3, 0x28, 0xd1,
+        0x23, 0xd2, 0x74, 0x03, 0xe9, 0x56, 0x01, 0xe8, 0x69, 0x3e});
+    constexpr auto allocator_prefix = std::to_array<std::uint8_t>({
+        0x0e, 0x07, 0xbb, 0x00, 0x10, 0xb4, 0x4a, 0xcd, 0x21});
+    constexpr auto continuation_sha256 =
+        "9623d493ddfa9339d3137799c133a99df86425db2fb0d674a81b2e09555692b6";
+    constexpr auto allocator_prefix_sha256 =
+        "11d1e2057faef11b2ebbcd56ea6e392435d75111519765894d3c839d6ba551c8";
+    constexpr auto offset = [](const std::uint16_t address) {
+        return static_cast<std::size_t>(address) - load_bias;
+    };
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, offset(0xd2e5), continuation)
+        || !has_bytes(game_executable, offset(0xd1fa), allocator_prefix)
+        || to_hex(sha256(game_executable.subspan(offset(0xd2e5), continuation.size())))
+            != continuation_sha256
+        || to_hex(sha256(game_executable.subspan(offset(0xd1fa), allocator_prefix.size())))
+            != allocator_prefix_sha256) {
+        throw std::runtime_error("Unsupported Millennium DOS startup allocation boundary");
+    }
+    return {std::string(executable_sha256), 0xd2e5, 0xd2e8, 0xd1fa, 0xd201,
+        0x21, 0x4a, 0xd128, 0xd2ee, 0xd2f0, 0xd2f5, 0xd2f2, 0xd44b,
+        0xd2f5, 0x1161, std::string(continuation_sha256),
+        std::string(allocator_prefix_sha256)};
+}
+
 MillenniumDosEighthFunctionKeyRepeatLoop
 evaluate_millennium_dos_eighth_function_key_repeat_loop(
     const std::span<const std::uint8_t> game_executable,

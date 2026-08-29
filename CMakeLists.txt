@@ -128,6 +128,7 @@ add_executable(project-eon
     src/data/millennium_dos_video_driver.cpp
     src/data/millennium_amiga_loader.cpp
     src/data/reference_trace.cpp
+    src/data/release_manifest.cpp
     src/data/sha256.cpp
     src/data/zip_archive.cpp
     src/platform/game_data.cpp
@@ -244,6 +245,7 @@ if(BUILD_TESTING)
         src/data/millennium_dos_video_driver.cpp
         src/data/millennium_amiga_loader.cpp
         src/data/reference_trace.cpp
+        src/data/release_manifest.cpp
         src/data/sha256.cpp
         src/data/zip_archive.cpp
         src/platform/game_data.cpp

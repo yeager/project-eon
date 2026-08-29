@@ -38,6 +38,18 @@ DOS flat executables, one DOS COM program, 14 audio files, 12 game resources,
 and one unknown item. Alternate/cracked dumps are comparative evidence; clean
 dumps are preferred as semantic baselines.
 
+## Machine-readable release/profile manifest
+
+[`release-manifest.json`](release-manifest.json) is the canonical interchange
+manifest for the currently verified corpus. Each parser profile names an outer
+release SHA-256, a leaf SHA-256 and size, plus the exact byte span used as its
+present evidence. The compiled `release_manifest` table uses the same records
+for native recognition and tests prove every declared profile against the
+user-supplied archive. A profile is not transferable to a matching filename,
+a different language, an alternate/cracked dump, or another platform. The
+manifest contains no game bytes and does not ask the runtime to extract, copy,
+or mutate media.
+
 ### Stable evidence anchors
 
 | Artifact | Bytes | SHA-256 |
@@ -2109,6 +2121,20 @@ if those calls return do their next direct calls reach `$044e` or `$0466`.
 These are control-flow operands only: Project Eon neither assumes either
 wrapper return nor interprets the register setup, follow-up calls, or their
 results.
+
+The later English startup continuation is independently hash-locked as well.
+If either selected private-wrapper path returns, `$d2e5` preserves DX,
+restores DS from CS, and calls `$d1fa` at `$d2e8`. The callee's first nine
+bytes end at its `INT $21` site `$d201`, with literal AH `$4a`; this is an
+external DOS boundary, so Project Eon neither invokes it nor supplies AX, DX,
+carry, or a return. Only if that call returns do the following bytes store AX
+at `$d128`, test DX at `$d2ee`, branch on zero to `$d2f5` (whose first local
+call is `$d2f5 → $1161`), or jump on nonzero from `$d2f2` to `$d44b`. These
+are raw static control-flow operands, not an allocation result, startup
+decision, or executable path. The 20-byte continuation and 9-byte callee
+prefix are both SHA-256-validated by
+`MillenniumDosStartupAllocationBoundary` against the full original English
+`2200AD.EXE`; mutations are rejected before the facts are exposed.
 
 The direct follow-up targets are also bounded by original bytes. `$044e`
 loads literal `$01`, writes it to `$da05`, and returns. `$0466` sets `DS=CS`,
