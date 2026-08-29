@@ -1586,6 +1586,72 @@ MillenniumDosGxOverlaySelectorEvidence parse_millennium_dos_gx_overlay_selector_
         0x4b6e, 0xd373, 0x6c52, caller_sha256, overlay_sha256};
 }
 
+MillenniumDosGxOverlayStartupRecordEvidence
+parse_millennium_dos_gx_overlay_startup_record_evidence(
+    const std::span<const std::uint8_t> gx_overlay_executable,
+    const MillenniumDosGxOverlaySelectorEvidence& selector) {
+    constexpr std::string_view overlay_sha256 =
+        "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
+    constexpr std::size_t first_entry_offset = 0x90;
+    constexpr auto entry_span = std::to_array<std::uint8_t>({
+        0xbe,0x70,0x00,0x33,0xc0,0xeb,0x1d,0xbe,0x80,0x00,0xb8,0x02,0x00,0xeb,0x15,0xbe,
+        0x78,0x00,0xb8,0x01,0x00,0xeb,0x0d,0xb8,0x00,0xb8,0x2e,0xa3,0x5a,0x00,0xbe,0x88,
+        0x00,0xb8,0x03,0x00,0xbf,0x65,0x00,0xa5,0xa5,0xa5,0xa5,0xa2,0x6d,0x00,0xb8,0xf4,
+        0x00,0xb9,0xf0,0x00,0xba,0xf2,0x00,0x05,0x08,0x00,0x25,0xff,0x03,0x83,0xc1,0x02,
+        0x81,0xe1,0xff,0x03,0x83,0xc2,0x04,0x81,0xe2,0xff,0x03,0x89,0x06,0xf4,0x00,0x89,
+        0x0e,0xf0,0x00,0x89,0x16,0xf2,0x00,0xb8,0xea,0x47,0xa3,0x5c,0x00,0xc3,
+    });
+    constexpr auto records = std::to_array<std::uint8_t>({
+        0xc7,0x0d,0x24,0x00,0xa0,0x05,0xa2,0x05,
+        0x1f,0x37,0x20,0x01,0xa0,0x05,0x10,0x2d,
+        0x8f,0x1b,0x48,0x00,0xa0,0x05,0x44,0x0b,
+        0x8f,0x1b,0x90,0x00,0xa0,0x05,0xa8,0x05,
+    });
+    constexpr std::string_view entry_span_sha256 =
+        "8d412472415d513482b5c70198bb1aa04fa0d25798dd5f4b40b262151c489736";
+    constexpr std::string_view record_bank_sha256 =
+        "1b92e08f514f6b6dee4683550e2d9363d39e6ed0375ac9c9e2b652754326965f";
+    constexpr std::array<std::uint16_t, 4> entry_offsets{{0x90, 0x97, 0x9f, 0xa7}};
+    // This order follows the executable paths, not sorted source addresses.
+    constexpr std::array<std::uint16_t, 4> source_offsets{{0x70, 0x80, 0x78, 0x88}};
+    // 2200AD's mode-value order is 3/4/2/default, whereas the native GX
+    // targets execute in 0x90/0x97/0x9f/0xa7 order.
+    constexpr std::array<std::uint16_t, 4> selector_source_offsets{{0x70, 0x80, 0x88, 0x78}};
+    if (to_hex(sha256(gx_overlay_executable)) != overlay_sha256
+        || selector.overlay_prefix_sha256 != "8d412472415d513482b5c70198bb1aa04fa0d25798dd5f4b40b262151c489736"
+        || selector.overlay_targets != std::array<std::uint16_t, 4>{{0x000e,0x0012,0x0014,0x000f}}
+        || selector.overlay_record_offsets != selector_source_offsets
+        || !has_bytes(gx_overlay_executable, first_entry_offset, entry_span)
+        || !has_bytes(gx_overlay_executable, 0x70, records)
+        || to_hex(sha256(gx_overlay_executable.subspan(first_entry_offset, entry_span.size())))
+            != entry_span_sha256
+        || to_hex(sha256(gx_overlay_executable.subspan(0x70, records.size())))
+            != record_bank_sha256) {
+        throw std::runtime_error("Unexpected Millennium DOS GX overlay startup record evidence");
+    }
+    MillenniumDosGxOverlayStartupRecordEvidence result;
+    result.overlay_sha256 = std::string(overlay_sha256);
+    result.first_entry_offset = first_entry_offset;
+    result.entry_span_byte_count = entry_span.size();
+    result.entry_offsets = entry_offsets;
+    result.source_record_offsets = source_offsets;
+    for (std::size_t index = 0; index < source_offsets.size(); ++index) {
+        const auto source = static_cast<std::size_t>(source_offsets[index]);
+        std::copy_n(gx_overlay_executable.begin() + static_cast<std::ptrdiff_t>(source), 8,
+            result.source_records[index].begin());
+    }
+    result.shared_copy_entry_offset = 0xb2;
+    result.copy_destination_offset = 0x65;
+    result.copy_word_count = 4;
+    result.copied_last_byte_storage_offset = 0x6d;
+    result.state_word_storage_offsets = {0xf4, 0xf0, 0xf2};
+    result.terminal_word_storage_offset = 0x5c;
+    result.terminal_word_value = 0x47ea;
+    result.entry_span_sha256 = std::string(entry_span_sha256);
+    result.record_bank_sha256 = std::string(record_bank_sha256);
+    return result;
+}
+
 MillenniumDosEnglishGameStartupCallees
 parse_millennium_dos_english_game_startup_callees(
     const std::span<const std::uint8_t> game_executable) {

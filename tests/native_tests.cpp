@@ -569,6 +569,21 @@ int main() {
         char* trace_without_platform[] = {program, data_option, custom_path, game_option, millennium,
             trace_option, trace_manifest};
         assert(!eon::parse_command_line(7, trace_without_platform).request);
+        char resolution_option[] = "--resolution";
+        char resolution[] = "1600x900";
+        char aspect_option[] = "--aspect";
+        char aspect[] = "square-pixels";
+        char* display_args[] = {program, resolution_option, resolution, aspect_option, aspect};
+        const auto display = eon::parse_command_line(5, display_args);
+        assert(display.request && display.request->display.width == 1600
+            && display.request->display.height == 900
+            && display.request->display.aspect_ratio_index == 1);
+        char unsupported_resolution[] = "1024x768";
+        char* unsupported_display_args[] = {program, resolution_option, unsupported_resolution};
+        assert(!eon::parse_command_line(3, unsupported_display_args).request);
+        char unknown_aspect[] = "squished";
+        char* unknown_aspect_args[] = {program, aspect_option, unknown_aspect};
+        assert(!eon::parse_command_line(3, unknown_aspect_args).request);
 
         const std::vector<eon::ReleaseArchive> menu_releases{
             {eon::Game::millennium, eon::Platform::dos, "en", {}, {}},
@@ -1963,6 +1978,39 @@ int main() {
     assert(gx_overlay_selector.dx_storage_address == 0x4b6e);
     assert(gx_overlay_selector.adapter_call_address == 0xd373);
     assert(gx_overlay_selector.adapter_target == 0x6c52);
+    const auto gx_overlay_startup_records =
+        eon::parse_millennium_dos_gx_overlay_startup_record_evidence(
+            *gx_overlay, gx_overlay_selector);
+    assert(gx_overlay_startup_records.first_entry_offset == 0x90);
+    assert(gx_overlay_startup_records.entry_span_byte_count == 94);
+    assert((gx_overlay_startup_records.entry_offsets
+        == std::array<std::uint16_t, 4>{{0x90, 0x97, 0x9f, 0xa7}}));
+    assert((gx_overlay_startup_records.source_record_offsets
+        == std::array<std::uint16_t, 4>{{0x70, 0x80, 0x78, 0x88}}));
+    assert((gx_overlay_startup_records.source_records[0]
+        == std::array<std::uint8_t, 8>{{0xc7,0x0d,0x24,0x00,0xa0,0x05,0xa2,0x05}}));
+    assert((gx_overlay_startup_records.source_records[2]
+        == std::array<std::uint8_t, 8>{{0x1f,0x37,0x20,0x01,0xa0,0x05,0x10,0x2d}}));
+    assert(gx_overlay_startup_records.shared_copy_entry_offset == 0xb2);
+    assert(gx_overlay_startup_records.copy_destination_offset == 0x65);
+    assert(gx_overlay_startup_records.copy_word_count == 4);
+    assert(gx_overlay_startup_records.copied_last_byte_storage_offset == 0x6d);
+    assert((gx_overlay_startup_records.state_word_storage_offsets
+        == std::array<std::uint16_t, 3>{{0xf4, 0xf0, 0xf2}}));
+    assert(gx_overlay_startup_records.terminal_word_storage_offset == 0x5c);
+    assert(gx_overlay_startup_records.terminal_word_value == 0x47ea);
+    {
+        auto altered_gx_overlay = *gx_overlay;
+        altered_gx_overlay[0xb2] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_millennium_dos_gx_overlay_startup_record_evidence(
+                altered_gx_overlay, gx_overlay_selector));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto game_flow = eon::parse_millennium_dos_game_flow(*game_executable);
     assert(game_flow.entry_address == 0xd2b0);
     assert(game_flow.startup_address == 0xd2b4);
@@ -5334,6 +5382,29 @@ int main() {
         == "c3998d07f8e89408b9332ae19f449256087b1eb8843256751c03e52700cbbec4");
     assert(post_exec_tail_flag_gate_first_callee.routine_sha256
         == "101f4026b51a3c0bef3758f4244fffd3fe12c93d76e37b44d0728295b5e27aa6");
+    const auto post_exec_tail_flag_gate_copy_callee =
+        eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_copy_callee_profile(
+            system_disk, load_plan);
+    assert((post_exec_tail_flag_gate_copy_callee.caller_addresses
+        == std::array<std::uint32_t, 2>{{0x40638, 0x40662}}));
+    assert((post_exec_tail_flag_gate_copy_callee.caller_continuation_addresses
+        == std::array<std::uint32_t, 2>{{0x4063e, 0x40668}}));
+    assert(post_exec_tail_flag_gate_copy_callee.entry_address == 0x1f238);
+    assert(post_exec_tail_flag_gate_copy_callee.gate_word_address == 0x1eed6);
+    assert(post_exec_tail_flag_gate_copy_callee.zero_branch_target == 0x1f252);
+    assert(post_exec_tail_flag_gate_copy_callee.source_address == 0x1eec0);
+    assert(post_exec_tail_flag_gate_copy_callee.destination_address == 0x1eec0);
+    assert(post_exec_tail_flag_gate_copy_callee.transferred_byte_count == 1);
+    assert(post_exec_tail_flag_gate_copy_callee.delay_loop_counter == 0x13);
+    assert(post_exec_tail_flag_gate_copy_callee.copy_loop_address == 0x1f24c);
+    assert(post_exec_tail_flag_gate_copy_callee.copy_loop_branch_address == 0x1f24e);
+    assert(post_exec_tail_flag_gate_copy_callee.copy_loop_branch_target == 0x1f24e);
+    assert(post_exec_tail_flag_gate_copy_callee.increment_address == 0x1f252);
+    assert(post_exec_tail_flag_gate_copy_callee.terminal_return_address == 0x1f25a);
+    assert(post_exec_tail_flag_gate_copy_callee.caller_sha256
+        == "88e2b3531aa5cb582d1ed1a672f9a524c89cbdf572c7a7d77c8cc7f4e6db695d");
+    assert(post_exec_tail_flag_gate_copy_callee.routine_sha256
+        == "9c0ffcff9d88feedca2b8079b14f5a32fb51dac94bee60e1c477c746e7c6c4f0");
     {
         auto altered_tail_flag_gate_disk = *amiga_disk1;
         altered_tail_flag_gate_disk[0x9b616] ^= 0x01;
@@ -5355,6 +5426,20 @@ int main() {
             const eon::AmigaAdf altered_disk(std::move(altered_tail_flag_gate_first_callee_disk));
             static_cast<void>(
                 eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
+                    altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    for (const auto disk_offset : {0x9b638U, 0x9b662U, 0x7a238U}) {
+        auto altered_tail_flag_gate_copy_callee_disk = *amiga_disk1;
+        altered_tail_flag_gate_copy_callee_disk[disk_offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_tail_flag_gate_copy_callee_disk));
+            static_cast<void>(
+                eon::parse_deuteros_amiga_title_post_exec_tail_flag_gate_copy_callee_profile(
                     altered_disk, load_plan));
         } catch (const std::runtime_error&) {
             rejected = true;

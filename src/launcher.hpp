@@ -2,6 +2,7 @@
 
 #include "platform/game_data.hpp"
 
+#include <cstddef>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -9,6 +10,14 @@
 namespace eon {
 
 enum class Presentation { original, modern };
+
+// Renderer-only preferences shared by CLI startup and the F10 overlay. They
+// never enter a game simulation, save file, or original media access path.
+struct DisplayPreferences {
+    int width = 1280;
+    int height = 720;
+    std::size_t aspect_ratio_index = 0; // Original 4:3, square 8:5, wide 16:9.
+};
 
 struct LaunchRequest {
     std::filesystem::path data_directory;
@@ -19,6 +28,7 @@ struct LaunchRequest {
     bool inspect_data = false;
     std::optional<Platform> platform;
     Presentation presentation = Presentation::original;
+    DisplayPreferences display;
     std::string language;
 };
 

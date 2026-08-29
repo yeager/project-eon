@@ -914,6 +914,29 @@ struct MillenniumDosGxOverlaySelectorEvidence {
     std::string overlay_prefix_sha256;
 };
 
+// The four original GX overlay entry targets selected by 2200AD's startup
+// selector converge on one compact record-copying suffix. This is raw
+// executable provenance: each source record is eight original bytes, and the
+// destination/state cells are instruction operands rather than a recovered
+// screen, layout, or host-side renderer contract.
+struct MillenniumDosGxOverlayStartupRecordEvidence {
+    std::string overlay_sha256;
+    std::uint16_t first_entry_offset = 0;
+    std::size_t entry_span_byte_count = 0;
+    std::array<std::uint16_t, 4> entry_offsets{};
+    std::array<std::uint16_t, 4> source_record_offsets{};
+    std::array<std::array<std::uint8_t, 8>, 4> source_records{};
+    std::uint16_t shared_copy_entry_offset = 0;
+    std::uint16_t copy_destination_offset = 0;
+    std::uint8_t copy_word_count = 0;
+    std::uint16_t copied_last_byte_storage_offset = 0;
+    std::array<std::uint16_t, 3> state_word_storage_offsets{};
+    std::uint16_t terminal_word_storage_offset = 0;
+    std::uint16_t terminal_word_value = 0;
+    std::string entry_span_sha256;
+    std::string record_bank_sha256;
+};
+
 [[nodiscard]] MillenniumDosGxOverlayLoadEvidence
 parse_millennium_dos_gx_overlay_load_evidence(
     std::span<const std::uint8_t> game_executable,
@@ -935,6 +958,10 @@ parse_millennium_dos_gx_overlay_selector_evidence(
     std::span<const std::uint8_t> gx_overlay_executable,
     const MillenniumDosGxOverlayAdapterEvidence& adapter,
     const MillenniumDosGxOverlayDispatcherEvidence& dispatcher);
+[[nodiscard]] MillenniumDosGxOverlayStartupRecordEvidence
+parse_millennium_dos_gx_overlay_startup_record_evidence(
+    std::span<const std::uint8_t> gx_overlay_executable,
+    const MillenniumDosGxOverlaySelectorEvidence& selector);
 
 // The English 2200AD.EXE startup's two local selector callees are bounded
 // independently from the broad main-loop profile.  Both retain the private

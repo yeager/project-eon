@@ -21,6 +21,22 @@ std::optional<Platform> parse_platform(std::string_view value) {
     return std::nullopt;
 }
 
+bool parse_display_resolution(const std::string_view value, DisplayPreferences& display) {
+    if (value == "1280x720") display = {1280, 720, display.aspect_ratio_index};
+    else if (value == "1600x900") display = {1600, 900, display.aspect_ratio_index};
+    else if (value == "1920x1080") display = {1920, 1080, display.aspect_ratio_index};
+    else return false;
+    return true;
+}
+
+bool parse_display_aspect(const std::string_view value, DisplayPreferences& display) {
+    if (value == "original") display.aspect_ratio_index = 0;
+    else if (value == "square-pixels") display.aspect_ratio_index = 1;
+    else if (value == "widescreen") display.aspect_ratio_index = 2;
+    else return false;
+    return true;
+}
+
 std::filesystem::path default_data_directory(const char* executable_path) {
 #ifdef _WIN32
     std::error_code error;
@@ -45,6 +61,8 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>] --game millennium|deuteros\n"
         "               [--platform dos|amiga|atari-st]\n"
         "               [--presentation original|modern]\n\n"
+        "               [--resolution 1280x720|1600x900|1920x1080]\n"
+        "               [--aspect original|square-pixels|widescreen]\n\n"
         "               [--language <language>]\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --verify-data millennium|deuteros\n\n"
         "  project-eon --data <directory-or-archive> --game millennium|deuteros\n"
@@ -87,6 +105,14 @@ ParseResult parse_command_line(int argc, char** argv) {
             if (value == "original") request.presentation = Presentation::original;
             else if (value == "modern") request.presentation = Presentation::modern;
             else return {{}, "Unknown presentation: " + std::string(value), false};
+        } else if (argument == "--resolution") {
+            if (!parse_display_resolution(value, request.display)) {
+                return {{}, "Unsupported resolution: " + std::string(value), false};
+            }
+        } else if (argument == "--aspect") {
+            if (!parse_display_aspect(value, request.display)) {
+                return {{}, "Unknown aspect ratio: " + std::string(value), false};
+            }
         } else if (argument == "--language" || argument == "-l") {
             request.language = normalize_language(value);
             if (request.language.empty()) return {{}, "Unknown language: " + std::string(value), false};

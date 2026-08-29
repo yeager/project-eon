@@ -620,6 +620,35 @@ struct DeuterosAmigaTitlePostExecTailFlagGateFirstCalleeProfile {
 parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// Both remaining direct calls in the post-Exec tail flag gate enter this
+// return-bounded local routine.  It conditionally transfers one byte between
+// two original runtime pointers, then performs a D1-based delay loop and
+// increments the gate cell.  The original cell contents and branch result are
+// unavailable, so this is provenance only:
+// Project Eon neither reads nor writes either address and never executes it.
+struct DeuterosAmigaTitlePostExecTailFlagGateCopyCalleeProfile {
+    std::array<std::uint32_t, 2> caller_addresses{};
+    std::array<std::uint32_t, 2> caller_continuation_addresses{};
+    std::uint32_t entry_address = 0;
+    std::uint32_t gate_word_address = 0;
+    std::uint32_t zero_branch_target = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t destination_address = 0;
+    std::uint16_t transferred_byte_count = 0;
+    std::uint8_t delay_loop_counter = 0;
+    std::uint32_t copy_loop_address = 0;
+    std::uint32_t copy_loop_branch_address = 0;
+    std::uint32_t copy_loop_branch_target = 0;
+    std::uint32_t increment_address = 0;
+    std::uint32_t terminal_return_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecTailFlagGateCopyCalleeProfile
+parse_deuteros_amiga_title_post_exec_tail_flag_gate_copy_callee_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // The first common internal setup callee opens the literal
 // `graphics.library` name through an Exec vector.  Its return is an explicit
 // ABI input: zero enters the original self-loop and any nonzero longword is
