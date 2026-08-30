@@ -25,7 +25,9 @@ enum class MillenniumDosSoundDriverKind { sound_blaster, covox_sound_master };
 struct MillenniumDosSoundDriverLeaf {
     MillenniumDosSoundDriverKind kind{};
     std::string_view original_filename;
-    std::string_view sha256;
+    // The admission parser computes this digest locally, so the returned
+    // evidence must own it rather than retaining a dangling view.
+    std::string sha256;
     std::size_t byte_size = 0;
 };
 
