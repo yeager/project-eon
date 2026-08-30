@@ -297,6 +297,12 @@ terminal or cache while retaining an auditable identity for the complete raw
 diagnostic stream. It does not drop or reinterpret the hash-bound event and
 result records.
 
+The helper additionally verifies the reviewed recorder executable before it
+opens a mount or writes an evidence directory. Its required SHA-256 is
+`0ba7a23b75ed543e519e56c6ece7106b81bd1fd8efb3e1b3813b79ca44b71cca`.
+An arbitrary DOSBox-X binary, including one with similar visible behaviour,
+cannot produce a Project Eon capture receipt.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the

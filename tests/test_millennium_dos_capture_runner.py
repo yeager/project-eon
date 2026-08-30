@@ -67,6 +67,20 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
                 TOOL.EXPECTED_RELEASE_SHA256 = original_hash
                 TOOL.EXPECTED_RELEASE_SIZE = original_size
 
+    def test_recorder_hash_is_exact_and_rejects_another_executable(self) -> None:
+        with temporary_directory() as directory:
+            recorder = Path(directory) / "reviewed-recorder"
+            recorder.write_bytes(b"recorder boundary bytes")
+            original_hash = TOOL.EXPECTED_RECORDER_SHA256
+            try:
+                TOOL.EXPECTED_RECORDER_SHA256 = hashlib.sha256(recorder.read_bytes()).hexdigest()
+                TOOL.validate_recorder(recorder)
+                TOOL.EXPECTED_RECORDER_SHA256 = "0" * 64
+                with self.assertRaisesRegex(TOOL.CaptureError, "reviewed DOSBox-X"):
+                    TOOL.validate_recorder(recorder)
+            finally:
+                TOOL.EXPECTED_RECORDER_SHA256 = original_hash
+
     def test_input_receipt_status_never_invents_an_empty_timeline(self) -> None:
         with temporary_directory() as directory:
             receipt = Path(directory) / "host-input-receipt.raw"
