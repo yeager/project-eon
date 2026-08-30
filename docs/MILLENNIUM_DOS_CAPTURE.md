@@ -272,6 +272,31 @@ still provide a physical host-key receipt and a trace schema that binds a real
 poll/result/frame sequence; Eon does not retry the prior AUTOTYPE timings as a
 substitute.
 
+### Wrap-compatibility probe (not input evidence)
+
+A fresh 15-second input-free probe used that explicit configuration against the
+same archive through a newly verified read-only mount. The source archive
+remained `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
+It retained the existing five-event stream
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda` and the
+existing four raw results
+`4f26dcaa3320de13d3118f202bf5cad2750b68a887969e7f44d311b361a988e6`; no
+host-input receipt was created.
+
+The segment-limit loop did not recur, which isolates it as a recorder
+configuration defect. The recorder then emitted repeated unhandled `INT 6`
+diagnostics instead. This is a separate emulator/driver configuration boundary
+already observed during sound-selection research, not an original-game crash,
+input result, title frame, or playable handoff. The probe is not admitted into
+any runtime adapter.
+
+The capture helper now drains the emulator console into a fixed 1 MiB external
+prefix while recording the full transcript's SHA-256 and byte count in
+`run-status.txt`. This prevents an emulator exception loop from exhausting a
+terminal or cache while retaining an auditable identity for the complete raw
+diagnostic stream. It does not drop or reinterpret the hash-bound event and
+result records.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
