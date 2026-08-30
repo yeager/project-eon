@@ -17,6 +17,7 @@ from pathlib import Path
 import stat
 import subprocess
 import sys
+import threading
 import time
 
 
@@ -40,10 +41,28 @@ MAX_DURATION_SECONDS = 600
 # The reviewed delivery observer writes a bounded physical-input receipt.
 # Never hash an arbitrary-size file merely because a recorder path was set.
 MAX_INPUT_RECEIPT_BYTES = 64 * 1024
+# Raw recorder output and console diagnostics are external evidence, not
+# unbounded host storage.  A broken emulator must not be able to exhaust the
+# operator's terminal, disk, or cache while a capture is being reviewed.
+MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
+MAX_RECORDER_CONSOLE_LOG_BYTES = 1024 * 1024
 
 
 class CaptureError(RuntimeError):
     """A local preflight failure that must not create an admitted capture."""
+
+
+class RecorderConsoleStatus:
+    """Hash-bound identity for a bounded external console transcript."""
+
+    def __init__(self, total_bytes: int, sha256: str, retained_bytes: int) -> None:
+        self.total_bytes = total_bytes
+        self.sha256 = sha256
+        self.retained_bytes = retained_bytes
+
+    @property
+    def truncated(self) -> bool:
+        return self.total_bytes != self.retained_bytes
 
 
 def sha256_file(path: Path) -> tuple[str, int]:
@@ -77,10 +96,11 @@ def validate_identity(path: Path, label: str, expected_hash: str, expected_size:
     return digest, size
 
 
-def validate_recorder(path: Path) -> None:
-    digest, _ = sha256_file(path)
+def validate_recorder(path: Path) -> tuple[str, int]:
+    digest, size = sha256_file(path)
     if digest != EXPECTED_RECORDER_SHA256:
         raise CaptureError("recorder hash does not match the reviewed FS-UAE binary")
+    return digest, size
 
 
 def is_system_tmp_path(path: Path) -> bool:
@@ -172,6 +192,57 @@ def input_receipt_status(path: Path) -> str:
             f"host_input_receipt_bytes={size}\n")
 
 
+def raw_observation_status(path: Path, name: str) -> str:
+    """Bind optional recorder output without accepting arbitrary-size input."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return f"{name}=absent\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError(f"{name} is not a regular non-symlink file")
+    if info.st_size > MAX_RAW_OBSERVATION_BYTES:
+        raise CaptureError(f"{name} exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return f"{name}=empty\n"
+    digest, size = sha256_file(path)
+    return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+
+
+def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
+    """Drain a potentially pathological emulator console into fixed storage."""
+    digest = hashlib.sha256()
+    total = 0
+    retained = 0
+    with path.open("xb") as destination:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            digest.update(chunk)
+            if retained < MAX_RECORDER_CONSOLE_LOG_BYTES:
+                keep = chunk[:MAX_RECORDER_CONSOLE_LOG_BYTES - retained]
+                destination.write(keep)
+                retained += len(keep)
+        destination.flush()
+        os.fsync(destination.fileno())
+    return RecorderConsoleStatus(total, digest.hexdigest(), retained)
+
+
+def recorder_console_status(status: RecorderConsoleStatus) -> str:
+    return ("recorder_console=present\n"
+            f"recorder_console_sha256={status.sha256}\n"
+            f"recorder_console_total_bytes={status.total_bytes}\n"
+            f"recorder_console_retained_bytes={status.retained_bytes}\n"
+            f"recorder_console_truncated={'true' if status.truncated else 'false'}\n")
+
+
+def identity_status(name: str, identity: tuple[str, int]) -> str:
+    """Place both pre- and post-capture identities in the external receipt."""
+    digest, size = identity
+    return f"{name}_sha256={digest}\n{name}_bytes={size}\n"
+
+
 def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path) -> str:
     return "\n".join((
         "# Ephemeral physical-input capture configuration; no debugger or playback.",
@@ -205,7 +276,7 @@ def run_capture(args: argparse.Namespace) -> Path:
     require_visible_operator_input(environment)
     release_before = validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE)
     kickstart_before = validate_identity(kickstart, "Kickstart archive", EXPECTED_KICKSTART_SHA256, EXPECTED_KICKSTART_SIZE)
-    validate_recorder(recorder)
+    recorder_identity = validate_recorder(recorder)
     output.mkdir(mode=0o700)
     mounts = [output / name for name in ("release-outer-ro", "disk1-ro", "disk2-ro", "kickstart-ro")]
     for mountpoint in mounts:
@@ -228,6 +299,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         validate_identity(rom, "Kickstart ROM", EXPECTED_ROM_SHA256, 262_144)
         configuration = output / "deuteros-amiga-capture.fs-uae"
         write_exclusive(configuration, recorder_config(disk1, disk2, rom, output))
+        configuration_identity = sha256_file(configuration)
         command = [str(recorder), str(configuration)]
         write_exclusive(output / "command-tail.txt", " ".join(command) + "\n")
         environment.update({
@@ -238,20 +310,50 @@ def run_capture(args: argparse.Namespace) -> Path:
         print(f"Press keys only in the visible FS-UAE window within {args.duration_seconds} seconds.")
         print("No debugger, playback, injected host event, or guest-memory edit is permitted.")
         started = time.time()
+        process = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        assert process.stdout is not None
+        console_result: list[RecorderConsoleStatus] = []
+        console_errors: list[BaseException] = []
+
+        def drain_console() -> None:
+            try:
+                console_result.append(capture_bounded_console(
+                    process.stdout, output / "recorder-console.log"))
+            except BaseException as error:  # Report it after process cleanup.
+                console_errors.append(error)
+
+        console_thread = threading.Thread(target=drain_console,
+                                          name="project-eon-fs-uae-console", daemon=True)
+        console_thread.start()
         try:
-            completed = subprocess.run(command, env=environment, timeout=args.duration_seconds, check=False)
-            exit_status = completed.returncode
+            exit_status = process.wait(timeout=args.duration_seconds)
         except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
             exit_status = 124
+        console_thread.join()
+        if console_errors:
+            raise CaptureError(f"unable to retain bounded recorder console: {console_errors[0]}")
+        if len(console_result) != 1:
+            raise CaptureError("bounded recorder console did not produce exactly one receipt")
         ended = time.time()
-        if release_before != validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE):
+        release_after = validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE)
+        if release_before != release_after:
             raise CaptureError("source release changed during capture; evidence is rejected")
-        if kickstart_before != validate_identity(kickstart, "Kickstart archive", EXPECTED_KICKSTART_SHA256, EXPECTED_KICKSTART_SIZE):
+        kickstart_after = validate_identity(kickstart, "Kickstart archive", EXPECTED_KICKSTART_SHA256, EXPECTED_KICKSTART_SIZE)
+        if kickstart_before != kickstart_after:
             raise CaptureError("Kickstart archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.txt")
+        observation_status = raw_observation_status(output / "raw-pc.txt", "raw_pc")
         write_exclusive(output / "run-status.txt",
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
-                        + receipt_status)
+                        + identity_status("source_release", release_after)
+                        + identity_status("kickstart_archive", kickstart_after)
+                        + identity_status("recorder", recorder_identity)
+                        + identity_status("configuration", configuration_identity)
+                        + receipt_status + observation_status
+                        + recorder_console_status(console_result[0]))
         print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
     finally:

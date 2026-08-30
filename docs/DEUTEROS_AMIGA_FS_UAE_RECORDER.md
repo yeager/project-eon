@@ -119,11 +119,16 @@ nested disk archive, and Kickstart archive separately with
 `floppy_write_protect = 1`; and rehashes both source ZIPs after the run.
 It rejects repository/media/`/tmp` output paths and headless SDL. Its only
 recorder outputs are raw PC and host-input-delivery receipts outside the
-repository. `run-status.txt` explicitly says whether a receipt was created,
-hashes it only when nonempty, and caps it at 64 KiB, so a no-input preflight
-cannot silently look like an empty physical-input timeline or trigger
-unbounded host-side hashing. A physical input timeline, independent review and
-trace assembly remain required before any runtime admission.
+repository. `run-status.txt` binds the post-run outer-release, Kickstart,
+reviewed-recorder and generated-configuration identities; it reports the
+optional raw-PC file by hash/size (with an 8 MiB ceiling), and explicitly says
+whether a receipt was created, hashing it only when nonempty and capping it at
+64 KiB. It also records a SHA-256 and byte count for the complete FS-UAE
+console while retaining at most the first 1 MiB in `recorder-console.log`.
+Consequently a no-input preflight cannot silently look like an empty
+physical-input timeline, and a defective recorder cannot make the terminal or
+evidence cache grow without bound. A physical input timeline, independent
+review and trace assembly remain required before any runtime admission.
 
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;
