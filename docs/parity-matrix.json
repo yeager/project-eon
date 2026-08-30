@@ -1,0 +1,15 @@
+{
+  "schema": "project-eon.parity-matrix/v1",
+  "purpose": "Release-exact preservation status. Values are boundaries, not compatibility claims.",
+  "states": ["verified", "boundary", "unrecovered"],
+  "releases": [
+    {"release_sha256":"0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69","recognition":"verified","bootstrap":"verified","gameplay":"unrecovered","input":"unrecovered","rendering":"unrecovered","audio":"unrecovered","saves":"unrecovered","completion":"unrecovered"},
+    {"release_sha256":"f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04","recognition":"verified","bootstrap":"verified","gameplay":"boundary","input":"boundary","rendering":"verified","audio":"verified","saves":"unrecovered","completion":"unrecovered"},
+    {"release_sha256":"c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653","recognition":"verified","bootstrap":"verified","gameplay":"unrecovered","input":"unrecovered","rendering":"unrecovered","audio":"unrecovered","saves":"unrecovered","completion":"unrecovered"},
+    {"release_sha256":"2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400","recognition":"verified","bootstrap":"verified","gameplay":"unrecovered","input":"unrecovered","rendering":"unrecovered","audio":"unrecovered","saves":"unrecovered","completion":"unrecovered"},
+    {"release_sha256":"ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01","recognition":"verified","bootstrap":"verified","gameplay":"unrecovered","input":"unrecovered","rendering":"unrecovered","audio":"unrecovered","saves":"unrecovered","completion":"unrecovered"},
+    {"release_sha256":"e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123","recognition":"verified","bootstrap":"boundary","gameplay":"unrecovered","input":"boundary","rendering":"verified","audio":"boundary","saves":"boundary","completion":"unrecovered"},
+    {"release_sha256":"b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4","recognition":"verified","bootstrap":"verified","gameplay":"unrecovered","input":"boundary","rendering":"verified","audio":"unrecovered","saves":"unrecovered","completion":"unrecovered"},
+    {"release_sha256":"ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd","recognition":"verified","bootstrap":"verified","gameplay":"unrecovered","input":"unrecovered","rendering":"unrecovered","audio":"unrecovered","saves":"unrecovered","completion":"unrecovered"}
+  ]
+}
