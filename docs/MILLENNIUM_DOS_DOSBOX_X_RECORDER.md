@@ -17,17 +17,19 @@ symlink is never overwritten; it rejects DS:DX strings containing separators
 or a drive delimiter, and disables its image map after a duplicate entry-CS
 observation.
 
-It is **not a recorder release and has produced no admitted capture**. A full
+It is **not a recorder release**. A full
 serial build was completed with all compiler temporary files under the
 project-scoped cache rather than `/tmp`. The corrected executable SHA-256 is
 `122869702f46b5eda8f9f3ded1032c2e466dd6b0bfafaa460742ef4cd5712dc0`.
 It corrects the interrupt-hook match to the actual `CD 21` at `0x020c`, while
 the emitted schema remains the intentionally stable `0x0209` setup-site ID.
-The first corrected write-protected run emitted two raw request observations;
-the recorded external hashes and its strict non-admission status are in
-[MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-raw-observation-not-admitted).
+The first explicitly configured, write-protected run emitted two raw request
+observations. Its private preimages were assembled and accepted by Project
+Eon's CLI as a diagnostics-only v2 provenance record; its exact hashes and
+strict runtime non-admission status are in
+[MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-trace-validated-capture-diagnostics-only).
 Re-review the exact patch, retain a complete configuration and input timeline,
-and capture the required result boundaries before admitting any output.
+and capture the required result boundaries before extending any runtime path.
 
 The design is locked to the locally inspected DOSBox-X source revision
 `234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapter

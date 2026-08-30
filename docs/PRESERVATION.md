@@ -322,6 +322,16 @@ result/carry flag/register, replays a trace, or changes original media, saves,
 or runtime state. This keeps recorded observation useful for preservation
 without promoting an external capture into an emulator or synthetic game path.
 
+On 2026-08-30, a private, explicitly configured DOSBox-X recorder capture
+from this exact outer archive was assembled and accepted by the CLI's v2
+validator with two ordered records: the `$02cf` `mcga.bin` driver-load request
+and the `$0209` setup-site/`$020c` `INT 21h` vector request. Its event-stream
+SHA-256 is `dc4a67ce61ed6bcd32767c2bf354444f525176ba81308cb9374d7718d1b7aa9a`.
+The event stream and all provenance preimages remain outside the repository.
+This validates only that narrow external diagnostic record; no return, driver
+outcome, EXEC, child execution, input result, frame, audio checkpoint, or
+game state is admitted. See [the capture ledger](MILLENNIUM_DOS_CAPTURE.md).
+
 ### English Millennium DOS startup prefix
 
 The clean English `2200AD.EXE` has a caller-connected, hash-locked startup
