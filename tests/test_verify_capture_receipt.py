@@ -14,6 +14,13 @@ SPEC.loader.exec_module(TOOL)
 
 
 class ReceiptVerifierTests(unittest.TestCase):
+    def test_receipt_requires_current_schema(self) -> None:
+        with self.assertRaisesRegex(ValueError, "receipt schema"):
+            TOOL.require_receipt_schema({})
+        with self.assertRaisesRegex(ValueError, "receipt schema"):
+            TOOL.require_receipt_schema({"capture_receipt_version": "1"})
+        TOOL.require_receipt_schema({"capture_receipt_version": "2"})
+
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
             path = Path(directory) / "run-status.txt"
@@ -51,6 +58,10 @@ class ReceiptVerifierTests(unittest.TestCase):
                       "recorder_console_total_bytes": "2", "recorder_console_sha256": "a" * 64}
             TOOL.verify_console(fields, root)
             fields["recorder_console_retained_bytes"] = "2"
+            with self.assertRaisesRegex(ValueError, "mismatch"):
+                TOOL.verify_console(fields, root)
+            fields["recorder_console_retained_bytes"] = "1"
+            fields["recorder_console_sha256"] = "z" * 64
             with self.assertRaisesRegex(ValueError, "mismatch"):
                 TOOL.verify_console(fields, root)
 

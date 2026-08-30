@@ -297,6 +297,19 @@ terminal or cache while retaining an auditable identity for the complete raw
 diagnostic stream. It does not drop or reinterpret the hash-bound event and
 result records.
 
+New captures write `capture_receipt_version=2`, binding the retained console
+prefix as well as the complete transcript. Verify a completed external capture
+without reading game media:
+
+```sh
+python3 tools/verify_capture_receipt.py \
+  --kind millennium-dos --capture /absolute/cache/capture-directory
+```
+
+Pre-v2 capture directories remain diagnostic-only: their retained console
+prefix cannot be integrity-verified. Reproduce the physical capture with the
+current runner; do not edit or upgrade an older receipt.
+
 The helper additionally verifies the reviewed recorder executable before it
 opens a mount or writes an evidence directory. Its required SHA-256 is
 `0ba7a23b75ed543e519e56c6ece7106b81bd1fd8efb3e1b3813b79ca44b71cca`.
