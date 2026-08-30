@@ -537,9 +537,13 @@ void assert_deuteros_amiga_post_exec_third_service(const std::vector<std::uint8_
 }
 
 void assert_modern_asset_pack_admission() {
+    const auto test_tmpdir = std::getenv("EON_TEST_TMPDIR");
+    assert(test_tmpdir && *test_tmpdir);
+    const auto temporary_root = std::filesystem::path(test_tmpdir);
+    std::filesystem::create_directories(temporary_root);
     const auto nonce = std::to_string(
         std::chrono::high_resolution_clock::now().time_since_epoch().count());
-    const auto root = std::filesystem::temp_directory_path() / ("project-eon-modern-pack-" + nonce);
+    const auto root = temporary_root / ("project-eon-modern-pack-" + nonce);
     const auto pack_root = root / "independent-title";
     const auto textures = pack_root / "textures";
     std::filesystem::create_directories(textures);
@@ -1202,15 +1206,19 @@ int main() {
     // The Unicode launcher renderer must never consult a system font when no
     // reviewed bundled asset is present. This is a no-renderer/no-font native
     // contract and therefore requires no host font in CI.
+    const auto test_tmpdir = std::getenv("EON_TEST_TMPDIR");
+    assert(test_tmpdir && *test_tmpdir);
+    const auto temporary_root = std::filesystem::path(test_tmpdir);
+    std::filesystem::create_directories(temporary_root);
     assert(!eon::UnicodeTextRenderer::create(nullptr,
-        std::filesystem::temp_directory_path() / "project-eon-no-host-font.ttf"));
+        temporary_root / "project-eon-no-host-font.ttf"));
         char language_option[] = "--language";
         char swedish[] = "sv_SE.UTF-8";
         char* language_args[] = {program, language_option, swedish};
         const auto language = eon::parse_command_line(3, language_args);
         assert(language.request && language.request->language == "sv_SE");
 
-        const auto temporary_po = std::filesystem::temp_directory_path() / "project-eon-i18n-test.po";
+        const auto temporary_po = temporary_root / "project-eon-i18n-test.po";
         {
             std::ofstream po(temporary_po, std::ios::binary);
             po << "msgid \"\"\nmsgstr \"header\"\n\n"
