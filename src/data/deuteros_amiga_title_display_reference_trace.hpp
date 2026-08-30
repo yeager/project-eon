@@ -20,6 +20,18 @@ struct DeuterosAmigaTitleDisplayReferenceTraceDiagnostics {
     std::size_t input_checkpoint_count = 0;
     std::size_t frame_checkpoint_count = 0;
     std::size_t audio_checkpoint_count = 0;
+    // These remain opaque provenance values. A v4 trace merely records them;
+    // v5 admission cross-checks them against separately hash-verified capture
+    // artifacts without exposing any bytes to a runtime session.
+    std::string copper_list_sha256;
+    std::string rgb4_palette_sha256;
+    std::string rgba_palette_sha256;
+    std::string bitplanes_sha256;
+    std::string rgba_sha256;
+    std::string audio_sample_rate;
+    std::string audio_channels;
+    std::string audio_sample_frames;
+    std::string pcm_sha256;
 };
 
 // Requires a complete v3 ordered bridge prefix followed by one ordered,

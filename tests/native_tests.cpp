@@ -1126,7 +1126,19 @@ int main() {
             && display_diagnostics.palette_checkpoint_count == 1
             && display_diagnostics.input_checkpoint_count == 1
             && display_diagnostics.frame_checkpoint_count == 1
-            && display_diagnostics.audio_checkpoint_count == 1);
+            && display_diagnostics.audio_checkpoint_count == 1
+            && display_diagnostics.copper_list_sha256
+                == "cf827847c13dbeafeea72c86f2c4fb90a6d717bf548f0914b2f203abb94293f6"
+            && display_diagnostics.rgb4_palette_sha256
+                == "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55"
+            && display_diagnostics.bitplanes_sha256
+                == "fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490"
+            && display_diagnostics.rgba_palette_sha256 == std::string(64, '0')
+            && display_diagnostics.rgba_sha256 == std::string(64, '0')
+            && display_diagnostics.audio_sample_rate == "0x00002710"
+            && display_diagnostics.audio_channels == "0x02"
+            && display_diagnostics.audio_sample_frames == "0x00000000"
+            && display_diagnostics.pcm_sha256 == std::string(64, '0'));
         assert(!eon::validate_deuteros_amiga_title_display_reference_events(
             title_display_events, display_diagnostics, trace_error,
             "1111111111111111111111111111111111111111111111111111111111111111"));
