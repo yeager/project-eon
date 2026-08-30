@@ -28,6 +28,16 @@ height stretching. Any individual output, ratio, Scale2x, filtering, scanline
 or frame change switches the panel to Custom. Original has no path to invoke
 these settings.
 
+The F10 panel also contains a read-only **Developer diagnostics** page. It
+reports only launcher-owned facts: the selected hash identity in abbreviated
+form, game/platform/language, the number of declarative recovery-map
+boundaries for that exact release, whether an external reference trace is
+loaded, the active Modern preset and output controls, and the SDL VSync frame
+pacing policy. GUI launches never load a trace: full trace admission remains
+the separate hash-locked CLI verifier. The page consumes its own keyboard,
+gamepad and touch events and cannot inspect or modify original media, guest
+input, simulation state, or save bytes.
+
 Separately installed Modern asset packs retain their existing explicit
 release-hash admission requirements; they are not discovered automatically and
 are never selected in Original mode. See [MODERN_ASSET_PACK_FORMAT.md](MODERN_ASSET_PACK_FORMAT.md).

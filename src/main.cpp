@@ -277,7 +277,7 @@ constexpr std::array<const char*, 3> display_aspect_names{{
 constexpr std::array<const char*, 5> modern_graphics_preset_names{{
     "CLEAN", "CRT", "CINEMATIC", "HIGH CONTRAST", "CUSTOM",
 }};
-constexpr int modern_graphics_option_count = 8;
+constexpr int modern_graphics_option_count = 9;
 
 // These renderer-space bounds are shared by drawing and touch handling.  A
 // Custom profile must remain usable on an iPad even when no hardware F10 key
@@ -332,6 +332,27 @@ void cycle_modern_graphics_preset(ModernGraphicsSettings& settings, const int di
     const auto current = static_cast<int>(settings.preset);
     const auto next = direction < 0 ? (current + count - 1) % count : (current + 1) % count;
     apply_modern_graphics_preset(settings, static_cast<ModernGraphicsPreset>(next));
+}
+
+// This readout is deliberately derived from already admitted launcher state.
+// It is neither a guest debugger nor a source of data for a recovered game
+// session.  In particular, a reference trace is only "admitted" after the
+// separate CLI validator has checked its complete external manifest; the UI
+// does not open, retain, replay, or infer a trace behind an active game.
+struct ModernRuntimeDiagnostics {
+    std::string release_identity = "NOT SELECTED";
+    std::size_t recovery_boundary_count = 0;
+    std::string trace_admission = "NOT LOADED";
+    bool sdl_vsync = true;
+};
+
+[[nodiscard]] std::string truncated_identity_hash(const std::string_view hash) {
+    // The launcher needs enough identity to correlate an on-screen readout
+    // with a preservation report, but never needs to turn the whole digest
+    // into a UI label. Keep both ends to make accidental prefix collisions
+    // visibly distinguishable without crowding a 1280x720 modal.
+    if (hash.size() <= 16) return std::string(hash);
+    return std::string(hash.substr(0, 12)) + "…" + std::string(hash.substr(hash.size() - 4));
 }
 
 std::size_t output_resolution_index_for(const eon::DisplayPreferences& display) {
@@ -578,7 +599,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 232, tr("TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"));
     constexpr std::array<const char*, modern_graphics_option_count> names{{
         "GRAPHICS PRESET", "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
-        "MODERN ASSET PACK",
+        "MODERN ASSET PACK", "DEVELOPER DIAGNOSTICS",
     }};
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
     const std::array<std::string, modern_graphics_option_count> values{{
@@ -590,6 +611,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         tr(settings.scanlines ? "ON" : "OFF"),
         tr(settings.frame ? "ON" : "OFF"),
         tr(modern_pack_selected ? "ON" : "CHOOSE…"),
+        tr("OPEN"),
     }};
     for (std::size_t index = 0; index < names.size(); ++index) {
         SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(settings.focused_option)
@@ -602,7 +624,52 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
             + static_cast<float>(index) * modern_graphics_option_stride, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 630, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
+    draw_text(renderer, 390, 650, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
+}
+
+// This is a separate page of the existing F10 modal, rather than an overlay
+// on a recovered screen.  The only values it reads are launcher provenance
+// and SDL renderer configuration.  It has no route to original media bytes,
+// guest input, simulation state, or save serialization.
+void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
+    const ModernGraphicsSettings& settings, const ModernRuntimeDiagnostics& diagnostics,
+    const eon::Translator& translator) {
+    const auto tr = [&translator](const std::string_view message) {
+        return std::string(translator.translate(message));
+    };
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 3, 10, 20, 240);
+    SDL_RenderFillRect(renderer, &modern_graphics_popup_bounds);
+    SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
+    SDL_RenderRect(renderer, &modern_graphics_popup_bounds);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+    draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
+    draw_text(renderer, 390, 212, tr("F10 / ESC: BACK TO SETTINGS"));
+    const auto& resolution = output_resolutions.at(settings.output_resolution_index);
+    const std::array<std::pair<const char*, std::string>, 6> rows{{
+        {"RELEASE IDENTITY", diagnostics.release_identity},
+        {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
+        {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
+        {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
+        {"RENDERER SETTINGS", std::to_string(resolution.width) + "x" + std::to_string(resolution.height)
+            + " / " + tr(display_aspect_names.at(settings.aspect_ratio_index))
+            + " / " + tr("PIXEL RECONSTRUCTION") + "="
+            + tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)")
+            + " / " + tr("SMOOTH SCALING") + "=" + tr(settings.smooth_scaling ? "ON" : "OFF")
+            + " / " + tr("SCANLINES") + "=" + tr(settings.scanlines ? "ON" : "OFF")
+            + " / " + tr("MODERN FRAME") + "=" + tr(settings.frame ? "ON" : "OFF")},
+        {"FRAME PACING", tr(diagnostics.sdl_vsync ? "SDL VSYNC: ON" : "SDL VSYNC: OFF")},
+    }};
+    for (std::size_t index = 0; index < rows.size(); ++index) {
+        const float y = 272.0F + static_cast<float>(index) * 52.0F;
+        SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+        draw_text(renderer, 390, y, tr(rows[index].first));
+        SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
+        draw_text(renderer, 390, y + 20.0F, rows[index].second);
+    }
+    SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+    draw_text(renderer, 390, 630, tr("DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."));
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -3631,6 +3698,7 @@ int main(int argc, char** argv) {
     bool custom_profile_ready = false;
     bool show_scanner = false;
     bool show_modern_graphics_settings = false;
+    bool show_modern_runtime_diagnostics = false;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
     const auto clear_deuteros_opening_input = [&] {
@@ -3833,6 +3901,30 @@ int main(int argc, char** argv) {
     ModernGraphicsSettings modern_graphics_settings;
     modern_graphics_settings.output_resolution_index = output_resolution_index_for(request.display);
     modern_graphics_settings.aspect_ratio_index = request.display.aspect_ratio_index;
+    const auto current_modern_runtime_diagnostics = [&] {
+        ModernRuntimeDiagnostics diagnostics;
+        // In the menu, show the currently focused game/platform/release
+        // choice; after launch, show the fixed session selection. This is a
+        // live UI readout, not a second admission path.
+        const auto game = screen == Screen::launching ? selected
+            : cards.at(static_cast<std::size_t>(focused)).game;
+        if (!active_platform || !active_release_language) return diagnostics;
+        const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
+            return candidate.game == game && candidate.platform == *active_platform
+                && candidate.language == *active_release_language;
+        });
+        if (release == releases.end()) return diagnostics;
+        diagnostics.release_identity = tr(launcher_game_label(release->game)) + " / "
+            + tr(launcher_platform_label(release->platform)) + " / " + release->language
+            + " / " + truncated_identity_hash(release->sha256);
+        diagnostics.recovery_boundary_count = eon::recovery_map_for_release(release->sha256).size();
+        // GUI launches intentionally do not accept a trace path. The CLI
+        // verifier exits after a complete, hash-locked validation, so no
+        // unvalidated trace can appear admitted here.
+        diagnostics.trace_admission = "NOT LOADED";
+        diagnostics.sdl_vsync = true; // SDL_SetRenderVSync(renderer, 1), above.
+        return diagnostics;
+    };
     const auto open_modern_pack_dialog = [&] {
         // Changing an art candidate is allowed only before Custom launches a
         // session. Once a recovered VM/title session is active, its external
@@ -3878,10 +3970,13 @@ int main(int argc, char** argv) {
             mark_modern_graphics_custom(modern_graphics_settings); break;
         case 6: modern_graphics_settings.frame = !modern_graphics_settings.frame;
             mark_modern_graphics_custom(modern_graphics_settings); break;
-        default: open_modern_pack_dialog(); break;
+        case 7: open_modern_pack_dialog(); break;
+        case 8: show_modern_runtime_diagnostics = true; break;
+        default: break;
         }
     };
     const auto close_modern_graphics_settings = [&] {
+        show_modern_runtime_diagnostics = false;
         show_modern_graphics_settings = false;
         if (screen == Screen::menu && launcher_page == LauncherPage::profiles
             && focused_profile_card == 2) custom_profile_ready = true;
@@ -3913,6 +4008,10 @@ int main(int argc, char** argv) {
                 // default that a runtime key may silently replace.  Modern
                 // and Custom launches retain the in-game settings popup.
                 if (request.presentation != eon::Presentation::modern) continue;
+                if (show_modern_runtime_diagnostics) {
+                    show_modern_runtime_diagnostics = false;
+                    continue;
+                }
                 if (!show_modern_graphics_settings) clear_deuteros_opening_input();
                 show_modern_graphics_settings = !show_modern_graphics_settings;
                 if (!show_modern_graphics_settings && screen == Screen::menu
@@ -3924,7 +4023,19 @@ int main(int argc, char** argv) {
                 // This renderer-only dialog is a real input boundary. In
                 // particular, Space, Enter and South/A must not leak into a
                 // recovered opening or DOS availability poll behind it.
-                if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+                if (show_modern_runtime_diagnostics) {
+                    // The diagnostics page is strictly read-only. It consumes
+                    // launcher navigation before any recovered input route.
+                    if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+                        && event.key.key == SDLK_ESCAPE) {
+                        show_modern_runtime_diagnostics = false;
+                    } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
+                        && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
+                        show_modern_runtime_diagnostics = false;
+                    } else if (event.type == SDL_EVENT_FINGER_DOWN) {
+                        show_modern_runtime_diagnostics = false;
+                    }
+                } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.key == SDLK_ESCAPE) {
                         close_modern_graphics_settings();
                     } else if (event.key.key == SDLK_UP) {
@@ -4720,8 +4831,13 @@ int main(int argc, char** argv) {
             }
         }
         if (show_modern_graphics_settings) {
-            draw_modern_graphics_popup(renderer, modern_graphics_settings,
-                selected_modern_pack_manifest.has_value(), translator);
+            if (show_modern_runtime_diagnostics) {
+                draw_modern_runtime_diagnostics_popup(renderer, modern_graphics_settings,
+                    current_modern_runtime_diagnostics(), translator);
+            } else {
+                draw_modern_graphics_popup(renderer, modern_graphics_settings,
+                    selected_modern_pack_manifest.has_value(), translator);
+            }
         }
         SDL_RenderPresent(renderer);
     }

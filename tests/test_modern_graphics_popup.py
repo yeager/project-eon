@@ -15,6 +15,41 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("MODERN GRAPHICS SETTINGS", SOURCE)
         self.assertIn("SETTINGS APPLY TO SDL RENDERING ONLY.", SOURCE)
 
+    def test_diagnostics_page_is_a_modern_readout_not_a_guest_debugger(self) -> None:
+        """F10 diagnostics must remain outside Original media and simulation."""
+        start = SOURCE.index("struct ModernRuntimeDiagnostics")
+        end = SOURCE.index("std::size_t output_resolution_index_for", start)
+        diagnostics = SOURCE[start:end]
+        self.assertIn("release_identity", diagnostics)
+        self.assertIn("recovery_boundary_count", diagnostics)
+        self.assertIn("trace_admission", diagnostics)
+        self.assertIn("sdl_vsync", diagnostics)
+        self.assertIn("truncated_identity_hash", diagnostics)
+        self.assertNotIn("save", diagnostics)
+
+        popup_start = SOURCE.index("void draw_modern_runtime_diagnostics_popup")
+        popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
+        for label in (
+            "MODERN RUNTIME DIAGNOSTICS", "RELEASE IDENTITY",
+            "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "RENDERER SETTINGS",
+            "FRAME PACING", "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
+        ):
+            with self.subTest(label=label):
+                self.assertIn(label, popup)
+        self.assertIn("tr(rows[index].first)", popup)
+        self.assertIn("SDL VSYNC: ON", popup)
+        self.assertIn("SDL VSYNC: OFF", popup)
+
+    def test_diagnostics_page_is_reached_and_dismissed_inside_the_modal(self) -> None:
+        self.assertIn('"DEVELOPER DIAGNOSTICS"', SOURCE)
+        self.assertIn("show_modern_runtime_diagnostics = true", SOURCE)
+        modal = SOURCE.index("if (show_modern_graphics_settings) {")
+        modal_block = SOURCE[modal:SOURCE.index("if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)", modal)]
+        self.assertIn("if (show_modern_runtime_diagnostics)", modal_block)
+        self.assertIn("event.key.key == SDLK_ESCAPE", modal_block)
+        self.assertIn("SDL_GAMEPAD_BUTTON_BACK", modal_block)
+        self.assertIn("event.type == SDL_EVENT_FINGER_DOWN", modal_block)
+
     def test_every_visible_popup_label_is_explicitly_catalogued_before_rendering(self) -> None:
         """The F10 dialog is launcher chrome, not original in-game prose."""
         start = SOURCE.index("void draw_modern_graphics_popup")

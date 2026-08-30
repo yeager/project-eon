@@ -132,6 +132,11 @@ class CatalogTests(unittest.TestCase):
             "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",
             "SCALE2X (MEMORY ONLY)", "OFF (ORIGINAL PIXELS)", "ON", "OFF",
             "SETTINGS APPLY TO SDL RENDERING ONLY.",
+            "DEVELOPER DIAGNOSTICS", "OPEN", "MODERN RUNTIME DIAGNOSTICS",
+            "F10 / ESC: BACK TO SETTINGS", "RELEASE IDENTITY", "RECOVERY MAP BOUNDARIES",
+            "TRACE ADMISSION", "NOT LOADED", "RENDERER SETTINGS", "FRAME PACING",
+            "SDL VSYNC: ON", "SDL VSYNC: OFF",
+            "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
         }
         source_catalog = po_messages(PO / "ProjectEon.pot")
         self.assertTrue(labels <= set(source_catalog))
