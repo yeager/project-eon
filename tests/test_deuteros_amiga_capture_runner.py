@@ -68,6 +68,20 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "exact recognised"):
                 TOOL.validate_identity(source.resolve(), "test source", "0" * 64, source.stat().st_size)
 
+    def test_input_receipt_status_keeps_no_input_distinct_from_a_receipt(self) -> None:
+        with temporary_directory() as directory:
+            receipt = Path(directory) / "host-input-receipt.txt"
+            self.assertEqual(TOOL.input_receipt_status(receipt), "host_input_receipt=absent\n")
+            observed = b"host-input 1 frame=2 line=3 action=key state=down\n"
+            receipt.write_bytes(observed)
+            status = TOOL.input_receipt_status(receipt)
+            self.assertIn("host_input_receipt=present\n", status)
+            self.assertIn(f"host_input_receipt_bytes={len(observed)}\n", status)
+            receipt.unlink()
+            receipt.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.input_receipt_status(receipt)
+
 
 if __name__ == "__main__":
     unittest.main()
