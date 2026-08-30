@@ -339,16 +339,22 @@ prefix, followed by exactly one of each of these ordered raw checkpoints:
 | Type | Required fields |
 | --- | --- |
 | `display-layout` | `site=0x0001eda6`, source/destination addresses, observed display base/list, and a copper-list SHA-256 |
-| `bitplane-layout` | `site=0x0001f182`, observed base pointer, four plane pointers, and geometry/modulo |
+| `bitplane-layout` | `site=0x0001f182`, observed base pointer, four plane pointers, and the fixed 320×200 / 40-byte-row / zero-modulo geometry with `plane_stride=0x1f40` |
 | `palette-checkpoint` | `site=0x0001eda6`, source/destination, word count, RGB4 and converted RGBA palette SHA-256 values |
 | `input-checkpoint` | callback/selector sites and queue/input-timeline SHA-256 values |
-| `frame-checkpoint` | observed display base, RGBA dimensions, bitplane and RGBA-frame SHA-256 values |
+| `frame-checkpoint` | the matching observed display base, fixed 320×200 RGBA dimensions, and bitplane/RGBA-frame SHA-256 values |
 | `audio-checkpoint` | sample rate, channel/frame count and PCM SHA-256 value |
 
 The fixed source identities are the clean English outer release
 `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`, system
 ADF `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`, and
 title-stage hash `48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03`.
+
+The fixed geometry is independently bounded by the live display sample and
+the hash-locked `0x1f40`-iteration longword clear loop at `$1f182`: it yields
+four contiguous 8,000-byte planes at `$b5f0`, `$d530`, `$f470`, and `$113b0`.
+It is an admission constraint, not a renderer contract or an inferred title
+mode for other frames.
 
 The schema validates provenance and recorder completeness only. It does not
 accept a generated frame, supply a display base or palette, replay audio,
