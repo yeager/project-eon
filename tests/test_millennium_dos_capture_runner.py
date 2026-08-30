@@ -26,9 +26,10 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             TOOL.require_visible_operator_input({})
         TOOL.require_visible_operator_input({"WAYLAND_DISPLAY": "wayland-0"})
 
-    def test_generated_configuration_is_normal_core_and_never_injects_input(self) -> None:
+    def test_generated_configuration_handles_real_mode_wrap_and_never_injects_input(self) -> None:
         configuration = TOOL.recorder_config(Path("/safe/read-only/game-root"))
         self.assertIn("core=normal", configuration)
+        self.assertIn("segment limits=false", configuration)
         self.assertIn('mount c "/safe/read-only/game-root"', configuration)
         self.assertNotIn("AUTOTYPE", configuration)
         self.assertNotIn("KEYBOARD_AddKey", configuration)

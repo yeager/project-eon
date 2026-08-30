@@ -400,10 +400,18 @@ def reject_output_path(inputs: tuple[Path, ...], output: Path) -> None:
     # receipt. Keep that transient work in the caller's Project Eon cache as
     # well: an output below /tmp would violate the no-system-temporary-files
     # contract even though the final receipt itself is user-owned evidence.
-    resolved = output.resolve(strict=False)
-    system_temporary_root = Path("/tmp")
-    if resolved == system_temporary_root or system_temporary_root in resolved.parents:
+    # macOS resolves `/tmp` under `/private`, and Windows maps a POSIX-looking
+    # `/tmp/...` path to the current drive. Preserve the operator's lexical
+    # route before resolution so this contract has identical force on every
+    # supported host.
+    normalized_output = output.as_posix().replace("\\", "/")
+    output_parts = output.parts
+    is_system_tmp = (normalized_output == "/tmp" or normalized_output.startswith("/tmp/")
+                     or bool(output.anchor and len(output_parts) > 1
+                             and output_parts[1].casefold() == "tmp"))
+    if is_system_tmp:
         raise EvidenceError("output must not use /tmp; use a Project Eon cache path")
+    resolved = output.resolve(strict=False)
     # Inputs are regular files, so a distinct non-existent directory cannot
     # overlap their bytes.  Deliberately permit a sibling capture directory:
     # a user commonly keeps a read-only archive and its separately owned
