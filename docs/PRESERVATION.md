@@ -1621,6 +1621,9 @@ The live `DeuterosAtariBootstrapSession` retains these three static plans,
 the vector-5 return profile, and the XBIOS callback-byte boundary after
 validating the same original second stage. Thus the SDL launch request and
 `--inspect` share one hash-validated provenance record; retaining it does not
+substitute a title or game runtime. The session also validates the complete
+Replicants Disk 1 leaf before it reads either boot stage, so matching stage
+prefixes from another protected-media variant cannot enter this runtime path.
 read a selected state, invoke XBIOS, or materialize a title/game surface.
 
 The vector's immediate static continuation is now bounded too. Track-2

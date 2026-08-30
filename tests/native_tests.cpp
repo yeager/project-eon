@@ -6103,6 +6103,21 @@ int main() {
     const eon::DeuterosAtariDisk deuteros_disk1(*deuteros_st_disk1);
     const eon::DeuterosAtariDisk deuteros_disk2(*deuteros_st_disk2);
     const eon::DeuterosAtariBootstrapSession deuteros_atari_session(*deuteros_st_disk1);
+    {
+        auto altered_deuteros_st_disk1 = *deuteros_st_disk1;
+        // The tail is outside the two recovered boot-stage sector reads. A
+        // session for this exact Replicants Disk 1 must reject it before it
+        // exposes any static bootstrap evidence.
+        altered_deuteros_st_disk1.back() ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::DeuterosAtariBootstrapSession(
+                std::move(altered_deuteros_st_disk1)));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(deuteros_atari_session.first_stage_sha256()
         == "dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168");
     assert(deuteros_atari_session.second_stage_sha256()
