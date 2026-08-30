@@ -362,6 +362,28 @@ SHA-256 is
 the input receipt was absent. Neither output is admitted into a runtime adapter
 or reference trace.
 
+### Receipt-v2 end-to-end probe (not input or gameplay evidence)
+
+On 2026-08-30, the current runner performed a fresh 15-second input-free,
+write-protected capture against the same supplied archive. Its external
+directory was independently accepted by
+`verify_capture_receipt.py --kind millennium-dos`: source archive, recorder,
+generated configuration, optional artifacts, complete console identity and
+the retained 1 MiB console prefix all matched receipt v2. It retained the
+same five-event stream
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda` and the
+same 522-byte raw-result identity
+`7c00214e4461f6d442ea66b2413ae32c8e4a12210cf9dbef67b0cfad3af19f06`.
+
+The recorder timed out normally after 15 seconds, created no host-input
+receipt, and retained 1,048,576 console bytes. The complete console was
+1,017,458,719 bytes with SHA-256
+`f22756f5b57ac516a075b44317440a4af3f6a4acc9eff7dcd2dd712773e5cdee`; the
+retained prefix SHA-256 was
+`8445ff9b71f82d6904408ad2e95e57d303b05915033bed3ed4e786f2e04c1f38`.
+This validates the bounded external-evidence route, not a key delivery, DOS
+input result, title frame, driver ABI, or gameplay state.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
