@@ -108,7 +108,11 @@ std::string usage() {
 ParseResult parse_command_line(int argc, char** argv) {
     LaunchRequest request;
     request.data_directory = default_data_directory(argc > 0 ? argv[0] : "project-eon");
-    request.language = language_from_environment();
+    // The launcher must be deterministic and English-first when the user has
+    // not selected a language. Host locale is not a presentation preference:
+    // it would make the same command/menu route produce different UI text on
+    // different machines and contradict the documented English default.
+    request.language = "en";
     for (int index = 1; index < argc; ++index) {
         const std::string_view argument = argv[index];
         if (argument == "--help" || argument == "-h") return {{}, {}, true};
