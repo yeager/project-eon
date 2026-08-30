@@ -47,6 +47,19 @@ afterwards. This proves only that the documented, read-only media route and ROM
 admission reach FS-UAE initialisation. It records no title frame, game input,
 audio, callback, emulator result, event stream, or trace admission.
 
+## External recorder no-input preflight
+
+On 2026-08-30, the reviewed FS-UAE raw-observer build ran the same positional
+configuration for a bounded 20 seconds with no host input. The initial
+headless SDL dummy-video attempt stopped before emulation because FS-UAE could
+not initialise an OpenGL context; it produced no raw output. The normal desktop
+video route then ran to the deliberate timeout (`124`). Its log confirmed the
+two exact FUSE ADF paths, Kickstart ROM, and `floppy_write_protect = 1`; the
+outer archive still hashed to `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`
+afterward. No configured probe PC was reached, so the observer correctly
+created no output file. This is media-route and recorder-liveness evidence
+only, not a title, input, display, audio, or reference-trace observation.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
