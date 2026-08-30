@@ -2165,6 +2165,10 @@ destination `$13000`, entry `$40426`) and hash-validates whole-stage SHA-256
 verified clean system ADF; altered stage bytes fail closed. It never creates a title bitmap, inferred registers,
 global work memory, or replacement menu: its next execution requirements still
 cross unrecovered Exec and graphics-library vector boundaries.
+The root title-stage parser enforces that same complete stage identity before
+it accepts any opcode window, so a matching entry or palette prefix cannot
+substitute altered bytes elsewhere in the original `ADF +0x6e000`,
+`0x6ca00`-byte stage.
 The entry begins by preserving the bootstrap's `A1` value at `$206a0`, storing
 the passed mode word at `$4040e`, and comparing its low byte with five. The
 meaning of those mode values and the later gameplay dispatch remain unknown.

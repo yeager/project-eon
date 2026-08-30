@@ -42,6 +42,11 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     if (stage.entry_address < stage.destination || stage.entry_address - stage.destination >= stage.length) {
         throw std::runtime_error("Deuteros title stage entry outside its loaded range");
     }
+    constexpr std::string_view clean_title_stage_sha256 =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    if (to_hex(sha256(disk.bytes(stage.disk_offset, stage.length))) != clean_title_stage_sha256) {
+        throw std::runtime_error("Unsupported Deuteros Amiga title-stage media");
+    }
     const auto entry_offset = stage.disk_offset + stage.entry_address - stage.destination;
     const auto stage_code = [&](std::uint32_t address, std::size_t length) {
         if (address < stage.destination || address - stage.destination > stage.length
