@@ -1318,6 +1318,17 @@ int main() {
         assert(!eon::parse_command_line(7, invalid_release_args).request);
         char* missing_release_scope_args[] = {program, release_language_option, spanish_release};
         assert(!eon::parse_command_line(3, missing_release_scope_args).request);
+        char release_sha256_option[] = "--release-sha256";
+        char release_sha256[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        char* exact_release_args[] = {program, game_option, millennium, platform_option, dos,
+            release_sha256_option, release_sha256};
+        const auto exact_release_request = eon::parse_command_line(7, exact_release_args);
+        assert(exact_release_request.request
+            && exact_release_request.request->release_sha256 == release_sha256);
+        char malformed_release_sha256[] = "not-a-sha";
+        char* malformed_release_args[] = {program, game_option, millennium, platform_option, dos,
+            release_sha256_option, malformed_release_sha256};
+        assert(!eon::parse_command_line(7, malformed_release_args).request);
         char* spanish_pack_args[] = {program, game_option, millennium, platform_option, dos,
             presentation_option, modern, release_language_option, spanish_release,
             modern_pack_option, modern_manifest};
@@ -1402,6 +1413,24 @@ int main() {
             eon::Game::millennium, eon::Platform::dos, std::string{"es"}) == "es");
         assert(eon::select_available_release_language(multilingual_menu_releases,
             eon::Game::millennium, eon::Platform::amiga, std::nullopt) == "en");
+        const std::vector<eon::ReleaseArchive> duplicate_english_releases{
+            {eon::Game::millennium, eon::Platform::amiga, "en",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", {}},
+            {eon::Game::millennium, eon::Platform::amiga, "en",
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", {}},
+        };
+        assert(eon::available_release_identities(duplicate_english_releases,
+            eon::Game::millennium, eon::Platform::amiga).size() == 2);
+        assert(!eon::select_available_release_sha256(duplicate_english_releases,
+            eon::Game::millennium, eon::Platform::amiga, std::nullopt));
+        assert(eon::platform_card_status(duplicate_english_releases,
+            eon::Game::millennium, eon::Platform::amiga)
+            == eon::PlatformCardStatus::release_selection_required);
+        const auto exact_duplicate = eon::resolve_release_identity(duplicate_english_releases,
+            eon::Game::millennium, eon::Platform::amiga,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "en");
+        assert(exact_duplicate && exact_duplicate->sha256
+            == "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
 
         assert(eon::normalize_language("sv_SE.UTF-8") == "sv_SE");
         assert(eon::normalize_language("pt-BR") == "pt_BR");

@@ -16,14 +16,14 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("LauncherPage::releases", SOURCE)
         self.assertIn("LauncherPage::profiles", SOURCE)
 
-    def test_english_is_default_for_multilingual_platforms(self) -> None:
-        self.assertIn("available_release_languages", SOURCE)
-        self.assertIn("select_available_release_language", SOURCE)
-        self.assertIn('std::find(languages.begin(), languages.end(), "en")', SOURCE)
-        self.assertIn("English is selected automatically when it exists.", SOURCE)
+    def test_english_defaults_only_for_a_unique_outer_release(self) -> None:
+        self.assertIn("available_release_identities", SOURCE)
+        self.assertIn("select_available_release_sha256", SOURCE)
+        self.assertIn("if (english.size() == 1)", (ROOT / "src" / "launcher.cpp").read_text())
+        self.assertIn("English is the default original edition only when it identifies exactly one", SOURCE)
         self.assertIn("advance_after_platform_selection", SOURCE)
         advance = SOURCE[SOURCE.index("advance_after_platform_selection"):]
-        self.assertIn("active_release_language ? LauncherPage::profiles", advance)
+        self.assertIn("active_release_sha256 ? LauncherPage::profiles", advance)
 
     def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
         self.assertIn("eon::platform_card_status(releases, game, card.platform)", SOURCE)
@@ -50,8 +50,17 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("no physical-media fallback or substitution", SOURCE)
 
     def test_ambiguous_or_missing_platform_cards_cannot_start_a_game(self) -> None:
-        self.assertIn("eon::platform_card_startable", SOURCE)
-        self.assertIn("!active_platform || !active_release_language", SOURCE)
+        self.assertIn("!active_platform || !active_release_sha256", SOURCE)
+        self.assertIn("eon::resolve_release_identity", SOURCE)
+        self.assertIn("no scan-order fallback was selected", SOURCE)
+
+    def test_release_cards_carry_exact_outer_identity(self) -> None:
+        cards = SOURCE[SOURCE.index("struct ReleaseLanguageCard"):
+                       SOURCE.index("enum class ProfileChoice")]
+        self.assertIn("std::string sha256", cards)
+        self.assertIn("available_release_identities", SOURCE)
+        self.assertIn("active_release_sha256 = language_cards", SOURCE)
+        self.assertIn("truncated_identity_hash(card.sha256)", SOURCE)
 
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
         # If a game has only Amiga/Atari media, selecting its game card must

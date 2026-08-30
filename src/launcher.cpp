@@ -25,6 +25,12 @@ std::optional<Platform> parse_platform(std::string_view value) {
     return std::nullopt;
 }
 
+bool is_sha256(const std::string_view value) {
+    return value.size() == 64 && std::all_of(value.begin(), value.end(), [](const unsigned char byte) {
+        return (byte >= '0' && byte <= '9') || (byte >= 'a' && byte <= 'f');
+    });
+}
+
 bool parse_display_resolution(const std::string_view value, DisplayPreferences& display) {
     if (value == "1280x720") display = {1280, 720, display.aspect_ratio_index};
     else if (value == "1600x900") display = {1600, 900, display.aspect_ratio_index};
@@ -75,7 +81,7 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>]\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --game millennium|deuteros\n"
         "               --platform dos|amiga|atari-st\n"
-        "               [--release-language en|es]\n"
+        "               [--release-language en|es] [--release-sha256 <64-lowercase-hex>]\n"
         "               [--presentation original|modern] [--modern-pack <pack.eonmodern>]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
@@ -141,6 +147,11 @@ ParseResult parse_command_line(int argc, char** argv) {
                 return {{}, "Unknown original release language: " + std::string(value), false};
             }
             request.release_language = std::string(value);
+        } else if (argument == "--release-sha256") {
+            if (!is_sha256(value)) {
+                return {{}, "--release-sha256 must be 64 lowercase hexadecimal characters", false};
+            }
+            request.release_sha256 = std::string(value);
         } else if (argument == "--presentation") {
             if (value == "original") request.presentation = Presentation::original;
             else if (value == "modern") request.presentation = Presentation::modern;
@@ -166,7 +177,8 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.inspect_save && (!request.data_directory_is_default || request.game || request.verify_game || request.inspect_data
         || request.reference_trace || request.modern_pack_root || request.modern_pack_manifest
-        || request.platform || request.release_language || request.presentation_explicit)) {
+        || request.platform || request.release_language || request.release_sha256
+        || request.presentation_explicit)) {
         return {{}, "--inspect-save is standalone; it never selects game data, a release, or runtime", false};
     }
     if (request.verify_game && request.inspect_data) {
@@ -201,8 +213,8 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
     }
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
-    if (request.release_language && (!request.game || !request.platform)) {
-        return {{}, "--release-language requires both --game and --platform", false};
+    if ((request.release_language || request.release_sha256) && (!request.game || !request.platform)) {
+        return {{}, "--release-language and --release-sha256 require both --game and --platform", false};
     }
     // The graphical flow records a platform card before a profile can start
     // a game. A direct CLI launch needs the same unambiguous release choice:
@@ -226,13 +238,9 @@ bool release_available(
 
 PlatformCardStatus platform_card_status(
     const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform) {
-    const auto languages = available_release_languages(releases, game, platform);
-    if (languages.empty()) return PlatformCardStatus::unavailable;
-    // English is the documented default for a selected game/platform. An
-    // explicit --release-language still selects only that exact identity;
-    // this never substitutes another platform or an unavailable language.
-    return languages.size() == 1
-            || std::find(languages.begin(), languages.end(), "en") != languages.end()
+    const auto identities = available_release_identities(releases, game, platform);
+    if (identities.empty()) return PlatformCardStatus::unavailable;
+    return select_available_release_sha256(releases, game, platform, std::nullopt)
         ? PlatformCardStatus::ready : PlatformCardStatus::release_selection_required;
 }
 
@@ -292,6 +300,52 @@ std::optional<std::string> select_available_release_language(
     // hash-verified release identity, not a UI-locale inference or fallback.
     if (std::find(languages.begin(), languages.end(), "en") != languages.end()) return "en";
     return languages.size() == 1 ? std::optional<std::string>{languages.front()} : std::nullopt;
+}
+
+std::vector<ReleaseArchive> available_release_identities(
+    const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform) {
+    std::vector<ReleaseArchive> identities;
+    for (const auto& release : releases) {
+        if (release.game == game && release.platform == platform) identities.push_back(release);
+    }
+    std::sort(identities.begin(), identities.end(), [](const auto& left, const auto& right) {
+        return left.sha256 < right.sha256;
+    });
+    return identities;
+}
+
+std::optional<std::string> select_available_release_sha256(
+    const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform,
+    const std::optional<std::string>& current) {
+    const auto identities = available_release_identities(releases, game, platform);
+    if (identities.empty()) return std::nullopt;
+    if (current && std::any_of(identities.begin(), identities.end(), [&](const auto& release) {
+        return release.sha256 == *current;
+    })) return current;
+    std::vector<std::string> english;
+    for (const auto& release : identities) {
+        if (release.language == "en") english.push_back(release.sha256);
+    }
+    if (english.size() == 1) return english.front();
+    return identities.size() == 1 ? std::optional<std::string>{identities.front().sha256}
+                                  : std::nullopt;
+}
+
+std::optional<ReleaseArchive> resolve_release_identity(
+    const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform,
+    const std::optional<std::string>& requested_sha256,
+    const std::optional<std::string>& requested_language) {
+    const auto identities = available_release_identities(releases, game, platform);
+    const auto selected_sha256 = requested_sha256
+        ? requested_sha256 : select_available_release_sha256(releases, game, platform, std::nullopt);
+    if (!selected_sha256) return std::nullopt;
+    const auto match = std::find_if(identities.begin(), identities.end(), [&](const auto& release) {
+        return release.sha256 == *selected_sha256;
+    });
+    if (match == identities.end() || (requested_language && match->language != *requested_language)) {
+        return std::nullopt;
+    }
+    return *match;
 }
 
 std::optional<Platform> select_available_platform(

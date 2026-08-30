@@ -3931,20 +3931,21 @@ The original-media selector is separate from Project Eon's launcher locale:
 this FAT12 edition. It never maps a Spanish UI locale onto English media or
 falls back to English if the Spanish hash is absent. When both DOS editions
 are installed and no original language is selected, English is the documented
-default for that already selected DOS platform; Spanish remains an explicit
-hash-bound `--release-language es` choice.
+default only when it identifies one outer release for that already selected
+DOS platform; Spanish remains an explicit hash-bound `--release-language es`
+choice. If one language identifies multiple outer containers,
+`--release-sha256` is required.
 
 ### Launcher platform-card admission
 
 Platform cards are driven only by the scanner's hash-verified
 `ReleaseArchive` identities. A platform with no such identity is visibly
-unavailable and cannot advance or launch. When English is present it is the
-default exact language identity for the already selected game/platform, even
-when other verified editions are available; explicit language selection stays
-strictly hash-bound. Only a multi-language platform without English is marked
-**release selection required**. This keeps an unrecognised, incomplete, or
-ambiguous real-media candidate from becoming an implicit Atari ST (or other
-platform) fallback.
+unavailable and cannot advance or launch. English is an automatic choice only
+when it resolves to one exact outer SHA-256. Otherwise each verified outer
+container receives its own release card, labelled with language and a short
+identity hash; direct CLI launch requires `--release-sha256`. This keeps an
+unrecognised, incomplete, or ambiguous real-media candidate from becoming an
+implicit Atari ST (or other platform) fallback or a scan-order selection.
 
 Mouse and touch cards share this exact admission route. On iPadOS an
 `SDL_EVENT_FINGER_DOWN` normalized coordinate is converted through the active

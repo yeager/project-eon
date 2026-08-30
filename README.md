@@ -326,11 +326,12 @@ start menu, separate game cards, direct CLI game selection, a platform-neutral
 data layer and distinct engine/render/audio modules as those systems mature.
 Platform cards are admission gates, not filename guesses: only a hash-verified
 release enables one. Missing or unrecognised media stays disabled. When English
-is one of several verified editions for the selected game/platform, it is the
-default; `--release-language` retains an explicit choice for another installed
-edition. A multi-edition platform with no English release still requires a
-release card. This applies equally to Atari ST media; the launcher never
-substitutes an Amiga or DOS release.
+identifies exactly one verified outer release for the selected game/platform,
+it is the default. If multiple original containers share a language, the menu
+shows separate release cards with a short hash and the CLI requires
+`--release-sha256`; `--release-language` can narrow but never collapse that
+identity. This applies equally to Atari ST media; the launcher never
+substitutes an Amiga or DOS release or chooses by scan order.
 Verified Atari ST cards are additionally labelled **Atari bootstrap only**.
 They select their exact original media but do not claim unrecovered GEMDOS,
 XBIOS, callback, title, or gameplay parity as a completed game start.

@@ -25,16 +25,17 @@ language but must never be silently substituted.
 ## What “all supported platforms” guarantees
 
 Every recognised release is selectable from the launcher and explicit CLI
-platform selection never substitutes a different platform or language. A
+platform selection never substitutes a different platform, language, or outer
+container identity. A
 missing data path remains read-only: Project Eon reports it and does not create
 the default directory.
 
-When English is present among several hash-recognised original languages for a
+When English identifies exactly one hash-recognised outer release for a
 selected game/platform, it is the default for both launcher and CLI. An
-explicit `--release-language` still selects another exact installed identity.
-If several editions exist but English does not, the launcher inserts an
-**Original release** card page and the CLI requires
-`--release-language`. This does not translate or alter original in-game text.
+explicit `--release-language` narrows media but does not identify a container.
+If multiple containers remain, the launcher inserts an **Original release**
+card page and the CLI requires `--release-sha256`. This does not translate or
+alter original in-game text.
 
 The portable entry points are:
 

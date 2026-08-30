@@ -48,6 +48,10 @@ struct LaunchRequest {
     // UI locale above.  A release selection must never infer this from the
     // user's desktop locale or substitute another edition.
     std::optional<std::string> release_language;
+    // Exact immutable outer-container identity. This is deliberately distinct
+    // from language: several recognised releases can share one platform and
+    // language but still have different loader/provenance boundaries.
+    std::optional<std::string> release_sha256;
     Presentation presentation = Presentation::original;
     // Keep diagnostics-only inputs from quietly accepting an otherwise
     // meaningless presentation switch.
@@ -97,6 +101,21 @@ enum class PlatformCardStatus { unavailable, release_selection_required, ready }
 [[nodiscard]] std::optional<std::string> select_available_release_language(
     const std::vector<ReleaseArchive>& releases, Game game, Platform platform,
     const std::optional<std::string>& current);
+// Exact release identities for one game/platform. The returned copies retain
+// the scanner's immutable outer hash and path; ordering is by SHA-256 so no
+// menu or CLI path can depend on filesystem scan order.
+[[nodiscard]] std::vector<ReleaseArchive> available_release_identities(
+    const std::vector<ReleaseArchive>& releases, Game game, Platform platform);
+// Retain a selected hash only within its game/platform scope. English is a
+// default only when it identifies exactly one eligible outer release; a
+// duplicate English identity must be chosen explicitly.
+[[nodiscard]] std::optional<std::string> select_available_release_sha256(
+    const std::vector<ReleaseArchive>& releases, Game game, Platform platform,
+    const std::optional<std::string>& current);
+[[nodiscard]] std::optional<ReleaseArchive> resolve_release_identity(
+    const std::vector<ReleaseArchive>& releases, Game game, Platform platform,
+    const std::optional<std::string>& requested_sha256,
+    const std::optional<std::string>& requested_language);
 // Retain a choice only when it belongs to the newly focused game. Otherwise
 // choose that game's first hash-verified platform; no platform means no start.
 [[nodiscard]] std::optional<Platform> select_available_platform(
