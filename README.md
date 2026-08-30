@@ -121,7 +121,7 @@ system package is unavailable.
 
 ```sh
 cmake -S . -B build -G Ninja \
-  -DEON_REAL_DATA_DIR="$HOME/Hämtningar"
+  -DEON_REAL_DATA_DIR="$HOME/Downloads"
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
@@ -188,7 +188,7 @@ Files-visible `Documents/ProjectEon` folder exposed by the sideloaded app;
 the IPA itself deliberately contains no game media. `--data` (or the explicit
 alias `--data-dir`) selects a
 different directory or one original archive, for example a preservation
-collection in `Hämtningar`.
+collection in `Downloads`.
 Archives and disk images are read in place: Project Eon never creates the data
 directory, unpacks, copies,
 installs, modifies, or redistributes original game data.
@@ -201,9 +201,9 @@ recovered English DOS path until that Spanish ABI has evidence.
 Or select a game directly from the CLI:
 
 ```sh
-./build/project-eon --data "$HOME/Hämtningar" --game millennium \
+./build/project-eon --data "$HOME/Downloads" --game millennium \
   --platform amiga --presentation original --resolution 1600x900 --aspect original
-./build/project-eon --data "$HOME/Hämtningar" --game deuteros \
+./build/project-eon --data "$HOME/Downloads" --game deuteros \
   --platform amiga --presentation modern --resolution 1920x1080 --aspect widescreen
 ```
 
@@ -217,14 +217,14 @@ platform's release when the choice is omitted. Use the card menu or
 Verify genuine release archives by SHA-256 without opening SDL:
 
 ```sh
-./build/project-eon --data "$HOME/Hämtningar" --verify-data millennium
-./build/project-eon --data "$HOME/Hämtningar" --verify-data deuteros
+./build/project-eon --data "$HOME/Downloads" --verify-data millennium
+./build/project-eon --data "$HOME/Downloads" --verify-data deuteros
 ```
 
 Inspect every recognised original release in one read-only scan:
 
 ```sh
-./build/project-eon --data "$HOME/Hämtningar" --inspect
+./build/project-eon --data "$HOME/Downloads" --inspect
 ```
 
 Add `--inventory` to an inspection for a bounded, hash-addressed manifest of
@@ -236,7 +236,7 @@ Narrow that same non-SDL inspection to one requested original release when
 recording or comparing preservation evidence:
 
 ```sh
-./build/project-eon --data "$HOME/Hämtningar" --inspect --game millennium --platform dos
+./build/project-eon --data "$HOME/Downloads" --inspect --game millennium --platform dos
 ```
 
 Audit separately installed Modern art packs only when explicitly requested:
@@ -416,7 +416,7 @@ The repository does not contain the commercial games. Point the inventory tool
 at a directory containing the original archives:
 
 ```sh
-python3 -m eon.inventory ~/Hämtningar
+python3 -m eon.inventory ~/Downloads
 python3 -m unittest discover -s tests -v
 ```
 
