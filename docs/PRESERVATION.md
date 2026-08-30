@@ -602,6 +602,12 @@ by the bounded Equinox bootstrap. A shared configuration filename or hash is
 not permission to pair it with another executable, flatten an STX image, or
 use another variant as a launch fallback.
 
+The Equinox bootstrap session additionally verifies both the complete original
+819,200-byte FAT12 image (`3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7`)
+and its supplied `MILENIUM.TOS` chain before materializing any local loader
+state. This keeps an otherwise valid FAT12 filesystem or matching configuration
+file from being joined to unrelated program bytes.
+
 The same exact Equinox FAT12 root is now retained as a 13-file,
 cluster-addressed inventory. `DESKTOP.INF` is cluster 2, 555 bytes, SHA-256
 `ce2aa85b442be281f25c22456c0d081d01b51108e96716bba9f867b7e791ab19`;

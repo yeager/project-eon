@@ -5493,6 +5493,30 @@ int main() {
     assert(atari_config.sha256 == "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6");
     const eon::MillenniumAtariBootstrapSession atari_session(
         atari_disk, atari_disk.read(*atari_executable));
+    {
+        auto altered = *atari_image;
+        altered.back() ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::Fat12Disk altered_disk(std::move(altered));
+            static_cast<void>(eon::MillenniumAtariBootstrapSession(
+                altered_disk, altered_disk.read(*altered_disk.find("MILENIUM.TOS"))));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_program = atari_disk.read(*atari_executable);
+        altered_program.back() ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::MillenniumAtariBootstrapSession(atari_disk, altered_program));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(atari_session.target().target_address == 0x77000);
     assert(atari_session.execution().stop_before_trap_address == 0x7700e);
     assert(atari_session.execution().target_prefix_bytes_executed == 14);
