@@ -307,7 +307,8 @@ ordering evidence. Its optional v2 `millennium-dos-en-startup-v1` adapter is
 the first deliberately narrow semantic schema: it accepts only the clean
 English DOS outer archive and only declared observations of the already
 byte-locked `MILL.COM`/`TITLES.EXE`/`2200AD.EXE` startup sites. The accepted set is the
-`MILL.COM` raw `INT 21h` vector request at `$0209`, title wrapper `INT 91h` at
+`MILL.COM` raw `INT 21h` vector request whose setup site is `$0209` (the
+`INT` opcode is `$020c`), title wrapper `INT 91h` at
 `$0127`, the `2200AD.EXE` entry's first private-wrapper `INT 91h` at `$0124`
 with its literal `AX=$001f`, `ES=CS`, and `BX=$d19e` setup, title input poll
 and exit sites, the `$02cf` video-driver-load
@@ -2991,8 +2992,8 @@ loop, or decompression stage in this loader. Its result segment remains
 unknown: the only byte-proven relation is `MOV DS,AX` after the allocation and
 before the read.
 
-After that loader returns, `$0207` clears `DX`, loads `AX=$2591`, and executes
-`INT 21h` at `$0209`. Thus the raw vector request has interrupt number `$91`
+After that loader returns, `$0207` clears `DX`, `$0209` loads `AX=$2591`, and
+`$020c` executes `INT 21h`. Thus the raw vector request has interrupt number `$21`
 and the exact source ABI `DS:$0000`, whose code bytes originate in the selected
 original external file. Project Eon does not assign a numeric DOS segment,
 assume any DOS call succeeds, or infer handler execution/return behavior.

@@ -191,6 +191,12 @@ driver, file-open/load completion, DOS behaviour, private `INT 91h` dispatch,
 or an executed child. It reports only counts by type after validating the
 external trace's hash and source-release provenance.
 
+For the first `mill.com` row, `pc=0x0209` deliberately identifies the
+three-byte setup site (`MOV AX,0x2591`) immediately before the interrupt. A
+CPU interrupt hook must match the actual `CD 21` opcode at `0x020c` and emit
+the stable setup-site identifier required by this schema. This naming does not
+describe a return or any DOS behaviour.
+
 ## Event stream (v2 Deuteros Atari ST adapter)
 
 `deuteros-atari-st-boot-v1` accepts only the external boot observations
