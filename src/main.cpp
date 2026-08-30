@@ -3448,6 +3448,8 @@ int main(int argc, char** argv) {
                     << " private-return observations; diagnostics only)\n";
             } else if (trace.adapter == "millennium-dos-en-gx-startup-v2") {
                 std::cout << trace.adapter_private_return_count << " private-return, "
+                    << trace.adapter_mode_read_count << " mode-read, "
+                    << trace.adapter_overlay_return_count << " adapter-return, "
                     << trace.adapter_local_return_count << " local-return observations; "
                     << "call-free transient overlay admitted through second private-INT boundary)\n";
             } else {

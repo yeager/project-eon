@@ -1014,7 +1014,9 @@ ReferenceTraceValidation validate_reference_trace(
         deuteros_amiga_title_bridge_diagnostics.local_call_count,
         millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.local_return_count
             : deuteros_amiga_title_bridge_diagnostics.local_return_count,
-        deuteros_amiga_title_bridge_diagnostics.dispatch_snapshot_count}, {}};
+        deuteros_amiga_title_bridge_diagnostics.dispatch_snapshot_count,
+        millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.mode_read_count : 0,
+        millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.adapter_return_count : 0}, {}};
 }
 
 } // namespace eon

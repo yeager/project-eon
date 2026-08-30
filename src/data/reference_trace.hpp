@@ -82,6 +82,12 @@ struct ReferenceTrace {
     std::size_t adapter_local_call_count = 0;
     std::size_t adapter_local_return_count = 0;
     std::size_t adapter_dispatch_snapshot_count = 0;
+    // GX startup v2 has two source-byte reads and one overlay return between
+    // its raw private return and six caller-local returns. Keep these as
+    // separate provenance counts rather than overloading similarly named
+    // Amiga title-bridge fields.
+    std::size_t adapter_mode_read_count = 0;
+    std::size_t adapter_overlay_return_count = 0;
 };
 
 struct ReferenceTraceValidation {
