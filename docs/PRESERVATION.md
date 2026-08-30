@@ -355,6 +355,16 @@ command-tail condition. See [the capture ledger](MILLENNIUM_DOS_CAPTURE.md)
 for exact timestamps, executable/configuration hashes, and the unaltered
 archive proof.
 
+A third external normal-core run retained that same command-tail condition and
+observed two raw returns at `TITLES.EXE:$0129`, immediately after the declared
+private `INT $91` request: `AX=$0101`, then `AX=$0000`. The observations are
+ordered, hash-recorded, and intentionally raw only. They establish neither
+the private-vector ABI, flags, record writes, branch choices, title pixels,
+input result, nor game state. Eon does not consume either word as a runtime
+result. The separately assembled v2 candidate remains the same three
+diagnostic request events, with all raw evidence external; see [the capture
+ledger](MILLENNIUM_DOS_CAPTURE.md#title-private-vector-return-reconnaissance-not-a-v2-event).
+
 ### English Millennium DOS startup prefix
 
 The clean English `2200AD.EXE` has a caller-connected, hash-locked startup

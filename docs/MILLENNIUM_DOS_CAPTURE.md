@@ -4,7 +4,7 @@ This document records the current acquisition boundary for the first
 Millennium 2.2 DOS runtime evidence.  It is intentionally a capture recipe,
 not an emulator setup guide and not a claim that the game is playable.
 
-Two external captures have been assembled and independently CLI-validated under
+Three external captures have been assembled and independently CLI-validated under
 this recipe. That validation proves only the declared release identity,
 provenance hashes, ordering, and narrow event grammar. In particular, no event
 in this repository represents an emulator observation, and validation does
@@ -135,6 +135,40 @@ The archive SHA-256 was the required
 `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` before
 and after the run; the FUSE mount was unmounted afterwards. All raw events,
 result observations, and provenance preimages remain outside this repository.
+
+### Title private-vector return reconnaissance (not a v2 event)
+
+A third private run on 2026-08-30 retained the same literal guest command
+tail `mill.com 0`, no device-input injection, unchanged archive, and
+read-only FUSE route. Its separately opt-in result observer reads only `AX`
+when original `TITLES.EXE` reaches `$0129`, the first instruction after its
+observed `INT $91` opcode at `$0127`. The raw file SHA-256 is
+`4f26dcaa3320de13d3118f202bf5cad2750b68a887969e7f44d311b361a988e6`:
+
+```text
+raw-result 3 3 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0101
+raw-result 4 4 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0000
+```
+
+These are two ordered raw observations at one return site; they do not assign
+meaning to either word, infer interrupt flags, record-buffer writes, branch
+selection, rendered output, or an input/game state. The observer did not
+change guest registers, memory, vectors, flags, timing, or input. Its
+executable SHA-256 was
+`2343c8ce86ef4fa3b07a7655ae28baba1a00bbcd0f08dad1dee2c9aac4775164`.
+
+The same three v2 diagnostic events were separately assembled and accepted;
+the private manifest SHA-256 is
+`3d4ffdf3b566ec8e2c77d54cdbc4a246c2708542b0404720cea2942644e9f2dc`.
+The capture ran from `2026-08-30T04:06:59Z` to `2026-08-30T04:07:22Z`; its
+configuration, command-tail, and input-timeline SHA-256 values are,
+respectively,
+`64d592591591ee34d1d8cea68053b7a4602ac5f3888d1fce35b519d257bded2f`,
+`2c35ec229f5b76975246f28b70429e23667197147bb6268f3a4493c9d4250687`, and
+`2b1edf6ba255c41fb7099e3b3a610b9591014aa691d9e0f55a84ab6397f0deb1`.
+The archive hash was checked unchanged before and after, and the mount was
+unmounted. No raw result or preimage is stored in this repository or consumed
+by the runtime.
 
 ## Audited local route
 
