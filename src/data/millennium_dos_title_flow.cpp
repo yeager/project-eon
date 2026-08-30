@@ -103,6 +103,18 @@ parse_millennium_dos_spanish_title_presentation_evidence(
 MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     std::span<const std::uint8_t> titles_executable,
     std::span<const std::uint8_t> mill_launcher) {
+    // The local call/branch anchors below identify a recovered boundary, not
+    // a generic DOS format. Bind both participating leaves in full before a
+    // similarly-shaped executable can contribute any title/launcher fact.
+    constexpr std::string_view titles_sha256 =
+        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+    constexpr std::string_view launcher_sha256 =
+        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+    if (titles_executable.size() != 7022 || mill_launcher.size() != 1445
+        || to_hex(sha256(titles_executable)) != titles_sha256
+        || to_hex(sha256(mill_launcher)) != launcher_sha256) {
+        throw std::runtime_error("Unsupported Millennium English DOS title-flow leaves");
+    }
     // Flat DOS files are loaded at offset 0x100.  The entry jump at file 0
     // lands at 0x1b80, where the title program establishes its stack.
     constexpr std::array<std::uint8_t, 7> entry_jump{
