@@ -10,6 +10,27 @@ import sys
 from zipfile import ZipFile
 
 
+def render_instructions(decoder, data: bytes, address: int, *, complete_linear: bool) -> list[str]:
+    """Render a M68000 listing, retaining every byte in complete-linear mode."""
+    def render(instruction) -> str:
+        return f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip()
+
+    if not complete_linear:
+        return [render(instruction) for instruction in decoder.disasm(data, address)]
+    lines: list[str] = []
+    offset = 0
+    while offset < len(data):
+        instruction = next(decoder.disasm(data[offset:], address + offset, count=1), None)
+        if (instruction is None or instruction.address != address + offset
+                or instruction.size <= 0 or instruction.size > len(data) - offset):
+            lines.append(f"{address + offset:08x}  .byte      0x{data[offset]:02x} ; code/data-unclassified")
+            offset += 1
+            continue
+        lines.append(render(instruction))
+        offset += instruction.size
+    return lines
+
+
 def read_source(args: argparse.Namespace) -> tuple[bytes, str]:
     """Read one source image in memory, with no media-file output.
 
@@ -93,22 +114,24 @@ def main() -> None:
         f"- Title entry: `0x{title_entry:x}` (disk `0x{title_entry_offset:x}`)",
         "- Listing scope: " + ("complete loaded ranges, linear candidate only (code/data unclassified)"
             if args.complete_linear else "bounded entrypoint windows"),
+        *( ["- Linear coverage: every source byte is rendered as an instruction or explicit `.byte`."]
+           if args.complete_linear else [] ),
         "",
         "## Boot block",
         "",
         "```asm",
     ]
     boot_bytes = 1024 if args.complete_linear else args.bytes
-    for instruction in decoder.disasm(data[12 : 12 + boot_bytes], 12):
-        lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
+    lines.extend(render_instructions(decoder, data[12 : 12 + boot_bytes], 12,
+                                     complete_linear=args.complete_linear))
     lines.extend(["```", "", "## Bootstrap entry", "", "```asm"])
     loader_entry_offset = loader_disk_offset + loader_entry - loader_destination
     bootstrap_bytes = loader_length if args.complete_linear else 192
     bootstrap_source_offset = loader_disk_offset if args.complete_linear else loader_entry_offset
     bootstrap_address = loader_destination if args.complete_linear else loader_entry
-    for instruction in decoder.disasm(data[bootstrap_source_offset : bootstrap_source_offset + bootstrap_bytes],
-                                       bootstrap_address):
-        lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
+    lines.extend(render_instructions(
+        decoder, data[bootstrap_source_offset : bootstrap_source_offset + bootstrap_bytes], bootstrap_address,
+        complete_linear=args.complete_linear))
     lines.extend(["```", "", "## Main entry", "", "```asm"])
     # End on the instruction boundary immediately before the next routine's
     # absolute LEA; Capstone otherwise substitutes its invalid-input sentinel
@@ -116,8 +139,9 @@ def main() -> None:
     main_bytes = length if args.complete_linear else 0x1FE
     main_source_offset = stage_offset if args.complete_linear else stage_entry_offset
     main_address = destination if args.complete_linear else stage_entry
-    for instruction in decoder.disasm(data[main_source_offset : main_source_offset + main_bytes], main_address):
-        lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
+    lines.extend(render_instructions(
+        decoder, data[main_source_offset : main_source_offset + main_bytes], main_address,
+        complete_linear=args.complete_linear))
     lines.extend(["```", "", "## Title handoff entry", "", "```asm"])
     # Use a fresh decoder after the intentionally truncated main-entry view.
     # Capstone's M68K binding otherwise can retain an invalid-input sentinel
@@ -129,9 +153,9 @@ def main() -> None:
     title_bytes = title_length if args.complete_linear else 196
     title_source_offset = title_offset if args.complete_linear else title_entry_offset
     title_address = title_destination if args.complete_linear else title_entry
-    for instruction in title_decoder.disasm(data[title_source_offset : title_source_offset + title_bytes],
-                                             title_address):
-        lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
+    lines.extend(render_instructions(
+        title_decoder, data[title_source_offset : title_source_offset + title_bytes], title_address,
+        complete_linear=args.complete_linear))
     lines.extend(["```", ""])
     report = "\n".join(lines)
     if args.output:

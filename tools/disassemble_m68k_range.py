@@ -32,13 +32,24 @@ def read_exact_member(archive_path: Path, nested_member: str, member: str) -> by
 
 
 def disassemble(data: bytes, address: int) -> list[str]:
+    """Render a byte-complete M68000 candidate listing for an exact range."""
     try:
         from capstone import CS_ARCH_M68K, CS_MODE_BIG_ENDIAN, CS_MODE_M68K_000, Cs
     except ImportError as error:
         raise SystemExit("Install analysis dependencies: pip install -r requirements-analysis.txt") from error
     decoder = Cs(CS_ARCH_M68K, CS_MODE_BIG_ENDIAN | CS_MODE_M68K_000)
-    return [f"{item.address:08x}  {item.mnemonic:<10} {item.op_str}".rstrip()
-            for item in decoder.disasm(data, address)]
+    lines: list[str] = []
+    offset = 0
+    while offset < len(data):
+        item = next(decoder.disasm(data[offset:], address + offset, count=1), None)
+        if (item is None or item.address != address + offset or item.size <= 0
+                or item.size > len(data) - offset):
+            lines.append(f"{address + offset:08x}  .byte      0x{data[offset]:02x} ; code/data-unclassified")
+            offset += 1
+            continue
+        lines.append(f"{item.address:08x}  {item.mnemonic:<10} {item.op_str}".rstrip())
+        offset += item.size
+    return lines
 
 
 def main() -> None:
@@ -68,7 +79,8 @@ def main() -> None:
         f"- Source range: disk `+0x{args.offset:x}` for `0x{args.length:x}` bytes",
         f"- Runtime address: `0x{args.address:x}`",
         f"- Range SHA-256: `{digest}`",
-        "- Scope: full linear decode; code/data and reachability are unclassified.",
+        "- Scope: full byte-complete linear decode; code/data and reachability are unclassified.",
+        "- Coverage: every source byte is rendered as an instruction or explicit `.byte`.",
         "",
         "```asm",
         *disassemble(source, args.address),

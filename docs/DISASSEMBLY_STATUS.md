@@ -90,7 +90,8 @@ Add `--complete-linear` only when a complete byte-coverage candidate listing
 is needed. It reads each member into process memory, emits source hashes, and
 rejects a missing/ambiguous member rather than scanning an archive for a
 convenient substitute. The complete-linear mode labels every decoded byte range
-as code/data-unclassified; it is not a semantic control-flow claim.
+as code/data-unclassified; a byte that Capstone cannot decode is retained as
+an explicit `.byte` record. It is not a semantic control-flow claim.
 
 For 68000 media, Project Eon does **not** make a temporary extracted stage just
 to satisfy an external disassembler. The range is instead addressed through
@@ -108,12 +109,15 @@ ambiguous archive/member selection; a nearby crack or save image cannot become
 an accidental analysis input. Its `--complete-linear` mode covers each
 byte-identified loaded boot/bootstrap/main/title range and labels every result
 code/data-unclassified until a caller-connected map or trace proves otherwise.
+Undecodable bytes remain explicit `.byte` records, so a decoder stop cannot
+silently reduce byte coverage.
 
 For an Atari ST raw stage (or any other range with an independently proven
 disk-to-RAM mapping), `tools/disassemble_m68k_range.py` requires the exact
 outer ZIP, nested ZIP, member, source interval, runtime address, and SHA-256
 of the interval. It refuses a range hash mismatch. This preserves the stage's
 media provenance while permitting direct in-memory full-range inspection.
+Its full-range listing is byte-complete by the same explicit `.byte` rule.
 
 ## Completion rule
 
