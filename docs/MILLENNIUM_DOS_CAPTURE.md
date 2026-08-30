@@ -4,7 +4,7 @@ This document records the current acquisition boundary for the first
 Millennium 2.2 DOS runtime evidence.  It is intentionally a capture recipe,
 not an emulator setup guide and not a claim that the game is playable.
 
-One external capture has been assembled and independently CLI-validated under
+Two external captures have been assembled and independently CLI-validated under
 this recipe. That validation proves only the declared release identity,
 provenance hashes, ordering, and narrow event grammar. In particular, no event
 in this repository represents an emulator observation, and validation does
@@ -90,6 +90,51 @@ before the host ended this input-free run. This does **not** establish that
 the call cannot return, nor any function meaning, result flag, branch,
 driver outcome, title, input, frame, audio, or game state. The raw result has
 no v2 grammar entry, is not assembled, and is not a runtime input.
+
+### Command-tail sound-choice continuation (diagnostics only)
+
+A second, separately assembled run on 2026-08-30 used the same unchanged
+archive and read-only FUSE route, but recorded the literal original guest DOS
+command tail `mill.com 0`. It injected no keyboard, pointer, controller, or
+other guest input. This is an explicit, reproducible original command-tail
+condition, not a replacement asset, host-hardware policy, runtime input, or
+claim that any input path is generally recovered.
+
+The recorder executable SHA-256 was
+`cf0f3d67d2f9ca8857f9daf749136b19ed625918764ba23fd02b284c65423f78`.
+The external event stream SHA-256 was
+`cb55a2ad7935da29ff2b698be0abb162a1d61532a750d4cb585b1cd4a366c89f`, and
+the assembled private manifest SHA-256 was
+`e7779652cef7d89eb56682ece688968b926a80534318b2f33f20b9a6856683ac`.
+CLI validation accepted these three ordered diagnostic observations:
+
+```text
+event 1 1 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin
+event 2 2 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000
+event 3 3 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4
+```
+
+The private raw result probe additionally observed `AX=$0000` at `$0213`,
+the original continuation immediately after `CALL $0511`; its SHA-256 is
+`8eaf872a3bcf02c8d10b29a361236694306a2241a72ecec52b503538cb903406`.
+That raw result remains outside the v2 event grammar and is not replayed or
+consumed by Eon. The sole new admitted v2 fact is the title wrapper request
+at `TITLES.EXE:$0127`. It neither establishes its return, title rendering,
+input result, frame, audio, child execution, nor playable state.
+
+| Private capture field | SHA-256 / value |
+| --- | --- |
+| Capture UTC | `2026-08-30T04:00:43Z` to `2026-08-30T04:01:06Z` |
+| Explicit recorder configuration | `a0c5302a719fc8f070b79ed57ffa3095b0c8e66ab0cc208b2d30cabb484a2f9c` |
+| Literal command tail | `adb9588ac15cecf16445efacb9bc94696b857b264479d2f73a4801f720eef39e` |
+| Explicit no-device-input timeline | `2b1edf6ba255c41fb7099e3b3a610b9591014aa691d9e0f55a84ab6397f0deb1` |
+| Recorder source-review anchor | `234797680781567e18c374c9e62da24de5423db0` |
+| Recorder-reported version | `DOSBox-X 2026.08.02 source e522642` |
+
+The archive SHA-256 was the required
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` before
+and after the run; the FUSE mount was unmounted afterwards. All raw events,
+result observations, and provenance preimages remain outside this repository.
 
 ## Audited local route
 
