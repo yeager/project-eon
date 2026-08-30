@@ -121,10 +121,11 @@ def validate_source_release(source: Path) -> tuple[str, int]:
     return digest, size
 
 
-def validate_recorder(path: Path) -> None:
-    digest, _ = sha256_file(path)
+def validate_recorder(path: Path) -> tuple[str, int]:
+    digest, size = sha256_file(path)
     if digest != EXPECTED_RECORDER_SHA256:
         raise CaptureError("recorder hash does not match the reviewed DOSBox-X build")
+    return digest, size
 
 
 def require_visible_operator_input(environment: dict[str, str]) -> None:
@@ -276,10 +277,16 @@ def recorder_console_status(status: RecorderConsoleStatus) -> str:
             f"recorder_console_truncated={'true' if status.truncated else 'false'}\n")
 
 
+def identity_status(name: str, identity: tuple[str, int]) -> str:
+    """Retain the exact capture preimage without retaining supplied media."""
+    digest, size = identity
+    return f"{name}_sha256={digest}\n{name}_bytes={size}\n"
+
+
 def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
-    validate_recorder(recorder)
+    recorder_identity = validate_recorder(recorder)
     output = reject_unsafe_output(source, Path(args.output))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
@@ -299,6 +306,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         configuration = output / "recorder.conf"
         command_tail = output / "command-tail.txt"
         write_exclusive(configuration, recorder_config(game_root))
+        configuration_identity = sha256_file(configuration)
         command = [str(recorder), "-conf", str(configuration), "-fastlaunch", "-c", "c:",
                    "-c", "mill.com 0"]
         write_exclusive(command_tail, " ".join(command) + "\n")
@@ -346,6 +354,9 @@ def run_capture(args: argparse.Namespace) -> Path:
                               + raw_observation_status(output / "results.raw", "results_raw"))
         write_exclusive(output / "run-status.txt",
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
+                        + identity_status("source_release", (after_hash, after_size))
+                        + identity_status("recorder", recorder_identity)
+                        + identity_status("configuration", configuration_identity)
                         + receipt_status + observation_status + recorder_console_status(console_result[0]))
         print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
