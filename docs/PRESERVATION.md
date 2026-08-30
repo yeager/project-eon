@@ -3056,6 +3056,9 @@ The loaded `ega640.bin` (4,632 bytes, SHA-256
 `mcga.bin` (4,366 bytes, SHA-256
 `bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`) both
 start an `INT 91h` dispatcher that doubles `AX` into their local word table.
+The English driver parser verifies those complete leaf hashes before accepting
+any local dispatch or instruction anchor; a same-size altered or look-alike
+driver is rejected even if its inspected prefix still matches.
 
 The original `MILL.COM` driver choice is now separately byte-locked. Its
 45-byte command-tail scan at loaded `$019d..$01c9` (file `+$009d`, SHA-256

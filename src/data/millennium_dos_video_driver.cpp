@@ -36,6 +36,17 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
     if (bytes.size() != (spanish ? spanish_size : english_size)) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver size");
     }
+    // A matching dispatch table is not enough to make a foreign or altered
+    // driver executable evidence. English drivers are admitted by their full
+    // supplied leaf identity just like the Spanish FAT12 leaves below.
+    if (!spanish) {
+        const auto expected = ega
+            ? "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a"
+            : "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
+        if (to_hex(sha256(bytes)) != expected) {
+            throw std::runtime_error("Unsupported Millennium English DOS video driver");
+        }
+    }
     constexpr auto entry = std::to_array<std::uint8_t>({
         0xfb, 0x0e, 0x1f, 0xd1, 0xe0, 0x3d, 0x4e, 0x00, 0x90, 0x73});
     if (!has_bytes(bytes, 0, entry)) throw std::runtime_error("Unsupported Millennium DOS video-driver entry");
