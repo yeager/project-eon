@@ -22,6 +22,9 @@ public:
 
     [[nodiscard]] std::uint16_t bytes_per_sector() const { return bytes_per_sector_; }
     [[nodiscard]] std::uint8_t sectors_per_cluster() const { return sectors_per_cluster_; }
+    // Read-only raw provenance for media-owning sessions. Callers must not
+    // retain or mutate the underlying image through this view.
+    [[nodiscard]] std::span<const std::uint8_t> bytes() const { return image_; }
     [[nodiscard]] const std::vector<Fat12Entry>& root_entries() const { return root_entries_; }
     [[nodiscard]] std::vector<std::uint8_t> read(const Fat12Entry& entry) const;
     [[nodiscard]] const Fat12Entry* find(std::string_view name) const;
@@ -41,4 +44,3 @@ private:
 };
 
 } // namespace eon
-

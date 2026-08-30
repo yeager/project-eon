@@ -1,11 +1,21 @@
 #include "engine/millennium_atari_bootstrap_session.hpp"
 
+#include "data/sha256.hpp"
+
 #include <stdexcept>
 
 namespace eon {
 
 MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     const Fat12Disk& disk, const std::span<const std::uint8_t> program) {
+    constexpr std::string_view equinox_disk_sha256 =
+        "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
+    constexpr std::string_view equinox_program_sha256 =
+        "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686";
+    if (to_hex(sha256(disk.bytes())) != equinox_disk_sha256
+        || to_hex(sha256(program)) != equinox_program_sha256) {
+        throw std::runtime_error("Unsupported Millennium Atari ST Equinox media");
+    }
     const auto prg = parse_atari_st_prg(program);
     bootstrap_ = parse_millennium_atari_bootstrap(program, prg);
     bss_entry_ = parse_millennium_atari_bss_entry(program, prg, bootstrap_);
