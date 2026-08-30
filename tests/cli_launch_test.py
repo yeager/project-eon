@@ -587,6 +587,13 @@ def main() -> int:
             raise SystemExit(f"Could not parse inspected platform for {archive}:\n{line}")
         language = line.rsplit(" / ", 1)[-1]
         detected_releases.add((game, platform, language))
+        startup_boundaries = [value for value in inspected.stdout.splitlines()
+                              if value.startswith("          STARTUP BOUNDARY  ")]
+        if len(startup_boundaries) != 1 or "; stops before " not in startup_boundaries[0]:
+            raise SystemExit(
+                f"{game}/{platform} did not report exactly one explicit startup boundary:\n"
+                f"{inspected.stdout}"
+            )
         expected_bootstrap = {
             ("millennium", "amiga"): (
                 "bounded launcher bootstrap: resident entry 0x68000, raw resident SHA-256 "
