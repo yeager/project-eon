@@ -85,6 +85,16 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.input_receipt_status(receipt)
 
+    def test_raw_observation_status_is_hash_bound_and_bounded(self) -> None:
+        with temporary_directory() as directory:
+            path = Path(directory) / "events.raw"
+            self.assertEqual(TOOL.raw_observation_status(path, "events_raw"), "events_raw=absent\n")
+            path.write_bytes(b"event\n")
+            self.assertIn("events_raw_sha256=", TOOL.raw_observation_status(path, "events_raw"))
+            path.write_bytes(b"x" * (TOOL.MAX_RAW_OBSERVATION_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.raw_observation_status(path, "events_raw")
+
 
 if __name__ == "__main__":
     unittest.main()

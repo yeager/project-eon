@@ -29,6 +29,7 @@ MAX_DURATION_SECONDS = 600
 # generous, fixed ceiling here so a damaged or substituted recorder cannot
 # turn a receipt status check into unbounded host-side I/O.
 MAX_INPUT_RECEIPT_BYTES = 64 * 1024
+MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
 
 
 class CaptureError(RuntimeError):
@@ -173,6 +174,22 @@ def input_receipt_status(path: Path) -> str:
             f"host_input_receipt_bytes={size}\n")
 
 
+def raw_observation_status(path: Path, name: str) -> str:
+    """Bind an optional recorder-owned raw log without reading it unbounded."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return f"{name}=absent\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError(f"{name} is not a regular non-symlink file")
+    if info.st_size > MAX_RAW_OBSERVATION_BYTES:
+        raise CaptureError(f"{name} exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return f"{name}=empty\n"
+    digest, size = sha256_file(path)
+    return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+
+
 def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
@@ -218,9 +235,11 @@ def run_capture(args: argparse.Namespace) -> Path:
         if (source_hash, source_size) != (after_hash, after_size):
             raise CaptureError("source archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.raw")
+        observation_status = (raw_observation_status(output / "events.raw", "events_raw")
+                              + raw_observation_status(output / "results.raw", "results_raw"))
         write_exclusive(output / "run-status.txt",
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
-                        + receipt_status)
+                        + receipt_status + observation_status)
         print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
     except Exception:
