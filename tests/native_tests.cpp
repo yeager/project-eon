@@ -864,6 +864,20 @@ int main() {
   assert(millennium_startup.has_value());
   assert(millennium_startup->parser_profile_id == "millennium-dos-launcher");
   assert(millennium_startup->source_address == "MILL.COM+0x0");
+  const std::array expected_startup_boundaries{
+      std::pair{"b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", "millennium-dos-spanish-startup"},
+      std::pair{"2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400", "millennium-amiga-defjam-bootstrap"},
+      std::pair{"ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd", "millennium-amiga-defjam-direct-bootstrap"},
+      std::pair{"0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "millennium-atari-equinox-direct-bootstrap"},
+      std::pair{"ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01", "millennium-atari-equinox-bootstrap"},
+      std::pair{"f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "deuteros-amiga-clean-main-stage"},
+      std::pair{"c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653", "deuteros-atari-replicants-first-stage"},
+  };
+  for (const auto& [release_sha256, parser_profile_id] : expected_startup_boundaries) {
+    const auto boundary = eon::startup_boundary_for_release(release_sha256);
+    assert(boundary.has_value());
+    assert(boundary->parser_profile_id == parser_profile_id);
+  }
   assert(!eon::startup_boundary_for_release(
       "0000000000000000000000000000000000000000000000000000000000000000"));
 

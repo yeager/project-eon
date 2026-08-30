@@ -43,6 +43,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("RECOVERY FUNCTION MAP", SOURCE)
         self.assertIn("release_has_recovery_map_entry", SOURCE)
         self.assertIn("startup_boundary_for_release", SOURCE)
+        self.assertIn("report_startup_boundary", SOURCE)
         self.assertIn("DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.", SOURCE)
 
     def test_function_map_is_paged_read_only_provenance_not_a_hook_table(self) -> None:

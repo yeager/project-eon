@@ -556,6 +556,17 @@ void report_recovery_map(const eon::ReleaseArchive& release) {
     }
 }
 
+// The startup marker gives preservation work a stable first address to cite
+// after an archive has been rehashed. It deliberately retains the next hard
+// boundary: `--inspect` must not make a static observation appear executable.
+void report_startup_boundary(const eon::ReleaseArchive& release) {
+    const auto boundary = eon::startup_boundary_for_release(release.sha256);
+    if (!boundary) return;
+    std::cout << "          STARTUP BOUNDARY  " << boundary->parser_profile_id
+        << " at " << boundary->source_address << "; stops before "
+        << boundary->unresolved << '\n';
+}
+
 // Keep the user-facing Atari card label tied to a concise, release-specific
 // provenance statement.  This runs after verify_release_archive() in the
 // inspection loop; it is not a claim that either native boundary is emulated.
@@ -3427,6 +3438,7 @@ int main(int argc, char** argv) {
                 << "          " << release.sha256 << '\n'
                 << "          " << release.path << '\n';
             report_recovery_map(release);
+            report_startup_boundary(release);
             report_atari_launch_boundary(release);
             if (release.game == eon::Game::deuteros
                 && release.platform == eon::Platform::amiga) {
