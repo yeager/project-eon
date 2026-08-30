@@ -130,6 +130,19 @@ physical-input timeline, and a defective recorder cannot make the terminal or
 evidence cache grow without bound. A physical input timeline, independent
 review and trace assembly remain required before any runtime admission.
 
+New captures write `capture_receipt_version=2`. It binds both the complete
+console-stream identity and the retained-prefix identity. Verify a completed
+external capture without opening its game media with:
+
+```sh
+python3 tools/verify_capture_receipt.py \
+  --kind deuteros-amiga --capture /absolute/cache/capture-directory
+```
+
+Pre-v2 capture directories remain diagnostic evidence only: their retained
+console prefix was not hash-bound, so they cannot be verifier-admissible.
+Repeat the physical capture rather than upgrading or editing its receipt.
+
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;
 the delivery receipt path did not create a file, so FS-UAE's startup

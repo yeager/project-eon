@@ -46,6 +46,10 @@ MAX_INPUT_RECEIPT_BYTES = 64 * 1024
 # operator's terminal, disk, or cache while a capture is being reviewed.
 MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
 MAX_RECORDER_CONSOLE_LOG_BYTES = 1024 * 1024
+# Receipt v2 binds the retained console prefix as well as the complete stream.
+# A verifier must never treat a pre-v2 receipt as if that missing integrity
+# property had been observed.
+CAPTURE_RECEIPT_VERSION = "2"
 
 
 class CaptureError(RuntimeError):
@@ -352,6 +356,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         receipt_status = input_receipt_status(output / "host-input-receipt.txt")
         observation_status = raw_observation_status(output / "raw-pc.txt", "raw_pc")
         write_exclusive(output / "run-status.txt",
+                        f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
                         + identity_status("source_release", release_after)
                         + identity_status("kickstart_archive", kickstart_after)

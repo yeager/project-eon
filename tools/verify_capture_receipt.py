@@ -10,6 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CAPTURE_RECEIPT_VERSION = "2"
 
 
 def load_tool(name: str):
@@ -52,6 +53,17 @@ def require_identity(fields: dict[str, str], prefix: str, expected: tuple[str, i
         raise ValueError(f"{prefix} identity does not match the reviewed contract")
 
 
+def require_receipt_schema(fields: dict[str, str]) -> None:
+    version = fields.get("capture_receipt_version")
+    if version != CAPTURE_RECEIPT_VERSION:
+        raise ValueError(
+            "capture receipt schema is unsupported; rerun the physical capture with receipt v2")
+
+
+def is_sha256(value: str | None) -> bool:
+    return value is not None and len(value) == 64 and all(character in "0123456789abcdef" for character in value)
+
+
 def verify_file(fields: dict[str, str], directory: Path, key: str, filename: str) -> None:
     state = fields.get(key)
     path = directory / filename
@@ -78,7 +90,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
         raise ValueError("recorder console receipt has no valid total")
     if (fields.get("recorder_console") != "present" or fields.get("recorder_console_retained_bytes") != str(actual[1])
             or fields.get("recorder_console_retained_sha256") != actual[0]
-            or total < actual[1] or len(fields.get("recorder_console_sha256", "")) != 64):
+            or total < actual[1] or not is_sha256(fields.get("recorder_console_sha256"))):
         raise ValueError("recorder console receipt mismatch")
 
 
@@ -86,6 +98,7 @@ def verify(kind: str, directory: Path) -> None:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
     fields = receipt(directory / "run-status.txt")
+    require_receipt_schema(fields)
     if kind == "millennium-dos":
         tool = load_tool("run_millennium_dos_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
