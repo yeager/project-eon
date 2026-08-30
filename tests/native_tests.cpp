@@ -1347,6 +1347,17 @@ int main() {
             {eon::Game::deuteros, eon::Platform::amiga, "en", {}, {}},
             {eon::Game::deuteros, eon::Platform::atari_st, "en", {}, {}},
         };
+        assert((eon::supported_platforms(eon::Game::millennium)
+            == std::vector<eon::Platform>{eon::Platform::dos, eon::Platform::amiga,
+                eon::Platform::atari_st}));
+        const auto deuteros_supported = eon::supported_platforms(eon::Game::deuteros);
+        assert((deuteros_supported
+            == std::vector<eon::Platform>{eon::Platform::amiga, eon::Platform::atari_st}));
+        // Support is a property of the recovered project catalogue, not of
+        // whichever archives happen to have been scanned. Deuteros must not
+        // show a DOS card merely because no Deuteros DOS archive exists.
+        assert(std::find(deuteros_supported.begin(), deuteros_supported.end(), eon::Platform::dos)
+            == deuteros_supported.end());
         assert(eon::select_available_platform(
             menu_releases, eon::Game::millennium, eon::Platform::dos) == eon::Platform::dos);
         assert(eon::select_available_platform(
