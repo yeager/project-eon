@@ -340,6 +340,27 @@ user-supplied media tree.  Use a new, scoped path such as
 `/home/yeager/.cache/project-eon-tools/millennium-dos-capture-<UTC>`; never
 use `/tmp`.
 
+For the reviewed external DOSBox-X recorder, the repository includes a
+preflight helper that creates this read-only route but does not contain,
+build, or modify the recorder itself:
+
+```sh
+python3 tools/run_millennium_dos_capture.py \
+  --source-release /absolute/path/to/Millennium-Return-to-Earth_DOS_EN.zip \
+  --recorder /absolute/path/to/reviewed/dosbox-x \
+  --output /home/you/.cache/project-eon-tools/millennium-dos-capture-<UTC>
+```
+
+It rehashes the exact archive before and after a fresh `archivemount -o ro`
+mount, requires `ro,nosuid,nodev`, forces DOSBox-X's normal CPU core, and
+sets exclusive external paths for event, raw-result, and host-input-receipt
+files. It refuses `/tmp`, repository/media output paths, headless SDL, and a
+missing visible X11/Wayland display. The operator must press keys in the
+visible emulator window; the helper has no AUTOTYPE, mapper, debugger, or
+guest-memory input path. Its output is raw external evidence only and still
+requires assembly, independent validation, and review before any new adapter
+or runtime route can exist.
+
 1. Hash the owner-supplied outer archive before and after the run.  Both
    values must equal the table above.  List the ZIP directory with a read-only
    tool only; do not extract it.
