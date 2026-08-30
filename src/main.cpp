@@ -3024,14 +3024,12 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
 }
 
 std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
-    const std::vector<eon::ReleaseArchive>& releases,
-    const std::optional<eon::Platform> requested_platform,
-    const std::optional<std::string>& requested_release_language,
-    const std::optional<std::string>& requested_release_sha256) {
+    const eon::ReleaseArchive& release) {
     // The following executable and library profile is verified solely for
     // English DOS media. Never substitute it when the caller explicitly chose
     // the Amiga or Atari ST release.
-    if (requested_platform && *requested_platform != eon::Platform::dos) return std::nullopt;
+    if (release.game != eon::Game::millennium || release.platform != eon::Platform::dos
+        || (release.language != "en" && release.language != "es")) return std::nullopt;
     constexpr auto title_lib_sha256 =
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
     constexpr auto gx_lib_sha256 =
@@ -3048,35 +3046,17 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
     constexpr auto mcga_sha256 =
         "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
-    if (!requested_release_sha256) return std::nullopt;
-    const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-        return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
-            && candidate.language == "en" && candidate.sha256 == *requested_release_sha256;
-    });
-    const auto spanish_release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-        return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
-            && candidate.language == "es" && candidate.sha256 == *requested_release_sha256;
-    });
-    // A caller normally reaches this loader after the CLI or card route has
-    // fixed a language identity. An omitted identity may default only to the
-    // installed English DOS release; other languages remain explicit.
-    if (requested_release_language && (*requested_release_language != "en"
-        && *requested_release_language != "es")) return std::nullopt;
-    if (release == releases.end() && spanish_release == releases.end()) return std::nullopt;
     try {
-        // A requested original language is a media identity, not a UI
-        // translation preference.  It selects only that hash-verified
-        // edition and never falls back across editions.
-        const bool use_spanish = requested_release_language
-            && *requested_release_language == "es";
+        // This exact archive was resolved before entry. Its language is a
+        // media identity, never a UI preference or a fallback decision.
+        const bool use_spanish = release.language == "es";
         if (use_spanish) {
-            if (spanish_release == releases.end()) return std::nullopt;
             // The Spanish edition is an original FAT12 floppy. Its P00
             // resource is independently verified, but no executable handoff
             // ABI has been recovered, so expose only this authentic title.
             constexpr auto spanish_image_sha256 =
                 "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
-            const auto image = eon::extract_verified_release_asset(*spanish_release, spanish_image_sha256);
+            const auto image = eon::extract_verified_release_asset(release, spanish_image_sha256);
             if (!image) return std::nullopt;
             const eon::Fat12Disk disk(*image);
             const auto* title_entry = disk.find("TITLE.LIB");
@@ -3111,7 +3091,7 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
                 .initial_save = std::nullopt,
             };
         }
-        const auto bytes = eon::extract_verified_release_asset(*release, title_lib_sha256);
+        const auto bytes = eon::extract_verified_release_asset(release, title_lib_sha256);
         if (!bytes) return std::nullopt;
         const eon::MillenniumDosLib title_lib(*bytes);
         const auto* p00 = title_lib.find("P00");
@@ -3119,13 +3099,13 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         const auto resource = title_lib.read(*p00);
         const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
         const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
-        const auto gx_bytes = eon::extract_verified_release_asset(*release, gx_lib_sha256);
-        const auto titles = eon::extract_verified_release_asset(*release, titles_sha256);
-        const auto launcher = eon::extract_verified_release_asset(*release, launcher_sha256);
-        const auto game = eon::extract_verified_release_asset(*release, game_sha256);
-        const auto initial_save = eon::extract_verified_release_asset(*release, initial_save_sha256);
-        const auto ega640 = eon::extract_verified_release_asset(*release, ega640_sha256);
-        const auto mcga = eon::extract_verified_release_asset(*release, mcga_sha256);
+        const auto gx_bytes = eon::extract_verified_release_asset(release, gx_lib_sha256);
+        const auto titles = eon::extract_verified_release_asset(release, titles_sha256);
+        const auto launcher = eon::extract_verified_release_asset(release, launcher_sha256);
+        const auto game = eon::extract_verified_release_asset(release, game_sha256);
+        const auto initial_save = eon::extract_verified_release_asset(release, initial_save_sha256);
+        const auto ega640 = eon::extract_verified_release_asset(release, ega640_sha256);
+        const auto mcga = eon::extract_verified_release_asset(release, mcga_sha256);
         if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga) {
             return std::nullopt;
         }
@@ -3156,20 +3136,13 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
 }
 
 std::unique_ptr<eon::DeuterosAmigaOpening> load_deuteros_opening(
-    const std::vector<eon::ReleaseArchive>& releases,
-    std::optional<eon::Platform> requested_platform,
-    const std::optional<std::string>& requested_release_sha256) {
-    if (!eon::deuteros_amiga_opening_supported(requested_platform)) return {};
-    if (!requested_release_sha256) return {};
+    const eon::ReleaseArchive& release) {
+    if (release.game != eon::Game::deuteros || release.platform != eon::Platform::amiga
+        || release.language != "en") return {};
     constexpr auto clean_system_adf =
         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
-    const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-        return candidate.game == eon::Game::deuteros && candidate.platform == eon::Platform::amiga
-            && candidate.sha256 == *requested_release_sha256;
-    });
-    if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_verified_release_asset(*release, clean_system_adf);
+        const auto image = eon::extract_verified_release_asset(release, clean_system_adf);
         if (!image) return {};
         return std::make_unique<eon::DeuterosAmigaOpening>(std::move(*image));
     } catch (const std::exception& error) {
@@ -3179,20 +3152,13 @@ std::unique_ptr<eon::DeuterosAmigaOpening> load_deuteros_opening(
 }
 
 std::unique_ptr<eon::MillenniumAtariBootstrapSession> load_millennium_atari_bootstrap(
-    const std::vector<eon::ReleaseArchive>& releases,
-    std::optional<eon::Platform> requested_platform,
-    const std::optional<std::string>& requested_release_sha256) {
-    if (requested_platform != eon::Platform::atari_st) return {};
-    if (!requested_release_sha256) return {};
+    const eon::ReleaseArchive& release) {
+    if (release.game != eon::Game::millennium || release.platform != eon::Platform::atari_st
+        || release.language != "en") return {};
     constexpr auto equinox_disk_sha256 =
         "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
-    const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-        return candidate.game == eon::Game::millennium
-            && candidate.platform == eon::Platform::atari_st && candidate.sha256 == *requested_release_sha256;
-    });
-    if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_verified_release_asset(*release, equinox_disk_sha256);
+        const auto image = eon::extract_verified_release_asset(release, equinox_disk_sha256);
         if (!image) return {};
         const eon::Fat12Disk disk(*image);
         const auto* executable = disk.find("MILENIUM.TOS");
@@ -3206,20 +3172,13 @@ std::unique_ptr<eon::MillenniumAtariBootstrapSession> load_millennium_atari_boot
 }
 
 std::unique_ptr<eon::MillenniumAmigaBootstrapSession> load_millennium_amiga_bootstrap(
-    const std::vector<eon::ReleaseArchive>& releases,
-    std::optional<eon::Platform> requested_platform,
-    const std::optional<std::string>& requested_release_sha256) {
-    if (requested_platform != eon::Platform::amiga) return {};
-    if (!requested_release_sha256) return {};
+    const eon::ReleaseArchive& release) {
+    if (release.game != eon::Game::millennium || release.platform != eon::Platform::amiga
+        || release.language != "en") return {};
     constexpr auto defjam_adf_sha256 =
         "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
-    const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-        return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::amiga
-            && candidate.sha256 == *requested_release_sha256;
-    });
-    if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_verified_release_asset(*release, defjam_adf_sha256);
+        const auto image = eon::extract_verified_release_asset(release, defjam_adf_sha256);
         if (!image) return {};
         return std::make_unique<eon::MillenniumAmigaBootstrapSession>(std::move(*image));
     } catch (const std::exception& error) {
@@ -3229,23 +3188,16 @@ std::unique_ptr<eon::MillenniumAmigaBootstrapSession> load_millennium_amiga_boot
 }
 
 std::unique_ptr<eon::DeuterosAtariBootstrapSession> load_deuteros_atari_bootstrap(
-    const std::vector<eon::ReleaseArchive>& releases,
-    std::optional<eon::Platform> requested_platform,
-    const std::optional<std::string>& requested_release_sha256) {
-    if (requested_platform != eon::Platform::atari_st) return {};
-    if (!requested_release_sha256) return {};
+    const eon::ReleaseArchive& release) {
+    if (release.game != eon::Game::deuteros || release.platform != eon::Platform::atari_st
+        || release.language != "en") return {};
     // This is the supplied Replicants Disk 1 whose boot code contains the
     // verified raw-stage sequence. Other protected ST disks remain detected,
     // but are never silently substituted for this bounded path.
     constexpr auto replicants_disk1_sha256 =
         "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
-    const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-        return candidate.game == eon::Game::deuteros
-            && candidate.platform == eon::Platform::atari_st && candidate.sha256 == *requested_release_sha256;
-    });
-    if (release == releases.end()) return {};
     try {
-        const auto image = eon::extract_verified_release_asset(*release, replicants_disk1_sha256);
+        const auto image = eon::extract_verified_release_asset(release, replicants_disk1_sha256);
         if (!image) return {};
         return std::make_unique<eon::DeuterosAtariBootstrapSession>(std::move(*image));
     } catch (const std::exception& error) {
@@ -3567,20 +3519,26 @@ int main(int argc, char** argv) {
     std::optional<eon::Platform> active_platform = request.platform;
     std::optional<std::string> active_release_language = request.release_language;
     std::optional<std::string> active_release_sha256 = request.release_sha256;
+    std::optional<eon::ReleaseArchive> initial_release;
     if (request.game && active_platform) {
-        const auto selected_release = eon::resolve_release_identity(releases, *request.game,
+        initial_release = eon::resolve_release_identity(releases, *request.game,
             *active_platform, active_release_sha256, active_release_language);
-        if (!selected_release) {
+        if (!initial_release) {
             std::cerr << "The selected game and platform need one exact verified original release. "
                          "Use --release-sha256 when several outer containers share a language; "
                          "no scan-order fallback was selected.\n";
             return 4;
         }
-        active_release_sha256 = selected_release->sha256;
-        active_release_language = selected_release->language;
+        active_release_sha256 = initial_release->sha256;
+        active_release_language = initial_release->language;
     }
-    auto millennium_assets = load_millennium_launch_assets(releases, active_platform,
-        active_release_language, active_release_sha256);
+    const auto resolve_active_release = [&](const eon::Game game) -> std::optional<eon::ReleaseArchive> {
+        if (!active_platform || !active_release_sha256) return std::nullopt;
+        return eon::resolve_release_identity(releases, game, *active_platform,
+            active_release_sha256, active_release_language);
+    };
+    auto millennium_assets = initial_release && initial_release->game == eon::Game::millennium
+        ? load_millennium_launch_assets(*initial_release) : std::nullopt;
     // The command-line path is an initial explicit selection, not a mutable
     // request object. Custom's native picker may replace this session-local
     // candidate before launch; neither route has a default pack location.
@@ -3690,11 +3648,8 @@ int main(int argc, char** argv) {
             || active_platform != eon::Platform::amiga || !active_release_language
             || !active_release_sha256
             || *active_release_language != "en") return;
-        const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-            return candidate.game == eon::Game::deuteros && candidate.platform == eon::Platform::amiga
-                && candidate.sha256 == *active_release_sha256;
-        });
-        if (release == releases.end()) return;
+        const auto release = resolve_active_release(eon::Game::deuteros);
+        if (!release) return;
         try {
             deuteros_external_modern_sequence = eon::load_deuteros_amiga_held_opening_modern_sequence(
                 *selected_modern_pack_manifest, release->sha256);
@@ -3821,8 +3776,9 @@ int main(int argc, char** argv) {
     // only when the scanner has actually found the selected original media.
     const auto load_millennium_assets_if_available = [&] {
         if (!millennium_assets) {
-            millennium_assets = load_millennium_launch_assets(releases, active_platform,
-                active_release_language, active_release_sha256);
+            if (const auto release = resolve_active_release(eon::Game::millennium)) {
+                millennium_assets = load_millennium_launch_assets(*release);
+            }
             create_millennium_textures();
         }
         if (!millennium_assets || millennium_assets->language != "en"
@@ -3830,12 +3786,8 @@ int main(int argc, char** argv) {
             || request.presentation != eon::Presentation::modern
             || active_platform != eon::Platform::dos) return;
         millennium_external_modern_attempted = true;
-        if (!active_release_sha256) return;
-        const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-            return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
-                && candidate.sha256 == *active_release_sha256;
-        });
-        if (release == releases.end()) return;
+        const auto release = resolve_active_release(eon::Game::millennium);
+        if (!release) return;
         try {
             millennium_external_modern_surface = eon::load_millennium_dos_title_modern_surface(
                 *selected_modern_pack_manifest, release->sha256);
@@ -3970,10 +3922,10 @@ int main(int argc, char** argv) {
         // selecting the title again starts a fresh original boundary, and
         // must not retain an IME/virtual keyboard from the previous visit.
         stop_millennium_title();
-        millennium_atari_session = load_millennium_atari_bootstrap(releases, active_platform,
-            active_release_sha256);
-        millennium_amiga_session = load_millennium_amiga_bootstrap(releases, active_platform,
-            active_release_sha256);
+        const auto release = resolve_active_release(eon::Game::millennium);
+        if (!release) return;
+        millennium_atari_session = load_millennium_atari_bootstrap(*release);
+        millennium_amiga_session = load_millennium_amiga_bootstrap(*release);
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
         // MILL.COM's sound prompt occurs before the title child request. For
@@ -4008,9 +3960,10 @@ int main(int argc, char** argv) {
         stop_millennium_title();
         clear_deuteros_opening_input();
         discard_deuteros_external_modern_sequence();
-        deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform,
-            active_release_sha256);
-        deuteros_opening = load_deuteros_opening(releases, active_platform, active_release_sha256);
+        const auto release = resolve_active_release(eon::Game::deuteros);
+        if (!release) return;
+        deuteros_atari_session = load_deuteros_atari_bootstrap(*release);
+        deuteros_opening = load_deuteros_opening(*release);
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
@@ -4129,12 +4082,8 @@ int main(int argc, char** argv) {
         // live UI readout, not a second admission path.
         const auto game = screen == Screen::launching ? selected
             : cards.at(static_cast<std::size_t>(focused)).game;
-        if (!active_platform || !active_release_sha256) return diagnostics;
-        const auto release = std::find_if(releases.begin(), releases.end(), [&](const auto& candidate) {
-            return candidate.game == game && candidate.platform == *active_platform
-                && candidate.sha256 == *active_release_sha256;
-        });
-        if (release == releases.end()) return diagnostics;
+        const auto release = resolve_active_release(game);
+        if (!release) return diagnostics;
         diagnostics.release_identity = tr(launcher_game_label(release->game)) + " / "
             + tr(launcher_platform_label(release->platform)) + " / " + release->language
             + " / " + truncated_identity_hash(release->sha256);
@@ -4572,7 +4521,9 @@ int main(int argc, char** argv) {
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && !deuteros_opening && eon::deuteros_amiga_opening_supported(active_platform)) {
-            deuteros_opening = load_deuteros_opening(releases, active_platform, active_release_sha256);
+            if (const auto release = resolve_active_release(eon::Game::deuteros)) {
+                deuteros_opening = load_deuteros_opening(*release);
+            }
             create_deuteros_opening_texture();
             start_deuteros_audio();
             load_deuteros_external_modern_sequence();
@@ -4580,8 +4531,9 @@ int main(int argc, char** argv) {
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && active_platform == eon::Platform::atari_st && !deuteros_atari_session) {
-            deuteros_atari_session = load_deuteros_atari_bootstrap(releases, active_platform,
-                active_release_sha256);
+            if (const auto release = resolve_active_release(eon::Game::deuteros)) {
+                deuteros_atari_session = load_deuteros_atari_bootstrap(*release);
+            }
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && deuteros_opening && !deuteros_opening->title_handed_off()) {
