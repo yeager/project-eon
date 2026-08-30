@@ -25,7 +25,7 @@ EXPECTED_RELEASE_SHA256 = "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630c
 EXPECTED_RELEASE_SIZE = 328_383
 # The capture helper never accepts a merely executable emulator as a recorder:
 # its hooks and input-receipt contract are part of the provenance boundary.
-EXPECTED_RECORDER_SHA256 = "0ba7a23b75ed543e519e56c6ece7106b81bd1fd8efb3e1b3813b79ca44b71cca"
+EXPECTED_RECORDER_SHA256 = "ab53ed0ef1d921b7379f1668013da39b3a2d0bb41faa1eb6a7a5eb8a15f50325"
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600

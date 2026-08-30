@@ -43,6 +43,17 @@ The recognised user-owned outer archive was rehashed afterwards and remained
 This establishes the observer's no-input behaviour only; it does not record a
 physical key, title poll, guest acceptance, frame, audio, or playable state.
 
+The currently reviewed diagnostic build is SHA-256
+`ab53ed0ef1d921b7379f1668013da39b3a2d0bb41faa1eb6a7a5eb8a15f50325`.
+In addition to the pre-existing raw result sites, its callback default handler
+retains exactly one raw `unhandled-interrupt` record when an exception-vector
+callback loops. The record reports the callback's machine register state and
+the three words then at its guest stack top, followed by four bytes at the
+derived address. It does not write a v2 event, install a vector, alter guest
+state, identify a faulting original instruction, or interpret the stack words
+as a caller ABI. The bounded one-record limit prevents an exception loop from
+becoming an unbounded raw-result file.
+
 One additional experimental CPU-only probe is private to the capture cache: it
 opens a distinct `O_CREAT|O_EXCL` result file only when explicitly configured
 and reads `AX` at the first post-interrupt instruction for `MILL.COM:$020e`
@@ -92,6 +103,7 @@ exact-match filter succeeds.
 | `src/cpu/core_normal.cpp:CPU_Core_Normal_Run`, immediately before `Fetchb()` | Pre-instruction `CS:IP`, DS:DX for `MILL.COM:0x02cf` | Covers the only non-interrupt driver-load observation at its exact caller address. |
 | `src/dos/dos_execute.cpp:DOS_Execute(const char*,...)`, after the new program's `csip` is known and before it starts | Full source `name` plus entry CS for a recorder-owned image map | `RunningProgram` and DOS MCB names are truncated, so they cannot establish `mill.com`, `titles.exe`, or `2200ad.exe` identity. |
 | `src/gui/sdlmain.cpp:GFX_Events`, immediately before `MAPPER_CheckEvent` | Host SDL key press/release, scancode, symbol, modifier mask and `GetTicks()` | Retains a separate, bounded timeline of focused host events without calling mapper or keyboard APIs. |
+| `src/cpu/callback.cpp:default_handler` | First unhandled interrupt number plus raw callback/stack/register snapshot | Separates a DOSBox-X exception-vector callback loop from the hash-bound original event stream without treating its callback PC or stack as a game result. |
 
 `DEBUG_HeavyIsBreakpoint()` in `src/debug/debug.cpp` is useful for local
 debugging, but it is not the primary recorder hook: it is not an
