@@ -1,10 +1,12 @@
 #include "data/millennium_dos_gameplay_screen.hpp"
 
 #include "data/millennium_dos_lib.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace eon {
 namespace {
@@ -39,6 +41,14 @@ void require_profile(const MillenniumDosBitmap& bitmap, const std::uint8_t flags
 
 MillenniumDosGameplayScreen parse_millennium_dos_gameplay_screen(
     const std::span<const std::uint8_t> gx_lib) {
+    constexpr std::string_view english_gx_library_sha256 =
+        "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
+    // IMG00/IMG01 are a recovered English DOS presentation boundary, not a
+    // generic named-resource convention. Validate the entire original bank
+    // before decoding pixels or a DAC table from it.
+    if (to_hex(sha256(gx_lib)) != english_gx_library_sha256) {
+        throw std::runtime_error("Unsupported Millennium English DOS GX library");
+    }
     const MillenniumDosLib library({gx_lib.begin(), gx_lib.end()});
     const auto palette_bytes = library.read(require_entry(library, "IMG00"));
     const auto canvas_bytes = library.read(require_entry(library, "IMG01"));

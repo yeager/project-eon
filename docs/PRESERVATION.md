@@ -4063,7 +4063,9 @@ stores a 16-bit asset offset, bank byte, reserved zero byte, and NUL-padded
 eight-character name. `TITLE.LIB` has 38 entries at directory `$4813`;
 `GX.LIB` has 180 at `$4bd3c`. Native parsing rejects duplicate names,
 non-monotonic resources, invalid padding/flags, and any range outside the
-directory boundary.
+directory boundary. The English DOS gameplay-canvas reader additionally
+requires the full `GX.LIB` leaf hash before it reads IMG00/IMG01, so matching
+resource names or image prefixes alone cannot substitute a different bank.
 
 The English `2200AD4.BIN` static-data file (12,494 bytes, SHA-256
 `1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d`)
