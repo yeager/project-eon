@@ -281,6 +281,14 @@ read-only provenance report. The map contains no guest-to-host hooks, patch
 targets, replacement byte sequences, emulation directives, or inferred code
 flow; it never executes source instructions and never changes original media.
 
+The separate compiled `startup_boundary` table contains one exact release
+identity, parser profile, first observed source address, and an explicit
+unresolved boundary for every inventory release. It is accepted only when the
+same release hash still admits that parser profile. F10's read-only Modern
+diagnostics may display this navigation marker as `STARTUP BOUNDARY`; it is
+not a dispatch address, emulator hook, or claim that execution beyond the
+recorded boundary has been recovered.
+
 Every bounded parser profile in the release manifest has exactly one map row.
 This includes data and format readers as well as recovered control-flow
 boundaries: a map address may therefore be a verified leaf/file offset rather

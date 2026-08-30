@@ -42,6 +42,7 @@
 #include "data/reference_trace.hpp"
 #include "data/function_map.hpp"
 #include "data/recovery_map.hpp"
+#include "data/startup_boundary.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 
@@ -358,6 +359,9 @@ struct ModernRuntimeDiagnostics {
         std::string runtime_status;
     };
     std::string release_identity = "NOT SELECTED";
+    // The first hash-checked address is a preservation navigation marker,
+    // not a request to execute, emulate, or hook original machine code.
+    std::string startup_boundary = "—";
     std::size_t recovery_boundary_count = 0;
     std::vector<RecoveryFunction> recovery_functions;
     std::string trace_admission = "NOT LOADED";
@@ -693,8 +697,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
     draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::pair<const char*, std::string>, 6> rows{{
+    const std::array<std::pair<const char*, std::string>, 7> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
+        {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -708,7 +713,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"FRAME PACING", tr(diagnostics.sdl_vsync ? "SDL VSYNC: ON" : "SDL VSYNC: OFF")},
     }};
     for (std::size_t index = 0; index < rows.size(); ++index) {
-        const float y = 272.0F + static_cast<float>(index) * 52.0F;
+        const float y = 262.0F + static_cast<float>(index) * 43.0F;
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
         draw_text(renderer, 390, y, tr(rows[index].first));
         SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
@@ -4030,6 +4035,10 @@ int main(int argc, char** argv) {
         diagnostics.release_identity = tr(launcher_game_label(release->game)) + " / "
             + tr(launcher_platform_label(release->platform)) + " / " + release->language
             + " / " + truncated_identity_hash(release->sha256);
+        if (const auto boundary = eon::startup_boundary_for_release(release->sha256)) {
+            diagnostics.startup_boundary = std::string(boundary->parser_profile_id)
+                + " / " + std::string(boundary->source_address);
+        }
         diagnostics.recovery_boundary_count = eon::recovery_map_for_release(release->sha256).size();
         const auto function_map = eon::function_map_for_release(release->sha256);
         diagnostics.recovery_functions.reserve(function_map.size());

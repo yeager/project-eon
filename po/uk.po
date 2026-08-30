@@ -287,6 +287,9 @@ msgstr "RELEASE IDENTITY"
 msgid "RECOVERY MAP BOUNDARIES"
 msgstr "RECOVERY MAP BOUNDARIES"
 
+msgid "STARTUP BOUNDARY"
+msgstr "МЕЖА ЗАПУСКУ"
+
 msgid "TRACE ADMISSION"
 msgstr "TRACE ADMISSION"
 

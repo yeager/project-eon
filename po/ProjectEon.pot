@@ -382,6 +382,9 @@ msgstr ""
 msgid "RECOVERY MAP BOUNDARIES"
 msgstr ""
 
+msgid "STARTUP BOUNDARY"
+msgstr ""
+
 #: src/main.cpp
 msgid "TRACE ADMISSION"
 msgstr ""
