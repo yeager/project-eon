@@ -3452,6 +3452,14 @@ int main(int argc, char** argv) {
                     << trace.adapter_overlay_return_count << " adapter-return, "
                     << trace.adapter_local_return_count << " local-return observations; "
                     << "call-free transient overlay admitted through second private-INT boundary)\n";
+            } else if (trace.adapter == "deuteros-amiga-en-title-display-v4") {
+                std::cout << trace.adapter_display_layout_count << " display-layout, "
+                    << trace.adapter_bitplane_layout_count << " bitplane-layout, "
+                    << trace.adapter_palette_checkpoint_count << " palette, "
+                    << trace.adapter_input_checkpoint_count << " input, "
+                    << trace.adapter_frame_checkpoint_count << " frame, "
+                    << trace.adapter_audio_checkpoint_count
+                    << " audio checkpoints; diagnostics only, no title replay)\n";
             } else {
                 std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
                     << " file, " << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
