@@ -101,6 +101,27 @@ must record physical key/button press and release timing in a separate input
 timeline. Debugger commands, injected host events, guest memory edits and
 recorder-side input are not admissible controls.
 
+The repository's capture preflight helper prepares the interactive, physical
+route without including, building, or modifying FS-UAE itself:
+
+```sh
+python3 tools/run_deuteros_amiga_capture.py \
+  --source-release /absolute/path/to/Deuteros-The-Next-Millennium_Amiga_EN.zip \
+  --kickstart-archive '/absolute/path/to/Kickstart v1.3 r34.005 (1987-12)(Commodore)(A500-A1000-A2000-CDTV)[!].zip' \
+  --recorder /absolute/path/to/reviewed/fs-uae \
+  --output /home/you/.cache/project-eon-tools/deuteros-amiga-capture-<UTC>
+```
+
+It admits only the documented outer ZIPs, reviewed recorder binary, clean
+Disk 1/Disk 2 ADFs and Kickstart ROM hashes. It mounts the outer release, each
+nested disk archive, and Kickstart archive separately with
+`ro,nosuid,nodev,default_permissions`; supplies both FUSE ADFs with
+`floppy_write_protect = 1`; and rehashes both source ZIPs after the run.
+It rejects repository/media/`/tmp` output paths and headless SDL. Its only
+recorder outputs are raw PC and host-input-delivery receipts outside the
+repository; a physical input timeline, independent review and trace assembly
+remain required before any runtime admission.
+
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;
 the delivery receipt path did not create a file, so FS-UAE's startup
