@@ -6,6 +6,26 @@ recorder itself is not an admitted trace. The recorder and every output it creat
 repository. It must never change original media, guest memory, CPU registers,
 flags, vectors, input, execution order, or timing.
 
+## Prototype status
+
+An uncommitted, external Linux prototype has been reviewed against this
+contract. Its four source edits are limited to the listed CPU, normal-core and
+DOS-execution hooks plus declarations. The changed CPU and normal-core objects
+compile successfully at the pinned revision. It opens its opt-in output with
+exclusive creation (`O_CREAT|O_EXCL`, mode `0600`), so an existing file or
+symlink is never overwritten; it rejects DS:DX strings containing separators
+or a drive delimiter, and disables its image map after a duplicate entry-CS
+observation.
+
+It is **not a recorder release and has produced no admitted capture**. The
+full local DOSBox-X Autotools build currently stops in its unrelated bundled
+Opus/builtin dependency-file generation (`*.Tpo` missing after compilation).
+That host-build fault is recorded separately from the observer: it neither
+changes the reviewed object result nor permits a trace to be fabricated.
+Resolve or replace that external build route, then re-review the exact patch,
+hash the resulting executable, and run the write-protected recipe below
+before admitting any output.
+
 The design is locked to the locally inspected DOSBox-X source revision
 `234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapter
 `millennium-dos-en-startup-v1`. A patch for another DOSBox-X revision must
