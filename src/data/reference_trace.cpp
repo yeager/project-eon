@@ -17,6 +17,7 @@
 #include <fstream>
 #include <limits>
 #include <map>
+#include <set>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -56,6 +57,8 @@ constexpr std::array adapter_recovery_maps{
     AdapterRecoveryMap{"deuteros-amiga-en-title-bridge-v3",
         {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
     AdapterRecoveryMap{"deuteros-amiga-en-title-display-v4",
+        {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
+    AdapterRecoveryMap{"deuteros-amiga-en-title-display-artifacts-v5",
         {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
 };
 
@@ -733,6 +736,110 @@ bool validate_millennium_amiga_events(const std::filesystem::path& path,
     return true;
 }
 
+bool hexadecimal_u64(const std::string_view value, std::uint64_t& result) {
+    if (value.size() < 3 || value.substr(0, 2) != "0x") return false;
+    const auto parsed = std::from_chars(value.data() + 2, value.data() + value.size(), result, 16);
+    return parsed.ec == std::errc{} && parsed.ptr == value.data() + value.size();
+}
+
+bool validate_title_display_artifact(const std::filesystem::path& manifest_path,
+    const std::map<std::string, std::string>& fields, const std::string_view key,
+    const std::string_view expected_filename, const std::uint64_t expected_size,
+    const std::string_view expected_sha256, const std::string_view format,
+    const std::uintmax_t maximum_size, std::set<std::filesystem::path>& claimed_paths,
+    std::vector<ReferenceTraceArtifact>& artifacts, std::string& error) {
+    const std::string field_prefix(key);
+    const auto& filename = fields.at(field_prefix + "_file");
+    const auto& declared_size = fields.at(field_prefix + "_size");
+    const auto& declared_sha256 = key == "input_timeline"
+        ? fields.at("input_timeline_sha256") : fields.at(field_prefix + "_sha256");
+    std::uint64_t size = 0;
+    if (filename != expected_filename || !basename_only(filename)
+        || !decimal_u64(declared_size, size) || size != expected_size
+        || !lowercase_sha256(declared_sha256) || declared_sha256 != expected_sha256) {
+        error = "Deuteros title-display v5 artifact manifest fields are invalid";
+        return false;
+    }
+    const auto path = (manifest_path.parent_path() / filename).lexically_normal();
+    if (!claimed_paths.insert(path).second) {
+        error = "Deuteros title-display v5 artifacts must have distinct sibling paths";
+        return false;
+    }
+    std::uintmax_t observed_size = 0;
+    if (!regular_file_size(path, maximum_size, observed_size, error)) return false;
+    if (observed_size != size) {
+        error = "Deuteros title-display v5 artifact size does not match its manifest";
+        return false;
+    }
+    try {
+        if (to_hex(sha256_file(path)) != declared_sha256) {
+            error = "Deuteros title-display v5 artifact SHA-256 does not match its manifest";
+            return false;
+        }
+    } catch (const std::exception&) {
+        error = "Unable to hash Deuteros title-display v5 artifact";
+        return false;
+    }
+    artifacts.push_back({std::string(key), path, size, declared_sha256, std::string(format)});
+    return true;
+}
+
+bool validate_deuteros_amiga_title_display_artifacts_v5(const std::filesystem::path& manifest_path,
+    const std::map<std::string, std::string>& fields,
+    const DeuterosAmigaTitleDisplayReferenceTraceDiagnostics& diagnostics,
+    std::vector<ReferenceTraceArtifact>& artifacts, std::string& error) {
+    // The title-display event parser has already bound its fixed v4 prefix.
+    // This v5 layer only proves that capture-side bytes actually exist and
+    // match those opaque checkpoints; it never opens them in the runtime.
+    std::uint64_t input_size = 0;
+    std::uint64_t pcm_size = 0;
+    std::uint64_t channels = 0;
+    std::uint64_t sample_frames = 0;
+    if (!decimal_u64(fields.at("input_timeline_size"), input_size) || input_size == 0
+        || input_size > 1024U * 1024U
+        || !decimal_u64(fields.at("pcm_size"), pcm_size) || pcm_size == 0
+        || pcm_size > 8U * 1024U * 1024U
+        || !hexadecimal_u64(diagnostics.audio_channels, channels)
+        || !hexadecimal_u64(diagnostics.audio_sample_frames, sample_frames)
+        || channels == 0 || sample_frames == 0
+        || channels > std::numeric_limits<std::uint64_t>::max() / sample_frames
+        || channels * sample_frames > std::numeric_limits<std::uint64_t>::max() / 2U
+        || pcm_size != channels * sample_frames * 2U) {
+        error = "Deuteros title-display v5 audio or input artifact dimensions are invalid";
+        return false;
+    }
+    const bool cross_bound = fields.at("copper_list_sha256") == diagnostics.copper_list_sha256
+        && fields.at("rgb4_palette_sha256") == diagnostics.rgb4_palette_sha256
+        && fields.at("bitplanes_sha256") == diagnostics.bitplanes_sha256
+        && fields.at("rgba_palette_sha256") == diagnostics.rgba_palette_sha256
+        && fields.at("rgba_frame_sha256") == diagnostics.rgba_sha256
+        && fields.at("pcm_sha256") == diagnostics.pcm_sha256;
+    if (!cross_bound) {
+        error = "Deuteros title-display v5 artifacts do not match their event checkpoints";
+        return false;
+    }
+    std::set<std::filesystem::path> claimed_paths;
+    claimed_paths.insert(manifest_path.lexically_normal());
+    const auto events_path = (manifest_path.parent_path() / fields.at("event_file")).lexically_normal();
+    claimed_paths.insert(events_path);
+    artifacts.clear();
+    return validate_title_display_artifact(manifest_path, fields, "input_timeline", "input-timeline.txt",
+               input_size, fields.at("input_timeline_sha256"), "host-input-timeline", 1024U * 1024U,
+               claimed_paths, artifacts, error)
+        && validate_title_display_artifact(manifest_path, fields, "copper_list", "copper-list.bin", 88,
+               diagnostics.copper_list_sha256, "amiga-copper-words", 88, claimed_paths, artifacts, error)
+        && validate_title_display_artifact(manifest_path, fields, "rgb4_palette", "palette-rgb4.bin", 40,
+               diagnostics.rgb4_palette_sha256, "amiga-rgb4-words", 40, claimed_paths, artifacts, error)
+        && validate_title_display_artifact(manifest_path, fields, "bitplanes", "bitplanes.bin", 32000,
+               diagnostics.bitplanes_sha256, "amiga-4-plane-320x200", 32000, claimed_paths, artifacts, error)
+        && validate_title_display_artifact(manifest_path, fields, "rgba_palette", "palette-rgba8888.bin", 80,
+               diagnostics.rgba_palette_sha256, "rgba8888-rgb4-expanded-nibbles", 80, claimed_paths, artifacts, error)
+        && validate_title_display_artifact(manifest_path, fields, "rgba_frame", "frame-rgba8888.bin", 256000,
+               diagnostics.rgba_sha256, "rgba8888-row-major-320x200", 256000, claimed_paths, artifacts, error)
+        && validate_title_display_artifact(manifest_path, fields, "pcm", "audio-s16le.bin", pcm_size,
+               diagnostics.pcm_sha256, "s16le-interleaved", 8U * 1024U * 1024U, claimed_paths, artifacts, error);
+}
+
 } // namespace
 
 ReferenceTraceValidation validate_reference_trace(
@@ -766,6 +873,17 @@ ReferenceTraceValidation validate_reference_trace(
         "source_release_sha256", "source_release_size", "source_media_sha256", "source_stage_sha256",
         "capture_start_utc", "capture_end_utc", "emulator_name", "emulator_version", "emulator_sha256",
         "config_sha256", "command_tail_sha256", "input_timeline_sha256"};
+    constexpr std::array deuteros_amiga_title_display_v5_required_fields{
+        "format", "adapter", "event_file", "event_size", "event_sha256", "game", "platform", "language",
+        "source_release_sha256", "source_release_size", "source_media_sha256", "source_stage_sha256",
+        "capture_start_utc", "capture_end_utc", "emulator_name", "emulator_version", "emulator_sha256",
+        "config_sha256", "command_tail_sha256", "input_timeline_sha256", "input_timeline_file", "input_timeline_size",
+        "copper_list_file", "copper_list_size", "copper_list_sha256",
+        "rgb4_palette_file", "rgb4_palette_size", "rgb4_palette_sha256",
+        "bitplanes_file", "bitplanes_size", "bitplanes_sha256",
+        "rgba_palette_file", "rgba_palette_size", "rgba_palette_sha256",
+        "rgba_frame_file", "rgba_frame_size", "rgba_frame_sha256",
+        "pcm_file", "pcm_size", "pcm_sha256"};
     const bool v1 = fields.contains("format") && fields.at("format") == "project-eon-reference-trace-v1";
     const bool millennium_dos_v2 = fields.contains("format")
         && fields.at("format") == "project-eon-reference-trace-v2"
@@ -794,6 +912,9 @@ ReferenceTraceValidation validate_reference_trace(
     const bool deuteros_amiga_title_display_v4 = fields.contains("format")
         && fields.at("format") == "project-eon-reference-trace-v4"
         && fields.contains("adapter") && fields.at("adapter") == "deuteros-amiga-en-title-display-v4";
+    const bool deuteros_amiga_title_display_v5 = fields.contains("format")
+        && fields.at("format") == "project-eon-reference-trace-v5"
+        && fields.contains("adapter") && fields.at("adapter") == "deuteros-amiga-en-title-display-artifacts-v5";
     const auto manifest_has_exact_fields = [&fields](const auto& required) {
         if (fields.size() != required.size()) return false;
         return std::all_of(required.begin(), required.end(), [&fields](const auto field) {
@@ -807,13 +928,16 @@ ReferenceTraceValidation validate_reference_trace(
              : deuteros_amiga_v2 ? manifest_has_exact_fields(deuteros_amiga_v2_required_fields)
              : (deuteros_amiga_title_bridge_v3 || deuteros_amiga_main_stage_v3
                  || deuteros_amiga_title_display_v4) ? manifest_has_exact_fields(deuteros_amiga_v2_required_fields)
+             : deuteros_amiga_title_display_v5
+                 ? manifest_has_exact_fields(deuteros_amiga_title_display_v5_required_fields)
              : millennium_amiga_v2 ? manifest_has_exact_fields(v2_required_fields)
              : false)) {
         return {{}, "Reference trace manifest has unknown or missing fields"};
     }
     if ((!v1 && fields.at("format") != "project-eon-reference-trace-v2"
             && fields.at("format") != "project-eon-reference-trace-v3"
-            && fields.at("format") != "project-eon-reference-trace-v4")
+            && fields.at("format") != "project-eon-reference-trace-v4"
+            && fields.at("format") != "project-eon-reference-trace-v5")
         || !basename_only(fields.at("event_file"))
         || !lowercase_sha256(fields.at("event_sha256"))
         || !lowercase_sha256(fields.at("source_release_sha256"))
@@ -822,7 +946,8 @@ ReferenceTraceValidation validate_reference_trace(
         || !lowercase_sha256(fields.at("command_tail_sha256"))
         || !lowercase_sha256(fields.at("input_timeline_sha256"))
         || ((deuteros_atari_v2 || deuteros_amiga_v2 || deuteros_amiga_title_bridge_v3
-             || deuteros_amiga_main_stage_v3 || deuteros_amiga_title_display_v4)
+             || deuteros_amiga_main_stage_v3 || deuteros_amiga_title_display_v4
+             || deuteros_amiga_title_display_v5)
             && (!lowercase_sha256(fields.at("source_media_sha256"))
             || !lowercase_sha256(fields.at("source_stage_sha256"))))
         || !utc_timestamp(fields.at("capture_start_utc"))
@@ -903,7 +1028,7 @@ ReferenceTraceValidation validate_reference_trace(
                 || fields.at("source_stage_sha256") != "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6")) {
         return {{}, "Reference trace adapter does not match the exact Deuteros Amiga main-stage media"};
     }
-    if (deuteros_amiga_title_display_v4
+    if ((deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5)
             && (source->game != Game::deuteros || source->platform != Platform::amiga
                 || source->language != "en"
                 || source->sha256 != "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04"
@@ -950,7 +1075,7 @@ ReferenceTraceValidation validate_reference_trace(
                 : deuteros_amiga_v2
                     ? validate_deuteros_amiga_events(events_path, event_size, fields.at("event_sha256"),
                         deuteros_amiga_diagnostics, error)
-                    : deuteros_amiga_title_display_v4
+                    : (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5)
                         ? validate_deuteros_amiga_title_display_events(events_path, event_size,
                             fields.at("event_sha256"), fields.at("input_timeline_sha256"),
                             deuteros_amiga_title_display_diagnostics, error)
@@ -963,6 +1088,12 @@ ReferenceTraceValidation validate_reference_trace(
                         : validate_millennium_amiga_events(events_path, event_size, fields.at("event_sha256"),
                             amiga_diagnostics, error);
     if (!events_valid) {
+        return {{}, error};
+    }
+    std::vector<ReferenceTraceArtifact> artifacts;
+    if (deuteros_amiga_title_display_v5
+        && !validate_deuteros_amiga_title_display_artifacts_v5(manifest_path, fields,
+            deuteros_amiga_title_display_diagnostics, artifacts, error)) {
         return {{}, error};
     }
     std::vector<ReferenceTraceBoundary> recovery_boundaries;
@@ -978,17 +1109,21 @@ ReferenceTraceValidation validate_reference_trace(
     if (deuteros_amiga_v2) event_count = deuteros_amiga_diagnostics.event_count;
     if (deuteros_amiga_title_bridge_v3) event_count = deuteros_amiga_title_bridge_diagnostics.event_count;
     if (deuteros_amiga_main_stage_v3) event_count = deuteros_amiga_main_stage_diagnostics.event_count;
-    if (deuteros_amiga_title_display_v4) event_count = deuteros_amiga_title_display_diagnostics.event_count;
+    if (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5) {
+        event_count = deuteros_amiga_title_display_diagnostics.event_count;
+    }
     return {ReferenceTrace{manifest_path, events_path, *source,
         fields.at("capture_start_utc"), fields.at("capture_end_utc"), fields.at("emulator_name"),
         fields.at("emulator_version"), fields.at("emulator_sha256"), fields.at("config_sha256"),
         fields.at("command_tail_sha256"), fields.at("input_timeline_sha256"), fields.at("format"),
         v1 ? "" : fields.at("adapter"), event_count, event_size, fields.at("event_sha256"),
         (deuteros_atari_v2 || deuteros_amiga_v2 || deuteros_amiga_title_bridge_v3
-            || deuteros_amiga_main_stage_v3 || deuteros_amiga_title_display_v4)
+            || deuteros_amiga_main_stage_v3 || deuteros_amiga_title_display_v4
+            || deuteros_amiga_title_display_v5)
             ? fields.at("source_media_sha256") : "",
         (deuteros_atari_v2 || deuteros_amiga_v2 || deuteros_amiga_title_bridge_v3
-            || deuteros_amiga_main_stage_v3 || deuteros_amiga_title_display_v4)
+            || deuteros_amiga_main_stage_v3 || deuteros_amiga_title_display_v4
+            || deuteros_amiga_title_display_v5)
             ? fields.at("source_stage_sha256") : "",
         std::move(recovery_boundaries),
         millennium_dos_title_init_v2 ? millennium_dos_title_init_diagnostics.interrupt_count
@@ -1020,12 +1155,13 @@ ReferenceTraceValidation validate_reference_trace(
         deuteros_amiga_title_bridge_diagnostics.dispatch_snapshot_count,
         millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.mode_read_count : 0,
         millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.adapter_return_count : 0,
-        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.display_layout_count : 0,
-        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.bitplane_layout_count : 0,
-        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.palette_checkpoint_count : 0,
-        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.input_checkpoint_count : 0,
-        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.frame_checkpoint_count : 0,
-        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.audio_checkpoint_count : 0}, {}};
+        (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5) ? deuteros_amiga_title_display_diagnostics.display_layout_count : 0,
+        (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5) ? deuteros_amiga_title_display_diagnostics.bitplane_layout_count : 0,
+        (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5) ? deuteros_amiga_title_display_diagnostics.palette_checkpoint_count : 0,
+        (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5) ? deuteros_amiga_title_display_diagnostics.input_checkpoint_count : 0,
+        (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5) ? deuteros_amiga_title_display_diagnostics.frame_checkpoint_count : 0,
+        (deuteros_amiga_title_display_v4 || deuteros_amiga_title_display_v5) ? deuteros_amiga_title_display_diagnostics.audio_checkpoint_count : 0,
+        std::move(artifacts)}, {}};
 }
 
 } // namespace eon

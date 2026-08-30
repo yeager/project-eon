@@ -97,6 +97,7 @@ capture tooling must choose the row below before it writes a manifest.
 | `deuteros-amiga-en-title-stage-v1` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` | Clean system ADF and `ADF +0x6e000`, 0x6ca00-byte title stage. |
 | `deuteros-amiga-en-main-copy-loop-v3` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6` | Clean system ADF and `ADF +0x5800`, 0x4200-byte main stage. |
 | `deuteros-amiga-en-title-display-v4` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` | Clean system ADF and title stage; capture admission only. |
+| `deuteros-amiga-en-title-display-artifacts-v5` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | The v4 source hashes plus seven named, hash-verified sibling capture artifacts. | Clean system ADF and title stage; artifact admission only. |
 
 This table is a capture-admission registry, not an equivalence class.  An
 archive with the same filename, a direct one-disk container that exposes an
@@ -126,6 +127,7 @@ similar platform's evidence.
 | `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
 | `deuteros-amiga-en-main-copy-loop-v3` | `deuteros-amiga-main-stage` |
 | `deuteros-amiga-en-title-display-v4` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
+| `deuteros-amiga-en-title-display-artifacts-v5` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
 
 For the two physical-media adapters, the CLI also prints their already
 validated `source media` and `source stage` hashes. This makes an independent
@@ -420,6 +422,30 @@ accept a generated frame, supply a display base or palette, replay audio,
 invoke a callback, or advance a title/game session. Until an independently
 recorded v4 capture exists outside this repository, the runtime remains at its
 documented title-stage boundary.
+
+### Deuteros Amiga title-display artifact v5 capture profile
+
+`project-eon-reference-trace-v5` with adapter
+`deuteros-amiga-en-title-display-artifacts-v5` retains the exact ordered v4
+event grammar and fixed clean-media identity. It does not upgrade or reinterpret
+a v4 record. In addition, its manifest must name these distinct, regular,
+non-symlink sibling files, all of which are rehashed after event validation and
+before the CLI prints its provenance report:
+
+| Role | Fixed filename and size | Required cross-binding |
+| --- | --- | --- |
+| Host input | `input-timeline.txt`, 1–1,048,576 bytes | SHA-256 equals manifest `input_timeline_sha256`, which already equals the `input-checkpoint` hash. |
+| Copper list | `copper-list.bin`, 88 bytes | SHA-256 equals `display-layout.copper_list_sha256`. |
+| RGB4 palette | `palette-rgb4.bin`, 40 bytes | SHA-256 equals `palette-checkpoint.rgb4_sha256`. |
+| Bitplanes | `bitplanes.bin`, 32,000 bytes | SHA-256 equals `frame-checkpoint.bitplanes_sha256`. |
+| Expanded palette | `palette-rgba8888.bin`, 80 bytes | SHA-256 equals `palette-checkpoint.rgba_palette_sha256`. |
+| RGBA frame | `frame-rgba8888.bin`, 256,000 bytes | SHA-256 equals `frame-checkpoint.rgba_sha256`. |
+| PCM | `audio-s16le.bin`, 1–8,388,608 bytes | SHA-256 equals `audio-checkpoint.pcm_sha256`; byte count is exactly `sample_frames × channels × 2` and both factors are nonzero. |
+
+No artifact byte is decoded, rendered, replayed, copied into game data, or
+given to a recovered session. V5 is a stronger preservation receipt only: it
+proves that a capture's externally declared audio/visual/input bytes exist
+under the displayed hashes while preserving the same title-runtime boundary.
 
 The mandatory main-stage SHA-256 prevents a PC observation from being
 mistakenly attributed to the later title stage, which overlays part of the
