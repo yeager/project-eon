@@ -303,6 +303,27 @@ opens a mount or writes an evidence directory. Its required SHA-256 is
 An arbitrary DOSBox-X binary, including one with similar visible behaviour,
 cannot produce a Project Eon capture receipt.
 
+### CPU-profile discrimination (diagnostics only)
+
+Three additional 15-second, input-free observations establish that the
+remaining loop is neither an Eon observer side effect nor solved by choosing
+a different CPU label. Each used the same read-only, rehashed English archive
+and is external-only evidence:
+
+| Recorder / CPU configuration | Observed result | Consequence |
+| --- | --- | --- |
+| Unmodified DOSBox-X build, `cputype=auto` | `INT 6` loop; 933,800,899 console bytes, SHA-256 `d10a91cdf2f728b1e833f123718e38d9ea35a170252415676b061c9ea4db6c94` | The loop is not caused by Eon's CPU/DOS/GUI observer hooks. |
+| Reviewed recorder, `cputype=286` | Same `INT 6` loop; 856,661,123 console bytes, SHA-256 `f565bcd77f6036f9e3a16f7377561c4b27783f723a2933e9241e4925feafba69` | A 286 label is not a compatible substitute for the default profile. |
+| Reviewed recorder, `cputype=8086` | No `INT 6`; instead repeated writes to ROM at `f4725`; console SHA-256 `2d6bb4684f25f73c964b7a23d8dc7fdebcba78c9931faa55593368fd53f9fa8b` | This configuration selects DOSBox-X's 8086 core path, bypassing the recorder's required normal-core pre-instruction hook. Its two-record result is incomplete and inadmissible. |
+
+The first comparison is especially important: it retains no Eon event/result
+files and therefore cannot be promoted to a trace, but it isolates the failure
+to the emulator's machine/driver behaviour. The `8086` route produced only
+the setup and title private-interrupt observations (event-stream SHA-256
+`f61dba5b38f7eaa067e1d9f4a943309fb9dd4d9c9231027cd133b9aa28d8bc5b`) and no
+raw-result file. Project Eon must keep `core=normal` with its reviewed hook;
+it must not switch CPU cores merely to suppress diagnostics.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
