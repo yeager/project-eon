@@ -55,10 +55,11 @@ class CaptureError(RuntimeError):
 class RecorderConsoleStatus:
     """Hash-bound identity for a bounded external console transcript."""
 
-    def __init__(self, total_bytes: int, sha256: str, retained_bytes: int) -> None:
+    def __init__(self, total_bytes: int, sha256: str, retained_bytes: int, retained_sha256: str) -> None:
         self.total_bytes = total_bytes
         self.sha256 = sha256
         self.retained_bytes = retained_bytes
+        self.retained_sha256 = retained_sha256
 
     @property
     def truncated(self) -> bool:
@@ -67,6 +68,7 @@ class RecorderConsoleStatus:
 
 def sha256_file(path: Path) -> tuple[str, int]:
     digest = hashlib.sha256()
+    retained_digest = hashlib.sha256()
     size = 0
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -211,6 +213,7 @@ def raw_observation_status(path: Path, name: str) -> str:
 def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
     """Drain a potentially pathological emulator console into fixed storage."""
     digest = hashlib.sha256()
+    retained_digest = hashlib.sha256()
     total = 0
     retained = 0
     with path.open("xb") as destination:
@@ -223,10 +226,11 @@ def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
             if retained < MAX_RECORDER_CONSOLE_LOG_BYTES:
                 keep = chunk[:MAX_RECORDER_CONSOLE_LOG_BYTES - retained]
                 destination.write(keep)
+                retained_digest.update(keep)
                 retained += len(keep)
         destination.flush()
         os.fsync(destination.fileno())
-    return RecorderConsoleStatus(total, digest.hexdigest(), retained)
+    return RecorderConsoleStatus(total, digest.hexdigest(), retained, retained_digest.hexdigest())
 
 
 def recorder_console_status(status: RecorderConsoleStatus) -> str:
@@ -234,6 +238,7 @@ def recorder_console_status(status: RecorderConsoleStatus) -> str:
             f"recorder_console_sha256={status.sha256}\n"
             f"recorder_console_total_bytes={status.total_bytes}\n"
             f"recorder_console_retained_bytes={status.retained_bytes}\n"
+            f"recorder_console_retained_sha256={status.retained_sha256}\n"
             f"recorder_console_truncated={'true' if status.truncated else 'false'}\n")
 
 

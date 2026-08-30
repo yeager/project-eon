@@ -77,6 +77,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
     except (KeyError, ValueError):
         raise ValueError("recorder console receipt has no valid total")
     if (fields.get("recorder_console") != "present" or fields.get("recorder_console_retained_bytes") != str(actual[1])
+            or fields.get("recorder_console_retained_sha256") != actual[0]
             or total < actual[1] or len(fields.get("recorder_console_sha256", "")) != 64):
         raise ValueError("recorder console receipt mismatch")
 

@@ -47,6 +47,7 @@ class ReceiptVerifierTests(unittest.TestCase):
             root = Path(directory)
             (root / "recorder-console.log").write_bytes(b"x")
             fields = {"recorder_console": "present", "recorder_console_retained_bytes": "1",
+                      "recorder_console_retained_sha256": hashlib.sha256(b"x").hexdigest(),
                       "recorder_console_total_bytes": "2", "recorder_console_sha256": "a" * 64}
             TOOL.verify_console(fields, root)
             fields["recorder_console_retained_bytes"] = "2"
