@@ -1,6 +1,5 @@
 #include "data/deuteros_amiga_audio.hpp"
 
-#include <limits>
 #include <span>
 #include <stdexcept>
 
@@ -52,9 +51,9 @@ DeuterosAmigaSoundBank parse_deuteros_amiga_sound_bank(
         if (length_words == 0 || period == 0 || volume > 64) {
             throw std::runtime_error("Invalid Deuteros Paula sound entry");
         }
-        if (length_words > std::numeric_limits<std::uint32_t>::max() / 2U) {
-            throw std::runtime_error("Deuteros Paula sample length overflow");
-        }
+        // `length_words` is an on-media 16-bit word count. Widen before the
+        // byte conversion; its maximum (131070 bytes) cannot overflow the
+        // 32-bit bundle-relative bounds checked below.
         const auto byte_length = static_cast<std::uint32_t>(length_words) * 2U;
         if (sample_relative_offset > bundle.length || byte_length > bundle.length - sample_relative_offset) {
             throw std::runtime_error("Deuteros Paula sample outside bundle");
