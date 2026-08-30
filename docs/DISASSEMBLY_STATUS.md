@@ -26,6 +26,14 @@ repository; commands below stream a member directly from the user's archive.
 | Deuteros Amiga | Motorola 68000 | boot to `$12a4e`; main stage disk `+$5800` to `$20000`, entry `$21734`; title stage disk `+$6e000` to `$13000`, entry `$40426` | Exec/graphics/callback returns, display ownership, title/game input and timing |
 | Deuteros Atari ST | Motorola 68000 | Replicants Disk 1 protected boot: disk `+$4ec00` to `$1200`, entry `$9c4`, stage SHA-256 `d20784600c5fe3c8fb2005ec5d162d68ffa8f5a0f65d29fcd8a1d9ede2bafddc`; next stage `$70000`; Disk 2 KILLER_BOOT vector route | XBIOS read result, callback dispatch, RAM vector contents, all control/state semantics |
 
+The same range tool has been run against Millennium Amiga's Defjam system
+disk (`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`):
+disk `+0x16400`, length `0x2c000`, maps to `$68000` and hashes to
+`d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e`.
+This establishes a reproducible full byte-coverage candidate listing of the
+shared resident stage; it does not turn its opaque loader handoff, indirect
+calls, or unknown return values into executable Eon behaviour.
+
 ## Variant separation
 
 The following identities are recognised forensic inputs, not interchangeable
