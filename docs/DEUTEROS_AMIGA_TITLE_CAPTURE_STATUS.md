@@ -44,6 +44,11 @@ state:
 | `BPL1MOD` / `BPL2MOD` | `0x0000` / `0x0000` |
 | `DDFSTRT` / `DDFSTOP` | `0x0038` / `0x00d0` |
 
+The four addresses are separated by `0x1f40` (8,000) bytes. Combined with
+the observed 320×200, 40-byte-row, zero-modulo layout and the title stage's
+hash-locked `0x1f40` longword clear loop, this is now an explicit v4 capture
+admission boundary—not a claim that later display updates share it.
+
 The following hashes were calculated from the observed RAM ranges at that
 same paused sample. They identify the bytes without publishing them:
 
