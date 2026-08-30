@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 from pathlib import Path
 import unittest
 
@@ -68,6 +69,21 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "exact recognised"):
                 TOOL.validate_identity(source.resolve(), "test source", "0" * 64, source.stat().st_size)
 
+    def test_recorder_identity_is_returned_only_for_the_reviewed_binary(self) -> None:
+        with temporary_directory() as directory:
+            recorder = Path(directory) / "reviewed-recorder"
+            recorder.write_bytes(b"recorder boundary bytes")
+            original_hash = TOOL.EXPECTED_RECORDER_SHA256
+            try:
+                TOOL.EXPECTED_RECORDER_SHA256 = hashlib.sha256(recorder.read_bytes()).hexdigest()
+                self.assertEqual(TOOL.validate_recorder(recorder),
+                                 (TOOL.EXPECTED_RECORDER_SHA256, recorder.stat().st_size))
+                TOOL.EXPECTED_RECORDER_SHA256 = "0" * 64
+                with self.assertRaisesRegex(TOOL.CaptureError, "reviewed FS-UAE"):
+                    TOOL.validate_recorder(recorder)
+            finally:
+                TOOL.EXPECTED_RECORDER_SHA256 = original_hash
+
     def test_input_receipt_status_keeps_no_input_distinct_from_a_receipt(self) -> None:
         with temporary_directory() as directory:
             receipt = Path(directory) / "host-input-receipt.txt"
@@ -87,6 +103,40 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             receipt.write_bytes(b"x" * (TOOL.MAX_INPUT_RECEIPT_BYTES + 1))
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.input_receipt_status(receipt)
+
+    def test_raw_recorder_observation_is_hash_bound_and_bounded(self) -> None:
+        with temporary_directory() as directory:
+            raw = Path(directory) / "raw-pc.txt"
+            self.assertEqual(TOOL.raw_observation_status(raw, "raw_pc"), "raw_pc=absent\n")
+            raw.write_bytes(b"pc 0x001000\n")
+            self.assertIn("raw_pc_sha256=", TOOL.raw_observation_status(raw, "raw_pc"))
+            raw.unlink()
+            raw.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.raw_observation_status(raw, "raw_pc")
+            raw.unlink()
+            raw.write_bytes(b"x" * (TOOL.MAX_RAW_OBSERVATION_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.raw_observation_status(raw, "raw_pc")
+
+    def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
+        with temporary_directory() as directory:
+            path = Path(directory) / "recorder-console.log"
+            observed = b"x" * (TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES + 17)
+            status = TOOL.capture_bounded_console(io.BytesIO(observed), path)
+            self.assertEqual(status.total_bytes, len(observed))
+            self.assertEqual(status.retained_bytes, TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES)
+            self.assertTrue(status.truncated)
+            self.assertEqual(status.sha256, hashlib.sha256(observed).hexdigest())
+            self.assertEqual(path.stat().st_size, TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES)
+            receipt = TOOL.recorder_console_status(status)
+            self.assertIn("recorder_console_truncated=true", receipt)
+
+    def test_identity_status_retains_a_reviewable_capture_preimage(self) -> None:
+        for name in ("source_release", "kickstart_archive", "recorder", "configuration"):
+            status = TOOL.identity_status(name, ("a" * 64, 123))
+            self.assertEqual(status, f"{name}_sha256=" + "a" * 64
+                             + f"\n{name}_bytes=123\n")
 
 
 if __name__ == "__main__":
