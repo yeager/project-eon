@@ -83,16 +83,30 @@ def validate_recorder(path: Path) -> None:
         raise CaptureError("recorder hash does not match the reviewed FS-UAE binary")
 
 
+def is_system_tmp_path(path: Path) -> bool:
+    """Reject the operator's `/tmp` spelling before host path resolution.
+
+    `/tmp` becomes `/private/tmp` on macOS and a drive-rooted path on Windows,
+    so a resolved-path-only test would make the external-evidence contract
+    host dependent.
+    """
+    normalized = path.as_posix().replace("\\", "/")
+    if normalized == "/tmp" or normalized.startswith("/tmp/"):
+        return True
+    parts = path.parts
+    return bool(path.anchor and len(parts) > 1 and parts[1].casefold() == "tmp")
+
+
 def reject_unsafe_output(*sources: Path, output: Path) -> Path:
     if not output.is_absolute():
         raise CaptureError("output path must be absolute")
     if output.exists() or output.is_symlink():
         raise CaptureError("output directory must not exist")
+    if is_system_tmp_path(output):
+        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     resolved = output.resolve(strict=False)
     if resolved == ROOT or ROOT in resolved.parents:
         raise CaptureError("output must stay outside the repository")
-    if str(resolved) == "/tmp" or Path("/tmp") in resolved.parents:
-        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     if any(source.parent == resolved or source.parent in resolved.parents for source in sources):
         raise CaptureError("output must stay outside supplied-media directories")
     if not resolved.parent.is_dir() or resolved.parent.is_symlink():

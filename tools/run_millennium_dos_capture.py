@@ -60,18 +60,33 @@ def require_absolute_regular_file(path: Path, label: str, *, executable: bool = 
     return path
 
 
+def is_system_tmp_path(path: Path) -> bool:
+    """Reject the lexical `/tmp` route before platform-specific resolution.
+
+    macOS resolves `/tmp` through `/private/tmp`, while Windows resolves a
+    POSIX-looking `Path('/tmp/...')` on its current drive.  The capture
+    contract names the route supplied by the operator, so checking only a
+    resolved path silently weakened it on both hosts.
+    """
+    normalized = path.as_posix().replace("\\", "/")
+    if normalized == "/tmp" or normalized.startswith("/tmp/"):
+        return True
+    parts = path.parts
+    return bool(path.anchor and len(parts) > 1 and parts[1].casefold() == "tmp")
+
+
 def reject_unsafe_output(source: Path, output: Path) -> Path:
     if not output.is_absolute():
         raise CaptureError("output path must be absolute")
     if output.exists() or output.is_symlink():
         raise CaptureError("output directory must not exist")
+    if is_system_tmp_path(output):
+        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     resolved = output.resolve(strict=False)
     if resolved == ROOT or ROOT in resolved.parents:
         raise CaptureError("output must stay outside the repository")
     if source.parent == resolved or source.parent in resolved.parents:
         raise CaptureError("output must stay outside the supplied-media directory")
-    if str(resolved) == "/tmp" or Path("/tmp") in resolved.parents:
-        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     parent = resolved.parent
     if not parent.is_dir() or parent.is_symlink():
         raise CaptureError("output parent must be an existing non-symlink directory")
@@ -93,7 +108,16 @@ def require_visible_operator_input(environment: dict[str, str]) -> None:
 
 
 def recorder_config(game_root: Path) -> str:
-    """Return the fixed normal-core configuration with one read-only game root."""
+    """Return the fixed, evidence-reviewed configuration with one read-only game root.
+
+    Millennium's 16-bit startup reaches a documented word copy from the last
+    offset in a segment.  The pinned recorder's default ``segment limits=true``
+    turns that real-mode wrapping operation into an endless #GP diagnostic
+    loop.  Disable only that emulator compatibility check; this does not
+    alter guest memory, the original archive, or the physical-input policy.
+    The resulting configuration remains an explicit, hash-bound capture
+    preimage rather than an implicit runtime fallback.
+    """
     return "\n".join((
         "[sdl]",
         "fullscreen=false",
@@ -110,6 +134,7 @@ def recorder_config(game_root: Path) -> str:
         "[cpu]",
         "core=normal",
         "cycles=max",
+        "segment limits=false",
         "",
         "[sblaster]",
         "sbtype=none",

@@ -257,10 +257,20 @@ any title/game action.
 The private command timelines, raw files, and compressed emulator logs remain
 outside this repository. The emulator repeatedly reported an x86 segment
 limit violation while the title wrapper remained within its existing private
-ABI boundary. That diagnostic does not establish a game fault or an input
-semantic. A future input capture must first provide a reviewed delivery
-receipt and a trace schema that binds a real poll/result/frame sequence; Eon
-does not retry these two timings as a substitute.
+ABI boundary. Inspection of the pinned recorder's generated reference
+configuration establishes that its default `segment limits=true` rejects a
+word transfer at `ES:DI=$ffff` rather than applying the original real-mode
+wrap. This is recorder configuration behaviour, not evidence of an original
+game fault or input semantic.
+
+The operator-facing capture helper now pins `segment limits=false` together
+with the existing normal core. The configuration is written and hash-bound in
+every external capture directory, so it is reviewable and cannot silently
+change Eon's runtime or supplied bytes. It does not inject input, alter guest
+memory, or promote a capture into an input result. A future input capture must
+still provide a physical host-key receipt and a trace schema that binds a real
+poll/result/frame sequence; Eon does not retry the prior AUTOTYPE timings as a
+substitute.
 
 ## Audited local route
 
