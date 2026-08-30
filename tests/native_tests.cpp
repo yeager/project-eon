@@ -1351,9 +1351,8 @@ int main() {
             == std::vector<std::string>{"en", "es"}));
         assert(eon::platform_card_status(multilingual_menu_releases,
             eon::Game::millennium, eon::Platform::dos)
-            == eon::PlatformCardStatus::release_selection_required);
-        assert(eon::platform_card_selectable(eon::PlatformCardStatus::release_selection_required));
-        assert(!eon::platform_card_startable(eon::PlatformCardStatus::release_selection_required));
+            == eon::PlatformCardStatus::ready);
+        assert(eon::platform_card_startable(eon::PlatformCardStatus::ready));
         assert(eon::platform_card_status(multilingual_menu_releases,
             eon::Game::millennium, eon::Platform::atari_st)
             == eon::PlatformCardStatus::unavailable);
@@ -1363,8 +1362,8 @@ int main() {
             eon::Game::deuteros, eon::Platform::atari_st)
             == eon::PlatformCardStatus::ready);
         assert(eon::platform_card_startable(eon::PlatformCardStatus::ready));
-        assert(!eon::select_available_release_language(multilingual_menu_releases,
-            eon::Game::millennium, eon::Platform::dos, std::nullopt));
+        assert(eon::select_available_release_language(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::dos, std::nullopt) == "en");
         assert(eon::select_available_release_language(multilingual_menu_releases,
             eon::Game::millennium, eon::Platform::dos, std::string{"es"}) == "es");
         assert(eon::select_available_release_language(multilingual_menu_releases,

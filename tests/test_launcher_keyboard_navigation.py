@@ -15,14 +15,14 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("LauncherPage::releases", SOURCE)
         self.assertIn("LauncherPage::profiles", SOURCE)
 
-    def test_multilingual_platforms_require_a_release_card_before_profiles(self) -> None:
+    def test_english_is_default_for_multilingual_platforms(self) -> None:
         self.assertIn("available_release_languages", SOURCE)
         self.assertIn("select_available_release_language", SOURCE)
-        self.assertIn("SELECT AN ORIGINAL RELEASE", SOURCE)
-        self.assertIn("CHOOSE A LANGUAGE; NO EDITION FALLBACK IS USED", SOURCE)
-        self.assertIn("RELEASE IDENTITY IS FIXED AT LAUNCH", SOURCE)
+        self.assertIn('std::find(languages.begin(), languages.end(), "en")', SOURCE)
+        self.assertIn("English is selected automatically when it exists.", SOURCE)
         self.assertIn("advance_after_platform_selection", SOURCE)
-        self.assertIn("LauncherPage::releases", SOURCE[SOURCE.index("advance_after_platform_selection"):])
+        advance = SOURCE[SOURCE.index("advance_after_platform_selection"):]
+        self.assertIn("active_release_language ? LauncherPage::profiles", advance)
 
     def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
         self.assertIn("eon::platform_card_status(releases, game, card.platform)", SOURCE)

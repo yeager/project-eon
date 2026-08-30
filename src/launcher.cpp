@@ -228,8 +228,12 @@ PlatformCardStatus platform_card_status(
     const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform) {
     const auto languages = available_release_languages(releases, game, platform);
     if (languages.empty()) return PlatformCardStatus::unavailable;
-    return languages.size() == 1 ? PlatformCardStatus::ready
-                                 : PlatformCardStatus::release_selection_required;
+    // English is the documented default for a selected game/platform. An
+    // explicit --release-language still selects only that exact identity;
+    // this never substitutes another platform or an unavailable language.
+    return languages.size() == 1
+            || std::find(languages.begin(), languages.end(), "en") != languages.end()
+        ? PlatformCardStatus::ready : PlatformCardStatus::release_selection_required;
 }
 
 bool platform_card_selectable(const PlatformCardStatus status) {
@@ -270,8 +274,10 @@ std::optional<std::string> select_available_release_language(
     if (current && std::find(languages.begin(), languages.end(), *current) != languages.end()) {
         return current;
     }
-    // Selecting one release is safe only when there is exactly one matching
-    // language.  More than one must be exposed as distinct launcher cards.
+    // English is the stable default when it is installed. This choice is
+    // scoped to the already selected game/platform and remains an exact
+    // hash-verified release identity, not a UI-locale inference or fallback.
+    if (std::find(languages.begin(), languages.end(), "en") != languages.end()) return "en";
     return languages.size() == 1 ? std::optional<std::string>{languages.front()} : std::nullopt;
 }
 
