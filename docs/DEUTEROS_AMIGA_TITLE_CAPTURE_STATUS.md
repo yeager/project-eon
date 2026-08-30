@@ -114,3 +114,7 @@ specified frame boundary, converts it with a documented RGB4 rule, and
 captures PCM after mixing. Bind those files to the source identities above
 with `tools/record_reference_trace.py`; only then may the v4 validator be
 asked to admit the trace.
+
+The current external raw-observer design, including its exact FS-UAE source
+revision and non-admission boundary, is in
+[`DEUTEROS_AMIGA_FS_UAE_RECORDER.md`](DEUTEROS_AMIGA_FS_UAE_RECORDER.md).
