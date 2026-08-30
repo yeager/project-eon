@@ -1011,15 +1011,16 @@ int main() {
             "event\t5 50 custom-register-call site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff\n"
             "event\t6 60 graphics-return site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
             diagnostics, trace_error));
-        // These values exercise a capture grammar only. They are not pixels,
-        // audio, or a title-stage replay fixture.
+        // The fixed display values are genuine debugger observations. The
+        // all-zero future hash fields below exercise grammar only; they are
+        // not pixels, audio, or a title-stage replay fixture.
         std::string title_display_events{valid_events};
         title_display_events +=
-            "event\t19 190 display-layout site=0x0001eda6 base_source_address=0x00012ff4 base_destination_a=0x0001f168 base_destination_b=0x0001f164 display_base=0x00010000 display_list=0x00011000 copper_list_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
-            "event\t20 200 bitplane-layout site=0x0001f182 base_pointer_address=0x0001f168 bitplane_count=0x0004 plane0=0x00012000 plane1=0x00013000 plane2=0x00014000 plane3=0x00015000 width_pixels=0x0140 height_lines=0x00c8 bytes_per_row=0x0028 modulo=0x0000\n"
-            "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=0000000000000000000000000000000000000000000000000000000000000000 rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t19 190 display-layout site=0x0001eda6 base_source_address=0x00012ff4 base_destination_a=0x0001f168 base_destination_b=0x0001f164 display_base=0x0000ab00 display_list=0x00000420 copper_list_sha256=cf827847c13dbeafeea72c86f2c4fb90a6d717bf548f0914b2f203abb94293f6\n"
+            "event\t20 200 bitplane-layout site=0x0001f182 base_pointer_address=0x0001f168 bitplane_count=0x0004 plane0=0x0000b5f0 plane1=0x0000d530 plane2=0x0000f470 plane3=0x000113b0 bplcon0=0x4200 bpl1mod=0x0000 bpl2mod=0x0000 ddfstrt=0x0038 ddfstop=0x00d0 width_pixels=0x0140 height_lines=0x00c8 bytes_per_row=0x0028 modulo=0x0000\n"
+            "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55 rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
             "event\t22 220 input-checkpoint callback_site=0x0001f056 selector_site=0x0001fe7a queue_sha256=0000000000000000000000000000000000000000000000000000000000000000 input_timeline_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
-            "event\t23 230 frame-checkpoint display_base=0x00010000 rgba_width=0x0140 rgba_height=0x00c8 bitplanes_sha256=0000000000000000000000000000000000000000000000000000000000000000 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t23 230 frame-checkpoint display_base=0x0000ab00 rgba_width=0x0140 rgba_height=0x00c8 bitplanes_sha256=fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
             "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
         eon::DeuterosAmigaTitleDisplayReferenceTraceDiagnostics display_diagnostics;
         assert(eon::validate_deuteros_amiga_title_display_reference_events(
