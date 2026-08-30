@@ -4297,7 +4297,9 @@ must report those areas honestly rather than presenting fabricated gameplay.
 The SDL Deuteros launch view performs the complete verified chain at runtime:
 outer archive SHA-256 → nested clean system ADF SHA-256 → boot/load plan →
 bundle 0 → channel VM / original VBL source → indexed bitmap → palette → RGBA
-texture. The session advances on a 20 ms scheduler cadence and supplies only a
+texture. `DeuterosAmigaOpening` independently rechecks the complete clean ADF
+identity before it constructs any VM or renderer state, so callers cannot use
+a matching boot or bundle prefix as a substitute. The session advances on a 20 ms scheduler cadence and supplies only a
 recovered held input signal to the VM; the VM controls whether that signal is
 accepted.
 Thus the displayed pixels remain derived from user-supplied original data and
