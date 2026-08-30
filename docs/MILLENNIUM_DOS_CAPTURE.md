@@ -359,8 +359,9 @@ missing visible X11/Wayland display. The operator must press keys in the
 visible emulator window; the helper has no AUTOTYPE, mapper, debugger, or
 guest-memory input path. `run-status.txt` records whether the recorder
 actually created a host-input receipt, and hashes it only when present; an
-absent receipt remains explicit no-input evidence rather than a generated
-empty timeline. Its output is raw external evidence only and still requires
+absent or empty receipt remains explicit no-input evidence rather than a
+generated empty timeline. The receipt is also capped at 64 KiB before it is
+hashed. Its output is raw external evidence only and still requires
 assembly, independent validation, and review before any new adapter or runtime
 route can exist.
 

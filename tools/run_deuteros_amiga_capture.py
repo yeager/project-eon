@@ -37,6 +37,9 @@ DISK2_IMAGE = "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 2 of 2
 KICKSTART_IMAGE = "Kickstart v1.3 r34.005 (1987-12)(Commodore)(A500-A1000-A2000-CDTV)[!].rom"
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
+# The reviewed delivery observer writes a bounded physical-input receipt.
+# Never hash an arbitrary-size file merely because a recorder path was set.
+MAX_INPUT_RECEIPT_BYTES = 64 * 1024
 
 
 class CaptureError(RuntimeError):
@@ -145,6 +148,10 @@ def input_receipt_status(path: Path) -> str:
         return "host_input_receipt=absent\n"
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
         raise CaptureError("host-input receipt is not a regular non-symlink file")
+    if info.st_size > MAX_INPUT_RECEIPT_BYTES:
+        raise CaptureError("host-input receipt exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "host_input_receipt=empty\n"
     digest, size = sha256_file(path)
     return ("host_input_receipt=present\n"
             f"host_input_receipt_sha256={digest}\n"

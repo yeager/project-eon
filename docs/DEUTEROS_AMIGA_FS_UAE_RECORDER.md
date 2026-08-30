@@ -120,9 +120,10 @@ nested disk archive, and Kickstart archive separately with
 It rejects repository/media/`/tmp` output paths and headless SDL. Its only
 recorder outputs are raw PC and host-input-delivery receipts outside the
 repository. `run-status.txt` explicitly says whether a receipt was created,
-and hashes it only when present, so a no-input preflight cannot silently look
-like an empty physical-input timeline. A physical input timeline, independent
-review and trace assembly remain required before any runtime admission.
+hashes it only when nonempty, and caps it at 64 KiB, so a no-input preflight
+cannot silently look like an empty physical-input timeline or trigger
+unbounded host-side hashing. A physical input timeline, independent review and
+trace assembly remain required before any runtime admission.
 
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;

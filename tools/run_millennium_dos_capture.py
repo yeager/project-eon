@@ -25,6 +25,10 @@ EXPECTED_RELEASE_SIZE = 328_383
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
+# The reviewed recorder caps host input at 256 short text records.  Keep a
+# generous, fixed ceiling here so a damaged or substituted recorder cannot
+# turn a receipt status check into unbounded host-side I/O.
+MAX_INPUT_RECEIPT_BYTES = 64 * 1024
 
 
 class CaptureError(RuntimeError):
@@ -159,6 +163,10 @@ def input_receipt_status(path: Path) -> str:
         return "host_input_receipt=absent\n"
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
         raise CaptureError("host-input receipt is not a regular non-symlink file")
+    if info.st_size > MAX_INPUT_RECEIPT_BYTES:
+        raise CaptureError("host-input receipt exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "host_input_receipt=empty\n"
     digest, size = sha256_file(path)
     return ("host_input_receipt=present\n"
             f"host_input_receipt_sha256={digest}\n"
