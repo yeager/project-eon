@@ -3784,6 +3784,17 @@ verified evaluator; it owns no original media bytes. Out-of-order or repeated
 observations are rejected, and the session neither starts from the launcher
 nor emulates DOS, private calls, overlay loading, or a title handoff.
 
+An external capture can now document exactly this boundary with adapter
+`millennium-dos-en-gx-startup-v2`. Its event stream is restricted to ten
+ordered records: the `$0129` private-return observation (including, but not
+interpreting, AX), the `$d349` `$da05` read, the GX `+$00ed` `RETF` to
+`$d376`, returns from each of the six call sites `$d376` through `$d385`, and
+the independently observed `$d388` `$da05` read. Both observed byte values
+are opaque lowercase hexadecimal provenance. The trace parser requires the
+exact clean English DOS outer-release hash and reports only counts and
+recovery-map boundaries; it neither creates a session, supplies an observed
+value to it, nor executes or replays any captured event.
+
 ### Millennium DOS GX dispatcher slot 13 boundary
 
 The already hash-identified `2200GX.EXE` dispatcher table maps raw selector

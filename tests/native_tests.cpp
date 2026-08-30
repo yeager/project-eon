@@ -885,6 +885,44 @@ int main() {
             "event\t1 10 interrupt image=2200ad.exe pc=0x0124 int=0x91 ax=0x001f es=cs bx=0xd19f\n",
             diagnostics, trace_error));
     }
+    // These records exercise the GX trace grammar only. They are not game
+    // data or a capture fixture; validation reports opaque provenance and
+    // never starts a GX session or supplies any observed value to one.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n"
+            "event\t2 20 mode-read image=2200ad.exe pc=0xd349 address=0xda05 value=0x03\n"
+            "event\t3 30 adapter-return image=2200gx.exe pc=0x00ed op=retf return_pc=0xd376\n"
+            "event\t4 40 local-return image=2200ad.exe call_pc=0xd376 return_pc=0xd379\n"
+            "event\t5 50 local-return image=2200ad.exe call_pc=0xd379 return_pc=0xd37c\n"
+            "event\t6 60 local-return image=2200ad.exe call_pc=0xd37c return_pc=0xd37f\n"
+            "event\t7 70 local-return image=2200ad.exe call_pc=0xd37f return_pc=0xd382\n"
+            "event\t8 80 local-return image=2200ad.exe call_pc=0xd382 return_pc=0xd385\n"
+            "event\t9 90 local-return image=2200ad.exe call_pc=0xd385 return_pc=0xd388\n"
+            "event\t10 100 mode-read image=2200ad.exe pc=0xd388 address=0xda05 value=0x01\n";
+        eon::MillenniumDosGxStartupReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_millennium_dos_gx_startup_reference_events(
+            valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 10 && diagnostics.private_return_count == 1
+            && diagnostics.mode_read_count == 2 && diagnostics.adapter_return_count == 1
+            && diagnostics.local_return_count == 6);
+        assert(!eon::validate_millennium_dos_gx_startup_reference_events(
+            "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n",
+            diagnostics, trace_error));
+        assert(!eon::validate_millennium_dos_gx_startup_reference_events(
+            "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0X0000\n"
+            "event\t2 20 mode-read image=2200ad.exe pc=0xd349 address=0xda05 value=0x03\n"
+            "event\t3 30 adapter-return image=2200gx.exe pc=0x00ed op=retf return_pc=0xd376\n"
+            "event\t4 40 local-return image=2200ad.exe call_pc=0xd376 return_pc=0xd379\n"
+            "event\t5 50 local-return image=2200ad.exe call_pc=0xd379 return_pc=0xd37c\n"
+            "event\t6 60 local-return image=2200ad.exe call_pc=0xd37c return_pc=0xd37f\n"
+            "event\t7 70 local-return image=2200ad.exe call_pc=0xd37f return_pc=0xd382\n"
+            "event\t8 80 local-return image=2200ad.exe call_pc=0xd382 return_pc=0xd385\n"
+            "event\t9 90 local-return image=2200ad.exe call_pc=0xd385 return_pc=0xd388\n"
+            "event\t10 100 mode-read image=2200ad.exe pc=0xd388 address=0xda05 value=0x01\n",
+            diagnostics, trace_error));
+    }
     // These two records name only the verified caller-side handoffs. They do
     // not model execution, read completion, or a return from the opaque stage.
     {

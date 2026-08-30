@@ -70,7 +70,18 @@ class RecordReferenceTraceTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.EvidenceError, "exact source sha256"):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
                     "sha256": "0" * 64, "size": 328383, "game": "millennium",
-                    "platform": "dos", "language": "en"})
+                "platform": "dos", "language": "en"})
+
+    def test_gx_v2_adapter_requires_the_clean_millennium_dos_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.tsv"
+            path.write_text(metadata_lines(
+                format="project-eon-reference-trace-v2",
+                adapter="millennium-dos-en-gx-startup-v2"), encoding="utf-8")
+            identity = {
+                "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+                "size": 328383, "game": "millennium", "platform": "dos", "language": "en"}
+            TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
 
     def test_v3_title_bridge_requires_the_exact_amiga_media_and_stage(self):
         with tempfile.TemporaryDirectory() as directory:
