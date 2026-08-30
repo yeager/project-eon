@@ -9,8 +9,8 @@ flags, vectors, input, execution order, or timing.
 ## Prototype status
 
 An uncommitted, external Linux prototype has been reviewed against this
-contract. Its four source edits are limited to the listed CPU, normal-core and
-DOS-execution hooks plus declarations. The changed CPU and normal-core objects
+contract. Its changes are limited to the listed CPU, normal-core and
+DOS-execution hook files plus declarations. The changed CPU and normal-core objects
 compile successfully at the pinned revision. It opens its opt-in output with
 exclusive creation (`O_CREAT|O_EXCL`, mode `0600`), so an existing file or
 symlink is never overwritten; it rejects DS:DX strings containing separators
@@ -30,6 +30,14 @@ strict runtime non-admission status are in
 [MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-trace-validated-capture-diagnostics-only).
 Re-review the exact patch, retain a complete configuration and input timeline,
 and capture the required result boundaries before extending any runtime path.
+
+One additional experimental CPU-only probe is private to the capture cache: it
+opens a distinct `O_CREAT|O_EXCL` result file only when explicitly configured
+and reads `AX` at `MILL.COM:$020e`, the first instruction after the captured
+`CD 21` at `$020c`. It does not write candidate v2 events, mutate guest state,
+or establish a return beyond that one observed instruction. Its raw result and
+the unresolved `$0213` local-call return boundary are recorded in
+[MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-raw-result-reconnaissance-not-a-v2-event).
 
 The design is locked to the locally inspected DOSBox-X source revision
 `234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapter

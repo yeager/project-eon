@@ -69,6 +69,28 @@ return value, input result, title state, frame, audio checkpoint, or game
 state was observed. It is therefore a trace-validated diagnostic provenance
 record, not a runtime input or a gameplay/parity claim.
 
+### First raw result reconnaissance (not a v2 event)
+
+The same exact archive and explicit read-only route were used for a separate,
+private result probe on 2026-08-30. Static 8086 bytes establish that the
+`INT 21h` opcode at `$020c` returns to `$020e`; the probe reads `AX` only when
+the normal core reaches that instruction, before the original `PUSH CS`.
+Its raw output SHA-256 is
+`d09a4c840a4d9f1877b033a6e67f9a96b9ca7201ca5fddf932ddcaa2ed60c391`:
+
+```text
+raw-result 1 1 image=mill.com pc=0x020e source-int=0x21 source-ax=0x2591 ax=0x2591
+```
+
+The probe executable hash is
+`cf0f3d67d2f9ca8857f9daf749136b19ed625918764ba23fd02b284c65423f78`.
+The next caller-connected point is the return from original `CALL $0511` at
+`$0210`, observed before `AND AL,AL` at `$0213`. No `$0213` record appeared
+before the host ended this input-free run. This does **not** establish that
+the call cannot return, nor any function meaning, result flag, branch,
+driver outcome, title, input, frame, audio, or game state. The raw result has
+no v2 grammar entry, is not assembled, and is not a runtime input.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
