@@ -19,6 +19,10 @@ SPEC.loader.exec_module(TOOL)
 
 
 class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
+    def test_pinned_kickstart_archive_size_is_not_its_rom_payload_size(self) -> None:
+        self.assertEqual(TOOL.EXPECTED_KICKSTART_SIZE, 143_269)
+        self.assertNotEqual(TOOL.EXPECTED_KICKSTART_SIZE, 262_144)
+
     def test_rejects_headless_or_missing_visible_display(self) -> None:
         with self.assertRaisesRegex(TOOL.CaptureError, "headless SDL"):
             TOOL.require_visible_operator_input({"SDL_VIDEODRIVER": "dummy", "DISPLAY": ":1"})
