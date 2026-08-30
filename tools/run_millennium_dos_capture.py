@@ -23,6 +23,9 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_RELEASE_SHA256 = "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123"
 EXPECTED_RELEASE_SIZE = 328_383
+# The capture helper never accepts a merely executable emulator as a recorder:
+# its hooks and input-receipt contract are part of the provenance boundary.
+EXPECTED_RECORDER_SHA256 = "0ba7a23b75ed543e519e56c6ece7106b81bd1fd8efb3e1b3813b79ca44b71cca"
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
@@ -116,6 +119,12 @@ def validate_source_release(source: Path) -> tuple[str, int]:
     if digest != EXPECTED_RELEASE_SHA256 or size != EXPECTED_RELEASE_SIZE:
         raise CaptureError("source release is not the exact recognised English Millennium DOS archive")
     return digest, size
+
+
+def validate_recorder(path: Path) -> None:
+    digest, _ = sha256_file(path)
+    if digest != EXPECTED_RECORDER_SHA256:
+        raise CaptureError("recorder hash does not match the reviewed DOSBox-X build")
 
 
 def require_visible_operator_input(environment: dict[str, str]) -> None:
@@ -270,6 +279,7 @@ def recorder_console_status(status: RecorderConsoleStatus) -> str:
 def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
+    validate_recorder(recorder)
     output = reject_unsafe_output(source, Path(args.output))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
