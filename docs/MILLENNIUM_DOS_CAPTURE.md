@@ -207,6 +207,32 @@ state. The trace is never replayed and neither return word is supplied to Eon
 runtime code. The archive was rehashed unchanged before and after the run and
 the FUSE mount was unmounted; raw outputs and all preimages remain external.
 
+### Independent recorder repeat (diagnostics only)
+
+On 2026-08-30, a fresh 45-second normal-core observation repeated the same
+literal guest command tail, `mill.com 0`, through a newly created
+`archivemount -o ro` view of the exact English DOS archive. It used the later
+host-key-receipt recorder build (SHA-256
+`0ba7a23b75ed543e519e56c6ece7106b81bd1fd8efb3e1b3813b79ca44b71cca`) but
+did not configure, inject, or claim any host input. The read-only mount was
+confirmed `ro,nosuid,nodev`, and the archive retained SHA-256
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` before
+and after the run.
+
+The new external event stream is byte-identical to the strict five-record
+candidate above (SHA-256
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`). Its
+separate raw-result file is likewise byte-identical to the previously retained
+four observations (SHA-256
+`4f26dcaa3320de13d3118f202bf5cad2750b68a887969e7f44d311b361a988e6`): the
+post-DOS `MILL.COM:$020e` word, the post-call `MILL.COM:$0213` word, and the
+two `TITLES.EXE:$0129` words. This repeat corroborates recorder stability for
+that bounded, no-input condition only. It supplies no flags, memory writes,
+delivery receipt, poll result, frame, audio, `EXEC`, title state, or playable
+path, and no new record is admitted into runtime code. The raw files,
+configuration, and emulator log remain outside the repository and supplied
+media.
+
 ### Explicit keyboard-delivery probes (not input evidence)
 
 Two further private probes used DOSBox-X's built-in `AUTOTYPE` mapper command
