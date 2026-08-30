@@ -38,14 +38,17 @@ class DisassemblyInventoryTests(unittest.TestCase):
                     self.assertGreaterEqual(segment["source_offset"], 0)
                     self.assertGreater(segment["length"], 0)
                     self.assertGreaterEqual(segment["runtime_address"], 0)
-                    self.assertNotEqual("entry_address" in segment, "entry_offset" in segment)
-                    if "entry_address" in segment:
+                    entry_kinds = {"entry_address", "entry_offset", "entry_status"} & segment.keys()
+                    self.assertEqual(len(entry_kinds), 1)
+                    if "entry_address" in entry_kinds:
                         self.assertGreaterEqual(segment["entry_address"], segment["runtime_address"])
                         self.assertLess(segment["entry_address"],
                                         segment["runtime_address"] + segment["length"])
-                    else:
+                    elif "entry_offset" in entry_kinds:
                         self.assertGreaterEqual(segment["entry_offset"], 0)
                         self.assertLess(segment["entry_offset"], segment["length"])
+                    else:
+                        self.assertEqual(segment["entry_status"], "unproven")
                     self.assertGreaterEqual(segment["source_offset"], previous_end)
                     previous_end = segment["source_offset"] + segment["length"]
 
