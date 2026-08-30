@@ -237,6 +237,8 @@ struct PreviewAnimation {
 
 // Modern options are renderer state only. They are deliberately independent
 // from original input, media, simulation state and save bytes.
+enum class ModernGraphicsPreset { clean, crt, cinematic, high_contrast, custom };
+
 struct ModernGraphicsSettings {
     bool smooth_scaling = true;
     // Reconstruct an edge-aware 2x renderer texture from a decoded original
@@ -245,6 +247,9 @@ struct ModernGraphicsSettings {
     bool pixel_reconstruction = true;
     bool scanlines = false;
     bool frame = true;
+    // Presets only select combinations of the renderer controls below.  They
+    // are never serialized into a supplied save or sent to a recovered VM.
+    ModernGraphicsPreset preset = ModernGraphicsPreset::clean;
     // The selected output mode controls only the SDL window.  Original frame
     // dimensions, indexed pixels and simulation state remain unchanged.
     std::size_t output_resolution_index = 0;
@@ -269,12 +274,65 @@ constexpr std::array<const char*, 3> display_aspect_names{{
     "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",
 }};
 
+constexpr std::array<const char*, 5> modern_graphics_preset_names{{
+    "CLEAN", "CRT", "CINEMATIC", "HIGH CONTRAST", "CUSTOM",
+}};
+constexpr int modern_graphics_option_count = 8;
+
 // These renderer-space bounds are shared by drawing and touch handling.  A
 // Custom profile must remain usable on an iPad even when no hardware F10 key
 // is attached; they are Eon's own chrome, never a game input surface.
-constexpr SDL_FRect modern_graphics_popup_bounds{356, 112, 568, 520};
+constexpr SDL_FRect modern_graphics_popup_bounds{356, 76, 568, 594};
 constexpr float modern_graphics_option_first_baseline = 272.0F;
 constexpr float modern_graphics_option_stride = 42.0F;
+
+// This is intentionally a presentation-only preset table.  It has no access
+// to game state, media bytes, input state or saves.  Changing a single
+// renderer option marks the selection Custom; selecting a named profile
+// restores its complete, explicit renderer combination.
+void apply_modern_graphics_preset(ModernGraphicsSettings& settings,
+    const ModernGraphicsPreset preset) {
+    settings.preset = preset;
+    switch (preset) {
+    case ModernGraphicsPreset::clean:
+        settings.pixel_reconstruction = true;
+        settings.smooth_scaling = true;
+        settings.scanlines = false;
+        settings.frame = true;
+        break;
+    case ModernGraphicsPreset::crt:
+        settings.pixel_reconstruction = false;
+        settings.smooth_scaling = false;
+        settings.scanlines = true;
+        settings.frame = true;
+        break;
+    case ModernGraphicsPreset::cinematic:
+        settings.pixel_reconstruction = true;
+        settings.smooth_scaling = true;
+        settings.scanlines = false;
+        settings.frame = false;
+        break;
+    case ModernGraphicsPreset::high_contrast:
+        settings.pixel_reconstruction = true;
+        settings.smooth_scaling = false;
+        settings.scanlines = false;
+        settings.frame = true;
+        break;
+    case ModernGraphicsPreset::custom:
+        break;
+    }
+}
+
+void mark_modern_graphics_custom(ModernGraphicsSettings& settings) {
+    settings.preset = ModernGraphicsPreset::custom;
+}
+
+void cycle_modern_graphics_preset(ModernGraphicsSettings& settings, const int direction) {
+    constexpr auto count = static_cast<int>(ModernGraphicsPreset::custom) + 1;
+    const auto current = static_cast<int>(settings.preset);
+    const auto next = direction < 0 ? (current + count - 1) % count : (current + 1) % count;
+    apply_modern_graphics_preset(settings, static_cast<ModernGraphicsPreset>(next));
+}
 
 std::size_t output_resolution_index_for(const eon::DisplayPreferences& display) {
     for (std::size_t index = 0; index < output_resolutions.size(); ++index) {
@@ -369,6 +427,41 @@ void draw_scanlines(SDL_Renderer* renderer, const SDL_FRect& bounds) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 56);
     for (float y = bounds.y + 1; y < bounds.y + bounds.h; y += 2) {
         SDL_RenderLine(renderer, bounds.x, y, bounds.x + bounds.w, y);
+    }
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+}
+
+// These two looks deliberately operate after the original or separately
+// admitted Modern texture has been rendered.  They are transient SDL draw
+// operations, not colour changes to a decoded original surface or a pack.
+// The named profiles are presentation looks rather than accessibility claims:
+// users retain Custom controls and Original never calls this function.
+void draw_modern_preset_overlay(SDL_Renderer* renderer, const SDL_FRect& bounds,
+    const ModernGraphicsPreset preset) {
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    if (preset == ModernGraphicsPreset::cinematic) {
+        // A restrained warm wash plus a vignette makes this profile visibly
+        // distinct from Clean without touching any original texture bytes.
+        SDL_SetRenderDrawColor(renderer, 106, 62, 18, 24);
+        SDL_RenderFillRect(renderer, &bounds);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 44);
+        constexpr float edge = 18.0F;
+        const SDL_FRect top{bounds.x, bounds.y, bounds.w, edge};
+        const SDL_FRect bottom{bounds.x, bounds.y + bounds.h - edge, bounds.w, edge};
+        const SDL_FRect left{bounds.x, bounds.y, edge, bounds.h};
+        const SDL_FRect right{bounds.x + bounds.w - edge, bounds.y, edge, bounds.h};
+        SDL_RenderFillRect(renderer, &top);
+        SDL_RenderFillRect(renderer, &bottom);
+        SDL_RenderFillRect(renderer, &left);
+        SDL_RenderFillRect(renderer, &right);
+    } else if (preset == ModernGraphicsPreset::high_contrast) {
+        // A crisp black surround and bright inner keyline improve separation
+        // against the Modern chrome while leaving all source pixels alone.
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 92);
+        SDL_FRect surround{bounds.x - 5, bounds.y - 5, bounds.w + 10, bounds.h + 10};
+        SDL_RenderRect(renderer, &surround);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 140);
+        SDL_RenderRect(renderer, &bounds);
     }
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 }
@@ -483,12 +576,13 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN GRAPHICS SETTINGS"));
     draw_text(renderer, 390, 212, tr("UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"));
     draw_text(renderer, 390, 232, tr("TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"));
-    constexpr std::array<const char*, 7> names{{
-        "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
+    constexpr std::array<const char*, modern_graphics_option_count> names{{
+        "GRAPHICS PRESET", "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
         "MODERN ASSET PACK",
     }};
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::string, 7> values{{
+    const std::array<std::string, modern_graphics_option_count> values{{
+        tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset))),
         std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
         tr(display_aspect_names.at(settings.aspect_ratio_index)),
         tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)"),
@@ -508,7 +602,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
             + static_cast<float>(index) * modern_graphics_option_stride, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 588, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
+    draw_text(renderer, 390, 630, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -3773,12 +3867,17 @@ int main(int argc, char** argv) {
     };
     const auto change_modern_graphics_option = [&](const int direction) {
         switch (modern_graphics_settings.focused_option) {
-        case 0: cycle_output_resolution(direction); break;
-        case 1: cycle_aspect_ratio(direction); break;
-        case 2: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction; break;
-        case 3: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling; break;
-        case 4: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines; break;
-        case 5: modern_graphics_settings.frame = !modern_graphics_settings.frame; break;
+        case 0: cycle_modern_graphics_preset(modern_graphics_settings, direction); break;
+        case 1: cycle_output_resolution(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
+        case 2: cycle_aspect_ratio(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
+        case 3: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction;
+            mark_modern_graphics_custom(modern_graphics_settings); break;
+        case 4: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling;
+            mark_modern_graphics_custom(modern_graphics_settings); break;
+        case 5: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines;
+            mark_modern_graphics_custom(modern_graphics_settings); break;
+        case 6: modern_graphics_settings.frame = !modern_graphics_settings.frame;
+            mark_modern_graphics_custom(modern_graphics_settings); break;
         default: open_modern_pack_dialog(); break;
         }
     };
@@ -3830,10 +3929,11 @@ int main(int argc, char** argv) {
                         close_modern_graphics_settings();
                     } else if (event.key.key == SDLK_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 6) % 7;
+                            (modern_graphics_settings.focused_option + modern_graphics_option_count - 1)
+                                % modern_graphics_option_count;
                     } else if (event.key.key == SDLK_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 7;
+                            (modern_graphics_settings.focused_option + 1) % modern_graphics_option_count;
                     } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
                         change_modern_graphics_option(event.key.key == SDLK_LEFT ? -1 : 1);
                     }
@@ -3842,10 +3942,11 @@ int main(int argc, char** argv) {
                         close_modern_graphics_settings();
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 6) % 7;
+                            (modern_graphics_settings.focused_option + modern_graphics_option_count - 1)
+                                % modern_graphics_option_count;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % 7;
+                            (modern_graphics_settings.focused_option + 1) % modern_graphics_option_count;
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
                         || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
                         change_modern_graphics_option(
@@ -3870,7 +3971,7 @@ int main(int argc, char** argv) {
                         const auto first_row_top = modern_graphics_option_first_baseline - 22.0F;
                         const auto row = static_cast<int>((y - first_row_top)
                             / modern_graphics_option_stride);
-                        if (row >= 0 && row < 7) {
+                        if (row >= 0 && row < modern_graphics_option_count) {
                             modern_graphics_settings.focused_option = row;
                             change_modern_graphics_option(1);
                         }
@@ -4279,6 +4380,8 @@ int main(int argc, char** argv) {
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
+                if (modern) draw_modern_preset_overlay(renderer, preview_bounds,
+                    modern_graphics_settings.preset);
                 if (millennium_game_execution_observed) {
                     const auto& save = *millennium_assets->initial_save;
                     constexpr std::size_t records_per_page = 8;
@@ -4609,6 +4712,8 @@ int main(int argc, char** argv) {
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
+                if (modern) draw_modern_preset_overlay(renderer, preview_bounds,
+                    modern_graphics_settings.preset);
                 draw_text(renderer, 64, 580, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else {
                 draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));

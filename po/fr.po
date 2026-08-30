@@ -14,6 +14,21 @@ msgstr "PIXELS CARRÉS 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "ÉCRAN LARGE 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "PRÉRÉGLAGE GRAPHIQUE"
+
+msgid "CLEAN"
+msgstr "NET"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "CINÉMATOGRAPHIQUE"
+
+msgid "HIGH CONTRAST"
+msgstr "CONTRASTE ÉLEVÉ"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 

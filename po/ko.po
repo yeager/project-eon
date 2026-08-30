@@ -15,6 +15,21 @@ msgstr "정사각형 픽셀 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "와이드스크린 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "그래픽 사전 설정"
+
+msgid "CLEAN"
+msgstr "깔끔함"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "시네마틱"
+
+msgid "HIGH CONTRAST"
+msgstr "고대비"
+
 msgid "PROJECT EON"
 msgstr "프로젝트 이온"
 

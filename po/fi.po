@@ -14,6 +14,21 @@ msgstr "NELIÖPIKSELIT 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "LAAJAKUVA 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "GRAFIIKKAESIASETUS"
+
+msgid "CLEAN"
+msgstr "PUHDAS"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "ELOKUVAMAINEN"
+
+msgid "HIGH CONTRAST"
+msgstr "SUURI KONTRASTI"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 
