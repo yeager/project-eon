@@ -321,6 +321,22 @@ def main() -> int:
         )
     trace_specs = (
         (
+            "millennium", "dos", "millennium-dos-en-gx-startup-v2",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n"
+            "event\t2 20 mode-read image=2200ad.exe pc=0xd349 address=0xda05 value=0x03\n"
+            "event\t3 30 adapter-return image=2200gx.exe pc=0x00ed op=retf return_pc=0xd376\n"
+            "event\t4 40 local-return image=2200ad.exe call_pc=0xd376 return_pc=0xd379\n"
+            "event\t5 50 local-return image=2200ad.exe call_pc=0xd379 return_pc=0xd37c\n"
+            "event\t6 60 local-return image=2200ad.exe call_pc=0xd37c return_pc=0xd37f\n"
+            "event\t7 70 local-return image=2200ad.exe call_pc=0xd37f return_pc=0xd382\n"
+            "event\t8 80 local-return image=2200ad.exe call_pc=0xd382 return_pc=0xd385\n"
+            "event\t9 90 local-return image=2200ad.exe call_pc=0xd385 return_pc=0xd388\n"
+            "event\t10 100 mode-read image=2200ad.exe pc=0xd388 address=0xda05 value=0x01\n",
+            None, None,
+            "1 private-return, 6 local-return observations; call-free transient overlay admitted through second private-INT boundary)",
+        ),
+        (
             "millennium", "dos", "millennium-dos-en-startup-v1",
             "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
             "event\t1 10 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000\n"
@@ -372,6 +388,9 @@ def main() -> int:
         ),
     )
     trace_recovery_boundaries = {
+        "millennium-dos-en-gx-startup-v2": (
+            "millennium-dos-game-flow", "millennium-dos-gx-overlay",
+        ),
         "millennium-dos-en-startup-v1": (
             "millennium-dos-launcher", "millennium-dos-title-flow", "millennium-dos-game-flow",
         ),

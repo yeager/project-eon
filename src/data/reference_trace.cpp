@@ -993,7 +993,8 @@ ReferenceTraceValidation validate_reference_trace(
         millennium_dos_title_init_v2 ? millennium_dos_title_init_diagnostics.file_count
             : diagnostics.file_count,
         millennium_dos_v2 ? diagnostics.exec_count : deuteros_amiga_diagnostics.exec_count,
-        millennium_dos_title_init_v2 ? millennium_dos_title_init_diagnostics.private_return_count : 0,
+        millennium_dos_title_init_v2 ? millennium_dos_title_init_diagnostics.private_return_count
+            : millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.private_return_count : 0,
         deuteros_diagnostics.trap_count,
         deuteros_atari_v2 ? deuteros_diagnostics.callback_count : deuteros_amiga_diagnostics.callback_count,
         deuteros_diagnostics.frame_count, deuteros_diagnostics.state_count,
@@ -1011,7 +1012,8 @@ ReferenceTraceValidation validate_reference_trace(
         deuteros_amiga_title_bridge_diagnostics.callback_entry_count,
         deuteros_amiga_title_bridge_diagnostics.selector_entry_count,
         deuteros_amiga_title_bridge_diagnostics.local_call_count,
-        deuteros_amiga_title_bridge_diagnostics.local_return_count,
+        millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.local_return_count
+            : deuteros_amiga_title_bridge_diagnostics.local_return_count,
         deuteros_amiga_title_bridge_diagnostics.dispatch_snapshot_count}, {}};
 }
 

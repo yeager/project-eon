@@ -10,10 +10,13 @@ manifest/event pair, see [REFERENCE_TRACE_ASSEMBLY.md](REFERENCE_TRACE_ASSEMBLY.
 Assembly records source identity before and after the operation; it does not
 admit, replay, or validate a trace's gameplay meaning.
 
-The initial implementation is validation and provenance reporting only. It
-does not emulate a platform service, modify supplied media, create state, or
-advance a game session. A game-specific adapter may consume an event only
-after its caller, ABI and result are separately documented in
+The implementation is validation and provenance reporting by default. It
+does not emulate a platform service, modify supplied media, or advance a game
+session. The one documented exception is the complete Millennium DOS GX v2
+profile: after its pair and source archive are rehashed, it may construct the
+predefined call-free transient overlay state and immediately stop at its next
+private-INT boundary. A game-specific adapter may consume an event only after
+its caller, ABI and result are separately documented in
 [`PRESERVATION.md`](PRESERVATION.md).
 
 Format **v1** remains the generic identity-and-ordering format. Format **v2**
@@ -23,9 +26,9 @@ adapters `millennium-dos-en-startup-v1`, `deuteros-atari-st-boot-v1`,
 `deuteros-amiga-en-title-stage-v1`, plus the separate
 `millennium-dos-en-gx-startup-v2` continuation profile.
 Their observations are checked against literal, hash-pinned source sites.
-Neither replays observations nor treats a
-validated result as a platform-service, private-driver, file, device, or
-child-process result.
+Except for the explicitly bounded GX admission described below, none replays
+observations or treats a validated result as a platform-service,
+private-driver, file, device, or child-process result.
 
 ## Pair and encoding
 
@@ -336,9 +339,12 @@ ordered `local-return` records for call sites `$d376`, `$d379`, `$d37c`,
 `$da05`. The two observed byte values are recorded as provenance only.
 
 The schema rejects omitted, reordered, duplicated, extra, upper-case, or
-other-site records. Its result is validation counts and the two declarative
-recovery-map rows above—not execution, an injected session value, an overlay
-load, DOS/private-interrupt emulation, or a title handoff.
+other-site records. After the manifest, source archive, and event file have
+all been rehashed, `--reference-trace` may use this one complete grammar to
+construct the existing **call-free, transient** GX overlay admission state.
+That state is discarded with the command and stops at the second private-INT
+boundary. It is not execution, a general injected session value, an overlay
+load, DOS/private-interrupt emulation, a title handoff, or a game launch.
 
 ### Deuteros Amiga title-bridge v3 capture profile
 
