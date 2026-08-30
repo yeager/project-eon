@@ -97,6 +97,7 @@ add_executable(project-eon
     src/engine/deuteros_amiga_title_stage_session.cpp
     src/engine/deuteros_amiga_paula.cpp
     src/engine/deuteros_atari_bootstrap_session.cpp
+    src/engine/millennium_dos_sound_selection_session.cpp
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_game_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
@@ -142,6 +143,7 @@ add_executable(project-eon
     src/data/millennium_amiga_reference_trace.cpp
     src/data/millennium_amiga_loader.cpp
     src/data/reference_trace.cpp
+    src/data/function_map.cpp
     src/data/recovery_map.cpp
     src/data/release_manifest.cpp
     src/data/sha256.cpp
@@ -251,6 +253,7 @@ if(BUILD_TESTING)
         src/engine/deuteros_amiga_title_stage_session.cpp
         src/engine/deuteros_amiga_paula.cpp
         src/engine/deuteros_atari_bootstrap_session.cpp
+        src/engine/millennium_dos_sound_selection_session.cpp
         src/engine/millennium_dos_title_session.cpp
         src/engine/millennium_dos_game_session.cpp
         src/engine/millennium_dos_gx_startup_session.cpp
@@ -296,6 +299,7 @@ if(BUILD_TESTING)
         src/data/millennium_amiga_reference_trace.cpp
         src/data/millennium_amiga_loader.cpp
         src/data/reference_trace.cpp
+        src/data/function_map.cpp
         src/data/recovery_map.cpp
         src/data/release_manifest.cpp
         src/data/sha256.cpp

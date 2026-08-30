@@ -38,6 +38,14 @@ the separate hash-locked CLI verifier. The page consumes its own keyboard,
 gamepad and touch events and cannot inspect or modify original media, guest
 input, simulation state, or save bytes.
 
+The diagnostics page can open a paged **Recovery function map**.  Each row is
+an exact named function/dispatch boundary for the selected rehashed release:
+CPU, source-leaf SHA-256, source offset, runtime address, evidence level,
+uncertainty and runtime boundary. It is a preservation cross-reference
+inspired by declarative recompilation maps, not a hook table or guest-code
+browser. The renderer never executes an entry, opens a trace, or exposes an
+original byte through this view.
+
 Separately installed Modern asset packs retain their existing explicit
 release-hash admission requirements; they are not discovered automatically and
 are never selected in Original mode. See [MODERN_ASSET_PACK_FORMAT.md](MODERN_ASSET_PACK_FORMAT.md).

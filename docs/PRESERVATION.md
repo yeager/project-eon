@@ -3033,6 +3033,26 @@ admitted as external sound-driver leaves, by full content identity only. This
 admission does not parse or execute their private ABI, perform sound playback,
 invent hardware routing, or admit an `SROL.DRV`/matching-name substitute.
 
+Project Eon has a corresponding narrow, test-covered sound-selection session.
+It accepts only character bytes `0`, `1`, and `2`, exactly once, and exposes
+only the proven original filename/table-slot pairs `sibm.drv`/`0`,
+`ssbl.drv`/`3`, and `scvx.drv`/`4`. It is deliberately not an audio device
+selector: no host hardware is inspected, no supplied driver is loaded, and a
+selection stops at the still-unobserved driver-initialisation return boundary.
+This makes the first `MILL.COM` menu semantics recoverable without presenting
+a fabricated sound result or a false continuation into `TITLES.EXE`.
+
+The visible choice prompt is also recovered as an ephemeral, original byte
+span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
+terminator) is 155 bytes with SHA-256
+`d84297ee58abeaa4ca09d60a533fe0b05ea4b805af46629d32c031b11700cad0`.
+The runtime checks the whole `MILL.COM` identity and this span before rendering
+the supplied bytes. It strips only the DOS output terminator, does not put the
+text in a localisation catalog, and retains neither the prompt nor any media
+bytes after its session. The current renderer is text-only presentation of
+that original prompt—not a claim that its DOS font, mode, or surrounding
+screen pixels are recovered.
+
 The `$1f` query's low byte is also not a fixed profile constant. EGA function
 `$00` writes its derived allocation count to local `$008a` at `$022f`, and
 function `$1e` can write a clamped caller byte there at `$0259`; MCGA function

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace eon {
@@ -34,6 +35,8 @@ struct MillenniumDosSoundSelectionEvidence {
     std::size_t selector_byte_count = 0;
     std::string_view selector_sha256;
     std::uint16_t prompt_address = 0;
+    std::size_t prompt_byte_count = 0;
+    std::string_view prompt_sha256;
     std::uint16_t filename_table_address = 0;
     std::size_t filename_table_byte_count = 0;
     std::string_view filename_table_sha256;
@@ -58,6 +61,13 @@ struct MillenniumDosSoundSelectionEvidence {
 // tables. This parser admits no guessed hardware policy or interactive input.
 [[nodiscard]] MillenniumDosSoundSelectionEvidence
 parse_millennium_dos_sound_selection(std::span<const std::uint8_t> mill_com);
+
+// Return the byte-locked, DOS `$`-terminated sound-selection prompt from the
+// supplied launcher without translating, normalising, or retaining it. The
+// caller owns the returned in-memory view of user-supplied original text.
+[[nodiscard]] std::string extract_millennium_dos_sound_selection_prompt(
+    std::span<const std::uint8_t> mill_com,
+    const MillenniumDosSoundSelectionEvidence& evidence);
 
 // Admit only the two supplied external sound-driver leaves by complete content
 // identity. A matching filename, SIBM.DRV, SROL.DRV, or another release is not

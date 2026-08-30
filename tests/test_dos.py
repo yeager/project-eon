@@ -1,6 +1,6 @@
 import unittest
 
-from eon.dos import ascii_strings, initial_near_jump, interrupt_counts
+from eon.dos import ascii_strings, describe_bytes, initial_near_jump, interrupt_counts
 
 
 class DosAnalysisTests(unittest.TestCase):
@@ -20,6 +20,12 @@ class DosAnalysisTests(unittest.TestCase):
 
     def test_ascii_strings_include_offsets(self):
         self.assertEqual(ascii_strings(b"\0HELLO\0xx\0", 4), [(1, "HELLO")])
+
+    def test_in_memory_description_does_not_need_a_media_path(self):
+        report = describe_bytes("MILL.COM", b"\xe9\x00\x00\xcd\x21HELLO\0")
+        self.assertEqual(report["name"], "MILL.COM")
+        self.assertEqual(report["entry_file_offset"], 3)
+        self.assertEqual(report["interrupts"], {"0x21": 1})
 
 
 if __name__ == "__main__":

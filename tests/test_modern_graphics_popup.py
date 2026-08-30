@@ -39,6 +39,21 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("tr(rows[index].first)", popup)
         self.assertIn("SDL VSYNC: ON", popup)
         self.assertIn("SDL VSYNC: OFF", popup)
+        self.assertIn("RECOVERY FUNCTION MAP", SOURCE)
+        self.assertIn("release_has_recovery_map_entry", SOURCE)
+        self.assertIn("DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.", SOURCE)
+
+    def test_function_map_is_paged_read_only_provenance_not_a_hook_table(self) -> None:
+        popup_start = SOURCE.index("void draw_recovery_function_map_popup")
+        popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
+        for field in ("id", "profile", "cpu", "source_asset_sha256", "source_offset",
+                      "runtime_address", "evidence_level", "uncertainty", "runtime_status"):
+            with self.subTest(field=field):
+                self.assertIn(f"entry.{field}", popup)
+        self.assertIn("rows_per_page = 3", popup)
+        self.assertIn("UP/DOWN: PAGE", popup)
+        self.assertNotIn("SDL_ShowOpenFileDialog", popup)
+        self.assertNotIn("reference_trace", popup)
 
     def test_diagnostics_page_is_reached_and_dismissed_inside_the_modal(self) -> None:
         self.assertIn('"DEVELOPER DIAGNOSTICS"', SOURCE)

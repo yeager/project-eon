@@ -1,0 +1,107 @@
+# Whole-program disassembly status
+
+This is the preservation ledger for Project Eon's whole-program
+disassembly. It is deliberately an index of reproducible inputs, address
+spaces, and coverage boundaries—not a claim that a linear decoder has proved
+all bytes are executable code. Original media is never copied into this
+repository; commands below stream a member directly from the user's archive.
+
+## Input identities
+
+| Game | Platform | Container SHA-256 | Principal code/media identity |
+| --- | --- | --- | --- |
+| Millennium 2.2 | DOS English | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `MILL.COM` `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`; `TITLES.EXE` `3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`; `2200AD.EXE` `427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`; `2200GX.EXE` `093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb` |
+| Millennium 2.2 | Amiga English | `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | nested ADF variants; raw-stage base must be proven before code listing |
+| Millennium 2.2 | Atari ST English | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | nested ST/STX variants; filesystem/raw-stage chain and load base remain separate evidence tasks |
+| Deuteros | Amiga English | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | clean Disk 1 `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; clean Disk 2 `99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a` |
+| Deuteros | Atari ST English | `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | protected/cracked disk variants are separately identified; no clean release is silently substituted |
+
+## Architecture and anchored coverage
+
+| Target | CPU / origin | Verified static anchors | What is not yet asserted |
+| --- | --- | --- | --- |
+| Millennium DOS | 8086, flat COM-style images at `$0100` | `MILL.COM` private interrupt setup and sound-selection routine; `TITLES.EXE` availability-poll exit; `2200AD.EXE` action-poll sites | DOS/driver/child return values, code/data classification beyond recovered paths, game execution |
+| Millennium Amiga | Motorola 68000 | bounded ADF loader/raw-stage records | raw-stage invocation results, runtime base and reachable code map |
+| Millennium Atari ST | Motorola 68000 | disk structures and bounded bootstrap session | executable chain/load addresses and TOS/XBIOS returns |
+| Deuteros Amiga | Motorola 68000 | boot to `$12a4e`; main stage disk `+$5800` to `$20000`, entry `$21734`; title stage disk `+$6e000` to `$13000`, entry `$40426` | Exec/graphics/callback returns, display ownership, title/game input and timing |
+| Deuteros Atari ST | Motorola 68000 | Replicants Disk 1 protected boot: disk `+$4ec00` to `$1200`, entry `$9c4`; next stage `$70000`; Disk 2 KILLER_BOOT vector route | XBIOS read result, callback dispatch, RAM vector contents, all control/state semantics |
+
+## Variant separation
+
+The following identities are recognised forensic inputs, not interchangeable
+program releases. A static range is admitted only for the exact image listed
+by its parser or trace contract.
+
+| Deuteros Amiga image | SHA-256 | Separation rule |
+| --- | --- | --- |
+| Clean Disk 1 | `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38` | primary executable baseline (`DOS\0`) |
+| Black Monks Disk 1 | `d0f79fe5b65f1ffa3598c1f999afbd87234649fedd03907bc0cf622d19ae0031` | altered boot/main/title |
+| Black Monks `[a]` Disk 1 | `e858490c483ed68447ac06c943d274829d484148ab45907b1100428cc343476a` | separate altered boot/main/title identity |
+| SKR Disk 1 | `db205cd1d8cefcd9f61ed8cb4169e6fc7169b41abcc50a1331db12a14994e9f1` | clean main-stage bytes do not admit its changed boot/title |
+| `[a2]` Disk 1 | `70489505484e3bfd3a37b61d77493cae8fd4a779ab61825f50ad1e5d6641ed12` | modified boot/title, separate title identity |
+| `[a]` Disk 1 | `0a655c33d691d6420332abb1ac6ca00df48facbc02946a64ac2490f584a70c39` | modified boot/title, separate title identity |
+| Clean Disk 2 | `99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a` | `DEU\0` custom data media |
+| `[a2]` Disk 2 | `5a74a97232369ae6c459ff125516ad8d4389020eb862cf49db99593b9f3460ff` | matching observed layout is not identity equivalence |
+| `[a]` Disk 2 | `8d0b5f3e9b330551f608977f7b890f93f6f68748190a081392a3ac64e76f96bd` | matching observed layout is not identity equivalence |
+| save disks | `19dcb795782ef2b34cd4aec7ff8f0f0abfb939093a35d597d7d01d6783b2e11a`, `e59a67eec0ad1c464df78ccf9af6b390e5f3c2f04cf26246d507475e1464d520` | `MSCF` nonboot media; never boot/disassembly candidates |
+
+| Deuteros Atari ST image | SHA-256 | Separation rule |
+| --- | --- | --- |
+| Replicants Disk 1 | `aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee` | admitted first-stage profile only |
+| Replicants `[a2]` Disk 1 | `a49f509b33ac3d5e59ce496999f28883014c0242c66cfc5e817dd07eb5e65fc8` | shared stage hashes; boot remains separate |
+| Replicants `[a]` Disk 1 | `5def9740c010decd32ac263cf933698a8371c2f542fbceab73abfad44576714f` | shared stage hashes; boot remains separate |
+| Elite Disk 1 | `5aabe878d05a5ddbead3ddf17c7d4dc5610ce396c33af28f60fa8ecc97d42b1e` | distinct boot identity |
+| Elite Falcon Disk 1 | `a601e40ee5da3e0abe2114eab4cd51e51fa81d96091abbd6557986299500cffe` | distinct boot identity |
+| unnamed Disk 2 | `5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193` | KILLER_BOOT vector-copy profile |
+| Replicants Disk 2 | `e882651f4c0100773bdb5832b6cb80d8eeb5397fba4be5907e7f908341e8f834` | same observed protection bytes, distinct image identity |
+| Replicants `[a2]` Disk 2 | `690c6558a4f6b954cdea3ef91197241af59d154d9eac9df76fde9cd62fa26e05` | unsupported nonstandard geometry |
+| Replicants `[a]` Disk 2 | `91e296ddbc005f756d05786a58660e0e4f8feee22016157fa3c751601bdf5fa7` | distinct boot identity |
+| Elite Disk 2 | `6d450e8af1f961b63dd858ef690e4c8e85040983862ea037e7fc98307fa8baab` | distinct boot identity |
+| Elite Falcon Disk 2 | `ef46cb3692ff1a4bbbd4f87fb686faa2e307f4f514f41abd0f6f836372654182` | unsupported nonstandard geometry |
+
+## Reproduction
+
+For a complete *linear candidate listing* of an identified DOS image, use a
+direct pipe. This writes no extracted game file and the result must remain
+outside the repository unless it contains only reviewed, minimal evidence.
+
+```sh
+unzip -p /path/to/Millennium-Return-to-Earth_DOS_EN.zip \
+  'millennium-return-to-earth-2-2/MILL.COM' |
+  ndisasm -b 16 -o 0x100 -
+```
+
+For the four known Millennium DOS program images in one reproducible report,
+use `tools/analyze_dos.py --archive` and repeat the exact `--member` argument.
+Add `--complete-linear` only when a complete byte-coverage candidate listing
+is needed. It reads each member into process memory, emits source hashes, and
+rejects a missing/ambiguous member rather than scanning an archive for a
+convenient substitute. The complete-linear mode labels every decoded byte range
+as code/data-unclassified; it is not a semantic control-flow claim.
+
+For 68000 media, Project Eon does **not** make a temporary extracted stage just
+to satisfy an external disassembler. The range is instead addressed through
+the in-memory, bounded ADF/ST parsers and decoded only after its source span
+and relocation are established. Generic ADF/ST linear decoding would mislabel
+resources, compressed data and sectors as instructions. The existing generated
+reports are navigation aids: `docs/generated/dos-millennium.md`,
+`docs/generated/deuteros-amiga-boot.md`, and
+`docs/generated/deuteros-atari-protected-boot.md`.
+
+`tools/analyze_m68k.py` also accepts an exact `--archive`, `--nested-member`,
+and `--member` triplet. It reads that ADF only into process memory. This is the
+reproducible route for the clean Deuteros disk and deliberately rejects an
+ambiguous archive/member selection; a nearby crack or save image cannot become
+an accidental analysis input. Its `--complete-linear` mode covers each
+byte-identified loaded boot/bootstrap/main/title range and labels every result
+code/data-unclassified until a caller-connected map or trace proves otherwise.
+
+## Completion rule
+
+“Complete disassembly” for any release means every reachable executable range
+has a hash, source offset, runtime address, architecture, code/data decision,
+successor/unknown edge, and reference to a test or trace. A decoder listing
+alone is not complete: it becomes a verified code map only after callers,
+relocation and external ABI outcomes have been established. Unknown edges stay
+in the recovery map and block gameplay exposure rather than being filled in
+with emulator guesses.

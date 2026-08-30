@@ -1,24 +1,56 @@
 #!/usr/bin/env python3
-"""Disassemble genuine Amiga 68000 boot code from an ADF image."""
+"""Disassemble genuine Amiga 68000 boot code without extracting its ADF."""
 
 from __future__ import annotations
 
 import argparse
+from io import BytesIO
 from pathlib import Path
 import sys
+from zipfile import ZipFile
+
+
+def read_source(args: argparse.Namespace) -> tuple[bytes, str]:
+    """Read one source image in memory, with no media-file output.
+
+    The archive form deliberately names every nesting layer.  Selecting the
+    first matching member would turn archive ordering into an unsupported
+    release fallback, particularly for collections containing crack variants.
+    """
+    archive_mode = args.archive is not None
+    direct_mode = args.adf is not None
+    if archive_mode == direct_mode:
+        raise SystemExit("Specify exactly one ADF path or --archive source")
+    if direct_mode:
+        return args.adf.read_bytes(), args.adf.name
+    if not args.nested_member or not args.member:
+        raise SystemExit("--archive requires --nested-member and --member")
+    try:
+        with ZipFile(args.archive) as outer:
+            nested = outer.read(args.nested_member)
+        with ZipFile(BytesIO(nested)) as inner:
+            return inner.read(args.member), f"{args.archive.name}!{args.nested_member}!{args.member}"
+    except (KeyError, OSError, ValueError) as error:
+        raise SystemExit(f"Unable to read exact ADF archive member: {error}") from error
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("adf", type=Path)
+    parser.add_argument("adf", type=Path, nargs="?", help="Direct ADF path (read only)")
+    parser.add_argument("--archive", type=Path,
+                        help="Outer ZIP containing one exact nested ZIP member")
+    parser.add_argument("--nested-member", help="Exact ZIP member holding the inner ZIP")
+    parser.add_argument("--member", help="Exact ADF member inside --nested-member")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--bytes", type=int, default=144)
+    parser.add_argument("--complete-linear", action="store_true",
+                        help="Decode each proven loaded range as code/data-unclassified M68000 bytes")
     args = parser.parse_args()
     try:
         from capstone import CS_ARCH_M68K, CS_MODE_BIG_ENDIAN, CS_MODE_M68K_000, Cs
     except ImportError as error:
         raise SystemExit("Install analysis dependencies: pip install -r requirements-analysis.txt") from error
-    data = args.adf.read_bytes()
+    data, source_label = read_source(args)
     if len(data) != 901_120:
         raise SystemExit("Expected a standard 901120-byte ADF")
     identifier = data[:4]
@@ -50,7 +82,7 @@ def main() -> None:
     lines = [
         "# Generated Deuteros Amiga boot disassembly",
         "",
-        f"- Source: `{args.adf.name}`",
+        f"- Source: `{source_label}`",
         f"- Disk identifier: `{identifier!r}`",
         f"- Root/custom block: `{root}` (`0x{root * 512:x}`)",
         f"- Bootstrap track load: disk `0x{loader_disk_offset:x}` → memory `0x{loader_destination:x}`, length `0x{loader_length:x}`",
@@ -59,22 +91,32 @@ def main() -> None:
         f"- Main entry: `0x{stage_entry:x}` (disk `0x{stage_entry_offset:x}`)",
         f"- Title handoff stage: disk `0x{title_offset:x}` → memory `0x{title_destination:x}`, length `0x{title_length:x}`",
         f"- Title entry: `0x{title_entry:x}` (disk `0x{title_entry_offset:x}`)",
+        "- Listing scope: " + ("complete loaded ranges, linear candidate only (code/data unclassified)"
+            if args.complete_linear else "bounded entrypoint windows"),
         "",
         "## Boot block",
         "",
         "```asm",
     ]
-    for instruction in decoder.disasm(data[12 : 12 + args.bytes], 12):
+    boot_bytes = 1024 if args.complete_linear else args.bytes
+    for instruction in decoder.disasm(data[12 : 12 + boot_bytes], 12):
         lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
     lines.extend(["```", "", "## Bootstrap entry", "", "```asm"])
     loader_entry_offset = loader_disk_offset + loader_entry - loader_destination
-    for instruction in decoder.disasm(data[loader_entry_offset : loader_entry_offset + 192], loader_entry):
+    bootstrap_bytes = loader_length if args.complete_linear else 192
+    bootstrap_source_offset = loader_disk_offset if args.complete_linear else loader_entry_offset
+    bootstrap_address = loader_destination if args.complete_linear else loader_entry
+    for instruction in decoder.disasm(data[bootstrap_source_offset : bootstrap_source_offset + bootstrap_bytes],
+                                       bootstrap_address):
         lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
     lines.extend(["```", "", "## Main entry", "", "```asm"])
     # End on the instruction boundary immediately before the next routine's
     # absolute LEA; Capstone otherwise substitutes its invalid-input sentinel
     # for a deliberately truncated operand.
-    for instruction in decoder.disasm(data[stage_entry_offset : stage_entry_offset + 0x1FE], stage_entry):
+    main_bytes = length if args.complete_linear else 0x1FE
+    main_source_offset = stage_offset if args.complete_linear else stage_entry_offset
+    main_address = destination if args.complete_linear else stage_entry
+    for instruction in decoder.disasm(data[main_source_offset : main_source_offset + main_bytes], main_address):
         lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
     lines.extend(["```", "", "## Title handoff entry", "", "```asm"])
     # Use a fresh decoder after the intentionally truncated main-entry view.
@@ -84,7 +126,11 @@ def main() -> None:
     # 196 bytes ends immediately after the complete six-byte move at $404e4.
     # Do not terminate in the following JSR operand: Capstone then renders a
     # misleading sentinel address for that truncated final instruction.
-    for instruction in title_decoder.disasm(data[title_entry_offset : title_entry_offset + 196], title_entry):
+    title_bytes = title_length if args.complete_linear else 196
+    title_source_offset = title_offset if args.complete_linear else title_entry_offset
+    title_address = title_destination if args.complete_linear else title_entry
+    for instruction in title_decoder.disasm(data[title_source_offset : title_source_offset + title_bytes],
+                                             title_address):
         lines.append(f"{instruction.address:08x}  {instruction.mnemonic:<10} {instruction.op_str}".rstrip())
     lines.extend(["```", ""])
     report = "\n".join(lines)

@@ -40,6 +40,7 @@
 #include "data/millennium_dos_title_transition.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
+#include "engine/millennium_dos_sound_selection_session.hpp"
 #include "data/millennium_dos_reference_trace.hpp"
 #include "data/millennium_amiga_reference_trace.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
@@ -2745,6 +2746,9 @@ int main() {
     assert(sound_selection.selector_entry_address == 0x511);
     assert(sound_selection.selector_byte_count == 100);
     assert(sound_selection.prompt_address == 0x407);
+    assert(sound_selection.prompt_byte_count == 155);
+    assert(sound_selection.prompt_sha256
+        == "d84297ee58abeaa4ca09d60a533fe0b05ea4b805af46629d32c031b11700cad0");
     assert(sound_selection.filename_table_address == 0x62a);
     assert(sound_selection.selection_table_address == 0x66e);
     assert(sound_selection.ibm_speaker_table_slot == 0);
@@ -2755,6 +2759,44 @@ int main() {
     assert(sound_selection.covox_filename == "scvx.drv");
     assert(sound_selection.missing_srol_table_slot == 2);
     assert(sound_selection.missing_srol_filename == "srol.drv");
+    const auto original_sound_prompt = eon::extract_millennium_dos_sound_selection_prompt(
+        *mill_bytes, sound_selection);
+    assert(original_sound_prompt.size() == 154);
+    assert(original_sound_prompt.ends_with('$') == false);
+    assert(original_sound_prompt.find("0 = IBM Speaker") != std::string::npos);
+    auto altered_sound_prompt = *mill_bytes;
+    altered_sound_prompt[0x307] ^= 1U;
+    bool rejected_sound_prompt = false;
+    try {
+        static_cast<void>(eon::extract_millennium_dos_sound_selection_prompt(
+            altered_sound_prompt, sound_selection));
+    } catch (const std::runtime_error&) {
+        rejected_sound_prompt = true;
+    }
+    assert(rejected_sound_prompt);
+    eon::MillenniumDosSoundSelectionSession ibm_sound_session(sound_selection);
+    assert(ibm_sound_session.awaiting_choice());
+    assert(!ibm_sound_session.accept_ascii_character('x'));
+    assert(ibm_sound_session.awaiting_choice());
+    assert(ibm_sound_session.accept_ascii_character('0'));
+    assert(!ibm_sound_session.awaiting_choice());
+    assert(ibm_sound_session.choice() == eon::MillenniumDosSoundEffectChoice::ibm_speaker);
+    assert(ibm_sound_session.selected_table_slot() == 0);
+    assert(ibm_sound_session.selected_original_filename() == "sibm.drv");
+    // The parser proves only literal character input. A second character must
+    // not become an invented re-selection/driver switch in the host runtime.
+    assert(!ibm_sound_session.accept_ascii_character('1'));
+    assert(ibm_sound_session.selected_original_filename() == "sibm.drv");
+    eon::MillenniumDosSoundSelectionSession sound_blaster_session(sound_selection);
+    assert(sound_blaster_session.accept_ascii_character('1'));
+    assert(sound_blaster_session.choice() == eon::MillenniumDosSoundEffectChoice::sound_blaster);
+    assert(sound_blaster_session.selected_table_slot() == 3);
+    assert(sound_blaster_session.selected_original_filename() == "ssbl.drv");
+    eon::MillenniumDosSoundSelectionSession covox_sound_session(sound_selection);
+    assert(covox_sound_session.accept_ascii_character('2'));
+    assert(covox_sound_session.choice() == eon::MillenniumDosSoundEffectChoice::covox_sound_master);
+    assert(covox_sound_session.selected_table_slot() == 4);
+    assert(covox_sound_session.selected_original_filename() == "scvx.drv");
     const auto sound_blaster = eon::extract_asset_by_sha256(english_dos->path,
         "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72");
     const auto covox = eon::extract_asset_by_sha256(english_dos->path,
