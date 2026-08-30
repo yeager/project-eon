@@ -4,9 +4,32 @@ This document records the current acquisition boundary for the first
 Millennium 2.2 DOS runtime evidence.  It is intentionally a capture recipe,
 not an emulator setup guide and not a claim that the game is playable.
 
-No Project Eon reference trace has been recorded or admitted by following
-this recipe yet.  In particular, no event in this repository represents an
-emulator observation.
+No Project Eon reference trace has been admitted by following this recipe.
+In particular, no event in this repository represents an emulator observation.
+
+## First raw observation (not admitted)
+
+On 2026-08-30, the reviewed external recorder was built from the pinned
+DOSBox-X revision and run against the English archive through an
+`archivemount -o ro` FUSE mount. The mount was verified as
+`ro,nosuid,nodev`, and the archive hash was identical before and after the
+run. The recorder emitted one raw request observation before a 20-second
+headless smoke run was stopped:
+
+```text
+event 1 1 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin
+```
+
+The raw event file remains outside this repository. Its SHA-256 is
+`402b411a0a6958e2fd425bdc6dcdf4cedb1cee3a9fac9437745d6fa7b63e1c76`;
+the recorder executable is
+`5c1132e7a78b36703aa24347e08ba5d8c48fd4fb385a2412f9ce1818d895af09`
+and the retained DOSBox-X log is
+`6bf278b48d4d7fd05211afce73433775c21fc9995dd998bf6e9d90c749eb84ef`.
+The run was intentionally interrupted before a complete request sequence,
+return value, input result, title state, frame, audio checkpoint, or game
+state was observed. It is therefore raw preservation provenance only, not an
+admitted v2 trace and not a runtime input.
 
 ## Audited local route
 

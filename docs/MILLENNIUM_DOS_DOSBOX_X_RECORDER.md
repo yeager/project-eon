@@ -17,14 +17,15 @@ symlink is never overwritten; it rejects DS:DX strings containing separators
 or a drive delimiter, and disables its image map after a duplicate entry-CS
 observation.
 
-It is **not a recorder release and has produced no admitted capture**. The
-full local DOSBox-X Autotools build currently stops in its unrelated bundled
-Opus/builtin dependency-file generation (`*.Tpo` missing after compilation).
-That host-build fault is recorded separately from the observer: it neither
-changes the reviewed object result nor permits a trace to be fabricated.
-Resolve or replace that external build route, then re-review the exact patch,
-hash the resulting executable, and run the write-protected recipe below
-before admitting any output.
+It is **not a recorder release and has produced no admitted capture**. A full
+serial build was completed with all compiler temporary files under the
+project-scoped cache rather than `/tmp`. Its executable SHA-256 is
+`5c1132e7a78b36703aa24347e08ba5d8c48fd4fb385a2412f9ce1818d895af09`.
+The first write-protected run emitted exactly one raw request observation;
+the recorded external hashes and its strict non-admission status are in
+[MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-raw-observation-not-admitted).
+Re-review the exact patch, retain a complete configuration and input timeline,
+and capture the required result boundaries before admitting any output.
 
 The design is locked to the locally inspected DOSBox-X source revision
 `234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapter
