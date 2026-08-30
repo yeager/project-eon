@@ -14,6 +14,22 @@ msgid "GRAPHICS PRESET"
 msgstr ""
 
 #: src/main.cpp
+msgid "RENDER PACING"
+msgstr ""
+
+#: src/main.cpp
+msgid "VSYNC (DISPLAY)"
+msgstr ""
+
+#: src/main.cpp
+msgid "120 FPS (RENDER ONLY)"
+msgstr ""
+
+#: src/main.cpp
+msgid "UNCAPPED (RENDER ONLY)"
+msgstr ""
+
+#: src/main.cpp
 msgid "CLEAN"
 msgstr ""
 

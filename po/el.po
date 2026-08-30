@@ -290,3 +290,14 @@ msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
 msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgid "RENDER PACING"
+msgstr "ΡΥΘΜΟΣ ΑΠΕΙΚΟΝΙΣΗΣ"
+
+msgid "VSYNC (DISPLAY)"
+msgstr "VSYNC (ΟΘΟΝΗ)"
+
+msgid "120 FPS (RENDER ONLY)"
+msgstr "120 FPS (ΜΟΝΟ ΑΠΟΔΟΣΗ)"
+
+msgid "UNCAPPED (RENDER ONLY)"
+msgstr "ΧΩΡΙΣ ΟΡΙΟ (ΜΟΝΟ ΑΠΟΔΟΣΗ)"
