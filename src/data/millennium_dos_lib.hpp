@@ -21,12 +21,17 @@ public:
     explicit MillenniumDosLib(std::vector<std::uint8_t> bytes);
 
     [[nodiscard]] std::uint32_t directory_offset() const { return directory_offset_; }
+    // Container identity is retained separately from generic directory
+    // parsing so a recovery path can require an exact original leaf without
+    // making the format reader itself a cross-edition admission policy.
+    [[nodiscard]] const std::string& source_sha256() const { return source_sha256_; }
     [[nodiscard]] const std::vector<MillenniumDosLibEntry>& entries() const { return entries_; }
     [[nodiscard]] const MillenniumDosLibEntry* find(std::string_view name) const;
     [[nodiscard]] std::vector<std::uint8_t> read(const MillenniumDosLibEntry& entry) const;
 
 private:
     std::vector<std::uint8_t> bytes_;
+    std::string source_sha256_;
     std::uint32_t directory_offset_ = 0;
     std::vector<MillenniumDosLibEntry> entries_;
 };

@@ -1,5 +1,7 @@
 #include "data/millennium_dos_lib.hpp"
 
+#include "data/sha256.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <set>
@@ -56,6 +58,7 @@ std::string upper(std::string_view text) {
 MillenniumDosLib::MillenniumDosLib(std::vector<std::uint8_t> bytes)
     : bytes_(std::move(bytes)) {
     if (bytes_.size() < header_size) throw std::runtime_error("Millennium DOS LIB is too short");
+    source_sha256_ = to_hex(sha256(bytes_));
     const auto count = little16(bytes_, 0);
     if (count == 0) throw std::runtime_error("Empty Millennium DOS LIB directory");
     if (bytes_[5] != 0) throw std::runtime_error("Invalid Millennium DOS LIB header flags");

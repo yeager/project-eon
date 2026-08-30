@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <string_view>
 
 namespace eon {
 namespace {
@@ -15,6 +16,14 @@ std::string name_for(const std::uint16_t index) {
 
 MillenniumDosTitleTransitionSequence parse_millennium_dos_title_transition(
     const MillenniumDosLib& title_library, const MillenniumDosTitleFlow& flow) {
+    constexpr std::string_view english_title_library_sha256 =
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+    // The transition addresses belong to the exact English title bank
+    // established by the hash-locked title-flow profile. Do not let a
+    // structurally valid or cross-edition LIB contribute its P01..P25 bytes.
+    if (title_library.source_sha256() != english_title_library_sha256) {
+        throw std::runtime_error("Unsupported Millennium English DOS title library");
+    }
     if (flow.intro_transition_steps == 0 || flow.intro_step_stride == 0
         || flow.intro_transition_steps >= title_library.entries().size()) {
         throw std::runtime_error("Invalid Millennium DOS title transition bounds");

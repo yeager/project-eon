@@ -2670,6 +2670,8 @@ int main() {
     assert(gx_bytes->size() == 312'748);
     const eon::MillenniumDosLib title_lib(*title_bytes);
     const eon::MillenniumDosLib gx_lib(*gx_bytes);
+    assert(title_lib.source_sha256()
+        == "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678");
     assert(title_lib.directory_offset() == 0x4813);
     assert(title_lib.entries().size() == 38);
     assert(title_lib.entries().front().name == "P00");
@@ -2742,6 +2744,19 @@ int main() {
     assert(rejected_altered_launcher);
     const auto title_exit = eon::parse_millennium_dos_title_exit_closure(*titles_bytes);
     const auto millennium_title_transition = eon::parse_millennium_dos_title_transition(title_lib, title_flow);
+    auto altered_title_library_bytes = *title_bytes;
+    // P00 is outside the P01..P25 transition bank, so this exercises the
+    // complete-leaf gate rather than merely breaking a decoded patch record.
+    altered_title_library_bytes[6] ^= 0x01;
+    const eon::MillenniumDosLib altered_title_library(std::move(altered_title_library_bytes));
+    bool rejected_altered_title_library = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_title_transition(
+            altered_title_library, title_flow));
+    } catch (const std::runtime_error&) {
+        rejected_altered_title_library = true;
+    }
+    assert(rejected_altered_title_library);
     assert(title_flow.title_entry_address == 0x1b80);
     assert(title_flow.title_selection_callee_entry_address == 0x1725);
     assert(title_flow.title_selection_callee_branch_address == 0x172f);
