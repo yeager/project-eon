@@ -374,6 +374,21 @@ def main() -> int:
             "event\t4 40 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n",
             None, None, "2 interrupt, 1 file, 1 EXEC observations; diagnostics only)",
         ),
+        # This is the exact five-record, externally captured title-init
+        # observation documented in MILLENNIUM_DOS_CAPTURE.md.  The test
+        # rehashes the supplied archive and exercises the public CLI only;
+        # it does not replay either private-vector return or use it as game
+        # input, state, rendering, or a substitute for original media.
+        (
+            "millennium", "dos", "millennium-dos-en-title-init-v2",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "event\t1 1 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin\n"
+            "event\t2 2 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000\n"
+            "event\t3 3 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n"
+            "event\t4 4 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0101\n"
+            "event\t5 5 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0000\n",
+            None, None, "2 interrupt, 1 file, 2 private-return observations; diagnostics only)",
+        ),
         (
             "millennium", "amiga", "millennium-amiga-en-defjam-bootstrap-v1",
             "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
@@ -444,6 +459,9 @@ def main() -> int:
         ),
         "millennium-dos-en-startup-v1": (
             "millennium-dos-launcher", "millennium-dos-title-flow", "millennium-dos-game-flow",
+        ),
+        "millennium-dos-en-title-init-v2": (
+            "millennium-dos-launcher", "millennium-dos-title-flow",
         ),
         "millennium-amiga-en-defjam-bootstrap-v1": (
             "millennium-amiga-defjam-bootstrap", "millennium-amiga-shared-resident",
