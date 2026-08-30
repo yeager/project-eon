@@ -83,7 +83,8 @@ def write_reference_trace(
     events_path.write_text(events, encoding="ascii")
     event_bytes = events_path.read_bytes()
     fields = [
-        ("format", "project-eon-reference-trace-v3" if adapter.endswith("-v3")
+        ("format", "project-eon-reference-trace-v4" if adapter.endswith("-v4")
+            else "project-eon-reference-trace-v3" if adapter.endswith("-v3")
             else "project-eon-reference-trace-v2"),
         ("adapter", adapter),
         ("event_file", events_path.name),
@@ -116,6 +117,34 @@ def write_reference_trace(
         "".join(f"{key}\t{value}\n" for key, value in fields), encoding="ascii"
     )
     return manifest_path
+
+
+def deuteros_title_bridge_events() -> str:
+    """Return a grammar fixture for the exact v3 bridge contract.
+
+    The records are external-observation syntax only. They contain no Amiga
+    media, screenshot, audio payload, input injection, or replay state.
+    """
+    return (
+        "event\t1 10 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x0096 result_d0=0x00000000 result_sr=0x2000\n"
+        "event\t2 20 exec-return site=0x00040450 exec_base_address=0x00000004 vector=-0x009c result_d0=0x00000000 result_sr=0x2000\n"
+        "event\t3 30 open-library-return site=0x0001ed80 name_address=0x0001ed02 exec_base_address=0x00000004 vector=-0x0228 result_d0=0x00012fec result_sr=0x2000\n"
+        "event\t4 40 graphics-call site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0\n"
+        "event\t5 50 custom-register-call site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff\n"
+        "event\t6 60 custom-register-return site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff result_d0=0x00000000 result_sr=0x2000\n"
+        "event\t7 70 graphics-return site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n"
+        "event\t8 80 callback-registration-return site=0x0001ef74 callback=0x0001f056 exec_base_address=0x00000004 vector=-0x01ce result_d0=0x00000000 result_sr=0x2000\n"
+        "event\t9 90 queue-snapshot phase=pre queue_address=0x0001eec0 queue_bytes=0000000000000000000000000000000000000000 pending_address=0x0001eed6 pending_word=0x0000 source_table_address=0x0001ee20 source_table_size=160 source_table_sha256=2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265\n"
+        "event\t10 100 callback-entry site=0x0001f056 incoming_a0=0x00001000 frame_04_0d=00000000000000000000\n"
+        "event\t11 110 queue-snapshot phase=post queue_address=0x0001eec0 queue_bytes=0000000000000000000000000000000000000000 pending_address=0x0001eed6 pending_word=0x0000 source_table_address=0x0001ee20 source_table_size=160 source_table_sha256=2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265\n"
+        "event\t12 120 selector-entry site=0x0001fe7a incoming_d0=0x00000000\n"
+        "event\t13 130 local-call call_site=0x0001fe84 callee=0x0001feaa return_pc=0x0001fe88\n"
+        "event\t14 140 local-return call_site=0x0001fe84 callee=0x0001feaa return_pc=0x0001fe88 result_d0=0x00000000 result_sr=0x2000\n"
+        "event\t15 150 local-call call_site=0x0001fe92 callee=0x0001feaa return_pc=0x0001fe96\n"
+        "event\t16 160 local-return call_site=0x0001fe92 callee=0x0001feaa return_pc=0x0001fe96 result_d0=0x00000000 result_sr=0x2000\n"
+        "event\t17 170 dispatch-snapshot phase=pre site=0x0001fbe6 cell_1f98c=0x00 cell_1f98e=0x00 cell_1f99c=0x00000000 cell_1f974=0x00000000 cell_1f970=0x00000000 cell_1f96c=0x00000000 cell_1f994=0x00000000 cell_1f998=0x00000000\n"
+        "event\t18 180 dispatch-snapshot phase=post site=0x0001fbe6 cell_1f98c=0x00 cell_1f98e=0x00 cell_1f99c=0x00000000 cell_1f974=0x00000000 cell_1f970=0x00000000 cell_1f96c=0x00000000 cell_1f994=0x00000000 cell_1f998=0x00000000\n"
+    )
 
 
 def main() -> int:
@@ -379,6 +408,28 @@ def main() -> int:
             "1 Exec, 1 OpenLibrary, 1 graphics, 1 custom-register, 2 callback observations; diagnostics only)",
         ),
         (
+            "deuteros", "amiga", "deuteros-amiga-en-title-bridge-v3",
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            deuteros_title_bridge_events(),
+            "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+            "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
+            "2 Exec return, 1 OpenLibrary return, 1/1 graphics call/return, 1/1 custom-register call/return, 2 queue snapshot, 1 callback entry, 2 dispatch snapshot observations; diagnostics only)",
+        ),
+        (
+            "deuteros", "amiga", "deuteros-amiga-en-title-display-v4",
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            deuteros_title_bridge_events()
+            + "event\t19 190 display-layout site=0x0001eda6 base_source_address=0x00012ff4 base_destination_a=0x0001f168 base_destination_b=0x0001f164 display_base=0x0000ab00 display_list=0x00000420 copper_list_sha256=cf827847c13dbeafeea72c86f2c4fb90a6d717bf548f0914b2f203abb94293f6\n"
+            + "event\t20 200 bitplane-layout site=0x0001f182 base_pointer_address=0x0001f168 bitplane_count=0x0004 plane0=0x0000b5f0 plane1=0x0000d530 plane2=0x0000f470 plane3=0x000113b0 plane_stride=0x1f40 bplcon0=0x4200 bpl1mod=0x0000 bpl2mod=0x0000 ddfstrt=0x0038 ddfstop=0x00d0 width_pixels=0x0140 height_lines=0x00c8 bytes_per_row=0x0028 modulo=0x0000\n"
+            + "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55 rgba_palette_format=rgba8888-rgb4-expanded-nibbles rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            + "event\t22 220 input-checkpoint callback_site=0x0001f056 selector_site=0x0001fe7a queue_sha256=0000000000000000000000000000000000000000000000000000000000000000 input_timeline_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            + "event\t23 230 frame-checkpoint display_base=0x0000ab00 rgba_width=0x0140 rgba_height=0x00c8 rgba_format=rgba8888-row-major bitplanes_sha256=fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            + "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_format=s16le-interleaved pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n",
+            "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+            "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
+            "1 display-layout, 1 bitplane-layout, 1 palette, 1 input, 1 frame, 1 audio checkpoints; diagnostics only, no title replay)",
+        ),
+        (
             "deuteros", "amiga", "deuteros-amiga-en-main-copy-loop-v3",
             "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
             "event\t1 10 main-copy-loop-pc pc=0x000210d4 opcode=0x51c8\n",
@@ -401,6 +452,12 @@ def main() -> int:
             "deuteros-atari-protected-boot", "deuteros-atari-first-stage",
         ),
         "deuteros-amiga-en-title-stage-v1": (
+            "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
+        ),
+        "deuteros-amiga-en-title-bridge-v3": (
+            "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
+        ),
+        "deuteros-amiga-en-title-display-v4": (
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
         ),
         "deuteros-amiga-en-main-copy-loop-v3": ("deuteros-amiga-main-stage",),
