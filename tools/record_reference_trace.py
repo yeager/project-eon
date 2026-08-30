@@ -385,8 +385,14 @@ def copy_checked_input(input_fd: int, expected: os.stat_result, output_path: Pat
 
 def write_text_atomic(path: Path, content: str) -> None:
     temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(content, encoding="utf-8", newline="\n")
-    with temporary.open("rb") as stream:
+    # Windows rejects fsync on a read-only CRT descriptor (EBADF), even
+    # though POSIX accepts it. Keep the durable write and the sync on the
+    # same writable handle so capture assembly has identical semantics on all
+    # supported hosts. ``x`` also makes an unexpected temporary path a hard
+    # failure rather than replacing an operator-owned file.
+    with temporary.open("x", encoding="utf-8", newline="\n") as stream:
+        stream.write(content)
+        stream.flush()
         os.fsync(stream.fileno())
     temporary.replace(path)
 
