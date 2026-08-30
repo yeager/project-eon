@@ -55,6 +55,7 @@ struct ReferenceTrace {
     std::size_t adapter_interrupt_count = 0;
     std::size_t adapter_file_count = 0;
     std::size_t adapter_exec_count = 0;
+    std::size_t adapter_private_return_count = 0;
     std::size_t adapter_trap_count = 0;
     std::size_t adapter_callback_count = 0;
     std::size_t adapter_frame_count = 0;

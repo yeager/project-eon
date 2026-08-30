@@ -908,6 +908,30 @@ int main() {
             "event\t1 10 interrupt image=2200ad.exe pc=0x0124 int=0x91 ax=0x001f es=cs bx=0xd19f\n",
             diagnostics, trace_error));
     }
+    // This exact five-record schema retains a real title-wrapper return
+    // observation as diagnostics only. It never turns either AX word into a
+    // title-session input or a private-driver ABI implementation.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 1 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin\n"
+            "event\t2 2 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000\n"
+            "event\t3 3 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n"
+            "event\t4 4 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0101\n"
+            "event\t5 5 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0000\n";
+        eon::MillenniumDosTitleInitReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_millennium_dos_title_init_reference_events(
+            valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 5 && diagnostics.interrupt_count == 2
+            && diagnostics.file_count == 1 && diagnostics.private_return_count == 2);
+        assert(!eon::validate_millennium_dos_title_init_reference_events(
+            "event\t1 1 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin\n"
+            "event\t2 2 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000\n"
+            "event\t3 3 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4\n"
+            "event\t4 4 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0000\n"
+            "event\t5 5 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0101\n",
+            diagnostics, trace_error));
+    }
     // These records exercise the GX trace grammar only. They are not game
     // data or a capture fixture; validation reports opaque provenance and
     // never starts a GX session or supplies any observed value to one.

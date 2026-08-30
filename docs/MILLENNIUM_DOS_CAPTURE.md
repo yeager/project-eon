@@ -4,7 +4,7 @@ This document records the current acquisition boundary for the first
 Millennium 2.2 DOS runtime evidence.  It is intentionally a capture recipe,
 not an emulator setup guide and not a claim that the game is playable.
 
-Three external captures have been assembled and independently CLI-validated under
+Four external captures have been assembled and independently CLI-validated under
 this recipe. That validation proves only the declared release identity,
 provenance hashes, ordering, and narrow event grammar. In particular, no event
 in this repository represents an emulator observation, and validation does
@@ -169,6 +169,43 @@ respectively,
 The archive hash was checked unchanged before and after, and the mount was
 unmounted. No raw result or preimage is stored in this repository or consumed
 by the runtime.
+
+### First strict title-init v2 trace (diagnostics only)
+
+The fourth private run on 2026-08-30 promoted only the already observed,
+ordered title-wrapper records into the dedicated
+`millennium-dos-en-title-init-v2` capture grammar. It used the same original
+guest command tail `mill.com 0`, no device-input injection, normal CPU core,
+read-only FUSE route, and unaltered English DOS archive. Its candidate event
+stream SHA-256 is
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`:
+
+```text
+event 1 1 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin
+event 2 2 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000
+event 3 3 interrupt image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4
+event 4 4 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0101
+event 5 5 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0000
+```
+
+The external assembler and Eon CLI accepted all five ordered records. The
+private manifest SHA-256 is
+`c1081a1107c7f7bdd047c237bba8b4564321ca949d5d429d92899caf4c4664fd`; the
+capture interval was `2026-08-30T04:17:32Z` to `2026-08-30T04:17:55Z`. The
+recorder executable SHA-256 was
+`bc8796acc3748db743352beac7a77797bd4f633d1ff30f0d90b282882691d695`.
+Its exact configuration, command-tail, and input-timeline hashes were,
+respectively,
+`0b0a0ce24ed1b2bbfda0b9fe558aec63d340be3b2ef8f0a97af32445c808c866`,
+`96a17ae1c4bb95d2290bf430c358bd16f7a3c95961be037f09b8a19ab2a5ad3c`, and
+`2b1edf6ba255c41fb7099e3b3a610b9591014aa691d9e0f55a84ab6397f0deb1`.
+
+This strict v2 acceptance is still diagnostics-only. It proves the declared
+raw records and provenance, not the `INT $91` ABI, flags, record writes,
+branch consequences, title pixels, input semantics, audio, EXEC, or a game
+state. The trace is never replayed and neither return word is supplied to Eon
+runtime code. The archive was rehashed unchanged before and after the run and
+the FUSE mount was unmounted; raw outputs and all preimages remain external.
 
 ## Audited local route
 
