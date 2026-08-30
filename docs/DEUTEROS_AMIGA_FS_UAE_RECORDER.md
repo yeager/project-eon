@@ -13,7 +13,7 @@ configuration and supplied media remain outside this repository.
 | Reviewed tag | `v3.2.35` |
 | Reviewed commit | `4ae7ddaec50b567ed80d71ffbff067cb58e945a3` |
 | Local package used for configuration preflight | Ubuntu `fs-uae 3.2.35-2` |
-| CPU route | A500-compatible 68000 loop, `src/newcpu.cpp:m68k_run_1` |
+| CPU route | A500-compatible cycle-exact 68000 loop, `src/newcpu.cpp:m68k_run_1_ce` |
 | Recorder activation | Exclusive new output named by `PROJECT_EON_FS_UAE_RAW_RECORD` |
 
 The FS-UAE configuration file must be passed as the positional command-line
@@ -23,8 +23,9 @@ to fall back to default media; see
 
 ## Hook contract
 
-The prototype has one pre-instruction hook immediately after
-`r->opcode = r->ir` in `m68k_run_1`. It only reads the current PC, original
+The prototype has the same pre-instruction hook immediately after
+`r->opcode = r->ir` in both 68000 routes (`m68k_run_1` and the A500-selected
+cycle-exact `m68k_run_1_ce`). It only reads the current PC, original
 opcode, D0, A0, A6, SR and emulated cycle counter. It tests a fixed finite
 site set:
 
