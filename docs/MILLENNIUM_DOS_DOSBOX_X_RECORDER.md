@@ -19,14 +19,16 @@ observation.
 
 It is **not a recorder release**. A full
 serial build was completed with all compiler temporary files under the
-project-scoped cache rather than `/tmp`. The corrected executable SHA-256 is
-`122869702f46b5eda8f9f3ded1032c2e466dd6b0bfafaa460742ef4cd5712dc0`.
+project-scoped cache rather than `/tmp`. The current reviewed external
+executable SHA-256 is
+`bc8796acc3748db743352beac7a77797bd4f633d1ff30f0d90b282882691d695`.
 It corrects the interrupt-hook match to the actual `CD 21` at `0x020c`, while
 the emitted schema remains the intentionally stable `0x0209` setup-site ID.
 The first explicitly configured, write-protected run emitted two raw request
-observations. Its private preimages were assembled and accepted by Project
-Eon's CLI as a diagnostics-only v2 provenance record; its exact hashes and
-strict runtime non-admission status are in
+observations. A later strictly filtered run also retained the title private
+vector's two observed post-return AX values and was accepted by Project Eon's
+CLI as the diagnostics-only `millennium-dos-en-title-init-v2` record. Its
+exact hashes and strict runtime non-admission status are in
 [MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-trace-validated-capture-diagnostics-only).
 Re-review the exact patch, retain a complete configuration and input timeline,
 and capture the required result boundaries before extending any runtime path.
@@ -41,8 +43,8 @@ status are recorded in
 [MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#title-private-vector-return-reconnaissance-not-a-v2-event).
 
 The design is locked to the locally inspected DOSBox-X source revision
-`234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapter
-`millennium-dos-en-startup-v1`. A patch for another DOSBox-X revision must
+`234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapters
+`millennium-dos-en-startup-v1` and `millennium-dos-en-title-init-v2`. A patch for another DOSBox-X revision must
 repeat the source-anchor review below; it must not be treated as compatible by
 filename or version string alone.
 

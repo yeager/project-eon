@@ -31,13 +31,21 @@ table recorded `ro,nosuid,nodev,default_permissions` for every view. Hashing
 the exposed files yielded the three ADF/ROM identities in the table above;
 the outer release still hashed to `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`.
 
-FS-UAE 3.2.35 was then started with the recorded A500 configuration, both
-floppy drives write-protected, and a 20-second host preflight limit. Its
-console identified `KS ROM v1.3 ... rev 34.5 (256k)` and stopped cleanly when
-the preflight limit ended. This proves only that the documented, read-only
-media route and ROM admission reach FS-UAE initialisation. It records no
-title frame, game input, audio, callback, emulator result, event stream, or
-trace admission.
+An earlier same-day preflight passed the file using `--config=…`. FS-UAE 3.2.35
+silently ignored that option: its own log showed no floppy images and its
+default ROMs. That invocation is withdrawn as media/ROM evidence. It had never
+produced a trace, frame, input, or runtime admission.
+
+The corrected invocation supplies the `.fs-uae` file as FS-UAE's positional
+argument. On 2026-08-30 from `04:30:33Z` to `04:30:53Z`, it loaded the recorded
+A500 configuration (configuration SHA-256 in the table), both exact FUSE ADF
+paths as drives 0 and 1 with `write protected 1`, and `KS ROM v1.3
+(A500,A1000,A2000) rev 34.5 (256k) [315093-02]`. Host status `124` is the
+deliberate 20-second timeout, not an emulator result. The outer archive still
+hashed to `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`
+afterwards. This proves only that the documented, read-only media route and ROM
+admission reach FS-UAE initialisation. It records no title frame, game input,
+audio, callback, emulator result, event stream, or trace admission.
 
 ## Direct title-stage observations
 
@@ -86,8 +94,10 @@ particular, it did **not** produce:
 - the ordered v3 callback/Exec prefix;
 - an independently recorded game-input timeline (debugger keystrokes are not
   game input);
-- a defined raw-to-RGBA conversion and a canonical RGBA frame checkpoint;
-- a host PCM capture with sample rate, channel count, and frame count;
+- the mandatory RGB4-to-`rgba8888-rgb4-expanded-nibbles` conversion and a
+  canonical `rgba8888-row-major` frame checkpoint;
+- a host `s16le-interleaved` PCM capture with sample rate, channel count, and
+  frame count;
 - a capture manifest with start/end times and command/input fingerprints.
 
 The local route intentionally used `uae_sound_output=interrupts`, so FS-UAE
