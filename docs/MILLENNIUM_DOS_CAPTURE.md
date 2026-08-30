@@ -4,10 +4,14 @@ This document records the current acquisition boundary for the first
 Millennium 2.2 DOS runtime evidence.  It is intentionally a capture recipe,
 not an emulator setup guide and not a claim that the game is playable.
 
-No Project Eon reference trace has been admitted by following this recipe.
-In particular, no event in this repository represents an emulator observation.
+One external capture has been assembled and independently CLI-validated under
+this recipe. That validation proves only the declared release identity,
+provenance hashes, ordering, and narrow event grammar. In particular, no event
+in this repository represents an emulator observation, and validation does
+not prove a DOS/private-driver result, title transition, input result, frame,
+audio checkpoint, or playable game state.
 
-## First raw observation (not admitted)
+## First trace-validated capture (diagnostics only)
 
 On 2026-08-30, the reviewed external recorder was built from the pinned
 DOSBox-X revision and run against the English archive through an
@@ -29,6 +33,28 @@ file has SHA-256
 `dc4a67ce61ed6bcd32767c2bf354444f525176ba81308cb9374d7718d1b7aa9a`; its
 recorder executable has SHA-256
 `122869702f46b5eda8f9f3ded1032c2e466dd6b0bfafaa460742ef4cd5712dc0`.
+The explicitly configured 2026-08-30 capture was assembled with the source
+archive hash checked before and after the run, and CLI validation accepted its
+two ordered events through `millennium-dos-en-startup-v1`. The private
+assembled manifest SHA-256 is
+`79b77f399ebc0dd14494e9a6c0f0c7d55c13bbd864bba008f0f7f29cd7c885fa`.
+
+| Private capture field | SHA-256 / value |
+| --- | --- |
+| Capture UTC | `2026-08-30T03:49:37Z` to `2026-08-30T03:50:00Z` |
+| Explicit recorder configuration | `ba56ee4f77e3e982e5ddb36680190ec17b109e496bad8452cc0a0a4c895d3291` |
+| Literal command tail | `ff9c433831db4975cefa7ee23b646cee2eba1ad676aad4f8df2a48ce36b72ca8` |
+| Empty guest-input timeline | `f8a02c12d4fed2b0f8374ac5137e6565d1d9ca520cfe49d9e194376e7d7ad704` |
+| Recorder source-review anchor | `234797680781567e18c374c9e62da24de5423db0` |
+| Recorder-reported version | `DOSBox-X 2026.08.02 source e522642` |
+
+The FUSE mount was `ro,nosuid,nodev`, and it was unmounted after the run. The
+newly assembled directory contains private copies of the exact configuration,
+command-tail, input-timeline, metadata, event stream, manifest, and receipt;
+it contains no original release bytes. The CLI's `REFERENCE TRACE VERIFIED`
+report is diagnostic provenance only and does not authorize Eon to replay the
+capture or cross any result boundary.
+
 The preliminary one-event file remains retained with SHA-256
 `402b411a0a6958e2fd425bdc6dcdf4cedb1cee3a9fac9437745d6fa7b63e1c76` and
 its executable has SHA-256
@@ -40,8 +66,8 @@ The retained DOSBox-X log for the corrected observation is
 `6bf278b48d4d7fd05211afce73433775c21fc9995dd998bf6e9d90c749eb84ef`.
 Every run was intentionally interrupted before a complete request sequence,
 return value, input result, title state, frame, audio checkpoint, or game
-state was observed. It is therefore raw preservation provenance only, not an
-admitted v2 trace and not a runtime input.
+state was observed. It is therefore a trace-validated diagnostic provenance
+record, not a runtime input or a gameplay/parity claim.
 
 ## Audited local route
 
@@ -172,10 +198,10 @@ trace or a runtime integration.
 
 ## Acceptance boundary
 
-An admitted v2 capture would improve the diagnostic evidence for the seven
-request sites only.  It does not satisfy work-queue rank 1, whose acceptance
+The trace-validated v2 capture improves diagnostic evidence for two of the
+seven request sites only. It does not satisfy work-queue rank 1, whose acceptance
 requires observed interrupt/EXEC/far-return and driver results through a real
-navigable state.  The next engineering task after such an admission is to
+navigable state. The next engineering task after this validation is to
 define one bounded result-return capture contract, with its caller site,
 register/flag widths, input boundary and output checkpoint proved before any
 runtime implementation is extended.
