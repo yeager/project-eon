@@ -324,6 +324,31 @@ the setup and title private-interrupt observations (event-stream SHA-256
 raw-result file. Project Eon must keep `core=normal` with its reviewed hook;
 it must not switch CPU cores merely to suppress diagnostics.
 
+### Unhandled-interrupt machine-state reconnaissance (not trace evidence)
+
+The reviewed diagnostic recorder now has executable SHA-256
+`ab53ed0ef1d921b7379f1668013da39b3a2d0bb41faa1eb6a7a5eb8a15f50325`.
+Its first 15-second, input-free run retained the unchanged five-event stream
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda` and,
+after the four earlier raw values, exactly one additional raw observation:
+
+```text
+fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 ss=0x0a8d sp=0xc9bf \
+return_ip=0x1900 return_cs=0x0e70 return_flags=0x7047 code=0x00000000 \
+ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101
+```
+
+The callback PC is DOSBox-X's default exception-vector handler, not an
+original Millennium location. The three following stack words and all-zero
+four-byte read are raw callback-context values only; they do not establish a
+faulting instruction, a loaded driver segment, a return ABI, or a game result.
+This probe confirms that the `INT 6` loop happens after the existing title
+prefix and remains an emulator/driver boundary. Its 522-byte raw-result file
+SHA-256 is
+`7c00214e4461f6d442ea66b2413ae32c8e4a12210cf9dbef67b0cfad3af19f06`;
+the input receipt was absent. Neither output is admitted into a runtime adapter
+or reference trace.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
