@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -15,6 +16,11 @@ inline constexpr std::string_view deuteros_amiga_title_bridge_reference_trace_ad
 
 struct DeuterosAmigaTitleBridgeReferenceTraceDiagnostics {
     std::size_t event_count = 0;
+    // The v4 display contract continues this exact evidence stream. Retain
+    // its final envelope coordinates so a separately parsed suffix cannot
+    // restart sequence or emulator time at zero.
+    std::uint64_t last_sequence = 0;
+    std::uint64_t last_tick = 0;
     std::size_t exec_return_count = 0;
     std::size_t open_library_return_count = 0;
     std::size_t graphics_call_count = 0;

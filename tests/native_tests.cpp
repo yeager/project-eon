@@ -1104,10 +1104,10 @@ int main() {
         title_display_events +=
             "event\t19 190 display-layout site=0x0001eda6 base_source_address=0x00012ff4 base_destination_a=0x0001f168 base_destination_b=0x0001f164 display_base=0x0000ab00 display_list=0x00000420 copper_list_sha256=cf827847c13dbeafeea72c86f2c4fb90a6d717bf548f0914b2f203abb94293f6\n"
             "event\t20 200 bitplane-layout site=0x0001f182 base_pointer_address=0x0001f168 bitplane_count=0x0004 plane0=0x0000b5f0 plane1=0x0000d530 plane2=0x0000f470 plane3=0x000113b0 plane_stride=0x1f40 bplcon0=0x4200 bpl1mod=0x0000 bpl2mod=0x0000 ddfstrt=0x0038 ddfstop=0x00d0 width_pixels=0x0140 height_lines=0x00c8 bytes_per_row=0x0028 modulo=0x0000\n"
-            "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55 rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55 rgba_palette_format=rgba8888-rgb4-expanded-nibbles rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
             "event\t22 220 input-checkpoint callback_site=0x0001f056 selector_site=0x0001fe7a queue_sha256=0000000000000000000000000000000000000000000000000000000000000000 input_timeline_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
-            "event\t23 230 frame-checkpoint display_base=0x0000ab00 rgba_width=0x0140 rgba_height=0x00c8 bitplanes_sha256=fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
-            "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
+            "event\t23 230 frame-checkpoint display_base=0x0000ab00 rgba_width=0x0140 rgba_height=0x00c8 rgba_format=rgba8888-row-major bitplanes_sha256=fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_format=s16le-interleaved pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
         eon::DeuterosAmigaTitleDisplayReferenceTraceDiagnostics display_diagnostics;
         assert(eon::validate_deuteros_amiga_title_display_reference_events(
             title_display_events, display_diagnostics, trace_error));
@@ -1119,6 +1119,21 @@ int main() {
             && display_diagnostics.input_checkpoint_count == 1
             && display_diagnostics.frame_checkpoint_count == 1
             && display_diagnostics.audio_checkpoint_count == 1);
+        auto restarted_suffix{title_display_events};
+        restarted_suffix.replace(restarted_suffix.find("event\t19 190"),
+            std::string_view("event\t19 190").size(), "event\t18 190");
+        assert(!eon::validate_deuteros_amiga_title_display_reference_events(
+            restarted_suffix, display_diagnostics, trace_error));
+        auto unspecified_pixel_format{title_display_events};
+        unspecified_pixel_format.replace(unspecified_pixel_format.find("rgba8888-row-major"),
+            std::string_view("rgba8888-row-major").size(), "rgba8888-unknown");
+        assert(!eon::validate_deuteros_amiga_title_display_reference_events(
+            unspecified_pixel_format, display_diagnostics, trace_error));
+        auto unspecified_pcm_format{title_display_events};
+        unspecified_pcm_format.replace(unspecified_pcm_format.find("s16le-interleaved"),
+            std::string_view("s16le-interleaved").size(), "f32le-interleaved");
+        assert(!eon::validate_deuteros_amiga_title_display_reference_events(
+            unspecified_pcm_format, display_diagnostics, trace_error));
         title_display_events.replace(title_display_events.find("site=0x0001eda6"),
             std::string_view("site=0x0001eda6").size(), "site=0x0001eda7");
         assert(!eon::validate_deuteros_amiga_title_display_reference_events(
@@ -1127,10 +1142,10 @@ int main() {
         title_display_events +=
             "event\t19 190 display-layout site=0x0001eda6 base_source_address=0x00012ff4 base_destination_a=0x0001f168 base_destination_b=0x0001f164 display_base=0x0000ab00 display_list=0x00000420 copper_list_sha256=cf827847c13dbeafeea72c86f2c4fb90a6d717bf548f0914b2f203abb94293f6\n"
             "event\t20 200 bitplane-layout site=0x0001f182 base_pointer_address=0x0001f168 bitplane_count=0x0004 plane0=0x0000b5f0 plane1=0x0000d530 plane2=0x0000f470 plane3=0x000113b0 plane_stride=0x1f40 bplcon0=0x4200 bpl1mod=0x0000 bpl2mod=0x0000 ddfstrt=0x0038 ddfstop=0x00d0 width_pixels=0x0141 height_lines=0x00c8 bytes_per_row=0x0028 modulo=0x0000\n"
-            "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55 rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55 rgba_palette_format=rgba8888-rgb4-expanded-nibbles rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
             "event\t22 220 input-checkpoint callback_site=0x0001f056 selector_site=0x0001fe7a queue_sha256=0000000000000000000000000000000000000000000000000000000000000000 input_timeline_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
-            "event\t23 230 frame-checkpoint display_base=0x0000ab00 rgba_width=0x0140 rgba_height=0x00c8 bitplanes_sha256=fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
-            "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
+            "event\t23 230 frame-checkpoint display_base=0x0000ab00 rgba_width=0x0140 rgba_height=0x00c8 rgba_format=rgba8888-row-major bitplanes_sha256=fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_format=s16le-interleaved pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
         assert(!eon::validate_deuteros_amiga_title_display_reference_events(
             title_display_events, display_diagnostics, trace_error));
         title_display_events.replace(title_display_events.find("width_pixels=0x0141"),

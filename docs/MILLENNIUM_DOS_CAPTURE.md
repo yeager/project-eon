@@ -336,10 +336,12 @@ trace or a runtime integration.
 
 ## Acceptance boundary
 
-The trace-validated v2 capture improves diagnostic evidence for two of the
-seven request sites only. It does not satisfy work-queue rank 1, whose acceptance
+The two strict v2 captures now retain five ordered observations: the startup
+driver-load and DOS request, then the title private-vector request and its two
+observed returns. They do not satisfy work-queue rank 1, whose acceptance
 requires observed interrupt/EXEC/far-return and driver results through a real
-navigable state. The next engineering task after this validation is to
-define one bounded result-return capture contract, with its caller site,
-register/flag widths, input boundary and output checkpoint proved before any
-runtime implementation is extended.
+navigable state. The remaining capture must use a real focused emulator input
+route, record key press/release timing separately, and retain the title poll,
+local exit, parent `EXEC`, child/far return, and device results. Recorder-side
+keyboard injection, guest memory edits, and fabricated return values remain
+inadmissible.
