@@ -57,6 +57,13 @@ V2_ADAPTERS = {
                                            "source_stage_sha256": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
 }
 V3_ADAPTERS = {
+    "deuteros-amiga-en-main-copy-loop-v3": {
+        "game": "deuteros", "platform": "amiga", "language": "en",
+        "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+        "size": 4066771,
+        "source_media_sha256": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+        "source_stage_sha256": "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6",
+    },
     "deuteros-amiga-en-title-bridge-v3": {
         "game": "deuteros", "platform": "amiga", "language": "en",
         "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",

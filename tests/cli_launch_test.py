@@ -83,7 +83,8 @@ def write_reference_trace(
     events_path.write_text(events, encoding="ascii")
     event_bytes = events_path.read_bytes()
     fields = [
-        ("format", "project-eon-reference-trace-v2"),
+        ("format", "project-eon-reference-trace-v3" if adapter.endswith("-v3")
+            else "project-eon-reference-trace-v2"),
         ("adapter", adapter),
         ("event_file", events_path.name),
         ("event_size", str(len(event_bytes))),
@@ -361,6 +362,14 @@ def main() -> int:
             "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
             "1 Exec, 1 OpenLibrary, 1 graphics, 1 custom-register, 2 callback observations; diagnostics only)",
         ),
+        (
+            "deuteros", "amiga", "deuteros-amiga-en-main-copy-loop-v3",
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            "event\t1 10 main-copy-loop-pc pc=0x000210d4 opcode=0x51c8\n",
+            "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+            "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6",
+            "0 interrupt, 0 file, 0 EXEC observations; diagnostics only)",
+        ),
     )
     trace_recovery_boundaries = {
         "millennium-dos-en-startup-v1": (
@@ -375,6 +384,7 @@ def main() -> int:
         "deuteros-amiga-en-title-stage-v1": (
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
         ),
+        "deuteros-amiga-en-main-copy-loop-v3": ("deuteros-amiga-main-stage",),
     }
     with tempfile.TemporaryDirectory(dir=temporary_root) as temporary_trace_root:
         trace_root = Path(temporary_trace_root)

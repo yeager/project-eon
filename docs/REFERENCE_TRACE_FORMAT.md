@@ -74,7 +74,7 @@ Capture timestamps are validated as real Gregorian UTC instants (including
 leap years), not merely strings shaped like timestamps. They establish a
 capture boundary and ordering only; they do not establish emulation timing.
 
-### v2 adapter registry and source identity
+### Versioned adapter registry and source identity
 
 A v2 manifest has all v1 records, changes `format` to exactly
 `project-eon-reference-trace-v2`, and adds exactly one `adapter` record.  It
@@ -89,6 +89,7 @@ capture tooling must choose the row below before it writes a manifest.
 | `deuteros-atari-st-boot-v1` | `deuteros`/`atari-st`/`en`, 3021682, `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `source_media_sha256=aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`; `source_stage_sha256=2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7` | Replicants Disk 1 and its copied second-stage interval. |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium`/`amiga`/`en`, 2558009, `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | None | Two caller-side Defjam bootstrap handoffs. |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` | Clean system ADF and `ADF +0x6e000`, 0x6ca00-byte title stage. |
+| `deuteros-amiga-en-main-copy-loop-v3` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6` | Clean system ADF and `ADF +0x5800`, 0x4200-byte main stage. |
 
 This table is a capture-admission registry, not an equivalence class.  An
 archive with the same filename, a direct one-disk container that exposes an
@@ -114,6 +115,7 @@ similar platform's evidence.
 | `deuteros-atari-st-boot-v1` | `deuteros-atari-protected-boot`, `deuteros-atari-first-stage` |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-shared-resident` |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
+| `deuteros-amiga-en-main-copy-loop-v3` | `deuteros-amiga-main-stage` |
 
 For the two physical-media adapters, the CLI also prints their already
 validated `source media` and `source stage` hashes. This makes an independent
@@ -314,6 +316,22 @@ call nesting; a return cannot be reassigned to a different observed call. All
 addresses, vectors, widths, raw results, source-table hash, and allowed custom
 register/value pairs are checked by the adapter. This admits neither an
 emulator's undocumented service semantics nor a replay input.
+
+### Deuteros Amiga main-copy-loop v3 capture profile
+
+`deuteros-amiga-en-main-copy-loop-v3` admits exactly one external PC
+observation from the clean main stage (`ADF +0x5800`, length `0x4200`, loaded
+at `$20000`):
+
+```text
+event<TAB>sequence tick main-copy-loop-pc pc=0x000210d4 opcode=0x51c8
+```
+
+The mandatory main-stage SHA-256 prevents a PC observation from being
+mistakenly attributed to the later title stage, which overlays part of the
+same RAM address range. The adapter validates only the exact `DBF` site and
+reports one observation. It does not infer registers, a caller, copy count,
+source or destination, a completed copy, a visual meaning, or a return.
 
 ## Command-line boundary
 

@@ -20,6 +20,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "data/deuteros_amiga_reference_trace.hpp"
+#include "data/deuteros_amiga_main_stage_reference_trace.hpp"
 #include "data/deuteros_amiga_title_bridge_reference_trace.hpp"
 #include "data/deuteros_atari_boot.hpp"
 #include "data/deuteros_atari_reference_trace.hpp"
@@ -938,6 +939,25 @@ int main() {
             && diagnostics.custom_register_count == 1 && diagnostics.callback_count == 2);
         assert(!eon::validate_deuteros_amiga_title_reference_events(
             "event\t1 10 graphics site=0x0004069a graphics_base_address=0x00012fed vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
+            diagnostics, trace_error));
+    }
+    // This is one raw debugger observation from the clean main stage. It
+    // deliberately records no inferred registers, copying semantics, or
+    // gameplay state; overlapping Amiga RAM makes those claims unsafe here.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 10 main-copy-loop-pc pc=0x000210d4 opcode=0x51c8\n";
+        eon::DeuterosAmigaMainStageReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_deuteros_amiga_main_stage_reference_events(
+            valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 1 && diagnostics.main_copy_loop_pc_count == 1);
+        assert(!eon::validate_deuteros_amiga_main_stage_reference_events(
+            "event\t1 10 main-copy-loop-pc pc=0x000210d4 opcode=0x51c9\n",
+            diagnostics, trace_error));
+        assert(!eon::validate_deuteros_amiga_main_stage_reference_events(
+            "event\t1 10 main-copy-loop-pc pc=0x000210d4 opcode=0x51c8\n"
+            "event\t2 20 main-copy-loop-pc pc=0x000210d4 opcode=0x51c8\n",
             diagnostics, trace_error));
     }
     // These synthetic records exercise the v3 title-bridge capture grammar
