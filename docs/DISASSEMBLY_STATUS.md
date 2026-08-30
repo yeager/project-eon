@@ -6,6 +6,11 @@ spaces, and coverage boundaries—not a claim that a linear decoder has proved
 all bytes are executable code. Original media is never copied into this
 repository; commands below stream a member directly from the user's archive.
 
+The machine-readable companion [disassembly inventory](disassembly-inventory.json)
+has one row for every recognised release. Each row can name only parser
+profiles bound to that exact release and must retain an explicit unresolved
+boundary; coverage never upgrades unknown ABI behaviour to executable code.
+
 ## Input identities
 
 | Game | Platform | Container SHA-256 | Principal code/media identity |
