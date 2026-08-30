@@ -15,6 +15,21 @@ msgstr "KWADRATOWE PIKSELE 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "PANORAMA 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "USTAWIENIE WSTĘPNE GRAFIKI"
+
+msgid "CLEAN"
+msgstr "CZYSTY"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "KINOWY"
+
+msgid "HIGH CONTRAST"
+msgstr "WYSOKI KONTRAST"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 

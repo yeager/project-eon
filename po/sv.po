@@ -4,6 +4,21 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "GRAPHICS PRESET"
+msgstr "GRAFIKFÖRINSTÄLLNING"
+
+msgid "CLEAN"
+msgstr "REN"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "FILMISKT"
+
+msgid "HIGH CONTRAST"
+msgstr "HÖG KONTRAST"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 

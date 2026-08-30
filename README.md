@@ -59,7 +59,8 @@ Eon currently renders only a deliberately bounded mapping: an explicitly
 selected, reverified pack may replace the recovered English Millennium DOS P00
 title in Modern mode with an independently supplied 640×400 or 1280×800 RGBA
 PNG. It never ships a pack, automatically selects one, or changes game logic,
-saves, or supplied media. See `docs/MODERN_ASSET_PACK_FORMAT.md`.
+saves, or supplied media. See `docs/MODERN_ASSET_PACK_FORMAT.md` and the
+[Modern presentation profiles](docs/MODERN_PRESENTATION.md).
 
 ## Original game data
 

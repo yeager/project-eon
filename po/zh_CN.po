@@ -15,6 +15,21 @@ msgstr "方形像素 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "宽屏 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "图形预设"
+
+msgid "CLEAN"
+msgstr "清晰"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "电影"
+
+msgid "HIGH CONTRAST"
+msgstr "高对比度"
+
 msgid "PROJECT EON"
 msgstr "伊恩计划"
 

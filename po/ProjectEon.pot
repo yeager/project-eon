@@ -10,6 +10,26 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/main.cpp
+msgid "GRAPHICS PRESET"
+msgstr ""
+
+#: src/main.cpp
+msgid "CLEAN"
+msgstr ""
+
+#: src/main.cpp
+msgid "CRT"
+msgstr ""
+
+#: src/main.cpp
+msgid "CINEMATIC"
+msgstr ""
+
+#: src/main.cpp
+msgid "HIGH CONTRAST"
+msgstr ""
+
+#: src/main.cpp
 msgid "PROJECT EON"
 msgstr ""
 

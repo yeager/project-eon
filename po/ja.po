@@ -14,6 +14,21 @@ msgstr "正方形ピクセル 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "ワイドスクリーン 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "グラフィックプリセット"
+
+msgid "CLEAN"
+msgstr "クリーン"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "シネマティック"
+
+msgid "HIGH CONTRAST"
+msgstr "高コントラスト"
+
 msgid "PROJECT EON"
 msgstr "プロジェクト・イオン"
 

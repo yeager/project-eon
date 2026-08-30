@@ -3,6 +3,21 @@ msgstr ""
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "GRAPHICS PRESET"
+msgstr "PREAJUSTE GRÁFICO"
+
+msgid "CLEAN"
+msgstr "LIMPIO"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "CINEMATOGRÁFICO"
+
+msgid "HIGH CONTRAST"
+msgstr "ALTO CONTRASTE"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 

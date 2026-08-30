@@ -15,6 +15,21 @@ msgstr "FIRKANTEDE PIKSLER 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "BREDSKJERM 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "GRAFIKKFORHÅNDSINNSTILLING"
+
+msgid "CLEAN"
+msgstr "REN"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "FILMATISK"
+
+msgid "HIGH CONTRAST"
+msgstr "HØY KONTRAST"
+
 msgid "PROJECT EON"
 msgstr "PROJECT EON"
 

@@ -31,6 +31,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assertIn(f'tr("{message}")', popup)
         self.assertIn("tr(names[index])", popup)
+        self.assertIn("tr(modern_graphics_preset_names.at", popup)
         self.assertIn("tr(display_aspect_names.at(settings.aspect_ratio_index))", popup)
         self.assertIn('tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)"', popup)
         self.assertIn('tr(settings.smooth_scaling ? "ON" : "OFF")', popup)
@@ -62,6 +63,30 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("width = height * ratio", SOURCE)
         self.assertIn("draw_scanlines", SOURCE)
         self.assertIn("draw_modern_surface_frame", SOURCE)
+
+    def test_named_presets_are_renderer_only_and_manual_controls_become_custom(self) -> None:
+        """Modern profiles must not become a hidden simulation or media mode."""
+        for preset in ("clean", "crt", "cinematic", "high_contrast", "custom"):
+            with self.subTest(preset=preset):
+                self.assertIn(f"ModernGraphicsPreset::{preset}", SOURCE)
+        self.assertIn('"GRAPHICS PRESET"', SOURCE)
+        self.assertIn("apply_modern_graphics_preset", SOURCE)
+        self.assertIn("mark_modern_graphics_custom", SOURCE)
+        self.assertIn("cycle_modern_graphics_preset", SOURCE)
+        preset_block = SOURCE[SOURCE.index("void apply_modern_graphics_preset"):
+                              SOURCE.index("void mark_modern_graphics_custom")]
+        for prohibited in ("LaunchRequest", "save", "input", "media"):
+            with self.subTest(prohibited=prohibited):
+                self.assertNotIn(prohibited, preset_block)
+
+    def test_cinematic_and_high_contrast_overlays_are_modern_only(self) -> None:
+        overlay_start = SOURCE.index("void draw_modern_preset_overlay")
+        overlay = SOURCE[overlay_start:SOURCE.index("// This report is intentionally shared", overlay_start)]
+        self.assertIn("ModernGraphicsPreset::cinematic", overlay)
+        self.assertIn("ModernGraphicsPreset::high_contrast", overlay)
+        self.assertIn("original texture bytes", overlay)
+        self.assertGreaterEqual(SOURCE.count(
+            "if (modern) draw_modern_preset_overlay(renderer, preview_bounds,"), 2)
 
     def test_deuteros_modern_reconstruction_is_cached_per_verified_vm_tick(self) -> None:
         # The host may present several times between 20 ms opening-VM ticks.

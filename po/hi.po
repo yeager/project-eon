@@ -14,6 +14,21 @@ msgstr "वर्ग पिक्सेल 8:5"
 msgid "WIDESCREEN 16:9"
 msgstr "वाइडस्क्रीन 16:9"
 
+msgid "GRAPHICS PRESET"
+msgstr "ग्राफ़िक्स प्रीसेट"
+
+msgid "CLEAN"
+msgstr "स्वच्छ"
+
+msgid "CRT"
+msgstr "CRT"
+
+msgid "CINEMATIC"
+msgstr "सिनेमाई"
+
+msgid "HIGH CONTRAST"
+msgstr "उच्च कंट्रास्ट"
+
 msgid "PROJECT EON"
 msgstr "प्रोजेक्ट इऑन"
 
