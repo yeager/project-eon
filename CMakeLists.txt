@@ -312,7 +312,14 @@ if(BUILD_TESTING)
     else()
         target_compile_options(eon-native-tests PRIVATE -UNDEBUG)
     endif()
+    # Native fixtures never use the system temporary directory. This protects
+    # constrained preservation workstations and keeps test artefacts outside
+    # both the checkout and user-supplied game media.
+    set(EON_TEST_TMPDIR "${CMAKE_BINARY_DIR}/eon-test-tmp")
+    file(MAKE_DIRECTORY "${EON_TEST_TMPDIR}")
     add_test(NAME native-data-detection COMMAND eon-native-tests)
+    set_tests_properties(native-data-detection PROPERTIES
+        ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     # Commercial game data is never available in CI.  A developer build that
     # explicitly supplies it receives a separate black-box launch test for
     # every supported platform path.
@@ -321,8 +328,6 @@ if(BUILD_TESTING)
         # Keep test-only manifests and fixture media out of /tmp as well as
         # out of user-supplied original media. The test script rejects a
         # missing value rather than falling back to the system temp directory.
-        set(EON_TEST_TMPDIR "${CMAKE_BINARY_DIR}/eon-test-tmp")
-        file(MAKE_DIRECTORY "${EON_TEST_TMPDIR}")
         add_test(NAME cli-real-platform-starts
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_launch_test.py"
