@@ -56,9 +56,18 @@ not initialise an OpenGL context; it produced no raw output. The normal desktop
 video route then ran to the deliberate timeout (`124`). Its log confirmed the
 two exact FUSE ADF paths, Kickstart ROM, and `floppy_write_protect = 1`; the
 outer archive still hashed to `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`
-afterward. No configured probe PC was reached, so the observer correctly
-created no output file. This is media-route and recorder-liveness evidence
-only, not a title, input, display, audio, or reference-trace observation.
+afterward. That initial observer build did not cover A500's cycle-exact CPU
+loop, so it created no output file.
+
+After adding the same host-only hook to the actual cycle-exact loop and
+correcting its LF writer, a second no-input 15-second run produced 4,096
+raw records (SHA-256 `d46d768e9ab16c8154eead16ce82dce60842554fcc89ca1517b9b46d394106ce`)
+from a recorder binary SHA-256
+`05624790bdf2cce3e34e98309ada9e4ff0ac8d5aa9282ce718f7855719e93e1b`.
+They comprise 1,334 hits at `$1fe84`, 697 at `$1fe96`, and 2,065 at `$210d4`;
+the 4,096-record cap then stopped further host output. The raw file remains
+outside the repository. These are reachability observations only, not title,
+input, display, audio, ABI, or reference-trace evidence.
 
 ## Direct title-stage observations
 
