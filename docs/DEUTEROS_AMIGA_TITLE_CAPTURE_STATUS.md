@@ -76,6 +76,19 @@ other configured site. It therefore confirms the same bootstrap/loader
 boundary with better sampling, but still supplies no input-to-title transition
 or evidence for any later runtime path.
 
+After the repository capture receipt was hardened, a new 60-second
+operator-visible, no-input run used the reviewed FS-UAE binary
+`727bba3ac4bc78558b964d0f572c488a419cd0985d803979e047381d2cf34f93`
+through the four read-only FUSE layers. Its receipt binds the unchanged outer
+release, Kickstart archive, recorder and generated configuration; the raw-PC
+file is 42,132 bytes with SHA-256
+`92dcc35ea0b05102e23a96176eb56550b3a4028ac7712de8dc19dd21b4ef2db6`.
+It contains exactly 384 records: 128 at each of `$1fe84`, `$1fe96`, and
+`$210d4`. The host-input receipt is absent and the captured console is empty.
+This independently reconfirms only the bounded bootstrap/loader sites over a
+longer real-media run. It does not reach a title/display probe site and does
+not establish input, frame, audio, callback, ABI, or gameplay behaviour.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
