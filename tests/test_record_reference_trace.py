@@ -41,6 +41,22 @@ def metadata_lines(**overrides: str) -> str:
     return "".join(f"{key}\t{value}\n" for key, value in fields.items())
 
 
+def write_provenance_preimages(root: Path) -> tuple[Path, Path, Path, dict[str, str]]:
+    """Create distinct non-media capture inputs with their real hashes."""
+    configuration = root / "configuration"
+    command_tail = root / "command-tail"
+    input_timeline = root / "input-timeline"
+    configuration.write_bytes(b"[cpu]\ncore=normal\n")
+    command_tail.write_bytes(b"dosbox-x --conf recorder.conf\n")
+    input_timeline.write_bytes(b"no guest input\n")
+    overrides = {
+        "config_sha256": hashlib.sha256(configuration.read_bytes()).hexdigest(),
+        "command_tail_sha256": hashlib.sha256(command_tail.read_bytes()).hexdigest(),
+        "input_timeline_sha256": hashlib.sha256(input_timeline.read_bytes()).hexdigest(),
+    }
+    return configuration, command_tail, input_timeline, overrides
+
+
 class RecordReferenceTraceTests(unittest.TestCase):
     def test_metadata_has_no_assembler_owned_fields(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -156,10 +172,11 @@ class RecordReferenceTraceTests(unittest.TestCase):
             events = root / "external-events.log"
             metadata = root / "metadata.tsv"
             output = root / "capture"
+            configuration, command_tail, input_timeline, hashes = write_provenance_preimages(root)
             original = b"not-game-media; temporary boundary input"
             source.write_bytes(original)
             events.write_bytes(b"external recorder observation\n")
-            metadata.write_text(metadata_lines(), encoding="utf-8")
+            metadata.write_text(metadata_lines(**hashes), encoding="utf-8")
             original_identity = TOOL.release_identity
             TOOL.release_identity = lambda digest, size: {
                 "sha256": digest, "size": size, "game": "millennium",
@@ -167,16 +184,24 @@ class RecordReferenceTraceTests(unittest.TestCase):
             try:
                 result = TOOL.assemble(type("Arguments", (), {
                     "source_release": str(source.resolve()), "events": str(events.resolve()),
-                    "metadata": str(metadata.resolve()), "output": str(output.resolve())})())
+                    "metadata": str(metadata.resolve()), "config": str(configuration.resolve()),
+                    "command_tail": str(command_tail.resolve()),
+                    "input_timeline": str(input_timeline.resolve()), "output": str(output.resolve())})())
             finally:
                 TOOL.release_identity = original_identity
             self.assertEqual(result, output.resolve())
             self.assertEqual(source.read_bytes(), original)
             self.assertEqual((output / "events.eontrace").read_bytes(), events.read_bytes())
+            self.assertEqual((output / "configuration.preimage").read_bytes(), configuration.read_bytes())
+            self.assertEqual((output / "command-tail.preimage").read_bytes(), command_tail.read_bytes())
+            self.assertEqual((output / "input-timeline.preimage").read_bytes(), input_timeline.read_bytes())
             self.assertTrue((output / "manifest.eontrace").read_text(encoding="utf-8").endswith("\n"))
             self.assertIn('"status": "assembled-not-admitted"',
                           (output / "receipt.json").read_text(encoding="utf-8"))
             receipt = json.loads((output / "receipt.json").read_text(encoding="utf-8"))
+            self.assertEqual(receipt["provenance"]["configuration"]["sha256"], hashes["config_sha256"])
+            self.assertEqual(receipt["provenance"]["command_tail"]["sha256"], hashes["command_tail_sha256"])
+            self.assertEqual(receipt["provenance"]["input_timeline"]["sha256"], hashes["input_timeline_sha256"])
             self.assertEqual(receipt["tool"]["sha256"],
                              hashlib.sha256((ROOT / "tools" / "record_reference_trace.py").read_bytes()).hexdigest())
 
@@ -192,20 +217,54 @@ class RecordReferenceTraceTests(unittest.TestCase):
             output = root / "already-there"
             output.mkdir()
             with self.assertRaises(TOOL.EvidenceError):
-                TOOL.reject_output_path(target.resolve(), target.resolve(), target.resolve(), output.resolve())
+                TOOL.reject_output_path((target.resolve(),), output.resolve())
 
     def test_rejects_event_alias_of_original_release(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "source"
             metadata = root / "metadata"
+            configuration, command_tail, input_timeline, hashes = write_provenance_preimages(root)
             source.write_bytes(b"x")
-            metadata.write_text(metadata_lines(), encoding="utf-8")
+            metadata.write_text(metadata_lines(**hashes), encoding="utf-8")
             arguments = type("Arguments", (), {
                 "source_release": str(source.resolve()), "events": str(source.resolve()),
-                "metadata": str(metadata.resolve()), "output": str((root / "out").resolve())})()
+                "metadata": str(metadata.resolve()), "config": str(configuration.resolve()),
+                "command_tail": str(command_tail.resolve()),
+                "input_timeline": str(input_timeline.resolve()), "output": str((root / "out").resolve())})()
             with self.assertRaisesRegex(TOOL.EvidenceError, "must not be the original"):
                 TOOL.assemble(arguments)
+
+    def test_assembly_rejects_provenance_bytes_that_do_not_match_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "owned-release.zip"
+            events = root / "external-events.log"
+            metadata = root / "metadata.tsv"
+            output = root / "capture"
+            configuration, command_tail, input_timeline, hashes = write_provenance_preimages(root)
+            source.write_bytes(b"not-game-media; temporary boundary input")
+            events.write_bytes(b"external recorder observation\n")
+            metadata.write_text(metadata_lines(**hashes), encoding="utf-8")
+            configuration.write_bytes(b"[cpu]\ncore=dynamic\n")
+            original_identity = TOOL.release_identity
+            TOOL.release_identity = lambda digest, size: {
+                "sha256": digest, "size": size, "game": "millennium",
+                "platform": "dos", "language": "en"}
+            try:
+                arguments = type("Arguments", (), {
+                    "source_release": str(source.resolve()), "events": str(events.resolve()),
+                    "metadata": str(metadata.resolve()), "config": str(configuration.resolve()),
+                    "command_tail": str(command_tail.resolve()),
+                    "input_timeline": str(input_timeline.resolve()), "output": str(output.resolve())})()
+                with self.assertRaisesRegex(TOOL.EvidenceError, "configuration SHA-256"):
+                    TOOL.assemble(arguments)
+            finally:
+                TOOL.release_identity = original_identity
+
+    def test_secure_open_requests_binary_mode_when_the_platform_supports_it(self):
+        source = (ROOT / "tools" / "record_reference_trace.py").read_text(encoding="utf-8")
+        self.assertIn('getattr(os, "O_BINARY", 0)', source)
 
 
 if __name__ == "__main__":

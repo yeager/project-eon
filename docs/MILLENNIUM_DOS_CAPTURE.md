@@ -157,11 +157,12 @@ use `/tmp`.
 
 The candidate event records must exactly follow the registered schema in
 [`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md#event-stream-v2-millennium-dos-adapter).
-The assembler manifest must include the exact configuration, command-tail and
-input-timeline hashes described in
-[`REFERENCE_TRACE_ASSEMBLY.md`](REFERENCE_TRACE_ASSEMBLY.md).  Retain the
-preimages and raw recorder output privately; commit neither those files nor
-the archive, mount, saved state, screenshot, audio, or trace pair.
+The assembler must receive those exact configuration, command-tail and
+input-timeline files as well as their hashes described in
+[`REFERENCE_TRACE_ASSEMBLY.md`](REFERENCE_TRACE_ASSEMBLY.md). It checks and
+retains their evidence copies in the private capture directory. Commit neither
+the archive, mount, saved state, screenshot, audio, raw recorder output, or
+trace pair.
 
 The exact reviewed DOSBox-X hook locations, normal-core restriction, program
 identity map, and non-mutation requirements are in

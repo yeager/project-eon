@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "docs" / "release-manifest.json"
 MAX_EVENT_SIZE = 256 * 1024 * 1024
 MAX_METADATA_SIZE = 64 * 1024
+MAX_PROVENANCE_ARTIFACT_SIZE = 8 * 1024 * 1024
 MAX_LINE_SIZE = 4096
 SHA256_HEX = set("0123456789abcdef")
 
@@ -160,7 +161,13 @@ def require_absolute_regular_file(path: Path, label: str, maximum: int | None = 
 
 
 def secure_open(path: Path) -> int:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    # Windows opens file descriptors in text mode unless O_BINARY is stated.
+    # Text-mode CRLF translation makes the byte count disagree with stat(),
+    # which is fatal for evidence hashing and made the cross-platform tests
+    # reject otherwise valid LF metadata. POSIX exposes no O_BINARY, so zero
+    # keeps this exact byte-open contract portable.
+    flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0)
+             | getattr(os, "O_NOFOLLOW", 0))
     try:
         return os.open(path, flags)
     except OSError as error:
@@ -202,19 +209,26 @@ def open_checked_input(path: Path, label: str, maximum: int) -> tuple[int, os.st
 def read_checked_input(path: Path, label: str, maximum: int) -> bytes:
     fd, initial = open_checked_input(path, label, maximum)
     try:
-        chunks: list[bytes] = []
-        remaining = initial.st_size
-        while remaining:
-            chunk = os.read(fd, min(1024 * 1024, remaining))
-            if not chunk:
-                raise EvidenceError(f"Unable to read complete {label}")
-            chunks.append(chunk)
-            remaining -= len(chunk)
-        if os.read(fd, 1) or not same_file_identity(initial, os.fstat(fd)):
-            raise EvidenceError(f"{label} changed while it was read")
-        return b"".join(chunks)
+        return read_opened_input(fd, initial, label)
     finally:
         os.close(fd)
+
+
+def read_opened_input(fd: int, expected: os.stat_result, label: str) -> bytes:
+    """Read one already identity-checked descriptor without a second pathname lookup."""
+    os.lseek(fd, 0, os.SEEK_SET)
+    chunks: list[bytes] = []
+    remaining = expected.st_size
+    while remaining:
+        chunk = os.read(fd, min(1024 * 1024, remaining))
+        if not chunk:
+            raise EvidenceError(f"Unable to read complete {label}")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    if os.read(fd, 1) or not same_file_identity(expected, os.fstat(fd)):
+        raise EvidenceError(f"{label} changed while it was read")
+    os.lseek(fd, 0, os.SEEK_SET)
+    return b"".join(chunks)
 
 
 def is_sha256(value: str) -> bool:
@@ -234,8 +248,7 @@ def valid_ascii(value: str) -> bool:
     return bool(value) and all(0x20 <= ord(character) <= 0x7e for character in value)
 
 
-def parse_metadata(path: Path) -> dict[str, str]:
-    data = read_checked_input(path, "metadata", MAX_METADATA_SIZE)
+def parse_metadata_bytes(data: bytes) -> dict[str, str]:
     if not data or not data.endswith(b"\n") or b"\r" in data:
         raise EvidenceError("metadata must be non-empty LF-terminated key<TAB>value records")
     try:
@@ -254,6 +267,10 @@ def parse_metadata(path: Path) -> dict[str, str]:
             raise EvidenceError("metadata has a duplicate key")
         fields[key] = value
     return fields
+
+
+def parse_metadata(path: Path) -> dict[str, str]:
+    return parse_metadata_bytes(read_checked_input(path, "metadata", MAX_METADATA_SIZE))
 
 
 def release_identity(source_sha256: str, source_size: int) -> dict[str, object]:
@@ -322,7 +339,7 @@ def validate_metadata(fields: dict[str, str], release: dict[str, object]) -> Non
             raise EvidenceError(f"metadata {key} does not match the supplied recognised source")
 
 
-def reject_output_path(source: Path, event: Path, metadata: Path, output: Path) -> None:
+def reject_output_path(inputs: tuple[Path, ...], output: Path) -> None:
     if not output.is_absolute():
         raise EvidenceError("output path must be absolute")
     if output.exists() or output.is_symlink():
@@ -331,11 +348,12 @@ def reject_output_path(source: Path, event: Path, metadata: Path, output: Path) 
     # overlap their bytes.  Deliberately permit a sibling capture directory:
     # a user commonly keeps a read-only archive and its separately owned
     # evidence under one collection root.
-    if output in (source, event, metadata):
+    if output in inputs:
         raise EvidenceError("output directory must not name an input file")
 
 
-def copy_event(input_fd: int, expected: os.stat_result, output_path: Path) -> tuple[str, int]:
+def copy_checked_input(input_fd: int, expected: os.stat_result, output_path: Path,
+                       label: str, maximum: int) -> tuple[str, int]:
     digest = hashlib.sha256()
     total = 0
     try:
@@ -345,8 +363,8 @@ def copy_event(input_fd: int, expected: os.stat_result, output_path: Path) -> tu
                 if not chunk:
                     break
                 total += len(chunk)
-                if total > MAX_EVENT_SIZE:
-                    raise EvidenceError("event stream exceeds 268435456 bytes")
+                if total > maximum:
+                    raise EvidenceError(f"{label} exceeds {maximum} bytes")
                 digest.update(chunk)
                 destination.write(chunk)
             destination.flush()
@@ -354,9 +372,9 @@ def copy_event(input_fd: int, expected: os.stat_result, output_path: Path) -> tu
     finally:
         os.lseek(input_fd, 0, os.SEEK_SET)
     if total == 0:
-        raise EvidenceError("event stream must not be empty")
+        raise EvidenceError(f"{label} must not be empty")
     if total != expected.st_size or not same_file_identity(expected, os.fstat(input_fd)):
-        raise EvidenceError("event stream changed while it was copied")
+        raise EvidenceError(f"{label} changed while it was copied")
     return digest.hexdigest(), total
 
 
@@ -372,24 +390,74 @@ def assemble(args: argparse.Namespace) -> Path:
     source = Path(args.source_release)
     events = Path(args.events)
     metadata = Path(args.metadata)
+    configuration = Path(args.config)
+    command_tail = Path(args.command_tail)
+    input_timeline = Path(args.input_timeline)
     output = Path(args.output)
     source_initial = require_absolute_regular_file(source, "source release")
     event_initial = require_absolute_regular_file(events, "event stream", MAX_EVENT_SIZE)
-    if (source_initial.st_dev, source_initial.st_ino) == (event_initial.st_dev, event_initial.st_ino):
+    metadata_initial = require_absolute_regular_file(metadata, "metadata", MAX_METADATA_SIZE)
+    configuration_initial = require_absolute_regular_file(
+        configuration, "configuration", MAX_PROVENANCE_ARTIFACT_SIZE)
+    command_tail_initial = require_absolute_regular_file(
+        command_tail, "command tail", MAX_PROVENANCE_ARTIFACT_SIZE)
+    input_timeline_initial = require_absolute_regular_file(
+        input_timeline, "input timeline", MAX_PROVENANCE_ARTIFACT_SIZE)
+    inputs = (source, events, metadata, configuration, command_tail, input_timeline)
+    identities = ((source_initial.st_dev, source_initial.st_ino),
+                  (event_initial.st_dev, event_initial.st_ino),
+                  (metadata_initial.st_dev, metadata_initial.st_ino),
+                  (configuration_initial.st_dev, configuration_initial.st_ino),
+                  (command_tail_initial.st_dev, command_tail_initial.st_ino),
+                  (input_timeline_initial.st_dev, input_timeline_initial.st_ino))
+    if identities[0] == identities[1]:
         raise EvidenceError("event stream must not be the original source release")
-    reject_output_path(source, events, metadata, output)
+    if len(set(identities)) != len(identities):
+        raise EvidenceError("source, events, metadata, configuration, command tail, and input timeline must be distinct files")
+    reject_output_path(inputs, output)
     source_fd = secure_open(source)
     event_fd = -1
+    metadata_fd = -1
+    configuration_fd = -1
+    command_tail_fd = -1
+    input_timeline_fd = -1
     try:
         source_hash, source_size, source_before = hash_fd(source_fd)
         if not stat.S_ISREG(source_before.st_mode) or not same_file_identity(source_initial, source_before):
             raise EvidenceError("source release changed while it was opened")
         release = release_identity(source_hash, source_size)
-        fields = parse_metadata(metadata)
+        metadata_fd, opened_metadata = open_checked_input(metadata, "metadata", MAX_METADATA_SIZE)
+        if not same_file_identity(metadata_initial, opened_metadata):
+            raise EvidenceError("metadata changed while it was opened")
+        metadata_preimage_hash, _, hashed_metadata = hash_fd(metadata_fd)
+        if not same_file_identity(opened_metadata, hashed_metadata):
+            raise EvidenceError("metadata changed while it was hashed")
+        fields = parse_metadata_bytes(read_opened_input(metadata_fd, opened_metadata, "metadata"))
         validate_metadata(fields, release)
         event_fd, opened_event = open_checked_input(events, "event stream", MAX_EVENT_SIZE)
         if not same_file_identity(event_initial, opened_event):
             raise EvidenceError("event stream changed while it was opened")
+        provenance_inputs: list[tuple[str, int, os.stat_result, str, str]] = []
+        for label, path, initial, expected_hash, output_name in (
+                ("configuration", configuration, configuration_initial, fields["config_sha256"], "configuration.preimage"),
+                ("command tail", command_tail, command_tail_initial, fields["command_tail_sha256"], "command-tail.preimage"),
+                ("input timeline", input_timeline, input_timeline_initial,
+                 fields["input_timeline_sha256"], "input-timeline.preimage")):
+            descriptor, opened = open_checked_input(path, label, MAX_PROVENANCE_ARTIFACT_SIZE)
+            if not same_file_identity(initial, opened):
+                os.close(descriptor)
+                raise EvidenceError(f"{label} changed while it was opened")
+            digest, size, hashed = hash_fd(descriptor)
+            if not same_file_identity(opened, hashed) or digest != expected_hash:
+                os.close(descriptor)
+                raise EvidenceError(f"{label} SHA-256 does not match metadata")
+            provenance_inputs.append((label, descriptor, opened, digest, output_name))
+            if label == "configuration":
+                configuration_fd = descriptor
+            elif label == "command tail":
+                command_tail_fd = descriptor
+            else:
+                input_timeline_fd = descriptor
         tool_fd = secure_open(Path(__file__).resolve())
         try:
             tool_hash, _, _ = hash_fd(tool_fd)
@@ -401,7 +469,22 @@ def assemble(args: argparse.Namespace) -> Path:
         staging = Path(tempfile.mkdtemp(prefix=".eon-trace-", dir=staging_parent))
         try:
             os.chmod(staging, 0o700)
-            event_hash, event_size = copy_event(event_fd, opened_event, staging / "events.eontrace")
+            event_hash, event_size = copy_checked_input(
+                event_fd, opened_event, staging / "events.eontrace", "event stream", MAX_EVENT_SIZE)
+            metadata_hash, metadata_size = copy_checked_input(
+                metadata_fd, opened_metadata, staging / "capture-metadata.tsv", "metadata", MAX_METADATA_SIZE)
+            if metadata_hash != metadata_preimage_hash:
+                raise EvidenceError("metadata changed after it was parsed")
+            provenance_receipt: dict[str, dict[str, object]] = {
+                "metadata": {"path": "capture-metadata.tsv", "sha256": metadata_hash, "size": metadata_size},
+            }
+            for label, descriptor, opened, digest, output_name in provenance_inputs:
+                copied_hash, copied_size = copy_checked_input(
+                    descriptor, opened, staging / output_name, label, MAX_PROVENANCE_ARTIFACT_SIZE)
+                if copied_hash != digest:
+                    raise EvidenceError(f"{label} changed after its hash was checked")
+                provenance_receipt[label.replace(" ", "_")] = {
+                    "path": output_name, "sha256": copied_hash, "size": copied_size}
             source_after_hash, source_after_size, source_after = hash_fd(source_fd)
             if (source_hash, source_size, source_before.st_dev, source_before.st_ino) != (
                 source_after_hash, source_after_size, source_after.st_dev, source_after.st_ino):
@@ -428,6 +511,7 @@ def assemble(args: argparse.Namespace) -> Path:
                                    "size_before": source_size, "size_after": source_after_size,
                                    "device": source_before.st_dev, "inode": source_before.st_ino},
                 "event": {"path": "events.eontrace", "sha256": event_hash, "size": event_size},
+                "provenance": provenance_receipt,
                 "manifest": {"path": "manifest.eontrace", "sha256": hashlib.sha256(manifest_text.encode()).hexdigest()},
                 "tool": {"path": str(Path(__file__).resolve()), "sha256": tool_hash},
             }
@@ -439,6 +523,14 @@ def assemble(args: argparse.Namespace) -> Path:
     finally:
         if event_fd >= 0:
             os.close(event_fd)
+        if metadata_fd >= 0:
+            os.close(metadata_fd)
+        if configuration_fd >= 0:
+            os.close(configuration_fd)
+        if command_tail_fd >= 0:
+            os.close(command_tail_fd)
+        if input_timeline_fd >= 0:
+            os.close(input_timeline_fd)
         os.close(source_fd)
     return output
 
@@ -448,15 +540,20 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--source-release", help="Absolute user-owned original archive path")
     parser.add_argument("--events", help="Absolute external event stream path")
     parser.add_argument("--metadata", help="Absolute LF key<TAB>value metadata path")
+    parser.add_argument("--config", help="Absolute external emulator configuration preimage")
+    parser.add_argument("--command-tail", help="Absolute literal emulator command-tail preimage")
+    parser.add_argument("--input-timeline", help="Absolute recorder input-timeline preimage")
     parser.add_argument("--output", help="New absolute evidence directory")
     parser.add_argument("--metadata-template", metavar="ADAPTER",
                         help="Print a non-validating instructional metadata template for one registered adapter")
     args = parser.parse_args(argv)
     if args.metadata_template:
-        if any((args.source_release, args.events, args.metadata, args.output)):
+        if any((args.source_release, args.events, args.metadata, args.config, args.command_tail,
+                args.input_timeline, args.output)):
             parser.error("--metadata-template cannot be combined with assembly inputs")
-    elif not all((args.source_release, args.events, args.metadata, args.output)):
-        parser.error("assembly requires --source-release, --events, --metadata and --output")
+    elif not all((args.source_release, args.events, args.metadata, args.config, args.command_tail,
+                  args.input_timeline, args.output)):
+        parser.error("assembly requires --source-release, --events, --metadata, --config, --command-tail, --input-timeline and --output")
     return args
 
 
