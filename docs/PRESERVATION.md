@@ -3754,7 +3754,12 @@ save, screen, layout, resource, or display state is modified or inferred.
 through ordered trace observations: a private-return AX word, the original
 `$da05` byte, then a separately observed adapter return. It begins at boundary
 `$0129`, stops at adapter call `$d373`, and reaches `$d376` only after the
-last observation. The transient overlay retains only bytes written by the
+last observation. From there it composes the independently hash-locked caller
+continuation: six individually observed local-call returns advance to its
+second `$da05` read at `$d388`, and a separately observed byte selects the
+existing `$d1a1` or `$d1b5` private-INT boundary at `$0129`. The second byte
+is never inferred from the earlier selector because the original rereads it
+after opaque calls. The transient overlay retains only bytes written by the
 verified evaluator; it owns no original media bytes. Out-of-order or repeated
 observations are rejected, and the session neither starts from the launcher
 nor emulates DOS, private calls, overlay loading, or a title handoff.
