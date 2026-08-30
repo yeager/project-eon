@@ -88,6 +88,7 @@ capture tooling must choose the row below before it writes a manifest.
 | --- | --- | --- | --- |
 | `millennium-dos-en-startup-v1` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Clean English DOS startup sites only. |
 | `millennium-dos-en-gx-startup-v2` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Ten ordered private-return, original-byte-read, overlay-return and local-return observations through the GX startup continuation. |
+| `millennium-dos-en-title-init-v2` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | One exact launcher/title request prefix and two ordered `TITLES.EXE` private-vector return observations. |
 | `deuteros-atari-st-boot-v1` | `deuteros`/`atari-st`/`en`, 3021682, `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `source_media_sha256=aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`; `source_stage_sha256=2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7` | Replicants Disk 1 and its copied second-stage interval. |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium`/`amiga`/`en`, 2558009, `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | None | Two caller-side Defjam bootstrap handoffs. |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` | Clean system ADF and `ADF +0x6e000`, 0x6ca00-byte title stage. |
@@ -116,6 +117,7 @@ similar platform's evidence.
 | --- | --- |
 | `millennium-dos-en-startup-v1` | `millennium-dos-launcher`, `millennium-dos-title-flow`, `millennium-dos-game-flow` |
 | `millennium-dos-en-gx-startup-v2` | `millennium-dos-game-flow`, `millennium-dos-gx-overlay` |
+| `millennium-dos-en-title-init-v2` | `millennium-dos-launcher`, `millennium-dos-title-flow` |
 | `deuteros-atari-st-boot-v1` | `deuteros-atari-protected-boot`, `deuteros-atari-first-stage` |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-shared-resident` |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
@@ -196,6 +198,29 @@ three-byte setup site (`MOV AX,0x2591`) immediately before the interrupt. A
 CPU interrupt hook must match the actual `CD 21` opcode at `0x020c` and emit
 the stable setup-site identifier required by this schema. This naming does not
 describe a return or any DOS behaviour.
+
+### Event stream (v2 Millennium DOS title-init adapter)
+
+`millennium-dos-en-title-init-v2` is a distinct five-record, ordered capture
+profile for one documented English DOS command-tail condition. It accepts the
+exact prefix below followed by the two observed raw return words at the first
+instruction after `TITLES.EXE`'s `INT $91` opcode. The validator binds the
+capture to the same full outer-release identity and rejects a missing, extra,
+reordered, nearby-address, or altered-value record.
+
+```text
+event  1 1 file           image=mill.com pc=0x02cf op=driver-load path=mcga.bin
+event  2 2 interrupt      image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000
+event  3 3 interrupt      image=titles.exe pc=0x0127 int=0x91 ax=0x0000 es=cs bx=0x1ac4
+event  4 4 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0101
+event  5 5 private-return image=titles.exe pc=0x0129 int=0x91 ax=0x0000
+```
+
+The pair of words is capture provenance only. The adapter does not interpret
+the private-vector ABI, flags, record writes, local branch effects, title
+pixels, input, or game state, and it never supplies a return word to an Eon
+session. It therefore provides a stricter preservation record without making
+an external trace executable.
 
 ## Event stream (v2 Deuteros Atari ST adapter)
 

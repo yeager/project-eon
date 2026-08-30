@@ -29,6 +29,16 @@ struct MillenniumDosGxStartupReferenceTraceDiagnostics {
     std::size_t local_return_count = 0;
 };
 
+// The title-initialisation trace binds one genuinely captured request prefix
+// to two raw return words at the original wrapper continuation. It remains a
+// diagnostics-only record: neither word is supplied to a title session.
+struct MillenniumDosTitleInitReferenceTraceDiagnostics {
+    std::size_t event_count = 0;
+    std::size_t interrupt_count = 0;
+    std::size_t file_count = 0;
+    std::size_t private_return_count = 0;
+};
+
 // Parse the v2 event grammar after the generic trace validator has pinned its
 // external file by size and SHA-256. The caller provides the whole UTF-8/ASCII
 // text only for this bounded, diagnostics-only validation; no event returns
@@ -41,6 +51,11 @@ struct MillenniumDosGxStartupReferenceTraceDiagnostics {
 [[nodiscard]] bool validate_millennium_dos_gx_startup_reference_events(
     std::string_view events,
     MillenniumDosGxStartupReferenceTraceDiagnostics& diagnostics,
+    std::string& error);
+
+[[nodiscard]] bool validate_millennium_dos_title_init_reference_events(
+    std::string_view events,
+    MillenniumDosTitleInitReferenceTraceDiagnostics& diagnostics,
     std::string& error);
 
 } // namespace eon

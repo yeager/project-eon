@@ -365,6 +365,14 @@ result. The separately assembled v2 candidate remains the same three
 diagnostic request events, with all raw evidence external; see [the capture
 ledger](MILLENNIUM_DOS_CAPTURE.md#title-private-vector-return-reconnaissance-not-a-v2-event).
 
+The same ordered five records are now retained by the strict
+`millennium-dos-en-title-init-v2` adapter. Its validator requires the exact
+driver-load and request prefix, then exactly `AX=$0101` and `AX=$0000` at
+`TITLES.EXE:$0129`, and reports the result only as diagnostics. This captures
+the real observations without allowing a trace to supply a private-vector
+result to runtime code. Exact manifest, recorder, and preimage hashes are in
+[the capture ledger](MILLENNIUM_DOS_CAPTURE.md#first-strict-title-init-v2-trace-diagnostics-only).
+
 ### English Millennium DOS startup prefix
 
 The clean English `2200AD.EXE` has a caller-connected, hash-locked startup

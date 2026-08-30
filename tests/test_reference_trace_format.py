@@ -21,6 +21,10 @@ class ReferenceTraceFormatTests(unittest.TestCase):
             "game": "millennium", "platform": "dos", "language": "en", "size": 328383,
             "release": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
         },
+        "millennium-dos-en-title-init-v2": {
+            "game": "millennium", "platform": "dos", "language": "en", "size": 328383,
+            "release": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        },
         "deuteros-atari-st-boot-v1": {
             "game": "deuteros", "platform": "atari-st", "language": "en", "size": 3021682,
             "release": "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
@@ -63,6 +67,9 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         ),
         "millennium-dos-en-gx-startup-v2": (
             "millennium-dos-game-flow", "millennium-dos-gx-overlay",
+        ),
+        "millennium-dos-en-title-init-v2": (
+            "millennium-dos-launcher", "millennium-dos-title-flow",
         ),
         "deuteros-atari-st-boot-v1": (
             "deuteros-atari-protected-boot", "deuteros-atari-first-stage",

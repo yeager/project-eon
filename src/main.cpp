@@ -3397,6 +3397,10 @@ int main(int argc, char** argv) {
                     << trace.adapter_callback_entry_count << " callback entry, "
                     << trace.adapter_dispatch_snapshot_count
                     << " dispatch snapshot observations; diagnostics only)\n";
+            } else if (trace.adapter == "millennium-dos-en-title-init-v2") {
+                std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
+                    << " file, " << trace.adapter_private_return_count
+                    << " private-return observations; diagnostics only)\n";
             } else {
                 std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
                     << " file, " << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
