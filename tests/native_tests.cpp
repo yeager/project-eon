@@ -2722,6 +2722,24 @@ int main() {
         "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
     assert(titles_bytes && mill_bytes);
     const auto title_flow = eon::parse_millennium_dos_title_flow(*titles_bytes, *mill_bytes);
+    auto altered_titles = *titles_bytes;
+    altered_titles.back() ^= 0x01;
+    bool rejected_altered_titles = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_title_flow(altered_titles, *mill_bytes));
+    } catch (const std::runtime_error&) {
+        rejected_altered_titles = true;
+    }
+    assert(rejected_altered_titles);
+    auto altered_launcher = *mill_bytes;
+    altered_launcher.back() ^= 0x01;
+    bool rejected_altered_launcher = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_title_flow(*titles_bytes, altered_launcher));
+    } catch (const std::runtime_error&) {
+        rejected_altered_launcher = true;
+    }
+    assert(rejected_altered_launcher);
     const auto title_exit = eon::parse_millennium_dos_title_exit_closure(*titles_bytes);
     const auto millennium_title_transition = eon::parse_millennium_dos_title_transition(title_lib, title_flow);
     assert(title_flow.title_entry_address == 0x1b80);

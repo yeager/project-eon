@@ -2812,6 +2812,9 @@ The `$1390` callee is anchored through its first direct near-call at `$13bb`
 to `$013c`; this is a static address edge only.
 The `$013c` target is anchored for 16 bytes through its terminal `RET` at
 `$014b`; no operation or return effect is inferred.
+The English title-flow parser requires the complete `TITLES.EXE` and
+`MILL.COM` leaf hashes before it exposes those anchors, so a same-size image
+with matching local bytes cannot be substituted for either original program.
 transition routine at `$1941` starts with `CX=$25` and `DX=$0170`, so the
 verified title transition contains 37 steps with that original stride.
 
