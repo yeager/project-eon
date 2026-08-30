@@ -95,11 +95,13 @@ class ModernGraphicsPopupTests(unittest.TestCase):
     def test_custom_can_explicitly_choose_a_modern_pack_without_autodiscovery(self) -> None:
         """A native dialog submits one candidate; existing loaders still validate it."""
         self.assertIn("SDL_ShowOpenFileDialog", SOURCE)
-        self.assertIn('"Modern asset pack", "eonmodern"', SOURCE)
+        self.assertIn('mailbox.filter_label = tr("MODERN ASSET PACK")', SOURCE)
+        self.assertIn('mailbox.filter = {mailbox.filter_label.c_str(), "eonmodern"}', SOURCE)
+        self.assertIn("&mailbox.filter, 1, nullptr, false", SOURCE)
+        self.assertNotIn('"Modern asset pack", "eonmodern"', SOURCE)
         self.assertIn("receive_modern_pack_dialog_selection", SOURCE)
         self.assertIn("selected_modern_pack_manifest", SOURCE)
         self.assertIn("request.modern_pack_manifest", SOURCE)
-        self.assertIn("filters, 1, nullptr, false", SOURCE)
         self.assertIn("screen != Screen::menu || launcher_page != LauncherPage::profiles", SOURCE)
         self.assertIn("focused_profile_card != 2 || custom_profile_ready", SOURCE)
         self.assertIn("filelist && filelist[0] && !filelist[1]", SOURCE)
