@@ -69,6 +69,35 @@ mode-0700 capture directory. The receipt binds the source before/after
 identities, all copied evidence hashes, manifest hash, and tool hash, but
 contains no original bytes.
 
+### V5 title-display artifacts
+
+The v5 Deuteros title-display adapter additionally requires
+`--title-display-artifacts`, an absolute, non-symlink directory owned by the
+capture operator. It must contain the seven separately recorded files named in
+the public format: `copper-list.bin`, `palette-rgb4.bin`, `bitplanes.bin`,
+`palette-rgba8888.bin`, `frame-rgba8888.bin`, `audio-s16le.bin`, and the input
+timeline supplied separately with `--input-timeline`. The assembler secures,
+identity-checks, hashes, and copies the six directory files, then writes their
+filenames, sizes, and hashes as assembler-owned manifest fields. For v5 it
+copies the input timeline as `input-timeline.txt` so the CLI can bind it to
+the recorded input checkpoint.
+
+```sh
+python3 tools/record_reference_trace.py \
+  --source-release /absolute/path/to/user-owned-deuteros-amiga.zip \
+  --events /absolute/path/to/external-recorder-events \
+  --metadata /absolute/path/to/v5-capture-metadata.tsv \
+  --config /absolute/path/to/external-recorder.conf \
+  --command-tail /absolute/path/to/literal-command-tail.txt \
+  --input-timeline /absolute/path/to/input-timeline.txt \
+  --title-display-artifacts /absolute/path/to/v5-observation-artifacts \
+  --output /absolute/path/to/new-v5-capture
+```
+
+These files are capture evidence only. The assembler does not interpret pixels,
+audio, copper words, input semantics, or original game data; later CLI
+admission only compares their retained identities with the exact event fields.
+
 ## Metadata
 
 Metadata is an LF-only UTF-8 file using `key<TAB>value` records. It supplies
@@ -95,7 +124,7 @@ of those fields is rejected. It looks up the derived source hash and size in
 `docs/release-manifest.json`, then rejects game, platform, or language values
 that do not match that one recognised release.
 
-For v2/v3, metadata must additionally name exactly one registered `adapter`. The
+For v2/v3/v4/v5, metadata must additionally name exactly one registered `adapter`. The
 tool accepts only the registered adapters in the public trace format and enforces
 each adapter's full outer-release hash/size plus game/platform/language
 identity. The two physical-media adapters also

@@ -92,6 +92,27 @@ V4_ADAPTERS = {
         "source_stage_sha256": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
     },
 }
+V5_ADAPTERS = {
+    "deuteros-amiga-en-title-display-artifacts-v5": {
+        "game": "deuteros", "platform": "amiga", "language": "en",
+        "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+        "size": 4066771,
+        "source_media_sha256": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+        "source_stage_sha256": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
+    },
+}
+V5_ARTIFACTS = (
+    # These are external observation files, not original game media. The
+    # assembler only copies them into a new evidence receipt after securing
+    # and rehashing each one; Project Eon later cross-binds their identities
+    # to the independently parsed v5 event checkpoints.
+    ("copper_list", "copper-list.bin", 88),
+    ("rgb4_palette", "palette-rgb4.bin", 40),
+    ("bitplanes", "bitplanes.bin", 32000),
+    ("rgba_palette", "palette-rgba8888.bin", 80),
+    ("rgba_frame", "frame-rgba8888.bin", 256000),
+    ("pcm", "audio-s16le.bin", MAX_PROVENANCE_ARTIFACT_SIZE),
+)
 
 
 def registered_adapters() -> dict[str, tuple[str, dict[str, object]]]:
@@ -108,6 +129,8 @@ def registered_adapters() -> dict[str, tuple[str, dict[str, object]]]:
            for name, details in V3_ADAPTERS.items()},
         **{name: ("project-eon-reference-trace-v4", details)
            for name, details in V4_ADAPTERS.items()},
+        **{name: ("project-eon-reference-trace-v5", details)
+           for name, details in V5_ADAPTERS.items()},
     }
 
 
@@ -162,6 +185,18 @@ def require_absolute_regular_file(path: Path, label: str, maximum: int | None = 
         raise EvidenceError(f"{label} must be a non-symlink regular file")
     if maximum is not None and info.st_size > maximum:
         raise EvidenceError(f"{label} exceeds {maximum} bytes")
+    return info
+
+
+def require_absolute_directory(path: Path, label: str) -> os.stat_result:
+    if not path.is_absolute():
+        raise EvidenceError(f"{label} path must be absolute")
+    try:
+        info = path.lstat()
+    except OSError as error:
+        raise EvidenceError(f"Unable to stat {label}: {error}") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+        raise EvidenceError(f"{label} must be a non-symlink directory")
     return info
 
 
@@ -328,8 +363,20 @@ def validate_metadata(fields: dict[str, str], release: dict[str, object]) -> Non
                 continue
             if fields.get(key) != expected_value:
                 raise EvidenceError(f"adapter does not match its exact {key}")
+    elif version == "project-eon-reference-trace-v5":
+        adapter = fields.get("adapter")
+        if adapter not in V5_ADAPTERS:
+            raise EvidenceError("v5 metadata must name a registered adapter")
+        expected = COMMON_METADATA | {"adapter", "source_media_sha256", "source_stage_sha256"}
+        for key, expected_value in V5_ADAPTERS[adapter].items():
+            if key in {"sha256", "size"}:
+                if release.get(key) != expected_value:
+                    raise EvidenceError(f"adapter does not match its exact source {key}")
+                continue
+            if fields.get(key) != expected_value:
+                raise EvidenceError(f"adapter does not match its exact {key}")
     else:
-        raise EvidenceError("format must be project-eon-reference-trace-v1, -v2, -v3, or -v4")
+        raise EvidenceError("format must be project-eon-reference-trace-v1, -v2, -v3, -v4, or -v5")
     if set(fields) != expected:
         raise EvidenceError("metadata has unknown, missing, or assembler-owned fields")
     for key in ("emulator_sha256", "config_sha256", "command_tail_sha256", "input_timeline_sha256"):
@@ -404,6 +451,9 @@ def assemble(args: argparse.Namespace) -> Path:
     configuration = Path(args.config)
     command_tail = Path(args.command_tail)
     input_timeline = Path(args.input_timeline)
+    title_display_artifacts_arg = getattr(args, "title_display_artifacts", None)
+    title_display_artifacts = (Path(title_display_artifacts_arg)
+                               if title_display_artifacts_arg else None)
     output = Path(args.output)
     source_initial = require_absolute_regular_file(source, "source release")
     event_initial = require_absolute_regular_file(events, "event stream", MAX_EVENT_SIZE)
@@ -432,6 +482,7 @@ def assemble(args: argparse.Namespace) -> Path:
     configuration_fd = -1
     command_tail_fd = -1
     input_timeline_fd = -1
+    v5_artifact_fds: list[int] = []
     try:
         source_hash, source_size, source_before = hash_fd(source_fd)
         if not stat.S_ISREG(source_before.st_mode) or not same_file_identity(source_initial, source_before):
@@ -445,6 +496,30 @@ def assemble(args: argparse.Namespace) -> Path:
             raise EvidenceError("metadata changed while it was hashed")
         fields = parse_metadata_bytes(read_opened_input(metadata_fd, opened_metadata, "metadata"))
         validate_metadata(fields, release)
+        v5_artifact_inputs: list[tuple[str, str, int, os.stat_result, str, int]] = []
+        if fields["format"] == "project-eon-reference-trace-v5":
+            if title_display_artifacts is None:
+                raise EvidenceError("v5 title-display assembly requires --title-display-artifacts")
+            require_absolute_directory(title_display_artifacts, "title-display artifacts")
+            for field, filename, maximum in V5_ARTIFACTS:
+                path = title_display_artifacts / filename
+                initial = require_absolute_regular_file(path, f"v5 {field} artifact", maximum)
+                descriptor, opened = open_checked_input(path, f"v5 {field} artifact", maximum)
+                if not same_file_identity(initial, opened):
+                    os.close(descriptor)
+                    raise EvidenceError(f"v5 {field} artifact changed while it was opened")
+                digest, size, hashed = hash_fd(descriptor)
+                if not same_file_identity(opened, hashed):
+                    os.close(descriptor)
+                    raise EvidenceError(f"v5 {field} artifact changed while it was hashed")
+                v5_artifact_fds.append(descriptor)
+                v5_artifact_inputs.append((field, filename, descriptor, opened, digest, size))
+            all_identities = list(identities) + [
+                (opened.st_dev, opened.st_ino) for _, _, _, opened, _, _ in v5_artifact_inputs]
+            if len(set(all_identities)) != len(all_identities):
+                raise EvidenceError("v5 artifacts must be distinct from every assembly input")
+        elif title_display_artifacts is not None:
+            raise EvidenceError("--title-display-artifacts requires v5 metadata")
         event_fd, opened_event = open_checked_input(events, "event stream", MAX_EVENT_SIZE)
         if not same_file_identity(event_initial, opened_event):
             raise EvidenceError("event stream changed while it was opened")
@@ -453,7 +528,9 @@ def assemble(args: argparse.Namespace) -> Path:
                 ("configuration", configuration, configuration_initial, fields["config_sha256"], "configuration.preimage"),
                 ("command tail", command_tail, command_tail_initial, fields["command_tail_sha256"], "command-tail.preimage"),
                 ("input timeline", input_timeline, input_timeline_initial,
-                 fields["input_timeline_sha256"], "input-timeline.preimage")):
+                 fields["input_timeline_sha256"],
+                 "input-timeline.txt" if fields["format"] == "project-eon-reference-trace-v5"
+                 else "input-timeline.preimage")):
             descriptor, opened = open_checked_input(path, label, MAX_PROVENANCE_ARTIFACT_SIZE)
             if not same_file_identity(initial, opened):
                 os.close(descriptor)
@@ -496,6 +573,20 @@ def assemble(args: argparse.Namespace) -> Path:
                     raise EvidenceError(f"{label} changed after its hash was checked")
                 provenance_receipt[label.replace(" ", "_")] = {
                     "path": output_name, "sha256": copied_hash, "size": copied_size}
+            artifact_manifest_fields: dict[str, str] = {}
+            for field, filename, descriptor, opened, digest, size in v5_artifact_inputs:
+                copied_hash, copied_size = copy_checked_input(
+                    descriptor, opened, staging / filename, f"v5 {field} artifact",
+                    MAX_PROVENANCE_ARTIFACT_SIZE)
+                if copied_hash != digest or copied_size != size:
+                    raise EvidenceError(f"v5 {field} artifact changed after its hash was checked")
+                artifact_manifest_fields.update({
+                    f"{field}_file": filename,
+                    f"{field}_size": str(copied_size),
+                    f"{field}_sha256": copied_hash,
+                })
+                provenance_receipt[f"v5_{field}"] = {
+                    "path": filename, "sha256": copied_hash, "size": copied_size}
             source_after_hash, source_after_size, source_after = hash_fd(source_fd)
             if (source_hash, source_size, source_before.st_dev, source_before.st_ino) != (
                 source_after_hash, source_after_size, source_after.st_dev, source_after.st_ino):
@@ -505,6 +596,11 @@ def assemble(args: argparse.Namespace) -> Path:
                 "event_file": "events.eontrace", "event_size": str(event_size), "event_sha256": event_hash,
                 "source_release_sha256": source_hash, "source_release_size": str(source_size),
             })
+            if fields["format"] == "project-eon-reference-trace-v5":
+                manifest_fields["input_timeline_file"] = "input-timeline.txt"
+                manifest_fields["input_timeline_size"] = str(
+                    provenance_receipt["input_timeline"]["size"])
+                manifest_fields.update(artifact_manifest_fields)
             order = ["format"] + (["adapter"] if "adapter" in manifest_fields else []) + [
                 "event_file", "event_size", "event_sha256", "game", "platform", "language",
                 "source_release_sha256", "source_release_size",
@@ -513,6 +609,10 @@ def assemble(args: argparse.Namespace) -> Path:
                 order += ["source_media_sha256", "source_stage_sha256"]
             order += ["capture_start_utc", "capture_end_utc", "emulator_name", "emulator_version",
                       "emulator_sha256", "config_sha256", "command_tail_sha256", "input_timeline_sha256"]
+            if fields["format"] == "project-eon-reference-trace-v5":
+                order += ["input_timeline_file", "input_timeline_size"]
+                for field, _, _ in V5_ARTIFACTS:
+                    order += [f"{field}_file", f"{field}_size", f"{field}_sha256"]
             manifest_text = "".join(f"{key}\t{manifest_fields[key]}\n" for key in order)
             write_text_atomic(staging / "manifest.eontrace", manifest_text)
             receipt = {
@@ -542,6 +642,8 @@ def assemble(args: argparse.Namespace) -> Path:
             os.close(command_tail_fd)
         if input_timeline_fd >= 0:
             os.close(input_timeline_fd)
+        for descriptor in v5_artifact_fds:
+            os.close(descriptor)
         os.close(source_fd)
     return output
 
@@ -554,13 +656,15 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--config", help="Absolute external emulator configuration preimage")
     parser.add_argument("--command-tail", help="Absolute literal emulator command-tail preimage")
     parser.add_argument("--input-timeline", help="Absolute recorder input-timeline preimage")
+    parser.add_argument("--title-display-artifacts",
+                        help="Absolute directory holding the seven fixed v5 title-display capture artifacts")
     parser.add_argument("--output", help="New absolute evidence directory")
     parser.add_argument("--metadata-template", metavar="ADAPTER",
                         help="Print a non-validating instructional metadata template for one registered adapter")
     args = parser.parse_args(argv)
     if args.metadata_template:
         if any((args.source_release, args.events, args.metadata, args.config, args.command_tail,
-                args.input_timeline, args.output)):
+                args.input_timeline, args.title_display_artifacts, args.output)):
             parser.error("--metadata-template cannot be combined with assembly inputs")
     elif not all((args.source_release, args.events, args.metadata, args.config, args.command_tail,
                   args.input_timeline, args.output)):

@@ -145,6 +145,31 @@ class RecordReferenceTraceTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.EvidenceError, "source_stage_sha256"):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
 
+    def test_v5_title_display_metadata_is_bound_but_artifacts_remain_assembler_owned(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.tsv"
+            write_metadata(path,
+                format="project-eon-reference-trace-v5",
+                adapter="deuteros-amiga-en-title-display-artifacts-v5",
+                game="deuteros", platform="amiga",
+                source_media_sha256="6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+                source_stage_sha256="48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03")
+            identity = {
+                "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+                "size": 4066771, "game": "deuteros", "platform": "amiga", "language": "en"}
+            TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
+            self.assertIn("project-eon-reference-trace-v5", TOOL.metadata_template(
+                "deuteros-amiga-en-title-display-artifacts-v5"))
+            write_metadata(path,
+                format="project-eon-reference-trace-v5",
+                adapter="deuteros-amiga-en-title-display-artifacts-v5",
+                game="deuteros", platform="amiga",
+                source_media_sha256="6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+                source_stage_sha256="48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
+                rgba_frame_sha256="0" * 64)
+            with self.assertRaisesRegex(TOOL.EvidenceError, "assembler-owned"):
+                TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
+
     def test_metadata_template_is_instructional_and_hash_bound_to_one_adapter(self):
         template = TOOL.metadata_template("deuteros-amiga-en-title-display-v4")
         self.assertIn("format\tproject-eon-reference-trace-v4\n", template)
@@ -213,6 +238,68 @@ class RecordReferenceTraceTests(unittest.TestCase):
             self.assertEqual(receipt["provenance"]["input_timeline"]["sha256"], hashes["input_timeline_sha256"])
             self.assertEqual(receipt["tool"]["sha256"],
                              hashlib.sha256((ROOT / "tools" / "record_reference_trace.py").read_bytes()).hexdigest())
+
+    def test_v5_assembly_copies_all_named_artifacts_and_owns_their_manifest_fields(self):
+        # These are deliberately non-game boundary bytes. The test replaces
+        # the exact-release registry only inside this process so it can prove
+        # assembler ownership without manufacturing or retaining media.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "owned-release.zip"
+            events = root / "external-events.log"
+            metadata = root / "metadata.tsv"
+            artifacts = root / "artifacts"
+            artifacts.mkdir()
+            output = root / "capture"
+            configuration, command_tail, input_timeline, hashes = write_provenance_preimages(root)
+            source.write_bytes(b"temporary non-game release identity")
+            events.write_bytes(b"external recorder observation\n")
+            artifact_bytes = {
+                "copper-list.bin": b"c" * 88,
+                "palette-rgb4.bin": b"p" * 40,
+                "bitplanes.bin": b"b" * 32000,
+                "palette-rgba8888.bin": b"r" * 80,
+                "frame-rgba8888.bin": b"f" * 256000,
+                "audio-s16le.bin": b"a" * 2,
+            }
+            for name, data in artifact_bytes.items():
+                (artifacts / name).write_bytes(data)
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+            write_metadata(metadata, **hashes,
+                format="project-eon-reference-trace-v5",
+                adapter="deuteros-amiga-en-title-display-artifacts-v5",
+                game="deuteros", platform="amiga",
+                source_media_sha256="0" * 64, source_stage_sha256="1" * 64)
+            original_adapters = TOOL.V5_ADAPTERS
+            original_identity = TOOL.release_identity
+            TOOL.V5_ADAPTERS = {
+                "deuteros-amiga-en-title-display-artifacts-v5": {
+                    "game": "deuteros", "platform": "amiga", "language": "en",
+                    "sha256": source_hash, "size": source.stat().st_size,
+                    "source_media_sha256": "0" * 64, "source_stage_sha256": "1" * 64,
+                }}
+            TOOL.release_identity = lambda digest, size: {
+                "sha256": digest, "size": size, "game": "deuteros",
+                "platform": "amiga", "language": "en"}
+            try:
+                result = TOOL.assemble(type("Arguments", (), {
+                    "source_release": str(source.resolve()), "events": str(events.resolve()),
+                    "metadata": str(metadata.resolve()), "config": str(configuration.resolve()),
+                    "command_tail": str(command_tail.resolve()), "input_timeline": str(input_timeline.resolve()),
+                    "title_display_artifacts": str(artifacts.resolve()), "output": str(output.resolve())})())
+            finally:
+                TOOL.V5_ADAPTERS = original_adapters
+                TOOL.release_identity = original_identity
+            self.assertEqual(result, output.resolve())
+            manifest = dict(line.split("\t", 1) for line in
+                            (output / "manifest.eontrace").read_text(encoding="ascii").splitlines())
+            self.assertEqual(manifest["input_timeline_file"], "input-timeline.txt")
+            for field, filename, _ in TOOL.V5_ARTIFACTS:
+                self.assertEqual(manifest[f"{field}_file"], filename)
+                self.assertEqual(int(manifest[f"{field}_size"]), len(artifact_bytes[filename]))
+                self.assertEqual(manifest[f"{field}_sha256"],
+                                 hashlib.sha256(artifact_bytes[filename]).hexdigest())
+                self.assertEqual((output / filename).read_bytes(), artifact_bytes[filename])
 
     def test_rejects_symlink_and_existing_output(self):
         with tempfile.TemporaryDirectory() as directory:
