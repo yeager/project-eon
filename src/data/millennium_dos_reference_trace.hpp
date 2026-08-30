@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -29,6 +30,16 @@ struct MillenniumDosGxStartupReferenceTraceDiagnostics {
     std::size_t local_return_count = 0;
 };
 
+// The only values retained by the GX-startup grammar.  They are raw
+// observations at fixed, byte-locked continuation sites; callers must still
+// bind the event file to a recognised release through validate_reference_trace
+// before using them to admit a recovered, call-free session.
+struct MillenniumDosGxStartupObservations {
+    std::uint16_t private_return_ax = 0;
+    std::uint8_t initial_mode_byte = 0;
+    std::uint8_t post_overlay_mode_byte = 0;
+};
+
 // The title-initialisation trace binds one genuinely captured request prefix
 // to two raw return words at the original wrapper continuation. It remains a
 // diagnostics-only record: neither word is supplied to a title session.
@@ -51,6 +62,14 @@ struct MillenniumDosTitleInitReferenceTraceDiagnostics {
 [[nodiscard]] bool validate_millennium_dos_gx_startup_reference_events(
     std::string_view events,
     MillenniumDosGxStartupReferenceTraceDiagnostics& diagnostics,
+    std::string& error);
+
+// Validate the exact ten-record GX grammar and extract its three raw values.
+// This parser has no guest-execution side effects and accepts no abbreviated
+// trace.  It intentionally does not validate the external file identity or
+// source archive: callers must do that through validate_reference_trace.
+[[nodiscard]] std::optional<MillenniumDosGxStartupObservations>
+parse_millennium_dos_gx_startup_reference_observations(std::string_view events,
     std::string& error);
 
 [[nodiscard]] bool validate_millennium_dos_title_init_reference_events(

@@ -100,6 +100,40 @@ bool fixed_lowercase_hex(const std::string_view value, const std::size_t digits)
     return true;
 }
 
+bool parse_fixed_hex(const std::string_view value, const std::size_t digits,
+                     std::uint16_t& result) {
+    if (!fixed_lowercase_hex(value, digits)) return false;
+    result = 0;
+    for (const auto character : value.substr(2)) {
+        result = static_cast<std::uint16_t>(result << 4U);
+        result = static_cast<std::uint16_t>(result + (character <= '9'
+            ? character - '0' : character - 'a' + 10));
+    }
+    return true;
+}
+
+bool gx_value_at(const std::string_view events, const std::size_t expected_index,
+                 const std::string_view key, const std::size_t digits,
+                 std::uint16_t& result) {
+    std::size_t cursor = 0;
+    for (std::size_t index = 0; index <= expected_index; ++index) {
+        const auto end = events.find('\n', cursor);
+        if (end == std::string_view::npos) return false;
+        if (index == expected_index) {
+            const auto line = events.substr(cursor, end - cursor);
+            const std::string token = " " + std::string(key) + "=";
+            const auto value_start = line.find(token);
+            if (value_start == std::string_view::npos) return false;
+            const auto first = value_start + token.size();
+            const auto value_end = line.find(' ', first);
+            return parse_fixed_hex(line.substr(first, value_end == std::string_view::npos
+                ? std::string_view::npos : value_end - first), digits, result);
+        }
+        cursor = end + 1;
+    }
+    return false;
+}
+
 bool gx_schema_matches(const std::size_t index, const std::string_view type,
                        const std::map<std::string_view, std::string_view>& fields) {
     // Each PC/return site is an independently hash-locked instruction
@@ -281,6 +315,26 @@ bool validate_millennium_dos_gx_startup_reference_events(
     diagnostics.adapter_return_count = 1;
     diagnostics.local_return_count = 6;
     return true;
+}
+
+std::optional<MillenniumDosGxStartupObservations>
+parse_millennium_dos_gx_startup_reference_observations(const std::string_view events,
+                                                        std::string& error) {
+    error.clear();
+    MillenniumDosGxStartupReferenceTraceDiagnostics diagnostics;
+    if (!validate_millennium_dos_gx_startup_reference_events(events, diagnostics, error)) return std::nullopt;
+    MillenniumDosGxStartupObservations observations;
+    std::uint16_t initial_mode = 0;
+    std::uint16_t final_mode = 0;
+    if (!gx_value_at(events, 0, "ax", 4, observations.private_return_ax)
+            || !gx_value_at(events, 1, "value", 2, initial_mode)
+            || !gx_value_at(events, 9, "value", 2, final_mode)) {
+        error = "Millennium DOS GX reference trace has unreadable validated raw values";
+        return std::nullopt;
+    }
+    observations.initial_mode_byte = static_cast<std::uint8_t>(initial_mode);
+    observations.post_overlay_mode_byte = static_cast<std::uint8_t>(final_mode);
+    return observations;
 }
 
 bool validate_millennium_dos_title_init_reference_events(
