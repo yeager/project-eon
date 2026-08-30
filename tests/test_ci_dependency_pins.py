@@ -30,6 +30,16 @@ class CiDependencyPinTests(unittest.TestCase):
         self.assertIn("fetch --depth 1 origin $env:ZLIB_REF", WORKFLOW)
         self.assertIn('fetch --depth 1 origin "$LIBPNG_REF"', WORKFLOW)
 
+    def test_preservation_tests_install_their_declared_analysis_dependency(self) -> None:
+        # The hash-locked M68000 range tool is exercised by the common Python
+        # suite on all three build platforms. Keep its sole optional analysis
+        # dependency explicit rather than silently skipping a preservation
+        # test on a runner without Capstone.
+        self.assertEqual(WORKFLOW.count("Install preservation analysis dependencies"), 3)
+        self.assertEqual(WORKFLOW.count("--requirement requirements-analysis.txt"), 3)
+        self.assertIn("python3 -m pip install --user --requirement requirements-analysis.txt", WORKFLOW)
+        self.assertIn("python -m pip install --user --requirement requirements-analysis.txt", WORKFLOW)
+
     def test_actions_are_pinned_to_full_immutable_commit_ids(self) -> None:
         # Action tags, like source dependency tags, are mutable repository
         # references. Every `uses:` reference must identify a full Git object
