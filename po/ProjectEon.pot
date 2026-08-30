@@ -429,3 +429,27 @@ msgstr ""
 #: src/main.cpp
 msgid "RELEASE IDENTITY IS FIXED AT LAUNCH"
 msgstr ""
+
+#: src/main.cpp
+msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
+msgstr ""
+
+#: src/main.cpp
+msgid "RECOVERY FUNCTION MAP"
+msgstr ""
+
+#: src/main.cpp
+msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
+msgstr ""
+
+#: src/main.cpp
+msgid "PAGE"
+msgstr ""
+
+#: src/main.cpp
+msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
+msgstr ""
+
+#: src/main.cpp
+msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgstr ""

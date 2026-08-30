@@ -13,6 +13,23 @@ emulator-correctness claim. Admission remains the separate, bounded
 `project-eon --data ... --game ... --platform ... --reference-trace ...`
 validation described in [REFERENCE_TRACE_FORMAT.md](REFERENCE_TRACE_FORMAT.md).
 
+## Recorder metadata template
+
+Before recording, use the registered adapter identifier to print an
+instructional (intentionally invalid) metadata skeleton. This prevents a
+recorder setup from guessing its release/platform/stage identity:
+
+```sh
+python3 tools/record_reference_trace.py \
+  --metadata-template deuteros-amiga-en-title-display-v4
+```
+
+The `<actual-…>` placeholders must be replaced with hashes and UTC timestamps
+from the real external recorder and its retained configuration, command tail,
+and input timeline. The command emits neither events nor media bytes; its
+output is rejected unchanged by the assembler. It accepts no assembly paths in
+template mode, and it never starts an emulator.
+
 ## Inputs and output
 
 All four paths must be absolute. `--source-release`, `--events`, and

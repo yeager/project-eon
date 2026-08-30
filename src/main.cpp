@@ -5,6 +5,7 @@
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
+#include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
@@ -39,6 +40,7 @@
 #include "data/modern_pixel_reconstruction.hpp"
 #include "data/sha256.hpp"
 #include "data/reference_trace.hpp"
+#include "data/function_map.hpp"
 #include "data/recovery_map.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
@@ -340,8 +342,24 @@ void cycle_modern_graphics_preset(ModernGraphicsSettings& settings, const int di
 // separate CLI validator has checked its complete external manifest; the UI
 // does not open, retain, replay, or infer a trace behind an active game.
 struct ModernRuntimeDiagnostics {
+    // This is a named, declarative function-map view over the same
+    // hash-checked recovery boundaries that the CLI reports.  It is copied
+    // from the compiled map solely for presentation: none of these labels or
+    // addresses is an executable guest dispatch target.
+    struct RecoveryFunction {
+        std::string id;
+        std::string profile;
+        std::string cpu;
+        std::string source_asset_sha256;
+        std::string source_offset;
+        std::string runtime_address;
+        std::string evidence_level;
+        std::string uncertainty;
+        std::string runtime_status;
+    };
     std::string release_identity = "NOT SELECTED";
     std::size_t recovery_boundary_count = 0;
+    std::vector<RecoveryFunction> recovery_functions;
     std::string trace_admission = "NOT LOADED";
     bool sdl_vsync = true;
 };
@@ -371,6 +389,10 @@ struct MillenniumDosLaunchAssets {
     std::string language;
     std::optional<PreviewAnimation> gx_canvas;
     std::optional<eon::MillenniumDosTitleFlow> title_flow;
+    std::optional<eon::MillenniumDosSoundSelectionEvidence> sound_selection;
+    // This is a short-lived copy of a byte-locked original DOS string. It is
+    // never passed through launcher translation or persisted with a session.
+    std::optional<std::string> sound_selection_prompt;
     std::optional<eon::MillenniumDosSpanishTitleBoundary> spanish_title_boundary;
     std::optional<eon::MillenniumDosGameFlow> game_flow;
     // Both private video drivers are loaded from the same verified DOS
@@ -394,6 +416,30 @@ void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text
     // as ASCII-only; a renderer setup failure must not replace localized UTF-8
     // with transliterations or synthetic text.
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
+}
+
+void draw_original_text(SDL_Renderer* renderer, const float x, const float y,
+    const std::string_view text) {
+    // Unlike launcher chrome, this is verified source text from the user's
+    // supplied media. Localisation must never translate or replace it.
+    const std::string original(text);
+    if (active_text_renderer && active_text_renderer->draw(x, y, original)) return;
+    SDL_RenderDebugText(renderer, x, y, original.c_str());
+}
+
+void draw_original_multiline_text(SDL_Renderer* renderer, const float x, float y,
+    const std::string_view text, const float line_stride = 22.0F) {
+    std::size_t line_start = 0;
+    while (line_start <= text.size()) {
+        const auto line_end = text.find('\n', line_start);
+        const auto count = (line_end == std::string_view::npos ? text.size() : line_end) - line_start;
+        auto line = text.substr(line_start, count);
+        if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
+        draw_original_text(renderer, x, y, line);
+        y += line_stride;
+        if (line_end == std::string_view::npos) return;
+        line_start = line_end + 1;
+    }
 }
 
 // These are launcher labels, rather than names read from original media. Keep
@@ -645,7 +691,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
-    draw_text(renderer, 390, 212, tr("F10 / ESC: BACK TO SETTINGS"));
+    draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
     const std::array<std::pair<const char*, std::string>, 6> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
@@ -670,6 +716,52 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
     draw_text(renderer, 390, 630, tr("DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."));
+}
+
+// The function map is deliberately its own diagnostics subpage.  Unlike a
+// hook browser, it exposes only the parser-bound source identity already
+// present in RecoveryMapEntry.  Pages avoid truncating a release with more
+// than three named boundaries while keeping every row readable at 720p.
+void draw_recovery_function_map_popup(SDL_Renderer* renderer,
+    const ModernRuntimeDiagnostics& diagnostics, const std::size_t page,
+    const eon::Translator& translator) {
+    const auto tr = [&translator](const std::string_view message) {
+        return std::string(translator.translate(message));
+    };
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 3, 10, 20, 240);
+    SDL_RenderFillRect(renderer, &modern_graphics_popup_bounds);
+    SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
+    SDL_RenderRect(renderer, &modern_graphics_popup_bounds);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+    constexpr std::size_t rows_per_page = 3;
+    const auto page_count = std::max<std::size_t>(1,
+        (diagnostics.recovery_functions.size() + rows_per_page - 1U) / rows_per_page);
+    const auto first = std::min(page * rows_per_page, diagnostics.recovery_functions.size());
+    const auto last = std::min(first + rows_per_page, diagnostics.recovery_functions.size());
+    draw_text(renderer, 390, 174, tr("RECOVERY FUNCTION MAP"));
+    draw_text(renderer, 390, 212, tr("UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"));
+    draw_text(renderer, 390, 240, diagnostics.release_identity);
+    draw_text(renderer, 850, 240, tr("PAGE") + " " + std::to_string(page + 1U)
+        + "/" + std::to_string(page_count));
+    if (first == last) {
+        SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+        draw_text(renderer, 390, 320, tr("NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."));
+    }
+    for (std::size_t index = first; index < last; ++index) {
+        const auto& entry = diagnostics.recovery_functions[index];
+        const float y = 286.0F + static_cast<float>(index - first) * 112.0F;
+        SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
+        draw_text(renderer, 390, y, entry.id);
+        SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+        draw_text(renderer, 390, y + 22.0F, entry.cpu + " / " + entry.source_offset + " -> "
+            + entry.runtime_address + " / SHA " + truncated_identity_hash(entry.source_asset_sha256));
+        draw_text(renderer, 390, y + 44.0F, entry.profile + " / " + entry.evidence_level);
+        draw_text(renderer, 390, y + 66.0F, entry.runtime_status + "; " + entry.uncertainty);
+    }
+    SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+    draw_text(renderer, 390, 630, tr("DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."));
 }
 
 bool inside(const SDL_FRect& rectangle, float x, float y) {
@@ -3007,6 +3099,8 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
                 .language = "es",
                 .gx_canvas = std::nullopt,
                 .title_flow = std::nullopt,
+                .sound_selection = std::nullopt,
+                .sound_selection_prompt = std::nullopt,
                 .spanish_title_boundary = eon::parse_millennium_dos_spanish_title_boundary(
                     titles_bytes),
                 .game_flow = std::nullopt,
@@ -3034,12 +3128,17 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
             return std::nullopt;
         }
         const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
+        const auto sound_selection = eon::parse_millennium_dos_sound_selection(*launcher);
+        const auto sound_selection_prompt = eon::extract_millennium_dos_sound_selection_prompt(
+            *launcher, sound_selection);
         return MillenniumDosLaunchAssets{
             .title = {bitmap.width, bitmap.height,
                 {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
             .language = "en",
             .gx_canvas = PreviewAnimation{gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
             .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
+            .sound_selection = sound_selection,
+            .sound_selection_prompt = sound_selection_prompt,
             .spanish_title_boundary = std::nullopt,
             .game_flow = eon::parse_millennium_dos_game_flow(*game),
             .ega_video_driver = eon::parse_millennium_dos_video_driver(*ega640,
@@ -3699,6 +3798,8 @@ int main(int argc, char** argv) {
     bool show_scanner = false;
     bool show_modern_graphics_settings = false;
     bool show_modern_runtime_diagnostics = false;
+    bool show_recovery_function_map = false;
+    std::size_t recovery_function_map_page = 0;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
     bool deuteros_input_pressed = false;
     const auto clear_deuteros_opening_input = [&] {
@@ -3710,6 +3811,7 @@ int main(int argc, char** argv) {
     };
     std::optional<std::uint32_t> deuteros_title_resource;
     std::unique_ptr<eon::DeuterosAtariBootstrapSession> deuteros_atari_session;
+    std::unique_ptr<eon::MillenniumDosSoundSelectionSession> millennium_sound_selection_session;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
     // SDL text input is the host analogue of DOS' character-availability
     // poll. Keep it active only while TITLES.EXE's recovered title boundary
@@ -3765,6 +3867,7 @@ int main(int argc, char** argv) {
         // DOS availability result nor modifies original title/game data.
         if (millennium_title_text_input_active) SDL_StopTextInput(window);
         millennium_title_text_input_active = false;
+        millennium_sound_selection_session.reset();
         millennium_title_session.reset();
     };
     const auto start_millennium_title = [&] {
@@ -3777,7 +3880,16 @@ int main(int argc, char** argv) {
         millennium_amiga_session = load_millennium_amiga_bootstrap(releases, active_platform);
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
-        if (millennium_assets && millennium_assets->title_flow) {
+        // MILL.COM's sound prompt occurs before the title child request. For
+        // the exact English launcher, enter that recovered first menu before
+        // the later title boundary.  Once a value is selected, execution
+        // stops at its unobserved driver initialisation; it must not fall
+        // through to the title image as if DOS/driver return were captured.
+        if (millennium_assets && millennium_assets->sound_selection
+            && millennium_assets->sound_selection_prompt) {
+            millennium_sound_selection_session = std::make_unique<eon::MillenniumDosSoundSelectionSession>(
+                *millennium_assets->sound_selection);
+        } else if (millennium_assets && millennium_assets->title_flow) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
                 *millennium_assets->title_flow);
             millennium_state_page = 0;
@@ -3786,7 +3898,8 @@ int main(int argc, char** argv) {
                 *millennium_assets->spanish_title_boundary);
             millennium_state_page = 0;
         }
-        if (millennium_title_session && !millennium_title_text_input_active) {
+        if ((millennium_sound_selection_session || millennium_title_session)
+            && !millennium_title_text_input_active) {
             if (!SDL_StartTextInput(window)) {
                 std::cerr << "Unable to enable Millennium DOS title text input: "
                           << SDL_GetError() << '\n';
@@ -3918,6 +4031,21 @@ int main(int argc, char** argv) {
             + tr(launcher_platform_label(release->platform)) + " / " + release->language
             + " / " + truncated_identity_hash(release->sha256);
         diagnostics.recovery_boundary_count = eon::recovery_map_for_release(release->sha256).size();
+        const auto function_map = eon::function_map_for_release(release->sha256);
+        diagnostics.recovery_functions.reserve(function_map.size());
+        for (const auto& entry : function_map) {
+            // Preserve the exact parser-profile gate for named functions.
+            // A stale declarative record never becomes a host hook or UI
+            // claim merely because its outer-release hash still matches.
+            if (!eon::release_has_function_map_entry(release->sha256, entry.id)) continue;
+            diagnostics.recovery_functions.push_back({
+                std::string(entry.id), std::string(entry.parser_profile_id),
+                std::string(entry.cpu), std::string(entry.source_asset_sha256),
+                std::string(entry.source_offset), std::string(entry.runtime_address),
+                std::string(entry.evidence_level), std::string(entry.uncertainty),
+                std::string(entry.runtime_status),
+            });
+        }
         // GUI launches intentionally do not accept a trace path. The CLI
         // verifier exits after a complete, hash-locked validation, so no
         // unvalidated trace can appear admitted here.
@@ -3971,11 +4099,17 @@ int main(int argc, char** argv) {
         case 6: modern_graphics_settings.frame = !modern_graphics_settings.frame;
             mark_modern_graphics_custom(modern_graphics_settings); break;
         case 7: open_modern_pack_dialog(); break;
-        case 8: show_modern_runtime_diagnostics = true; break;
+        case 8:
+            show_recovery_function_map = false;
+            recovery_function_map_page = 0;
+            show_modern_runtime_diagnostics = true;
+            break;
         default: break;
         }
     };
     const auto close_modern_graphics_settings = [&] {
+        show_recovery_function_map = false;
+        recovery_function_map_page = 0;
         show_modern_runtime_diagnostics = false;
         show_modern_graphics_settings = false;
         if (screen == Screen::menu && launcher_page == LauncherPage::profiles
@@ -4009,7 +4143,11 @@ int main(int argc, char** argv) {
                 // and Custom launches retain the in-game settings popup.
                 if (request.presentation != eon::Presentation::modern) continue;
                 if (show_modern_runtime_diagnostics) {
-                    show_modern_runtime_diagnostics = false;
+                    // F10 follows the displayed back target: the function
+                    // map returns to diagnostics, while diagnostics returns
+                    // to the renderer settings page.
+                    if (show_recovery_function_map) show_recovery_function_map = false;
+                    else show_modern_runtime_diagnostics = false;
                     continue;
                 }
                 if (!show_modern_graphics_settings) clear_deuteros_opening_input();
@@ -4028,12 +4166,30 @@ int main(int argc, char** argv) {
                     // launcher navigation before any recovered input route.
                     if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
                         && event.key.key == SDLK_ESCAPE) {
-                        show_modern_runtime_diagnostics = false;
+                        if (show_recovery_function_map) show_recovery_function_map = false;
+                        else show_modern_runtime_diagnostics = false;
+                    } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+                        && !show_recovery_function_map
+                        && (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER)) {
+                        show_recovery_function_map = true;
+                        recovery_function_map_page = 0;
+                    } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+                        && show_recovery_function_map
+                        && (event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
+                        constexpr std::size_t rows_per_page = 3;
+                        const auto function_count = current_modern_runtime_diagnostics().recovery_functions.size();
+                        const auto page_count = std::max<std::size_t>(1,
+                            (function_count + rows_per_page - 1U) / rows_per_page);
+                        recovery_function_map_page = event.key.key == SDLK_UP
+                            ? (recovery_function_map_page + page_count - 1U) % page_count
+                            : (recovery_function_map_page + 1U) % page_count;
                     } else if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                         && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
-                        show_modern_runtime_diagnostics = false;
+                        if (show_recovery_function_map) show_recovery_function_map = false;
+                        else show_modern_runtime_diagnostics = false;
                     } else if (event.type == SDL_EVENT_FINGER_DOWN) {
-                        show_modern_runtime_diagnostics = false;
+                        if (show_recovery_function_map) show_recovery_function_map = false;
+                        else show_modern_runtime_diagnostics = false;
                     }
                 } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.key == SDLK_ESCAPE) {
@@ -4131,7 +4287,18 @@ int main(int argc, char** argv) {
             }
             if (event.type == SDL_EVENT_TEXT_INPUT && event.text.text && event.text.text[0] != '\0'
                 && screen == Screen::launching && selected == eon::Game::millennium
-                && millennium_title_session) {
+                && (millennium_sound_selection_session || millennium_title_session)) {
+                if (millennium_sound_selection_session) {
+                    // The source-level menu accepts literal ASCII data bytes,
+                    // not an SDL scancode or an inferred device choice. Its
+                    // one selection ends at the driver ABI boundary.
+                    if (millennium_sound_selection_session->accept_ascii_character(event.text.text[0])
+                        && millennium_title_text_input_active) {
+                        SDL_StopTextInput(window);
+                        millennium_title_text_input_active = false;
+                    }
+                    continue;
+                }
                 // TITLES.EXE's INT 21h/AH=06h poll distinguishes a nonzero
                 // console character from a raw physical key. SDL text input
                 // supplies only that availability signal; UTF-8 contents are
@@ -4448,7 +4615,21 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 136, modern ? tr("Presentation: Modern") : tr("Presentation: Original"));
             draw_text(renderer, 64, 156, tr("Original data is present and selected."));
             draw_text(renderer, 64, 180, tr("The simulation is incomplete; no synthetic substitute will run."));
-            if (selected == eon::Game::millennium && millennium_preview_texture && millennium_assets) {
+            if (selected == eon::Game::millennium && millennium_assets
+                && millennium_sound_selection_session && millennium_assets->sound_selection_prompt) {
+                // These lines are unmodified text bytes from the verified
+                // launcher, rendered with Eon's UI font only because the DOS
+                // text-mode font/mode has not been recovered. They are not
+                // translated launcher text and are not a visual-parity claim.
+                draw_original_multiline_text(renderer, 64, 222,
+                    *millennium_assets->sound_selection_prompt);
+                if (!millennium_sound_selection_session->awaiting_choice()) {
+                    draw_original_text(renderer, 64, 430,
+                        millennium_sound_selection_session->selected_original_filename());
+                    draw_text(renderer, 64, 458,
+                        tr("The simulation is incomplete; no synthetic substitute will run."));
+                }
+            } else if (selected == eon::Game::millennium && millennium_preview_texture && millennium_assets) {
                 // Input availability proves only TITLES.EXE's local exit path.
                 // Neither DOS EXEC return nor 2200AD startup is observed, so
                 // a GX canvas must never replace the original title frame.
@@ -4832,8 +5013,14 @@ int main(int argc, char** argv) {
         }
         if (show_modern_graphics_settings) {
             if (show_modern_runtime_diagnostics) {
-                draw_modern_runtime_diagnostics_popup(renderer, modern_graphics_settings,
-                    current_modern_runtime_diagnostics(), translator);
+                const auto diagnostics = current_modern_runtime_diagnostics();
+                if (show_recovery_function_map) {
+                    draw_recovery_function_map_popup(renderer, diagnostics,
+                        recovery_function_map_page, translator);
+                } else {
+                    draw_modern_runtime_diagnostics_popup(renderer, modern_graphics_settings,
+                        diagnostics, translator);
+                }
             } else {
                 draw_modern_graphics_popup(renderer, modern_graphics_settings,
                     selected_modern_pack_manifest.has_value(), translator);

@@ -137,6 +137,10 @@ class CatalogTests(unittest.TestCase):
             "TRACE ADMISSION", "NOT LOADED", "RENDERER SETTINGS", "FRAME PACING",
             "SDL VSYNC: ON", "SDL VSYNC: OFF",
             "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
+            "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS",
+            "RECOVERY FUNCTION MAP", "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS",
+            "PAGE", "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE.",
+            "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.",
         }
         source_catalog = po_messages(PO / "ProjectEon.pot")
         self.assertTrue(labels <= set(source_catalog))

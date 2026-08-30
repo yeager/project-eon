@@ -83,6 +83,59 @@ V4_ADAPTERS = {
 }
 
 
+def registered_adapters() -> dict[str, tuple[str, dict[str, object]]]:
+    """Return every exact capture-admission row, labelled by trace format.
+
+    This registry is deliberately the same fixed provenance information used
+    by assembly.  It has no recorder backend and contains no event payload,
+    original byte, or runtime result.
+    """
+    return {
+        **{name: ("project-eon-reference-trace-v2", details)
+           for name, details in V2_ADAPTERS.items()},
+        **{name: ("project-eon-reference-trace-v3", details)
+           for name, details in V3_ADAPTERS.items()},
+        **{name: ("project-eon-reference-trace-v4", details)
+           for name, details in V4_ADAPTERS.items()},
+    }
+
+
+def metadata_template(adapter: str) -> str:
+    """Render an instructional template; it is not valid capture metadata.
+
+    Angle-bracket values force the recorder operator to retain and hash the
+    actual external configuration, command and input timeline.  The template
+    must never be passed back to the assembler unchanged.
+    """
+    registered = registered_adapters()
+    if adapter not in registered:
+        raise EvidenceError("metadata template requires a registered adapter")
+    format_name, identity = registered[adapter]
+    rows = [
+        ("format", format_name),
+        ("adapter", adapter),
+        ("game", str(identity["game"])),
+        ("platform", str(identity["platform"])),
+        ("language", str(identity["language"])),
+    ]
+    if "source_media_sha256" in identity:
+        rows.extend((
+            ("source_media_sha256", str(identity["source_media_sha256"])),
+            ("source_stage_sha256", str(identity["source_stage_sha256"])),
+        ))
+    rows.extend((
+        ("capture_start_utc", "<actual-utc-YYYY-MM-DDTHH:MM:SSZ>"),
+        ("capture_end_utc", "<actual-utc-YYYY-MM-DDTHH:MM:SSZ>"),
+        ("emulator_name", "<external-recorder-name>"),
+        ("emulator_version", "<external-recorder-version>"),
+        ("emulator_sha256", "<actual-lowercase-sha256>"),
+        ("config_sha256", "<actual-lowercase-sha256>"),
+        ("command_tail_sha256", "<actual-lowercase-sha256>"),
+        ("input_timeline_sha256", "<actual-lowercase-sha256>"),
+    ))
+    return "".join(f"{key}\t{value}\n" for key, value in rows)
+
+
 class EvidenceError(RuntimeError):
     """A bounded input/provenance failure; never an excuse to make a trace."""
 
@@ -387,16 +440,28 @@ def assemble(args: argparse.Namespace) -> Path:
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source-release", required=True, help="Absolute user-owned original archive path")
-    parser.add_argument("--events", required=True, help="Absolute external event stream path")
-    parser.add_argument("--metadata", required=True, help="Absolute LF key<TAB>value metadata path")
-    parser.add_argument("--output", required=True, help="New absolute evidence directory")
-    return parser.parse_args(argv)
+    parser.add_argument("--source-release", help="Absolute user-owned original archive path")
+    parser.add_argument("--events", help="Absolute external event stream path")
+    parser.add_argument("--metadata", help="Absolute LF key<TAB>value metadata path")
+    parser.add_argument("--output", help="New absolute evidence directory")
+    parser.add_argument("--metadata-template", metavar="ADAPTER",
+                        help="Print a non-validating instructional metadata template for one registered adapter")
+    args = parser.parse_args(argv)
+    if args.metadata_template:
+        if any((args.source_release, args.events, args.metadata, args.output)):
+            parser.error("--metadata-template cannot be combined with assembly inputs")
+    elif not all((args.source_release, args.events, args.metadata, args.output)):
+        parser.error("assembly requires --source-release, --events, --metadata and --output")
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
     try:
-        output = assemble(parse_arguments(sys.argv[1:] if argv is None else argv))
+        args = parse_arguments(sys.argv[1:] if argv is None else argv)
+        if args.metadata_template:
+            print(metadata_template(args.metadata_template), end="")
+            return 0
+        output = assemble(args)
     except EvidenceError as error:
         print(f"Reference trace assembly rejected: {error}", file=sys.stderr)
         return 2

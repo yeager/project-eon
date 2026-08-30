@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Generate a Markdown report and entry-point disassembly for DOS game data."""
+"""Generate DOS reports from read-only files or exact ZIP members."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+from io import BytesIO
 from pathlib import Path
 import sys
+from zipfile import ZipFile
 
 # Allow direct execution from a source checkout without installing the package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from eon.dos import describe
+from eon.dos import describe_bytes
 
 
 def disassemble(data: bytes, address: int, offset: int, count: int = 96) -> list[str]:
@@ -26,26 +29,54 @@ def disassemble(data: bytes, address: int, offset: int, count: int = 96) -> list
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("directory", type=Path, help="Extracted Millennium DOS directory")
+    parser.add_argument("directory", type=Path, nargs="?",
+                        help="Read-only DOS directory (legacy investigator input)")
+    parser.add_argument("--archive", type=Path,
+                        help="Original outer ZIP; requires one or more exact --member paths")
+    parser.add_argument("--member", action="append", default=[],
+                        help="Exact EXE/COM path inside --archive; repeat for every program")
+    parser.add_argument("--complete-linear", action="store_true",
+                        help="Decode every byte as an explicitly unproven linear x86 candidate")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    executables = sorted([*args.directory.glob("*.EXE"), *args.directory.glob("*.COM")])
+    archive_mode = args.archive is not None
+    directory_mode = args.directory is not None
+    if archive_mode == directory_mode:
+        raise SystemExit("Specify exactly one directory or --archive")
+    if archive_mode and not args.member:
+        raise SystemExit("--archive requires one or more exact --member paths")
+    if directory_mode:
+        sources = [(path.name, path.read_bytes()) for path in sorted(
+            [*args.directory.glob("*.EXE"), *args.directory.glob("*.COM")])]
+    else:
+        try:
+            with ZipFile(args.archive) as archive:
+                sources = [(member, archive.read(member)) for member in args.member]
+        except (KeyError, OSError, ValueError) as error:
+            raise SystemExit(f"Unable to read exact DOS archive member: {error}") from error
     lines = ["# Generated Millennium DOS binary report", ""]
-    for executable in executables:
-        report = describe(executable)
+    for name, data in sources:
+        report = describe_bytes(Path(name).name, data)
+        listing_offset = 0 if args.complete_linear else report["entry_file_offset"]
+        listing_address = 0x100 if args.complete_linear else report["entry_load_address"]
+        listing_count = len(data) if args.complete_linear else 96
         lines.extend([
             f"## `{report['name']}`",
             "",
             f"- Size: {report['size']} bytes",
+            f"- SHA-256: `{hashlib.sha256(data).hexdigest()}`",
             f"- Entry file offset: `0x{report['entry_file_offset']:x}`",
             f"- Entry load address: `0x{report['entry_load_address']:x}`",
             f"- Syntactic interrupt occurrences: {report['interrupts']}",
+            "- Listing scope: " + ("entire image, linear candidate only (code/data unclassified)"
+                if args.complete_linear else "96 bytes from inferred entry candidate"),
             "",
             "```asm",
             *disassemble(
-                executable.read_bytes(),
-                report["entry_load_address"],
-                report["entry_file_offset"],
+                data,
+                listing_address,
+                listing_offset,
+                listing_count,
             ),
             "```",
             "",

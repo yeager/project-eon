@@ -109,6 +109,28 @@ class RecordReferenceTraceTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.EvidenceError, "source_stage_sha256"):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
 
+    def test_metadata_template_is_instructional_and_hash_bound_to_one_adapter(self):
+        template = TOOL.metadata_template("deuteros-amiga-en-title-display-v4")
+        self.assertIn("format\tproject-eon-reference-trace-v4\n", template)
+        self.assertIn("adapter\tdeuteros-amiga-en-title-display-v4\n", template)
+        self.assertIn("game\tdeuteros\nplatform\tamiga\nlanguage\ten\n", template)
+        self.assertIn(
+            "source_media_sha256\t6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38\n",
+            template)
+        self.assertIn("<actual-lowercase-sha256>", template)
+        self.assertNotIn("event\t", template)
+        with self.assertRaisesRegex(TOOL.EvidenceError, "registered adapter"):
+            TOOL.metadata_template("unregistered-adapter")
+
+    def test_metadata_template_cannot_be_used_as_assembly_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.tsv"
+            path.write_text(TOOL.metadata_template("millennium-dos-en-startup-v1"), encoding="utf-8")
+            with self.assertRaises(TOOL.EvidenceError):
+                TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
+                    "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+                    "size": 328383, "game": "millennium", "platform": "dos", "language": "en"})
+
     def test_metadata_read_is_bounded_after_secure_open(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
