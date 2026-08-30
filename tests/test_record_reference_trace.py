@@ -41,6 +41,11 @@ def metadata_lines(**overrides: str) -> str:
     return "".join(f"{key}\t{value}\n" for key, value in fields.items())
 
 
+def write_metadata(path: Path, **overrides: str) -> None:
+    """Write the required LF-only metadata bytes without host newline conversion."""
+    path.write_bytes(metadata_lines(**overrides).encode("utf-8"))
+
+
 def write_provenance_preimages(root: Path) -> tuple[Path, Path, Path, dict[str, str]]:
     """Create distinct non-media capture inputs with their real hashes."""
     configuration = root / "configuration"
@@ -58,10 +63,16 @@ def write_provenance_preimages(root: Path) -> tuple[Path, Path, Path, dict[str, 
 
 
 class RecordReferenceTraceTests(unittest.TestCase):
+    def test_test_metadata_fixture_preserves_lf_bytes_on_every_host(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.tsv"
+            write_metadata(path)
+            self.assertNotIn(b"\r", path.read_bytes())
+
     def test_metadata_has_no_assembler_owned_fields(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
-            path.write_text(metadata_lines(event_size="1"), encoding="utf-8")
+            write_metadata(path, event_size="1")
             with self.assertRaises(TOOL.EvidenceError):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
                     "game": "millennium", "platform": "dos", "language": "en"})
@@ -69,10 +80,10 @@ class RecordReferenceTraceTests(unittest.TestCase):
     def test_v2_adapter_cannot_cross_release_identity(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
-            path.write_text(metadata_lines(
+            write_metadata(path,
                 format="project-eon-reference-trace-v2",
                 adapter="millennium-dos-en-startup-v1",
-                platform="amiga"), encoding="utf-8")
+                platform="amiga")
             with self.assertRaises(TOOL.EvidenceError):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
                 "game": "millennium", "platform": "amiga", "language": "en"})
@@ -80,9 +91,9 @@ class RecordReferenceTraceTests(unittest.TestCase):
     def test_v2_adapter_requires_its_exact_outer_release_identity(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
-            path.write_text(metadata_lines(
+            write_metadata(path,
                 format="project-eon-reference-trace-v2",
-                adapter="millennium-dos-en-startup-v1"), encoding="utf-8")
+                adapter="millennium-dos-en-startup-v1")
             with self.assertRaisesRegex(TOOL.EvidenceError, "exact source sha256"):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
                     "sha256": "0" * 64, "size": 328383, "game": "millennium",
@@ -91,9 +102,9 @@ class RecordReferenceTraceTests(unittest.TestCase):
     def test_gx_v2_adapter_requires_the_clean_millennium_dos_release(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
-            path.write_text(metadata_lines(
+            write_metadata(path,
                 format="project-eon-reference-trace-v2",
-                adapter="millennium-dos-en-gx-startup-v2"), encoding="utf-8")
+                adapter="millennium-dos-en-gx-startup-v2")
             identity = {
                 "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
                 "size": 328383, "game": "millennium", "platform": "dos", "language": "en"}
@@ -102,13 +113,12 @@ class RecordReferenceTraceTests(unittest.TestCase):
     def test_v3_title_bridge_requires_the_exact_amiga_media_and_stage(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
-            path.write_text(metadata_lines(
+            write_metadata(path,
                 format="project-eon-reference-trace-v3",
                 adapter="deuteros-amiga-en-title-bridge-v3",
                 game="deuteros", platform="amiga",
                 source_media_sha256="6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
-                source_stage_sha256="48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"),
-                encoding="utf-8")
+                source_stage_sha256="48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03")
             TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
                 "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
                 "size": 4066771, "game": "deuteros", "platform": "amiga", "language": "en"})
@@ -116,23 +126,22 @@ class RecordReferenceTraceTests(unittest.TestCase):
     def test_v3_main_copy_loop_requires_the_exact_amiga_media_and_main_stage(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
-            path.write_text(metadata_lines(
+            write_metadata(path,
                 format="project-eon-reference-trace-v3",
                 adapter="deuteros-amiga-en-main-copy-loop-v3",
                 game="deuteros", platform="amiga",
                 source_media_sha256="6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
-                source_stage_sha256="a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6"),
-                encoding="utf-8")
+                source_stage_sha256="a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6")
             identity = {
                 "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
                 "size": 4066771, "game": "deuteros", "platform": "amiga", "language": "en"}
             TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
-            path.write_text(metadata_lines(
+            write_metadata(path,
                 format="project-eon-reference-trace-v3",
                 adapter="deuteros-amiga-en-main-copy-loop-v3",
                 game="deuteros", platform="amiga",
                 source_media_sha256="6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
-                source_stage_sha256="0" * 64), encoding="utf-8")
+                source_stage_sha256="0" * 64)
             with self.assertRaisesRegex(TOOL.EvidenceError, "source_stage_sha256"):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
 
@@ -152,7 +161,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
     def test_metadata_template_cannot_be_used_as_assembly_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"
-            path.write_text(TOOL.metadata_template("millennium-dos-en-startup-v1"), encoding="utf-8")
+            path.write_bytes(TOOL.metadata_template("millennium-dos-en-startup-v1").encode("utf-8"))
             with self.assertRaises(TOOL.EvidenceError):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), {
                     "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
@@ -176,7 +185,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
             original = b"not-game-media; temporary boundary input"
             source.write_bytes(original)
             events.write_bytes(b"external recorder observation\n")
-            metadata.write_text(metadata_lines(**hashes), encoding="utf-8")
+            write_metadata(metadata, **hashes)
             original_identity = TOOL.release_identity
             TOOL.release_identity = lambda digest, size: {
                 "sha256": digest, "size": size, "game": "millennium",
@@ -226,7 +235,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
             metadata = root / "metadata"
             configuration, command_tail, input_timeline, hashes = write_provenance_preimages(root)
             source.write_bytes(b"x")
-            metadata.write_text(metadata_lines(**hashes), encoding="utf-8")
+            write_metadata(metadata, **hashes)
             arguments = type("Arguments", (), {
                 "source_release": str(source.resolve()), "events": str(source.resolve()),
                 "metadata": str(metadata.resolve()), "config": str(configuration.resolve()),
@@ -245,7 +254,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
             configuration, command_tail, input_timeline, hashes = write_provenance_preimages(root)
             source.write_bytes(b"not-game-media; temporary boundary input")
             events.write_bytes(b"external recorder observation\n")
-            metadata.write_text(metadata_lines(**hashes), encoding="utf-8")
+            write_metadata(metadata, **hashes)
             configuration.write_bytes(b"[cpu]\ncore=dynamic\n")
             original_identity = TOOL.release_identity
             TOOL.release_identity = lambda digest, size: {
