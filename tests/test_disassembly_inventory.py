@@ -32,21 +32,34 @@ class DisassemblyInventoryTests(unittest.TestCase):
                 known_leaf = any(profile["release_sha256"] == row["release_sha256"]
                                  and profile["leaf_sha256"] == span["leaf_sha256"]
                                  for profile in profiles.values())
-                self.assertTrue(known_leaf)
+                # A FAT12 member can be hash-addressed by the static ledger
+                # without becoming a runtime parser-profile leaf. In that
+                # case its containing disk profile must be named explicitly;
+                # otherwise a report could silently detach from its original
+                # image provenance.
+                if not known_leaf:
+                    self.assertIn("source_provenance_profile_id", span)
+                    provenance = profiles[span["source_provenance_profile_id"]]
+                    self.assertEqual(provenance["release_sha256"], row["release_sha256"])
                 previous_end = -1
                 for segment in span["segments"]:
                     self.assertGreaterEqual(segment["source_offset"], 0)
                     self.assertGreater(segment["length"], 0)
                     self.assertGreaterEqual(segment["runtime_address"], 0)
+                    address_space = segment.get("address_space", "runtime")
+                    self.assertIn(address_space, {"runtime", "image-relative-unrelocated"})
                     entry_kinds = {"entry_address", "entry_offset", "entry_status"} & segment.keys()
                     self.assertEqual(len(entry_kinds), 1)
                     if "entry_address" in entry_kinds:
+                        self.assertEqual(address_space, "runtime")
                         self.assertGreaterEqual(segment["entry_address"], segment["runtime_address"])
                         self.assertLess(segment["entry_address"],
                                         segment["runtime_address"] + segment["length"])
                     elif "entry_offset" in entry_kinds:
                         self.assertGreaterEqual(segment["entry_offset"], 0)
                         self.assertLess(segment["entry_offset"], segment["length"])
+                        if address_space == "image-relative-unrelocated":
+                            self.assertEqual(segment["runtime_address"], 0)
                     else:
                         self.assertEqual(segment["entry_status"], "unproven")
                     self.assertGreaterEqual(segment["source_offset"], previous_end)

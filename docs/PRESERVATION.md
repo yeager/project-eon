@@ -534,6 +534,14 @@ first site is offset `0x6`, value `0x0000115e`; the last is `0x1150`, value
 SHA-identified disk file and are native test anchors for future execution
 research.
 
+The exact PRG's loadable TEXT+DATA range (file `+0x1c`, 49,010 bytes) now also
+has a byte-complete linear candidate report. Its retained external report
+SHA-256 is `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548`
+(17,519 lines). Every address in that report is an unrelocated PRG
+image-relative offset, not a GEMDOS runtime address. The report therefore
+does not establish a load base, applied relocation, reachability, code/data
+classification, TOS/XBIOS return, or executable behaviour.
+
 The earliest literal TEXT path is independently anchored too. Entry offset
 `0x0` is `BRA.W 0x24`; that bootstrap loads `A0 = 0x115e`, `A1 = 0x1232`, and
 `A2 = 0x1d636`, then post-increment copies longwords while `A0 <= A1`. It
