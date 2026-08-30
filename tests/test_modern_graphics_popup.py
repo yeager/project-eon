@@ -21,6 +21,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         end = SOURCE.index("std::size_t output_resolution_index_for", start)
         diagnostics = SOURCE[start:end]
         self.assertIn("release_identity", diagnostics)
+        self.assertIn("startup_boundary", diagnostics)
         self.assertIn("recovery_boundary_count", diagnostics)
         self.assertIn("trace_admission", diagnostics)
         self.assertIn("sdl_vsync", diagnostics)
@@ -31,7 +32,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
         for label in (
             "MODERN RUNTIME DIAGNOSTICS", "RELEASE IDENTITY",
-            "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "RENDERER SETTINGS",
+            "STARTUP BOUNDARY", "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "RENDERER SETTINGS",
             "FRAME PACING", "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
         ):
             with self.subTest(label=label):
@@ -41,6 +42,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("SDL VSYNC: OFF", popup)
         self.assertIn("RECOVERY FUNCTION MAP", SOURCE)
         self.assertIn("release_has_recovery_map_entry", SOURCE)
+        self.assertIn("startup_boundary_for_release", SOURCE)
         self.assertIn("DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.", SOURCE)
 
     def test_function_map_is_paged_read_only_provenance_not_a_hook_table(self) -> None:
