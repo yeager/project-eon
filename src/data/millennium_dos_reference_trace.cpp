@@ -59,6 +59,8 @@ bool schema_matches(const std::string_view type,
     // they do not assert call success, carry flags, returned registers, DOS
     // behaviour, vector installation, file contents, or child execution.
     if (type == "interrupt") {
+        // 0x0209 is the schema's stable MOV AX,0x2591 setup-site identifier.
+        // The recorder observes the following CD 21 instruction at 0x020c.
         return fields_equal(fields, {{"image", "mill.com"}, {"pc", "0x0209"},
                    {"int", "0x21"}, {"ax", "0x2591"}, {"dx", "0x0000"}})
             || fields_equal(fields, {{"image", "titles.exe"}, {"pc", "0x0127"},

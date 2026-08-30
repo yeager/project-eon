@@ -13,20 +13,32 @@ On 2026-08-30, the reviewed external recorder was built from the pinned
 DOSBox-X revision and run against the English archive through an
 `archivemount -o ro` FUSE mount. The mount was verified as
 `ro,nosuid,nodev`, and the archive hash was identical before and after the
-run. The recorder emitted one raw request observation before a 20-second
-headless smoke run was stopped:
+run. The first recorder build emitted one raw driver-load request before a
+20-second headless smoke run was stopped. After correcting its interrupt hook
+to match the actual `INT` opcode at `0x020c` while retaining the declared
+`0x0209` setup-site identifier, the rebuilt recorder emitted this two-event
+sequence:
 
 ```text
 event 1 1 file image=mill.com pc=0x02cf op=driver-load path=mcga.bin
+event 2 2 interrupt image=mill.com pc=0x0209 int=0x21 ax=0x2591 dx=0x0000
 ```
 
-The raw event file remains outside this repository. Its SHA-256 is
-`402b411a0a6958e2fd425bdc6dcdf4cedb1cee3a9fac9437745d6fa7b63e1c76`;
-the recorder executable is
-`5c1132e7a78b36703aa24347e08ba5d8c48fd4fb385a2412f9ce1818d895af09`
-and the retained DOSBox-X log is
+The raw event files remain outside this repository. The corrected two-event
+file has SHA-256
+`dc4a67ce61ed6bcd32767c2bf354444f525176ba81308cb9374d7718d1b7aa9a`; its
+recorder executable has SHA-256
+`122869702f46b5eda8f9f3ded1032c2e466dd6b0bfafaa460742ef4cd5712dc0`.
+The preliminary one-event file remains retained with SHA-256
+`402b411a0a6958e2fd425bdc6dcdf4cedb1cee3a9fac9437745d6fa7b63e1c76` and
+its executable has SHA-256
+`5c1132e7a78b36703aa24347e08ba5d8c48fd4fb385a2412f9ce1818d895af09`.
+An additional alternate video-mode run emitted the bounded `ega640.bin`
+driver-load request (event-file SHA-256
+`1a7c4cee85ba64a159d167948ca0162fc1425ba72f4738bae9dcb7d57f21c874`).
+The retained DOSBox-X log for the corrected observation is
 `6bf278b48d4d7fd05211afce73433775c21fc9995dd998bf6e9d90c749eb84ef`.
-The run was intentionally interrupted before a complete request sequence,
+Every run was intentionally interrupted before a complete request sequence,
 return value, input result, title state, frame, audio checkpoint, or game
 state was observed. It is therefore raw preservation provenance only, not an
 admitted v2 trace and not a runtime input.
@@ -88,7 +100,7 @@ observe only these byte-locked request sites:
 
 | Image | PC | Observation |
 | --- | --- | --- |
-| `mill.com` | `0x0209` | `INT 21h`, `AX=0x2591`, `DX=0x0000` |
+| `mill.com` | setup site `0x0209`; `INT` opcode `0x020c` | `INT 21h`, `AX=0x2591`, `DX=0x0000` |
 | `titles.exe` | `0x0127` | `INT 91h`, `AX=0x0000`, `ES=CS`, `BX=0x1ac4` |
 | `2200ad.exe` | `0x0124` | `INT 91h`, `AX=0x001f`, `ES=CS`, `BX=0xd19e` |
 | `titles.exe` | `0x0d0a` | title input poll: `INT 21h`, `AH=0x06`, `DL=0xff` |

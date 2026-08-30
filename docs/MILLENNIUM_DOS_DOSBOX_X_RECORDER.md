@@ -19,9 +19,11 @@ observation.
 
 It is **not a recorder release and has produced no admitted capture**. A full
 serial build was completed with all compiler temporary files under the
-project-scoped cache rather than `/tmp`. Its executable SHA-256 is
-`5c1132e7a78b36703aa24347e08ba5d8c48fd4fb385a2412f9ce1818d895af09`.
-The first write-protected run emitted exactly one raw request observation;
+project-scoped cache rather than `/tmp`. The corrected executable SHA-256 is
+`122869702f46b5eda8f9f3ded1032c2e466dd6b0bfafaa460742ef4cd5712dc0`.
+It corrects the interrupt-hook match to the actual `CD 21` at `0x020c`, while
+the emitted schema remains the intentionally stable `0x0209` setup-site ID.
+The first corrected write-protected run emitted two raw request observations;
 the recorded external hashes and its strict non-admission status are in
 [MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-raw-observation-not-admitted).
 Re-review the exact patch, retain a complete configuration and input timeline,
@@ -86,7 +88,7 @@ At `CPU_Interrupt`, it accepts only `CPU_INT_SOFTWARE`, interrupt `0x21` or
 `0x91`, and an exact mapped image/site/register shape:
 
 ```text
-mill.com    0x0209  int 0x21  ax=0x2591 dx=0x0000
+mill.com    setup 0x0209 / INT opcode 0x020c  int 0x21  ax=0x2591 dx=0x0000
 titles.exe  0x0127  int 0x91  ax=0x0000 es=cs bx=0x1ac4
 2200ad.exe  0x0124  int 0x91  ax=0x001f es=cs bx=0xd19e
 titles.exe  0x0d0a  int 0x21  ah=0x06 dl=0xff

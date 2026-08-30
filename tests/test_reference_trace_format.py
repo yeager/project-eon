@@ -143,6 +143,16 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertIn("must never change original media, guest memory, CPU registers", contract)
         self.assertIn("not an admitted trace", contract)
 
+    def test_millennium_setup_site_is_not_misreported_as_the_interrupt_opcode(self):
+        documented = FORMAT.read_text(encoding="utf-8")
+        validator = (ROOT / "src" / "data" / "millennium_dos_reference_trace.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("setup site (`MOV AX,0x2591`)", documented)
+        self.assertIn("actual `CD 21` opcode at `0x020c`", documented)
+        self.assertIn("MOV AX,0x2591 setup-site identifier", validator)
+        self.assertIn("CD 21 instruction at 0x020c", validator)
+
     def test_deuteros_amiga_next_step_capture_contract_keeps_unknown_abi_external(self):
         documented = FORMAT.read_text(encoding="utf-8")
         self.assertIn("Required capture contract before a Deuteros Amiga runtime increment", documented)
