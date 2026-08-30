@@ -4066,6 +4066,9 @@ non-monotonic resources, invalid padding/flags, and any range outside the
 directory boundary. The English DOS gameplay-canvas reader additionally
 requires the full `GX.LIB` leaf hash before it reads IMG00/IMG01, so matching
 resource names or image prefixes alone cannot substitute a different bank.
+The single-entry English `LAST.LIB` is likewise hash-locked before its `last`
+bitmap and palette are decoded. Its directory shape and bitmap profile are
+additional bounded-format checks, never a substitute for original leaf identity.
 
 The English `2200AD4.BIN` static-data file (12,494 bytes, SHA-256
 `1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d`)

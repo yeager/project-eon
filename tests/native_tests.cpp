@@ -4773,6 +4773,17 @@ int main() {
         "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510");
     assert(last_bytes && last_bytes->size() == 18'117);
     const auto last_screen = eon::parse_millennium_dos_last_screen(*last_bytes);
+    auto altered_last_library = *last_bytes;
+    // The directory tail is not part of the single bitmap resource.  The
+    // leaf-identity gate must still reject it before rendering begins.
+    altered_last_library.back() ^= 0x01;
+    bool rejected_altered_last_library = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_last_screen(altered_last_library));
+    } catch (const std::runtime_error&) {
+        rejected_altered_last_library = true;
+    }
+    assert(rejected_altered_last_library);
     assert(last_screen.bitmap.width == 318 && last_screen.bitmap.height == 197);
     assert(last_screen.bitmap.max_palette_index == 15);
     assert(last_screen.palette.logical_to_dac.size() == 16);
