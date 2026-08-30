@@ -1127,6 +1127,9 @@ int main() {
             && display_diagnostics.input_checkpoint_count == 1
             && display_diagnostics.frame_checkpoint_count == 1
             && display_diagnostics.audio_checkpoint_count == 1);
+        assert(!eon::validate_deuteros_amiga_title_display_reference_events(
+            title_display_events, display_diagnostics, trace_error,
+            "1111111111111111111111111111111111111111111111111111111111111111"));
         auto restarted_suffix{title_display_events};
         restarted_suffix.replace(restarted_suffix.find("event\t19 190"),
             std::string_view("event\t19 190").size(), "event\t18 190");

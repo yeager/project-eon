@@ -26,6 +26,6 @@ struct DeuterosAmigaTitleDisplayReferenceTraceDiagnostics {
 // raw display checkpoint sequence. Validation is diagnostic/admission only.
 [[nodiscard]] bool validate_deuteros_amiga_title_display_reference_events(
     std::string_view events, DeuterosAmigaTitleDisplayReferenceTraceDiagnostics& diagnostics,
-    std::string& error);
+    std::string& error, std::string_view expected_input_timeline_sha256 = {});
 
 } // namespace eon
