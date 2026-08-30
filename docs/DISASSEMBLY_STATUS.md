@@ -9,7 +9,7 @@ repository; commands below stream a member directly from the user's archive.
 The machine-readable companion [disassembly inventory](disassembly-inventory.json)
 has one row for every recognised release. Version 2 additionally records
 hash-bound source spans, load addresses, and—where the mapping is known—
-absolute entries or explicit stage-relative entry offsets, plus retained
+absolute entries or explicit stage-/image-relative entry offsets, plus retained
 linear-report identities. An explicit unproven entry remains a boundary, not a
 license to infer one. Each row can
 name only parser profiles and source leaves bound to that exact release and
