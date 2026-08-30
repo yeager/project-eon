@@ -21,6 +21,7 @@ ABI behaviour to executable code.
 | Game | Platform | Container SHA-256 | Principal code/media identity |
 | --- | --- | --- | --- |
 | Millennium 2.2 | DOS English | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `MILL.COM` `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`; `TITLES.EXE` `3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`; `2200AD.EXE` `427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`; `2200GX.EXE` `093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb` |
+| Millennium 2.2 | DOS Spanish | `b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4` | FAT12 `IBM.COM` `84b7d158c770117aeaa07cb5ea2e7ed4a6bcc288d6b352d82569ff4d97b2fda9`; `TITLES.EXE` `02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7`; `2200AD.EXE` `9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6` |
 | Millennium 2.2 | Amiga English | `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | nested ADF variants; raw-stage base must be proven before code listing |
 | Millennium 2.2 | Atari ST English | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | nested ST/STX variants; filesystem/raw-stage chain and load base remain separate evidence tasks |
 | Deuteros | Amiga English | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | clean Disk 1 `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; clean Disk 2 `99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a` |
@@ -56,6 +57,7 @@ proves reachability, code/data classification, an ABI result, or gameplay.
 | Target | Exact source span and runtime address | Source archive SHA-256 | Generated report SHA-256 | Lines |
 | --- | --- | --- | --- | ---: |
 | Millennium DOS English | `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE`; flat 8086 candidate origins `$0100` | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `3664163eb193c7df0d4040e674a2af1499b11579224ffea091086450b3545e42` | 52,236 |
+| Millennium DOS Spanish | FAT12 `IBM.COM`, `TITLES.EXE`, and `2200AD.EXE`; flat 8086 candidate origins `$0100` | `b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4` | `c669eae3731eefdeec7d4872e320f09208746ffba3666657dc2c5f3c1b8ab257` | 29,510 |
 | Millennium Amiga English Defjam | system ADF `+0x16400`, length `0x2c000` → `$68000` | `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
 | Millennium Atari ST English Equinox | `MILENIUM.TOS` PRG TEXT+DATA, file `+0x1c`, 49,010 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548` | 17,519 |
 | Deuteros Amiga English clean Disk 1 | boot/bootstrap/main/title loaded spans; M68000 origins from the validated load plan | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `db4379bb4f50cb18f9ef72fdc1066796d5a8621a798e519d730f5282610c1791` | 162,970 |
@@ -122,6 +124,16 @@ rejects a missing/ambiguous member rather than scanning an archive for a
 convenient substitute. The complete-linear mode labels every decoded byte range
 as code/data-unclassified; a byte that Capstone cannot decode is retained as
 an explicit `.byte` record. It is not a semantic control-flow claim.
+
+The same tool accepts `--fat12-archive` and `--fat12-member` for a DOS floppy
+image, and then reads only each explicitly named root file in memory. This
+keeps Spanish FAT12 programs separate from the English ZIP members:
+
+```sh
+python3 tools/analyze_dos.py --fat12-archive /path/to/Millennium-Return-to-Earth_DOS_ES_Floppy-Disk-Image-v201.zip \
+  --fat12-member MRTE.IMG --member IBM.COM --member TITLES.EXE --member 2200AD.EXE \
+  --complete-linear --output /home/user/.cache/project-eon-tools/millennium-spanish-dos.md
+```
 
 For 68000 media, Project Eon does **not** make a temporary extracted stage just
 to satisfy an external disassembler. The range is instead addressed through
