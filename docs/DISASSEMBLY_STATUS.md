@@ -7,9 +7,13 @@ all bytes are executable code. Original media is never copied into this
 repository; commands below stream a member directly from the user's archive.
 
 The machine-readable companion [disassembly inventory](disassembly-inventory.json)
-has one row for every recognised release. Each row can name only parser
-profiles bound to that exact release and must retain an explicit unresolved
-boundary; coverage never upgrades unknown ABI behaviour to executable code.
+has one row for every recognised release. Version 2 additionally records
+hash-bound source spans, load addresses, absolute entries or explicit
+stage-relative entry offsets, and retained linear-report identities where the
+static evidence is complete enough to do so. Each row can
+name only parser profiles and source leaves bound to that exact release and
+must retain an explicit unresolved boundary; coverage never upgrades unknown
+ABI behaviour to executable code.
 
 ## Input identities
 
