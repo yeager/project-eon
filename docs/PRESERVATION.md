@@ -341,6 +341,20 @@ recorded absence within one bounded run, not proof of a non-return or a reason
 to assign a DOS/private-driver ABI. It remains outside the v2 event grammar
 and Project Eon runtime.
 
+One later private capture made the literal original guest DOS command tail
+`mill.com 0` explicit and injected no device input. Its external v2 stream
+(`cb55a2ad7935da29ff2b698be0abb162a1d61532a750d4cb585b1cd4a366c89f`) was
+assembled and CLI-accepted as three ordered observations: the same two
+`MILL.COM` records and the existing hash-locked title-wrapper request at
+`TITLES.EXE:$0127` with `AX=$0000`, `ES=CS`, and `BX=$1ac4`. The separate raw
+observer also reached `$0213` with `AX=$0000`. The command tail, result, and
+all preimages remain external. This proves neither a generic input model nor
+any result, private-wrapper return, title frame, audio, EXEC, or game state;
+it merely removes the earlier input-free-run limitation for that one declared
+command-tail condition. See [the capture ledger](MILLENNIUM_DOS_CAPTURE.md)
+for exact timestamps, executable/configuration hashes, and the unaltered
+archive proof.
+
 ### English Millennium DOS startup prefix
 
 The clean English `2200AD.EXE` has a caller-connected, hash-locked startup
