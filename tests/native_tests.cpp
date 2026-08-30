@@ -4745,6 +4745,18 @@ int main() {
     assert(gx_lib.entries().front().offset == 6);
     assert(gx_lib.entries().front().size == 3'461);
     const auto gameplay_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
+    auto altered_gx_library = *gx_bytes;
+    // The final directory byte is outside IMG00/IMG01; the complete-library
+    // gate rejects it before any unrelated resource can be treated as source
+    // evidence for the recovered gameplay canvas.
+    altered_gx_library.back() ^= 0x01;
+    bool rejected_altered_gx_library = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_gameplay_screen(altered_gx_library));
+    } catch (const std::runtime_error&) {
+        rejected_altered_gx_library = true;
+    }
+    assert(rejected_altered_gx_library);
     assert(gameplay_canvas.canvas.width == 320 && gameplay_canvas.canvas.height == 167);
     assert(gameplay_canvas.canvas_logical_to_dac.size() == 68);
     assert(eon::to_hex(eon::sha256(gameplay_canvas.canvas.pixels))
