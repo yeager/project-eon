@@ -53,6 +53,7 @@
 #include "data/sha256.hpp"
 #include "data/recovery_map.hpp"
 #include "data/release_manifest.hpp"
+#include "data/startup_boundary.hpp"
 
 #include <algorithm>
 #include <array>
@@ -858,6 +859,14 @@ void assert_modern_asset_pack_admission() {
 } // namespace
 
 int main() {
+  const auto millennium_startup = eon::startup_boundary_for_release(
+      "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123");
+  assert(millennium_startup.has_value());
+  assert(millennium_startup->parser_profile_id == "millennium-dos-launcher");
+  assert(millennium_startup->source_address == "MILL.COM+0x0");
+  assert(!eon::startup_boundary_for_release(
+      "0000000000000000000000000000000000000000000000000000000000000000"));
+
     // These synthetic strings exercise only the strict external-record
     // grammar. They are not game data or a capture fixture and never invoke
     // a DOS service, alter media, or advance a game session.
