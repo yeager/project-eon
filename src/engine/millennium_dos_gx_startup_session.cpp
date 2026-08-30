@@ -6,6 +6,16 @@
 namespace eon {
 MillenniumDosGxStartupSession::MillenniumDosGxStartupSession(const std::span<const std::uint8_t> game,
     const std::span<const std::uint8_t> overlay) : game_executable_(game), gx_overlay_executable_(overlay) {
+    // Validate both supplied leaves on admission. The initial evaluator stops
+    // at the private-INT boundary before it needs GX bytes, so calling only it
+    // here would postpone rejection of a substituted overlay until later.
+    const auto loader = parse_millennium_dos_gx_overlay_load_evidence(game, overlay);
+    const auto adapter = parse_millennium_dos_gx_overlay_adapter_evidence(game, loader);
+    const auto dispatcher = parse_millennium_dos_gx_overlay_dispatcher_evidence(overlay, adapter);
+    const auto selector = parse_millennium_dos_gx_overlay_selector_evidence(
+        game, overlay, adapter, dispatcher);
+    static_cast<void>(parse_millennium_dos_gx_overlay_startup_record_evidence(overlay, selector));
+    static_cast<void>(parse_millennium_dos_post_overlay_adapter_continuation(game));
     const auto initial = evaluate_millennium_dos_gx_overlay_startup(game, overlay);
     if (initial.outcome != MillenniumDosGxOverlayStartupOutcome::private_interrupt_boundary || initial.boundary_address != 0x0129)
         throw std::runtime_error("Unsupported Millennium DOS GX startup initial boundary");
@@ -37,7 +47,50 @@ void MillenniumDosGxStartupSession::observe_adapter_return() {
     const auto next = evaluate_millennium_dos_gx_overlay_startup(game_executable_, gx_overlay_executable_, private_return_ax_, mode_byte_, true);
     if (next.outcome != MillenniumDosGxOverlayStartupOutcome::overlay_return || next.boundary_address != 0xd376)
         throw std::runtime_error("Unsupported Millennium DOS GX startup return boundary");
-    apply_overlay_writes(next); evaluation_ = next; state_ = MillenniumDosGxStartupSessionState::returned_to_caller;
+    apply_overlay_writes(next);
+    evaluation_ = next;
+    post_overlay_evaluation_ = evaluate_millennium_dos_post_overlay_continuation(
+        game_executable_, true);
+    if (post_overlay_evaluation_->outcome != MillenniumDosPostOverlayContinuationOutcome::local_call_boundary
+        || post_overlay_evaluation_->boundary_address != 0xd376) {
+        throw std::runtime_error("Unsupported Millennium DOS GX post-overlay entry boundary");
+    }
+    state_ = MillenniumDosGxStartupSessionState::awaiting_post_overlay_call_returns;
+}
+
+void MillenniumDosGxStartupSession::observe_post_overlay_call_return() {
+    require_state(MillenniumDosGxStartupSessionState::awaiting_post_overlay_call_returns,
+        "post-overlay call return");
+    if (observed_post_overlay_call_return_count_ >= observed_post_overlay_call_returns_.size()) {
+        throw std::runtime_error("Too many Millennium DOS post-overlay call-return observations");
+    }
+    observed_post_overlay_call_returns_[observed_post_overlay_call_return_count_++] = true;
+    post_overlay_evaluation_ = evaluate_millennium_dos_post_overlay_continuation(
+        game_executable_, true, observed_post_overlay_call_returns_);
+    if (observed_post_overlay_call_return_count_ == observed_post_overlay_call_returns_.size()) {
+        if (post_overlay_evaluation_->outcome != MillenniumDosPostOverlayContinuationOutcome::mode_byte_boundary
+            || post_overlay_evaluation_->boundary_address != 0xd388) {
+            throw std::runtime_error("Unsupported Millennium DOS GX post-overlay mode boundary");
+        }
+        state_ = MillenniumDosGxStartupSessionState::awaiting_post_overlay_mode_byte;
+        return;
+    }
+    if (post_overlay_evaluation_->outcome != MillenniumDosPostOverlayContinuationOutcome::local_call_boundary) {
+        throw std::runtime_error("Unsupported Millennium DOS GX post-overlay call boundary");
+    }
+}
+
+void MillenniumDosGxStartupSession::observe_post_overlay_mode_byte(const std::uint8_t value) {
+    require_state(MillenniumDosGxStartupSessionState::awaiting_post_overlay_mode_byte,
+        "post-overlay mode byte");
+    post_overlay_evaluation_ = evaluate_millennium_dos_post_overlay_continuation(
+        game_executable_, true, observed_post_overlay_call_returns_, value);
+    if (post_overlay_evaluation_->outcome
+            != MillenniumDosPostOverlayContinuationOutcome::private_interrupt_boundary
+        || post_overlay_evaluation_->boundary_address != 0x0129) {
+        throw std::runtime_error("Unsupported Millennium DOS GX post-overlay private-INT boundary");
+    }
+    state_ = MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary;
 }
 std::optional<std::uint8_t> MillenniumDosGxStartupSession::overlay_byte(const std::uint16_t offset) const {
     const auto found = overlay_bytes_.find(offset);

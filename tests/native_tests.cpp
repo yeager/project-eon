@@ -21,6 +21,7 @@
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "data/deuteros_amiga_reference_trace.hpp"
 #include "data/deuteros_amiga_main_stage_reference_trace.hpp"
+#include "data/deuteros_amiga_title_display_reference_trace.hpp"
 #include "data/deuteros_amiga_title_bridge_reference_trace.hpp"
 #include "data/deuteros_atari_boot.hpp"
 #include "data/deuteros_atari_reference_trace.hpp"
@@ -66,6 +67,7 @@
 #include <stdexcept>
 #include <set>
 #include <span>
+#include <string>
 #include <vector>
 
 #include <zlib.h>
@@ -1009,6 +1011,31 @@ int main() {
             "event\t5 50 custom-register-call site=0x0004046c base=0x00dff000 offset=0x0040 value=0x7fff\n"
             "event\t6 60 graphics-return site=0x0004069a graphics_base_address=0x00012fec vector=-0x00c0 result_d0=0x00000000 result_sr=0x2000\n",
             diagnostics, trace_error));
+        // These values exercise a capture grammar only. They are not pixels,
+        // audio, or a title-stage replay fixture.
+        std::string title_display_events{valid_events};
+        title_display_events +=
+            "event\t19 190 display-layout site=0x0001eda6 base_source_address=0x00012ff4 base_destination_a=0x0001f168 base_destination_b=0x0001f164 display_base=0x00010000 display_list=0x00011000 copper_list_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t20 200 bitplane-layout site=0x0001f182 base_pointer_address=0x0001f168 bitplane_count=0x0004 plane0=0x00012000 plane1=0x00013000 plane2=0x00014000 plane3=0x00015000 width_pixels=0x0140 height_lines=0x00c8 bytes_per_row=0x0028 modulo=0x0000\n"
+            "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=0000000000000000000000000000000000000000000000000000000000000000 rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t22 220 input-checkpoint callback_site=0x0001f056 selector_site=0x0001fe7a queue_sha256=0000000000000000000000000000000000000000000000000000000000000000 input_timeline_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t23 230 frame-checkpoint display_base=0x00010000 rgba_width=0x0140 rgba_height=0x00c8 bitplanes_sha256=0000000000000000000000000000000000000000000000000000000000000000 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
+            "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
+        eon::DeuterosAmigaTitleDisplayReferenceTraceDiagnostics display_diagnostics;
+        assert(eon::validate_deuteros_amiga_title_display_reference_events(
+            title_display_events, display_diagnostics, trace_error));
+        assert(display_diagnostics.event_count == 24
+            && display_diagnostics.bridge_event_count == 18
+            && display_diagnostics.display_layout_count == 1
+            && display_diagnostics.bitplane_layout_count == 1
+            && display_diagnostics.palette_checkpoint_count == 1
+            && display_diagnostics.input_checkpoint_count == 1
+            && display_diagnostics.frame_checkpoint_count == 1
+            && display_diagnostics.audio_checkpoint_count == 1);
+        title_display_events.replace(title_display_events.find("site=0x0001eda6"),
+            std::string_view("site=0x0001eda6").size(), "site=0x0001eda7");
+        assert(!eon::validate_deuteros_amiga_title_display_reference_events(
+            title_display_events, display_diagnostics, trace_error));
     }
     assert_modern_asset_pack_admission();
     // Modern Scale2x is a renderer-only, in-memory reconstruction. This
@@ -3491,14 +3518,48 @@ int main() {
     assert(gx_session.evaluation()->selected_ax == 0x0012);
     assert(!gx_session.overlay_byte(0x65));
     gx_session.observe_adapter_return();
-    assert(gx_session.state() == eon::MillenniumDosGxStartupSessionState::returned_to_caller);
+    assert(gx_session.state()
+        == eon::MillenniumDosGxStartupSessionState::awaiting_post_overlay_call_returns);
     assert(gx_session.evaluation()->boundary_address == 0xd376);
+    assert(gx_session.post_overlay_evaluation());
+    assert(gx_session.post_overlay_evaluation()->boundary_address == 0xd376);
     assert(gx_session.overlay_byte(0x65) == 0x8f);
     assert(gx_session.overlay_byte(0x66) == 0x1b);
     assert(gx_session.overlay_byte(0x6d) == 2);
     bool rejected_gx_repeat_adapter_return = false;
     try { gx_session.observe_adapter_return(); } catch (const std::runtime_error&) { rejected_gx_repeat_adapter_return = true; }
     assert(rejected_gx_repeat_adapter_return);
+    bool rejected_gx_mode_before_post_overlay_returns = false;
+    try { gx_session.observe_post_overlay_mode_byte(1); } catch (const std::runtime_error&) {
+        rejected_gx_mode_before_post_overlay_returns = true;
+    }
+    assert(rejected_gx_mode_before_post_overlay_returns);
+    for (std::size_t call = 0; call < 6; ++call) gx_session.observe_post_overlay_call_return();
+    assert(gx_session.state() == eon::MillenniumDosGxStartupSessionState::awaiting_post_overlay_mode_byte);
+    assert(gx_session.observed_post_overlay_call_return_count() == 6);
+    assert(gx_session.post_overlay_evaluation()->boundary_address == 0xd388);
+    gx_session.observe_post_overlay_mode_byte(1);
+    assert(gx_session.state()
+        == eon::MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary);
+    assert(gx_session.post_overlay_evaluation()->selected_callee_address == 0xd1a1);
+    assert(gx_session.post_overlay_evaluation()->selected_private_call_address == 0xd1a9);
+    bool rejected_gx_repeat_post_overlay_mode = false;
+    try { gx_session.observe_post_overlay_mode_byte(1); } catch (const std::runtime_error&) {
+        rejected_gx_repeat_post_overlay_mode = true;
+    }
+    assert(rejected_gx_repeat_post_overlay_mode);
+    {
+        auto altered_gx_overlay = *gx_overlay;
+        altered_gx_overlay[0x90] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::MillenniumDosGxStartupSession(
+                *game_executable, altered_gx_overlay));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_startup_allocation = *game_executable;
         altered_startup_allocation[0xd2e8 - 0x100] ^= 0x01;

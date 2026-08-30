@@ -72,6 +72,15 @@ V3_ADAPTERS = {
         "source_stage_sha256": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
     },
 }
+V4_ADAPTERS = {
+    "deuteros-amiga-en-title-display-v4": {
+        "game": "deuteros", "platform": "amiga", "language": "en",
+        "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+        "size": 4066771,
+        "source_media_sha256": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+        "source_stage_sha256": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
+    },
+}
 
 
 class EvidenceError(RuntimeError):
@@ -227,8 +236,20 @@ def validate_metadata(fields: dict[str, str], release: dict[str, object]) -> Non
                 continue
             if fields.get(key) != expected_value:
                 raise EvidenceError(f"adapter does not match its exact {key}")
+    elif version == "project-eon-reference-trace-v4":
+        adapter = fields.get("adapter")
+        if adapter not in V4_ADAPTERS:
+            raise EvidenceError("v4 metadata must name a registered adapter")
+        expected = COMMON_METADATA | {"adapter", "source_media_sha256", "source_stage_sha256"}
+        for key, expected_value in V4_ADAPTERS[adapter].items():
+            if key in {"sha256", "size"}:
+                if release.get(key) != expected_value:
+                    raise EvidenceError(f"adapter does not match its exact source {key}")
+                continue
+            if fields.get(key) != expected_value:
+                raise EvidenceError(f"adapter does not match its exact {key}")
     else:
-        raise EvidenceError("format must be project-eon-reference-trace-v1, -v2, or -v3")
+        raise EvidenceError("format must be project-eon-reference-trace-v1, -v2, -v3, or -v4")
     if set(fields) != expected:
         raise EvidenceError("metadata has unknown, missing, or assembler-owned fields")
     for key in ("emulator_sha256", "config_sha256", "command_tail_sha256", "input_timeline_sha256"):
