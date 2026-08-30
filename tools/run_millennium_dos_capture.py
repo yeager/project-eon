@@ -16,6 +16,7 @@ from pathlib import Path
 import stat
 import subprocess
 import sys
+import threading
 import time
 
 
@@ -30,10 +31,27 @@ MAX_DURATION_SECONDS = 600
 # turn a receipt status check into unbounded host-side I/O.
 MAX_INPUT_RECEIPT_BYTES = 64 * 1024
 MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
+# A defective external recorder can print a tight exception loop. Retain a
+# reviewable prefix while hashing and counting the complete byte stream, rather
+# than letting terminal output or an evidence cache grow without limit.
+MAX_RECORDER_CONSOLE_LOG_BYTES = 1024 * 1024
 
 
 class CaptureError(RuntimeError):
     """A local preflight failure that must not create a capture receipt."""
+
+
+class RecorderConsoleStatus:
+    """Small importlib-safe value object for a bounded console receipt."""
+
+    def __init__(self, total_bytes: int, sha256: str, retained_bytes: int) -> None:
+        self.total_bytes = total_bytes
+        self.sha256 = sha256
+        self.retained_bytes = retained_bytes
+
+    @property
+    def truncated(self) -> bool:
+        return self.total_bytes != self.retained_bytes
 
 
 def sha256_file(path: Path) -> tuple[str, int]:
@@ -215,6 +233,40 @@ def raw_observation_status(path: Path, name: str) -> str:
     return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
 
 
+def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
+    """Drain an emulator console while retaining only a bounded evidence prefix.
+
+    The full transcript is hashed and counted as it is read. This preserves a
+    stable identity for a pathological recorder output without keeping an
+    unbounded error loop on disk or blocking the emulator on a full pipe.
+    """
+    digest = hashlib.sha256()
+    total = 0
+    retained = 0
+    with path.open("xb") as destination:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            digest.update(chunk)
+            if retained < MAX_RECORDER_CONSOLE_LOG_BYTES:
+                keep = chunk[:MAX_RECORDER_CONSOLE_LOG_BYTES - retained]
+                destination.write(keep)
+                retained += len(keep)
+        destination.flush()
+        os.fsync(destination.fileno())
+    return RecorderConsoleStatus(total, digest.hexdigest(), retained)
+
+
+def recorder_console_status(status: RecorderConsoleStatus) -> str:
+    return ("recorder_console=present\n"
+            f"recorder_console_sha256={status.sha256}\n"
+            f"recorder_console_total_bytes={status.total_bytes}\n"
+            f"recorder_console_retained_bytes={status.retained_bytes}\n"
+            f"recorder_console_truncated={'true' if status.truncated else 'false'}\n")
+
+
 def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
@@ -249,12 +301,32 @@ def run_capture(args: argparse.Namespace) -> Path:
         print(f"Press keys only in the visible DOSBox-X window within {args.duration_seconds} seconds.")
         print("No AUTOTYPE, debugger input, or guest-memory injection is permitted.")
         started = time.time()
+        process = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        assert process.stdout is not None
+        console_path = output / "recorder-console.log"
+        console_result: list[RecorderConsoleStatus] = []
+        console_errors: list[BaseException] = []
+
+        def drain_console() -> None:
+            try:
+                console_result.append(capture_bounded_console(process.stdout, console_path))
+            except BaseException as error:  # Propagate after process cleanup.
+                console_errors.append(error)
+
+        console_thread = threading.Thread(target=drain_console, name="project-eon-dos-console", daemon=True)
+        console_thread.start()
         try:
-            completed = subprocess.run(command, env=environment, timeout=args.duration_seconds,
-                                       check=False)
-            exit_status = completed.returncode
+            exit_status = process.wait(timeout=args.duration_seconds)
         except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
             exit_status = 124
+        console_thread.join()
+        if console_errors:
+            raise CaptureError(f"unable to retain bounded recorder console: {console_errors[0]}")
+        if len(console_result) != 1:
+            raise CaptureError("bounded recorder console did not produce exactly one receipt")
         ended = time.time()
         after_hash, after_size = validate_source_release(source)
         if (source_hash, source_size) != (after_hash, after_size):
@@ -264,7 +336,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                               + raw_observation_status(output / "results.raw", "results_raw"))
         write_exclusive(output / "run-status.txt",
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
-                        + receipt_status + observation_status)
+                        + receipt_status + observation_status + recorder_console_status(console_result[0]))
         print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
     except Exception:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 from pathlib import Path
 import unittest
 
@@ -95,6 +96,20 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             path.write_bytes(b"x" * (TOOL.MAX_RAW_OBSERVATION_BYTES + 1))
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.raw_observation_status(path, "events_raw")
+
+    def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
+        """A recorder exception loop must not make cache or terminal output unbounded."""
+        with temporary_directory() as directory:
+            path = Path(directory) / "recorder-console.log"
+            bytes_to_observe = b"x" * (TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES + 17)
+            status = TOOL.capture_bounded_console(io.BytesIO(bytes_to_observe), path)
+            self.assertEqual(status.total_bytes, len(bytes_to_observe))
+            self.assertEqual(status.retained_bytes, TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES)
+            self.assertTrue(status.truncated)
+            self.assertEqual(status.sha256, hashlib.sha256(bytes_to_observe).hexdigest())
+            self.assertEqual(path.stat().st_size, TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES)
+            receipt = TOOL.recorder_console_status(status)
+            self.assertIn("recorder_console_truncated=true", receipt)
 
 
 if __name__ == "__main__":
