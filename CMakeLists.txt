@@ -145,8 +145,8 @@ add_executable(project-eon
     src/data/reference_trace.cpp
     src/data/function_map.cpp
     src/data/recovery_map.cpp
-        src/data/release_manifest.cpp
-        src/data/startup_boundary.cpp
+    src/data/release_manifest.cpp
+    src/data/startup_boundary.cpp
     src/data/sha256.cpp
     src/data/zip_archive.cpp
     src/platform/game_data.cpp
@@ -302,8 +302,8 @@ if(BUILD_TESTING)
         src/data/reference_trace.cpp
         src/data/function_map.cpp
         src/data/recovery_map.cpp
-    src/data/release_manifest.cpp
-    src/data/startup_boundary.cpp
+        src/data/release_manifest.cpp
+        src/data/startup_boundary.cpp
         src/data/sha256.cpp
         src/data/zip_archive.cpp
         src/platform/game_data.cpp
