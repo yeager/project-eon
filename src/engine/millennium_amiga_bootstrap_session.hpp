@@ -2,9 +2,43 @@
 
 #include "data/millennium_amiga_loader.hpp"
 
+#include <array>
 #include <vector>
 
 namespace eon {
+
+// All records here are independently hash-checked static raw-resident facts
+// from the same Defjam image as the load plan. They are a diagnostics snapshot
+// only: none represents a call return, runtime register state, input, or a
+// runnable Amiga execution path.
+struct MillenniumAmigaResidentEvidenceSnapshot {
+    MillenniumAmigaResidentEntry entry;
+    MillenniumAmigaResidentWordSplitter splitter;
+    MillenniumAmigaResidentHelperRawBoundary helper_boundary;
+    MillenniumAmigaResidentSetupHelperRawBoundary setup_helper_boundary;
+    std::array<MillenniumAmigaResidentHelperStagingCallsite, 2> staging_callsites{};
+    MillenniumAmigaResidentFirstPostHelperStaticChain first_post_helper_chain;
+    MillenniumAmigaResidentSecondPostHelperStaticChain second_post_helper_chain;
+    MillenniumAmigaResidentStagingDirectReachabilityBoundary staging_reachability;
+    MillenniumAmigaResidentSeparateEntryGate separate_entry;
+    MillenniumAmigaResidentSeparateBranchBoundary separate_branch;
+    MillenniumAmigaResidentSeparatePostCallBoundary separate_post_call;
+    MillenniumAmigaResidentSeparatePostCallTailBoundary separate_post_call_tail;
+    MillenniumAmigaResidentSeparatePostCallTailBranchBoundary separate_post_call_tail_branch;
+    MillenniumAmigaResidentSeparateComparisonBoundary separate_comparison;
+    MillenniumAmigaResidentSeparateByteGateBoundary separate_byte_gate;
+    MillenniumAmigaResidentSeparateByteGateTargetBoundary separate_byte_gate_target;
+    MillenniumAmigaResidentSeparateByteGateConvergenceBoundary separate_byte_gate_convergence;
+    MillenniumAmigaResidentSeparateByteGateTakenBranchBoundary separate_byte_gate_taken_branch;
+    MillenniumAmigaResidentSeparateByteGateFallthroughBoundary separate_byte_gate_fallthrough;
+    MillenniumAmigaResidentSeparatePostExternalCallBoundary separate_post_external_call;
+    MillenniumAmigaResidentSeparateTerminalJumpRawTargetBoundary separate_terminal_jump_target;
+    MillenniumAmigaResidentIndependentEntryGate independent_entry;
+    MillenniumAmigaResidentNegativeD3Continuation negative_d3;
+    MillenniumAmigaResidentNegativeD3Terminal negative_d3_terminal;
+    MillenniumAmigaResidentPostNegativeD3Terminal post_negative_d3_terminal;
+    MillenniumAmigaResidentPostNegativeD3ContinuationBoundary post_negative_d3_continuation;
+};
 
 // Validates Defjam's original raw Millennium Amiga load plan in memory. It
 // records only the source ranges and resident entry, stopping before the
@@ -18,7 +52,10 @@ public:
         return shared_resident_;
     }
     [[nodiscard]] const MillenniumAmigaResidentEntry& resident_entry() const {
-        return resident_entry_;
+        return resident_evidence_.entry;
+    }
+    [[nodiscard]] const MillenniumAmigaResidentEvidenceSnapshot& resident_evidence() const {
+        return resident_evidence_;
     }
     // This is the checked caller-side continuation from the boot loader.  It
     // records that the original first stage is invoked through A3 and that
@@ -47,22 +84,20 @@ public:
     // prevents a caller from joining arithmetic evidence from another image.
     [[nodiscard]] const MillenniumAmigaResidentPostNegativeD3Terminal&
     post_negative_d3_terminal() const {
-        return post_negative_d3_terminal_;
+        return resident_evidence_.post_negative_d3_terminal;
     }
     [[nodiscard]] const MillenniumAmigaResidentPostNegativeD3ContinuationBoundary&
     post_negative_d3_continuation() const {
-        return post_negative_d3_continuation_;
+        return resident_evidence_.post_negative_d3_continuation;
     }
 
 private:
     MillenniumAmigaLoadPlan plan_;
     MillenniumAmigaSharedResidentLayout shared_resident_;
-    MillenniumAmigaResidentEntry resident_entry_;
+    MillenniumAmigaResidentEvidenceSnapshot resident_evidence_;
     MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary_;
     MillenniumAmigaBootstrapRelocationBoundary relocation_boundary_;
     MillenniumAmigaFirstStageSourceAnchorBoundary first_stage_source_anchors_;
-    MillenniumAmigaResidentPostNegativeD3Terminal post_negative_d3_terminal_;
-    MillenniumAmigaResidentPostNegativeD3ContinuationBoundary post_negative_d3_continuation_;
 };
 
 } // namespace eon

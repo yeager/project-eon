@@ -960,6 +960,14 @@ invocation checks have succeeded. This is a numeric provenance panel only: it
 does not transform the first raw stage, call it, read its return, or substitute
 a DOS title/screen for the native Amiga path.
 
+The same session now owns one immutable resident-evidence snapshot: the
+resident entry, splitter, static staging chains, independent negative-`D3`
+chain, and separately bounded external/terminal paths are all parsed from the
+same hash-identified Defjam ADF before either CLI or launcher reports them.
+The panel exposes only compact entry and terminal-ABI provenance. It does not
+turn these records into a call graph, infer a returned value, tick a runtime,
+or draw an Amiga screen.
+
 Millennium's usable game media are not AmigaDOS files.  In the supplied Defjam
 image (ADF SHA-256
 `8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`), the

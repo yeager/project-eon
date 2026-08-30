@@ -1938,71 +1938,36 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
     const auto image = eon::extract_verified_release_asset(release, loader_adf_sha256);
     if (!image) return;
     const eon::MillenniumAmigaBootstrapSession live_bootstrap(*image);
-    const eon::AmigaAdf disk(*image);
     const auto& plan = live_bootstrap.plan();
     const auto& opaque_invocation = live_bootstrap.opaque_invocation_boundary();
     const auto& first_stage_source_anchors = live_bootstrap.first_stage_source_anchors();
+    const auto& resident_evidence = live_bootstrap.resident_evidence();
     std::cout << "          bounded launcher bootstrap: resident entry 0x" << std::hex
         << live_bootstrap.resident_entry().entry_address << ", raw resident SHA-256 "
         << live_bootstrap.shared_resident().raw_sha256 << std::dec
         << " (opaque handoff validated; no raw-stage invocation)\n";
-    const auto resident = eon::parse_millennium_amiga_resident_entry(disk, plan);
-    const auto splitter = eon::parse_millennium_amiga_resident_word_splitter(disk, plan);
-    const auto helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
-        disk, plan, splitter);
-    const auto setup_helper_boundary =
-        eon::parse_millennium_amiga_resident_setup_helper_raw_boundary(disk, plan);
-    const auto staging_callsites = eon::parse_millennium_amiga_resident_helper_staging_callsites(
-        disk, plan, splitter);
-    const auto first_post_helper_chain =
-        eon::parse_millennium_amiga_resident_first_post_helper_static_chain(
-            disk, plan, staging_callsites.front());
-    const auto second_post_helper_chain =
-        eon::parse_millennium_amiga_resident_second_post_helper_static_chain(
-            disk, plan, staging_callsites.back());
-    const auto staging_reachability =
-        eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
-            disk, plan, staging_callsites);
-    const auto separate_entry = eon::parse_millennium_amiga_resident_separate_entry_gate(disk, plan);
-    const auto separate_branch = eon::parse_millennium_amiga_resident_separate_branch_boundary(
-        disk, plan, separate_entry);
-    const auto separate_post_call = eon::parse_millennium_amiga_resident_separate_post_call_boundary(
-        disk, plan, separate_branch);
-    const auto separate_post_call_tail =
-        eon::parse_millennium_amiga_resident_separate_post_call_tail_boundary(
-            disk, plan, separate_post_call);
-    const auto separate_post_call_tail_branch =
-        eon::parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
-            disk, plan, separate_post_call_tail);
-    const auto separate_comparison =
-        eon::parse_millennium_amiga_resident_separate_comparison_boundary(
-            disk, plan, separate_post_call_tail_branch);
-    const auto separate_byte_gate =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_boundary(
-            disk, plan, separate_comparison);
-    const auto separate_byte_gate_target =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_target_boundary(
-            disk, plan, separate_byte_gate);
-    const auto separate_byte_gate_convergence =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_convergence_boundary(
-            disk, plan, separate_byte_gate_target);
-    const auto separate_byte_gate_taken_branch =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_taken_branch_boundary(
-            disk, plan, separate_byte_gate_convergence);
-    const auto separate_byte_gate_fallthrough =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
-            disk, plan, separate_byte_gate_convergence);
-    const auto independent_entry =
-        eon::parse_millennium_amiga_resident_independent_entry_gate(disk, plan);
-    const auto negative_d3 = eon::parse_millennium_amiga_resident_negative_d3_continuation(
-        disk, plan, independent_entry);
-    const auto negative_d3_terminal = eon::parse_millennium_amiga_resident_negative_d3_terminal(
-        disk, plan, negative_d3);
-    const auto post_negative_d3 = eon::parse_millennium_amiga_resident_post_negative_d3_terminal(
-        disk, plan, negative_d3_terminal);
-    const auto post_negative_d3_continuation =
-        eon::parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
-            disk, plan, post_negative_d3);
+    const auto& resident = resident_evidence.entry;
+    const auto& splitter = resident_evidence.splitter;
+    const auto& helper_boundary = resident_evidence.helper_boundary;
+    const auto& setup_helper_boundary = resident_evidence.setup_helper_boundary;
+    const auto& staging_callsites = resident_evidence.staging_callsites;
+    const auto& first_post_helper_chain = resident_evidence.first_post_helper_chain;
+    const auto& second_post_helper_chain = resident_evidence.second_post_helper_chain;
+    const auto& staging_reachability = resident_evidence.staging_reachability;
+    const auto& separate_post_call = resident_evidence.separate_post_call;
+    const auto& separate_post_call_tail = resident_evidence.separate_post_call_tail;
+    const auto& separate_post_call_tail_branch = resident_evidence.separate_post_call_tail_branch;
+    const auto& separate_comparison = resident_evidence.separate_comparison;
+    const auto& separate_byte_gate = resident_evidence.separate_byte_gate;
+    const auto& separate_byte_gate_target = resident_evidence.separate_byte_gate_target;
+    const auto& separate_byte_gate_convergence = resident_evidence.separate_byte_gate_convergence;
+    const auto& separate_byte_gate_taken_branch = resident_evidence.separate_byte_gate_taken_branch;
+    const auto& separate_byte_gate_fallthrough = resident_evidence.separate_byte_gate_fallthrough;
+    const auto& independent_entry = resident_evidence.independent_entry;
+    const auto& negative_d3 = resident_evidence.negative_d3;
+    const auto& negative_d3_terminal = resident_evidence.negative_d3_terminal;
+    const auto& post_negative_d3 = resident_evidence.post_negative_d3_terminal;
+    const auto& post_negative_d3_continuation = resident_evidence.post_negative_d3_continuation;
     std::cout << "          raw loader: disk 0x" << std::hex
         << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
         << " -> memory 0x" << plan.first_stage.destination
@@ -5014,6 +4979,7 @@ int main(int argc, char** argv) {
                     const auto& plan = millennium_amiga_session->plan();
                     const auto& handoff = millennium_amiga_session->opaque_invocation_boundary();
                     const auto& resident = millennium_amiga_session->resident_entry();
+                    const auto& evidence = millennium_amiga_session->resident_evidence();
                     std::ostringstream ranges;
                     ranges << "ADF+0x" << std::hex << plan.first_stage.disk_offset
                            << "/0x" << plan.first_stage.length << " -> RAM 0x"
@@ -5030,6 +4996,14 @@ int main(int argc, char** argv) {
                           << resident.entry_address << " -> 0x" << resident.initializer_address
                           << "; [0x" << resident.result_word_address << "]";
                     draw_text(renderer, 64, 308, entry.str());
+                    std::ostringstream boundaries;
+                    boundaries << "Static resident paths: gate 0x" << std::hex
+                               << evidence.independent_entry.entry_address << "; opaque ABI JMP 0x"
+                               << evidence.post_negative_d3_continuation.terminal_jump_address
+                               << " -> 0x" << evidence.post_negative_d3_continuation.terminal_jump_target;
+                    draw_text(renderer, 64, 324, boundaries.str());
+                    draw_text(renderer, 64, 340,
+                        tr("HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."));
                 }
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::deuteros && active_platform

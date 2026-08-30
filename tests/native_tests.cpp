@@ -1802,6 +1802,15 @@ int main() {
     const eon::AmigaAdf defjam_loader_disk(*defjam_adf);
     const auto defjam_plan = eon::parse_millennium_amiga_load_plan(defjam_loader_disk);
     const eon::MillenniumAmigaBootstrapSession defjam_session(*defjam_adf);
+    const auto& defjam_resident_evidence = defjam_session.resident_evidence();
+    assert(&defjam_session.resident_entry() == &defjam_resident_evidence.entry);
+    assert(defjam_resident_evidence.splitter.entry_address == 0x68016);
+    assert(defjam_resident_evidence.staging_callsites.size() == 2);
+    assert(defjam_resident_evidence.first_post_helper_chain.staging_entry_address == 0x69624);
+    assert(defjam_resident_evidence.second_post_helper_chain.staging_entry_address == 0x69b88);
+    assert(defjam_resident_evidence.separate_post_external_call.terminal_jump_address == 0x68f72);
+    assert(defjam_resident_evidence.separate_terminal_jump_target.target_address == 0x7c54e);
+    assert(defjam_resident_evidence.independent_entry.entry_address == 0x68508);
     assert(defjam_session.post_negative_d3_terminal().entry_address == 0x685fe);
     assert(defjam_session.post_negative_d3_continuation().entry_address == 0x6861a);
     assert(defjam_session.plan().loader_magic == 0xa8d398fb);
