@@ -396,6 +396,14 @@ def reject_output_path(inputs: tuple[Path, ...], output: Path) -> None:
         raise EvidenceError("output path must be absolute")
     if output.exists() or output.is_symlink():
         raise EvidenceError("output directory must not exist")
+    # Trace assembly creates a private staging directory beside the requested
+    # receipt. Keep that transient work in the caller's Project Eon cache as
+    # well: an output below /tmp would violate the no-system-temporary-files
+    # contract even though the final receipt itself is user-owned evidence.
+    resolved = output.resolve(strict=False)
+    system_temporary_root = Path("/tmp")
+    if resolved == system_temporary_root or system_temporary_root in resolved.parents:
+        raise EvidenceError("output must not use /tmp; use a Project Eon cache path")
     # Inputs are regular files, so a distinct non-existent directory cannot
     # overlap their bytes.  Deliberately permit a sibling capture directory:
     # a user commonly keeps a read-only archive and its separately owned

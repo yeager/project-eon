@@ -36,7 +36,8 @@ All seven paths must be absolute. `--source-release`, `--events`,
 `--metadata`, `--config`, `--command-tail`, and `--input-timeline` must be
 distinct, non-symlink regular files. The output directory must not already
 exist. Use a new directory below the project-scoped tools cache rather than
-the repository, supplied media, or `/tmp`. Inputs stay untouched: the
+the repository, supplied media, or `/tmp`; the assembler rejects `/tmp` before
+it creates its adjacent private staging directory. Inputs stay untouched: the
 assembler only copies their evidence bytes into the new capture directory.
 
 ```sh
