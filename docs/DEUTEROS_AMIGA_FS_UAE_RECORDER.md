@@ -23,7 +23,7 @@ to fall back to default media; see
 
 ## Hook contract
 
-The prototype has the same pre-instruction hook immediately after
+The raw-PC prototype has the same pre-instruction hook immediately after
 `r->opcode = r->ir` in both 68000 routes (`m68k_run_1` and the A500-selected
 cycle-exact `m68k_run_1_ce`). It only reads the current PC, original
 opcode, D0, A0, A6, SR and emulated cycle counter. It tests a fixed finite
@@ -59,6 +59,32 @@ release identity, and cannot be passed to `tools/record_reference_trace.py` or
 ABI, callback meaning, bitplane layout, input semantic, title screen, audio,
 or runtime transition.
 
+## Physical-input delivery receipt
+
+The reviewed local probe also has a distinct, disabled-by-default receipt at
+`src/fs-uae/main.c:input_handler_loop`. It observes an action only after the
+FS-UAE frontend has dequeued it from `fs_emu_get_input_event`, and records it
+only after `fs_uae_process_input_event` has rejected port-configuration and
+state-management actions and immediately before it calls
+`amiga_send_input_event`. The playback route is explicitly excluded. Thus it
+records delivery to the Amiga core, not an arbitrary host key event and not a
+recorder-created action.
+
+Set `PROJECT_EON_FS_UAE_INPUT_RECORD` to a new absolute path. The observer
+uses the same `0600`, `O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW` safeguards as the
+raw-PC observer and writes at most 256 LF-terminated records:
+
+```text
+host-input <ordinal> frame=<emulated-frame> line=<scanline> action=<FS-UAE-action> state=<state>
+```
+
+This receipt is deliberately not an Eon reference-trace event and does not
+claim that the game polled or accepted the event. It only supplies the missing
+reviewable delivery side of a future user-operated capture. A physical user
+press/release must still be retained as a separate input timeline and linked
+to matching title-poll and frame observations; recorder-side injection,
+playback, debugger commands and guest-memory edits remain inadmissible.
+
 ## Media and execution safeguards
 
 Use only the recognised English Deuteros archive and its clean disk-1/disk-2
@@ -74,6 +100,15 @@ The first safe run is a bounded, no-input preflight. A later interactive run
 must record physical key/button press and release timing in a separate input
 timeline. Debugger commands, injected host events, guest memory edits and
 recorder-side input are not admissible controls.
+
+On 2026-08-30 the new delivery observer passed an eight-second no-input
+preflight. The raw-PC observer produced its expected 384 site-capped records;
+the delivery receipt path did not create a file, so FS-UAE's startup
+port-configuration actions were not misclassified as core input. The external
+recorder executable SHA-256 was
+`727bba3ac4bc78558b964d0f572c488a419cd0985d803979e047381d2cf34f93`.
+The supplied outer archive was rehashed after the run and remained
+`f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`.
 
 ## Current build boundary
 
