@@ -144,6 +144,27 @@ def write_exclusive(path: Path, content: str) -> None:
         os.fsync(stream.fileno())
 
 
+def input_receipt_status(path: Path) -> str:
+    """Describe a recorder-created host-input receipt without creating one.
+
+    A missing receipt is useful negative evidence: the visible recorder ran,
+    but it did not observe a host key in its SDL event loop.  It must never be
+    represented as an empty, generated input timeline.  A receipt is still
+    only a host-side observation, not proof that the DOS program accepted an
+    input.
+    """
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "host_input_receipt=absent\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("host-input receipt is not a regular non-symlink file")
+    digest, size = sha256_file(path)
+    return ("host_input_receipt=present\n"
+            f"host_input_receipt_sha256={digest}\n"
+            f"host_input_receipt_bytes={size}\n")
+
+
 def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
@@ -185,11 +206,14 @@ def run_capture(args: argparse.Namespace) -> Path:
         except subprocess.TimeoutExpired:
             exit_status = 124
         ended = time.time()
-        write_exclusive(output / "run-status.txt", f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n")
         after_hash, after_size = validate_source_release(source)
         if (source_hash, source_size) != (after_hash, after_size):
             raise CaptureError("source archive changed during capture; evidence is rejected")
-        print("CAPTURE COMPLETE  external evidence only; assemble and validate separately")
+        receipt_status = input_receipt_status(output / "host-input-receipt.raw")
+        write_exclusive(output / "run-status.txt",
+                        f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
+                        + receipt_status)
+        print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
     except Exception:
         # A failed preflight is not an admitted capture, but preserve every

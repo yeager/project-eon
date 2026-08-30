@@ -119,8 +119,10 @@ nested disk archive, and Kickstart archive separately with
 `floppy_write_protect = 1`; and rehashes both source ZIPs after the run.
 It rejects repository/media/`/tmp` output paths and headless SDL. Its only
 recorder outputs are raw PC and host-input-delivery receipts outside the
-repository; a physical input timeline, independent review and trace assembly
-remain required before any runtime admission.
+repository. `run-status.txt` explicitly says whether a receipt was created,
+and hashes it only when present, so a no-input preflight cannot silently look
+like an empty physical-input timeline. A physical input timeline, independent
+review and trace assembly remain required before any runtime admission.
 
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;

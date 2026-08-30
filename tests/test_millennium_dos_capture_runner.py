@@ -65,6 +65,20 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
                 TOOL.EXPECTED_RELEASE_SHA256 = original_hash
                 TOOL.EXPECTED_RELEASE_SIZE = original_size
 
+    def test_input_receipt_status_never_invents_an_empty_timeline(self) -> None:
+        with temporary_directory() as directory:
+            receipt = Path(directory) / "host-input-receipt.raw"
+            self.assertEqual(TOOL.input_receipt_status(receipt), "host_input_receipt=absent\n")
+            observed = b"host-key 1 ticks=2 state=down scancode=0x1 sym=0x2 mod=0x0\n"
+            receipt.write_bytes(observed)
+            status = TOOL.input_receipt_status(receipt)
+            self.assertIn("host_input_receipt=present\n", status)
+            self.assertIn(f"host_input_receipt_bytes={len(observed)}\n", status)
+            receipt.unlink()
+            receipt.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.input_receipt_status(receipt)
+
 
 if __name__ == "__main__":
     unittest.main()

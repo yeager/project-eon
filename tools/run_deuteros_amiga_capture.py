@@ -131,6 +131,26 @@ def write_exclusive(path: Path, content: str) -> None:
         os.fsync(stream.fileno())
 
 
+def input_receipt_status(path: Path) -> str:
+    """Describe a recorder-created host-input receipt without creating one.
+
+    An absent receipt proves neither a user action nor a game-input outcome;
+    it only means the recorder did not observe a host input event.  Keeping
+    that distinction in the external status prevents a no-input preflight
+    from looking like an interactive capture.
+    """
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "host_input_receipt=absent\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("host-input receipt is not a regular non-symlink file")
+    digest, size = sha256_file(path)
+    return ("host_input_receipt=present\n"
+            f"host_input_receipt_sha256={digest}\n"
+            f"host_input_receipt_bytes={size}\n")
+
+
 def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path) -> str:
     return "\n".join((
         "# Ephemeral physical-input capture configuration; no debugger or playback.",
@@ -203,12 +223,15 @@ def run_capture(args: argparse.Namespace) -> Path:
         except subprocess.TimeoutExpired:
             exit_status = 124
         ended = time.time()
-        write_exclusive(output / "run-status.txt", f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n")
         if release_before != validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE):
             raise CaptureError("source release changed during capture; evidence is rejected")
         if kickstart_before != validate_identity(kickstart, "Kickstart archive", EXPECTED_KICKSTART_SHA256, EXPECTED_KICKSTART_SIZE):
             raise CaptureError("Kickstart archive changed during capture; evidence is rejected")
-        print("CAPTURE COMPLETE  external evidence only; assemble and validate separately")
+        receipt_status = input_receipt_status(output / "host-input-receipt.txt")
+        write_exclusive(output / "run-status.txt",
+                        f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
+                        + receipt_status)
+        print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
     finally:
         for mountpoint in reversed(mounted):
