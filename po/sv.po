@@ -296,6 +296,9 @@ msgstr "SPÅRINLÄSNING"
 msgid "NOT LOADED"
 msgstr "INTE INLÄST"
 
+msgid "NOT SELECTED"
+msgstr "INTE VALD"
+
 msgid "RENDERER SETTINGS"
 msgstr "RENDERARINSTÄLLNINGAR"
 

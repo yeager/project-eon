@@ -296,6 +296,9 @@ msgstr "TRACE ADMISSION"
 msgid "NOT LOADED"
 msgstr "NOT LOADED"
 
+msgid "NOT SELECTED"
+msgstr "선택되지 않음"
+
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"
 

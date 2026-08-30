@@ -296,6 +296,9 @@ msgstr "TRACE ADMISSION"
 msgid "NOT LOADED"
 msgstr "NOT LOADED"
 
+msgid "NOT SELECTED"
+msgstr "НЕ ВИБРАНО"
+
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"
 
