@@ -21,6 +21,24 @@ The configuration and every transient debugger dump remain outside the
 repository under the project-scoped cache. The three temporary buffers used
 solely to calculate the hashes below were removed immediately afterwards.
 
+## Read-only emulator preflight
+
+On 2026-08-30 the configured FS-UAE route was revalidated before an emulator
+preflight. The outer Deuteros archive and the Kickstart archive were exposed
+only through four nested `archivemount -o ro` FUSE mounts: the outer release,
+the two original nested disk ZIPs, and the Kickstart ZIP. The kernel mount
+table recorded `ro,nosuid,nodev,default_permissions` for every view. Hashing
+the exposed files yielded the three ADF/ROM identities in the table above;
+the outer release still hashed to `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`.
+
+FS-UAE 3.2.35 was then started with the recorded A500 configuration, both
+floppy drives write-protected, and a 20-second host preflight limit. Its
+console identified `KS ROM v1.3 ... rev 34.5 (256k)` and stopped cleanly when
+the preflight limit ended. This proves only that the documented, read-only
+media route and ROM admission reach FS-UAE initialisation. It records no
+title frame, game input, audio, callback, emulator result, event stream, or
+trace admission.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
