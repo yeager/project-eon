@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace eon {
 
@@ -79,6 +80,10 @@ enum class PlatformCardStatus { unavailable, release_selection_required, ready }
     const std::vector<ReleaseArchive>& releases, Game game, Platform platform);
 [[nodiscard]] bool platform_card_selectable(PlatformCardStatus status);
 [[nodiscard]] bool platform_card_startable(PlatformCardStatus status);
+// The launcher must distinguish an unsupported platform from a supported
+// platform whose original media is absent. This fixed support catalogue is
+// deliberately independent of the scanner's hash-verified availability.
+[[nodiscard]] std::vector<Platform> supported_platforms(Game game);
 // Ordered, hash-verified platforms that can be selected for one game. This is
 // shared by the start menu and tests so a UI choice cannot silently fall back
 // to another release.

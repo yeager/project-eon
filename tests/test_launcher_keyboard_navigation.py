@@ -9,7 +9,8 @@ SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
         self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", SOURCE)
-        self.assertIn("std::array<PlatformCard, 3>", SOURCE)
+        self.assertIn("platform_cards_for_game", SOURCE)
+        self.assertIn("eon::supported_platforms(game)", SOURCE)
         self.assertIn("std::array<ProfileCard, 3>", SOURCE)
         self.assertIn("LauncherPage::platforms", SOURCE)
         self.assertIn("LauncherPage::releases", SOURCE)
@@ -33,6 +34,16 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("ATARI BOOTSTRAP ONLY", SOURCE)
         self.assertIn("card.platform == eon::Platform::atari_st", SOURCE)
         self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
+
+    def test_platform_cards_are_game_specific_before_media_availability_is_shown(self) -> None:
+        # Deuteros supports Amiga and Atari ST. A missing archive must render
+        # as unavailable on one of those cards, not create a fictitious DOS
+        # target labelled as missing data.
+        cards = SOURCE[SOURCE.index("const auto platform_cards_for_game"):
+                       SOURCE.index("const auto focus_active_platform_card")]
+        self.assertIn("eon::supported_platforms(game)", cards)
+        self.assertIn("platform_card_templates", cards)
+        self.assertIn("unsupported platform is never misrepresented as absent user media", SOURCE)
 
     def test_atari_media_scope_never_implies_a_physical_dump_fallback(self) -> None:
         self.assertIn("absent from this verified outer release", SOURCE)

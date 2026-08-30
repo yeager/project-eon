@@ -244,6 +244,19 @@ bool platform_card_startable(const PlatformCardStatus status) {
     return status == PlatformCardStatus::ready;
 }
 
+std::vector<Platform> supported_platforms(const Game game) {
+    // Keep this declaration separate from available_platforms(): the latter
+    // answers what immutable releases the user has supplied, while this
+    // answers which original targets Project Eon recognises for this game.
+    switch (game) {
+    case Game::millennium:
+        return {Platform::dos, Platform::amiga, Platform::atari_st};
+    case Game::deuteros:
+        return {Platform::amiga, Platform::atari_st};
+    }
+    return {};
+}
+
 std::vector<Platform> available_platforms(
     const std::vector<ReleaseArchive>& releases, const Game game) {
     std::vector<Platform> platforms;

@@ -3631,12 +3631,12 @@ int main(int argc, char** argv) {
         {eon::Game::deuteros, "DEUTEROS", "THE NEXT MILLENNIUM", "deuteros.png", {664, 170, 552, 310}},
     }};
     for (auto& card : cards) card.texture = load_card(renderer, card.filename);
-    std::array<PlatformCard, 3> platform_cards{{
+    std::array<PlatformCard, 3> platform_card_templates{{
         {eon::Platform::dos, "DOS", "dos-platform-v1.png", {64, 188, 352, 308}},
         {eon::Platform::amiga, "AMIGA", "amiga-platform-v1.png", {464, 188, 352, 308}},
         {eon::Platform::atari_st, "ATARI ST", "atari-st-platform-v1.png", {864, 188, 352, 308}},
     }};
-    for (auto& card : platform_cards) card.texture = load_card(renderer, card.filename);
+    for (auto& card : platform_card_templates) card.texture = load_card(renderer, card.filename);
     std::array<ProfileCard, 3> profile_cards{{
         {ProfileChoice::original, "ORIGINAL", "PRESERVATION PROFILE", "original-profile-v1.png", {64, 188, 352, 308}},
         {ProfileChoice::modern, "MODERN", "ENHANCED PROFILE", "modern-profile-v1.png", {464, 188, 352, 308}},
@@ -3912,12 +3912,32 @@ int main(int argc, char** argv) {
     // launcher until a genuine DOS return/startup path is recovered.
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
     std::size_t millennium_state_page = 0;
+    const auto platform_cards_for_game = [&](const eon::Game game) {
+        std::vector<PlatformCard> cards_for_game;
+        const auto supported = eon::supported_platforms(game);
+        cards_for_game.reserve(supported.size());
+        const float width = supported.size() == 2 ? 552.0F : 352.0F;
+        const float first_x = 64.0F;
+        const float stride = supported.size() == 2 ? 600.0F : 400.0F;
+        for (std::size_t index = 0; index < supported.size(); ++index) {
+            const auto found = std::find_if(platform_card_templates.begin(),
+                platform_card_templates.end(), [&](const PlatformCard& candidate) {
+                    return candidate.platform == supported[index];
+                });
+            if (found == platform_card_templates.end()) continue;
+            auto card = *found;
+            card.bounds = {first_x + static_cast<float>(index) * stride, 188, width, 308};
+            cards_for_game.push_back(card);
+        }
+        return cards_for_game;
+    };
     // Keep keyboard/gamepad focus on the same card as the automatic
-    // hash-verified choice.  Without this, selecting a game that has only
-    // Amiga media can leave focus on the disabled DOS card even though the
-    // launcher has correctly selected Amiga as its only startable platform.
+    // hash-verified choice. The card collection itself is game-specific, so
+    // an unsupported platform is never misrepresented as absent user media.
     const auto focus_active_platform_card = [&] {
         if (!active_platform) return;
+        const auto platform_cards = platform_cards_for_game(
+            cards[static_cast<std::size_t>(focused)].game);
         const auto card = std::find_if(platform_cards.begin(), platform_cards.end(),
             [&](const PlatformCard& candidate) { return candidate.platform == *active_platform; });
         if (card != platform_cards.end()) {
@@ -3949,6 +3969,7 @@ int main(int argc, char** argv) {
             active_release_language.reset();
             discard_millennium_assets();
         }
+        if (!next_platform) focused_platform_card = 0;
         // This is also needed when the active platform happens not to change:
         // the game card can have been focused while scanning was incomplete.
         focus_active_platform_card();
@@ -4022,6 +4043,9 @@ int main(int argc, char** argv) {
         if (selected == eon::Game::deuteros) start_deuteros();
     };
     const auto choose_platform_card = [&](const int index) {
+        const auto platform_cards = platform_cards_for_game(
+            cards[static_cast<std::size_t>(focused)].game);
+        if (platform_cards.empty()) return false;
         focused_platform_card = std::clamp(index, 0, static_cast<int>(platform_cards.size() - 1U));
         const auto platform = platform_cards[static_cast<std::size_t>(focused_platform_card)].platform;
         const auto game = cards[static_cast<std::size_t>(focused)].game;
@@ -4076,6 +4100,8 @@ int main(int argc, char** argv) {
                 }
             }
         } else if (launcher_page == LauncherPage::platforms) {
+            const auto platform_cards = platform_cards_for_game(
+                cards[static_cast<std::size_t>(focused)].game);
             for (std::size_t index = 0; index < platform_cards.size(); ++index) {
                 if (inside(platform_cards[index].bounds, x, y)
                     && choose_platform_card(static_cast<int>(index))) advance_after_platform_selection();
@@ -4452,10 +4478,17 @@ int main(int argc, char** argv) {
                         launcher_page = LauncherPage::platforms;
                     }
                 } else if (launcher_page == LauncherPage::platforms) {
+                    const auto platform_cards = platform_cards_for_game(
+                        cards[static_cast<std::size_t>(focused)].game);
+                    const auto count = static_cast<int>(platform_cards.size());
+                    if (count == 0) {
+                        launcher_page = LauncherPage::games;
+                        continue;
+                    }
                     if (previous || next) {
-                        focused_platform_card = (focused_platform_card + (previous ? 2 : 1)) % 3;
+                        focused_platform_card = (focused_platform_card + (previous ? count - 1 : 1)) % count;
                     } else if (event.key.key == SDLK_HOME) focused_platform_card = 0;
-                    else if (event.key.key == SDLK_END) focused_platform_card = 2;
+                    else if (event.key.key == SDLK_END) focused_platform_card = count - 1;
                     else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
                         if (choose_platform_card(focused_platform_card)) advance_after_platform_selection();
                     }
@@ -4490,7 +4523,11 @@ int main(int argc, char** argv) {
                 const auto button = event.gbutton.button;
                 if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT || button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                     if (launcher_page == LauncherPage::games) focus_menu_card(1 - focused);
-                    else if (launcher_page == LauncherPage::platforms) focused_platform_card = (focused_platform_card + 2) % 3;
+                    else if (launcher_page == LauncherPage::platforms) {
+                        const auto count = static_cast<int>(platform_cards_for_game(
+                            cards[static_cast<std::size_t>(focused)].game).size());
+                        if (count > 0) focused_platform_card = (focused_platform_card + count - 1) % count;
+                    }
                     else if (launcher_page == LauncherPage::releases) {
                         const auto count = static_cast<int>(release_language_cards().size());
                         if (count > 0) focused_release_card = (focused_release_card + count - 1) % count;
@@ -4498,7 +4535,11 @@ int main(int argc, char** argv) {
                     else { focused_profile_card = (focused_profile_card + 2) % 3; custom_profile_ready = false; }
                 } else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                     if (launcher_page == LauncherPage::games) focus_menu_card(1 - focused);
-                    else if (launcher_page == LauncherPage::platforms) focused_platform_card = (focused_platform_card + 1) % 3;
+                    else if (launcher_page == LauncherPage::platforms) {
+                        const auto count = static_cast<int>(platform_cards_for_game(
+                            cards[static_cast<std::size_t>(focused)].game).size());
+                        if (count > 0) focused_platform_card = (focused_platform_card + 1) % count;
+                    }
                     else if (launcher_page == LauncherPage::releases) {
                         const auto count = static_cast<int>(release_language_cards().size());
                         if (count > 0) focused_release_card = (focused_release_card + 1) % count;
@@ -4648,6 +4689,7 @@ int main(int argc, char** argv) {
                 }
             } else if (launcher_page == LauncherPage::platforms) {
                 const auto game = cards[static_cast<std::size_t>(focused)].game;
+                const auto platform_cards = platform_cards_for_game(game);
                 draw_text(renderer, 64, 82, tr("SELECT A VERIFIED PLATFORM"));
                 draw_text(renderer, 64, 108, tr("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME"));
                 for (std::size_t index = 0; index < platform_cards.size(); ++index) {
