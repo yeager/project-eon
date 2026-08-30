@@ -15,16 +15,48 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from eon.dos import describe_bytes
 
 
-def disassemble(data: bytes, address: int, offset: int, count: int = 96) -> list[str]:
+def _render_instruction(instruction) -> str:
+    return f"{instruction.address:05x}  {instruction.mnemonic:<8} {instruction.op_str}".rstrip()
+
+
+def disassemble_linear(data: bytes, address: int) -> list[str]:
+    """Render a byte-complete, deliberately unclassified x86 listing.
+
+    Capstone stops its iterator at malformed or incomplete input. That is
+    useful for normal disassembly, but a preservation report that calls itself
+    complete must retain those bytes as explicit unknown data rather than
+    silently omitting its tail.
+    """
     try:
         from capstone import CS_ARCH_X86, CS_MODE_16, Cs
     except ImportError as error:
         raise SystemExit("Install analysis dependencies: pip install -r requirements-analysis.txt") from error
     decoder = Cs(CS_ARCH_X86, CS_MODE_16)
-    return [
-        f"{instruction.address:05x}  {instruction.mnemonic:<8} {instruction.op_str}".rstrip()
-        for instruction in decoder.disasm(data[offset : offset + count], address)
-    ]
+    lines: list[str] = []
+    offset = 0
+    while offset < len(data):
+        instruction = next(decoder.disasm(data[offset:], address + offset, count=1), None)
+        if (instruction is None or instruction.address != address + offset
+                or instruction.size <= 0 or instruction.size > len(data) - offset):
+            lines.append(f"{address + offset:05x}  .byte    0x{data[offset]:02x} ; code/data-unclassified")
+            offset += 1
+            continue
+        lines.append(_render_instruction(instruction))
+        offset += instruction.size
+    return lines
+
+
+def disassemble(data: bytes, address: int, offset: int, count: int = 96,
+                *, complete_linear: bool = False) -> list[str]:
+    if complete_linear:
+        return disassemble_linear(data[offset : offset + count], address)
+    try:
+        from capstone import CS_ARCH_X86, CS_MODE_16, Cs
+    except ImportError as error:
+        raise SystemExit("Install analysis dependencies: pip install -r requirements-analysis.txt") from error
+    decoder = Cs(CS_ARCH_X86, CS_MODE_16)
+    return [_render_instruction(instruction)
+            for instruction in decoder.disasm(data[offset : offset + count], address)]
 
 
 def main() -> None:
@@ -70,6 +102,8 @@ def main() -> None:
             f"- Syntactic interrupt occurrences: {report['interrupts']}",
             "- Listing scope: " + ("entire image, linear candidate only (code/data unclassified)"
                 if args.complete_linear else "96 bytes from inferred entry candidate"),
+            *( ["- Linear coverage: every source byte is rendered as an instruction or explicit `.byte`."]
+               if args.complete_linear else [] ),
             "",
             "```asm",
             *disassemble(
@@ -77,6 +111,7 @@ def main() -> None:
                 listing_address,
                 listing_offset,
                 listing_count,
+                complete_linear=args.complete_linear,
             ),
             "```",
             "",
