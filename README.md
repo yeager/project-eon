@@ -425,6 +425,11 @@ and contribution rules live in the
 The release-by-release distinction between data support, bounded startup and
 playable parity is maintained in the [parity matrix](docs/PARITY.md).
 
+The detailed, priority-ordered completion work is maintained in the
+[completion plan](docs/COMPLETION_PLAN.md). It defines evidence gates and
+exit criteria for every major recovery phase; it is not a claim that the
+currently recognised releases have reached campaign parity.
+
 ## Continuous integration and Git policy
 
 GitHub Actions builds and tests Linux, macOS, and Windows, runs the preservation
