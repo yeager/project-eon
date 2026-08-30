@@ -39,6 +39,27 @@ This establishes a reproducible full byte-coverage candidate listing of the
 shared resident stage; it does not turn its opaque loader handoff, indirect
 calls, or unknown return values into executable Eon behaviour.
 
+## Reproduced byte-complete candidate reports
+
+On 2026-08-30 the current byte-complete range tool was run against the exact
+user-supplied archive members below. Each report remains outside the repository
+because it is a mechanical rendering of copyrighted executable bytes. The
+report digest makes a retained local copy auditable without turning it into a
+repository artifact. A report is a linear candidate listing only; no row
+proves reachability, code/data classification, an ABI result, or gameplay.
+
+| Target | Exact source span and runtime address | Source archive SHA-256 | Generated report SHA-256 | Lines |
+| --- | --- | --- | --- | ---: |
+| Millennium DOS English | `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE`; flat 8086 candidate origins `$0100` | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `3664163eb193c7df0d4040e674a2af1499b11579224ffea091086450b3545e42` | 52,236 |
+| Millennium Amiga English Defjam | system ADF `+0x16400`, length `0x2c000` → `$68000` | `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
+| Deuteros Amiga English clean Disk 1 | boot/bootstrap/main/title loaded spans; M68000 origins from the validated load plan | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `db4379bb4f50cb18f9ef72fdc1066796d5a8621a798e519d730f5282610c1791` | 162,970 |
+| Deuteros Atari ST English Replicants Disk 1 | raw disk `+0x4ec00`, length `0x1200` → `$1200` | `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `4c4bd8add9873e1ab2a52ba0d23a9c225005a7a6d2ecb7435f24191f32b88c35` | 1,979 |
+
+These reports cover only source spans with an independently established CPU
+and load address. Millennium Atari ST's `MILENIUM.TOS` and Millennium Amiga's
+opaque transformed raw stage remain intentionally outside this table until a
+loader result establishes their runtime image and entry relationship.
+
 ## Variant separation
 
 The following identities are recognised forensic inputs, not interchangeable
