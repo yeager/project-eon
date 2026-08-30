@@ -1499,6 +1499,14 @@ both hashes and the first-stage checksum, then records the second-stage
 dispatcher. It stops before `Floprd`, callback/XBIOS behavior, state
 selection, or a display is invented; other protected disks are detected but
 never substituted for this profile.
+The first-stage copy is now retained separately as a hash-gated, isolated RAM
+record: its literal byte loop copies the complete 4,608-byte track-2 interval
+from `$70000` to `$1e00`, preserving the same SHA-256 at both locations. Its
+direct-entry source offset `+$c4` therefore maps to relocated `$1ec4`.
+This proves only the bytes a local copy would produce if its preceding service
+returned and the loop were reached. It neither asserts either condition nor
+executes the copied dispatcher, reads its runtime state, selects a vector, or
+calls XBIOS.
 At its loaded address `$70000`, it is executable code rather than a resource.
 Its SR-dependent entry paths rejoin at track-2 `+$18`; Eon executes that
 common, hash-locked 12-byte local suffix (SHA-256

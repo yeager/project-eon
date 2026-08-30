@@ -6185,6 +6185,9 @@ int main() {
         == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
     assert(deuteros_atari_session.first_stage().next_destination == 0x70000);
     assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
+    assert(deuteros_atari_session.first_stage_copy_execution().source_address == 0x70000);
+    assert(deuteros_atari_session.first_stage_copy_execution().destination_address == 0x1e00);
+    assert(deuteros_atari_session.first_stage_copy_execution().relocated_entry_address == 0x1ec4);
     assert(deuteros_atari_session.entry_execution().join_offset == 0x18);
     assert(deuteros_atari_session.entry_execution().dispatcher_entry == 0x1ec4);
     assert(deuteros_atari_session.entry_execution().stop_before_dispatcher_source_offset == 0xc4);
@@ -6257,6 +6260,53 @@ int main() {
     assert(deuteros_second_stage_profile.dispatch_state_address == 0x1eaa);
     assert(deuteros_second_stage_profile.dispatch_table_address == 0x1eac);
     assert(deuteros_second_stage_profile.dispatch_raw_reader_address == 0x70030);
+    const auto deuteros_copy_execution = eon::execute_deuteros_atari_first_stage_copy_prefix(
+        deuteros_second_stage, deuteros_first_stage_profile, deuteros_second_stage_profile);
+    assert(deuteros_copy_execution.source_address == 0x70000);
+    assert(deuteros_copy_execution.destination_address == 0x1e00);
+    assert(deuteros_copy_execution.byte_count == 0x1200);
+    assert(deuteros_copy_execution.source_sha256
+        == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
+    assert(deuteros_copy_execution.relocated_sha256 == deuteros_copy_execution.source_sha256);
+    assert(deuteros_copy_execution.relocated_bytes == deuteros_second_stage);
+    assert(deuteros_copy_execution.direct_entry_source_offset == 0xc4);
+    assert(deuteros_copy_execution.relocated_entry_address == 0x1ec4);
+    {
+        auto altered_second_stage = deuteros_second_stage;
+        altered_second_stage[0xc4] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::execute_deuteros_atari_first_stage_copy_prefix(
+                altered_second_stage, deuteros_first_stage_profile, deuteros_second_stage_profile));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_first_stage_profile = deuteros_first_stage_profile;
+        altered_first_stage_profile.copy_byte_count = 0x1000;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::execute_deuteros_atari_first_stage_copy_prefix(
+                deuteros_second_stage, altered_first_stage_profile, deuteros_second_stage_profile));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_second_stage_profile = deuteros_second_stage_profile;
+        altered_second_stage_profile.direct_entry = 0x1ec6;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::execute_deuteros_atari_first_stage_copy_prefix(
+                deuteros_second_stage, deuteros_first_stage_profile, altered_second_stage_profile));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto deuteros_entry_execution = eon::execute_deuteros_atari_second_stage_entry_prefix(
         deuteros_second_stage, deuteros_second_stage_profile);
     assert(deuteros_entry_execution.join_offset == 0x18);

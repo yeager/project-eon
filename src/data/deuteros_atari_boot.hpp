@@ -158,6 +158,30 @@ struct DeuterosAtariFirstStageProfile {
 [[nodiscard]] std::uint32_t calculate_deuteros_atari_first_stage_checksum(
     std::span<const std::uint8_t> bytes, const DeuterosAtariFirstStageProfile& profile);
 
+// The first raw stage has a wholly local copy loop after its Floprd service
+// call: it copies the exact track-2 interval from $70000 to $1e00.  This
+// records the resulting isolated RAM image only when the original interval is
+// supplied and hash-verified.  It does not assert that Floprd returned, that
+// the loop was reached, or that the relocated dispatcher was executed.
+struct DeuterosAtariFirstStageCopyExecutionPrefix {
+    std::uint32_t source_address = 0;
+    std::uint32_t destination_address = 0;
+    std::size_t byte_count = 0;
+    std::string source_sha256;
+    std::vector<std::uint8_t> relocated_bytes;
+    std::string relocated_sha256;
+    std::size_t direct_entry_source_offset = 0;
+    std::uint32_t relocated_entry_address = 0;
+};
+
+struct DeuterosAtariSecondStageProfile;
+
+[[nodiscard]] DeuterosAtariFirstStageCopyExecutionPrefix
+execute_deuteros_atari_first_stage_copy_prefix(
+    std::span<const std::uint8_t> second_stage_bytes,
+    const DeuterosAtariFirstStageProfile& first_stage,
+    const DeuterosAtariSecondStageProfile& second_stage);
+
 struct DeuterosAtariSecondStageProfile {
     std::uint32_t supervisor_stack = 0;
     std::uint32_t application_stack = 0;

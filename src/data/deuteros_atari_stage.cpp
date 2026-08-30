@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <stdexcept>
+#include <utility>
 
 namespace eon {
 namespace {
@@ -201,6 +202,47 @@ DeuterosAtariSecondStageProfile parse_deuteros_atari_second_stage(
         .raw_read_routine_offset = 0x60,
         .raw_read_max_sector_count = 9,
         .side_switch_track = 0x50};
+}
+
+DeuterosAtariFirstStageCopyExecutionPrefix
+execute_deuteros_atari_first_stage_copy_prefix(
+    const std::span<const std::uint8_t> second_stage_bytes,
+    const DeuterosAtariFirstStageProfile& first_stage,
+    const DeuterosAtariSecondStageProfile& second_stage) {
+    constexpr std::uint32_t expected_source = 0x70000;
+    constexpr std::uint32_t expected_destination = 0x1e00;
+    constexpr std::size_t expected_byte_count = 0x1200;
+    constexpr std::size_t expected_entry_offset = 0xc4;
+    constexpr std::string_view expected_sha256 =
+        "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7";
+
+    // Re-parse the copied stage to bind the direct entry to the same original
+    // bytes. This preserves the conditional nature of the copy: this is a
+    // verified in-memory image, not a claim that the preceding XBIOS call
+    // returned or that its dispatcher can now run.
+    const auto parsed = parse_deuteros_atari_second_stage(second_stage_bytes);
+    if (first_stage.copy_source != expected_source
+        || first_stage.copy_destination != expected_destination
+        || first_stage.copy_byte_count != expected_byte_count
+        || second_stage_bytes.size() != expected_byte_count
+        || second_stage.direct_entry_source_offset != expected_entry_offset
+        || second_stage.direct_entry != expected_destination + expected_entry_offset
+        || parsed.direct_entry_source_offset != second_stage.direct_entry_source_offset
+        || parsed.direct_entry != second_stage.direct_entry) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST first-stage copy topology");
+    }
+    const auto source_digest = to_hex(sha256(second_stage_bytes));
+    if (source_digest != expected_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST first-stage copy source");
+    }
+    std::vector<std::uint8_t> relocated_bytes(second_stage_bytes.begin(), second_stage_bytes.end());
+    const auto relocated_digest = to_hex(sha256(relocated_bytes));
+    if (relocated_digest != source_digest) {
+        throw std::runtime_error("Deuteros Atari ST first-stage relocation lost original bytes");
+    }
+    return {expected_source, expected_destination, expected_byte_count, source_digest,
+        std::move(relocated_bytes), relocated_digest, expected_entry_offset,
+        expected_destination + static_cast<std::uint32_t>(expected_entry_offset)};
 }
 
 DeuterosAtariSecondStageEntryExecutionPrefix
