@@ -7084,6 +7084,21 @@ int main() {
         assert(rejected);
     }
     const auto title_stage = eon::parse_deuteros_amiga_title_stage(system_disk, load_plan);
+    {
+        auto altered_title_stage_disk = *amiga_disk1;
+        // The final stage byte lies outside the profile's decoded opcode
+        // windows. Full-stage identity must reject it before those windows
+        // can be treated as English title-stage evidence.
+        altered_title_stage_disk[0x6e000 + 0x6ca00 - 1] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_title_stage_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_stage(altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(title_stage.entry_address == 0x40426);
     assert(title_stage.incoming_mode_address == 0x4040e);
     assert(title_stage.special_mode == 5);
