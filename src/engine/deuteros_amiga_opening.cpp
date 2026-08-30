@@ -1,10 +1,22 @@
 #include "engine/deuteros_amiga_opening.hpp"
 
+#include "data/sha256.hpp"
+
 #include <algorithm>
 #include <stdexcept>
 
 namespace eon {
 namespace {
+
+std::vector<std::uint8_t> require_clean_deuteros_amiga_system_adf(
+    std::vector<std::uint8_t> system_adf) {
+    constexpr std::string_view clean_system_adf_sha256 =
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
+    if (to_hex(sha256(system_adf)) != clean_system_adf_sha256) {
+        throw std::runtime_error("Unsupported Deuteros Amiga system ADF");
+    }
+    return system_adf;
+}
 
 DeuterosAmigaMainResourceTransfer require_opening_transfer(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan) {
@@ -18,7 +30,7 @@ DeuterosAmigaMainResourceTransfer require_opening_transfer(const AmigaAdf& disk,
 } // namespace
 
 DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
-    : disk_(std::move(system_adf)),
+    : disk_(require_clean_deuteros_amiga_system_adf(std::move(system_adf))),
       load_plan_(parse_deuteros_amiga_load_plan(disk_)),
       title_handoff_route_(parse_deuteros_amiga_title_handoff_route(disk_, load_plan_)),
       transferred_bundle_(require_opening_transfer(disk_, load_plan_)),

@@ -8429,6 +8429,20 @@ int main() {
     assert(eon::to_hex(eon::sha256(first_special_bitmap.color_indices))
         == "a7abcb6a308f7016e28611862a14de3adfa12881efcce458e5888b07e2d0c1cb");
     eon::DeuterosAmigaOpening live_opening(*amiga_disk1);
+    {
+        auto altered_system_adf = *amiga_disk1;
+        // The tail is outside the opening's first decoded bundles. The live
+        // runtime must still reject a non-identical source before it creates
+        // any VM, palette, or renderer state.
+        altered_system_adf.back() ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::DeuterosAmigaOpening(std::move(altered_system_adf)));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     static_cast<void>(live_opening.tick());
     const auto live_tick2 = live_opening.tick();
     assert(live_tick2.palette == 1);
