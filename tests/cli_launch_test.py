@@ -334,7 +334,7 @@ def main() -> int:
             "event\t9 90 local-return image=2200ad.exe call_pc=0xd385 return_pc=0xd388\n"
             "event\t10 100 mode-read image=2200ad.exe pc=0xd388 address=0xda05 value=0x01\n",
             None, None,
-            "1 private-return, 6 local-return observations; call-free transient overlay admitted through second private-INT boundary)",
+            "1 private-return, 2 mode-read, 1 adapter-return, 6 local-return observations; call-free transient overlay admitted through second private-INT boundary)",
         ),
         (
             "millennium", "dos", "millennium-dos-en-startup-v1",
