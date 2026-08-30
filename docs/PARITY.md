@@ -8,6 +8,11 @@ that the original game is playable to completion.
 All rows use media read in place. No original archive, disk, asset, save, or
 runtime data is unpacked, copied back, changed, or distributed by Project Eon.
 
+The release-exact, machine-checked status fields are in
+[`parity-matrix.json`](parity-matrix.json). It covers every recognised archive
+or direct-container identity, including releases that share a platform and
+language but must never be silently substituted.
+
 | Game | Platform / language | Recognition and data access | Current verified runtime | Original presentation | Hard boundary before parity |
 | --- | --- | --- | --- | --- | --- |
 | Millennium 2.2 | DOS / English | ZIP, original DOS files and LIB resources are hash-identified | `TITLES.EXE` key-poll reaches its verified local input/exit boundary; the launcher/DOS return and `2200AD.EXE` startup remain unexecuted | `TITLE.LIB` P00; `GX.LIB` IMG00/IMG01; `2200SAVE.I` positional evidence | Full UI, simulation, mutable state, saves, named controls and native helper ABI are unrecovered |
