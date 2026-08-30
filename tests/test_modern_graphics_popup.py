@@ -166,7 +166,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         loader_block = SOURCE[loader:renderer]
         self.assertIn("request.presentation != eon::Presentation::modern", loader_block)
         self.assertIn("active_platform != eon::Platform::amiga", loader_block)
-        self.assertIn("candidate.sha256 == *active_release_sha256", loader_block)
+        self.assertIn("resolve_active_release(eon::Game::deuteros)", loader_block)
         self.assertIn("load_deuteros_amiga_held_opening_modern_sequence", loader_block)
         refresh = SOURCE.index("const auto refresh_deuteros_external_modern_texture", loader)
         refresh_block = SOURCE[refresh:renderer]

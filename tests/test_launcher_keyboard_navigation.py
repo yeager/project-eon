@@ -62,6 +62,25 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("active_release_sha256 = language_cards", SOURCE)
         self.assertIn("truncated_identity_hash(card.sha256)", SOURCE)
 
+    def test_runtime_loaders_consume_the_resolved_outer_identity(self) -> None:
+        # The launcher must resolve a media identity once before it enters a
+        # session. A loader searching the mutable scanner list again could
+        # accidentally make an exact release card into a scan-order decision.
+        self.assertIn("const auto resolve_active_release", SOURCE)
+        for loader in (
+            "load_millennium_launch_assets",
+            "load_deuteros_opening",
+            "load_millennium_atari_bootstrap",
+            "load_millennium_amiga_bootstrap",
+            "load_deuteros_atari_bootstrap",
+        ):
+            with self.subTest(loader=loader):
+                start = SOURCE.index(f"{loader}(")
+                signature = SOURCE[start:SOURCE.index(") {", start) + 3]
+                self.assertIn("const eon::ReleaseArchive& release", signature)
+        self.assertIn("load_deuteros_opening(*release)", SOURCE)
+        self.assertIn("load_millennium_launch_assets(*release)", SOURCE)
+
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
         # If a game has only Amiga/Atari media, selecting its game card must
         # not leave Enter/South-A focused on the disabled DOS card.
