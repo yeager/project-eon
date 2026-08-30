@@ -128,6 +128,21 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         for literal in ("2200ad.exe", "0x0124", "0x001f", "0xd19e"):
             self.assertIn(literal, validator)
 
+    def test_dosbox_x_recorder_contract_keeps_observation_hooks_non_mutating(self):
+        contract = (ROOT / "docs" / "MILLENNIUM_DOS_DOSBOX_X_RECORDER.md").read_text(
+            encoding="utf-8"
+        )
+        for literal in (
+            "234797680781567e18c374c9e62da24de5423db0",
+            "CPU_Interrupt(Bitu,Bitu,uint32_t)",
+            "CPU_Core_Normal_Run", "DOS_Execute(const char*,...)",
+            "core=normal", "MILL.COM:0x02cf", "millennium-dos-en-startup-v1",
+        ):
+            with self.subTest(literal=literal):
+                self.assertIn(literal, contract)
+        self.assertIn("must never change original media, guest memory, CPU registers", contract)
+        self.assertIn("not an admitted trace", contract)
+
     def test_deuteros_amiga_next_step_capture_contract_keeps_unknown_abi_external(self):
         documented = FORMAT.read_text(encoding="utf-8")
         self.assertIn("Required capture contract before a Deuteros Amiga runtime increment", documented)

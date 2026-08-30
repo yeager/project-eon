@@ -128,6 +128,12 @@ input-timeline hashes described in
 preimages and raw recorder output privately; commit neither those files nor
 the archive, mount, saved state, screenshot, audio, or trace pair.
 
+The exact reviewed DOSBox-X hook locations, normal-core restriction, program
+identity map, and non-mutation requirements are in
+[`MILLENNIUM_DOS_DOSBOX_X_RECORDER.md`](MILLENNIUM_DOS_DOSBOX_X_RECORDER.md).
+That design is an external recorder implementation contract, not an admitted
+trace or a runtime integration.
+
 ## Acceptance boundary
 
 An admitted v2 capture would improve the diagnostic evidence for the seven
