@@ -258,6 +258,9 @@ msgstr "ADMISSION DE TRACE"
 msgid "NOT LOADED"
 msgstr "NON CHARGÉ"
 
+msgid "NOT SELECTED"
+msgstr "NON SÉLECTIONNÉ"
+
 msgid "RENDERER SETTINGS"
 msgstr "RÉGLAGES DU MOTEUR DE RENDU"
 

@@ -377,7 +377,7 @@ struct ModernRuntimeDiagnostics {
         std::string uncertainty;
         std::string runtime_status;
     };
-    std::string release_identity = "NOT SELECTED";
+    std::string release_identity;
     // The first hash-checked address is a preservation navigation marker,
     // not a request to execute, emulate, or hook original machine code.
     std::string startup_boundary = "—";
@@ -4082,6 +4082,7 @@ int main(int argc, char** argv) {
     modern_graphics_settings.aspect_ratio_index = request.display.aspect_ratio_index;
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
+        diagnostics.release_identity = tr("NOT SELECTED");
         // In the menu, show the currently focused game/platform/release
         // choice; after launch, show the fixed session selection. This is a
         // live UI readout, not a second admission path.

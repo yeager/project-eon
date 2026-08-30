@@ -409,6 +409,9 @@ msgstr ""
 msgid "NOT LOADED"
 msgstr ""
 
+msgid "NOT SELECTED"
+msgstr ""
+
 #: src/main.cpp
 msgid "RENDERER SETTINGS"
 msgstr ""

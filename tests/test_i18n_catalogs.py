@@ -135,7 +135,7 @@ class CatalogTests(unittest.TestCase):
             "SETTINGS APPLY TO SDL RENDERING ONLY.",
             "DEVELOPER DIAGNOSTICS", "OPEN", "MODERN RUNTIME DIAGNOSTICS",
             "F10 / ESC: BACK TO SETTINGS", "RELEASE IDENTITY", "RECOVERY MAP BOUNDARIES",
-            "STARTUP BOUNDARY", "TRACE ADMISSION", "NOT LOADED", "RENDERER SETTINGS", "FRAME PACING",
+            "STARTUP BOUNDARY", "TRACE ADMISSION", "NOT LOADED", "NOT SELECTED", "RENDERER SETTINGS", "FRAME PACING",
             "SDL VSYNC: ON", "SDL VSYNC: OFF",
             "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
             "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS",
@@ -149,6 +149,14 @@ class CatalogTests(unittest.TestCase):
             with self.subTest(language=language):
                 catalog = po_messages(PO / f"{language}.po")
                 self.assertTrue(all(catalog.get(label) for label in labels))
+
+    def test_unselected_diagnostics_identity_is_translated_before_rendering(self) -> None:
+        self.assertIn('diagnostics.release_identity = tr("NOT SELECTED");', LAUNCHER_SOURCE)
+        source_catalog = po_messages(PO / "ProjectEon.pot")
+        self.assertIn("NOT SELECTED", source_catalog)
+        for language in sorted(CATALOGS):
+            with self.subTest(language=language):
+                self.assertTrue(po_messages(PO / f"{language}.po").get("NOT SELECTED"))
 
     def test_catalogs_do_not_use_language_name_prefixed_english_placeholders(self) -> None:
         for language in sorted(CATALOGS):
