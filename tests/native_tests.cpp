@@ -3012,6 +3012,19 @@ int main() {
     assert(mcga_profile.function_thirty_one_address == 0x24c);
     assert(mcga_profile.function_thirty_one_state_address == 0xac);
     assert(mcga_profile.function_thirty_one_return_ah == 0x01);
+    // A byte outside every parsed instruction prefix is still part of the
+    // original driver identity. Do not let a look-alike dispatch table cross
+    // the hash boundary merely because the local anchors happen to match.
+    auto altered_mcga = *mcga;
+    altered_mcga.back() ^= 0x01;
+    bool rejected_altered_mcga = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_video_driver(altered_mcga,
+            eon::MillenniumDosVideoDriverKind::mcga));
+    } catch (const std::runtime_error&) {
+        rejected_altered_mcga = true;
+    }
+    assert(rejected_altered_mcga);
     assert(title_flow.launcher_title_offset == 0x58f);
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");
