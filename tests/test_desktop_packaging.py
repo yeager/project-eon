@@ -90,6 +90,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("brew --prefix sdl3", workflow)
         self.assertIn("own_install_name=$(otool -D", workflow)
 
+    @unittest.skipIf(os.name == "nt", "Git Bash fixtures do not provide portable POSIX executable semantics")
     def test_macos_closure_verifier_resolves_rpath_and_rejects_homebrew(self) -> None:
         # Linux CI cannot execute Apple's inspection tools.  Model their small,
         # documented text interface here so the verifier's decision logic is

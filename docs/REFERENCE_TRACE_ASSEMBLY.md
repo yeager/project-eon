@@ -32,17 +32,21 @@ template mode, and it never starts an emulator.
 
 ## Inputs and output
 
-All four paths must be absolute. `--source-release`, `--events`, and
-`--metadata` must be non-symlink regular files. The output directory must not
-already exist. It is safe to use a new sibling directory beneath the same
-user-owned preservation collection, because inputs are regular files and the
-assembler never writes their paths.
+All seven paths must be absolute. `--source-release`, `--events`,
+`--metadata`, `--config`, `--command-tail`, and `--input-timeline` must be
+distinct, non-symlink regular files. The output directory must not already
+exist. Use a new directory below the project-scoped tools cache rather than
+the repository, supplied media, or `/tmp`. Inputs stay untouched: the
+assembler only copies their evidence bytes into the new capture directory.
 
 ```sh
 python3 tools/record_reference_trace.py \
   --source-release /absolute/path/to/user-owned-release.zip \
   --events /absolute/path/to/external-recorder-events \
   --metadata /absolute/path/to/capture-metadata.tsv \
+  --config /absolute/path/to/external-recorder.conf \
+  --command-tail /absolute/path/to/literal-command-tail.txt \
+  --input-timeline /absolute/path/to/input-timeline.txt \
   --output /absolute/path/to/new-capture
 ```
 
@@ -54,11 +58,16 @@ output directory if the recognised source identity changed. This protects
 the assembler's path and detects concurrent changes; it is not a claim that it
 can prevent a privileged third party from modifying the user's file.
 
-Only the external event stream is copied, to `events.eontrace`. The assembler
-never extracts or copies the original release. It writes `manifest.eontrace`
-and `receipt.json` atomically into a new mode-0700 capture directory. The
-receipt binds the source before/after identities, event and manifest hashes,
-and tool hash, but contains no original bytes.
+The assembler checks that the exact bytes of `--config`, `--command-tail`, and
+`--input-timeline` match their metadata SHA-256 fields before it writes any
+receipt. It copies the event stream to `events.eontrace`, the supplied metadata
+to `capture-metadata.tsv`, and the three reviewed preimages to
+`configuration.preimage`, `command-tail.preimage`, and
+`input-timeline.preimage`. It never extracts or copies the original release.
+It writes `manifest.eontrace` and `receipt.json` atomically into a new
+mode-0700 capture directory. The receipt binds the source before/after
+identities, all copied evidence hashes, manifest hash, and tool hash, but
+contains no original bytes.
 
 ## Metadata
 
@@ -91,8 +100,9 @@ tool accepts only the registered adapters in the public trace format and enforce
 each adapter's full outer-release hash/size plus game/platform/language
 identity. The two physical-media adapters also
 require their exact `source_media_sha256` and `source_stage_sha256` metadata.
-The assembler checks manifest provenance and file bounds; the Project Eon CLI
-remains the authority for full event-schema validation and trace admission.
+The assembler checks manifest provenance, file bounds, and the bytes behind
+all three provenance hashes; the Project Eon CLI remains the authority for
+full event-schema validation and trace admission.
 
 If any validation or source rehash fails, the staging directory is removed and
 no capture receipt is issued. Do not repair a rejected capture by editing
