@@ -88,9 +88,12 @@ results needed to execute them.
 
 Work packages:
 
-1. Produce a reproducible, write-protected capture recipe using a known clean
-   Kickstart and the two supplied clean ADFs. Store captures outside the repo;
-   commit only hashes, offsets, diagnostics, and a validator.
+1. Produce and maintain a reproducible, write-protected physical-input capture
+   route using a known clean Kickstart and the two supplied clean ADFs. The
+   repository now supplies `tools/run_deuteros_amiga_capture.py` for the
+   reviewed external recorder; it mounts all source archives read-only and
+   keeps raw output outside the repo. Commit only hashes, offsets, diagnostics,
+   and a validator.
 2. Record the title bridge in the existing reference-trace format: Exec and
    graphics calls/returns, callback installation and invocation, display-list
    writes, input queue observations, palette/bitplane state, and frame/audio
