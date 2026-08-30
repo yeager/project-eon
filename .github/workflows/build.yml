@@ -94,7 +94,11 @@ jobs:
       - name: Test native code without proprietary game data
         run: ctest --test-dir build -j4 --output-on-failure
       - name: Install preservation analysis dependencies
-        run: python3 -m pip install --user --requirement requirements-analysis.txt
+        # Homebrew Python on the macOS runner marks its base environment as
+        # externally managed (PEP 668). These are CI-only analysis tools;
+        # permit this one isolated --user installation rather than failing
+        # before the preservation tests start.
+        run: python3 -m pip install --user --break-system-packages --requirement requirements-analysis.txt
       - name: Test preservation tooling
         run: python3 -m unittest discover -s tests -v
 
