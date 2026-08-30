@@ -1,12 +1,27 @@
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 
+#include "data/sha256.hpp"
+
 #include <stdexcept>
 
 namespace eon {
+namespace {
+
+std::vector<std::uint8_t> require_defjam_millennium_adf(
+    std::vector<std::uint8_t> disk_image) {
+    constexpr std::string_view defjam_millennium_adf_sha256 =
+        "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
+    if (to_hex(sha256(disk_image)) != defjam_millennium_adf_sha256) {
+        throw std::runtime_error("Unsupported Millennium Amiga Defjam ADF");
+    }
+    return disk_image;
+}
+
+} // namespace
 
 MillenniumAmigaBootstrapSession::MillenniumAmigaBootstrapSession(
     std::vector<std::uint8_t> disk_image) {
-    const AmigaAdf disk(std::move(disk_image));
+    const AmigaAdf disk(require_defjam_millennium_adf(std::move(disk_image)));
     plan_ = parse_millennium_amiga_load_plan(disk);
     shared_resident_ = parse_millennium_amiga_shared_resident_layout(disk.bytes(0,
         AmigaAdf::standard_size));

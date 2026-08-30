@@ -1789,6 +1789,17 @@ int main() {
     assert(defjam_session.first_stage_source_anchors().byte_count == 0x6e000);
     assert(defjam_session.first_stage_source_anchors().sha256
         == defjam_session.plan().first_stage.raw_sha256);
+    {
+        auto altered = *defjam_adf;
+        altered.back() ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::MillenniumAmigaBootstrapSession(std::move(altered)));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(defjam_plan.bootstrap_loader.disk_offset == 0x400);
     assert(defjam_plan.bootstrap_loader.length == 0x400);
     assert(defjam_plan.bootstrap_loader.destination == 0x70000);
