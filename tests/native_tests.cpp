@@ -3044,8 +3044,12 @@ int main() {
     const auto covox_leaf = eon::admit_millennium_dos_sound_driver_leaf(*covox);
     assert(sound_blaster_leaf.kind == eon::MillenniumDosSoundDriverKind::sound_blaster);
     assert(sound_blaster_leaf.original_filename == "ssbl.drv" && sound_blaster_leaf.byte_size == 9194);
+    assert(sound_blaster_leaf.sha256
+        == "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72");
     assert(covox_leaf.kind == eon::MillenniumDosSoundDriverKind::covox_sound_master);
     assert(covox_leaf.original_filename == "scvx.drv" && covox_leaf.byte_size == 4053);
+    assert(covox_leaf.sha256
+        == "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4");
     bool rejected_sound_leaf = false;
     try {
         static_cast<void>(eon::admit_millennium_dos_sound_driver_leaf(*mill_bytes));
