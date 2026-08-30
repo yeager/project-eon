@@ -36,7 +36,8 @@ site set:
 - selector and local routes `$1fe7a`, `$1fe84`, `$1fe88`, `$1fe92`,
   `$1fe96`, `$1fbe6`.
 
-It writes at most 4,096 LF-terminated records to a new `0600` host file opened
+It writes at most 4,096 LF-terminated records, with at most 128 records per
+fixed probe site, to a new `0600` host file opened
 with `O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW`. The environment value must be an
 absolute path with no `..` component. An existing path, symlink, malformed
 path, short write, or I/O error disables observation. It never overwrites an
