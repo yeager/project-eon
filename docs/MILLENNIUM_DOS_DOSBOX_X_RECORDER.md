@@ -9,8 +9,8 @@ flags, vectors, input, execution order, or timing.
 ## Prototype status
 
 An uncommitted, external Linux prototype has been reviewed against this
-contract. Its changes are limited to the listed CPU, normal-core and
-DOS-execution hook files plus declarations. The changed CPU and normal-core objects
+contract. Its changes are limited to the listed CPU, normal-core,
+DOS-execution, and SDL-event-loop hook files plus declarations. The changed objects
 compile successfully at the pinned revision. It opens its opt-in output with
 exclusive creation (`O_CREAT|O_EXCL`, mode `0600`), so an existing file or
 symlink is never overwritten; it rejects DS:DX strings containing separators
@@ -32,6 +32,16 @@ exact hashes and strict runtime non-admission status are in
 [MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-trace-validated-capture-diagnostics-only).
 Re-review the exact patch, retain a complete configuration and input timeline,
 and capture the required result boundaries before extending any runtime path.
+
+On 2026-08-30, a second external-only recorder build added a bounded host-key
+receipt and completed an input-free five-second preflight. It opens no receipt
+file when no keyboard event reaches DOSBox-X's SDL event loop; it emitted no
+such file in that run. The new executable SHA-256 was
+`0ba7a23b75ed543e519e56c6ece7106b81bd1fd8efb3e1b3813b79ca44b71cca`.
+The recognised user-owned outer archive was rehashed afterwards and remained
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
+This establishes the observer's no-input behaviour only; it does not record a
+physical key, title poll, guest acceptance, frame, audio, or playable state.
 
 One additional experimental CPU-only probe is private to the capture cache: it
 opens a distinct `O_CREAT|O_EXCL` result file only when explicitly configured
@@ -81,6 +91,7 @@ exact-match filter succeeds.
 | `src/cpu/cpu.cpp:CPU_Interrupt(Bitu,Bitu,uint32_t)` | Software `INT 21h` and `INT 91h`, with source `CS:(oldeip-2)`, AX, DX, ES, BX and DS before vector dispatch | Covers both DOS and game-installed private interrupts without accepting a later DOS-handler result. |
 | `src/cpu/core_normal.cpp:CPU_Core_Normal_Run`, immediately before `Fetchb()` | Pre-instruction `CS:IP`, DS:DX for `MILL.COM:0x02cf` | Covers the only non-interrupt driver-load observation at its exact caller address. |
 | `src/dos/dos_execute.cpp:DOS_Execute(const char*,...)`, after the new program's `csip` is known and before it starts | Full source `name` plus entry CS for a recorder-owned image map | `RunningProgram` and DOS MCB names are truncated, so they cannot establish `mill.com`, `titles.exe`, or `2200ad.exe` identity. |
+| `src/gui/sdlmain.cpp:GFX_Events`, immediately before `MAPPER_CheckEvent` | Host SDL key press/release, scancode, symbol, modifier mask and `GetTicks()` | Retains a separate, bounded timeline of focused host events without calling mapper or keyboard APIs. |
 
 `DEBUG_HeavyIsBreakpoint()` in `src/debug/debug.cpp` is useful for local
 debugging, but it is not the primary recorder hook: it is not an
@@ -128,10 +139,29 @@ No record establishes a return value, carry flag, selected driver, child
 execution, private-vector behavior, input result, or game state. A failed
 match is a capture failure, not a fallback to static disassembly.
 
+## Physical host-key receipt
+
+Set `PROJECT_EON_DOSBOX_X_INPUT_RECORD` to a new absolute path for the
+external recorder. The GUI observer opens that path with `0600`,
+`O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW` and writes at most 256 LF-terminated
+records only for `SDL_KEYDOWN` and `SDL_KEYUP` events dequeued by the normal
+DOSBox-X event loop:
+
+```text
+host-key <ordinal> ticks=<dosbox-ticks> state=down|up scancode=0x<hex> sym=0x<hex> mod=0x<hex>
+```
+
+The observer is before `MAPPER_CheckEvent`, does not synthesize an SDL event,
+and cannot call `KEYBOARD_AddKey`, AUTOTYPE, a debugger, or guest-memory APIs.
+This receipt is an independent host-input timeline, not a DOS input result.
+A future capture must bind its press/release pair to the recorder's
+`TITLES.EXE:0x0d0a` poll and resulting frame/state evidence before Project Eon
+can claim the original title accepted an action.
+
 ## Review and admission
 
-Before a patched build is used, review that the diff changes only the three
-hooks and a recorder-local host-output implementation; it must contain no
+Before a patched build is used, review that the diff changes only the four
+hooks and recorder-local host-output implementations; it must contain no
 `mem_write`, register assignment, callback/vector installation, injected
 input, scheduler mutation, or guest-file write. Build it outside the Project
 Eon checkout. Capture the patched executable SHA-256 and source revision in
