@@ -78,6 +78,11 @@ namespace {
 struct ModernPackDialogMailbox {
     std::mutex mutex;
     std::optional<std::filesystem::path> pending_selection;
+    // SDL retains the filter pointers until the asynchronous native dialog
+    // completes. Keep both the translated label and its descriptor in the
+    // process-lifetime mailbox rather than handing SDL a temporary string.
+    std::string filter_label;
+    SDL_DialogFileFilter filter{};
     bool dialog_open = false;
 };
 
@@ -4123,13 +4128,14 @@ int main(int argc, char** argv) {
         {
             std::lock_guard lock(mailbox.mutex);
             if (mailbox.dialog_open) return;
+            mailbox.filter_label = tr("MODERN ASSET PACK");
+            mailbox.filter = {mailbox.filter_label.c_str(), "eonmodern"};
             mailbox.dialog_open = true;
         }
-        static const SDL_DialogFileFilter filters[] = {{"Modern asset pack", "eonmodern"}};
         // A null initial location deliberately avoids default-directory
         // lookup, creation, persistence, or background pack discovery.
         SDL_ShowOpenFileDialog(receive_modern_pack_dialog_selection, &mailbox, window,
-            filters, 1, nullptr, false);
+            &mailbox.filter, 1, nullptr, false);
     };
     const auto cycle_output_resolution = [&](const int direction) {
         const auto count = output_resolutions.size();
