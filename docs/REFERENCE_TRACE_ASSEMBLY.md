@@ -69,8 +69,8 @@ of those fields is rejected. It looks up the derived source hash and size in
 `docs/release-manifest.json`, then rejects game, platform, or language values
 that do not match that one recognised release.
 
-For v2, metadata must additionally name exactly one registered `adapter`. The
-tool accepts only the four adapters in the public trace format and enforces
+For v2/v3, metadata must additionally name exactly one registered `adapter`. The
+tool accepts only the registered adapters in the public trace format and enforces
 each adapter's full outer-release hash/size plus game/platform/language
 identity. The two physical-media adapters also
 require their exact `source_media_sha256` and `source_stage_sha256` metadata.

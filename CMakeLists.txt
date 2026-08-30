@@ -116,6 +116,7 @@ add_executable(project-eon
     src/data/deuteros_amiga_loader.cpp
     src/data/deuteros_amiga_title_stage.cpp
     src/data/deuteros_amiga_reference_trace.cpp
+    src/data/deuteros_amiga_main_stage_reference_trace.cpp
     src/data/deuteros_amiga_title_bridge_reference_trace.cpp
     src/data/deuteros_atari_boot.cpp
     src/data/deuteros_atari_reference_trace.cpp
@@ -267,6 +268,7 @@ if(BUILD_TESTING)
         src/data/deuteros_amiga_loader.cpp
         src/data/deuteros_amiga_title_stage.cpp
         src/data/deuteros_amiga_reference_trace.cpp
+        src/data/deuteros_amiga_main_stage_reference_trace.cpp
         src/data/deuteros_amiga_title_bridge_reference_trace.cpp
         src/data/deuteros_atari_boot.cpp
         src/data/deuteros_atari_reference_trace.cpp

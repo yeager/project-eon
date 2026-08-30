@@ -86,6 +86,29 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
                 "size": 4066771, "game": "deuteros", "platform": "amiga", "language": "en"})
 
+    def test_v3_main_copy_loop_requires_the_exact_amiga_media_and_main_stage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.tsv"
+            path.write_text(metadata_lines(
+                format="project-eon-reference-trace-v3",
+                adapter="deuteros-amiga-en-main-copy-loop-v3",
+                game="deuteros", platform="amiga",
+                source_media_sha256="6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+                source_stage_sha256="a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6"),
+                encoding="utf-8")
+            identity = {
+                "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+                "size": 4066771, "game": "deuteros", "platform": "amiga", "language": "en"}
+            TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
+            path.write_text(metadata_lines(
+                format="project-eon-reference-trace-v3",
+                adapter="deuteros-amiga-en-main-copy-loop-v3",
+                game="deuteros", platform="amiga",
+                source_media_sha256="6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+                source_stage_sha256="0" * 64), encoding="utf-8")
+            with self.assertRaisesRegex(TOOL.EvidenceError, "source_stage_sha256"):
+                TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
+
     def test_metadata_read_is_bounded_after_secure_open(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "metadata.tsv"

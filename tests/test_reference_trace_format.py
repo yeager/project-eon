@@ -33,6 +33,12 @@ class ReferenceTraceFormatTests(unittest.TestCase):
             "media": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
             "stage": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
         },
+        "deuteros-amiga-en-main-copy-loop-v3": {
+            "game": "deuteros", "platform": "amiga", "language": "en", "size": 4066771,
+            "release": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            "media": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+            "stage": "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6",
+        },
         "deuteros-amiga-en-title-bridge-v3": {
             "game": "deuteros", "platform": "amiga", "language": "en", "size": 4066771,
             "release": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
@@ -54,6 +60,7 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         "deuteros-amiga-en-title-stage-v1": (
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
         ),
+        "deuteros-amiga-en-main-copy-loop-v3": ("deuteros-amiga-main-stage",),
         "deuteros-amiga-en-title-bridge-v3": (
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
         ),
