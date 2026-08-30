@@ -396,7 +396,7 @@ prefix, followed by exactly one of each of these ordered raw checkpoints:
 | `display-layout` | `site=0x0001eda6`, source/destination addresses, observed display base/list, and a copper-list SHA-256 |
 | `bitplane-layout` | `site=0x0001f182`, observed base pointer, four plane pointers, and the fixed 320×200 / 40-byte-row / zero-modulo geometry with `plane_stride=0x1f40` |
 | `palette-checkpoint` | `site=0x0001eda6`, source/destination, word count, RGB4 SHA-256, `rgba_palette_format=rgba8888-rgb4-expanded-nibbles`, and converted RGBA palette SHA-256 values |
-| `input-checkpoint` | callback/selector sites and queue/input-timeline SHA-256 values |
+| `input-checkpoint` | callback/selector sites and queue/input-timeline SHA-256 values; its `input_timeline_sha256` must exactly equal the manifest's retained input-timeline hash |
 | `frame-checkpoint` | the matching observed display base, fixed 320×200 RGBA dimensions, `rgba_format=rgba8888-row-major`, and bitplane/RGBA-frame SHA-256 values |
 | `audio-checkpoint` | sample rate, channel/frame count, `pcm_format=s16le-interleaved`, and PCM SHA-256 value |
 

@@ -606,6 +606,7 @@ bool validate_deuteros_amiga_title_bridge_events(
 bool validate_deuteros_amiga_title_display_events(
     const std::filesystem::path& path, const std::uintmax_t expected_size,
     const std::string_view expected_sha256,
+    const std::string_view expected_input_timeline_sha256,
     DeuterosAmigaTitleDisplayReferenceTraceDiagnostics& diagnostics, std::string& error) {
     std::uintmax_t observed_size = 0;
     if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
@@ -629,7 +630,8 @@ bool validate_deuteros_amiga_title_display_events(
     }
     const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     if (stream.bad()
-        || !validate_deuteros_amiga_title_display_reference_events(contents, diagnostics, error)) {
+        || !validate_deuteros_amiga_title_display_reference_events(
+            contents, diagnostics, error, expected_input_timeline_sha256)) {
         if (stream.bad()) error = "Unable to read reference trace events";
         return false;
     }
@@ -950,7 +952,8 @@ ReferenceTraceValidation validate_reference_trace(
                         deuteros_amiga_diagnostics, error)
                     : deuteros_amiga_title_display_v4
                         ? validate_deuteros_amiga_title_display_events(events_path, event_size,
-                            fields.at("event_sha256"), deuteros_amiga_title_display_diagnostics, error)
+                            fields.at("event_sha256"), fields.at("input_timeline_sha256"),
+                            deuteros_amiga_title_display_diagnostics, error)
                     : deuteros_amiga_title_bridge_v3
                         ? validate_deuteros_amiga_title_bridge_events(events_path, event_size,
                             fields.at("event_sha256"), deuteros_amiga_title_bridge_diagnostics, error)
