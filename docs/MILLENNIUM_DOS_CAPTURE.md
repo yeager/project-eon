@@ -207,6 +207,35 @@ state. The trace is never replayed and neither return word is supplied to Eon
 runtime code. The archive was rehashed unchanged before and after the run and
 the FUSE mount was unmounted; raw outputs and all preimages remain external.
 
+### Explicit keyboard-delivery probes (not input evidence)
+
+Two further private probes used DOSBox-X's built-in `AUTOTYPE` mapper command
+to schedule one ordinary `Enter` keypress after, respectively, five and
+fifteen seconds. Both runs used the same normal-core recorder, a freshly
+mounted `archivemount -o ro` view of the supplied archive, and a 28--30 second
+host timeout. The archive SHA-256 was unchanged before and after each run;
+each FUSE mount was `ro,nosuid,nodev` and was unmounted immediately afterwards.
+
+Neither probe is admitted as an input capture. Both produced exactly the
+existing five-event candidate stream (SHA-256
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`) and
+the existing four raw return observations (SHA-256
+`4f26dcaa3320de13d3118f202bf5cad2750b68a887969e7f44d311b361a988e6`). In
+particular, neither emitted the recorder's bounded `TITLES.EXE:$0d0a` input
+poll, `$1a12` exit, or `MILL.COM:$0337` EXEC observation. The current
+headless recorder has no independent host-side delivery acknowledgement for
+that mapper request, so identical output must not be interpreted as proof
+that the key reached the original program, was polled, was accepted, or chose
+any title/game action.
+
+The private command timelines, raw files, and compressed emulator logs remain
+outside this repository. The emulator repeatedly reported an x86 segment
+limit violation while the title wrapper remained within its existing private
+ABI boundary. That diagnostic does not establish a game fault or an input
+semantic. A future input capture must first provide a reviewed delivery
+receipt and a trace schema that binds a real poll/result/frame sequence; Eon
+does not retry these two timings as a substitute.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
