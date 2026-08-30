@@ -220,7 +220,7 @@ def main() -> int:
             f"expected {sorted(expected_reported_releases)}, got {sorted(reported_releases)}"
         )
     expected_platform_admission = {
-        "PLATFORM ADMISSION  Millennium 2.2 / DOS / RELEASE SELECTION REQUIRED / RECOVERED PATH / 2 verified original languages",
+        "PLATFORM ADMISSION  Millennium 2.2 / DOS / READY / RECOVERED PATH / 2 verified original languages; English default",
         "PLATFORM ADMISSION  Millennium 2.2 / Amiga / READY / RECOVERED PATH / 1 verified original language",
         "PLATFORM ADMISSION  Millennium 2.2 / Atari ST / READY / BOOTSTRAP ONLY / 1 verified original language",
         "PLATFORM ADMISSION  Deuteros / Amiga / READY / RECOVERED PATH / 1 verified original language",
@@ -523,18 +523,20 @@ def main() -> int:
             "ambiguous direct launch did not stop before selecting a platform:\n"
             f"{ambiguous_start.stdout}\n{ambiguous_start.stderr}"
         )
-    ambiguous_edition_start = subprocess.run(
-        (str(executable), "--data", str(data_directory), "--game", "millennium", "--platform", "dos"),
-        env=environment, check=False, capture_output=True, text=True,
-    )
-    if (ambiguous_edition_start.returncode != 4
-            or "multiple verified original-language releases" not in ambiguous_edition_start.stderr
-            or "no edition fallback was selected" not in ambiguous_edition_start.stderr
-            or "SDL_Init" in ambiguous_edition_start.stderr):
-        raise SystemExit(
-            "ambiguous direct launch did not stop before selecting a release language:\n"
-            f"{ambiguous_edition_start.stdout}\n{ambiguous_edition_start.stderr}"
+    # English is the stable default for a selected platform when present.
+    # The process must reach SDL rather than fail as if Spanish had been
+    # silently selected; an explicit --release-language es remains tested
+    # separately above.
+    try:
+        subprocess.run(
+            (str(executable), "--data", str(data_directory), "--game", "millennium",
+                "--platform", "dos", "--presentation", "original"),
+            env=environment, check=False, capture_output=True, text=True, timeout=2,
         )
+    except subprocess.TimeoutExpired:
+        pass
+    else:
+        raise SystemExit("Millennium DOS did not enter its SDL loop with the English default release")
     starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
     for presentation in ("original", "modern"):
         for game, platform in (
@@ -544,11 +546,10 @@ def main() -> int:
             ("deuteros", "amiga"),
             ("deuteros", "atari-st"),
         ):
-            language = ("--release-language", "en") if (game, platform) == ("millennium", "dos") else ()
             starts.append((
                 f"{game}/{platform}/{presentation}",
                 (str(executable), "--data", str(data_directory), "--game", game,
-                    "--platform", platform, *language, "--presentation", presentation),
+                    "--platform", platform, "--presentation", presentation),
             ))
     for name, command in starts:
         try:

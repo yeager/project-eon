@@ -191,9 +191,9 @@ int inspect_millennium_dos_save(const std::filesystem::path& path) {
 enum class Screen { menu, launching };
 // The launcher deliberately separates the three choices into pages.  A game
 // card cannot accidentally start whichever platform happened to be selected.
-// Where a platform has multiple original-language releases, a separate
-// release card records that identity before the profile page records Original,
-// Modern, or a user-tuned Modern launch.
+// English is the default original edition for a selected platform when it is
+// installed; an exceptional multi-language platform with no English edition
+// still exposes release cards before Original, Modern, or a tuned launch.
 enum class LauncherPage { games, platforms, releases, profiles };
 
 const eon::Translator* active_translator = nullptr;
@@ -603,7 +603,12 @@ void report_platform_admission(const std::vector<eon::ReleaseArchive>& releases)
             std::cout << "PLATFORM ADMISSION  " << eon::name(game) << " / "
                 << eon::name(platform) << " / " << admission << " / " << coverage << " / "
                 << languages.size() << " verified original "
-                << (languages.size() == 1 ? "language" : "languages") << '\n';
+                << (languages.size() == 1 ? "language" : "languages");
+            if (languages.size() > 1
+                && std::find(languages.begin(), languages.end(), "en") != languages.end()) {
+                std::cout << "; English default";
+            }
+            std::cout << '\n';
         }
     }
 }
@@ -3071,18 +3076,18 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
         return candidate.game == eon::Game::millennium && candidate.platform == eon::Platform::dos
             && candidate.language == "es";
     });
-    // A caller reaches this loader only after the CLI or a release card has
-    // fixed a language identity.  Refusing an omitted identity prevents the
-    // old English-first convenience path from becoming a silent edition
-    // fallback when both DOS releases are present.
-    if (!requested_release_language || (*requested_release_language != "en"
+    // A caller normally reaches this loader after the CLI or card route has
+    // fixed a language identity. An omitted identity may default only to the
+    // installed English DOS release; other languages remain explicit.
+    if (requested_release_language && (*requested_release_language != "en"
         && *requested_release_language != "es")) return std::nullopt;
     if (release == releases.end() && spanish_release == releases.end()) return std::nullopt;
     try {
         // A requested original language is a media identity, not a UI
         // translation preference.  It selects only that hash-verified
         // edition and never falls back across editions.
-        const bool use_spanish = *requested_release_language == "es";
+        const bool use_spanish = requested_release_language
+            && *requested_release_language == "es";
         if (use_spanish) {
             if (spanish_release == releases.end()) return std::nullopt;
             // The Spanish edition is an original FAT12 floppy. Its P00
@@ -3511,9 +3516,12 @@ int main(int argc, char** argv) {
     if (request.game && !request.release_language) {
         const auto languages = eon::available_release_languages(
             releases, *request.game, *request.platform);
-        if (languages.size() > 1) {
-            std::cerr << "The selected game and platform have multiple verified original-language releases. "
-                         "Pass --release-language to select one explicitly; no edition fallback was selected.\n";
+        if (!languages.empty()
+            && !eon::select_available_release_language(releases, *request.game, *request.platform,
+                std::nullopt)) {
+            std::cerr << "The selected game and platform have multiple verified original-language releases, "
+                         "but no English default. Pass --release-language to select one explicitly; "
+                         "no edition fallback was selected.\n";
             return 4;
         }
     }
@@ -3977,9 +3985,8 @@ int main(int argc, char** argv) {
         return true;
     };
     const auto advance_after_platform_selection = [&] {
-        // A platform can have one immutable edition or several. Do not let
-        // the profile cards start the latter until its release-language card
-        // has recorded a choice.
+        // English is selected automatically when it exists. A multi-language
+        // platform without English remains intentionally explicit.
         launcher_page = active_release_language ? LauncherPage::profiles : LauncherPage::releases;
     };
     const auto choose_profile_card = [&](const ProfileChoice choice) {

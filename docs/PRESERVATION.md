@@ -173,9 +173,11 @@ failures auditable while preserving the strict content-addressed boundary.
 
 For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
 rehashed game/platform card state. `READY` has exactly one verified original
-language; `RELEASE SELECTION REQUIRED` has several and cannot launch until a
-specific identity is selected. Filtered reports omit this aggregate deliberately:
-their scope cannot establish whether an unprinted sibling language is present.
+language, or has English among its verified languages and therefore uses the
+documented English default. `RELEASE SELECTION REQUIRED` has several languages
+but no English and cannot launch until a specific identity is selected.
+Filtered reports omit this aggregate deliberately: their scope cannot
+establish whether an unprinted sibling language is present.
 The report is derived from scanner identities only and does not execute Atari
 ST GEMDOS/XBIOS services, callbacks, or guest code.
 
@@ -3882,20 +3884,21 @@ The original-media selector is separate from Project Eon's launcher locale:
 `--release-language es` with `--game millennium --platform dos` selects only
 this FAT12 edition. It never maps a Spanish UI locale onto English media or
 falls back to English if the Spanish hash is absent. When both DOS editions
-are installed, the card menu presents an explicit original-release card and
-does not select either language until the user makes that choice.
+are installed and no original language is selected, English is the documented
+default for that already selected DOS platform; Spanish remains an explicit
+hash-bound `--release-language es` choice.
 
 ### Launcher platform-card admission
 
 Platform cards are driven only by the scanner's hash-verified
 `ReleaseArchive` identities. A platform with no such identity is visibly
-unavailable and cannot advance or launch. A platform with more than one
-verified original language is marked **release selection required**: entering
-the card may reveal those immutable release cards, but the profile page and
-launch action remain unavailable until one identity is selected. A card is
-directly startable only when it has exactly one verified language identity.
-This keeps an unrecognised, incomplete, or ambiguous real-media candidate
-from becoming an implicit Atari ST (or other platform) fallback.
+unavailable and cannot advance or launch. When English is present it is the
+default exact language identity for the already selected game/platform, even
+when other verified editions are available; explicit language selection stays
+strictly hash-bound. Only a multi-language platform without English is marked
+**release selection required**. This keeps an unrecognised, incomplete, or
+ambiguous real-media candidate from becoming an implicit Atari ST (or other
+platform) fallback.
 
 Mouse and touch cards share this exact admission route. On iPadOS an
 `SDL_EVENT_FINGER_DOWN` normalized coordinate is converted through the active
