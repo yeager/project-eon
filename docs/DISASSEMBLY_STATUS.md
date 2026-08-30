@@ -57,13 +57,17 @@ proves reachability, code/data classification, an ABI result, or gameplay.
 | --- | --- | --- | --- | ---: |
 | Millennium DOS English | `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE`; flat 8086 candidate origins `$0100` | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `3664163eb193c7df0d4040e674a2af1499b11579224ffea091086450b3545e42` | 52,236 |
 | Millennium Amiga English Defjam | system ADF `+0x16400`, length `0x2c000` → `$68000` | `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
+| Millennium Atari ST English Equinox | `MILENIUM.TOS` PRG TEXT+DATA, file `+0x1c`, 49,010 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548` | 17,519 |
 | Deuteros Amiga English clean Disk 1 | boot/bootstrap/main/title loaded spans; M68000 origins from the validated load plan | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `db4379bb4f50cb18f9ef72fdc1066796d5a8621a798e519d730f5282610c1791` | 162,970 |
 | Deuteros Atari ST English Replicants Disk 1 | raw disk `+0x4ec00`, length `0x1200` → `$1200` | `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `4c4bd8add9873e1ab2a52ba0d23a9c225005a7a6d2ecb7435f24191f32b88c35` | 1,979 |
 
-These reports cover only source spans with an independently established CPU
-and load address. Millennium Atari ST's `MILENIUM.TOS` and Millennium Amiga's
-opaque transformed raw stage remain intentionally outside this table until a
-loader result establishes their runtime image and entry relationship.
+These reports cover source spans with an independently established CPU. Most
+also have a runtime load address. The Millennium Atari ST PRG is the explicit
+exception: its complete TEXT+DATA listing uses image-relative offsets because
+the original GEMDOS relocation and actual load base are not observed. It must
+never be read as a runtime address map. Millennium Amiga's opaque transformed
+raw stage remains intentionally outside this table until a loader result
+establishes its runtime image and entry relationship.
 
 ## Variant separation
 
@@ -137,6 +141,22 @@ byte-identified loaded boot/bootstrap/main/title range and labels every result
 code/data-unclassified until a caller-connected map or trace proves otherwise.
 Undecodable bytes remain explicit `.byte` records, so a decoder stop cannot
 silently reduce byte coverage.
+
+For a FAT12 Atari ST PRG whose GEMDOS load base remains unknown,
+`tools/analyze_atari_st_prg.py` reads an exact nested disk member and its named
+root-file entry in memory. It requires both disk and PRG hashes, then emits a
+full TEXT+DATA report with **image-relative** offsets. It does not apply PRG
+relocations or convert those offsets to runtime addresses:
+
+```sh
+python3 tools/analyze_atari_st_prg.py \
+  --archive /path/to/Millennium-Return-to-Earth_Atari-ST_EN.zip \
+  --nested-member 'Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].zip' \
+  --disk-member 'Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].st' \
+  --disk-sha256 3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7 \
+  --program-sha256 4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686 \
+  --output /home/user/.cache/project-eon-tools/millennium-atari-prg.md
+```
 
 For an Atari ST raw stage (or any other range with an independently proven
 disk-to-RAM mapping), `tools/disassemble_m68k_range.py` requires the exact
