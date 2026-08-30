@@ -72,6 +72,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         with temporary_directory() as directory:
             receipt = Path(directory) / "host-input-receipt.txt"
             self.assertEqual(TOOL.input_receipt_status(receipt), "host_input_receipt=absent\n")
+            receipt.write_bytes(b"")
+            self.assertEqual(TOOL.input_receipt_status(receipt), "host_input_receipt=empty\n")
             observed = b"host-input 1 frame=2 line=3 action=key state=down\n"
             receipt.write_bytes(observed)
             status = TOOL.input_receipt_status(receipt)
@@ -80,6 +82,10 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             receipt.unlink()
             receipt.symlink_to("missing")
             with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.input_receipt_status(receipt)
+            receipt.unlink()
+            receipt.write_bytes(b"x" * (TOOL.MAX_INPUT_RECEIPT_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.input_receipt_status(receipt)
 
 
