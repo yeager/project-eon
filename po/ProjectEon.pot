@@ -359,6 +359,58 @@ msgid "UNKNOWN PLATFORM"
 msgstr ""
 
 #: src/main.cpp
+msgid "DEVELOPER DIAGNOSTICS"
+msgstr ""
+
+#: src/main.cpp
+msgid "OPEN"
+msgstr ""
+
+#: src/main.cpp
+msgid "MODERN RUNTIME DIAGNOSTICS"
+msgstr ""
+
+#: src/main.cpp
+msgid "F10 / ESC: BACK TO SETTINGS"
+msgstr ""
+
+#: src/main.cpp
+msgid "RELEASE IDENTITY"
+msgstr ""
+
+#: src/main.cpp
+msgid "RECOVERY MAP BOUNDARIES"
+msgstr ""
+
+#: src/main.cpp
+msgid "TRACE ADMISSION"
+msgstr ""
+
+#: src/main.cpp
+msgid "NOT LOADED"
+msgstr ""
+
+#: src/main.cpp
+msgid "RENDERER SETTINGS"
+msgstr ""
+
+#: src/main.cpp
+msgid "FRAME PACING"
+msgstr ""
+
+#: src/main.cpp
+msgid "SDL VSYNC: ON"
+msgstr ""
+
+#: src/main.cpp
+msgid "SDL VSYNC: OFF"
+msgstr ""
+
+#: src/main.cpp
+msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr ""
+
+#: src/main.cpp
 msgid "SELECT AN ORIGINAL RELEASE"
 msgstr ""
 
