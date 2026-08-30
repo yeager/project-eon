@@ -77,11 +77,12 @@ recorder-side input are not admissible controls.
 
 The external source is clean at the reviewed tag before the local probe patch.
 Its Linux configuration needs the normal FS-UAE development dependencies. On
-the current host, an out-of-tree cache build passed autoconf and the unrelated
-MPEG/CDTV features can be disabled with `--without-libmpeg2 --disable-cdtv`,
-but configuration stops because OpenAL development headers and its pkg-config
-entry are absent. No system package was installed to bypass this boundary, no
-patched binary ran, and no raw capture was created.
+the current host, the reviewed source now configures and builds out of tree
+with `--without-libmpeg2 --disable-cdtv` using OpenAL Soft 1.24.2 and gettext
+tools built/extracted only beneath `/home/yeager/.cache/project-eon-tools/`.
+No system package was installed, and neither dependency is part of Project
+Eon or a release artifact. This clears the build prerequisite only: no raw
+capture has yet been created or admitted.
 
 When the external build prerequisites are available, review the complete diff
 against the exact commit above, build outside the checkout and game-media
