@@ -16,6 +16,8 @@ class DisassemblyInventoryTests(unittest.TestCase):
             self.assertIn(row["cpu"], {"i8086", "m68000"})
             self.assertTrue(row["unresolved"])
             self.assertTrue(row["coverage"])
+            self.assertIn(row["start_profile_id"], row["coverage"])
+            self.assertEqual(profiles[row["start_profile_id"]]["release_sha256"], row["release_sha256"])
             for profile_id in row["coverage"]:
                 self.assertEqual(profiles[profile_id]["release_sha256"], row["release_sha256"])
 
