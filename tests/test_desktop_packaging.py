@@ -5,8 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import subprocess
-import tempfile
 import unittest
+
+from eon_test_paths import temporary_directory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,7 +96,7 @@ class DesktopPackagingTests(unittest.TestCase):
         # Linux CI cannot execute Apple's inspection tools.  Model their small,
         # documented text interface here so the verifier's decision logic is
         # covered without needing a macOS runner or any game media.
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = Path(temporary)
             app = root / "ProjectEon.app"
             executable = app / "Contents" / "MacOS" / "ProjectEon"
