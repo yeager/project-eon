@@ -176,8 +176,9 @@ The launcher UI is translated through the portable gettext-style catalogs in
 [`po/`](po/README.md). It currently ships Arabic, German, Greek, British
 English, Spanish, Finnish, French, Hindi, Italian, Japanese, Korean, Dutch,
 Norwegian, Polish, Brazilian Portuguese, Russian, Swedish, Turkish, Ukrainian,
-and Simplified Chinese. Select a launcher language with `--language sv` (or
-`-l sv`); without it, Project Eon follows `LC_ALL`, `LC_MESSAGES`, then `LANG`.
+and Simplified Chinese. English is the default launcher language. Select a
+launcher language with `--language sv` (or `-l sv`) to opt into another
+catalog.
 Only Project Eon's own UI is translated—original game text remains sourced from
 the selected original media. All 20 UTF-8 catalogs are rendered through the
 bundled, hash-reviewed SDL_ttf/Noto fallback chain; Project Eon never selects a

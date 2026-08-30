@@ -27,6 +27,5 @@ private:
 // Turns BCP-47/POSIX spellings such as en-GB.UTF-8 into the PO filename stem
 // "en_GB", retaining a supplied regional catalog before generic fallback.
 [[nodiscard]] std::string normalize_language(std::string_view language);
-[[nodiscard]] std::string language_from_environment();
 
 } // namespace eon

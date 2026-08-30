@@ -1,7 +1,6 @@
 #include "i18n.hpp"
 
 #include <cctype>
-#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -56,16 +55,6 @@ std::string normalize_language(std::string_view language) {
                                             : static_cast<char>(std::tolower(character)));
     }
     return !normalized.empty() && normalized.back() != '_' ? normalized : std::string{};
-}
-
-std::string language_from_environment() {
-    for (const char* variable : {"LC_ALL", "LC_MESSAGES", "LANG"}) {
-        if (const char* value = std::getenv(variable); value && *value) {
-            const auto language = normalize_language(value);
-            if (!language.empty() && language != "c" && language != "posix") return language;
-        }
-    }
-    return "en";
 }
 
 Translator Translator::from_po_file(const std::filesystem::path& path) {

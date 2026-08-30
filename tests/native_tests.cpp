@@ -1222,6 +1222,7 @@ int main() {
         const auto defaults = eon::parse_command_line(1, args);
         assert(defaults.request && defaults.request->data_directory_is_default);
         assert(!defaults.request->data_directory.empty());
+        assert(defaults.request->language == "en");
         char data_option[] = "--data";
         char custom_path[] = "original-media";
         char* explicit_args[] = {program, data_option, custom_path};
