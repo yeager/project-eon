@@ -4030,6 +4030,14 @@ facts anchored in the original COM bytes, not an emulation contract: Project
 Eon does not invoke either DOS service, supply a carry or AL result, assume a
 child return, or run either target's unrecovered ABI.
 
+The three exact Spanish FAT12 programs (`IBM.COM`, `TITLES.EXE`, and
+`2200AD.EXE`) now have a joint byte-complete linear candidate report. Its
+external report SHA-256 is
+`c669eae3731eefdeec7d4872e320f09208746ffba3666657dc2c5f3c1b8ab257` (29,510
+lines). Each entry uses the COM-style `$0100` candidate origin, but the report
+does not choose DOS/private/BIOS return values, child status, code/data
+classification, input semantics, or a game state.
+
 Spanish `TITLES.EXE` is separately accepted only at its own SHA-256 above. Its
 own bytes retain entry `$1b80`, private wrapper `$0122`, and post-title
 `$1968 -> $1931`: five AX=`$0013` private calls followed by helper `$1917`.

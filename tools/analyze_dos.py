@@ -59,12 +59,89 @@ def disassemble(data: bytes, address: int, offset: int, count: int = 96,
             for instruction in decoder.disasm(data[offset : offset + count], address)]
 
 
+def _little16(data: bytes, offset: int) -> int:
+    if offset < 0 or offset + 2 > len(data):
+        raise ValueError("truncated FAT12 word")
+    return int.from_bytes(data[offset:offset + 2], "little")
+
+
+def _little32(data: bytes, offset: int) -> int:
+    if offset < 0 or offset + 4 > len(data):
+        raise ValueError("truncated FAT12 longword")
+    return int.from_bytes(data[offset:offset + 4], "little")
+
+
+def read_fat12_members(image: bytes, names: list[str]) -> list[tuple[str, bytes]]:
+    """Read only explicitly named 8.3 root files from a bounded FAT12 image."""
+    if len(image) < 512:
+        raise ValueError("FAT12 image is too short")
+    sector_bytes = _little16(image, 11)
+    sectors_per_cluster = image[13]
+    reserved = _little16(image, 14)
+    fat_count = image[16]
+    root_entries = _little16(image, 17)
+    total_sectors = _little16(image, 19) or _little32(image, 32)
+    sectors_per_fat = _little16(image, 22)
+    if (sector_bytes not in {512, 1024, 2048} or not sectors_per_cluster
+            or not reserved or not fat_count or not root_entries or not total_sectors
+            or not sectors_per_fat or total_sectors * sector_bytes > len(image)):
+        raise ValueError("invalid FAT12 BIOS parameter block")
+    fat_offset = reserved * sector_bytes
+    root_offset = (reserved + fat_count * sectors_per_fat) * sector_bytes
+    root_bytes = root_entries * 32
+    root_sectors = (root_bytes + sector_bytes - 1) // sector_bytes
+    data_offset = root_offset + root_sectors * sector_bytes
+    if root_offset + root_bytes > len(image) or data_offset > len(image):
+        raise ValueError("FAT12 regions lie outside image")
+    entries: dict[str, tuple[int, int]] = {}
+    for index in range(root_entries):
+        offset = root_offset + index * 32
+        first, attributes = image[offset], image[offset + 11]
+        if first == 0:
+            break
+        if first == 0xe5 or attributes == 0x0f or attributes & 0x18:
+            continue
+        stem = image[offset:offset + 8].rstrip(b" ").decode("ascii", "strict")
+        extension = image[offset + 8:offset + 11].rstrip(b" ").decode("ascii", "strict")
+        name = stem + ("." + extension if extension else "")
+        entries[name.upper()] = (_little16(image, offset + 26), _little32(image, offset + 28))
+    result: list[tuple[str, bytes]] = []
+    cluster_bytes = sectors_per_cluster * sector_bytes
+    for requested in names:
+        entry = entries.get(requested.upper())
+        if not entry:
+            raise ValueError(f"exact FAT12 member is unavailable: {requested}")
+        cluster, size = entry
+        if cluster < 2:
+            raise ValueError(f"invalid FAT12 first cluster: {requested}")
+        data = bytearray()
+        visited: set[int] = set()
+        while len(data) < size:
+            if cluster < 2 or cluster >= 0xff8 or cluster in visited:
+                raise ValueError(f"invalid or cyclic FAT12 chain: {requested}")
+            visited.add(cluster)
+            offset = data_offset + (cluster - 2) * cluster_bytes
+            if offset + cluster_bytes > len(image):
+                raise ValueError(f"FAT12 cluster outside image: {requested}")
+            data.extend(image[offset:offset + min(cluster_bytes, size - len(data))])
+            if len(data) < size:
+                fat_entry = fat_offset + cluster + cluster // 2
+                value = _little16(image, fat_entry)
+                cluster = value & 0x0fff if cluster % 2 == 0 else value >> 4
+        result.append((requested, bytes(data)))
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path, nargs="?",
                         help="Read-only DOS directory (legacy investigator input)")
     parser.add_argument("--archive", type=Path,
                         help="Original outer ZIP; requires one or more exact --member paths")
+    parser.add_argument("--fat12-archive", type=Path,
+                        help="Original ZIP with one exact FAT12 --fat12-member image")
+    parser.add_argument("--fat12-member",
+                        help="Exact FAT12 image member inside --fat12-archive")
     parser.add_argument("--member", action="append", default=[],
                         help="Exact EXE/COM path inside --archive; repeat for every program")
     parser.add_argument("--complete-linear", action="store_true",
@@ -72,20 +149,30 @@ def main() -> None:
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     archive_mode = args.archive is not None
+    fat12_archive_mode = args.fat12_archive is not None
     directory_mode = args.directory is not None
-    if archive_mode == directory_mode:
-        raise SystemExit("Specify exactly one directory or --archive")
-    if archive_mode and not args.member:
-        raise SystemExit("--archive requires one or more exact --member paths")
+    if sum((archive_mode, fat12_archive_mode, directory_mode)) != 1:
+        raise SystemExit("Specify exactly one directory, --archive, or --fat12-archive")
+    if (archive_mode or fat12_archive_mode) and not args.member:
+        raise SystemExit("archive modes require one or more exact --member names")
+    if fat12_archive_mode != (args.fat12_member is not None):
+        raise SystemExit("--fat12-archive requires --fat12-member")
     if directory_mode:
         sources = [(path.name, path.read_bytes()) for path in sorted(
             [*args.directory.glob("*.EXE"), *args.directory.glob("*.COM")])]
-    else:
+    elif archive_mode:
         try:
             with ZipFile(args.archive) as archive:
                 sources = [(member, archive.read(member)) for member in args.member]
         except (KeyError, OSError, ValueError) as error:
             raise SystemExit(f"Unable to read exact DOS archive member: {error}") from error
+    else:
+        try:
+            with ZipFile(args.fat12_archive) as archive:
+                image = archive.read(args.fat12_member)
+            sources = read_fat12_members(image, args.member)
+        except (KeyError, OSError, ValueError) as error:
+            raise SystemExit(f"Unable to read exact FAT12 DOS members: {error}") from error
     lines = ["# Generated Millennium DOS binary report", ""]
     for name, data in sources:
         report = describe_bytes(Path(name).name, data)
