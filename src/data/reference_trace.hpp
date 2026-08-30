@@ -88,6 +88,15 @@ struct ReferenceTrace {
     // Amiga title-bridge fields.
     std::size_t adapter_mode_read_count = 0;
     std::size_t adapter_overlay_return_count = 0;
+    // v4 Deuteros title-display records are immutable external checkpoints.
+    // Preserve their categories independently so diagnostics do not make a
+    // complete visual/audio evidence chain look like an empty generic trace.
+    std::size_t adapter_display_layout_count = 0;
+    std::size_t adapter_bitplane_layout_count = 0;
+    std::size_t adapter_palette_checkpoint_count = 0;
+    std::size_t adapter_input_checkpoint_count = 0;
+    std::size_t adapter_frame_checkpoint_count = 0;
+    std::size_t adapter_audio_checkpoint_count = 0;
 };
 
 struct ReferenceTraceValidation {

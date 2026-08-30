@@ -1016,7 +1016,13 @@ ReferenceTraceValidation validate_reference_trace(
             : deuteros_amiga_title_bridge_diagnostics.local_return_count,
         deuteros_amiga_title_bridge_diagnostics.dispatch_snapshot_count,
         millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.mode_read_count : 0,
-        millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.adapter_return_count : 0}, {}};
+        millennium_dos_gx_v2 ? millennium_dos_gx_diagnostics.adapter_return_count : 0,
+        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.display_layout_count : 0,
+        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.bitplane_layout_count : 0,
+        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.palette_checkpoint_count : 0,
+        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.input_checkpoint_count : 0,
+        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.frame_checkpoint_count : 0,
+        deuteros_amiga_title_display_v4 ? deuteros_amiga_title_display_diagnostics.audio_checkpoint_count : 0}, {}};
 }
 
 } // namespace eon
