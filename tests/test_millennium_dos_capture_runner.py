@@ -74,12 +74,19 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             original_hash = TOOL.EXPECTED_RECORDER_SHA256
             try:
                 TOOL.EXPECTED_RECORDER_SHA256 = hashlib.sha256(recorder.read_bytes()).hexdigest()
-                TOOL.validate_recorder(recorder)
+                self.assertEqual(TOOL.validate_recorder(recorder),
+                                 (TOOL.EXPECTED_RECORDER_SHA256, recorder.stat().st_size))
                 TOOL.EXPECTED_RECORDER_SHA256 = "0" * 64
                 with self.assertRaisesRegex(TOOL.CaptureError, "reviewed DOSBox-X"):
                     TOOL.validate_recorder(recorder)
             finally:
                 TOOL.EXPECTED_RECORDER_SHA256 = original_hash
+
+    def test_identity_status_retains_the_complete_capture_preimage(self) -> None:
+        for name in ("source_release", "recorder", "configuration"):
+            status = TOOL.identity_status(name, ("a" * 64, 123))
+            self.assertEqual(status, f"{name}_sha256=" + "a" * 64
+                             + f"\n{name}_bytes=123\n")
 
     def test_input_receipt_status_never_invents_an_empty_timeline(self) -> None:
         with temporary_directory() as directory:

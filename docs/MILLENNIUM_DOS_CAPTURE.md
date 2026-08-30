@@ -423,9 +423,12 @@ guest-memory input path. `run-status.txt` records whether the recorder
 actually created a host-input receipt, and hashes it only when present; an
 absent or empty receipt remains explicit no-input evidence rather than a
 generated empty timeline. The receipt is also capped at 64 KiB before it is
-hashed. Its output is raw external evidence only and still requires
-assembly, independent validation, and review before any new adapter or runtime
-route can exist.
+hashed. It also binds the post-run source archive, reviewed recorder and exact
+generated configuration by SHA-256/byte count, reports raw event/result files
+under their 8 MiB bounds, and retains only the first 1 MiB of a recorder
+console while hashing/counting its complete transcript. Its output is raw
+external evidence only and still requires assembly, independent validation,
+and review before any new adapter or runtime route can exist.
 
 1. Hash the owner-supplied outer archive before and after the run.  Both
    values must equal the table above.  List the ZIP directory with a read-only
