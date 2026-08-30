@@ -22,18 +22,22 @@ does not enter a recovered game VM, alter input sampling, timing, save data or
 original texture bytes. Cinematic and High contrast are visual presentation
 looks, not accessibility claims or alterations to original pixels.
 
-Output resolution and aspect ratio also remain renderer controls. The viewport
-is centered into the selected ratio, avoiding unintended independent width and
-height stretching. Any individual output, ratio, Scale2x, filtering, scanline
-or frame change switches the panel to Custom. Original has no path to invoke
-these settings.
+Output resolution, aspect ratio and frame pacing also remain renderer controls.
+The viewport is centered into the selected ratio, avoiding unintended
+independent width and height stretching. Pacing offers display VSync (the
+default), a precise 120-FPS presentation cap, or uncapped presentation. The
+cap delays only SDL presentation after a frame has been rendered; it never
+changes a recovered scheduler, original input poll, save byte, or game tick.
+Any individual output, ratio, pacing, Scale2x, filtering, scanline or frame
+change switches the panel to Custom. Original has no path to invoke these
+settings.
 
 The F10 panel also contains a read-only **Developer diagnostics** page. It
 reports only launcher-owned facts: the selected hash identity in abbreviated
 form, game/platform/language, the number of declarative recovery-map
 boundaries for that exact release, whether an external reference trace is
-loaded, the active Modern preset and output controls, and the SDL VSync frame
-pacing policy. GUI launches never load a trace: full trace admission remains
+loaded, the active Modern preset and output controls, and the selected SDL
+frame-pacing policy. GUI launches never load a trace: full trace admission remains
 the separate hash-locked CLI verifier. The page consumes its own keyboard,
 gamepad and touch events and cannot inspect or modify original media, guest
 input, simulation state, or save bytes.

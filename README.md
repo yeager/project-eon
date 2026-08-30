@@ -161,6 +161,9 @@ as the card menu and stays modal. Resolution presets control the SDL window only
 presets are Original 4:3 (the default), Square Pixels 8:5, and Widescreen
 16:9. The renderer fits and centres its viewport within the available region;
 it never crops a recovered frame or independently stretches width and height.
+Frame pacing defaults to display VSync; Custom can instead cap SDL presentation
+at 120 FPS or present uncapped. These choices never change a recovered game
+tick, input poll, original pixel or save byte.
 The panel is input-modal: it consumes all other keyboard and gamepad controls,
 so no launcher command or recovered original-game signal can be sent behind
 it. These controls never become original-game input mappings.

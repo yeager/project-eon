@@ -242,6 +242,10 @@ struct PreviewAnimation {
 // Modern options are renderer state only. They are deliberately independent
 // from original input, media, simulation state and save bytes.
 enum class ModernGraphicsPreset { clean, crt, cinematic, high_contrast, custom };
+// Presentation scheduling is deliberately separate from the recovered clock.
+// It controls when SDL presents already-rendered pixels; it never supplies a
+// tick, input, or elapsed-time value to an original game path.
+enum class RenderPacing { vsync, capped_120, uncapped };
 
 struct ModernGraphicsSettings {
     bool smooth_scaling = true;
@@ -258,6 +262,7 @@ struct ModernGraphicsSettings {
     // dimensions, indexed pixels and simulation state remain unchanged.
     std::size_t output_resolution_index = 0;
     std::size_t aspect_ratio_index = 0;
+    RenderPacing render_pacing = RenderPacing::vsync;
     int focused_option = 0;
 };
 
@@ -281,12 +286,15 @@ constexpr std::array<const char*, 3> display_aspect_names{{
 constexpr std::array<const char*, 5> modern_graphics_preset_names{{
     "CLEAN", "CRT", "CINEMATIC", "HIGH CONTRAST", "CUSTOM",
 }};
-constexpr int modern_graphics_option_count = 9;
+constexpr std::array<const char*, 3> render_pacing_names{{
+    "VSYNC (DISPLAY)", "120 FPS (RENDER ONLY)", "UNCAPPED (RENDER ONLY)",
+}};
+constexpr int modern_graphics_option_count = 10;
 
 // These renderer-space bounds are shared by drawing and touch handling.  A
 // Custom profile must remain usable on an iPad even when no hardware F10 key
 // is attached; they are Eon's own chrome, never a game input surface.
-constexpr SDL_FRect modern_graphics_popup_bounds{356, 76, 568, 594};
+constexpr SDL_FRect modern_graphics_popup_bounds{356, 32, 568, 680};
 constexpr float modern_graphics_option_first_baseline = 272.0F;
 constexpr float modern_graphics_option_stride = 42.0F;
 
@@ -366,7 +374,6 @@ struct ModernRuntimeDiagnostics {
     std::size_t recovery_boundary_count = 0;
     std::vector<RecoveryFunction> recovery_functions;
     std::string trace_admission = "NOT LOADED";
-    bool sdl_vsync = true;
 };
 
 [[nodiscard]] std::string truncated_identity_hash(const std::string_view hash) {
@@ -665,7 +672,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 212, tr("UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"));
     draw_text(renderer, 390, 232, tr("TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"));
     constexpr std::array<const char*, modern_graphics_option_count> names{{
-        "GRAPHICS PRESET", "OUTPUT RESOLUTION", "ASPECT RATIO", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
+        "GRAPHICS PRESET", "OUTPUT RESOLUTION", "ASPECT RATIO", "RENDER PACING", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
         "MODERN ASSET PACK", "DEVELOPER DIAGNOSTICS",
     }};
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
@@ -673,6 +680,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset))),
         std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
         tr(display_aspect_names.at(settings.aspect_ratio_index)),
+        tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing))),
         tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)"),
         tr(settings.smooth_scaling ? "ON" : "OFF"),
         tr(settings.scanlines ? "ON" : "OFF"),
@@ -691,7 +699,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
             + static_cast<float>(index) * modern_graphics_option_stride, values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 650, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
+    draw_text(renderer, 390, 692, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
 }
 
 // This is a separate page of the existing F10 modal, rather than an overlay
@@ -727,7 +735,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
             + " / " + tr("SMOOTH SCALING") + "=" + tr(settings.smooth_scaling ? "ON" : "OFF")
             + " / " + tr("SCANLINES") + "=" + tr(settings.scanlines ? "ON" : "OFF")
             + " / " + tr("MODERN FRAME") + "=" + tr(settings.frame ? "ON" : "OFF")},
-        {"FRAME PACING", tr(diagnostics.sdl_vsync ? "SDL VSYNC: ON" : "SDL VSYNC: OFF")},
+        {"FRAME PACING", tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing)))},
     }};
     for (std::size_t index = 0; index < rows.size(); ++index) {
         const float y = 262.0F + static_cast<float>(index) * 43.0F;
@@ -4136,7 +4144,6 @@ int main(int argc, char** argv) {
         // verifier exits after a complete, hash-locked validation, so no
         // unvalidated trace can appear admitted here.
         diagnostics.trace_admission = "NOT LOADED";
-        diagnostics.sdl_vsync = true; // SDL_SetRenderVSync(renderer, 1), above.
         return diagnostics;
     };
     const auto open_modern_pack_dialog = [&] {
@@ -4171,21 +4178,34 @@ int main(int argc, char** argv) {
         modern_graphics_settings.aspect_ratio_index = direction < 0
             ? (current + count - 1U) % count : (current + 1U) % count;
     };
+    const auto cycle_render_pacing = [&](const int direction) {
+        constexpr auto count = static_cast<int>(RenderPacing::uncapped) + 1;
+        const auto current = static_cast<int>(modern_graphics_settings.render_pacing);
+        const auto next = direction < 0 ? (current + count - 1) % count : (current + 1) % count;
+        modern_graphics_settings.render_pacing = static_cast<RenderPacing>(next);
+        // SDL's swap interval is a presentation setting.  A failed request is
+        // reported to stderr, but does not cause a recovery path to change.
+        if (!SDL_SetRenderVSync(renderer,
+                modern_graphics_settings.render_pacing == RenderPacing::vsync ? 1 : 0)) {
+            std::cerr << "Unable to set renderer frame pacing: " << SDL_GetError() << '\n';
+        }
+    };
     const auto change_modern_graphics_option = [&](const int direction) {
         switch (modern_graphics_settings.focused_option) {
         case 0: cycle_modern_graphics_preset(modern_graphics_settings, direction); break;
         case 1: cycle_output_resolution(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
         case 2: cycle_aspect_ratio(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
-        case 3: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction;
+        case 3: cycle_render_pacing(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
+        case 4: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction;
             mark_modern_graphics_custom(modern_graphics_settings); break;
-        case 4: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling;
+        case 5: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling;
             mark_modern_graphics_custom(modern_graphics_settings); break;
-        case 5: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines;
+        case 6: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines;
             mark_modern_graphics_custom(modern_graphics_settings); break;
-        case 6: modern_graphics_settings.frame = !modern_graphics_settings.frame;
+        case 7: modern_graphics_settings.frame = !modern_graphics_settings.frame;
             mark_modern_graphics_custom(modern_graphics_settings); break;
-        case 7: open_modern_pack_dialog(); break;
-        case 8:
+        case 8: open_modern_pack_dialog(); break;
+        case 9:
             show_recovery_function_map = false;
             recovery_function_map_page = 0;
             show_modern_runtime_diagnostics = true;
@@ -4201,6 +4221,7 @@ int main(int argc, char** argv) {
         if (screen == Screen::menu && launcher_page == LauncherPage::profiles
             && focused_profile_card == 2) custom_profile_ready = true;
     };
+    std::optional<std::uint64_t> last_capped_present_ns;
     bool running = true;
     while (running) {
         // SDL may call the dialog callback on another thread. Consume its
@@ -5112,7 +5133,23 @@ int main(int argc, char** argv) {
                     selected_modern_pack_manifest.has_value(), translator);
             }
         }
+        // The 120-FPS option limits only host presentation.  Recovered
+        // sessions continue to derive their timing from their own real-time
+        // schedulers above; no frame is synthesized and no original tick is
+        // skipped, inserted, or passed through this renderer-only limiter.
+        if (modern_graphics_settings.render_pacing == RenderPacing::capped_120) {
+            constexpr std::uint64_t presentation_period_ns = 1'000'000'000ULL / 120ULL;
+            const auto now_ns = SDL_GetTicksNS();
+            if (last_capped_present_ns && now_ns - *last_capped_present_ns < presentation_period_ns) {
+                SDL_DelayPrecise(presentation_period_ns - (now_ns - *last_capped_present_ns));
+            }
+        }
         SDL_RenderPresent(renderer);
+        if (modern_graphics_settings.render_pacing == RenderPacing::capped_120) {
+            last_capped_present_ns = SDL_GetTicksNS();
+        } else {
+            last_capped_present_ns.reset();
+        }
     }
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);

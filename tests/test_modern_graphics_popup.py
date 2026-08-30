@@ -24,7 +24,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("startup_boundary", diagnostics)
         self.assertIn("recovery_boundary_count", diagnostics)
         self.assertIn("trace_admission", diagnostics)
-        self.assertIn("sdl_vsync", diagnostics)
+        self.assertNotIn("sdl_vsync", diagnostics)
         self.assertIn("truncated_identity_hash", diagnostics)
         self.assertNotIn("save", diagnostics)
 
@@ -38,8 +38,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertIn(label, popup)
         self.assertIn("tr(rows[index].first)", popup)
-        self.assertIn("SDL VSYNC: ON", popup)
-        self.assertIn("SDL VSYNC: OFF", popup)
+        self.assertIn("render_pacing_names", popup)
         self.assertIn("RECOVERY FUNCTION MAP", SOURCE)
         self.assertIn("release_has_recovery_map_entry", SOURCE)
         self.assertIn("startup_boundary_for_release", SOURCE)
@@ -86,6 +85,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("tr(names[index])", popup)
         self.assertIn("tr(modern_graphics_preset_names.at", popup)
         self.assertIn("tr(display_aspect_names.at(settings.aspect_ratio_index))", popup)
+        self.assertIn("tr(render_pacing_names.at", popup)
         self.assertIn('tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)"', popup)
         self.assertIn('tr(settings.smooth_scaling ? "ON" : "OFF")', popup)
         self.assertIn('tr(settings.scanlines ? "ON" : "OFF")', popup)
@@ -107,7 +107,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("load_millennium_dos_title_modern_surface", SOURCE)
 
     def test_popup_controls_only_renderer_options(self) -> None:
-        for option in ("output_resolution_index", "aspect_ratio_index", "smooth_scaling", "scanlines", "frame"):
+        for option in ("output_resolution_index", "aspect_ratio_index", "render_pacing", "smooth_scaling", "scanlines", "frame"):
             self.assertIn(option, SOURCE)
         self.assertIn("SDL_SetWindowSize(window, resolution.width, resolution.height)", SOURCE)
         self.assertIn("aspect_viewport", SOURCE)
@@ -116,6 +116,13 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("width = height * ratio", SOURCE)
         self.assertIn("draw_scanlines", SOURCE)
         self.assertIn("draw_modern_surface_frame", SOURCE)
+        self.assertIn("SDL_SetRenderVSync", SOURCE)
+        self.assertIn("SDL_DelayPrecise", SOURCE)
+        self.assertIn("presentation_period_ns", SOURCE)
+        limiter = SOURCE[SOURCE.index("constexpr std::uint64_t presentation_period_ns"):
+                         SOURCE.index("SDL_RenderPresent(renderer);", SOURCE.index("constexpr std::uint64_t presentation_period_ns"))]
+        self.assertIn("SDL_DelayPrecise", limiter)
+        self.assertNotIn("deuteros_opening->tick", limiter)
 
     def test_named_presets_are_renderer_only_and_manual_controls_become_custom(self) -> None:
         """Modern profiles must not become a hidden simulation or media mode."""
