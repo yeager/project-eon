@@ -33,11 +33,12 @@ and capture the required result boundaries before extending any runtime path.
 
 One additional experimental CPU-only probe is private to the capture cache: it
 opens a distinct `O_CREAT|O_EXCL` result file only when explicitly configured
-and reads `AX` at `MILL.COM:$020e`, the first instruction after the captured
-`CD 21` at `$020c`. It does not write candidate v2 events, mutate guest state,
-or establish a return beyond that one observed instruction. Its raw result and
-the unresolved `$0213` local-call return boundary are recorded in
-[MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#first-raw-result-reconnaissance-not-a-v2-event).
+and reads `AX` at the first post-interrupt instruction for `MILL.COM:$020e`
+and `TITLES.EXE:$0129`, and at the first post-call instruction for
+`MILL.COM:$0213`. It does not write candidate v2 events, mutate guest state,
+or assign a return ABI. Its raw observations and their strict non-admission
+status are recorded in
+[MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#title-private-vector-return-reconnaissance-not-a-v2-event).
 
 The design is locked to the locally inspected DOSBox-X source revision
 `234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapter
