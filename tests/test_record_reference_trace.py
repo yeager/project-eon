@@ -316,6 +316,14 @@ class RecordReferenceTraceTests(unittest.TestCase):
             with self.assertRaises(TOOL.EvidenceError):
                 TOOL.reject_output_path((target.resolve(),), output.resolve())
 
+    def test_rejects_system_temporary_trace_receipts(self):
+        """Assembly staging follows --output, so /tmp must be rejected first."""
+        with temporary_directory() as directory:
+            source = Path(directory) / "external-input"
+            source.write_bytes(b"non-media boundary input")
+            with self.assertRaisesRegex(TOOL.EvidenceError, "/tmp"):
+                TOOL.reject_output_path((source.resolve(),), Path("/tmp/eon-trace-receipt"))
+
     def test_rejects_event_alias_of_original_release(self):
         with temporary_directory() as directory:
             root = Path(directory)
