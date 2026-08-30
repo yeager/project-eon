@@ -1022,7 +1022,8 @@ executables.
 
 When the Amiga Millennium launcher target is selected, Project Eon creates a
 bounded session only for the exact Defjam ADF above. It validates this load
-plan, its shared resident range, resident entry, exact caller-side opaque
+plan, first verifies the whole ADF's SHA-256 identity, then validates its
+shared resident range, resident entry, exact caller-side opaque
 handoff, and the source-only first-stage anchors directly from the original
 disk bytes. The session stops before the opaque first-stage invocation or any
 AmigaOS behavior: the added records are diagnostics, not an attempt to decode
