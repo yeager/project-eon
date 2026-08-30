@@ -3853,9 +3853,16 @@ interpreting, AX), the `$d349` `$da05` read, the GX `+$00ed` `RETF` to
 `$d376`, returns from each of the six call sites `$d376` through `$d385`, and
 the independently observed `$d388` `$da05` read. Both observed byte values
 are opaque lowercase hexadecimal provenance. The trace parser requires the
-exact clean English DOS outer-release hash and reports only counts and
-recovery-map boundaries; it neither creates a session, supplies an observed
-value to it, nor executes or replays any captured event.
+exact clean English DOS outer-release hash and reports recovery-map
+boundaries. A separate admission helper accepts *only* that complete grammar
+after its caller has independently passed `validate_reference_trace` (which
+pins the manifest, event-file size/hash, and source release). It then creates
+a fresh transient session and feeds the three already-validated raw values in
+their recorded order. It rejects partial, reordered, malformed, altered-media,
+or out-of-order input. This is not emulator replay: it executes no original
+instruction, DOS service, private interrupt, or opaque local callee, and it
+stops at the second `$0129` private-INT boundary without drawing a frame or
+starting a title/game session.
 
 ### Millennium DOS GX dispatcher slot 13 boundary
 

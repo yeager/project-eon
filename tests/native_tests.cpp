@@ -48,6 +48,7 @@
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_gx_startup_session.hpp"
+#include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "data/sha256.hpp"
@@ -969,6 +970,13 @@ int main() {
             "event\t9 90 local-return image=2200ad.exe call_pc=0xd385 return_pc=0xd388\n"
             "event\t10 100 mode-read image=2200ad.exe pc=0xd388 address=0xda05 value=0x01\n",
             diagnostics, trace_error));
+        const auto observations = eon::parse_millennium_dos_gx_startup_reference_observations(
+            valid_events, trace_error);
+        assert(observations && observations->private_return_ax == 0x0000
+            && observations->initial_mode_byte == 0x03 && observations->post_overlay_mode_byte == 0x01);
+        const auto rejected_observations = eon::parse_millennium_dos_gx_startup_reference_observations(
+            "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n", trace_error);
+        assert(!rejected_observations);
     }
     // These two records name only the verified caller-side handoffs. They do
     // not model execution, read completion, or a return from the opaque stage.
@@ -3712,6 +3720,32 @@ int main() {
         rejected_gx_repeat_post_overlay_mode = true;
     }
     assert(rejected_gx_repeat_post_overlay_mode);
+    // Admission consumes a complete strict trace into a fresh, call-free
+    // session. The strings are grammar fixtures only, not captured media;
+    // genuine use additionally requires validate_reference_trace provenance.
+    {
+        constexpr std::string_view valid_gx_trace =
+            "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n"
+            "event\t2 20 mode-read image=2200ad.exe pc=0xd349 address=0xda05 value=0x03\n"
+            "event\t3 30 adapter-return image=2200gx.exe pc=0x00ed op=retf return_pc=0xd376\n"
+            "event\t4 40 local-return image=2200ad.exe call_pc=0xd376 return_pc=0xd379\n"
+            "event\t5 50 local-return image=2200ad.exe call_pc=0xd379 return_pc=0xd37c\n"
+            "event\t6 60 local-return image=2200ad.exe call_pc=0xd37c return_pc=0xd37f\n"
+            "event\t7 70 local-return image=2200ad.exe call_pc=0xd37f return_pc=0xd382\n"
+            "event\t8 80 local-return image=2200ad.exe call_pc=0xd382 return_pc=0xd385\n"
+            "event\t9 90 local-return image=2200ad.exe call_pc=0xd385 return_pc=0xd388\n"
+            "event\t10 100 mode-read image=2200ad.exe pc=0xd388 address=0xda05 value=0x01\n";
+        const auto admission = eon::admit_millennium_dos_gx_startup_trace(
+            *game_executable, *gx_overlay, valid_gx_trace);
+        assert(admission.session && admission.error.empty());
+        assert(admission.session->state()
+            == eon::MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary);
+        assert(admission.session->overlay_byte(0x65) == 0x8f);
+        const auto incomplete_admission = eon::admit_millennium_dos_gx_startup_trace(
+            *game_executable, *gx_overlay,
+            "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n");
+        assert(!incomplete_admission.session && !incomplete_admission.error.empty());
+    }
     {
         auto altered_gx_overlay = *gx_overlay;
         altered_gx_overlay[0x90] ^= 0x01;

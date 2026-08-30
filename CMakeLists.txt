@@ -101,6 +101,7 @@ add_executable(project-eon
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_game_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
+    src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp
     src/engine/millennium_atari_bootstrap_session.cpp
     src/engine/millennium_amiga_bootstrap_session.cpp
@@ -258,6 +259,7 @@ if(BUILD_TESTING)
         src/engine/millennium_dos_title_session.cpp
         src/engine/millennium_dos_game_session.cpp
         src/engine/millennium_dos_gx_startup_session.cpp
+        src/engine/millennium_dos_gx_startup_trace_admission.cpp
         src/engine/millennium_dos_save_session.cpp
         src/engine/millennium_atari_bootstrap_session.cpp
         src/engine/millennium_amiga_bootstrap_session.cpp
