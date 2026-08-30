@@ -274,6 +274,8 @@ bool validate_deuteros_amiga_title_bridge_reference_events(
         first = false;
         previous_sequence = sequence;
         previous_tick = tick;
+        diagnostics.last_sequence = sequence;
+        diagnostics.last_tick = tick;
         ++diagnostics.event_count;
     }
     if (segment != Segment::complete) {

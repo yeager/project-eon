@@ -69,9 +69,11 @@ bool validate_deuteros_amiga_title_display_reference_events(
     diagnostics.bridge_event_count = bridge.event_count;
     diagnostics.event_count = bridge.event_count;
     enum class Step { display, planes, palette, input, frame, audio, complete } step = Step::display;
-    std::uint64_t previous_sequence = 0;
-    std::uint64_t previous_tick = 0;
-    bool first = true;
+    // A v4 record is one trace, not independently sortable v3 and v4
+    // fragments. The suffix therefore continues the prefix's envelope.
+    std::uint64_t previous_sequence = bridge.last_sequence;
+    std::uint64_t previous_tick = bridge.last_tick;
+    bool first = false;
     for (std::size_t at = display_start; at < events.size();) {
         const auto end = events.find('\n', at); const auto line = events.substr(at, end - at); at = end + 1U;
         if (line.empty() || line.size() > 4096U || line.find('\r') != std::string_view::npos
@@ -93,14 +95,14 @@ bool validate_deuteros_amiga_title_display_reference_events(
             // longword clear loop at this site; do not admit arbitrary
             // geometry merely because its fields look hexadecimal.
             && fields.at("site") == "0x0001f182" && fields.at("base_pointer_address") == "0x0001f168" && fields.at("bitplane_count") == "0x0004" && fields.at("plane0") == "0x0000b5f0" && fields.at("plane1") == "0x0000d530" && fields.at("plane2") == "0x0000f470" && fields.at("plane3") == "0x000113b0" && fields.at("plane_stride") == "0x1f40" && fields.at("bplcon0") == "0x4200" && fields.at("bpl1mod") == "0x0000" && fields.at("bpl2mod") == "0x0000" && fields.at("ddfstrt") == "0x0038" && fields.at("ddfstop") == "0x00d0" && fields.at("width_pixels") == "0x0140" && fields.at("height_lines") == "0x00c8" && fields.at("bytes_per_row") == "0x0028" && fields.at("modulo") == "0x0000") { accepted = true; step = Step::palette; ++diagnostics.bitplane_layout_count; }
-        else if (step == Step::palette && type == "palette-checkpoint" && exact(fields, {"site", "source_address", "destination_address", "word_count", "rgb4_sha256", "rgba_palette_sha256"})
-            && fields.at("site") == "0x0001eda6" && fields.at("source_address") == "0x0001ed24" && fields.at("destination_address") == "0x00012ecc" && fields.at("word_count") == "0x0014" && fields.at("rgb4_sha256") == "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55" && sha(fields.at("rgba_palette_sha256"))) { accepted = true; step = Step::input; ++diagnostics.palette_checkpoint_count; }
+        else if (step == Step::palette && type == "palette-checkpoint" && exact(fields, {"site", "source_address", "destination_address", "word_count", "rgb4_sha256", "rgba_palette_format", "rgba_palette_sha256"})
+            && fields.at("site") == "0x0001eda6" && fields.at("source_address") == "0x0001ed24" && fields.at("destination_address") == "0x00012ecc" && fields.at("word_count") == "0x0014" && fields.at("rgb4_sha256") == "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55" && fields.at("rgba_palette_format") == "rgba8888-rgb4-expanded-nibbles" && sha(fields.at("rgba_palette_sha256"))) { accepted = true; step = Step::input; ++diagnostics.palette_checkpoint_count; }
         else if (step == Step::input && type == "input-checkpoint" && exact(fields, {"callback_site", "selector_site", "queue_sha256", "input_timeline_sha256"})
             && fields.at("callback_site") == "0x0001f056" && fields.at("selector_site") == "0x0001fe7a" && sha(fields.at("queue_sha256")) && sha(fields.at("input_timeline_sha256"))) { accepted = true; step = Step::frame; ++diagnostics.input_checkpoint_count; }
-        else if (step == Step::frame && type == "frame-checkpoint" && exact(fields, {"display_base", "rgba_width", "rgba_height", "bitplanes_sha256", "rgba_sha256"})
-            && fields.at("display_base") == "0x0000ab00" && fields.at("rgba_width") == "0x0140" && fields.at("rgba_height") == "0x00c8" && fields.at("bitplanes_sha256") == "fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490" && sha(fields.at("rgba_sha256"))) { accepted = true; step = Step::audio; ++diagnostics.frame_checkpoint_count; }
-        else if (step == Step::audio && type == "audio-checkpoint" && exact(fields, {"sample_rate", "channels", "sample_frames", "pcm_sha256"})
-            && hex(fields.at("sample_rate"), 8) && hex(fields.at("channels"), 2) && hex(fields.at("sample_frames"), 8) && sha(fields.at("pcm_sha256"))) { accepted = true; step = Step::complete; ++diagnostics.audio_checkpoint_count; }
+        else if (step == Step::frame && type == "frame-checkpoint" && exact(fields, {"display_base", "rgba_width", "rgba_height", "rgba_format", "bitplanes_sha256", "rgba_sha256"})
+            && fields.at("display_base") == "0x0000ab00" && fields.at("rgba_width") == "0x0140" && fields.at("rgba_height") == "0x00c8" && fields.at("rgba_format") == "rgba8888-row-major" && fields.at("bitplanes_sha256") == "fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490" && sha(fields.at("rgba_sha256"))) { accepted = true; step = Step::audio; ++diagnostics.frame_checkpoint_count; }
+        else if (step == Step::audio && type == "audio-checkpoint" && exact(fields, {"sample_rate", "channels", "sample_frames", "pcm_format", "pcm_sha256"})
+            && hex(fields.at("sample_rate"), 8) && hex(fields.at("channels"), 2) && hex(fields.at("sample_frames"), 8) && fields.at("pcm_format") == "s16le-interleaved" && sha(fields.at("pcm_sha256"))) { accepted = true; step = Step::complete; ++diagnostics.audio_checkpoint_count; }
         if (!accepted) { error = "Deuteros title-display event is outside the v4 ordered raw-observation schema"; return false; }
         ++diagnostics.event_count;
         previous_sequence = sequence;

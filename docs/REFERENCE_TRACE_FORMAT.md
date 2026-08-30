@@ -389,10 +389,10 @@ prefix, followed by exactly one of each of these ordered raw checkpoints:
 | --- | --- |
 | `display-layout` | `site=0x0001eda6`, source/destination addresses, observed display base/list, and a copper-list SHA-256 |
 | `bitplane-layout` | `site=0x0001f182`, observed base pointer, four plane pointers, and the fixed 320×200 / 40-byte-row / zero-modulo geometry with `plane_stride=0x1f40` |
-| `palette-checkpoint` | `site=0x0001eda6`, source/destination, word count, RGB4 and converted RGBA palette SHA-256 values |
+| `palette-checkpoint` | `site=0x0001eda6`, source/destination, word count, RGB4 SHA-256, `rgba_palette_format=rgba8888-rgb4-expanded-nibbles`, and converted RGBA palette SHA-256 values |
 | `input-checkpoint` | callback/selector sites and queue/input-timeline SHA-256 values |
-| `frame-checkpoint` | the matching observed display base, fixed 320×200 RGBA dimensions, and bitplane/RGBA-frame SHA-256 values |
-| `audio-checkpoint` | sample rate, channel/frame count and PCM SHA-256 value |
+| `frame-checkpoint` | the matching observed display base, fixed 320×200 RGBA dimensions, `rgba_format=rgba8888-row-major`, and bitplane/RGBA-frame SHA-256 values |
+| `audio-checkpoint` | sample rate, channel/frame count, `pcm_format=s16le-interleaved`, and PCM SHA-256 value |
 
 The fixed source identities are the clean English outer release
 `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`, system
@@ -405,7 +405,11 @@ four contiguous 8,000-byte planes at `$b5f0`, `$d530`, `$f470`, and `$113b0`.
 It is an admission constraint, not a renderer contract or an inferred title
 mode for other frames.
 
-The schema validates provenance and recorder completeness only. It does not
+The full v4 sequence/tick envelope must continue strictly from the v3 prefix;
+the suffix cannot restart either counter. RGBA is one byte each in R, G, B, A
+order, row-major from top left. RGB4 expands each four-bit component by nibble
+replication (`n * 17`), with opaque alpha. PCM is signed 16-bit little-endian
+interleaved samples. The schema validates provenance and recorder completeness only. It does not
 accept a generated frame, supply a display base or palette, replay audio,
 invoke a callback, or advance a title/game session. Until an independently
 recorded v4 capture exists outside this repository, the runtime remains at its
