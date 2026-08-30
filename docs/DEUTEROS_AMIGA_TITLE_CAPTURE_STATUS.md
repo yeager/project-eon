@@ -69,6 +69,13 @@ the 4,096-record cap then stopped further host output. The raw file remains
 outside the repository. These are reachability observations only, not title,
 input, display, audio, ABI, or reference-trace evidence.
 
+The recorder was then changed to retain at most 128 records per fixed probe
+site, so that a loop cannot exhaust the global budget. A fresh no-input run
+reached exactly 128 records each at `$1fe84`, `$1fe96`, and `$210d4`, and no
+other configured site. It therefore confirms the same bootstrap/loader
+boundary with better sampling, but still supplies no input-to-title transition
+or evidence for any later runtime path.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
