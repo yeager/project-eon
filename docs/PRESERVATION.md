@@ -332,6 +332,15 @@ This validates only that narrow external diagnostic record; no return, driver
 outcome, EXEC, child execution, input result, frame, audio checkpoint, or
 game state is admitted. See [the capture ledger](MILLENNIUM_DOS_CAPTURE.md).
 
+The first subsequent raw result reconnaissance is separately bounded. The
+source bytes continue from `$020c` to `$020e`, and an external normal-core
+probe observed `AX=$2591` at that first post-interrupt instruction. The later
+`CALL $0511` begins at `$0210`; its caller continuation is `$0213`, before
+`AND AL,AL`. The input-free timed probe did not reach `$0213`. This is a
+recorded absence within one bounded run, not proof of a non-return or a reason
+to assign a DOS/private-driver ABI. It remains outside the v2 event grammar
+and Project Eon runtime.
+
 ### English Millennium DOS startup prefix
 
 The clean English `2200AD.EXE` has a caller-connected, hash-locked startup
