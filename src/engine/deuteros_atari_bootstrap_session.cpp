@@ -8,6 +8,11 @@ namespace eon {
 
 DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     std::vector<std::uint8_t> disk_image) {
+    constexpr std::string_view expected_disk_sha256 =
+        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
+    if (to_hex(sha256(disk_image)) != expected_disk_sha256) {
+        throw std::runtime_error("Unsupported Deuteros Atari ST boot media");
+    }
     DeuterosAtariDisk disk(std::move(disk_image));
     boot_ = disk.boot_profile();
     if (!boot_.has_recovered_first_stage) {
