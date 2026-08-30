@@ -10,8 +10,9 @@ import importlib.util
 import hashlib
 import json
 from pathlib import Path
-import tempfile
 import unittest
+
+from eon_test_paths import temporary_directory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,13 +65,13 @@ def write_provenance_preimages(root: Path) -> tuple[Path, Path, Path, dict[str, 
 
 class RecordReferenceTraceTests(unittest.TestCase):
     def test_test_metadata_fixture_preserves_lf_bytes_on_every_host(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path)
             self.assertNotIn(b"\r", path.read_bytes())
 
     def test_metadata_has_no_assembler_owned_fields(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path, event_size="1")
             with self.assertRaises(TOOL.EvidenceError):
@@ -78,7 +79,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                     "game": "millennium", "platform": "dos", "language": "en"})
 
     def test_v2_adapter_cannot_cross_release_identity(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path,
                 format="project-eon-reference-trace-v2",
@@ -89,7 +90,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 "game": "millennium", "platform": "amiga", "language": "en"})
 
     def test_v2_adapter_requires_its_exact_outer_release_identity(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path,
                 format="project-eon-reference-trace-v2",
@@ -100,7 +101,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 "platform": "dos", "language": "en"})
 
     def test_gx_v2_adapter_requires_the_clean_millennium_dos_release(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path,
                 format="project-eon-reference-trace-v2",
@@ -111,7 +112,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
             TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
 
     def test_v3_title_bridge_requires_the_exact_amiga_media_and_stage(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path,
                 format="project-eon-reference-trace-v3",
@@ -124,7 +125,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 "size": 4066771, "game": "deuteros", "platform": "amiga", "language": "en"})
 
     def test_v3_main_copy_loop_requires_the_exact_amiga_media_and_main_stage(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path,
                 format="project-eon-reference-trace-v3",
@@ -146,7 +147,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 TOOL.validate_metadata(TOOL.parse_metadata(path.resolve()), identity)
 
     def test_v5_title_display_metadata_is_bound_but_artifacts_remain_assembler_owned(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             write_metadata(path,
                 format="project-eon-reference-trace-v5",
@@ -184,7 +185,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
             TOOL.metadata_template("unregistered-adapter")
 
     def test_metadata_template_cannot_be_used_as_assembly_metadata(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             path.write_bytes(TOOL.metadata_template("millennium-dos-en-startup-v1").encode("utf-8"))
             with self.assertRaises(TOOL.EvidenceError):
@@ -193,14 +194,14 @@ class RecordReferenceTraceTests(unittest.TestCase):
                     "size": 328383, "game": "millennium", "platform": "dos", "language": "en"})
 
     def test_metadata_read_is_bounded_after_secure_open(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             path = Path(directory) / "metadata.tsv"
             path.write_bytes(b"x" * (TOOL.MAX_METADATA_SIZE + 1))
             with self.assertRaisesRegex(TOOL.EvidenceError, "exceeds"):
                 TOOL.parse_metadata(path.resolve())
 
     def test_assembly_uses_new_directory_and_keeps_source_unchanged(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             root = Path(directory)
             source = root / "owned-release.zip"
             events = root / "external-events.log"
@@ -243,7 +244,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
         # These are deliberately non-game boundary bytes. The test replaces
         # the exact-release registry only inside this process so it can prove
         # assembler ownership without manufacturing or retaining media.
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             root = Path(directory)
             source = root / "owned-release.zip"
             events = root / "external-events.log"
@@ -302,7 +303,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 self.assertEqual((output / filename).read_bytes(), artifact_bytes[filename])
 
     def test_rejects_symlink_and_existing_output(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             root = Path(directory)
             target = root / "target"
             target.write_bytes(b"x")
@@ -316,7 +317,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 TOOL.reject_output_path((target.resolve(),), output.resolve())
 
     def test_rejects_event_alias_of_original_release(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             root = Path(directory)
             source = root / "source"
             metadata = root / "metadata"
@@ -332,7 +333,7 @@ class RecordReferenceTraceTests(unittest.TestCase):
                 TOOL.assemble(arguments)
 
     def test_assembly_rejects_provenance_bytes_that_do_not_match_metadata(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             root = Path(directory)
             source = root / "owned-release.zip"
             events = root / "external-events.log"

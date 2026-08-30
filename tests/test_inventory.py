@@ -1,8 +1,9 @@
 import io
 from pathlib import Path
-import tempfile
 import unittest
 import zipfile
+
+from eon_test_paths import temporary_directory
 
 from eon.inventory import classify, inventory
 
@@ -15,7 +16,7 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(classify("disk.st", bytes(10)), "atari-st-disk")
 
     def test_nested_archive(self):
-        with tempfile.TemporaryDirectory() as directory:
+        with temporary_directory() as directory:
             root = Path(directory)
             nested = io.BytesIO()
             with zipfile.ZipFile(nested, "w") as inner:

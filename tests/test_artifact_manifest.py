@@ -7,8 +7,9 @@ import json
 from pathlib import Path
 import subprocess
 import sys
-import tempfile
 import unittest
+
+from eon_test_paths import temporary_directory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +20,7 @@ REVISION = "0123456789abcdef0123456789abcdef01234567"
 
 class ArtifactManifestTests(unittest.TestCase):
     def test_manifest_records_download_verifiable_bytes_deterministically(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = Path(temporary)
             first = root / "first.bin"
             second = root / "second.bin"
@@ -41,7 +42,7 @@ class ArtifactManifestTests(unittest.TestCase):
             self.assertNotIn(str(root), output.read_text(encoding="utf-8"))
 
     def test_rejects_unsafe_or_ambiguous_inputs(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = Path(temporary)
             artifact = root / "artifact.bin"
             artifact.write_bytes(b"artifact")
@@ -65,7 +66,7 @@ class ArtifactManifestTests(unittest.TestCase):
             self.assertIn("non-symlink regular file", linked.stderr)
 
     def test_verifier_detects_tampering_schema_and_unrecorded_files(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = Path(temporary)
             artifact = root / "artifact.bin"
             artifact.write_bytes(b"verified artifact")

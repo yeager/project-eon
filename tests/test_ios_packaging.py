@@ -2,9 +2,10 @@ import pathlib
 import os
 import shutil
 import subprocess
-import tempfile
 import unittest
 import zipfile
+
+from eon_test_paths import temporary_directory
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -107,7 +108,7 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn("opening user media in place", verifier)
 
     def test_creates_payload_with_relative_output(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             subprocess.run(["bash", str(SCRIPT), str(app), "project-eon.ipa"],
@@ -123,7 +124,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("Payload/ProjectEon.app/Resources/po/zh_CN.po", listing)
 
     def test_archive_verifier_rejects_post_package_media_injection(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             ipa = root / "project-eon.ipa"
@@ -135,7 +136,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("possible original game media", result.stderr)
 
     def test_archive_verifier_rejects_post_package_dynamic_framework_injection(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             ipa = root / "project-eon.ipa"
@@ -149,7 +150,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("unexpected dynamic framework", result.stderr)
 
     def test_archive_verifier_rejects_non_arm64_executable(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             (app / "project-eon").write_bytes(b"not a Mach-O")
@@ -159,7 +160,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertFalse(ipa.exists())
 
     def test_archive_verifier_rejects_arm64_header_without_executable_load_commands(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             # An arm64 magic/cputype prefix alone is not a launchable binary.
@@ -170,7 +171,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertFalse(ipa.exists())
 
     def test_archive_verifier_rejects_hidden_non_system_macho_dependency(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             # LC_LOAD_DYLIB (0x0c) with an @rpath name is a load-time
@@ -198,7 +199,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("non-system dynamic library", result.stderr)
 
     def test_archive_verifier_allows_system_macho_dependency(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             # Static SDL still legitimately uses iPadOS's system UIKit
@@ -224,7 +225,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertTrue(ipa.is_file())
 
     def test_rejects_incomplete_bundle(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = root / "ProjectEon.app"
             app.mkdir()
@@ -234,7 +235,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("incomplete iPad application", result.stderr)
 
     def test_rejects_original_media(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = root / "ProjectEon.app"
             data = app / "data"
@@ -246,7 +247,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("refusing to package", result.stderr)
 
     def test_rejects_unexpected_dynamic_framework_before_archiving(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             (app / "Frameworks").mkdir()
