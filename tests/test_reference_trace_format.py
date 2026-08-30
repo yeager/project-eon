@@ -59,6 +59,12 @@ class ReferenceTraceFormatTests(unittest.TestCase):
             "media": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
             "stage": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
         },
+        "deuteros-amiga-en-title-display-artifacts-v5": {
+            "game": "deuteros", "platform": "amiga", "language": "en", "size": 4066771,
+            "release": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            "media": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+            "stage": "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
+        },
     }
 
     recovery_boundaries = {
@@ -85,6 +91,9 @@ class ReferenceTraceFormatTests(unittest.TestCase):
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
         ),
         "deuteros-amiga-en-title-display-v4": (
+            "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
+        ),
+        "deuteros-amiga-en-title-display-artifacts-v5": (
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",
         ),
     }
@@ -124,6 +133,21 @@ class ReferenceTraceFormatTests(unittest.TestCase):
                 for boundary in boundaries:
                     self.assertIn(f'"{boundary}"', code)
                     self.assertIn(f"`{boundary}`", documented)
+
+    def test_title_display_v5_requires_real_hash_bound_artifacts_without_runtime_replay(self):
+        code = TRACE_VALIDATOR.read_text(encoding="utf-8")
+        documented = FORMAT.read_text(encoding="utf-8")
+        self.assertIn("validate_deuteros_amiga_title_display_artifacts_v5", code)
+        self.assertIn("input-timeline.txt", code)
+        self.assertIn("copper-list.bin", code)
+        self.assertIn("palette-rgb4.bin", code)
+        self.assertIn("bitplanes.bin", code)
+        self.assertIn("palette-rgba8888.bin", code)
+        self.assertIn("frame-rgba8888.bin", code)
+        self.assertIn("audio-s16le.bin", code)
+        self.assertIn("pcm_size != channels * sample_frames * 2U", code)
+        self.assertIn("artifacts verified; diagnostics only", (ROOT / "src" / "main.cpp").read_text(encoding="utf-8"))
+        self.assertIn("No artifact byte is decoded, rendered, replayed", documented)
 
     def test_documented_dos_schema_includes_the_2200ad_private_wrapper_site(self):
         documented = FORMAT.read_text(encoding="utf-8")

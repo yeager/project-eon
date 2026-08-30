@@ -21,6 +21,17 @@ struct ReferenceTraceBoundary {
     std::string documentation_anchor;
 };
 
+// A capture artifact is provenance-only. It is never decoded, replayed, or
+// made available to a recovered game session; the admission path records only
+// its fixed role, size, and independently rehashed identity.
+struct ReferenceTraceArtifact {
+    std::string role;
+    std::filesystem::path path;
+    std::uint64_t size = 0;
+    std::string sha256;
+    std::string format;
+};
+
 // An external reference trace is preservation evidence, not a save state or
 // an instruction stream for the runtime.  Version 1 deliberately retains
 // only identity and event ordering: Project Eon validates it and reports its
@@ -97,6 +108,7 @@ struct ReferenceTrace {
     std::size_t adapter_input_checkpoint_count = 0;
     std::size_t adapter_frame_checkpoint_count = 0;
     std::size_t adapter_audio_checkpoint_count = 0;
+    std::vector<ReferenceTraceArtifact> artifacts;
 };
 
 struct ReferenceTraceValidation {
