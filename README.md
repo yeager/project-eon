@@ -242,7 +242,7 @@ recording or comparing preservation evidence:
 Audit separately installed Modern art packs only when explicitly requested:
 
 ```sh
-./build/project-eon --data "$HOME/Hämtningar" --inspect --modern-packs /path/to/eon-modern-packs
+./build/project-eon --data "$HOME/Downloads" --inspect --modern-packs /path/to/eon-modern-packs
 ```
 
 `--modern-packs` is valid only with `--inspect` and never has a default search
