@@ -1579,6 +1579,36 @@ int main() {
         assert(route_launch && route_launch->release.sha256
             == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
+        // Cache invalidation is keyed to the complete release provenance,
+        // not card focus or presentation. The SDL layer may therefore safely
+        // retain resources for an identical selection and must revoke them
+        // for a platform, language, or outer-container hash change.
+        eon::LauncherInteractionController source_controller;
+        source_controller.session.focus_game(duplicate_english_releases, eon::Game::millennium);
+        const auto no_change = source_controller.source_identity();
+        assert(!source_controller.source_changed_since(no_change));
+        assert(source_controller.session.choose_release(duplicate_english_releases,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+        assert(source_controller.source_changed_since(no_change));
+        const auto first_identity = source_controller.source_identity();
+        assert(source_controller.session.choose_release(duplicate_english_releases,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+        assert(source_controller.source_changed_since(first_identity));
+        const std::vector<eon::ReleaseArchive> bilingual_identity_releases{
+            {eon::Game::millennium, eon::Platform::amiga, "en",
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", {}},
+            {eon::Game::millennium, eon::Platform::amiga, "es",
+                "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", {}},
+        };
+        eon::LauncherInteractionController language_controller;
+        language_controller.session.focus_game(bilingual_identity_releases, eon::Game::millennium);
+        assert(language_controller.session.choose_release(bilingual_identity_releases,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+        const auto english_identity = language_controller.source_identity();
+        assert(language_controller.session.choose_release(bilingual_identity_releases,
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"));
+        assert(language_controller.source_changed_since(english_identity));
+
         // Presentation and Custom confirmation have the same SDL-free owner
         // as the card route. A Custom card cannot bypass its renderer-only
         // panel, while Original/Modern resolve the identical release identity.
