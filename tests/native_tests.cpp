@@ -1586,6 +1586,8 @@ int main() {
         && loaded_preferences->render_pacing_index == 2
         && loaded_preferences->pixel_reconstruction_index == 0 && loaded_preferences->smooth_scaling
         && loaded_preferences->scanlines && !loaded_preferences->frame);
+    const eon::PresentationPreferences invalid_reconstruction{2, 1, 3, 2, 3, true, true, false};
+    assert(!eon::save_presentation_preferences(preferences_path, invalid_reconstruction));
     {
         std::ofstream malformed_preferences(preferences_path, std::ios::binary | std::ios::trunc);
         malformed_preferences << "project-eon-presentation-preferences=1\nresolution=9\n";
