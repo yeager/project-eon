@@ -141,7 +141,11 @@ proceed or start a game. Unsupported targets are never shown as if their media
 were merely missing. Before either profile starts, the selected game, platform,
 release language, and full outer SHA-256 are resolved together into one
 immutable launch request, so the menu never substitutes another platform's or
-language's media. Original and Modern
+language's media. If a supported platform has several recognised outer
+containers, Project Eon shows a release-identity card page before the profile
+cards. It displays up to four identities as a two-by-two grid and pages larger
+sets with the same highlighted-card navigation; clicking a card always carries
+its complete hash-sorted identity rather than a page-local position. Original and Modern
 cards start directly. The Custom card is not a third runtime mode: it opens
 Modern's fine-tuning panel, then presents an explicit start action using those
 Modern settings. Mouse and iPad touch input activate the same card-admission

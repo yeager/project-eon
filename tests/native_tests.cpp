@@ -1367,6 +1367,21 @@ int main() {
     assert(reconstruction_pipeline.failure());
     reconstruction_pipeline.reset();
     assert(!reconstruction_pipeline.attempted_key() && !reconstruction_pipeline.failure());
+    // Release-card pagination is presentation state only. It keeps the
+    // complete identity-list index stable across page boundaries, so the SDL
+    // pointer route cannot reinterpret a visible card as a page-local release.
+    const auto empty_release_page = eon::release_card_page_for_focus(0, 0);
+    assert(empty_release_page.first_identity == 0 && empty_release_page.visible_count == 0
+        && empty_release_page.page == 0 && empty_release_page.page_count == 0);
+    const auto first_release_page = eon::release_card_page_for_focus(5, 0);
+    assert(first_release_page.first_identity == 0 && first_release_page.visible_count == 4
+        && first_release_page.page == 0 && first_release_page.page_count == 2);
+    const auto second_release_page = eon::release_card_page_for_focus(5, 4);
+    assert(second_release_page.first_identity == 4 && second_release_page.visible_count == 1
+        && second_release_page.page == 1 && second_release_page.page_count == 2);
+    const auto bounded_release_page = eon::release_card_page_for_focus(5, 99);
+    assert(bounded_release_page.first_identity == 4 && bounded_release_page.visible_count == 1
+        && bounded_release_page.page == 1 && bounded_release_page.page_count == 2);
     {
         char program[] = "project-eon";
         char* args[] = {program};

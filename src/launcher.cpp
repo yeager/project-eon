@@ -114,6 +114,19 @@ void LauncherCardFocus::first(const LauncherPage page, const std::size_t count) 
     set(page, count, 0);
 }
 
+ReleaseCardPage release_card_page_for_focus(const std::size_t identity_count,
+    const std::size_t focused_identity) {
+    constexpr std::size_t cards_per_page = 4;
+    if (identity_count == 0) return {};
+    const auto bounded_focus = std::min(focused_identity, identity_count - 1U);
+    const auto page = bounded_focus / cards_per_page;
+    const auto first_identity = page * cards_per_page;
+    return {first_identity,
+        std::min(cards_per_page, identity_count - first_identity),
+        page,
+        (identity_count + cards_per_page - 1U) / cards_per_page};
+}
+
 void LauncherCardFocus::last(const LauncherPage page, const std::size_t count) {
     if (count != 0) set(page, count, count - 1U);
 }

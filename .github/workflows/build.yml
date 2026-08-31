@@ -251,7 +251,11 @@ jobs:
         run: brew install cmake ninja sdl3 zlib libpng
       - name: Build native application bundle
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          # Configure the selected target explicitly. A future runner-image
+          # migration must not produce a host-default Mach-O under the wrong
+          # architecture artifact name.
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}
           ninja -C build
           APP=ProjectEon.app
           mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/MacOS/assets/branding" "$APP/Contents/Resources/po"
