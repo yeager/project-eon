@@ -13,7 +13,20 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("SDLK_F10", SOURCE)
         self.assertIn("show_modern_graphics_settings", SOURCE)
         self.assertIn("MODERN GRAPHICS SETTINGS", SOURCE)
+        self.assertIn("ORIGINAL DISPLAY SETTINGS", SOURCE)
+        self.assertIn("original_display_option_count", SOURCE)
         self.assertIn("SETTINGS APPLY TO SDL RENDERING ONLY.", SOURCE)
+
+    def test_original_f10_is_limited_to_display_only_options(self) -> None:
+        popup_start = SOURCE.index("void draw_modern_graphics_popup")
+        popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
+        self.assertIn("modern ? modern_graphics_option_count : original_display_option_count", popup)
+        self.assertIn("Original permits only output viewport choices", popup)
+        f10 = SOURCE.index("event.key.key == SDLK_F10")
+        modal = SOURCE.index("if (show_modern_graphics_settings) {", f10)
+        f10_block = SOURCE[f10:modal]
+        self.assertIn("display-only controls", f10_block)
+        self.assertNotIn("request.presentation != eon::Presentation::modern) continue", f10_block)
 
     def test_diagnostics_page_is_a_modern_readout_not_a_guest_debugger(self) -> None:
         """F10 diagnostics must remain outside Original media and simulation."""
@@ -76,13 +89,14 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("translator.translate(message)", popup)
         for message in (
             "MODERN GRAPHICS SETTINGS",
+            "ORIGINAL DISPLAY SETTINGS",
             "UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE",
             "TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE",
             "SETTINGS APPLY TO SDL RENDERING ONLY.",
         ):
             with self.subTest(message=message):
                 self.assertIn(f'tr("{message}")', popup)
-        self.assertIn("tr(names[index])", popup)
+        self.assertIn("tr(modern ? names[index] : original_names[index])", popup)
         self.assertIn("tr(modern_graphics_preset_names.at", popup)
         self.assertIn("tr(display_aspect_names.at(settings.aspect_ratio_index))", popup)
         self.assertIn("tr(render_pacing_names.at", popup)

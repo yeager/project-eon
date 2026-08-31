@@ -353,3 +353,6 @@ msgstr "120 FPS (렌더링만)"
 
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr "제한 없음 (렌더링만)"
+
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr "원본 표시 설정"

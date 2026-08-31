@@ -29,6 +29,9 @@ msgstr ""
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr ""
 
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr ""
+
 #: src/main.cpp
 msgid "CLEAN"
 msgstr ""

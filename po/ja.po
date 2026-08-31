@@ -314,3 +314,6 @@ msgstr "120 FPS（描画のみ）"
 
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr "無制限（描画のみ）"
+
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr "オリジナル表示設定"
