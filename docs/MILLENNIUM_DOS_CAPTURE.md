@@ -384,6 +384,19 @@ retained prefix SHA-256 was
 This validates the bounded external-evidence route, not a key delivery, DOS
 input result, title frame, driver ABI, or gameplay state.
 
+### Receipt-v3 end-to-end probe (not input or gameplay evidence)
+
+On 2026-08-31, the same 15-second, input-free, write-protected route was
+repeated after the runner added strict raw-result grammar and count binding.
+The external v3 receipt was accepted by `verify_capture_receipt.py`; the
+outer archive remained the recognised `e6e7044b…9cab2a123` identity. It binds
+the five-record, 522-byte raw-result file
+`7c00214e4461f6d442ea66b2413ae32c8e4a12210cf9dbef67b0cfad3af19f06` as one
+each at `mill.com:$020e`, `mill.com:$0213`, and the unhandled-interrupt
+callback boundary, plus two at `titles.exe:$0129`. No host-input receipt was
+created. This is a recorder-format verification only: the fields are not an
+interrupt ABI, title-frame, audio, input, or gameplay admission.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
