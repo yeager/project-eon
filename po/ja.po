@@ -152,6 +152,9 @@ msgstr "ピクセル再構成"
 msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X（メモリ内のみ）"
 
+msgid "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (MEMORY ONLY)"
+
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "オフ（オリジナルピクセル）"
 

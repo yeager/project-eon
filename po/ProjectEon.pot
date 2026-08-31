@@ -258,6 +258,9 @@ msgstr ""
 msgid "SCALE2X (MEMORY ONLY)"
 msgstr ""
 
+msgid "SCALE4X (MEMORY ONLY)"
+msgstr ""
+
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr ""
 
