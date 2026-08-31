@@ -1548,6 +1548,18 @@ int main() {
         assert(!runtime_coordinator.active()
             && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::unselected);
 
+        // The DOS asset factory is equally strict before it reaches any
+        // archive path: its recognised title evidence cannot become an
+        // Amiga/Atari fallback or silently stand in for an unrecognised
+        // language. These calls must fail without reading the placeholder.
+        eon::ReleaseArchive wrong_dos_platform = duplicate_english_releases.front();
+        wrong_dos_platform.platform = eon::Platform::amiga;
+        assert(!eon::load_millennium_dos_runtime(wrong_dos_platform));
+        eon::ReleaseArchive wrong_dos_language = duplicate_english_releases.front();
+        wrong_dos_language.platform = eon::Platform::dos;
+        wrong_dos_language.language = "sv";
+        assert(!eon::load_millennium_dos_runtime(wrong_dos_language));
+
         // The whole card route is SDL-independent: input devices only choose
         // cards, while platform/release admission and back-navigation have
         // one deterministic state model.

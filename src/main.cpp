@@ -277,11 +277,7 @@ struct ProfileCard {
     SDL_Texture* texture = nullptr;
 };
 
-struct PreviewAnimation {
-    int width = 0;
-    int height = 0;
-    std::vector<std::vector<std::uint8_t>> rgba_frames;
-};
+using PreviewAnimation = eon::MillenniumDosPreviewAnimation;
 
 // Modern options are renderer state only. They are deliberately independent
 // from original input, media, simulation state and save bytes.
@@ -472,32 +468,7 @@ std::size_t output_resolution_index_for(const eon::DisplayPreferences& display) 
     throw std::runtime_error("Unsupported validated display resolution");
 }
 
-// These data products come from the same verified English DOS archive. The
-// title is launchable; GX remains read-only inspection evidence because the
-// console poll proves neither the DOS return nor 2200AD startup.
-struct MillenniumDosLaunchAssets {
-    PreviewAnimation title;
-    std::string language;
-    std::optional<PreviewAnimation> gx_canvas;
-    std::optional<eon::MillenniumDosTitleFlow> title_flow;
-    std::optional<eon::MillenniumDosSoundSelectionEvidence> sound_selection;
-    // This is a short-lived copy of a byte-locked original DOS string. It is
-    // never passed through launcher translation or persisted with a session.
-    std::optional<std::string> sound_selection_prompt;
-    std::optional<eon::MillenniumDosSpanishTitleBoundary> spanish_title_boundary;
-    std::optional<eon::MillenniumDosGameFlow> game_flow;
-    // Both private video drivers are loaded from the same verified DOS
-    // release as the launcher. Keeping their parsed ABI profiles alongside
-    // the launch assets prevents the SDL path from silently relying on a
-    // report-only parser, while still leaving driver selection/execution to
-    // a later, evidence-backed startup implementation.
-    std::optional<eon::MillenniumDosVideoDriverProfile> ega_video_driver;
-    std::optional<eon::MillenniumDosVideoDriverProfile> mcga_video_driver;
-    // This is intentionally the original serialized image, not a projected
-    // game model.  The launcher exposes only the recovered positional words
-    // once TITLES.EXE has made its verified hand-off.
-    std::optional<eon::MillenniumDosSaveSession> initial_save;
-};
+using MillenniumDosLaunchAssets = eon::MillenniumDosRuntimeAssets;
 
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
     const auto translated = active_translator ? active_translator->translate(text) : std::string_view(text);
@@ -3270,117 +3241,6 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         << "returns. Reported raw-load plans are not performed and no Amiga or synthetic screen is used.\n";
 }
 
-std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
-    const eon::ReleaseArchive& release) {
-    // The following executable and library profile is verified solely for
-    // English DOS media. Never substitute it when the caller explicitly chose
-    // the Amiga or Atari ST release.
-    if (release.game != eon::Game::millennium || release.platform != eon::Platform::dos
-        || (release.language != "en" && release.language != "es")) return std::nullopt;
-    constexpr auto title_lib_sha256 =
-        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-    constexpr auto gx_lib_sha256 =
-        "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
-    constexpr auto titles_sha256 =
-        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
-    constexpr auto launcher_sha256 =
-        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
-    constexpr auto game_sha256 =
-        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
-    constexpr auto initial_save_sha256 =
-        "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
-    constexpr auto ega640_sha256 =
-        "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
-    constexpr auto mcga_sha256 =
-        "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
-    try {
-        // This exact archive was resolved before entry. Its language is a
-        // media identity, never a UI preference or a fallback decision.
-        const bool use_spanish = release.language == "es";
-        if (use_spanish) {
-            // The Spanish edition is an original FAT12 floppy. Its P00
-            // resource is independently verified, but no executable handoff
-            // ABI has been recovered, so expose only this authentic title.
-            constexpr auto spanish_image_sha256 =
-                "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
-            const auto image = eon::extract_verified_release_asset(release, spanish_image_sha256);
-            if (!image) return std::nullopt;
-            const eon::Fat12Disk disk(*image);
-            const auto* title_entry = disk.find("TITLE.LIB");
-            const auto* titles_entry = disk.find("TITLES.EXE");
-            if (!title_entry || !titles_entry) return std::nullopt;
-            // Bind the Spanish P00 surface to its own TITLES.EXE selection
-            // bytes before renderer decoding. This is title provenance only:
-            // it does not execute the codec/transition/private-driver chain.
-            auto title_library_bytes = disk.read(*title_entry);
-            const auto titles_bytes = disk.read(*titles_entry);
-            static_cast<void>(eon::parse_millennium_dos_spanish_title_presentation_evidence(
-                titles_bytes, title_library_bytes));
-            const eon::MillenniumDosLib title_lib(std::move(title_library_bytes));
-            const auto* p00 = title_lib.find("P00");
-            if (!p00) return std::nullopt;
-            const auto resource = title_lib.read(*p00);
-            const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
-            const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
-            return MillenniumDosLaunchAssets{
-                .title = {bitmap.width, bitmap.height,
-                    {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
-                .language = "es",
-                .gx_canvas = std::nullopt,
-                .title_flow = std::nullopt,
-                .sound_selection = std::nullopt,
-                .sound_selection_prompt = std::nullopt,
-                .spanish_title_boundary = eon::parse_millennium_dos_spanish_title_boundary(
-                    titles_bytes),
-                .game_flow = std::nullopt,
-                .ega_video_driver = std::nullopt,
-                .mcga_video_driver = std::nullopt,
-                .initial_save = std::nullopt,
-            };
-        }
-        const auto bytes = eon::extract_verified_release_asset(release, title_lib_sha256);
-        if (!bytes) return std::nullopt;
-        const eon::MillenniumDosLib title_lib(*bytes);
-        const auto* p00 = title_lib.find("P00");
-        if (!p00) return std::nullopt;
-        const auto resource = title_lib.read(*p00);
-        const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
-        const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
-        const auto gx_bytes = eon::extract_verified_release_asset(release, gx_lib_sha256);
-        const auto titles = eon::extract_verified_release_asset(release, titles_sha256);
-        const auto launcher = eon::extract_verified_release_asset(release, launcher_sha256);
-        const auto game = eon::extract_verified_release_asset(release, game_sha256);
-        const auto initial_save = eon::extract_verified_release_asset(release, initial_save_sha256);
-        const auto ega640 = eon::extract_verified_release_asset(release, ega640_sha256);
-        const auto mcga = eon::extract_verified_release_asset(release, mcga_sha256);
-        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga) {
-            return std::nullopt;
-        }
-        const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
-        const auto sound_selection = eon::parse_millennium_dos_sound_selection(*launcher);
-        const auto sound_selection_prompt = eon::extract_millennium_dos_sound_selection_prompt(
-            *launcher, sound_selection);
-        return MillenniumDosLaunchAssets{
-            .title = {bitmap.width, bitmap.height,
-                {eon::colorize_millennium_dos_bitmap(bitmap, palette)}},
-            .language = "en",
-            .gx_canvas = PreviewAnimation{gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
-            .title_flow = eon::parse_millennium_dos_title_flow(*titles, *launcher),
-            .sound_selection = sound_selection,
-            .sound_selection_prompt = sound_selection_prompt,
-            .spanish_title_boundary = std::nullopt,
-            .game_flow = eon::parse_millennium_dos_game_flow(*game),
-            .ega_video_driver = eon::parse_millennium_dos_video_driver(*ega640,
-                eon::MillenniumDosVideoDriverKind::ega640),
-            .mcga_video_driver = eon::parse_millennium_dos_video_driver(*mcga,
-                eon::MillenniumDosVideoDriverKind::mcga),
-            .initial_save = eon::MillenniumDosSaveSession(*initial_save),
-        };
-    } catch (const std::exception& error) {
-        std::cerr << "Unable to load Millennium DOS launch assets: " << error.what() << '\n';
-        return std::nullopt;
-    }
-}
 
 // Modern packs are intentionally a report-only preservation boundary.  This
 // routine does not retain a pack object beyond inspection, nor does it create
@@ -3765,7 +3625,7 @@ int main(int argc, char** argv) {
         return active_launch()->release;
     };
     auto millennium_assets = active_launch() && active_launch()->release.game == eon::Game::millennium
-        ? load_millennium_launch_assets(active_launch()->release) : std::nullopt;
+        ? eon::load_millennium_dos_runtime(active_launch()->release) : std::nullopt;
     // The command-line path is an initial explicit selection, not a mutable
     // request object. Custom's native picker may replace this session-local
     // candidate before launch; neither route has a default pack location.
@@ -4041,7 +3901,7 @@ int main(int argc, char** argv) {
     const auto load_millennium_assets_if_available = [&] {
         if (!millennium_assets) {
             if (const auto release = resolve_active_release(eon::Game::millennium)) {
-                millennium_assets = load_millennium_launch_assets(*release);
+                millennium_assets = eon::load_millennium_dos_runtime(*release);
             }
             create_millennium_textures();
         }
