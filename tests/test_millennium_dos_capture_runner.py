@@ -31,9 +31,15 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
         configuration = TOOL.recorder_config(Path("/safe/read-only/game-root"))
         self.assertIn("core=normal", configuration)
         self.assertIn("segment limits=false", configuration)
+        self.assertIn("machine=svga_s3", configuration)
         self.assertIn('mount c "/safe/read-only/game-root"', configuration)
         self.assertNotIn("AUTOTYPE", configuration)
         self.assertNotIn("KEYBOARD_AddKey", configuration)
+
+    def test_machine_profiles_are_finite_and_rendered_verbatim(self) -> None:
+        self.assertIn("machine=ega", TOOL.recorder_config(Path("/safe/read-only/game-root"), "ega"))
+        with self.assertRaisesRegex(TOOL.CaptureError, "finite profile"):
+            TOOL.recorder_config(Path("/safe/read-only/game-root"), "vgaonly")
 
     def test_output_rejects_repository_media_and_system_temp_paths(self) -> None:
         with temporary_directory() as directory:

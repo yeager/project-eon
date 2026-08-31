@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6"}
 
 
 def load_tool(name: str):
@@ -97,8 +97,19 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
+
+
+def verify_millennium_machine_profile(fields: dict[str, str], directory: Path) -> None:
+    """Bind v6's finite display-machine label to the generated config text."""
+    profile = fields.get("machine_profile")
+    tool = load_tool("run_millennium_dos_capture")
+    if profile not in tool.MACHINE_PROFILES:
+        raise ValueError("machine profile is not in the reviewed finite profile set")
+    configuration = (directory / "recorder.conf").read_text(encoding="utf-8")
+    if f"machine={profile}\n" not in configuration:
+        raise ValueError("machine profile does not match the generated configuration")
 
 
 def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path) -> None:
@@ -151,8 +162,10 @@ def verify(kind: str, directory: Path) -> None:
                     str(sum(counts.values())), shapes):
                 raise ValueError("results_raw grammar/count receipt mismatch")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.raw")
-        if version == "5":
+        if version in {"5", "6"}:
             verify_millennium_host_input_summary(fields, directory)
+        if version == "6":
+            verify_millennium_machine_profile(fields, directory)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
