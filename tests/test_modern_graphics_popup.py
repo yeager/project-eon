@@ -53,8 +53,8 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("tr(rows[index].first)", popup)
         self.assertIn("render_pacing_names", popup)
         self.assertIn("RECOVERY FUNCTION MAP", SOURCE)
-        self.assertIn("release_has_recovery_map_entry", SOURCE)
-        self.assertIn("startup_boundary_for_release", SOURCE)
+        self.assertIn("runtime_diagnostics_for_release(*release)", SOURCE)
+        self.assertIn("runtime_diagnostics_for_release(release)", SOURCE)
         self.assertIn("report_startup_boundary", SOURCE)
         self.assertIn("DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.", SOURCE)
 

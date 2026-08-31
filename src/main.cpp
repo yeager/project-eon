@@ -44,6 +44,7 @@
 #include "data/reference_trace.hpp"
 #include "data/function_map.hpp"
 #include "data/recovery_map.hpp"
+#include "data/runtime_diagnostics.hpp"
 #include "data/startup_boundary.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
@@ -583,14 +584,12 @@ void draw_modern_preset_overlay(SDL_Renderer* renderer, const SDL_FRect& bounds,
 // manifest; printing it neither extracts more media nor dispatches any guest
 // code. It is a diagnostic equivalent of a symbol map, not a hook table.
 void report_recovery_map(const eon::ReleaseArchive& release) {
-    const auto entries = eon::recovery_map_for_release(release.sha256);
+    const auto diagnostics = eon::runtime_diagnostics_for_release(release);
+    const auto& entries = diagnostics.recovery_boundaries;
     if (entries.empty()) return;
     std::cout << "          RECOVERY MAP  " << entries.size()
         << " hash-bound static path" << (entries.size() == 1 ? "" : "s") << '\n';
     for (const auto& entry : entries) {
-        if (!eon::release_has_recovery_map_entry(release.sha256, entry.id)) {
-            throw std::runtime_error("Recovery-map entry lost its parser-profile binding");
-        }
         std::cout << "            " << entry.id << ": profile " << entry.parser_profile_id
             << ", " << entry.cpu << " " << entry.source_address << ", "
             << entry.evidence_level << "; " << entry.runtime_status << '\n';
@@ -601,7 +600,7 @@ void report_recovery_map(const eon::ReleaseArchive& release) {
 // after an archive has been rehashed. It deliberately retains the next hard
 // boundary: `--inspect` must not make a static observation appear executable.
 void report_startup_boundary(const eon::ReleaseArchive& release) {
-    const auto boundary = eon::startup_boundary_for_release(release.sha256);
+    const auto boundary = eon::runtime_diagnostics_for_release(release).startup_boundary;
     if (!boundary) return;
     std::cout << "          STARTUP BOUNDARY  " << boundary->parser_profile_id
         << " at " << boundary->source_address << "; stops before "
@@ -643,12 +642,13 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
     for (std::size_t index = 0; index < releases.size(); ++index) {
         if (index != 0) std::cout << ',';
         const auto& release = releases[index];
+        const auto diagnostics = eon::runtime_diagnostics_for_release(release);
         std::cout << "{\"game\":"; write_json_string(std::cout, eon::name(release.game));
         std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(release.platform));
         std::cout << ",\"language\":"; write_json_string(std::cout, release.language);
         std::cout << ",\"sha256\":"; write_json_string(std::cout, release.sha256);
         std::cout << ",\"startup_boundary\":";
-        if (const auto startup = eon::startup_boundary_for_release(release.sha256)) {
+        if (const auto& startup = diagnostics.startup_boundary) {
             std::cout << "{\"profile\":"; write_json_string(std::cout, startup->parser_profile_id);
             std::cout << ",\"source_address\":"; write_json_string(std::cout, startup->source_address);
             std::cout << ",\"unresolved\":"; write_json_string(std::cout, startup->unresolved);
@@ -657,13 +657,10 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
             std::cout << "null";
         }
         std::cout << ",\"recovery_boundaries\":[";
-        const auto boundaries = eon::recovery_map_for_release(release.sha256);
+        const auto& boundaries = diagnostics.recovery_boundaries;
         for (std::size_t boundary_index = 0; boundary_index < boundaries.size(); ++boundary_index) {
             if (boundary_index != 0) std::cout << ',';
             const auto& boundary = boundaries[boundary_index];
-            if (!eon::release_has_recovery_map_entry(release.sha256, boundary.id)) {
-                throw std::runtime_error("Recovery-map entry lost its parser-profile binding");
-            }
             std::cout << "{\"id\":"; write_json_string(std::cout, boundary.id);
             std::cout << ",\"profile\":"; write_json_string(std::cout, boundary.parser_profile_id);
             std::cout << ",\"source_address\":"; write_json_string(std::cout, boundary.source_address);
@@ -672,10 +669,9 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
             std::cout << '}';
         }
         std::cout << "],\"function_map\":[";
-        const auto functions = eon::function_map_for_release(release.sha256);
+        const auto& functions = diagnostics.functions;
         bool first_function = true;
         for (const auto& function : functions) {
-            if (!eon::release_has_function_map_entry(release.sha256, function.id)) continue;
             if (!first_function) std::cout << ',';
             first_function = false;
             std::cout << "{\"id\":"; write_json_string(std::cout, function.id);
@@ -4339,27 +4335,21 @@ int main(int argc, char** argv) {
             : cards.at(static_cast<std::size_t>(focused)).game;
         const auto release = resolve_active_release(game);
         if (!release) return diagnostics;
+        const auto report = eon::runtime_diagnostics_for_release(*release);
         diagnostics.release_identity = tr(launcher_game_label(release->game)) + " / "
             + tr(launcher_platform_label(release->platform)) + " / " + release->language
             + " / " + truncated_identity_hash(release->sha256);
-        if (const auto boundary = eon::startup_boundary_for_release(release->sha256)) {
-            diagnostics.startup_boundary = std::string(boundary->parser_profile_id)
+        if (const auto& boundary = report.startup_boundary) {
+            diagnostics.startup_boundary = boundary->parser_profile_id
                 + " / " + std::string(boundary->source_address);
         }
-        diagnostics.recovery_boundary_count = eon::recovery_map_for_release(release->sha256).size();
-        const auto function_map = eon::function_map_for_release(release->sha256);
-        diagnostics.recovery_functions.reserve(function_map.size());
-        for (const auto& entry : function_map) {
-            // Preserve the exact parser-profile gate for named functions.
-            // A stale declarative record never becomes a host hook or UI
-            // claim merely because its outer-release hash still matches.
-            if (!eon::release_has_function_map_entry(release->sha256, entry.id)) continue;
+        diagnostics.recovery_boundary_count = report.recovery_boundaries.size();
+        diagnostics.recovery_functions.reserve(report.functions.size());
+        for (const auto& entry : report.functions) {
             diagnostics.recovery_functions.push_back({
-                std::string(entry.id), std::string(entry.parser_profile_id),
-                std::string(entry.cpu), std::string(entry.source_asset_sha256),
-                std::string(entry.source_offset), std::string(entry.runtime_address),
-                std::string(entry.evidence_level), std::string(entry.uncertainty),
-                std::string(entry.runtime_status),
+                entry.id, entry.parser_profile_id, entry.cpu, entry.source_asset_sha256,
+                entry.source_offset, entry.runtime_address, entry.evidence_level, entry.uncertainty,
+                entry.runtime_status,
             });
         }
         // GUI launches intentionally do not accept a trace path. The CLI

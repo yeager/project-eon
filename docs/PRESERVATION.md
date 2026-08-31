@@ -305,6 +305,16 @@ diagnostics may display this navigation marker as `STARTUP BOUNDARY`; it is
 not a dispatch address, emulator hook, or claim that execution beyond the
 recorded boundary has been recovered.
 
+The SDL-free `runtime_diagnostics` composition is the single reader for the
+CLI JSON inspector and the F10 readout. For every selected, rehashed release
+it rechecks the game, platform, language, release hash, and parser-profile
+binding of every startup, recovery-map, and function-map record before that
+record is displayed. A mismatch throws and suppresses the report rather than
+mixing provenance from related editions. The composition reports
+`trace_admission=not-loaded` for media inspection: scanning or choosing a
+release never implies that a reference trace, ABI, renderer, or game session
+has been admitted.
+
 Every bounded parser profile in the release manifest has exactly one map row.
 This includes data and format readers as well as recovered control-flow
 boundaries: a map address may therefore be a verified leaf/file offset rather

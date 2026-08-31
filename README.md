@@ -236,7 +236,10 @@ document (`project-eon.inspect/v1`) after rehashing every selected release. It
 contains only game/platform/language/release hashes plus hash-bound startup and
 recovery boundaries, declarative function-map facts, and aggregate scan
 counters—never source paths, filenames, archive members, or original bytes.
-It cannot be combined with asset inventory or Modern-pack inspection.
+The CLI and F10 obtain these facts from the same fail-closed diagnostics
+composition, so a record whose release identity or parser-profile gate does
+not match cannot be displayed. Inspection never admits a trace or runtime
+session. It cannot be combined with asset inventory or Modern-pack inspection.
 
 For a separately assembled, validated reference trace, add
 `--reference-trace-json` to the normal explicit `--reference-trace` command.

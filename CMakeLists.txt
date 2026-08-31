@@ -161,6 +161,7 @@ add_executable(project-eon
     src/data/reference_trace.cpp
     src/data/function_map.cpp
     src/data/recovery_map.cpp
+    src/data/runtime_diagnostics.cpp
     src/data/release_manifest.cpp
     src/data/startup_boundary.cpp
     src/data/sha256.cpp
