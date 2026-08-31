@@ -148,6 +148,23 @@ reproducibility. It does not upgrade the raw hook to original instruction
 provenance or establish title, display, input, audio, ABI, or gameplay
 behaviour.
 
+On 2026-08-31, the new receipt-v8 runner was exercised for 15 seconds in
+`realtime` mode through the same four write-protected FUSE layers. The
+verifier accepted the fresh external receipt. The recognised release,
+Kickstart archive, and recorder retained their required identities; the new
+configuration identity is
+`c05b3a90004d4b779dd4264dc2cf8e149945eb70cbc93ceae62d4393ed57094e` (1,069
+bytes). No host-input receipt was produced. The 34,196-byte raw-PC file is
+again byte-identical to both v7 observations (SHA-256
+`22855e20e766df330ee7caf59d37525d5a69fd74d8663b3a1e3d0316a314c16e`), with
+128 records each at `$1fe84` and `$1fe96`. Receipt v8 additionally recomputes
+the opaque per-site word-pair summary: `$1fe84` reports `7202/7202` and
+`$1fe96` reports `7208/7208` for its separate IR/memory fields. The recorder
+console is empty and the run timed out normally after the bounded window.
+This confirms the new receipt schema and the existing bootstrap observation
+only; it does not prove title execution, instruction provenance, display,
+input, audio, ABI, or gameplay behaviour.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
