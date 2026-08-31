@@ -185,7 +185,7 @@ jobs:
       - name: Install packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build rpm cpio desktop-file-utils zlib1g-dev libpng-dev \
+          sudo apt-get install -y cmake ninja-build rpm cpio desktop-file-utils lintian rpmlint zlib1g-dev libpng-dev \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev \
             libdecor-0-dev libegl-dev libgles-dev libgl-dev libdrm-dev libgbm-dev \
@@ -209,6 +209,8 @@ jobs:
           cpack --config build/CPackConfig.cmake -G RPM -B package/rpm
       - name: Verify package contents contain no game media
         run: bash packaging/verify-desktop-package.sh package/deb/*.deb package/rpm/*.rpm
+      - name: Enforce Debian mentors and RPM package policy
+        run: bash packaging/verify-distribution-policy.sh package/deb/*.deb package/rpm/*.rpm
       - name: Write artifact integrity manifest
         run: >-
           python3 packaging/write-artifact-manifest.py

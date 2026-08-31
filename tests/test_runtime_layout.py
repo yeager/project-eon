@@ -34,13 +34,14 @@ class RuntimeLayoutTests(unittest.TestCase):
         self.assertIn("Documents/ProjectEon", PRESERVATION)
 
     def test_linux_install_layout_matches_runtime_search_order(self) -> None:
-        self.assertIn('install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', CMAKE)
-        self.assertIn('DESTINATION "${CMAKE_INSTALL_BINDIR}/assets/branding"', CMAKE)
-        self.assertIn('install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', CMAKE)
+        self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"', CMAKE)
+        self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets/branding"', CMAKE)
+        self.assertIn('INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}/project-eon"', CMAKE)
         self.assertIn('install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")', CMAKE)
         self.assertIn('executable_directory / "po"', I18N)
         self.assertIn('executable_directory / ".." / "share" / "project-eon" / "po"', I18N)
         self.assertIn('base / "assets" / directory / filename', MAIN)
+        self.assertIn('base / ".." / "share" / "project-eon" / "assets" / directory / filename', MAIN)
         self.assertIn('base / "assets" / directory / filename', MAIN)
         self.assertIn('base / "assets" / "fonts"', MAIN)
 

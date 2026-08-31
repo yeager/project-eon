@@ -57,8 +57,8 @@ for package in "$@"; do
       fi
 
       # Exercise the installed artifact rather than a build-tree executable.
-      # The loader trace must resolve all three staged SDL libraries through
-      # the executable's $ORIGIN runpath; no game media or display is needed.
+      # The loader trace must resolve the private SDL libraries outside
+      # /usr/bin, through the executable's package-relative runpath.
       temporary=$(make_temporary_directory)
       temporary_directories+=("$temporary")
       dpkg-deb --extract "$package" "$temporary"
@@ -69,7 +69,11 @@ for package in "$@"; do
       fi
       runtime_trace=$(LD_TRACE_LOADED_OBJECTS=1 "$executable")
       for library in libSDL3.so.0 libSDL3_image.so.0 libSDL3_ttf.so.0; do
-        if ! printf '%s\n' "$runtime_trace" | grep -Fq "$temporary/usr/bin/$library"; then
+        runtime_library=$(find "$temporary/usr" -name "$library" -print -quit)
+        runtime_directory=$(dirname "$runtime_library")
+        runtime_relative_directory="${runtime_directory#"$temporary/usr/"}"
+        runtime_loader_directory="$temporary/usr/bin/../$runtime_relative_directory"
+        if [ -z "$runtime_library" ] || ! grep -Fq "$runtime_loader_directory/" <<<"$runtime_trace"; then
           echo "$package does not resolve $library from its installed runtime" >&2
           exit 1
         fi
@@ -103,7 +107,7 @@ for package in "$@"; do
       # Do not limit RPM validation to its dependency declaration. Extract the
       # artifact into an isolated directory and run the installed executable,
       # just as the DEB path does. This catches a missing private SDL library,
-      # a lost $ORIGIN runpath, or a package layout regression before upload.
+      # a lost package-relative runpath, or a layout regression before upload.
       rpm2cpio "$package" | (cd "$temporary" && cpio --quiet -idm)
       executable="$temporary/usr/bin/project-eon"
       if [ ! -x "$executable" ]; then
@@ -112,7 +116,11 @@ for package in "$@"; do
       fi
       runtime_trace=$(LD_TRACE_LOADED_OBJECTS=1 "$executable")
       for library in libSDL3.so.0 libSDL3_image.so.0 libSDL3_ttf.so.0; do
-        if ! printf '%s\n' "$runtime_trace" | grep -Fq "$temporary/usr/bin/$library"; then
+        runtime_library=$(find "$temporary/usr" -name "$library" -print -quit)
+        runtime_directory=$(dirname "$runtime_library")
+        runtime_relative_directory="${runtime_directory#"$temporary/usr/"}"
+        runtime_loader_directory="$temporary/usr/bin/../$runtime_relative_directory"
+        if [ -z "$runtime_library" ] || ! grep -Fq "$runtime_loader_directory/" <<<"$runtime_trace"; then
           echo "$package does not resolve $library from its installed runtime" >&2
           exit 1
         fi
@@ -170,17 +178,17 @@ for package in "$@"; do
     exit 1
   fi
   for required in \
-      "assets/cards/millennium.png" "assets/cards/deuteros.png" \
-      "assets/cards/dos-platform-v1.png" "assets/cards/amiga-platform-v1.png" \
-      "assets/cards/atari-st-platform-v1.png" \
-      "assets/cards/original-profile-v1.png" "assets/cards/modern-profile-v1.png" \
-      "assets/cards/custom-profile-v1.png"; do
+      "share/project-eon/assets/cards/millennium.png" "share/project-eon/assets/cards/deuteros.png" \
+      "share/project-eon/assets/cards/dos-platform-v1.png" "share/project-eon/assets/cards/amiga-platform-v1.png" \
+      "share/project-eon/assets/cards/atari-st-platform-v1.png" \
+      "share/project-eon/assets/cards/original-profile-v1.png" "share/project-eon/assets/cards/modern-profile-v1.png" \
+      "share/project-eon/assets/cards/custom-profile-v1.png"; do
     if ! printf '%s\n' "$contents" | grep -Fq "$required"; then
       echo "$package lacks required Project Eon resource: $required" >&2
       exit 1
     fi
   done
-  if ! printf '%s\n' "$contents" | grep -Fq 'assets/branding/project-eon-logo-v1.png'; then
+  if ! printf '%s\n' "$contents" | grep -Fq 'share/project-eon/assets/branding/project-eon-logo-v1.png'; then
     echo "$package lacks the launcher branding resource" >&2
     exit 1
   fi
@@ -190,7 +198,7 @@ for package in "$@"; do
   for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
       NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
       NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do
-    if ! printf '%s\n' "$contents" | grep -Fq "assets/fonts/$font"; then
+    if ! printf '%s\n' "$contents" | grep -Fq "share/project-eon/assets/fonts/$font"; then
       echo "$package lacks required launcher font resource: $font" >&2
       exit 1
     fi
