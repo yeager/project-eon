@@ -32,6 +32,10 @@ for required in \
     exit 1
   fi
 done
+if [ ! -f "$app/Resources/assets/branding/project-eon-logo-v1.png" ]; then
+  echo "refusing to package incomplete iPad application: missing launcher branding" >&2
+  exit 1
+fi
 for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
     NotoSansDevanagari-Regular.ttf NotoSansJP-Regular.otf \
     NotoSansKR-Regular.otf NotoSansSC-Regular.otf OFL-1.1.txt; do

@@ -194,6 +194,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
             MACOSX_PACKAGE_LOCATION "Resources/assets/cards")
         target_sources(project-eon PRIVATE "${resource}")
     endforeach()
+    set_source_files_properties("assets/branding/project-eon-logo-v1.png" PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources/assets/branding")
+    target_sources(project-eon PRIVATE "assets/branding/project-eon-logo-v1.png")
     # The UI bundle is licensed separately from original game media. Keep the
     # exact reviewed font files in the app resource directory so iPadOS never
     # resolves text through a host font installation.
@@ -226,6 +229,9 @@ add_custom_command(TARGET project-eon POST_BUILD
         "${CMAKE_CURRENT_SOURCE_DIR}/assets/cards"
         "$<TARGET_FILE_DIR:project-eon>/assets/cards"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding"
+        "$<TARGET_FILE_DIR:project-eon>/assets/branding"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
         "$<TARGET_FILE_DIR:project-eon>/assets/fonts"
 )
@@ -234,6 +240,12 @@ if(MSVC)
     target_compile_options(project-eon PRIVATE /W4 /permissive-)
 else()
     target_compile_options(project-eon PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
+endif()
+
+# Embed the reviewed Project Eon mark in the native Windows executable. The
+# resource is launcher artwork, not an original game asset or data container.
+if(WIN32)
+    target_sources(project-eon PRIVATE packaging/windows/project-eon.rc)
 endif()
 
 # GCC 15's PRE pass can crash while optimizing the deliberately large
@@ -330,8 +342,13 @@ if(UNIX AND NOT APPLE)
     # original archive, data path, or mutable save location.
     install(FILES packaging/project-eon.desktop
         DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+    install(FILES assets/branding/project-eon-logo-v1.png
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps"
+        RENAME "project-eon.png")
 endif()
 install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+install(FILES assets/branding/project-eon-logo-v1.png
+    DESTINATION "${CMAKE_INSTALL_BINDIR}/assets/branding")
 install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
 install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")
 install(FILES README.md LICENSE DESTINATION "${CMAKE_INSTALL_DOCDIR}")

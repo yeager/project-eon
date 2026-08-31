@@ -3,6 +3,7 @@ Type=Application
 Name=Project Eon
 Comment=Preservation-first reimplementation launcher for Millennium 2.2 and Deuteros
 Exec=project-eon
+Icon=project-eon
 Terminal=false
 Categories=Game;Simulation;
 Keywords=Millennium;Deuteros;preservation;reimplementation;

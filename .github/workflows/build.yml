@@ -251,10 +251,12 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           ninja -C build
           APP=ProjectEon.app
-          mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/Resources/po"
+          mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/MacOS/assets/branding" "$APP/Contents/Resources/po"
           mkdir -p "$APP/Contents/Frameworks"
           cp build/project-eon "$APP/Contents/MacOS/ProjectEon"
           cp assets/cards/*.png "$APP/Contents/MacOS/assets/cards/"
+          cp assets/branding/project-eon-logo-v1.png "$APP/Contents/MacOS/assets/branding/"
+          cp assets/branding/project-eon.icns "$APP/Contents/Resources/project-eon.icns"
           cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"
           cp po/*.po "$APP/Contents/Resources/po/"
           cp README.md LICENSE "$APP/Contents/Resources/"
@@ -354,7 +356,7 @@ jobs:
           cat > "$APP/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleVersion</key><string>0.1.0</string></dict></plist>
+          <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleIconFile</key><string>project-eon.icns</string><key>CFBundleVersion</key><string>0.1.0</string></dict></plist>
           PLIST
           codesign --force --deep -s - "$APP"
           # This checks every Mach-O object in the completed bundle, including
@@ -371,7 +373,9 @@ jobs:
             "$APP/Contents/MacOS/assets/cards/atari-st-platform-v1.png" \
             "$APP/Contents/MacOS/assets/cards/original-profile-v1.png" \
             "$APP/Contents/MacOS/assets/cards/modern-profile-v1.png" \
-            "$APP/Contents/MacOS/assets/cards/custom-profile-v1.png"; do
+            "$APP/Contents/MacOS/assets/cards/custom-profile-v1.png" \
+            "$APP/Contents/MacOS/assets/branding/project-eon-logo-v1.png" \
+            "$APP/Contents/Resources/project-eon.icns"; do
             test -f "$required"
           done
           for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
@@ -402,7 +406,9 @@ jobs:
             "ProjectEon.app/Contents/MacOS/assets/cards/atari-st-platform-v1.png" \
             "ProjectEon.app/Contents/MacOS/assets/cards/original-profile-v1.png" \
             "ProjectEon.app/Contents/MacOS/assets/cards/modern-profile-v1.png" \
-            "ProjectEon.app/Contents/MacOS/assets/cards/custom-profile-v1.png"; do
+            "ProjectEon.app/Contents/MacOS/assets/cards/custom-profile-v1.png" \
+            "ProjectEon.app/Contents/MacOS/assets/branding/project-eon-logo-v1.png" \
+            "ProjectEon.app/Contents/Resources/project-eon.icns"; do
             printf '%s\n' "$listing" | grep -Fxq "$required"
           done
           for font in NotoSans-Regular.ttf NotoSansArabic-Regular.ttf \
@@ -472,7 +478,7 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/SDL3-install;${{ github.workspace }}/libpng-install;${{ github.workspace }}/zlib-install"
           cmake --build build --config Release --parallel 2
-          New-Item -ItemType Directory -Force dist/assets/cards,dist/po | Out-Null
+          New-Item -ItemType Directory -Force dist/assets/cards,dist/assets/branding,dist/po | Out-Null
           Copy-Item build/Release/project-eon.exe dist/project-eon.exe
           Copy-Item "${{ github.workspace }}/SDL3-install/bin/SDL3.dll" dist/SDL3.dll
           $sdlImage = Get-ChildItem build -Recurse -Filter SDL3_image.dll | Select-Object -First 1
@@ -484,13 +490,14 @@ jobs:
           Get-ChildItem "${{ github.workspace }}/libpng-install/bin/libpng*.dll" | Copy-Item -Destination dist
           Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" | Copy-Item -Destination dist
           Copy-Item assets/cards/*.png dist/assets/cards/
+          Copy-Item assets/branding/* dist/assets/branding/
           Copy-Item assets/fonts dist/assets/fonts -Recurse
           Copy-Item po/*.po dist/po/
           Copy-Item README.md,LICENSE dist/
           # Validate the exact staging tree supplied to Inno Setup. In
           # particular, SDL3_image is linked against the shared libpng built
           # above, so that DLL must reach the installer as well.
-          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "assets/cards/dos-platform-v1.png", "assets/cards/amiga-platform-v1.png", "assets/cards/atari-st-platform-v1.png", "assets/cards/original-profile-v1.png", "assets/cards/modern-profile-v1.png", "assets/cards/custom-profile-v1.png")
+          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "assets/cards/dos-platform-v1.png", "assets/cards/amiga-platform-v1.png", "assets/cards/atari-st-platform-v1.png", "assets/cards/original-profile-v1.png", "assets/cards/modern-profile-v1.png", "assets/cards/custom-profile-v1.png", "assets/branding/project-eon-logo-v1.png", "assets/branding/project-eon.ico", "assets/branding/project-eon.icns", "assets/branding/README.md")
           $fonts = @("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanagari-Regular.ttf", "NotoSansJP-Regular.otf", "NotoSansKR-Regular.otf", "NotoSansSC-Regular.otf", "OFL-1.1.txt")
           foreach ($font in $fonts) { $required += "assets/fonts/$font" }
           $catalogs = @("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
@@ -649,8 +656,9 @@ jobs:
           # same reviewed launcher-only resources explicitly into the final
           # app bundle before the IPA safety check. No original game data is
           # selected, copied, or created here.
-          mkdir -p "$APP/Resources/assets/cards" "$APP/Resources/assets/fonts" "$APP/Resources/po"
+          mkdir -p "$APP/Resources/assets/cards" "$APP/Resources/assets/branding" "$APP/Resources/assets/fonts" "$APP/Resources/po"
           cp assets/cards/*.png "$APP/Resources/assets/cards/"
+          cp assets/branding/project-eon-logo-v1.png "$APP/Resources/assets/branding/"
           cp assets/fonts/NotoSans-Regular.ttf assets/fonts/NotoSansArabic-Regular.ttf \
             assets/fonts/NotoSansDevanagari-Regular.ttf assets/fonts/NotoSansJP-Regular.otf \
             assets/fonts/NotoSansKR-Regular.otf assets/fonts/NotoSansSC-Regular.otf \
