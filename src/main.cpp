@@ -414,7 +414,7 @@ struct ModernRuntimeDiagnostics {
         std::string runtime_status;
     };
     std::string release_identity;
-    std::string runtime_admission = "UNSELECTED";
+    std::string runtime_admission = "NOT SELECTED";
     // The first hash-checked address is a preservation navigation marker,
     // not a request to execute, emulate, or hook original machine code.
     std::string startup_boundary = "—";
@@ -959,7 +959,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
     const std::array<std::pair<const char*, std::string>, 10> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
-        {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
+        {"TRACE ADMISSION", tr(diagnostics.runtime_admission)},
         {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
@@ -4415,10 +4415,10 @@ int main(int argc, char** argv) {
         ModernRuntimeDiagnostics diagnostics;
         diagnostics.release_identity = tr("NOT SELECTED");
         switch (runtime_coordinator.admission()) {
-        case eon::ReleaseRuntimeAdmission::unselected: diagnostics.runtime_admission = "UNSELECTED"; break;
-        case eon::ReleaseRuntimeAdmission::active: diagnostics.runtime_admission = "ACTIVE"; break;
-        case eon::ReleaseRuntimeAdmission::identity_rejected: diagnostics.runtime_admission = "IDENTITY REJECTED"; break;
-        case eon::ReleaseRuntimeAdmission::archive_rejected: diagnostics.runtime_admission = "ARCHIVE REJECTED"; break;
+        case eon::ReleaseRuntimeAdmission::unselected: diagnostics.runtime_admission = "NOT SELECTED"; break;
+        case eon::ReleaseRuntimeAdmission::active: diagnostics.runtime_admission = "READY"; break;
+        case eon::ReleaseRuntimeAdmission::identity_rejected: diagnostics.runtime_admission = "REJECTED"; break;
+        case eon::ReleaseRuntimeAdmission::archive_rejected: diagnostics.runtime_admission = "REJECTED"; break;
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");
