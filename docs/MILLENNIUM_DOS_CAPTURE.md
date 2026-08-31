@@ -352,7 +352,7 @@ it must not switch CPU cores merely to suppress diagnostics.
 ### Unhandled-interrupt machine-state reconnaissance (not trace evidence)
 
 The reviewed diagnostic recorder now has executable SHA-256
-`ab53ed0ef1d921b7379f1668013da39b3a2d0bb41faa1eb6a7a5eb8a15f50325`.
+`1bacb843a3c1684ce4da78cac809ef6e272b5fdabb7262a01cda2b9b1b571665`.
 Its first 15-second, input-free run retained the unchanged five-event stream
 `eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda` and,
 after the four earlier raw values, exactly one additional raw observation:

@@ -44,7 +44,7 @@ This establishes the observer's no-input behaviour only; it does not record a
 physical key, title poll, guest acceptance, frame, audio, or playable state.
 
 The currently reviewed diagnostic build is SHA-256
-`ab53ed0ef1d921b7379f1668013da39b3a2d0bb41faa1eb6a7a5eb8a15f50325`.
+`1bacb843a3c1684ce4da78cac809ef6e272b5fdabb7262a01cda2b9b1b571665`.
 In addition to the pre-existing raw result sites, its callback default handler
 retains exactly one raw `unhandled-interrupt` record when an exception-vector
 callback loops. The record reports the callback's machine register state and
@@ -62,6 +62,13 @@ and `TITLES.EXE:$0129`, and at the first post-call instruction for
 or assign a return ABI. Its raw observations and their strict non-admission
 status are recorded in
 [MILLENNIUM_DOS_CAPTURE.md](MILLENNIUM_DOS_CAPTURE.md#title-private-vector-return-reconnaissance-not-a-v2-event).
+
+The current build additionally emits at most one raw `private-vector` record
+at the already byte-locked `TITLES.EXE:$0127` software `INT $91` request. It
+reads the two words currently stored in IVT slot `$91` before DOSBox-X
+dispatches that original interrupt. The record is address provenance only: it
+does not install, replace, invoke, or interpret the vector, and it establishes
+neither handler code, return values, driver state, title output, nor gameplay.
 
 The design is locked to the locally inspected DOSBox-X source revision
 `234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapters
