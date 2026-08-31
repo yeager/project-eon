@@ -50,6 +50,13 @@ an unproven handoff nor changes source bytes. Their resulting objects remain
 bounded bootstrap/opening evidence; moving them out of the SDL layer does not
 execute an unknown ABI or claim game parity.
 
+Admission is transactional. After the outer archive rehash succeeds, the
+coordinator constructs exactly one platform-appropriate engine adapter in
+temporary storage, then publishes both that adapter and its launch identity
+together. A failed parser/leaf admission leaves no active identity or prior
+adapter. SDL owns only renderer, audio-device, and host-input resources; it
+borrows the admitted adapter and never reloads a release independently.
+
 ## Original and Modern mode contract
 
 Project Eon deliberately distinguishes a preservation result from an
