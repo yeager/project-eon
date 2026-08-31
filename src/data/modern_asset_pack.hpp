@@ -42,6 +42,16 @@ struct ModernAssetPackValidation {
     [[nodiscard]] bool accepted() const { return error.empty(); }
 };
 
+struct ModernAssetPackRendererTargets {
+    bool millennium_dos_title_640x400 = false;
+    bool millennium_dos_title_1280x800 = false;
+    std::size_t deuteros_amiga_opening_640x400_frames = 0;
+    std::size_t deuteros_amiga_opening_1280x800_frames = 0;
+};
+
+[[nodiscard]] ModernAssetPackRendererTargets modern_asset_pack_renderer_targets(
+    const ModernAssetPack& pack);
+
 // The first renderable v1 target is intentionally narrow: a 640x400 RGBA PNG
 // replacement for the recovered Millennium DOS English P00 title. This is a
 // renderer input only, not an original resource decoder.

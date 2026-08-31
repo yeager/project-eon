@@ -356,6 +356,19 @@ find_deuteros_amiga_held_opening_sequence(const ModernAssetPack& pack) {
 
 } // namespace
 
+ModernAssetPackRendererTargets modern_asset_pack_renderer_targets(const ModernAssetPack& pack) {
+    ModernAssetPackRendererTargets targets;
+    for (const auto& asset : pack.assets) {
+        if (asset.id == "millennium.dos.title.png-640x400") targets.millennium_dos_title_640x400 = true;
+        else if (asset.id == "millennium.dos.title.png-1280x800") targets.millennium_dos_title_1280x800 = true;
+        else if (asset.id.starts_with("deuteros.amiga.opening.held-v1.frame-")
+            && asset.id.ends_with(".png-640x400")) ++targets.deuteros_amiga_opening_640x400_frames;
+        else if (asset.id.starts_with("deuteros.amiga.opening.held-v1.frame-")
+            && asset.id.ends_with(".png-1280x800")) ++targets.deuteros_amiga_opening_1280x800_frames;
+    }
+    return targets;
+}
+
 ModernAssetPackValidation validate_modern_asset_pack(const std::filesystem::path& manifest_path) {
     std::uintmax_t manifest_size = 0;
     std::string error;

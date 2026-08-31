@@ -3445,6 +3445,14 @@ void report_modern_asset_packs(const std::filesystem::path& root,
             << " / source " << pack.source_release_sha256 << '\n'
             << "          " << pack.provenance << "; " << pack.assets.size()
             << " hash-verified external assets; admission only\n";
+        const auto targets = eon::modern_asset_pack_renderer_targets(pack);
+        std::cout << "          renderer targets: Millennium title "
+            << (targets.millennium_dos_title_1280x800 ? "1280x800"
+                : targets.millennium_dos_title_640x400 ? "640x400" : "none")
+            << "; Deuteros opening " << targets.deuteros_amiga_opening_640x400_frames
+            << "/" << eon::deuteros_amiga_held_opening_frame_count << " at 640x400, "
+            << targets.deuteros_amiga_opening_1280x800_frames << "/"
+            << eon::deuteros_amiga_held_opening_frame_count << " at 1280x800\n";
     }
 }
 
