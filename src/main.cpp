@@ -279,6 +279,9 @@ struct ReleaseLanguageCard {
     std::string language;
     std::string sha256;
     SDL_FRect bounds;
+    // Borrowed from the selected generated platform card. Release identity
+    // has no original-art dependency and must not own another SDL texture.
+    SDL_Texture* texture = nullptr;
 };
 
 enum class ProfileChoice { original, modern, custom };
@@ -4082,9 +4085,14 @@ int main(int argc, char** argv) {
             : (identities.size() == 2 ? 552.0F : 352.0F);
         const float first_x = identities.size() == 1 ? 364.0F : 64.0F;
         const float stride = identities.size() == 2 ? 600.0F : 400.0F;
+        const auto artwork = std::find_if(platform_card_templates.begin(),
+            platform_card_templates.end(), [&](const PlatformCard& card) {
+                return card.platform == *active_platform;
+            });
         for (std::size_t index = 0; index < identities.size(); ++index) {
             cards_for_platform.push_back({identities[index].language, identities[index].sha256,
-                {first_x + static_cast<float>(index) * stride, 188, width, 308}});
+                {first_x + static_cast<float>(index) * stride, 188, width, 308},
+                artwork == platform_card_templates.end() ? nullptr : artwork->texture});
         }
         return cards_for_platform;
     };
@@ -4988,11 +4996,16 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 64, 108, tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
                 for (std::size_t index = 0; index < language_cards.size(); ++index) {
                     const auto& card = language_cards[index];
-                    SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
+                    if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
+                    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                    SDL_SetRenderDrawColor(renderer, 3, 10, 20, card.texture ? 142 : 255);
                     SDL_RenderFillRect(renderer, &card.bounds);
+                    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
                     draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_release_card), true);
                     const auto label = card.language == "es" ? tr("SPANISH") : tr("ENGLISH");
-                    draw_text(renderer, card.bounds.x + 24, card.bounds.y + 116, label);
+                    draw_text(renderer, card.bounds.x + 24, card.bounds.y + 84,
+                        active_platform ? tr(launcher_platform_label(*active_platform)) : tr("UNKNOWN PLATFORM"));
+                    draw_text(renderer, card.bounds.x + 24, card.bounds.y + 126, label);
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 150,
                         std::string(tr("VERIFIED ORIGINAL DATA")) + " / "
                             + truncated_identity_hash(card.sha256));
