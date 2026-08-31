@@ -3620,8 +3620,7 @@ int main(int argc, char** argv) {
         if (!active_launch() || active_launch()->request.game != game) return std::nullopt;
         return active_launch()->release;
     };
-    auto millennium_assets = active_launch() && active_launch()->release.game == eon::Game::millennium
-        ? eon::load_millennium_dos_runtime(active_launch()->release) : std::nullopt;
+    const eon::MillenniumDosRuntimeAssets* millennium_assets = runtime_coordinator.millennium_dos();
     // The command-line path is an initial explicit selection, not a mutable
     // request object. Custom's native picker may replace this session-local
     // candidate before launch; neither route has a default pack location.
@@ -3699,7 +3698,7 @@ int main(int argc, char** argv) {
     // Project Eon branding is original launcher artwork, never recovered game
     // pixels. It remains a renderer-only menu resource in every profile.
     SDL_Texture* project_eon_logo_texture = load_branding_texture(renderer, "project-eon-logo-v1.png");
-    std::unique_ptr<eon::DeuterosAmigaOpening> deuteros_opening;
+    eon::DeuterosAmigaOpening* deuteros_opening = runtime_coordinator.deuteros_amiga();
     std::unique_ptr<eon::DeuterosAmigaPaulaMixer> deuteros_paula;
     SDL_AudioStream* deuteros_audio_stream = nullptr;
     SDL_Texture* preview_texture = nullptr;
@@ -3831,8 +3830,8 @@ int main(int argc, char** argv) {
     std::optional<eon::ModernAssetPackPngSurface> millennium_external_modern_surface;
     bool millennium_external_modern_attempted = false;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
-    std::unique_ptr<eon::MillenniumAtariBootstrapSession> millennium_atari_session;
-    std::unique_ptr<eon::MillenniumAmigaBootstrapSession> millennium_amiga_session;
+    eon::MillenniumAtariBootstrapSession* millennium_atari_session = runtime_coordinator.millennium_atari();
+    eon::MillenniumAmigaBootstrapSession* millennium_amiga_session = runtime_coordinator.millennium_amiga();
     const auto discard_millennium_assets = [&] {
         if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
         if (millennium_modern_preview_texture) SDL_DestroyTexture(millennium_modern_preview_texture);
@@ -3844,9 +3843,9 @@ int main(int argc, char** argv) {
         millennium_external_modern_surface.reset();
         millennium_external_modern_attempted = false;
         millennium_gx_canvas_texture = nullptr;
-        millennium_assets.reset();
-        millennium_atari_session.reset();
-        millennium_amiga_session.reset();
+        millennium_assets = nullptr;
+        millennium_atari_session = nullptr;
+        millennium_amiga_session = nullptr;
     };
     const auto create_millennium_textures = [&] {
         if (!millennium_assets || millennium_preview_texture) return;
@@ -3896,9 +3895,7 @@ int main(int argc, char** argv) {
     // only when the scanner has actually found the selected original media.
     const auto load_millennium_assets_if_available = [&] {
         if (!millennium_assets) {
-            if (const auto release = resolve_active_release(eon::Game::millennium)) {
-                millennium_assets = eon::load_millennium_dos_runtime(*release);
-            }
+            millennium_assets = runtime_coordinator.millennium_dos();
             create_millennium_textures();
         }
         if (!millennium_assets || millennium_assets->language != "en"
@@ -3958,7 +3955,7 @@ int main(int argc, char** argv) {
         deuteros_input_pressed = false;
     };
     std::optional<std::uint32_t> deuteros_title_resource;
-    std::unique_ptr<eon::DeuterosAtariBootstrapSession> deuteros_atari_session;
+    eon::DeuterosAtariBootstrapSession* deuteros_atari_session = runtime_coordinator.deuteros_atari();
     std::unique_ptr<eon::MillenniumDosSoundSelectionSession> millennium_sound_selection_session;
     std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
     // SDL text input is the host analogue of DOS' character-availability
@@ -4050,8 +4047,8 @@ int main(int argc, char** argv) {
             static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
         }
         deuteros_paula.reset();
-        deuteros_opening.reset();
-        deuteros_atari_session.reset();
+        deuteros_opening = nullptr;
+        deuteros_atari_session = nullptr;
         deuteros_title_resource.reset();
         deuteros_preview_rgba.reset();
         deuteros_preview_source_tick.reset();
@@ -4083,10 +4080,9 @@ int main(int argc, char** argv) {
         // selecting the title again starts a fresh original boundary, and
         // must not retain an IME/virtual keyboard from the previous visit.
         stop_millennium_title();
-        const auto release = resolve_active_release(eon::Game::millennium);
-        if (!release) return;
-        millennium_atari_session = eon::load_millennium_atari_runtime(*release);
-        millennium_amiga_session = eon::load_millennium_amiga_runtime(*release);
+        if (!resolve_active_release(eon::Game::millennium)) return;
+        millennium_atari_session = runtime_coordinator.millennium_atari();
+        millennium_amiga_session = runtime_coordinator.millennium_amiga();
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
         // MILL.COM's sound prompt occurs before the title child request. For
@@ -4120,10 +4116,9 @@ int main(int argc, char** argv) {
     const auto start_deuteros = [&] {
         stop_millennium_title();
         reset_deuteros_runtime();
-        const auto release = resolve_active_release(eon::Game::deuteros);
-        if (!release) return;
-        deuteros_atari_session = eon::load_deuteros_atari_runtime(*release);
-        deuteros_opening = eon::load_deuteros_amiga_runtime(*release);
+        if (!resolve_active_release(eon::Game::deuteros)) return;
+        deuteros_atari_session = runtime_coordinator.deuteros_atari();
+        deuteros_opening = runtime_coordinator.deuteros_amiga();
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
@@ -4140,6 +4135,11 @@ int main(int argc, char** argv) {
             admit_modern_pack_for_release(*selected_modern_pack_manifest, resolved->release);
         }
         if (!runtime_coordinator.acquire(*resolved)) return;
+        millennium_assets = runtime_coordinator.millennium_dos();
+        millennium_amiga_session = runtime_coordinator.millennium_amiga();
+        millennium_atari_session = runtime_coordinator.millennium_atari();
+        deuteros_opening = runtime_coordinator.deuteros_amiga();
+        deuteros_atari_session = runtime_coordinator.deuteros_atari();
         active_release_sha256 = resolved->request.release_sha256;
         active_release_language = resolved->request.release_language;
         selected = launcher_route.game;
@@ -4741,9 +4741,7 @@ int main(int argc, char** argv) {
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && !deuteros_opening && eon::deuteros_amiga_opening_supported(active_platform)) {
-            if (const auto release = resolve_active_release(eon::Game::deuteros)) {
-                deuteros_opening = eon::load_deuteros_amiga_runtime(*release);
-            }
+            deuteros_opening = runtime_coordinator.deuteros_amiga();
             create_deuteros_opening_texture();
             start_deuteros_audio();
             load_deuteros_external_modern_sequence();
@@ -4751,9 +4749,7 @@ int main(int argc, char** argv) {
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && active_platform == eon::Platform::atari_st && !deuteros_atari_session) {
-            if (const auto release = resolve_active_release(eon::Game::deuteros)) {
-                deuteros_atari_session = eon::load_deuteros_atari_runtime(*release);
-            }
+            deuteros_atari_session = runtime_coordinator.deuteros_atari();
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && deuteros_opening && !deuteros_opening->title_handed_off()) {
