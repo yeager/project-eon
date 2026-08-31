@@ -4233,6 +4233,12 @@ int main(int argc, char** argv) {
     };
     const auto launch_menu_selection = [&] {
         const auto candidate = launcher_session.launch_request(request);
+        // The coordinator acquires only a fresh, exact release, but the SDL
+        // layer also owns source-derived textures, audio queues and title
+        // input state. Revoke all of those before every menu launch, even if
+        // the preceding route returned normally, so an attempted re-launch
+        // can never present a frame or queued sample from another release.
+        reset_active_runtime();
         const auto admission = eon::admit_runtime_launch(runtime_coordinator, candidate, releases);
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(admission.admission));

@@ -105,6 +105,9 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("admit_runtime_launch", RUNTIME_SOURCE)
         self.assertIn("const auto admission = eon::admit_runtime_launch", SOURCE)
         self.assertIn("launcher_session.launch_request(request)", SOURCE)
+        launch = SOURCE.index("const auto launch_menu_selection")
+        admission = SOURCE.index("eon::admit_runtime_launch", launch)
+        self.assertIn("reset_active_runtime();", SOURCE[launch:admission])
 
     def test_profile_launch_rejections_are_visible_without_media_details(self) -> None:
         self.assertIn("std::string launcher_runtime_admission", SOURCE)
