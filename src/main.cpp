@@ -4149,8 +4149,11 @@ int main(int argc, char** argv) {
     };
     const auto apply_launcher_navigation = [&](const eon::LauncherSourceIdentity& before) {
         if (!launcher_interaction.source_changed_since(before)) return;
+        // A menu route may be driven by keyboard, gamepad, mouse, or touch.
+        // All four must revoke the prior admitted adapter before a different
+        // game/platform/language/hash can be presented or launched.
         clear_modern_pack_admission();
-        discard_millennium_assets();
+        reset_active_runtime();
     };
     const auto activate_launcher_card = [&](const std::optional<std::size_t> card) {
         const auto before = launcher_interaction.source_identity();
