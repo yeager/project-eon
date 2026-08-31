@@ -83,6 +83,9 @@ msgstr "ŹRÓDŁO DANYCH: NIEOBSŁUGIWANE"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "ODRZUCENIA: ROZMIAR {size}; HASH {hash}; NIECZYTELNE {unreadable}; ŁĄCZA {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "ZWERYFIKOWANE WYDANIA: {unique}; DUPLIKATY: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "WYBIERZ GRĘ   |   GÓRA/DÓŁ: PLATFORMA   |   D: SKAN DANYCH   |   F1: ORYGINALNY / NOWOCZESNY   |   ESC: WYJDŹ"
 

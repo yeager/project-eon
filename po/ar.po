@@ -72,6 +72,9 @@ msgstr "مصدر البيانات: غير مدعوم"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "المرفوضات: الحجم {size}; التجزئة {hash}; غير قابل للقراءة {unreadable}; الروابط {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "إصدارات موثقة: {unique}؛ نسخ مكررة: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "اختر اللعبة   |   أعلى/أسفل: المنصة   |   D: فحص البيانات   |   F1: أصلي / حديث   |   ESC: خروج"
 msgid "VERIFIED ORIGINAL DATA"

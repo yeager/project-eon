@@ -83,6 +83,9 @@ msgstr "데이터 원본: 지원 안 함"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "거부: 크기 {size}; 해시 {hash}; 읽을 수 없음 {unreadable}; 링크 {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "검증된 릴리스: {unique}; 중복: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "게임 선택   |   위/아래: 플랫폼   |   D: 데이터 검사   |   F1: 원본 / 현대식   |   ESC: 종료"
 

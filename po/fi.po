@@ -83,6 +83,9 @@ msgstr "TIETOLÄHDE: EI TUETTU"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "HYLÄTYT: KOKO {size}; TIIVISTE {hash}; LUKUKELVOTON {unreadable}; LINKIT {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "VARMENNETUT JULKAISUT: {unique}; KAKSOISKAPPALEET: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VALITSE PELI   |   YLÖS/ALAS: ALUSTA   |   D: TIETOJEN HAKU   |   F1: ALKUPERÄINEN / MODERNI   |   ESC: LOPETA"
 msgid "VERIFIED ORIGINAL DATA"

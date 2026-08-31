@@ -83,6 +83,9 @@ msgstr "数据来源：不受支持"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "已拒绝：大小 {size}；哈希 {hash}；不可读取 {unreadable}；链接 {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "已验证版本：{unique}；重复项：{duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "选择游戏   |   上/下：平台   |   D：扫描数据   |   F1：原版 / 现代   |   ESC：退出"
 

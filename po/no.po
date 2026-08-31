@@ -83,6 +83,9 @@ msgstr "DATAKILDE: IKKE STØTTET"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "AVVIST: STØRRELSE {size}; HASH {hash}; ULESBAR {unreadable}; LENKER {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "VERIFISERTE UTGIVELSER: {unique}; DUPLIKATER: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VELG SPILL   |   OPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERNE   |   ESC: AVSLUTT"
 

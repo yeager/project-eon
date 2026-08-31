@@ -83,6 +83,9 @@ msgstr "ДЖЕРЕЛО ДАНИХ: НЕ ПІДТРИМУЄТЬСЯ"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "ВІДХИЛЕНО: РОЗМІР {size}; ХЕШ {hash}; НЕЧИТАБЕЛЬНЕ {unreadable}; ПОСИЛАННЯ {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "ПЕРЕВІРЕНІ ВИДАННЯ: {unique}; ДУБЛІКАТИ: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВИБРАТИ ГРУ   |   ВГОРУ/ВНИЗ: ПЛАТФОРМА   |   D: ПЕРЕВІРКА ДАНИХ   |   F1: ОРИГІНАЛ / СУЧАСНИЙ   |   ESC: ВИЙТИ"
 
