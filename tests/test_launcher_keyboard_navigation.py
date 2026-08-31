@@ -87,7 +87,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
             "load_deuteros_atari_runtime",
         ):
             with self.subTest(loader=loader):
-                start = RUNTIME_SOURCE.index(f"{loader}(")
+                start = RUNTIME_SOURCE.rindex(f"{loader}(")
                 signature = RUNTIME_SOURCE[start:RUNTIME_SOURCE.index(") {", start) + 3]
                 self.assertIn("const ReleaseArchive& release", signature)
         self.assertIn("eon::load_deuteros_amiga_runtime(*release)", SOURCE)

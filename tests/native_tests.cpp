@@ -3061,6 +3061,21 @@ int main() {
     assert(spanish_dos_runtime->spanish_title_boundary && !spanish_dos_runtime->gx_canvas
         && !spanish_dos_runtime->title_flow && !spanish_dos_runtime->game_flow
         && !spanish_dos_runtime->initial_save);
+    // The coordinator publishes an adapter only after the exact outer archive
+    // has been rehashed and that adapter has fully parsed its own leaves.
+    eon::ResolvedLaunchRequest admitted_dos_launch;
+    admitted_dos_launch.release = *english_dos;
+    admitted_dos_launch.request.game = eon::Game::millennium;
+    admitted_dos_launch.request.platform = eon::Platform::dos;
+    admitted_dos_launch.request.release_language = "en";
+    admitted_dos_launch.request.release_sha256 = english_dos->sha256;
+    eon::ReleaseRuntimeCoordinator admitted_dos_runtime;
+    assert(admitted_dos_runtime.acquire(admitted_dos_launch));
+    assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos());
+    assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari()
+        && !admitted_dos_runtime.deuteros_amiga() && !admitted_dos_runtime.deuteros_atari());
+    admitted_dos_runtime.reset();
+    assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos());
     auto forged_release_metadata = *english_dos;
     forged_release_metadata.language = "es";
     bool rejected_forged_release_metadata = false;
