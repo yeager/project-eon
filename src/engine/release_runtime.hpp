@@ -1,6 +1,10 @@
 #pragma once
 
 #include "launcher.hpp"
+#include "engine/deuteros_amiga_opening.hpp"
+#include "engine/deuteros_atari_bootstrap_session.hpp"
+#include "engine/millennium_amiga_bootstrap_session.hpp"
+#include "engine/millennium_atari_bootstrap_session.hpp"
 
 #include <optional>
 
@@ -19,5 +23,14 @@ public:
 private:
     std::optional<ResolvedLaunchRequest> active_;
 };
+
+[[nodiscard]] std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(
+    const ReleaseArchive& release);
+[[nodiscard]] std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(
+    const ReleaseArchive& release);
+[[nodiscard]] std::unique_ptr<MillenniumAmigaBootstrapSession> load_millennium_amiga_runtime(
+    const ReleaseArchive& release);
+[[nodiscard]] std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(
+    const ReleaseArchive& release);
 
 } // namespace eon
