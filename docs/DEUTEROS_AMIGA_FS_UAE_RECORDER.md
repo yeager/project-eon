@@ -15,6 +15,7 @@ configuration and supplied media remain outside this repository.
 | Local package used for configuration preflight | Ubuntu `fs-uae 3.2.35-2` |
 | CPU route | A500-compatible cycle-exact 68000 loop, `src/newcpu.cpp:m68k_run_1_ce` |
 | Recorder activation | Exclusive new output named by `PROJECT_EON_FS_UAE_RAW_RECORD` |
+| Reviewed local v9 binary | aarch64 Linux, 61,505,560 bytes, SHA-256 `93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f` |
 
 The FS-UAE configuration file must be passed as the positional command-line
 argument. `--config=…` is not a FS-UAE configuration-file option and is known
@@ -46,13 +47,14 @@ registers or flags, changes vectors, inserts input, changes event scheduling,
 or writes a disk.
 
 The raw grammar is intentionally outside all Project Eon reference-trace
-versions:
+versions. Recorder v9 adds a delivery chronology snapshot, not guest input
+state:
 
 ```text
-raw-pc <ordinal> cycles=<emulated-cycle> pc=0x<address> ir_opcode=0x<word> memory_opcode=0x<word> d0=0x<value> a0=0x<value> a6=0x<value> sr=0x<word>
+raw-pc <ordinal> cycles=<emulated-cycle> pc=0x<address> ir_opcode=0x<word> memory_opcode=0x<word> d0=0x<value> a0=0x<value> a6=0x<value> sr=0x<word> input_ordinal=<0..256> input_frame=<frame>
 ```
 
-A v7 line distinguishes the cycle-exact core's prefetched IR word from the
+A v7/v9 line distinguishes the cycle-exact core's prefetched IR word from the
 word currently read at its observed PC. Neither field is promoted to an
 original-media instruction assertion without separately hash-bound load and
 execution evidence. A line says only that the patched emulator reached that
@@ -60,7 +62,14 @@ observation point with raw CPU values. It is not an `event<TAB>…` record, does
 release identity, and cannot be passed to `tools/record_reference_trace.py` or
 `--reference-trace`. In particular it establishes no Exec result, graphics
 ABI, callback meaning, bitplane layout, input semantic, title screen, audio,
-or runtime transition.
+or runtime transition. `input_ordinal=0 input_frame=0` means that no
+recorder-confirmed host delivery preceded that sample. A nonzero pair names
+the exact prior `host-input` receipt ordinal and its frame. The snapshot is
+published only after that bounded receipt write succeeds and immediately
+before the existing `amiga_send_input_event` call. It is an atomic packed
+observer value so a CPU record cannot combine a newer ordinal with an older
+frame. It does not copy action/state into the CPU record, claim an original
+poll, or imply acceptance by the guest.
 
 ## Physical-input delivery receipt
 
@@ -142,7 +151,7 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-Current captures write `capture_receipt_version=8`. They bind both the complete
+Current captures write `capture_receipt_version=9`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
@@ -159,7 +168,13 @@ than silently reinterpreting it. Receipt v8 recomputes a canonical per-site
 summary of the observed IR/memory word pairs from the raw-PC file. It does not
 assign those words an original-media, instruction, or ABI meaning. The action
 and state integers remain opaque: this binds delivery-file
-integrity, not a game input meaning or acceptance result. Receipt v2–v4 remain
+integrity, not a game input meaning or acceptance result. Receipt v9 additionally
+requires the raw CPU file to use the v9 grammar and recomputes every nonzero
+CPU snapshot against the finite host-delivery receipt. It rejects a missing,
+mismatched, nonmonotonic, or hand-edited ordinal/frame link. State save/restore
+and playback are excluded from both the receipt and snapshot. The resulting
+link proves only that an observed host-to-core delivery preceded an observed
+probe sample. Receipt v2–v4 remain
 verifiable as earlier evidence, but they do not contain the newer fields.
 Verify a completed external capture without opening its game media with:
 

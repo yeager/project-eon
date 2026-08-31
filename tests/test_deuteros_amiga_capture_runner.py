@@ -139,6 +139,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
     def test_raw_recorder_observation_is_hash_bound_and_bounded(self) -> None:
         with temporary_directory() as directory:
             raw = Path(directory) / "raw-pc.txt"
+            receipt = Path(directory) / "host-input-receipt.txt"
+            receipt.write_bytes(b"host-input 1 frame=2 line=3 action=4 state=1\n")
             self.assertEqual(TOOL.raw_observation_status(raw, "raw_pc"), "raw_pc=absent\n")
             observed = (b"raw-pc 1 cycles=1 pc=0x000210d4 opcode=0x4e75 "
                         b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n"
@@ -156,6 +158,24 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             self.assertIn("raw_pc_format=v7\n", v7_status)
             self.assertIn("raw_pc_records=1\n", v7_status)
             self.assertIn("raw_pc_opcode_pairs=0x000210d4:4e75/4e75\n", v7_status)
+            v9_observed = (b"raw-pc 1 cycles=1 pc=0x000210d4 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                           b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                           b"input_ordinal=0 input_frame=0\n")
+            raw.write_bytes(v9_observed)
+            v9_status = TOOL.raw_observation_status(raw, "raw_pc", "v9")
+            self.assertIn("raw_pc_format=v9\n", v9_status)
+            self.assertIn("raw_pc_input_links=0\n", v9_status)
+            self.assertEqual(TOOL.raw_pc_input_chronology_status(raw, receipt),
+                             "raw_pc_input_chronology=none\n")
+            raw.write_bytes(v9_observed.replace(b"input_ordinal=0 input_frame=0", b"input_ordinal=1 input_frame=2"))
+            self.assertEqual(TOOL.raw_pc_input_chronology_status(raw, receipt),
+                             "raw_pc_input_chronology=linked\nraw_pc_input_chronology_records=1\n")
+            raw.write_bytes(v9_observed.replace(b"input_ordinal=0 input_frame=0", b"input_ordinal=1 input_frame=3"))
+            with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
+                TOOL.raw_pc_input_chronology_status(raw, receipt)
+            raw.write_bytes(v9_observed.replace(b"input_ordinal=0 input_frame=0", b"input_ordinal=0 input_frame=1"))
+            with self.assertRaisesRegex(TOOL.CaptureError, "frame zero"):
+                TOOL.raw_observation_status(raw, "raw_pc", "v9")
             with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
                 TOOL.raw_observation_status(raw, "raw_pc")
             raw.write_bytes(b"raw-pc 2 cycles=1 pc=0x000210d4 opcode=0x4e75 "

@@ -28,7 +28,7 @@ EXPECTED_RELEASE_SIZE = 4_066_771
 EXPECTED_KICKSTART_SHA256 = "c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04"
 # This is the supplied ZIP size, not the 262,144-byte ROM payload size.
 EXPECTED_KICKSTART_SIZE = 143_269
-EXPECTED_RECORDER_SHA256 = "59635e876004536273708a04b6109831aa9d4fa6fb4e50663bc5e201cc450697"
+EXPECTED_RECORDER_SHA256 = "93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f"
 EXPECTED_DISK1_SHA256 = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
 EXPECTED_DISK2_SHA256 = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a"
 EXPECTED_ROM_SHA256 = "ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53"
@@ -78,6 +78,13 @@ RAW_PC_V7_LINE = re.compile(
     r"raw-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
     r"ir_opcode=0x([0-9a-f]{4}) memory_opcode=0x([0-9a-f]{4}) "
     r"d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4})\n")
+# v9 binds a raw CPU sample only to the most recent recorder-confirmed
+# host-to-core delivery. It never states that the guest polled or accepted it.
+RAW_PC_V9_LINE = re.compile(
+    r"raw-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
+    r"ir_opcode=0x([0-9a-f]{4}) memory_opcode=0x([0-9a-f]{4}) "
+    r"d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4}) "
+    r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
 # The reviewed FS-UAE host-delivery observer prints raw signed integer action
 # fields. They remain opaque delivery observations; this grammar proves only
 # that an external receipt has not been hand-edited into an arbitrary file.
@@ -86,7 +93,7 @@ HOST_INPUT_LINE = re.compile(
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
 # Receipt v6 additionally binds the finite recorder timing profile. Older
 # evidence remains verifiable without pretending it has the newer field.
-CAPTURE_RECEIPT_VERSION = "8"
+CAPTURE_RECEIPT_VERSION = "9"
 
 
 class CaptureError(RuntimeError):
@@ -260,25 +267,30 @@ def input_receipt_status(path: Path) -> str:
             f"host_input_receipt_records={record_count}\n")
 
 
-def parse_host_input_receipt(path: Path) -> int:
-    """Validate only the recorder's finite host-to-core delivery grammar."""
+def parse_host_input_records(path: Path) -> list[tuple[int, int]]:
+    """Validate finite host-to-core delivery records and retain ordinal/frame."""
     try:
         text = path.read_text(encoding="ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("host-input receipt is not ASCII recorder output") from error
     if not text.endswith("\n"):
         raise CaptureError("host-input receipt has a truncated final record")
-    count = 0
+    records: list[tuple[int, int]] = []
     for expected, line in enumerate(text.splitlines(keepends=True), start=1):
         match = HOST_INPUT_LINE.fullmatch(line)
         if not match:
             raise CaptureError("host-input receipt contains an invalid recorder record")
         if int(match.group(1)) != expected:
             raise CaptureError("host-input receipt record ordinals are not contiguous")
-        count = expected
-        if count > MAX_INPUT_RECEIPT_RECORDS:
+        records.append((int(match.group(1)), int(match.group(2))))
+        if len(records) > MAX_INPUT_RECEIPT_RECORDS:
             raise CaptureError("host-input receipt exceeds the recorder record cap")
-    return count
+    return records
+
+
+def parse_host_input_receipt(path: Path) -> int:
+    """Validate only the recorder's finite host-to-core delivery grammar."""
+    return len(parse_host_input_records(path))
 
 
 def raw_observation_status(path: Path, name: str, raw_format: str = "legacy") -> str:
@@ -300,12 +312,16 @@ def raw_observation_status(path: Path, name: str, raw_format: str = "legacy") ->
     status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
               f"{name}_format={raw_format}\n{name}_records={sum(site_counts.values())}\n"
               f"{name}_site_counts={ordered_counts}\n")
-    if raw_format == "v7":
+    if raw_format in {"v7", "v9"}:
         ordered_pairs = ",".join(
             f"0x{site:08x}:" + "+".join(
                 f"{ir:04x}/{memory:04x}" for ir, memory in sorted(site_opcode_pairs[site]))
             for site in RAW_PC_SITES if site in site_opcode_pairs)
         status += f"{name}_opcode_pairs={ordered_pairs}\n"
+    if raw_format == "v9":
+        links = parse_raw_pc_input_links(path)
+        status += (f"{name}_input_links={sum(ordinal != 0 for ordinal, _ in links)}\n"
+                   f"{name}_last_input_ordinal={links[-1][0] if links else 0}\n")
     return status
 
 
@@ -319,12 +335,14 @@ def parse_raw_pc_observations(path: Path, raw_format: str = "legacy") -> dict[in
     return parse_raw_pc_summary(path, raw_format)[0]
 
 
-def parse_raw_pc_summary(path: Path, raw_format: str = "legacy") -> tuple[dict[int, int], dict[int, set[tuple[int, int]]]]:
-    """Validate raw records and retain opaque v7 IR/memory pairs per probe site."""
+def _parse_raw_pc(path: Path, raw_format: str) -> tuple[dict[int, int], dict[int, set[tuple[int, int]]], list[tuple[int, int]]]:
+    """Validate raw records and retain opaque v7/v9 fields per probe site."""
     if raw_format == "legacy":
         matcher = RAW_PC_LEGACY_LINE
     elif raw_format == "v7":
         matcher = RAW_PC_V7_LINE
+    elif raw_format == "v9":
+        matcher = RAW_PC_V9_LINE
     else:
         raise CaptureError("raw_pc format is not a reviewed recorder grammar")
     try:
@@ -335,6 +353,7 @@ def parse_raw_pc_summary(path: Path, raw_format: str = "legacy") -> tuple[dict[i
         raise CaptureError("raw_pc has a truncated final record")
     counts: dict[int, int] = {}
     opcode_pairs: dict[int, set[tuple[int, int]]] = {}
+    input_links: list[tuple[int, int]] = []
     previous_cycle = -1
     for expected_ordinal, line in enumerate(text.splitlines(keepends=True), start=1):
         match = matcher.fullmatch(line)
@@ -349,13 +368,46 @@ def parse_raw_pc_summary(path: Path, raw_format: str = "legacy") -> tuple[dict[i
         if site not in RAW_PC_SITES:
             raise CaptureError("raw_pc uses an unreviewed probe site")
         counts[site] = counts.get(site, 0) + 1
-        if raw_format == "v7":
+        if raw_format in {"v7", "v9"}:
             opcode_pairs.setdefault(site, set()).add((int(match.group(4), 16), int(match.group(5), 16)))
+        if raw_format == "v9":
+            input_ordinal, input_frame = int(match.group(10)), int(match.group(11))
+            if input_ordinal > MAX_INPUT_RECEIPT_RECORDS:
+                raise CaptureError("raw_pc exceeds the input-recorder ordinal cap")
+            if input_links and input_ordinal < input_links[-1][0]:
+                raise CaptureError("raw_pc input ordinals are not monotonic")
+            if input_ordinal == 0 and input_frame != 0:
+                raise CaptureError("raw_pc no-input snapshot must use frame zero")
+            input_links.append((input_ordinal, input_frame))
         if counts[site] > MAX_RAW_RECORDS_PER_SITE:
             raise CaptureError("raw_pc exceeds the per-site recorder cap")
         if expected_ordinal > MAX_RAW_RECORDS:
             raise CaptureError("raw_pc exceeds the recorder record cap")
+    return counts, opcode_pairs, input_links
+
+
+def parse_raw_pc_summary(path: Path, raw_format: str = "legacy") -> tuple[dict[int, int], dict[int, set[tuple[int, int]]]]:
+    """Validate raw records and retain opaque IR/memory pairs per probe site."""
+    counts, opcode_pairs, _ = _parse_raw_pc(path, raw_format)
     return counts, opcode_pairs
+
+
+def parse_raw_pc_input_links(path: Path) -> list[tuple[int, int]]:
+    """Return v9 delivery chronology without promoting it to guest input proof."""
+    return _parse_raw_pc(path, "v9")[2]
+
+
+def raw_pc_input_chronology_status(raw_path: Path, input_path: Path) -> str:
+    """Cross-bind v9 CPU samples to prior recorder-confirmed host delivery."""
+    links = parse_raw_pc_input_links(raw_path)
+    if not any(ordinal for ordinal, _ in links):
+        return "raw_pc_input_chronology=none\n"
+    by_ordinal = dict(parse_host_input_records(input_path))
+    for ordinal, frame in links:
+        if ordinal and by_ordinal.get(ordinal) != frame:
+            raise CaptureError("raw_pc input chronology does not match the host-input receipt")
+    return ("raw_pc_input_chronology=linked\n"
+            f"raw_pc_input_chronology_records={sum(ordinal != 0 for ordinal, _ in links)}\n")
 
 
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
@@ -525,7 +577,11 @@ def run_capture(args: argparse.Namespace) -> Path:
         if kickstart_before != kickstart_after:
             raise CaptureError("Kickstart archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.txt")
-        observation_status = raw_observation_status(output / "raw-pc.txt", "raw_pc", "v7")
+        raw_path = output / "raw-pc.txt"
+        input_path = output / "host-input-receipt.txt"
+        observation_status = raw_observation_status(raw_path, "raw_pc", "v9")
+        chronology_status = (raw_pc_input_chronology_status(raw_path, input_path)
+                             if "raw_pc=present\n" in observation_status else "")
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
                         f"timing_profile={args.timing_profile}\n"
@@ -534,7 +590,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("kickstart_archive", kickstart_after)
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
-                        + receipt_status + observation_status
+                        + receipt_status + observation_status + chronology_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
