@@ -54,7 +54,9 @@
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "data/sha256.hpp"
+#include "data/function_map.hpp"
 #include "data/recovery_map.hpp"
+#include "data/runtime_diagnostics.hpp"
 #include "data/release_manifest.hpp"
 #include "data/startup_boundary.hpp"
 
@@ -1933,6 +1935,34 @@ int main() {
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
     assert(amiga_map.size() == 3);
     for (const auto& entry : amiga_map) assert(entry.game == eon::Game::deuteros);
+    // CLI JSON and the F10 panel consume this one SDL-free composition. It
+    // has to retain only rows that match the selected immutable release,
+    // while reporting no trace admission merely because media was scanned.
+    for (const auto& release : releases) {
+        const auto diagnostics = eon::runtime_diagnostics_for_release(release);
+        assert(diagnostics.game == release.game);
+        assert(diagnostics.platform == release.platform);
+        assert(diagnostics.language == release.language);
+        assert(diagnostics.release_sha256 == release.sha256);
+        assert(diagnostics.trace_admission == "not-loaded");
+        assert(diagnostics.recovery_boundaries.size()
+            == eon::recovery_map_for_release(release.sha256).size());
+        assert(diagnostics.functions.size()
+            == eon::function_map_for_release(release.sha256).size());
+        if (const auto startup = eon::startup_boundary_for_release(release.sha256)) {
+            assert(diagnostics.startup_boundary.has_value());
+            assert(diagnostics.startup_boundary->parser_profile_id == startup->parser_profile_id);
+            assert(diagnostics.startup_boundary->source_address == startup->source_address);
+        } else {
+            assert(!diagnostics.startup_boundary.has_value());
+        }
+        for (const auto& boundary : diagnostics.recovery_boundaries) {
+            assert(eon::release_has_recovery_map_entry(release.sha256, boundary.id));
+        }
+        for (const auto& function : diagnostics.functions) {
+            assert(eon::release_has_function_map_entry(release.sha256, function.id));
+        }
+    }
 
     const auto amiga_millennium = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium && release.platform == eon::Platform::amiga;

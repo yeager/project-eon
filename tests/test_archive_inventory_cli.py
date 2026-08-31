@@ -31,8 +31,8 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         body = MAIN[start:MAIN.index("SDL_FRect aspect_viewport", start)]
         self.assertIn(r'\"project-eon.inspect/v1\"', body)
         self.assertIn(r'\"function_map\"', body)
-        self.assertIn("function_map_for_release(release.sha256)", body)
-        self.assertIn("release_has_function_map_entry(release.sha256, function.id)", body)
+        self.assertIn("runtime_diagnostics_for_release(release)", body)
+        self.assertIn("diagnostics.functions", body)
         self.assertNotIn("release.path", body)
 
     def test_trace_json_is_diagnostics_only_and_omits_local_paths(self) -> None:
