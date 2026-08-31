@@ -49,11 +49,14 @@ The raw grammar is intentionally outside all Project Eon reference-trace
 versions:
 
 ```text
-raw-pc <ordinal> cycles=<emulated-cycle> pc=0x<address> opcode=0x<word> d0=0x<value> a0=0x<value> a6=0x<value> sr=0x<word>
+raw-pc <ordinal> cycles=<emulated-cycle> pc=0x<address> ir_opcode=0x<word> memory_opcode=0x<word> d0=0x<value> a0=0x<value> a6=0x<value> sr=0x<word>
 ```
 
-A line says only that the patched emulator reached that instruction with those
-raw register observations. It is not an `event<TAB>…` record, does not carry a
+A v7 line distinguishes the cycle-exact core's prefetched IR word from the
+word currently read at its observed PC. Neither field is promoted to an
+original-media instruction assertion without separately hash-bound load and
+execution evidence. A line says only that the patched emulator reached that
+observation point with raw CPU values. It is not an `event<TAB>…` record, does not carry a
 release identity, and cannot be passed to `tools/record_reference_trace.py` or
 `--reference-trace`. In particular it establishes no Exec result, graphics
 ABI, callback meaning, bitplane layout, input semantic, title screen, audio,
@@ -139,7 +142,7 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-Current captures write `capture_receipt_version=6`. They bind both the complete
+Current captures write `capture_receipt_version=7`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
@@ -150,7 +153,9 @@ v6 also binds the finite `realtime` or diagnostic-only `warp` timing profile
 to the generated configuration, and validates a present FS-UAE host-delivery
 receipt as at most 256
 contiguous ASCII records in the reviewed `host-input` grammar and records its
-count. The action and state integers remain opaque: this binds delivery-file
+count. Receipt v7 additionally requires the separate `ir_opcode` and
+`memory_opcode` raw-PC fields; it rejects a legacy single-opcode line rather
+than silently reinterpreting it. The action and state integers remain opaque: this binds delivery-file
 integrity, not a game input meaning or acceptance result. Receipt v2–v4 remain
 verifiable as earlier evidence, but they do not contain the newer fields.
 Verify a completed external capture without opening its game media with:

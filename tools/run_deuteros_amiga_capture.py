@@ -28,7 +28,7 @@ EXPECTED_RELEASE_SIZE = 4_066_771
 EXPECTED_KICKSTART_SHA256 = "c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04"
 # This is the supplied ZIP size, not the 262,144-byte ROM payload size.
 EXPECTED_KICKSTART_SIZE = 143_269
-EXPECTED_RECORDER_SHA256 = "727bba3ac4bc78558b964d0f572c488a419cd0985d803979e047381d2cf34f93"
+EXPECTED_RECORDER_SHA256 = "59635e876004536273708a04b6109831aa9d4fa6fb4e50663bc5e201cc450697"
 EXPECTED_DISK1_SHA256 = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
 EXPECTED_DISK2_SHA256 = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a"
 EXPECTED_ROM_SHA256 = "ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53"
@@ -67,10 +67,17 @@ RAW_PC_SITES = (
 )
 MAX_RAW_RECORDS = 4096
 MAX_RAW_RECORDS_PER_SITE = 128
-RAW_PC_LINE = re.compile(
+RAW_PC_LEGACY_LINE = re.compile(
     r"raw-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
     r"opcode=0x([0-9a-f]{4}) d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) "
     r"a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4})\n")
+# The cycle-exact core keeps a prefetched IR word separately from the memory
+# word at its current PC. Receipt v7 records both values and never presents
+# the former as though it were a direct original-media byte read.
+RAW_PC_V7_LINE = re.compile(
+    r"raw-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
+    r"ir_opcode=0x([0-9a-f]{4}) memory_opcode=0x([0-9a-f]{4}) "
+    r"d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4})\n")
 # The reviewed FS-UAE host-delivery observer prints raw signed integer action
 # fields. They remain opaque delivery observations; this grammar proves only
 # that an external receipt has not been hand-edited into an arbitrary file.
@@ -79,7 +86,7 @@ HOST_INPUT_LINE = re.compile(
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
 # Receipt v6 additionally binds the finite recorder timing profile. Older
 # evidence remains verifiable without pretending it has the newer field.
-CAPTURE_RECEIPT_VERSION = "6"
+CAPTURE_RECEIPT_VERSION = "7"
 
 
 class CaptureError(RuntimeError):
@@ -274,7 +281,7 @@ def parse_host_input_receipt(path: Path) -> int:
     return count
 
 
-def raw_observation_status(path: Path, name: str) -> str:
+def raw_observation_status(path: Path, name: str, raw_format: str = "legacy") -> str:
     """Bind strict raw-PC observations without assigning runtime semantics."""
     try:
         info = path.lstat()
@@ -286,22 +293,28 @@ def raw_observation_status(path: Path, name: str) -> str:
         raise CaptureError(f"{name} exceeds the bounded recorder contract")
     if info.st_size == 0:
         return f"{name}=empty\n"
-    site_counts = parse_raw_pc_observations(path)
+    site_counts = parse_raw_pc_observations(path, raw_format)
     digest, size = sha256_file(path)
     ordered_counts = ",".join(
         f"0x{site:08x}:{site_counts[site]}" for site in RAW_PC_SITES if site in site_counts)
     return (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
-            f"{name}_records={sum(site_counts.values())}\n"
+            f"{name}_format={raw_format}\n{name}_records={sum(site_counts.values())}\n"
             f"{name}_site_counts={ordered_counts}\n")
 
 
-def parse_raw_pc_observations(path: Path) -> dict[int, int]:
+def parse_raw_pc_observations(path: Path, raw_format: str = "legacy") -> dict[int, int]:
     """Validate the recorder grammar and return reachability counts only.
 
     This deliberately does not use register values as recovered ABI facts.
     It makes malformed, reordered, over-cap, or unreviewed-site recorder
     output a failed external capture instead of an opaque hash-bound blob.
     """
+    if raw_format == "legacy":
+        matcher = RAW_PC_LEGACY_LINE
+    elif raw_format == "v7":
+        matcher = RAW_PC_V7_LINE
+    else:
+        raise CaptureError("raw_pc format is not a reviewed recorder grammar")
     try:
         text = path.read_text(encoding="ascii")
     except UnicodeDecodeError as error:
@@ -311,7 +324,7 @@ def parse_raw_pc_observations(path: Path) -> dict[int, int]:
     counts: dict[int, int] = {}
     previous_cycle = -1
     for expected_ordinal, line in enumerate(text.splitlines(keepends=True), start=1):
-        match = RAW_PC_LINE.fullmatch(line)
+        match = matcher.fullmatch(line)
         if not match:
             raise CaptureError("raw_pc contains an invalid recorder record")
         ordinal, cycle, site = int(match.group(1)), int(match.group(2)), int(match.group(3), 16)
@@ -497,7 +510,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         if kickstart_before != kickstart_after:
             raise CaptureError("Kickstart archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.txt")
-        observation_status = raw_observation_status(output / "raw-pc.txt", "raw_pc")
+        observation_status = raw_observation_status(output / "raw-pc.txt", "raw_pc", "v7")
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
                         f"timing_profile={args.timing_profile}\n"

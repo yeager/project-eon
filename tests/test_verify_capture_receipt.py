@@ -65,10 +65,24 @@ class ReceiptVerifierTests(unittest.TestCase):
                 "a0=0x00000000 a6=0x00000000 sr=0x0000\n", encoding="ascii")
             fields = {"raw_pc": "present", "raw_pc_records": "1",
                       "raw_pc_site_counts": "0x000210d4:1"}
-            TOOL.verify_deuteros_raw_pc_summary(fields, root)
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "3")
             fields["raw_pc_site_counts"] = "0x000210d4:2"
             with self.assertRaisesRegex(ValueError, "grammar/count"):
-                TOOL.verify_deuteros_raw_pc_summary(fields, root)
+                TOOL.verify_deuteros_raw_pc_summary(fields, root, "3")
+
+    def test_v7_deuteros_raw_summary_requires_separate_ir_and_memory_words(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            raw = root / "raw-pc.txt"
+            raw.write_text(
+                "raw-pc 1 cycles=1 pc=0x000210d4 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n", encoding="ascii")
+            fields = {"raw_pc": "present", "raw_pc_format": "v7", "raw_pc_records": "1",
+                      "raw_pc_site_counts": "0x000210d4:1"}
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "7")
+            fields["raw_pc_format"] = "legacy"
+            with self.assertRaisesRegex(ValueError, "format"):
+                TOOL.verify_deuteros_raw_pc_summary(fields, root, "7")
 
     def test_v5_deuteros_host_input_summary_is_recomputed_from_strict_records(self) -> None:
         with temporary_directory() as directory:
@@ -115,6 +129,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "7")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "8")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "9")
+        TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "10")
         TOOL.verify_console_admission({}, "3")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "4")
