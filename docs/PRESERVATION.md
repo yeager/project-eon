@@ -274,6 +274,10 @@ candidates, manifest-sized hash rejections, verified and duplicate occurrences,
 unique releases, and unreadable candidates. The report deliberately does not
 print unrecognised filenames or infer their platform: it makes admission and
 scanner failures auditable while preserving the strict content-addressed boundary.
+The launcher's `D` scanner panel consumes the same immutable aggregate snapshot,
+including unique verified-release and duplicate-occurrence counts. It is a
+presentation of the existing admission result, not a second scanner or a path
+to launch an unrecognised candidate.
 
 For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
 rehashed game/platform card state. `READY` has exactly one verified original
