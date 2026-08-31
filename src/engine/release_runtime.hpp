@@ -19,7 +19,9 @@
 
 namespace eon {
 
-enum class ReleaseRuntimeAdmission { unselected, active, identity_rejected, archive_rejected };
+enum class ReleaseRuntimeAdmission {
+    unselected, active, identity_rejected, archive_rejected, adapter_rejected,
+};
 
 // Immutable decoded pixels remain derived from the caller's already verified
 // original media. This DTO deliberately contains no SDL objects, and its
@@ -58,9 +60,29 @@ public:
     void reset();
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return active_; }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return admission_; }
+    [[nodiscard]] const MillenniumDosRuntimeAssets* millennium_dos() const {
+        return millennium_dos_ ? &*millennium_dos_ : nullptr;
+    }
+    [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
+        return millennium_amiga_.get();
+    }
+    [[nodiscard]] MillenniumAtariBootstrapSession* millennium_atari() const {
+        return millennium_atari_.get();
+    }
+    [[nodiscard]] DeuterosAmigaOpening* deuteros_amiga() const {
+        return deuteros_amiga_.get();
+    }
+    [[nodiscard]] DeuterosAtariBootstrapSession* deuteros_atari() const {
+        return deuteros_atari_.get();
+    }
 
 private:
     std::optional<ResolvedLaunchRequest> active_;
+    std::optional<MillenniumDosRuntimeAssets> millennium_dos_;
+    std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
+    std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
+    std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
+    std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari_;
     ReleaseRuntimeAdmission admission_ = ReleaseRuntimeAdmission::unselected;
 };
 

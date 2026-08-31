@@ -4277,6 +4277,7 @@ int main(int argc, char** argv) {
         case eon::ReleaseRuntimeAdmission::active: diagnostics.runtime_admission = "READY"; break;
         case eon::ReleaseRuntimeAdmission::identity_rejected: diagnostics.runtime_admission = "REJECTED"; break;
         case eon::ReleaseRuntimeAdmission::archive_rejected: diagnostics.runtime_admission = "REJECTED"; break;
+        case eon::ReleaseRuntimeAdmission::adapter_rejected: diagnostics.runtime_admission = "REJECTED"; break;
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");

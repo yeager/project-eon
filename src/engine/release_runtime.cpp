@@ -28,12 +28,51 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         admission_ = ReleaseRuntimeAdmission::archive_rejected;
         return false;
     }
+    // Construct one typed adapter into local storage before publishing the
+    // new identity. A failed leaf/parser admission must not leave a previous
+    // adapter or a half-built replacement observable to SDL.
+    std::optional<MillenniumDosRuntimeAssets> millennium_dos;
+    std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga;
+    std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari;
+    std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
+    std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari;
+    switch (launch.release.game) {
+    case Game::millennium:
+        switch (launch.release.platform) {
+        case Platform::dos: millennium_dos = load_millennium_dos_runtime(launch.release); break;
+        case Platform::amiga: millennium_amiga = load_millennium_amiga_runtime(launch.release); break;
+        case Platform::atari_st: millennium_atari = load_millennium_atari_runtime(launch.release); break;
+        }
+        break;
+    case Game::deuteros:
+        switch (launch.release.platform) {
+        case Platform::dos: break;
+        case Platform::amiga: deuteros_amiga = load_deuteros_amiga_runtime(launch.release); break;
+        case Platform::atari_st: deuteros_atari = load_deuteros_atari_runtime(launch.release); break;
+        }
+        break;
+    }
+    if (!millennium_dos && !millennium_amiga && !millennium_atari
+        && !deuteros_amiga && !deuteros_atari) {
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        return false;
+    }
+    millennium_dos_ = std::move(millennium_dos);
+    millennium_amiga_ = std::move(millennium_amiga);
+    millennium_atari_ = std::move(millennium_atari);
+    deuteros_amiga_ = std::move(deuteros_amiga);
+    deuteros_atari_ = std::move(deuteros_atari);
     active_ = launch;
     admission_ = ReleaseRuntimeAdmission::active;
     return true;
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    millennium_dos_.reset();
+    millennium_amiga_.reset();
+    millennium_atari_.reset();
+    deuteros_amiga_.reset();
+    deuteros_atari_.reset();
     active_.reset();
     admission_ = ReleaseRuntimeAdmission::unselected;
 }
