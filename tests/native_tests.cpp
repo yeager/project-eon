@@ -1580,6 +1580,54 @@ int main() {
             && session.presentation == eon::Presentation::original
             && !session.custom_profile_ready && !session.custom_profile_pending);
 
+        // Every device uses this controller's card actions.  The keyboard
+        // route (move + activate) and pointer route (activate_card) must
+        // arrive at the same exact release identity; Custom cannot launch
+        // until the renderer-owned dialog explicitly confirms it.
+        eon::LauncherInteractionController keyboard_controller;
+        keyboard_controller.synchronize(duplicate_english_releases);
+        assert(keyboard_controller.session.route.game == eon::Game::millennium
+            && keyboard_controller.session.route.platform == eon::Platform::amiga);
+        assert(keyboard_controller.activate(duplicate_english_releases)
+            == eon::LauncherInteractionEffect::none);
+        assert(keyboard_controller.session.route.page == eon::LauncherPage::platforms);
+        assert(keyboard_controller.activate(duplicate_english_releases)
+            == eon::LauncherInteractionEffect::none);
+        assert(keyboard_controller.session.route.page == eon::LauncherPage::releases);
+        keyboard_controller.focus.release = 1;
+        assert(keyboard_controller.activate(duplicate_english_releases)
+            == eon::LauncherInteractionEffect::none);
+        assert(keyboard_controller.session.route.page == eon::LauncherPage::profiles
+            && keyboard_controller.session.route.release_sha256
+                == "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        keyboard_controller.focus.profile = 2;
+        assert(keyboard_controller.activate(duplicate_english_releases)
+            == eon::LauncherInteractionEffect::open_custom_settings);
+        assert(!keyboard_controller.session.can_launch());
+        keyboard_controller.session.confirm_custom();
+        assert(keyboard_controller.activate(duplicate_english_releases)
+            == eon::LauncherInteractionEffect::launch);
+        const auto controller_launch = keyboard_controller.session.resolve_launch(
+            menu_candidate, duplicate_english_releases);
+        assert(controller_launch && controller_launch->release.sha256
+            == "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        eon::LauncherInteractionController pointer_controller;
+        assert(pointer_controller.activate_card(duplicate_english_releases, pointer_controller.focus.platform)
+            == eon::LauncherInteractionEffect::none);
+        assert(pointer_controller.session.route.page == eon::LauncherPage::platforms);
+        assert(pointer_controller.activate_card(duplicate_english_releases, pointer_controller.focus.platform)
+            == eon::LauncherInteractionEffect::none);
+        assert(pointer_controller.session.route.page == eon::LauncherPage::releases);
+        assert(pointer_controller.activate_card(duplicate_english_releases, 1)
+            == eon::LauncherInteractionEffect::none);
+        assert(pointer_controller.session.route.release_sha256
+            == keyboard_controller.session.route.release_sha256);
+        pointer_controller.reset_for_data(eon::Game::deuteros);
+        assert(pointer_controller.session.route.page == eon::LauncherPage::games
+            && pointer_controller.focus.game == 1
+            && !pointer_controller.session.route.platform
+            && pointer_controller.session.presentation == eon::Presentation::original);
+
         // Card focus is deliberately independent from release identity. It
         // is shared presentation behaviour for keyboard/gamepad navigation,
         // while a pointer route may set a bounded index directly.

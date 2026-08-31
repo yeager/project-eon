@@ -24,7 +24,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("select_available_release_sha256", ROUTE_SOURCE)
         self.assertIn("if (english.size() == 1)", ROUTE_SOURCE)
         self.assertIn("page = release_sha256 ? LauncherPage::profiles : LauncherPage::releases", ROUTE_SOURCE)
-        self.assertIn("choose_platform_card(index);", SOURCE)
+        self.assertIn("LauncherInteractionController::activate", ROUTE_SOURCE)
 
     def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
         self.assertIn("eon::platform_card_status(releases, game, card.platform)", SOURCE)
@@ -34,17 +34,16 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RELEASE SELECTION REQUIRED", SOURCE)
         self.assertIn("ATARI BOOTSTRAP ONLY", SOURCE)
         self.assertIn("card.platform == eon::Platform::atari_st", SOURCE)
-        self.assertIn("choose_platform_card(index);", SOURCE)
+        self.assertIn("session.choose_platform(releases, platforms[focus.platform])", ROUTE_SOURCE)
 
     def test_card_focus_is_bounded_in_the_shared_launcher_core(self) -> None:
         self.assertIn("struct LauncherCardFocus", ROUTE_HEADER)
         self.assertIn("void move(LauncherPage page, std::size_t count, int direction)", ROUTE_HEADER)
         self.assertIn("if (count == 0 || direction == 0) return;", ROUTE_SOURCE)
         self.assertIn("reset_after_game_change", ROUTE_SOURCE)
-        self.assertIn("card_focus.move(eon::LauncherPage::games", SOURCE)
-        self.assertIn("card_focus.move(eon::LauncherPage::platforms", SOURCE)
-        self.assertIn("card_focus.move(eon::LauncherPage::releases", SOURCE)
-        self.assertIn("card_focus.move(eon::LauncherPage::profiles", SOURCE)
+        self.assertIn("struct LauncherInteractionController", ROUTE_HEADER)
+        self.assertIn("focus.move(page, card_count_for(session, releases), direction)", ROUTE_SOURCE)
+        self.assertIn("move_launcher_cards", SOURCE)
 
     def test_platform_cards_are_game_specific_before_media_availability_is_shown(self) -> None:
         # Deuteros supports Amiga and Atari ST. A missing archive must render
@@ -70,7 +69,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
                        SOURCE.index("enum class ProfileChoice")]
         self.assertIn("std::string sha256", cards)
         self.assertIn("available_release_identities", SOURCE)
-        self.assertIn("launcher_session.choose_release", SOURCE)
+        self.assertIn("session.choose_release(releases, identities[focus.release].sha256)", ROUTE_SOURCE)
         self.assertIn("release_sha256 = release->sha256", ROUTE_SOURCE)
         self.assertIn("truncated_identity_hash(card.sha256)", SOURCE)
 
@@ -157,10 +156,10 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
 
     def test_profiles_have_two_runtime_modes_and_a_custom_tuning_route(self) -> None:
         self.assertIn("enum class ProfileChoice { original, modern, custom }", SOURCE)
-        self.assertIn("Custom is not a third runtime mode", SOURCE)
-        self.assertIn("launcher_session.begin_custom()", SOURCE)
-        self.assertIn("launcher_session.choose_original()", SOURCE)
-        self.assertIn("launcher_session.choose_modern()", SOURCE)
+        self.assertIn("Custom is a deliberate renderer-only configuration route", SOURCE)
+        self.assertIn("session.begin_custom();", ROUTE_SOURCE)
+        self.assertIn("session.choose_original();", ROUTE_SOURCE)
+        self.assertIn("session.choose_modern();", ROUTE_SOURCE)
         self.assertIn("struct LauncherSessionState", (ROOT / "src" / "launcher.hpp").read_text(encoding="utf-8"))
         self.assertIn("custom_profile_ready", SOURCE)
         self.assertIn("CUSTOM SETTINGS READY", SOURCE)
@@ -184,7 +183,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # card first; a single-language platform returns to platforms.
         self.assertIn("Escape is a single navigation action", SOURCE)
         self.assertIn("Keep Back equivalent to Escape", SOURCE)
-        self.assertGreaterEqual(SOURCE.count("launcher_session.back(releases);"), 3)
+        self.assertGreaterEqual(SOURCE.count("launcher_interaction.back(releases);"), 2)
         self.assertIn("available_release_identities(releases, game, *platform).size() > 1", ROUTE_SOURCE)
 
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:

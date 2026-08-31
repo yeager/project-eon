@@ -148,6 +148,34 @@ struct LauncherSessionState {
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const;
 };
 
+// SDL adapts keyboard, gamepad, mouse, and touch to these three effects.  The
+// controller deliberately owns no rectangles, translated labels, dialogs, or
+// renderer resources: it can therefore prove that every input device follows
+// the same release-identity and Custom-confirmation rules.
+enum class LauncherInteractionEffect { none, open_custom_settings, launch };
+
+struct LauncherInteractionController {
+    LauncherSessionState session;
+    LauncherCardFocus focus;
+
+    // Scanner results may arrive incrementally. Reconcile the current game
+    // focus against only the supplied hash-verified releases; this never
+    // creates a release selection or invents a platform.
+    void synchronize(const std::vector<ReleaseArchive>& releases);
+    void move(const std::vector<ReleaseArchive>& releases, int direction);
+    void first(const std::vector<ReleaseArchive>& releases);
+    void last(const std::vector<ReleaseArchive>& releases);
+    void back(const std::vector<ReleaseArchive>& releases);
+    // Activates the focused card. A returned launch effect is admissible only
+    // through session.resolve_launch(), which binds one exact outer hash.
+    [[nodiscard]] LauncherInteractionEffect activate(const std::vector<ReleaseArchive>& releases);
+    // Pointer/touch cards set focus before using the same activate() path as
+    // keyboard and gamepad. Out-of-range cards are ignored safely.
+    [[nodiscard]] LauncherInteractionEffect activate_card(
+        const std::vector<ReleaseArchive>& releases, std::size_t index);
+    void reset_for_data(Game initial_game);
+};
+
 struct ParseResult {
     std::optional<LaunchRequest> request;
     std::string error;
