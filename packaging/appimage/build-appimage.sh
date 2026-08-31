@@ -74,9 +74,10 @@ if [ -e "$appdir" ] || [ -L "$appdir" ]; then
 fi
 mkdir -p "$appdir"
 
-# CMake's normal Linux install route supplies usr/bin, usr/lib, shared cards,
-# bundled fonts, PO catalogues, desktop entry and icon. Its INSTALL_RPATH
-# resolves private SDL libraries from usr/lib/project-eon inside this AppDir.
+# CMake's normal Linux install route supplies usr/bin, a multiarch private
+# library directory, shared cards, bundled fonts, PO catalogues, desktop entry
+# and icon.  Do not force a non-native lib path: CMake's INSTALL_RPATH already
+# resolves the installed private SDL directory relative to usr/bin.
 cmake --install "$build_dir" --prefix "$appdir/usr"
 install -m 0755 "$script_dir/AppRun" "$appdir/AppRun"
 install -m 0644 "$repository_root/packaging/project-eon.desktop" "$appdir/project-eon.desktop"
@@ -87,13 +88,16 @@ for required in \
     "$appdir/usr/share/project-eon/assets/cards/millennium.png" \
     "$appdir/usr/share/project-eon/assets/branding/project-eon-logo-v1.png" \
     "$appdir/usr/share/project-eon/po/sv.po" \
-    "$appdir/usr/lib/project-eon/libSDL3.so.0" \
     "$appdir/AppRun" "$appdir/project-eon.desktop" "$appdir/project-eon.png"; do
   if [ ! -e "$required" ]; then
     echo "AppDir lacks required installed resource: $required" >&2
     exit 1
   fi
 done
+if ! find "$appdir/usr/lib" -type f -name libSDL3.so.0 -print -quit | grep -q .; then
+  echo "AppDir lacks the installed private SDL3 runtime" >&2
+  exit 1
+fi
 
 # A release artifact must not contain original game media even if a caller's
 # CMake tree was contaminated. Keep this check lexical and bounded to the
