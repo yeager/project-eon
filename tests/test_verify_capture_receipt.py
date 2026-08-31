@@ -1,9 +1,13 @@
 """Negative contracts for external capture-receipt verification."""
 from __future__ import annotations
+import contextlib
 import hashlib
 import importlib.util
+import io
 from pathlib import Path
+import sys
 import unittest
+from unittest import mock
 from eon_test_paths import temporary_directory
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +18,15 @@ SPEC.loader.exec_module(TOOL)
 
 
 class ReceiptVerifierTests(unittest.TestCase):
+    def test_main_rejects_a_runner_capture_error_without_a_traceback(self) -> None:
+        output = io.StringIO()
+        with (mock.patch.object(sys, "argv", ["verify_capture_receipt.py", "--kind", "deuteros-amiga",
+                                               "--capture", "/nonexistent"]),
+              mock.patch.object(TOOL, "verify", side_effect=RuntimeError("invalid recorder record")),
+              contextlib.redirect_stdout(output)):
+            self.assertEqual(TOOL.main(), 2)
+        self.assertEqual(output.getvalue(), "CAPTURE RECEIPT REJECTED  invalid recorder record\n")
+
     def test_receipt_requires_current_schema(self) -> None:
         with self.assertRaisesRegex(ValueError, "receipt schema"):
             TOOL.require_receipt_schema({})
