@@ -71,6 +71,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_release_cards_carry_exact_outer_identity(self) -> None:
         cards = SOURCE[SOURCE.index("struct ReleaseLanguageCard"):
                        SOURCE.index("enum class ProfileChoice")]
+        self.assertIn("std::size_t identity_index", cards)
         self.assertIn("std::string sha256", cards)
         self.assertIn("available_release_identities", SOURCE)
         self.assertIn("session.choose_release(releases, identities[focus.release].sha256)", ROUTE_SOURCE)
@@ -78,6 +79,23 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("truncated_identity_hash(card.sha256)", SOURCE)
         self.assertIn("Borrowed from the selected generated platform card", SOURCE)
         self.assertIn("SDL_RenderTexture(renderer, card.texture", SOURCE)
+
+    def test_release_card_pages_preserve_global_identity_indices(self) -> None:
+        # A future manifest can contain more than the two current Millennium
+        # DOS identities. Page-local mouse/touch positions must never select
+        # a different outer archive after the focused card crosses a page.
+        release_cards = SOURCE[SOURCE.index("const auto release_language_cards"):
+                               SOURCE.index("const auto focus_menu_card")]
+        self.assertIn("release_card_page_for_focus", ROUTE_HEADER)
+        self.assertIn("constexpr std::size_t cards_per_page = 4", ROUTE_SOURCE)
+        self.assertIn("const auto page = eon::release_card_page_for_focus", release_cards)
+        self.assertIn("const auto identity_index = page.first_identity + visible_index", release_cards)
+        self.assertIn("cards_for_platform.push_back({identity_index", release_cards)
+        self.assertIn("two-by-two grid", release_cards)
+        pointer_route = SOURCE[SOURCE.index("const auto handle_menu_pointer_down"):
+                               SOURCE.index("if (screen == Screen::launching")]
+        self.assertIn("activate_launcher_card(card.identity_index)", pointer_route)
+        self.assertIn("card.identity_index == static_cast<std::size_t>(focused_release_card)", SOURCE)
 
     def test_incremental_scan_revokes_newly_ambiguous_automatic_release(self) -> None:
         self.assertIn("bool release_explicit = false", ROUTE_HEADER)

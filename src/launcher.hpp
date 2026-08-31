@@ -38,6 +38,22 @@ struct LauncherCardFocus {
     void reset_after_platform_change();
 };
 
+// The release page is a presentation window over the complete, SHA-sorted
+// identity list. It deliberately carries indexes, not release values: media
+// identity remains resolved by the existing launcher route and scanner.
+struct ReleaseCardPage {
+    std::size_t first_identity = 0;
+    std::size_t visible_count = 0;
+    std::size_t page = 0;
+    std::size_t page_count = 0;
+};
+
+// Four cards fit in the 1280x720 launcher grid. A larger recognised release
+// set follows keyboard/gamepad focus onto a new page without treating a
+// page-local card number as a release identity.
+[[nodiscard]] ReleaseCardPage release_card_page_for_focus(
+    std::size_t identity_count, std::size_t focused_identity);
+
 // Renderer-only preferences shared by CLI startup and the F10 overlay. They
 // never enter a game simulation, save file, or original media access path.
 struct DisplayPreferences {

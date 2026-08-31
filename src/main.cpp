@@ -278,6 +278,11 @@ struct PlatformCard {
 };
 
 struct ReleaseLanguageCard {
+    // This remains the index in the complete, SHA-sorted identity list even
+    // when the renderer is showing one page of release cards.  Pointer and
+    // touch activation must pass this value to the SDL-free controller rather
+    // than treating a page-local position as a different original release.
+    std::size_t identity_index = 0;
     std::string language;
     std::string sha256;
     SDL_FRect bounds;
@@ -4172,25 +4177,55 @@ int main(int argc, char** argv) {
                 static_cast<std::size_t>(std::distance(platform_cards.begin(), card)));
         }
     };
+    struct ReleaseLanguageCardPage {
+        std::vector<ReleaseLanguageCard> cards;
+        std::size_t page = 0;
+        std::size_t page_count = 0;
+    };
     const auto release_language_cards = [&] {
+        ReleaseLanguageCardPage result;
         std::vector<ReleaseLanguageCard> cards_for_platform;
-        if (!active_platform) return cards_for_platform;
+        if (!active_platform) return result;
         const auto identities = eon::available_release_identities(releases,
             cards[static_cast<std::size_t>(focused)].game, *active_platform);
-        const float width = identities.size() == 1 ? 552.0F
-            : (identities.size() == 2 ? 552.0F : 352.0F);
-        const float first_x = identities.size() == 1 ? 364.0F : 64.0F;
-        const float stride = identities.size() == 2 ? 600.0F : 400.0F;
+        if (identities.empty()) return result;
+        // The controller focus is bounded whenever scanner data changes, but
+        // keep this renderer-only view defensive so a scanner update between
+        // event and draw cannot turn a stale card position into an out of
+        // range page calculation.
+        const auto page = eon::release_card_page_for_focus(identities.size(), focused_release_card);
+        result.page = page.page;
+        result.page_count = page.page_count;
         const auto artwork = std::find_if(platform_card_templates.begin(),
             platform_card_templates.end(), [&](const PlatformCard& card) {
                 return card.platform == *active_platform;
             });
-        for (std::size_t index = 0; index < identities.size(); ++index) {
-            cards_for_platform.push_back({identities[index].language, identities[index].sha256,
-                {first_x + static_cast<float>(index) * stride, 188, width, 308},
+        for (std::size_t visible_index = 0; visible_index < page.visible_count; ++visible_index) {
+            const auto identity_index = page.first_identity + visible_index;
+            SDL_FRect bounds;
+            if (page.visible_count == 1) {
+                bounds = {364.0F, 188.0F, 552.0F, 308.0F};
+            } else if (page.visible_count == 2) {
+                bounds = {64.0F + static_cast<float>(visible_index) * 600.0F,
+                    188.0F, 552.0F, 308.0F};
+            } else if (page.visible_count == 3) {
+                bounds = {64.0F + static_cast<float>(visible_index) * 400.0F,
+                    188.0F, 352.0F, 308.0F};
+            } else {
+                // Four identities use a two-by-two grid. This leaves the
+                // header and back hint visible in the 1280x720 logical
+                // presentation, unlike a fourth horizontal card beyond the
+                // viewport. More identities page by the focused card.
+                bounds = {64.0F + static_cast<float>(visible_index % 2U) * 600.0F,
+                    132.0F + static_cast<float>(visible_index / 2U) * 286.0F,
+                    552.0F, 254.0F};
+            }
+            cards_for_platform.push_back({identity_index, identities[identity_index].language,
+                identities[identity_index].sha256, bounds,
                 artwork == platform_card_templates.end() ? nullptr : artwork->texture});
         }
-        return cards_for_platform;
+        result.cards = std::move(cards_for_platform);
+        return result;
     };
     const auto focus_menu_card = [&](const std::size_t next_focus) {
         card_focus.set(eon::LauncherPage::games, cards.size(), next_focus);
@@ -4413,9 +4448,9 @@ int main(int argc, char** argv) {
                 }
             }
         } else if (launcher_page == LauncherPage::releases) {
-            const auto language_cards = release_language_cards();
-            for (std::size_t index = 0; index < language_cards.size(); ++index) {
-                if (inside(language_cards[index].bounds, x, y)) activate_launcher_card(index);
+            const auto release_page = release_language_cards();
+            for (const auto& card : release_page.cards) {
+                if (inside(card.bounds, x, y)) activate_launcher_card(card.identity_index);
             }
         } else {
             for (std::size_t index = 0; index < profile_cards.size(); ++index) {
@@ -5111,9 +5146,15 @@ int main(int argc, char** argv) {
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }
             } else if (launcher_page == LauncherPage::releases) {
-                const auto language_cards = release_language_cards();
+                const auto release_page = release_language_cards();
+                const auto& language_cards = release_page.cards;
                 draw_text(renderer, 64, 82, tr("SELECT AN ORIGINAL RELEASE"));
                 draw_text(renderer, 64, 108, tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
+                if (release_page.page_count > 1) {
+                    draw_text(renderer, 1040, 108, tr("PAGE") + " "
+                        + std::to_string(release_page.page + 1U) + "/"
+                        + std::to_string(release_page.page_count));
+                }
                 for (std::size_t index = 0; index < language_cards.size(); ++index) {
                     const auto& card = language_cards[index];
                     if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
@@ -5121,7 +5162,8 @@ int main(int argc, char** argv) {
                     SDL_SetRenderDrawColor(renderer, 3, 10, 20, card.texture ? 142 : 255);
                     SDL_RenderFillRect(renderer, &card.bounds);
                     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-                    draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_release_card), true);
+                    draw_card_border(card.bounds,
+                        card.identity_index == static_cast<std::size_t>(focused_release_card), true);
                     // Language is part of the hash-bound original identity.
                     // Only the two currently catalogued labels are localized;
                     // a future recognised language must remain visibly its
