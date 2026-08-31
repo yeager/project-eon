@@ -405,6 +405,27 @@ callback boundary, plus two at `titles.exe:$0129`. No host-input receipt was
 created. This is a recorder-format verification only: the fields are not an
 interrupt ABI, title-frame, audio, input, or gameplay admission.
 
+### Receipt-v4 console-cap probe (explicitly rejected diagnostic)
+
+On 2026-08-31, the real English DOS archive was rechecked before and after a
+fresh write-protected run of the v4 helper. It retained its recognised outer
+identity `e6e7044b…9cab2a123`, but the reviewed recorder reached the new
+64 MiB total-console cap after 2.57 seconds. The resulting external receipt
+records `exit_status=125`, `recorder_console_total_bytes=67210697`, retained
+only the 1 MiB prefix (SHA-256
+`66beea17c88f9157bfee27e362446a60af8cf2b6a034ca07c74f2dd53c0ab5c0`), and
+sets `recorder_console_over_limit=true`. The verifier correctly rejects that
+directory as inadmissible.
+
+The recorder-owned raw files still have the pre-existing five-record result
+shape and a host-input receipt was present (861 bytes, SHA-256
+`ea1ce9317251609bf38bc5863ebbf3502c0c23fbdfc07ed7780c0e809274a854`). The
+cap is crossed before an independent guest-side poll/result/frame link can be
+observed. Therefore neither that host-side record nor any raw diagnostic is
+admitted as an input delivery, private DOS ABI, title state, audio, frame, or
+gameplay fact. All raw evidence remains outside the repository and supplied
+media.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
