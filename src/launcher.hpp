@@ -61,6 +61,8 @@ struct LaunchRequest {
     // meaningless presentation switch.
     bool presentation_explicit = false;
     DisplayPreferences display;
+    bool display_resolution_explicit = false;
+    bool display_aspect_explicit = false;
     std::string language;
 };
 

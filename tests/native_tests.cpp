@@ -3,6 +3,7 @@
 #include "launcher.hpp"
 #include "i18n.hpp"
 #include "launcher_text.hpp"
+#include "presentation_preferences.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -1520,6 +1521,22 @@ int main() {
     assert(test_tmpdir && *test_tmpdir);
     const auto temporary_root = std::filesystem::path(test_tmpdir);
     std::filesystem::create_directories(temporary_root);
+    const auto preferences_path = temporary_root / "presentation-preferences.ini";
+    const eon::PresentationPreferences preferences{2, 1, 3, 2, false, true, true, false};
+    assert(eon::save_presentation_preferences(preferences_path, preferences));
+    const auto loaded_preferences = eon::load_presentation_preferences(preferences_path);
+    assert(loaded_preferences && loaded_preferences->output_resolution_index == 2
+        && loaded_preferences->aspect_ratio_index == 1
+        && loaded_preferences->modern_preset_index == 3
+        && loaded_preferences->render_pacing_index == 2
+        && !loaded_preferences->pixel_reconstruction && loaded_preferences->smooth_scaling
+        && loaded_preferences->scanlines && !loaded_preferences->frame);
+    {
+        std::ofstream malformed_preferences(preferences_path, std::ios::binary | std::ios::trunc);
+        malformed_preferences << "project-eon-presentation-preferences=1\nresolution=9\n";
+    }
+    assert(!eon::load_presentation_preferences(preferences_path));
+    std::filesystem::remove(preferences_path);
     assert(!eon::UnicodeTextRenderer::create(nullptr,
         temporary_root / "project-eon-no-host-font.ttf"));
         char language_option[] = "--language";

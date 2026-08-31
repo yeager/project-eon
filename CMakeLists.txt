@@ -107,6 +107,7 @@ add_executable(project-eon
     src/launcher_text.cpp
     src/i18n.cpp
     src/launcher.cpp
+    src/presentation_preferences.cpp
     src/engine/deuteros_amiga_opening.cpp
     src/engine/deuteros_amiga_title_stage_session.cpp
     src/engine/deuteros_amiga_paula.cpp
