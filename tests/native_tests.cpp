@@ -1072,10 +1072,10 @@ int main() {
             "event\t10 100 callback-entry site=0x0001f056 incoming_a0=0x00001000 frame_04_0d=00000000000000000000\n"
             "event\t11 110 queue-snapshot phase=post queue_address=0x0001eec0 queue_bytes=0000000000000000000000000000000000000000 pending_address=0x0001eed6 pending_word=0x0000 source_table_address=0x0001ee20 source_table_size=160 source_table_sha256=2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265\n"
             "event\t12 120 selector-entry site=0x0001fe7a incoming_d0=0x00000000\n"
-            "event\t13 130 local-call call_site=0x0001fe84 callee=0x0001feaa return_pc=0x0001fe88\n"
-            "event\t14 140 local-return call_site=0x0001fe84 callee=0x0001feaa return_pc=0x0001fe88 result_d0=0x00000000 result_sr=0x2000\n"
-            "event\t15 150 local-call call_site=0x0001fe92 callee=0x0001feaa return_pc=0x0001fe96\n"
-            "event\t16 160 local-return call_site=0x0001fe92 callee=0x0001feaa return_pc=0x0001fe96 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t13 130 local-call call_site=0x0001fe84 callee=0x0001fea8 return_pc=0x0001fe88\n"
+            "event\t14 140 local-return call_site=0x0001fe84 callee=0x0001fea8 return_pc=0x0001fe88 result_d0=0x00000000 result_sr=0x2000\n"
+            "event\t15 150 local-call call_site=0x0001fe92 callee=0x0001fea8 return_pc=0x0001fe96\n"
+            "event\t16 160 local-return call_site=0x0001fe92 callee=0x0001fea8 return_pc=0x0001fe96 result_d0=0x00000000 result_sr=0x2000\n"
             "event\t17 170 dispatch-snapshot phase=pre site=0x0001fbe6 cell_1f98c=0x00 cell_1f98e=0x00 cell_1f99c=0x00000000 cell_1f974=0x00000000 cell_1f970=0x00000000 cell_1f96c=0x00000000 cell_1f994=0x00000000 cell_1f998=0x00000000\n"
             "event\t18 180 dispatch-snapshot phase=post site=0x0001fbe6 cell_1f98c=0x00 cell_1f98e=0x00 cell_1f99c=0x00000000 cell_1f974=0x00000000 cell_1f970=0x00000000 cell_1f96c=0x00000000 cell_1f994=0x00000000 cell_1f998=0x00000000\n";
         eon::DeuterosAmigaTitleBridgeReferenceTraceDiagnostics diagnostics;

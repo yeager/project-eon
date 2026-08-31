@@ -343,14 +343,22 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(selector, 2, 0x0000ffff);
     require_word(selector, 6, 0x80fc); // divu.w #$64,d0
     require_word(selector, 8, 0x0064);
-    require_word(selector, 10, 0x6100); // bsr.w $1feaa
+    require_word(selector, 10, 0x6100); // bsr.w $1fea8
     require_word(selector, 12, 0x0022);
     require_word(selector, 14, 0x0280); // andi.l #$ffff,d0
     require_long(selector, 16, 0x0000ffff);
     require_word(selector, 20, 0x80fc); // divu.w #$a,d0
     require_word(selector, 22, 0x000a);
-    require_word(selector, 24, 0x6100); // bsr.w $1feaa
+    require_word(selector, 24, 0x6100); // bsr.w $1fea8
     require_word(selector, 26, 0x0014);
+    // A 68000 word-displacement branch is based at its extension word. Keep
+    // the two independently encoded targets explicit so the trace contract
+    // cannot mistake either caller's return PC for its local callee.
+    constexpr std::uint32_t local_helper_address = 0x1fea8;
+    if (selector_address + 12U + static_cast<std::int16_t>(0x0022) != local_helper_address
+        || selector_address + 26U + static_cast<std::int16_t>(0x0014) != local_helper_address) {
+        throw std::runtime_error("Unexpected Deuteros title selector local-helper targets");
+    }
     require_word(selector, 28, 0x0640); // addi.w #$30,d0
     require_word(selector, 30, 0x0030);
     require_word(selector, 32, 0x13fc); // move.b #0,$1fe54

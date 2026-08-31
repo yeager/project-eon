@@ -134,7 +134,7 @@ bool local_call(const std::map<std::string_view, std::string_view>& fields, cons
         if (!exact_keys(fields, {"call_site", "callee", "return_pc", "result_d0", "result_sr"})) return false;
     } else if (!exact_keys(fields, {"call_site", "callee", "return_pc"})) return false;
     return fields.at("call_site") == call_site
-        && fields.at("callee") == "0x0001feaa" && fields.at("return_pc") == return_pc
+        && fields.at("callee") == "0x0001fea8" && fields.at("return_pc") == return_pc
         && (!has_result || raw_result(fields));
 }
 

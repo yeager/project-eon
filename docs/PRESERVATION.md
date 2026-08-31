@@ -2504,6 +2504,14 @@ code; it is explicitly not evidence of a handoff to the separately loaded
 main/game stage. Project Eon preserves the arithmetic, write, and destination
 without inventing menu or gameplay labels.
 
+The two word-displacement `BSR` instructions in that helper are separately
+resolved from their extension-word bases: `$1fe84` (`+$0022`) and `$1fe92`
+(`+$0014`) both target `$1fea8`, with return PCs `$1fe88` and `$1fe96`.
+The v3 bridge grammar pins this distinction, so an external capture cannot
+mistake a caller return location for the original local callee. It is still a
+control-flow fact only; neither call is asserted to occur or return without a
+genuine trace.
+
 The selector destination is now also bounded. `$1fbe6` tests signed byte
 `$1f98c`: zero enters `$1fc22` (which immediately tests `$1f98e`), while the
 positive `BPL.W` target is `$1fc9c`: this is the sibling route's `tst.b
