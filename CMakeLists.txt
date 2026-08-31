@@ -159,6 +159,15 @@ target_compile_definitions(project-eon PRIVATE
     EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
 target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf ZLIB::ZLIB)
 
+# The native preservation suite exercises every runtime module except the SDL
+# entry point.  Derive that module set from the shipped target instead of
+# maintaining a second hand-written source list: a new recovered parser or
+# session cannot be linked into the application while silently escaping the
+# native test binary.  Capture this before iPad-only bundle resources are
+# added below, since those are application packaging inputs, not C++ modules.
+get_target_property(EON_RUNTIME_SOURCES project-eon SOURCES)
+list(REMOVE_ITEM EON_RUNTIME_SOURCES src/main.cpp)
+
 # iPadOS uses the same SDL3 code as the desktop builds, with Project Eon's
 # own cards and catalogs embedded as resources. Supplied game archives are
 # deliberately not copied into the application bundle or IPA.
@@ -248,67 +257,7 @@ include(CTest)
 if(BUILD_TESTING)
     add_executable(eon-native-tests
         tests/native_tests.cpp
-        src/launcher_text.cpp
-        src/i18n.cpp
-        src/launcher.cpp
-        src/engine/deuteros_amiga_opening.cpp
-        src/engine/deuteros_amiga_title_stage_session.cpp
-        src/engine/deuteros_amiga_paula.cpp
-        src/engine/deuteros_atari_bootstrap_session.cpp
-        src/engine/millennium_dos_sound_selection_session.cpp
-        src/engine/millennium_dos_title_session.cpp
-        src/engine/millennium_dos_game_session.cpp
-        src/engine/millennium_dos_gx_startup_session.cpp
-        src/engine/millennium_dos_gx_startup_trace_admission.cpp
-        src/engine/millennium_dos_save_session.cpp
-        src/engine/millennium_atari_bootstrap_session.cpp
-        src/engine/millennium_amiga_bootstrap_session.cpp
-        src/data/amiga_adf.cpp
-        src/data/amiga_ofs.cpp
-        src/data/atari_st_prg.cpp
-        src/data/creative_voice.cpp
-        src/data/deuteros_amiga_bundle.cpp
-        src/data/deuteros_amiga_audio.cpp
-        src/data/deuteros_amiga_channel_vm.cpp
-        src/data/deuteros_amiga_alternate_renderer.cpp
-        src/data/deuteros_amiga_frame.cpp
-        src/data/deuteros_amiga_loader.cpp
-        src/data/deuteros_amiga_title_stage.cpp
-        src/data/deuteros_amiga_reference_trace.cpp
-        src/data/deuteros_amiga_main_stage_reference_trace.cpp
-        src/data/deuteros_amiga_title_display_reference_trace.cpp
-        src/data/deuteros_amiga_title_bridge_reference_trace.cpp
-        src/data/deuteros_atari_boot.cpp
-        src/data/deuteros_atari_reference_trace.cpp
-        src/data/deuteros_atari_stage.cpp
-        src/data/fat12.cpp
-        src/data/atari_st_stx.cpp
-        src/data/millennium_dos_bitmap.cpp
-        src/data/millennium_control_text.cpp
-        src/data/millennium_dos_game_data.cpp
-        src/data/millennium_dos_game_flow.cpp
-        src/data/millennium_dos_gameplay_screen.cpp
-        src/data/millennium_dos_last_screen.cpp
-        src/data/millennium_save_comparison.cpp
-        src/data/modern_asset_pack.cpp
-        src/data/modern_pixel_reconstruction.cpp
-        src/data/millennium_dos_lib.cpp
-        src/data/millennium_dos_title_flow.cpp
-        src/data/millennium_dos_title_exit.cpp
-        src/data/millennium_dos_title_transition.cpp
-        src/data/millennium_dos_video_driver.cpp
-        src/data/millennium_dos_sound_driver.cpp
-        src/data/millennium_dos_reference_trace.cpp
-        src/data/millennium_amiga_reference_trace.cpp
-        src/data/millennium_amiga_loader.cpp
-        src/data/reference_trace.cpp
-        src/data/function_map.cpp
-        src/data/recovery_map.cpp
-        src/data/release_manifest.cpp
-        src/data/startup_boundary.cpp
-        src/data/sha256.cpp
-        src/data/zip_archive.cpp
-        src/platform/game_data.cpp
+        ${EON_RUNTIME_SOURCES}
     )
     target_include_directories(eon-native-tests PRIVATE src)
     target_link_libraries(eon-native-tests PRIVATE SDL3::SDL3 SDL3_ttf::SDL3_ttf ZLIB::ZLIB)
