@@ -7,6 +7,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
+#include "engine/menu_runtime_launch.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
@@ -1742,6 +1743,40 @@ int main() {
             route_candidate, duplicate_english_releases);
         assert(route_admission.admission == eon::ReleaseRuntimeAdmission::archive_rejected);
         assert(!runtime_coordinator.active());
+
+        // The final card-menu handoff is itself SDL-free and has no adapter
+        // shortcut.  A fully selected card route still re-resolves only
+        // against the scanner identities supplied at activation time, then
+        // exposes a launch identity solely if the coordinator acquired it.
+        eon::LauncherSessionState menu_runtime_session;
+        menu_runtime_session.route = route;
+        menu_runtime_session.choose_modern();
+        eon::ReleaseRuntimeCoordinator menu_runtime_coordinator;
+        const auto menu_runtime_result = eon::launch_menu_runtime(menu_runtime_session,
+            menu_candidate, duplicate_english_releases, menu_runtime_coordinator);
+        assert(menu_runtime_result.admission.admission
+            == eon::ReleaseRuntimeAdmission::archive_rejected);
+        assert(!menu_runtime_result.accepted() && !menu_runtime_result.active_launch
+            && !menu_runtime_coordinator.active());
+        // A selected hash missing from the current scanner snapshot cannot
+        // follow an older route or card index into a prior adapter.
+        const std::vector<eon::ReleaseArchive> stale_menu_releases{
+            duplicate_english_releases.back()};
+        const auto stale_menu_result = eon::launch_menu_runtime(menu_runtime_session,
+            menu_candidate, stale_menu_releases, menu_runtime_coordinator);
+        assert(stale_menu_result.admission.admission
+            == eon::ReleaseRuntimeAdmission::identity_rejected);
+        assert(!stale_menu_result.accepted() && !stale_menu_result.active_launch
+            && !menu_runtime_coordinator.active());
+        // Custom has no launch bypass: before renderer confirmation there is
+        // no candidate for the same common admission gate to resolve.
+        menu_runtime_session.begin_custom();
+        const auto pending_custom_result = eon::launch_menu_runtime(menu_runtime_session,
+            menu_candidate, duplicate_english_releases, menu_runtime_coordinator);
+        assert(pending_custom_result.admission.admission
+            == eon::ReleaseRuntimeAdmission::identity_rejected);
+        assert(!pending_custom_result.accepted() && !pending_custom_result.active_launch
+            && !menu_runtime_coordinator.active());
 
         // Scanner completion can reveal a second container after a platform
         // had one automatic release. That auto-selection must be revoked and

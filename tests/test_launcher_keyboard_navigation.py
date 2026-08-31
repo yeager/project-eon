@@ -10,6 +10,8 @@ ROUTE_HEADER = (ROOT / "src" / "launcher.hpp").read_text(encoding="utf-8")
 ROUTE_SOURCE = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")
 RUNTIME_SOURCE = (ROOT / "src" / "engine" / "release_runtime.cpp").read_text(encoding="utf-8")
 RUNTIME_HEADER = (ROOT / "src" / "engine" / "release_runtime.hpp").read_text(encoding="utf-8")
+MENU_RUNTIME_HEADER = (ROOT / "src" / "engine" / "menu_runtime_launch.hpp").read_text(encoding="utf-8")
+MENU_RUNTIME_SOURCE = (ROOT / "src" / "engine" / "menu_runtime_launch.cpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
         self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", ROUTE_HEADER)
@@ -157,10 +159,14 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_cli_and_card_routes_share_the_final_runtime_admission_gate(self) -> None:
         self.assertIn("struct RuntimeLaunchAdmission", RUNTIME_HEADER)
         self.assertIn("admit_runtime_launch", RUNTIME_SOURCE)
-        self.assertIn("const auto admission = eon::admit_runtime_launch", SOURCE)
-        self.assertIn("launcher_session.launch_request(request)", SOURCE)
+        self.assertIn("struct MenuRuntimeLaunchResult", MENU_RUNTIME_HEADER)
+        self.assertIn("launch_menu_runtime", MENU_RUNTIME_HEADER)
+        self.assertIn("const auto candidate = session.launch_request(base)", MENU_RUNTIME_SOURCE)
+        self.assertIn("admit_runtime_launch(coordinator, candidate, releases)", MENU_RUNTIME_SOURCE)
+        self.assertIn("coordinator.active()", MENU_RUNTIME_SOURCE)
+        self.assertIn("eon::launch_menu_runtime(launcher_session, request, releases", SOURCE)
         launch = SOURCE.index("const auto launch_menu_selection")
-        admission = SOURCE.index("eon::admit_runtime_launch", launch)
+        admission = SOURCE.index("eon::launch_menu_runtime", launch)
         self.assertIn("reset_active_runtime();", SOURCE[launch:admission])
 
     def test_profile_launch_rejections_are_visible_without_media_details(self) -> None:

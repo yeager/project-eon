@@ -8,6 +8,7 @@
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
+#include "engine/menu_runtime_launch.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
@@ -4341,23 +4342,23 @@ int main(int argc, char** argv) {
         deuteros_title_resource.reset();
     };
     const auto launch_menu_selection = [&] {
-        const auto candidate = launcher_session.launch_request(request);
         // The coordinator acquires only a fresh, exact release, but the SDL
         // layer also owns source-derived textures, audio queues and title
         // input state. Revoke all of those before every menu launch, even if
         // the preceding route returned normally, so an attempted re-launch
         // can never present a frame or queued sample from another release.
         reset_active_runtime();
-        const auto admission = eon::admit_runtime_launch(runtime_coordinator, candidate, releases);
+        const auto menu_launch = eon::launch_menu_runtime(launcher_session, request, releases,
+            runtime_coordinator);
         launcher_runtime_admission = std::string(
-            eon::release_runtime_admission_label(admission.admission));
-        if (!admission.accepted()) return;
+            eon::release_runtime_admission_label(menu_launch.admission.admission));
+        if (!menu_launch.accepted()) return;
         // The chosen release card is part of the Modern-pack identity.  A
         // previously valid candidate becomes rejected rather than silently
         // following a different language/container/platform selection. Read
         // the one identity already resolved and rehashed by the common gate;
         // do not independently resolve card fields a second time here.
-        if (candidate->presentation == eon::Presentation::modern
+        if (menu_launch.active_launch->request.presentation == eon::Presentation::modern
             && selected_modern_pack_manifest) {
             admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch()->release);
         }
