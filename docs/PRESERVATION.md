@@ -31,6 +31,23 @@ size/SHA-256. It does not open original media or decode/execute the payload.
 The format, safety limits, and explicit non-equivalence boundary are specified
 in [`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md#opaque-replay-checkpoint-fixtures).
 
+### Runtime release-identity boundary
+
+The SDL-free `ReleaseRuntimeCoordinator` is the sole retained identity for a
+live CLI or card-menu launch. It accepts a `ResolvedLaunchRequest` only when
+game, platform, language, and outer SHA-256 all exactly match the attached
+`ReleaseArchive`, then reopens and hashes that archive through the manifest
+before retaining the value. It clears any prior identity before each acquire
+attempt and on source replacement. A malformed, stale, or replaced archive
+therefore leaves no active identity for a loader to consume.
+
+The four current native bootstrap/opening adapters—Millennium Amiga, Millennium
+Atari ST, Deuteros Amiga, and Deuteros Atari ST—are SDL-free engine factories
+behind that boundary. They select only their named hash-verified leaf and
+return no substitute if the selected release, language, or leaf is absent.
+Their resulting objects remain bounded bootstrap/opening evidence; moving them
+out of the SDL layer does not execute an unknown ABI or claim game parity.
+
 ## Original and Modern mode contract
 
 Project Eon deliberately distinguishes a preservation result from an
