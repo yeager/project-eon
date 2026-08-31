@@ -125,15 +125,24 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertNotIn('tr("Game: ") + eon::name(selected)', SOURCE)
         self.assertNotIn('card.bounds.h - 46, card.title);', SOURCE)
 
-    def test_menu_can_choose_an_immutable_original_data_folder(self) -> None:
+    def test_menu_can_choose_an_immutable_original_data_folder_or_archive(self) -> None:
         # The graphical launcher may begin before the default data directory
-        # exists, then accepts one explicit folder through SDL's native picker.
-        # The callback transfers a path only; the main thread replaces its
-        # bounded read-only scanner and never copies, creates, or unpacks media.
+        # exists, then accepts one explicit folder or one exact original archive
+        # through SDL's native pickers. The callback transfers a typed path only;
+        # the main thread replaces its bounded read-only scanner and never copies,
+        # creates, or unpacks media.
         self.assertIn("SDL_ShowOpenFolderDialog", SOURCE)
-        self.assertIn("receive_data_directory_dialog_selection", SOURCE)
+        self.assertIn("SDL_ShowOpenFileDialog", SOURCE)
+        self.assertIn("receive_original_data_source_dialog_selection", SOURCE)
         self.assertIn('tr("CHOOSE ORIGINAL DATA FOLDER (O)")', SOURCE)
+        self.assertIn('tr("CHOOSE ORIGINAL ARCHIVE (A)")', SOURCE)
         self.assertIn("event.key.key == SDLK_O", SOURCE)
+        self.assertIn("event.key.key == SDLK_A", SOURCE)
+        self.assertIn("OriginalDataSourceKind::directory", SOURCE)
+        self.assertIn("OriginalDataSourceKind::archive", SOURCE)
+        self.assertIn("std::filesystem::symlink_status", SOURCE)
+        self.assertIn("!std::filesystem::is_symlink(status)", SOURCE)
+        self.assertIn("std::filesystem::is_regular_file", SOURCE)
         self.assertIn("request.data_directory_is_default = false", SOURCE)
         self.assertIn("scanner = std::make_unique<eon::ReleaseScanner>", SOURCE)
         self.assertIn("ReleaseScanner advances later in", SOURCE)
@@ -142,7 +151,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # A new scanner cannot inherit a resolved archive, decoded frames, VM
         # state, queued audio, or a Modern sequence from its predecessor.
         reset = SOURCE.index("const auto reset_active_runtime")
-        source_change = SOURCE.index("if (selected_data_directory && screen == Screen::menu)")
+        source_change = SOURCE.index("if (selected_original_data_source && screen == Screen::menu)")
         self.assertLess(reset, source_change)
         reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
         for clearing in (
@@ -200,7 +209,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("const auto back_launcher_cards", SOURCE)
         self.assertGreaterEqual(SOURCE.count("back_launcher_cards();"), 2)
         back = SOURCE[SOURCE.index("const auto back_launcher_cards"):
-                      SOURCE.index("const auto open_data_directory_dialog")]
+                      SOURCE.index("const auto open_original_data_source_dialog")]
         self.assertIn("launcher_interaction.source_identity();", back)
         self.assertIn("apply_launcher_navigation(before);", back)
         self.assertIn("available_release_identities(releases, game, *platform).size() > 1", ROUTE_SOURCE)

@@ -118,27 +118,42 @@ void SDLCALL receive_modern_pack_dialog_selection(void* userdata,
     mailbox.dialog_open = false;
 }
 
-// Folder selection is a launcher-only, read-only operation.  Keep its
-// mailbox alive for the same reason as the Modern-pack dialog: native SDL
-// dialogs are asynchronous and may complete after the UI event that opened
-// them.  The callback merely transfers an untrusted path to the main thread.
-struct DataDirectoryDialogMailbox {
+// Original-data selection is a launcher-only, read-only operation.  Both
+// supported source shapes get an explicit native route because SDL's folder
+// and file dialogs deliberately have distinct contracts.  Keep the mailbox
+// alive for the same reason as the Modern-pack dialog: native SDL dialogs are
+// asynchronous and may complete after the UI event that opened them.  The
+// callback merely transfers one untrusted path and its requested shape to the
+// main thread.
+enum class OriginalDataSourceKind {
+    directory,
+    archive,
+};
+
+struct OriginalDataSourceSelection {
+    std::filesystem::path path;
+    OriginalDataSourceKind kind;
+};
+
+struct OriginalDataSourceDialogMailbox {
     std::mutex mutex;
-    std::optional<std::filesystem::path> pending_selection;
+    std::optional<OriginalDataSourceSelection> pending_selection;
+    OriginalDataSourceKind requested_kind = OriginalDataSourceKind::directory;
     bool dialog_open = false;
 };
 
-DataDirectoryDialogMailbox& data_directory_dialog_mailbox() {
-    static auto* mailbox = new DataDirectoryDialogMailbox;
+OriginalDataSourceDialogMailbox& original_data_source_dialog_mailbox() {
+    static auto* mailbox = new OriginalDataSourceDialogMailbox;
     return *mailbox;
 }
 
-void SDLCALL receive_data_directory_dialog_selection(void* userdata,
+void SDLCALL receive_original_data_source_dialog_selection(void* userdata,
     const char* const* filelist, int) {
-    auto& mailbox = *static_cast<DataDirectoryDialogMailbox*>(userdata);
+    auto& mailbox = *static_cast<OriginalDataSourceDialogMailbox*>(userdata);
     std::lock_guard lock(mailbox.mutex);
     if (filelist && filelist[0] && !filelist[1]) {
-        mailbox.pending_selection = std::filesystem::path(filelist[0]);
+        mailbox.pending_selection = OriginalDataSourceSelection{
+            std::filesystem::path(filelist[0]), mailbox.requested_kind};
     }
     mailbox.dialog_open = false;
 }
@@ -3940,7 +3955,8 @@ int main(int argc, char** argv) {
     bool show_scanner = false;
     // It intentionally has room for the longest shipped translation, rather
     // than treating English text width as the launcher layout contract.
-    const SDL_FRect data_directory_picker_bounds{640.0F, 58.0F, 398.0F, 34.0F};
+    const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 398.0F, 34.0F};
+    const SDL_FRect data_archive_picker_bounds{640.0F, 56.0F, 398.0F, 34.0F};
     bool show_modern_graphics_settings = false;
     bool show_modern_runtime_diagnostics = false;
     bool show_recovery_function_map = false;
@@ -4192,26 +4208,34 @@ int main(int argc, char** argv) {
         apply_launcher_navigation(before);
         if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
     };
-    const auto open_data_directory_dialog = [&] {
+    const auto open_original_data_source_dialog = [&](const OriginalDataSourceKind kind) {
         if (screen != Screen::menu) return;
-        auto& mailbox = data_directory_dialog_mailbox();
+        auto& mailbox = original_data_source_dialog_mailbox();
         {
             std::lock_guard lock(mailbox.mutex);
             if (mailbox.dialog_open) return;
             mailbox.dialog_open = true;
+            mailbox.requested_kind = kind;
         }
         // Do not provide the conventional data directory as an initial
         // location: a missing default remains an inert lookup and is never
         // created or persisted merely because the launcher is shown.
-        SDL_ShowOpenFolderDialog(receive_data_directory_dialog_selection, &mailbox,
-            window, nullptr, false);
+        if (kind == OriginalDataSourceKind::directory) {
+            SDL_ShowOpenFolderDialog(receive_original_data_source_dialog_selection, &mailbox,
+                window, nullptr, false);
+        } else {
+            SDL_ShowOpenFileDialog(receive_original_data_source_dialog_selection, &mailbox,
+                window, nullptr, 0, nullptr, false);
+        }
     };
     const auto handle_menu_pointer_down = [&](const float x, const float y) {
         // SDL mouse and touch input share one card route. The latter is
         // needed by the iPad build; both still pass through the same
         // hash-verified platform/release admission checks as keyboard focus.
         if (inside(data_directory_picker_bounds, x, y)) {
-            open_data_directory_dialog();
+            open_original_data_source_dialog(OriginalDataSourceKind::directory);
+        } else if (inside(data_archive_picker_bounds, x, y)) {
+            open_original_data_source_dialog(OriginalDataSourceKind::archive);
         } else if (launcher_page == LauncherPage::games) {
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 if (inside(cards[index].bounds, x, y)) {
@@ -4434,22 +4458,34 @@ int main(int argc, char** argv) {
     std::optional<std::uint64_t> last_capped_present_ns;
     bool running = true;
     while (running) {
-        std::optional<std::filesystem::path> selected_data_directory;
+        std::optional<OriginalDataSourceSelection> selected_original_data_source;
         {
-            auto& mailbox = data_directory_dialog_mailbox();
+            auto& mailbox = original_data_source_dialog_mailbox();
             std::lock_guard lock(mailbox.mutex);
             if (mailbox.pending_selection) {
-                selected_data_directory = std::move(*mailbox.pending_selection);
+                selected_original_data_source = std::move(*mailbox.pending_selection);
                 mailbox.pending_selection.reset();
             }
         }
-        if (selected_data_directory && screen == Screen::menu) {
+        if (selected_original_data_source && screen == Screen::menu) {
             std::error_code error;
-            if (std::filesystem::is_directory(*selected_data_directory, error) && !error) {
+            // Do not follow a selected symlink into an implicitly different
+            // collection. The path shape chosen in the native dialog is part
+            // of the handoff contract; ReleaseScanner receives that exact
+            // directory or regular archive only after this boundary check.
+            const auto status = std::filesystem::symlink_status(
+                selected_original_data_source->path, error);
+            const auto is_directory = !error && !std::filesystem::is_symlink(status)
+                && selected_original_data_source->kind == OriginalDataSourceKind::directory
+                && std::filesystem::is_directory(status);
+            const auto is_archive = !error && !std::filesystem::is_symlink(status)
+                && selected_original_data_source->kind == OriginalDataSourceKind::archive
+                && std::filesystem::is_regular_file(status);
+            if (is_directory || is_archive) {
                 // A selected source replaces only the scanner instance.  No
                 // archive is opened here; ReleaseScanner advances later in
                 // bounded steps and all recognition remains hash-addressed.
-                request.data_directory = *selected_data_directory;
+                request.data_directory = selected_original_data_source->path;
                 request.data_directory_is_default = false;
                 scanner = std::make_unique<eon::ReleaseScanner>(request.data_directory);
                 releases.clear();
@@ -4460,8 +4496,8 @@ int main(int argc, char** argv) {
                 show_scanner = true;
                 focus_menu_card(focused);
             } else {
-                std::cerr << "Selected data folder is not accessible: "
-                          << selected_data_directory->string() << '\n';
+                std::cerr << "Selected original data source is not accessible: "
+                          << selected_original_data_source->path.string() << '\n';
             }
         }
         // SDL may call the dialog callback on another thread. Consume its
@@ -4686,7 +4722,11 @@ int main(int argc, char** argv) {
                 && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                 if (event.key.key == SDLK_O) {
-                    open_data_directory_dialog();
+                    open_original_data_source_dialog(OriginalDataSourceKind::directory);
+                    continue;
+                }
+                if (event.key.key == SDLK_A) {
+                    open_original_data_source_dialog(OriginalDataSourceKind::archive);
                     continue;
                 }
                 const bool previous = event.key.key == SDLK_LEFT || event.key.key == SDLK_UP;
@@ -4830,6 +4870,13 @@ int main(int argc, char** argv) {
             draw_text(renderer, data_directory_picker_bounds.x + 10.0F,
                 data_directory_picker_bounds.y + 9.0F,
                 tr("CHOOSE ORIGINAL DATA FOLDER (O)"));
+            SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
+            SDL_RenderFillRect(renderer, &data_archive_picker_bounds);
+            SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);
+            SDL_RenderRect(renderer, &data_archive_picker_bounds);
+            draw_text(renderer, data_archive_picker_bounds.x + 10.0F,
+                data_archive_picker_bounds.y + 9.0F,
+                tr("CHOOSE ORIGINAL ARCHIVE (A)"));
             const auto draw_card_border = [&](const SDL_FRect& bounds, const bool active, const bool enabled) {
                 SDL_SetRenderDrawColor(renderer, active ? 255 : enabled ? 185 : 85,
                     active ? 195 : enabled ? 210 : 90, active ? 80 : enabled ? 135 : 90, 255);

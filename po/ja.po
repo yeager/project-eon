@@ -56,6 +56,9 @@ msgstr "拒否"
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "オリジナルゲームデータのフォルダーを選択 (O)"
 
+msgid "CHOOSE ORIGINAL ARCHIVE (A)"
+msgstr "オリジナルゲームアーカイブを選択 (A)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ゲームを選択   |   上下: プラットフォーム   |   D: データを検査   |   F1: オリジナル / モダン   |   ESC: 終了"
 msgid "VERIFIED ORIGINAL DATA"

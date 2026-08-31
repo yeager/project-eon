@@ -56,6 +56,9 @@ msgstr "ВІДХИЛЕНО"
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ВИБРАТИ ТЕКУ З ОРИГІНАЛЬНИМИ ДАНИМИ ГРИ (O)"
 
+msgid "CHOOSE ORIGINAL ARCHIVE (A)"
+msgstr "ВИБРАТИ АРХІВ ОРИГІНАЛЬНОЇ ГРИ (A)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВИБРАТИ ГРУ   |   ВГОРУ/ВНИЗ: ПЛАТФОРМА   |   D: ПЕРЕВІРКА ДАНИХ   |   F1: ОРИГІНАЛ / СУЧАСНИЙ   |   ESC: ВИЙТИ"
 

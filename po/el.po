@@ -45,6 +45,9 @@ msgstr "ΑΠΟΡΡΙΦΘΗΚΕ"
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ΕΠΙΛΟΓΗ ΦΑΚΕΛΟΥ ΑΡΧΙΚΩΝ ΔΕΔΟΜΕΝΩΝ (O)"
 
+msgid "CHOOSE ORIGINAL ARCHIVE (A)"
+msgstr "ΕΠΙΛΟΓΗ ΑΡΧΕΙΟΥ ΠΡΩΤΟΤΥΠΟΥ ΠΑΙΧΝΙΔΙΟΥ (A)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ΕΠΙΛΟΓΗ ΠΑΙΧΝΙΔΙΟΥ   |   ΠΑΝΩ/ΚΑΤΩ: ΠΛΑΤΦΟΡΜΑ   |   D: ΕΛΕΓΧΟΣ ΔΕΔΟΜΕΝΩΝ   |   F1: ΠΡΩΤΟΤΥΠΟ / ΣΥΓΧΡΟΝΟ   |   ESC: ΕΞΟΔΟΣ"
 msgid "VERIFIED ORIGINAL DATA"

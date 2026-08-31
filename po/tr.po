@@ -56,6 +56,9 @@ msgstr "REDDEDİLDİ"
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ÖZGÜN OYUN VERİSİ KLASÖRÜNÜ SEÇ (O)"
 
+msgid "CHOOSE ORIGINAL ARCHIVE (A)"
+msgstr "ÖZGÜN OYUN ARŞİVİNİ SEÇ (A)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "OYUN SEÇ   |   YUKARI/AŞAĞI: PLATFORM   |   D: VERİ TARAMA   |   F1: ÖZGÜN / MODERN   |   ESC: ÇIK"
 
