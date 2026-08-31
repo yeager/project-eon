@@ -358,6 +358,14 @@ std::vector<std::uint8_t> ZipArchive::extract(const ZipEntry& entry) const {
     return output;
 }
 
+std::optional<std::vector<std::uint8_t>> ZipArchive::extract_asset_by_sha256(
+    std::string_view expected_sha256, const unsigned maximum_nesting) const {
+    if (!is_lower_hex_sha256(expected_sha256)) {
+        throw std::runtime_error("Expected asset SHA-256 must be 64 lower-case hex characters");
+    }
+    return recurse_extract(*this, expected_sha256, 0, maximum_nesting);
+}
+
 std::vector<ArchiveAsset> inventory_zip(const std::filesystem::path& path, unsigned maximum_nesting) {
     std::vector<ArchiveAsset> assets;
     recurse_inventory(ZipArchive::open(path), path.filename().string(), 0, maximum_nesting, assets);
@@ -368,8 +376,7 @@ std::optional<std::vector<std::uint8_t>> extract_asset_by_sha256(
     const std::filesystem::path& path,
     std::string_view expected_sha256,
     unsigned maximum_nesting) {
-    if (expected_sha256.size() != 64) throw std::runtime_error("Expected SHA-256 must be 64 hex characters");
-    return recurse_extract(ZipArchive::open(path), expected_sha256, 0, maximum_nesting);
+    return ZipArchive::open(path).extract_asset_by_sha256(expected_sha256, maximum_nesting);
 }
 
 std::vector<ArchiveAsset> inventory_verified_zip(
@@ -387,11 +394,8 @@ std::optional<std::vector<std::uint8_t>> extract_verified_asset_by_sha256(
     std::string_view expected_archive_sha256,
     std::string_view expected_asset_sha256,
     unsigned maximum_nesting) {
-    if (!is_lower_hex_sha256(expected_asset_sha256)) {
-        throw std::runtime_error("Expected asset SHA-256 must be 64 lower-case hex characters");
-    }
-    return recurse_extract(ZipArchive::open_verified(path, expected_archive_sha256),
-        expected_asset_sha256, 0, maximum_nesting);
+    return ZipArchive::open_verified(path, expected_archive_sha256).extract_asset_by_sha256(
+        expected_asset_sha256, maximum_nesting);
 }
 
 std::string name(AssetKind kind) {

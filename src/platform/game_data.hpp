@@ -21,6 +21,24 @@ struct ReleaseArchive {
     std::filesystem::path path;
 };
 
+// One exact, manifest-recognised release archive held only for the duration
+// of runtime admission. Its ZIP bytes are verified before parsing and never
+// unpacked, written, cached, or exposed as a replacement data source.
+class VerifiedReleaseMedia {
+public:
+    [[nodiscard]] static VerifiedReleaseMedia open(const ReleaseArchive& release);
+    [[nodiscard]] const ReleaseArchive& release() const { return release_; }
+    [[nodiscard]] std::optional<std::vector<std::uint8_t>> extract(
+        std::string_view expected_asset_sha256) const;
+
+private:
+    VerifiedReleaseMedia(ReleaseArchive release, ZipArchive archive)
+        : release_(std::move(release)), archive_(std::move(archive)) {}
+
+    ReleaseArchive release_;
+    ZipArchive archive_;
+};
+
 // A hash-recognised physical leaf encountered outside a recognised release
 // container.  It is deliberately *not* a ReleaseArchive: one disk can be
 // shared by several container releases, and a leaf alone does not prove that

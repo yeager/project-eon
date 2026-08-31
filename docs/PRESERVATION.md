@@ -64,11 +64,15 @@ bounded bootstrap/opening evidence; moving them out of the SDL layer does not
 execute an unknown ABI or claim game parity.
 
 Admission is transactional. After the outer archive rehash succeeds, the
-coordinator constructs exactly one platform-appropriate engine adapter in
-temporary storage, then publishes both that adapter and its launch identity
-together. A failed parser/leaf admission leaves no active identity or prior
-adapter. SDL owns only renderer, audio-device, and host-input resources; it
-borrows the admitted adapter and never reloads a release independently.
+coordinator constructs one bounded read-only `VerifiedReleaseMedia` view and
+uses that exact in-memory ZIP for every leaf requested by the selected
+platform adapter. It is destroyed when admission finishes; no archive is
+unpacked, written, cached, or retained as a replacement data source. The
+coordinator then publishes exactly one platform-appropriate engine adapter and
+its launch identity together. A failed parser/leaf admission leaves no active
+identity or prior adapter. SDL owns only renderer, audio-device, and host-input
+resources; it borrows the admitted adapter and never reloads a release
+independently.
 
 The F10 developer readout reports the result as **ready**, **not selected**,
 or one of three deliberately non-sensitive rejection classes: **identity**,
