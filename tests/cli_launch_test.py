@@ -778,6 +778,23 @@ def main() -> int:
                 f"{completed.stdout}\n{completed.stderr}"
             )
 
+    # An explicit Modern-pack path is part of the requested renderer input.
+    # A rejected path must fail the CLI route rather than turn into a green
+    # Original-only launch check with the pack silently discarded.
+    rejected_modern_pack = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--presentation", "modern",
+            "--modern-pack", str(temporary_root / "missing-pack.eonmodern"), "--launch-check"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (rejected_modern_pack.returncode != 5
+            or "Modern asset pack rejected before launch:" not in rejected_modern_pack.stderr
+            or "Modern asset pack required by the CLI selection was rejected" not in rejected_modern_pack.stderr):
+        raise SystemExit(
+            "an explicit rejected Modern pack did not fail the CLI launch check:\n"
+            f"{rejected_modern_pack.stdout}\n{rejected_modern_pack.stderr}"
+        )
+
     # An individual original archive is a supported --data source too.  Ask
     # the program itself for the content-addressed identity first, then launch
     # that exact game/platform pair from the same read-only archive path.

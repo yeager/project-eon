@@ -3736,6 +3736,16 @@ int main(int argc, char** argv) {
     } else if (selected_modern_pack_manifest && active_launch()) {
         admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch()->release);
     }
+    // A path supplied on the command line is an explicit renderer request,
+    // not an optional picker result. Do not let automation claim a successful
+    // Modern launch check after silently discarding the requested pack. The
+    // interactive picker remains recoverable: it can reject one selection and
+    // let the user choose another without ending the launcher session.
+    if (request.presentation == eon::Presentation::modern && request.modern_pack_manifest
+        && modern_pack_admission != ModernPackAdmission::ready) {
+        std::cerr << "Modern asset pack required by the CLI selection was rejected; launch aborted.\n";
+        return 5;
+    }
 
     // This is a bounded startup diagnostic for real-media CI and preservation
     // workstations. It crosses the exact same identity, outer-hash, and typed
