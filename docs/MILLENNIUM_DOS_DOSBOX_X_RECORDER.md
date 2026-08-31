@@ -73,7 +73,10 @@ AL, keyboard buffer, title state, video surface, or audio stream; it neither
 injects a key nor calls mapper/keyboard APIs. Project Eon's v13 receipt
 rejects a poll ordinal that is absent from the separate host receipt and labels
 a valid ordering **host-key-and-poll**, deliberately not “delivered” or
-“accepted”. No physical v13 capture has yet been admitted.
+“accepted”. One 2026-08-31 operator-visible v13 receipt has been verified, but
+it stopped at the pre-existing `INT 6` boundary before a host-key receipt or
+title poll; it is no-input route evidence only, not an admitted physical-input
+capture.
 
 One additional experimental CPU-only probe is private to the capture cache: it
 opens a distinct `O_CREAT|O_EXCL` result file only when explicitly configured

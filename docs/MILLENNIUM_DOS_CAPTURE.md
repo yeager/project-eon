@@ -272,7 +272,7 @@ still provide a physical host-key receipt and a trace schema that binds a real
 poll/result/frame sequence; Eon does not retry the prior AUTOTYPE timings as a
 substitute.
 
-### V13 physical key-to-poll chronology (prepared, no capture admitted)
+### V13 physical key-to-poll chronology (one no-input capture; no input evidence admitted)
 
 The external v13 DOSBox-X build is hash-bound as
 `07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b` and is
@@ -286,10 +286,24 @@ the recorder's ordering of two observations; it is not evidence of key
 delivery to DOS, AL/carry output, accepted menu input, frame, palette, audio,
 `EXEC`, private return, title state, or playable gameplay.
 
-No physical v13 run is recorded in this repository. A future operator must
-retain two write-protected captures with the full external receipt, then add
-separately reviewed display/audio observation evidence before proposing any
-reference-trace or runtime admission.
+On 2026-08-31, one fresh operator-visible, write-protected `svga_s3` v13
+session completed through the external receipt verifier. The window was
+created, but the host-key receipt is absent and the result stream contains no
+`title-input-poll`: the reviewed early-stop condition arrived after 0.62
+seconds, before the original title's documented poll. Its source archive,
+recorder, event stream and raw-result stream respectively retained SHA-256
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`,
+`07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b`,
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`, and
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`.
+The generated 340-byte configuration and 4,606-byte console transcript have
+SHA-256 `badb070cce4eee9e531aa9f5d087124f70950f24a327c92e466c827d5225f688`
+and `e0500c47370caa57b72ad1c3ca68a3655b465c9dc4f300c1f7e68ee21a3e8938`.
+This is only a reproducible negative reachability result: it proves neither a
+physical key event nor guest input delivery. A future operator still needs two
+write-protected captures containing host-key-and-poll chronology, followed by
+separately reviewed display/audio observations, before any reference-trace or
+runtime admission can be proposed.
 
 ### Wrap-compatibility probe (not input evidence)
 

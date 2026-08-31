@@ -24,7 +24,7 @@ behind the first proven input-to-frame-to-state loop.
 
 ### 2026-08-31 capture-route update
 
-The rank-1 v13 Millennium DOS no-input preflight is independently
+The rank-1 v13 Millennium DOS operator-visible no-input capture is independently
 receipt-verified. It ends at the same eight-record `INT 6` diagnostic receipt
 (SHA-256 `8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`)
 with no host-key receipt and no title-input poll. The rank-3 Deuteros Amiga v9
