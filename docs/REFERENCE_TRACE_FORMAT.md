@@ -155,6 +155,49 @@ original bytes; it does not prove emulator correctness, timing, service ABI,
 or gameplay behaviour.  The event file and its private preimages are never
 copied into an Eon data directory or treated as runtime input.
 
+## Opaque replay checkpoint fixtures
+
+Frame, audio, state, and input checkpoints needed by a future recovered
+session stay external just like reference traces. They are never committed,
+packaged, copied into a game-data directory, decoded by the generic verifier,
+or accepted as a substitute for an original-media trace. A fixture is one
+bounded checkpoint, not a replay script and not permission to advance a game
+session.
+
+The adjacent tool validates an external fixture directory without opening game
+media:
+
+```sh
+python3 tools/verify_replay_fixture.py \
+  --fixture /absolute/path/to/external-checkpoint
+```
+
+The directory must be an absolute, non-symlink directory containing a regular
+`fixture.eonfixture` file and exactly one regular payload named by its
+manifest. The payload is opaque bytes: a canonical original frame, PCM window,
+state snapshot, or recorded input segment may be retained by its rights holder,
+but the tool does not interpret it. `frame`, `audio`, `state`, and `input`
+payloads have independent 16 MiB, 64 MiB, 16 MiB, and 64 KiB safety limits.
+
+The LF-only manifest has exactly these fields:
+
+| Field | Rule |
+| --- | --- |
+| `format` | Exactly `project-eon-replay-fixture-v1`. |
+| `kind` | One of `frame`, `audio`, `state`, or `input`. |
+| `source_release_sha256`, `source_release_size` | A complete recognised outer-release identity from the committed release ledger. The verifier reads the ledger only, not the archive. |
+| `capture_sha256` | Opaque lower-case SHA-256 identity of the separately retained capture manifest or receipt. |
+| `checkpoint_sequence`, `checkpoint_tick` | Canonical decimal source ordering values; sequence is positive. They are provenance labels, not timing emulation. |
+| `payload_file` | Basename of the adjacent payload; separators, traversal, and links are rejected. |
+| `payload_sha256`, `payload_bytes` | Lower-case SHA-256 and canonical decimal byte count recomputed from the regular payload. |
+
+A verified fixture proves only that one retained checkpoint's bytes and declared
+provenance are internally consistent. It does not prove emulator correctness,
+pixel equivalence, audio timing, game-state semantics, input acceptance, or
+that different fixtures form a replayable sequence. A game-specific bridge may
+consume a set only after it validates ordered checkpoints against an admitted
+trace and documents every claimed scope.
+
 ## Event stream (v1)
 
 Each event record is exactly `event<TAB>sequence tick type`, with decimal,

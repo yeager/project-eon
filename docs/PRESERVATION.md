@@ -20,6 +20,17 @@ content identities are authoritative.
 6. This repository contains code, documentation, hashes, and newly created
    menu artwork—not commercial game assets.
 
+### External replay checkpoints
+
+Canonical frame, audio, state, and physical-input checkpoint bytes remain
+outside the repository even after a capture becomes useful for recovery. The
+`tools/verify_replay_fixture.py` admission tool binds one opaque external
+payload to a recognised outer-release identity, an independently retained
+capture hash, canonical checkpoint ordering fields, and the payload's own
+size/SHA-256. It does not open original media or decode/execute the payload.
+The format, safety limits, and explicit non-equivalence boundary are specified
+in [`REFERENCE_TRACE_FORMAT.md`](REFERENCE_TRACE_FORMAT.md#opaque-replay-checkpoint-fixtures).
+
 ## Original and Modern mode contract
 
 Project Eon deliberately distinguishes a preservation result from an
