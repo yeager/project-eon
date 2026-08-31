@@ -4103,11 +4103,12 @@ called. SDL's compatibility touch-mouse events are ignored, so one physical
 tap cannot advance two card pages. Touch never bypasses media hashing, release
 selection, or the Original/Modern profile choice.
 
-Verified Atari ST cards display **Atari bootstrap only** rather than implying
-full runtime parity. The label preserves their exact-media admission while
-making the next unsupported native-API/callback boundary visible before a
-user enters the profile flow; it does not disable, replace, or emulate the
-documented bounded bootstrap session.
+Every verified card displays its explicit recovery coverage: **Recovered
+startup**, **Recovered opening**, or **Bootstrap only**, rather than implying
+full runtime parity. The label preserves exact-media admission while making the
+next unsupported native-API/callback boundary visible before a user enters the
+profile flow; it does not disable, replace, or emulate the documented bounded
+session.
 
 The same selector is strict for read-only provenance inspection: `--inspect
 --game millennium --platform dos --release-language es` reports only the
