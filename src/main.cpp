@@ -3577,34 +3577,28 @@ int main(int argc, char** argv) {
     std::optional<eon::Platform> active_platform = request.platform;
     std::optional<std::string> active_release_language = request.release_language;
     std::optional<std::string> active_release_sha256 = request.release_sha256;
-    std::optional<eon::ReleaseArchive> initial_release;
-    std::optional<eon::LaunchRequest> active_launch_request;
+    std::optional<eon::ResolvedLaunchRequest> active_launch;
     if (request.game && active_platform) {
         auto launch_candidate = request;
         launch_candidate.platform = active_platform;
         launch_candidate.release_sha256 = active_release_sha256;
         launch_candidate.release_language = active_release_language;
-        active_launch_request = eon::resolve_launch_request_identity(launch_candidate, releases);
-        if (!active_launch_request) {
+        active_launch = eon::resolve_launch_request_identity(launch_candidate, releases);
+        if (!active_launch) {
             std::cerr << "The selected game and platform need one exact verified original release. "
                          "Use --release-sha256 when several outer containers share a language; "
                          "no scan-order fallback was selected.\n";
             return 4;
         }
-        initial_release = eon::resolve_release_identity(releases, *active_launch_request->game,
-            *active_launch_request->platform, active_launch_request->release_sha256,
-            active_launch_request->release_language);
-        active_release_sha256 = active_launch_request->release_sha256;
-        active_release_language = active_launch_request->release_language;
+        active_release_sha256 = active_launch->request.release_sha256;
+        active_release_language = active_launch->request.release_language;
     }
     const auto resolve_active_release = [&](const eon::Game game) -> std::optional<eon::ReleaseArchive> {
-        if (!active_launch_request || active_launch_request->game != game
-            || !active_launch_request->platform) return std::nullopt;
-        return eon::resolve_release_identity(releases, game, *active_launch_request->platform,
-            active_launch_request->release_sha256, active_launch_request->release_language);
+        if (!active_launch || active_launch->request.game != game) return std::nullopt;
+        return active_launch->release;
     };
-    auto millennium_assets = initial_release && initial_release->game == eon::Game::millennium
-        ? load_millennium_launch_assets(*initial_release) : std::nullopt;
+    auto millennium_assets = active_launch && active_launch->release.game == eon::Game::millennium
+        ? load_millennium_launch_assets(active_launch->release) : std::nullopt;
     // The command-line path is an initial explicit selection, not a mutable
     // request object. Custom's native picker may replace this session-local
     // candidate before launch; neither route has a default pack location.
@@ -4053,9 +4047,9 @@ int main(int argc, char** argv) {
         launch_candidate.presentation_explicit = true;
         const auto resolved = eon::resolve_launch_request_identity(launch_candidate, releases);
         if (!resolved) return;
-        active_launch_request = resolved;
-        active_release_sha256 = resolved->release_sha256;
-        active_release_language = resolved->release_language;
+        active_launch = resolved;
+        active_release_sha256 = resolved->request.release_sha256;
+        active_release_language = resolved->request.release_language;
         selected = game;
         screen = Screen::launching;
         if (selected == eon::Game::millennium) start_millennium_title();

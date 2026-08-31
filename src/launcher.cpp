@@ -352,7 +352,7 @@ std::optional<ReleaseArchive> resolve_release_identity(
     return *match;
 }
 
-std::optional<LaunchRequest> resolve_launch_request_identity(
+std::optional<ResolvedLaunchRequest> resolve_launch_request_identity(
     const LaunchRequest& candidate, const std::vector<ReleaseArchive>& releases) {
     if (!candidate.game || !candidate.platform) return std::nullopt;
     const auto release = resolve_release_identity(releases, *candidate.game, *candidate.platform,
@@ -367,7 +367,7 @@ std::optional<LaunchRequest> resolve_launch_request_identity(
     resolved.platform = release->platform;
     resolved.release_language = release->language;
     resolved.release_sha256 = release->sha256;
-    return resolved;
+    return {{std::move(resolved), std::move(*release)}};
 }
 
 std::optional<Platform> select_available_platform(
