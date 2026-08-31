@@ -216,6 +216,29 @@ def main() -> int:
     if "RECOVERY MAP  " not in data_dir_inspection.stdout:
         raise SystemExit("--inspect did not report the hash-bound recovery map")
 
+    launch_check_json = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--presentation", "original", "--launch-check-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        launch_check_payload = json.loads(launch_check_json.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"--launch-check-json did not emit JSON: {error}") from error
+    if (launch_check_json.returncode != 0
+            or launch_check_payload != {
+                "schema": "project-eon.launch-check/v1",
+                "release": {
+                    "game": "Millennium 2.2", "platform": "DOS", "language": "en",
+                    "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+                },
+                "runtime_admission": "READY",
+            }):
+        raise SystemExit(
+            "--launch-check-json did not report the exact admitted release without SDL:\n"
+            f"{launch_check_json.stdout}\n{launch_check_json.stderr}"
+        )
+
     # External emulator mounting must never turn Eon's own bounded archive
     # inventory into a write path.  Exercise the explicit leaf-manifest mode
     # against real media; the final content snapshot below is the direct

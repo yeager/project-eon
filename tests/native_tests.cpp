@@ -1414,6 +1414,12 @@ int main() {
             launch_check_option};
         const auto launch_check = eon::parse_command_line(6, launch_check_args);
         assert(launch_check.request && launch_check.request->launch_check);
+        char launch_check_json_option[] = "--launch-check-json";
+        char* launch_check_json_args[] = {program, game_option, millennium, platform_option, dos,
+            launch_check_json_option};
+        const auto launch_check_json = eon::parse_command_line(6, launch_check_json_args);
+        assert(launch_check_json.request && launch_check_json.request->launch_check
+            && launch_check_json.request->launch_check_json);
         char* launch_check_without_target_args[] = {program, launch_check_option};
         assert(!eon::parse_command_line(2, launch_check_without_target_args).request);
         char* launch_check_with_inspect_args[] = {program, inspect_option, game_option, millennium,

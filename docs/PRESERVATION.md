@@ -78,6 +78,9 @@ already admitted identity rather than resolving menu fields independently.
 requires an explicit game/platform, emits only game/platform/language and the
 safe admission result, and exits before SDL initialization. It is not an
 emulator, replay, renderer, input path, audio path, or save operation.
+`--launch-check-json` writes this same minimal result as
+`project-eon.launch-check/v1`; it includes the exact release SHA-256 but never
+a local path, member name, original bytes, or parser exception.
 
 The launcher carries the same provenance boundary before admission. Its
 source identity is exactly game, platform, original-release language, and
