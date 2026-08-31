@@ -79,12 +79,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # session. A loader searching the mutable scanner list again could
         # accidentally make an exact release card into a scan-order decision.
         self.assertIn("const auto resolve_active_release", SOURCE)
-        for loader in ("load_millennium_launch_assets",):
-            with self.subTest(loader=loader):
-                start = SOURCE.index(f"{loader}(")
-                signature = SOURCE[start:SOURCE.index(") {", start) + 3]
-                self.assertIn("const eon::ReleaseArchive& release", signature)
         for loader in (
+            "load_millennium_dos_runtime",
             "load_deuteros_amiga_runtime",
             "load_millennium_atari_runtime",
             "load_millennium_amiga_runtime",
@@ -95,7 +91,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
                 signature = RUNTIME_SOURCE[start:RUNTIME_SOURCE.index(") {", start) + 3]
                 self.assertIn("const ReleaseArchive& release", signature)
         self.assertIn("eon::load_deuteros_amiga_runtime(*release)", SOURCE)
-        self.assertIn("load_millennium_launch_assets(*release)", SOURCE)
+        self.assertIn("eon::load_millennium_dos_runtime(*release)", SOURCE)
 
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
         # If a game has only Amiga/Atari media, selecting its game card must

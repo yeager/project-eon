@@ -2,6 +2,9 @@
 
 #include "platform/game_data.hpp"
 #include "data/fat12.hpp"
+#include "data/millennium_dos_bitmap.hpp"
+#include "data/millennium_dos_gameplay_screen.hpp"
+#include "data/millennium_dos_lib.hpp"
 
 namespace eon {
 
@@ -72,6 +75,108 @@ std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(c
         const auto* executable = volume.find("MILENIUM.TOS");
         return executable ? std::make_unique<MillenniumAtariBootstrapSession>(volume, volume.read(*executable)) : nullptr;
     } catch (...) { return {}; }
+}
+
+std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
+    const ReleaseArchive& release) {
+    // These profiles are asserted only for the selected DOS language. A
+    // caller that selected Amiga, Atari ST, or an unrecognised DOS edition
+    // receives no runtime object rather than a scan-order substitute.
+    if (release.game != Game::millennium || release.platform != Platform::dos
+        || (release.language != "en" && release.language != "es")) return std::nullopt;
+    constexpr auto title_lib_sha256 =
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+    constexpr auto gx_lib_sha256 =
+        "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
+    constexpr auto titles_sha256 =
+        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+    constexpr auto launcher_sha256 =
+        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+    constexpr auto game_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr auto initial_save_sha256 =
+        "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
+    constexpr auto ega640_sha256 =
+        "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
+    constexpr auto mcga_sha256 =
+        "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
+    try {
+        if (release.language == "es") {
+            constexpr auto spanish_image_sha256 =
+                "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
+            const auto image = extract_verified_release_asset(release, spanish_image_sha256);
+            if (!image) return std::nullopt;
+            const Fat12Disk disk(*image);
+            const auto* title_entry = disk.find("TITLE.LIB");
+            const auto* titles_entry = disk.find("TITLES.EXE");
+            if (!title_entry || !titles_entry) return std::nullopt;
+            auto title_library_bytes = disk.read(*title_entry);
+            const auto titles_bytes = disk.read(*titles_entry);
+            static_cast<void>(parse_millennium_dos_spanish_title_presentation_evidence(
+                titles_bytes, title_library_bytes));
+            const MillenniumDosLib title_lib(std::move(title_library_bytes));
+            const auto* p00 = title_lib.find("P00");
+            if (!p00) return std::nullopt;
+            const auto resource = title_lib.read(*p00);
+            const auto bitmap = decode_millennium_dos_bitmap(resource);
+            const auto palette = decode_millennium_dos_palette(resource, bitmap);
+            return MillenniumDosRuntimeAssets{
+                .title = {bitmap.width, bitmap.height,
+                    {colorize_millennium_dos_bitmap(bitmap, palette)}},
+                .language = "es",
+                .gx_canvas = std::nullopt,
+                .title_flow = std::nullopt,
+                .sound_selection = std::nullopt,
+                .sound_selection_prompt = std::nullopt,
+                .spanish_title_boundary = parse_millennium_dos_spanish_title_boundary(titles_bytes),
+                .game_flow = std::nullopt,
+                .ega_video_driver = std::nullopt,
+                .mcga_video_driver = std::nullopt,
+                .initial_save = std::nullopt,
+            };
+        }
+        const auto bytes = extract_verified_release_asset(release, title_lib_sha256);
+        if (!bytes) return std::nullopt;
+        const MillenniumDosLib title_lib(*bytes);
+        const auto* p00 = title_lib.find("P00");
+        if (!p00) return std::nullopt;
+        const auto resource = title_lib.read(*p00);
+        const auto bitmap = decode_millennium_dos_bitmap(resource);
+        const auto palette = decode_millennium_dos_palette(resource, bitmap);
+        const auto gx_bytes = extract_verified_release_asset(release, gx_lib_sha256);
+        const auto titles = extract_verified_release_asset(release, titles_sha256);
+        const auto launcher = extract_verified_release_asset(release, launcher_sha256);
+        const auto game = extract_verified_release_asset(release, game_sha256);
+        const auto initial_save = extract_verified_release_asset(release, initial_save_sha256);
+        const auto ega640 = extract_verified_release_asset(release, ega640_sha256);
+        const auto mcga = extract_verified_release_asset(release, mcga_sha256);
+        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga) {
+            return std::nullopt;
+        }
+        const auto gx_canvas = parse_millennium_dos_gameplay_screen(*gx_bytes);
+        const auto sound_selection = parse_millennium_dos_sound_selection(*launcher);
+        const auto sound_selection_prompt = extract_millennium_dos_sound_selection_prompt(
+            *launcher, sound_selection);
+        return MillenniumDosRuntimeAssets{
+            .title = {bitmap.width, bitmap.height,
+                {colorize_millennium_dos_bitmap(bitmap, palette)}},
+            .language = "en",
+            .gx_canvas = MillenniumDosPreviewAnimation{
+                gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
+            .title_flow = parse_millennium_dos_title_flow(*titles, *launcher),
+            .sound_selection = sound_selection,
+            .sound_selection_prompt = sound_selection_prompt,
+            .spanish_title_boundary = std::nullopt,
+            .game_flow = parse_millennium_dos_game_flow(*game),
+            .ega_video_driver = parse_millennium_dos_video_driver(*ega640,
+                MillenniumDosVideoDriverKind::ega640),
+            .mcga_video_driver = parse_millennium_dos_video_driver(*mcga,
+                MillenniumDosVideoDriverKind::mcga),
+            .initial_save = MillenniumDosSaveSession(*initial_save),
+        };
+    } catch (...) {
+        return std::nullopt;
+    }
 }
 
 } // namespace eon

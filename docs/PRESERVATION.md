@@ -41,12 +41,14 @@ before retaining the value. It clears any prior identity before each acquire
 attempt and on source replacement. A malformed, stale, or replaced archive
 therefore leaves no active identity for a loader to consume.
 
-The four current native bootstrap/opening adapters—Millennium Amiga, Millennium
-Atari ST, Deuteros Amiga, and Deuteros Atari ST—are SDL-free engine factories
-behind that boundary. They select only their named hash-verified leaf and
-return no substitute if the selected release, language, or leaf is absent.
-Their resulting objects remain bounded bootstrap/opening evidence; moving them
-out of the SDL layer does not execute an unknown ABI or claim game parity.
+The five current native bootstrap/opening adapters—Millennium DOS/Amiga/Atari
+ST and Deuteros Amiga/Atari ST—are SDL-free engine factories behind that
+boundary. They select only their named hash-verified leaf and return no
+substitute if the selected release, language, or leaf is absent. The DOS
+factory returns parser-only title and startup evidence; it neither executes
+an unproven handoff nor changes source bytes. Their resulting objects remain
+bounded bootstrap/opening evidence; moving them out of the SDL layer does not
+execute an unknown ABI or claim game parity.
 
 ## Original and Modern mode contract
 
