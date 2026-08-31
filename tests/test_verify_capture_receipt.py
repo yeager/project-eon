@@ -19,7 +19,8 @@ class ReceiptVerifierTests(unittest.TestCase):
             TOOL.require_receipt_schema({})
         with self.assertRaisesRegex(ValueError, "receipt schema"):
             TOOL.require_receipt_schema({"capture_receipt_version": "1"})
-        TOOL.require_receipt_schema({"capture_receipt_version": "2"})
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "2"}), "2")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "3"}), "3")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
@@ -48,6 +49,20 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "unsafe"):
                 TOOL.verify_file({"raw_pc": "present", "raw_pc_sha256": "0" * 64,
                                   "raw_pc_bytes": "0"}, root, "raw_pc", "raw-pc.txt")
+
+    def test_v3_deuteros_raw_summary_is_recomputed_from_strict_records(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            raw = root / "raw-pc.txt"
+            raw.write_text(
+                "raw-pc 1 cycles=1 pc=0x000210d4 opcode=0x4e75 d0=0x00000000 "
+                "a0=0x00000000 a6=0x00000000 sr=0x0000\n", encoding="ascii")
+            fields = {"raw_pc": "present", "raw_pc_records": "1",
+                      "raw_pc_site_counts": "0x000210d4:1"}
+            TOOL.verify_deuteros_raw_pc_summary(fields, root)
+            fields["raw_pc_site_counts"] = "0x000210d4:2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_raw_pc_summary(fields, root)
 
     def test_console_requires_a_bounded_retained_file(self) -> None:
         with temporary_directory() as directory:
