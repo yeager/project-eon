@@ -144,7 +144,7 @@ immutable launch request, so the menu never substitutes another platform's or
 language's media. If a supported platform has several recognised outer
 containers, Project Eon shows a release-identity card page before the profile
 cards. It displays up to four identities as a two-by-two grid and pages larger
-sets with the same highlighted-card navigation; clicking a card always carries
+sets with visible previous/next page controls as well as highlighted-card navigation; clicking a card always carries
 its complete hash-sorted identity rather than a page-local position. Original and Modern
 cards start directly. The Custom card is not a third runtime mode: it opens
 Modern's fine-tuning panel, then presents an explicit start action using those
@@ -153,7 +153,9 @@ route. A device-independent launcher state machine owns those transitions, so
 keyboard, gamepad, mouse, and touch cannot follow different release-admission
 rules. Keyboard and gamepad users can move through each card page with the
 D-pad or arrow keys and activate the highlighted card with Enter, Space, South/A, or
-Start; Escape returns to the preceding card page.
+Start; Escape returns to the preceding card page. Mouse and touch users can
+use the visible `<<` control to go back and the release-page controls to page
+through identities.
 
 If a selected profile cannot enter the final runtime boundary, the profile
 page reports the safe rejection class—identity, archive hash, or adapter—next

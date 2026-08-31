@@ -4134,6 +4134,12 @@ int main(int argc, char** argv) {
     // than treating English text width as the launcher layout contract.
     const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 398.0F, 34.0F};
     const SDL_FRect data_archive_picker_bounds{640.0F, 56.0F, 398.0F, 34.0F};
+    // These are Eon-shell controls, rendered in the same logical coordinate
+    // space as cards. They contain no release identity and therefore cannot
+    // select or launch original media by themselves.
+    const SDL_FRect launcher_back_bounds{64.0F, 16.0F, 152.0F, 34.0F};
+    const SDL_FRect release_page_previous_bounds{320.0F, 82.0F, 108.0F, 30.0F};
+    const SDL_FRect release_page_next_bounds{438.0F, 82.0F, 108.0F, 30.0F};
     bool show_modern_graphics_settings = false;
     bool show_modern_runtime_diagnostics = false;
     bool show_recovery_function_map = false;
@@ -4420,6 +4426,14 @@ int main(int argc, char** argv) {
         apply_launcher_navigation(before);
         if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
     };
+    const auto page_release_cards = [&](const int direction) {
+        const auto before = launcher_interaction.source_identity();
+        if (!launcher_interaction.page_releases(releases, direction)) return;
+        // Paging is presentation-only, but retain the shared source-change
+        // boundary so future controller changes cannot bypass lifecycle
+        // revocation by adding identity state to a page action.
+        apply_launcher_navigation(before);
+    };
     const auto open_original_data_source_dialog = [&](const OriginalDataSourceDialogKind kind) {
         if (screen != Screen::menu) return;
         auto& mailbox = original_data_source_dialog_mailbox();
@@ -4444,7 +4458,15 @@ int main(int argc, char** argv) {
         // SDL mouse and touch input share one card route. The latter is
         // needed by the iPad build; both still pass through the same
         // hash-verified platform/release admission checks as keyboard focus.
-        if (inside(data_directory_picker_bounds, x, y)) {
+        if (launcher_page != LauncherPage::games && inside(launcher_back_bounds, x, y)) {
+            back_launcher_cards();
+        } else if (launcher_page == LauncherPage::releases
+            && inside(release_page_previous_bounds, x, y)) {
+            page_release_cards(-1);
+        } else if (launcher_page == LauncherPage::releases
+            && inside(release_page_next_bounds, x, y)) {
+            page_release_cards(1);
+        } else if (inside(data_directory_picker_bounds, x, y)) {
             open_original_data_source_dialog(OriginalDataSourceDialogKind::directory);
         } else if (inside(data_archive_picker_bounds, x, y)) {
             open_original_data_source_dialog(OriginalDataSourceDialogKind::archive);
@@ -5097,6 +5119,14 @@ int main(int argc, char** argv) {
                     active ? 195 : enabled ? 210 : 90, active ? 80 : enabled ? 135 : 90, 255);
                 SDL_RenderRect(renderer, &bounds);
             };
+            if (launcher_page != LauncherPage::games) {
+                SDL_SetRenderDrawColor(renderer, 32, 73, 104, 255);
+                SDL_RenderFillRect(renderer, &launcher_back_bounds);
+                SDL_SetRenderDrawColor(renderer, 110, 190, 232, 255);
+                SDL_RenderRect(renderer, &launcher_back_bounds);
+                draw_text(renderer, launcher_back_bounds.x + 12.0F, launcher_back_bounds.y + 9.0F,
+                    "<<");
+            }
             if (launcher_page == LauncherPage::games) {
                 draw_text(renderer, 64, 82, tr("SELECT A GAME"));
                 draw_text(renderer, 64, 108, tr("CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"));
@@ -5149,6 +5179,16 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 64, 82, tr("SELECT AN ORIGINAL RELEASE"));
                 draw_text(renderer, 64, 108, tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
                 if (release_page.page_count > 1) {
+                    SDL_SetRenderDrawColor(renderer, 32, 73, 104, 255);
+                    SDL_RenderFillRect(renderer, &release_page_previous_bounds);
+                    SDL_RenderFillRect(renderer, &release_page_next_bounds);
+                    SDL_SetRenderDrawColor(renderer, 110, 190, 232, 255);
+                    SDL_RenderRect(renderer, &release_page_previous_bounds);
+                    SDL_RenderRect(renderer, &release_page_next_bounds);
+                    draw_text(renderer, release_page_previous_bounds.x + 12.0F,
+                        release_page_previous_bounds.y + 7.0F, "< " + tr("PAGE"));
+                    draw_text(renderer, release_page_next_bounds.x + 12.0F,
+                        release_page_next_bounds.y + 7.0F, tr("PAGE") + " >");
                     draw_text(renderer, 1040, 108, tr("PAGE") + " "
                         + std::to_string(release_page.page + 1U) + "/"
                         + std::to_string(release_page.page_count));

@@ -213,6 +213,10 @@ struct LauncherInteractionController {
     void move(const std::vector<ReleaseArchive>& releases, int direction);
     void first(const std::vector<ReleaseArchive>& releases);
     void last(const std::vector<ReleaseArchive>& releases);
+    // Moves the presentation window by a whole release-card page.  It never
+    // chooses an identity or changes the selected source route, so a pointer
+    // or touch page control cannot turn a visible card index into a launch.
+    [[nodiscard]] bool page_releases(const std::vector<ReleaseArchive>& releases, int direction);
     void back(const std::vector<ReleaseArchive>& releases);
     // Activates the focused card. A returned launch effect is admissible only
     // through session.resolve_launch(), which binds one exact outer hash.

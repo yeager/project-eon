@@ -101,6 +101,21 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("activate_launcher_card(card.identity_index)", pointer_route)
         self.assertIn("card.identity_index == static_cast<std::size_t>(focused_release_card)", SOURCE)
 
+    def test_touch_and_mouse_have_visible_back_and_release_page_controls(self) -> None:
+        self.assertIn("bool page_releases(const std::vector<ReleaseArchive>& releases, int direction)", ROUTE_HEADER)
+        self.assertIn("LauncherInteractionController::page_releases", ROUTE_SOURCE)
+        self.assertIn("next_page * 4U", ROUTE_SOURCE)
+        self.assertIn("launcher_back_bounds", SOURCE)
+        self.assertIn("release_page_previous_bounds", SOURCE)
+        self.assertIn("release_page_next_bounds", SOURCE)
+        pointer_route = SOURCE[SOURCE.index("const auto handle_menu_pointer_down"):
+                               SOURCE.index("if (screen == Screen::launching")]
+        self.assertLess(pointer_route.index("inside(launcher_back_bounds"),
+                        pointer_route.index("activate_launcher_card(card.identity_index)"))
+        self.assertIn("page_release_cards(-1)", pointer_route)
+        self.assertIn("page_release_cards(1)", pointer_route)
+        self.assertIn('"<<"', SOURCE)
+
     def test_incremental_scan_revokes_newly_ambiguous_automatic_release(self) -> None:
         self.assertIn("bool release_explicit = false", ROUTE_HEADER)
         self.assertIn("bool LauncherRouteState::reconcile_releases", ROUTE_SOURCE)

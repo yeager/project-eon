@@ -752,6 +752,24 @@ void LauncherInteractionController::last(const std::vector<ReleaseArchive>& rele
     if (page == LauncherPage::profiles) session.invalidate_custom();
 }
 
+bool LauncherInteractionController::page_releases(const std::vector<ReleaseArchive>& releases,
+    const int direction) {
+    if (session.route.page != LauncherPage::releases || !session.route.platform || direction == 0) {
+        return false;
+    }
+    const auto identities = available_release_identities(releases,
+        session.route.game, *session.route.platform);
+    const auto current_page = release_card_page_for_focus(identities.size(), focus.release);
+    if (current_page.page_count < 2) return false;
+    const auto next_page = direction < 0
+        ? (current_page.page + current_page.page_count - 1U) % current_page.page_count
+        : (current_page.page + 1U) % current_page.page_count;
+    // Retain a global identity index.  Selecting any card remains a separate
+    // activate_card() operation and routes through choose_release().
+    focus.set(LauncherPage::releases, identities.size(), next_page * 4U);
+    return true;
+}
+
 void LauncherInteractionController::back(const std::vector<ReleaseArchive>& releases) {
     session.back(releases);
     synchronize(releases);

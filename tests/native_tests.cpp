@@ -1385,6 +1385,40 @@ int main() {
     const auto bounded_release_page = eon::release_card_page_for_focus(5, 99);
     assert(bounded_release_page.first_identity == 4 && bounded_release_page.visible_count == 1
         && bounded_release_page.page == 1 && bounded_release_page.page_count == 2);
+    // Release-page controls are presentation navigation only. They move a
+    // whole four-card window without choosing an archive or changing the
+    // selected source identity, so a touch/mouse page tap cannot launch a
+    // page-local card by accident.
+    const std::vector<eon::ReleaseArchive> paged_release_identities{
+        {eon::Game::millennium, eon::Platform::amiga, "en",
+            "1111111111111111111111111111111111111111111111111111111111111111", {}},
+        {eon::Game::millennium, eon::Platform::amiga, "en",
+            "2222222222222222222222222222222222222222222222222222222222222222", {}},
+        {eon::Game::millennium, eon::Platform::amiga, "en",
+            "3333333333333333333333333333333333333333333333333333333333333333", {}},
+        {eon::Game::millennium, eon::Platform::amiga, "en",
+            "4444444444444444444444444444444444444444444444444444444444444444", {}},
+        {eon::Game::millennium, eon::Platform::amiga, "en",
+            "5555555555555555555555555555555555555555555555555555555555555555", {}},
+    };
+    eon::LauncherInteractionController paged_controller;
+    paged_controller.session.focus_game(paged_release_identities, eon::Game::millennium);
+    assert(paged_controller.session.choose_platform(paged_release_identities, eon::Platform::amiga));
+    assert(paged_controller.session.route.page == eon::LauncherPage::releases);
+    const auto page_source = paged_controller.source_identity();
+    assert(paged_controller.page_releases(paged_release_identities, 1));
+    assert(paged_controller.focus.release == 4
+        && !paged_controller.session.route.release_is_selected()
+        && !paged_controller.source_changed_since(page_source));
+    assert(paged_controller.page_releases(paged_release_identities, 1));
+    assert(paged_controller.focus.release == 0);
+    assert(paged_controller.page_releases(paged_release_identities, -1));
+    assert(paged_controller.focus.release == 4);
+    assert(paged_controller.activate_card(paged_release_identities, 4)
+        == eon::LauncherInteractionEffect::none);
+    assert(paged_controller.session.route.release_sha256
+        == "5555555555555555555555555555555555555555555555555555555555555555");
+    assert(!paged_controller.page_releases(paged_release_identities, 0));
     {
         char program[] = "project-eon";
         char* args[] = {program};
