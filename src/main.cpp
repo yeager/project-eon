@@ -3696,6 +3696,22 @@ int main(int argc, char** argv) {
         admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch()->release);
     }
 
+    // This is a bounded startup diagnostic for real-media CI and preservation
+    // workstations. It crosses the exact same identity, outer-hash, and typed
+    // adapter gate as a CLI/menu launch, then exits before SDL, input, audio,
+    // rendering, game timing, or a save can be created or changed.
+    if (request.launch_check) {
+        if (!active_launch()) {
+            std::cerr << "Launch check has no admitted original release.\n";
+            return 4;
+        }
+        std::cout << "LAUNCH CHECK  " << eon::name(active_launch()->release.game) << " / "
+                  << eon::name(active_launch()->release.platform) << " / "
+                  << active_launch()->release.language << " / "
+                  << eon::release_runtime_admission_label(runtime_coordinator.admission()) << '\n';
+        return 0;
+    }
+
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
         return 1;

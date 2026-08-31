@@ -658,7 +658,12 @@ def main() -> int:
         pass
     else:
         raise SystemExit("Millennium DOS did not enter its SDL loop with the English default release")
-    starts = [("start-menu", (str(executable), "--data", str(data_directory)))]
+    # Every platform now has a bounded SDL-free launch check. It crosses the
+    # same scanner identity, outer hash and native adapter gate as a real
+    # launch, then exits before any host window/input/audio loop. This makes
+    # original-media startup verification deterministic instead of relying on
+    # a process timeout for each platform.
+    starts: list[tuple[str, tuple[str, ...]]] = []
     for presentation in ("original", "modern"):
         for game, platform in (
             ("millennium", "dos"),
@@ -670,20 +675,16 @@ def main() -> int:
             starts.append((
                 f"{game}/{platform}/{presentation}",
                 (str(executable), "--data", str(data_directory), "--game", game,
-                    "--platform", platform, "--presentation", presentation),
+                    "--platform", platform, "--presentation", presentation, "--launch-check"),
             ))
     for name, command in starts:
-        try:
-            completed = subprocess.run(
-                command, env=environment, check=False, capture_output=True,
-                text=True, timeout=1,
+        completed = subprocess.run(command, env=environment, check=False,
+            capture_output=True, text=True)
+        if completed.returncode != 0 or "LAUNCH CHECK  " not in completed.stdout or " / READY" not in completed.stdout:
+            raise SystemExit(
+                f"{name} did not complete the shared runtime admission gate:\n"
+                f"{completed.stdout}\n{completed.stderr}"
             )
-        except subprocess.TimeoutExpired:
-            continue
-        raise SystemExit(
-            f"{name} exited before its SDL loop (status {completed.returncode}):\n"
-            f"{completed.stderr}"
-        )
 
     # An individual original archive is a supported --data source too.  Ask
     # the program itself for the content-addressed identity first, then launch
@@ -1004,7 +1005,7 @@ def main() -> int:
         archive_starts.append((
             f"archive/{game}/{platform}/{archive.name}",
             (str(executable), "--data", str(archive), "--game", game,
-                "--platform", platform, "--presentation", "original"),
+                "--platform", platform, "--presentation", "original", "--launch-check"),
         ))
     expected_releases = {
         ("millennium", "dos", "en"),
@@ -1020,17 +1021,13 @@ def main() -> int:
             f"expected {sorted(expected_releases)}, got {sorted(detected_releases)}"
         )
     for name, command in archive_starts:
-        try:
-            completed = subprocess.run(
-                command, env=environment, check=False, capture_output=True,
-                text=True, timeout=0.75,
+        completed = subprocess.run(command, env=environment, check=False,
+            capture_output=True, text=True)
+        if completed.returncode != 0 or "LAUNCH CHECK  " not in completed.stdout or " / READY" not in completed.stdout:
+            raise SystemExit(
+                f"{name} did not complete the shared runtime admission gate:\n"
+                f"{completed.stdout}\n{completed.stderr}"
             )
-        except subprocess.TimeoutExpired:
-            continue
-        raise SystemExit(
-            f"{name} exited before its SDL loop (status {completed.returncode}):\n"
-            f"{completed.stderr}"
-        )
     after = media_snapshot(data_directory, original_media_only=True)
     if after != before:
         raise SystemExit("Project Eon changed the supplied game-data directory")

@@ -135,6 +135,7 @@ std::string usage() {
         "               --platform dos|amiga|atari-st\n"
         "               [--release-language en|es] [--release-sha256 <64-lowercase-hex>]\n"
         "               [--presentation original|modern] [--modern-pack <pack.eonmodern>]\n\n"
+        "               [--launch-check]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
         "               [--language <language>]\n\n"
@@ -182,6 +183,10 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
         if (argument == "--inventory") {
             request.inventory_assets = true;
+            continue;
+        }
+        if (argument == "--launch-check") {
+            request.launch_check = true;
             continue;
         }
         if (argument == "--reference-trace-json") {
@@ -248,11 +253,14 @@ ParseResult parse_command_line(int argc, char** argv) {
     if (request.inspect_save && (!request.data_directory_is_default || request.game || request.verify_game || request.inspect_data
         || request.reference_trace || request.reference_trace_json || request.modern_pack_root || request.modern_pack_manifest
         || request.platform || request.release_language || request.release_sha256
-        || request.presentation_explicit)) {
+        || request.presentation_explicit || request.launch_check)) {
         return {{}, "--inspect-save is standalone; it never selects game data, a release, or runtime", false};
     }
     if (request.verify_game && request.inspect_data) {
         return {{}, "--verify-data and --inspect cannot be combined", false};
+    }
+    if (request.launch_check && (request.verify_game || request.inspect_data || request.reference_trace)) {
+        return {{}, "--launch-check cannot be combined with inspection, verification, or reference traces", false};
     }
     if (request.inventory_assets && !request.inspect_data) {
         return {{}, "--inventory requires --inspect; it is a read-only preservation report", false};
@@ -298,6 +306,9 @@ ParseResult parse_command_line(int argc, char** argv) {
     // Inspection remains a filter and therefore may name a game alone.
     if (request.game && !request.inspect_data && !request.platform) {
         return {{}, "--game requires --platform for a direct launch; use --inspect to list verified platforms", false};
+    }
+    if (request.launch_check && (!request.game || !request.platform)) {
+        return {{}, "--launch-check requires both --game and --platform", false};
     }
     return {request, {}, false};
 }
