@@ -55,7 +55,7 @@ as a caller ABI. The bounded one-record limit prevents an exception loop from
 becoming an unbounded raw-result file.
 
 The external Project Eon capture helper separately recognises that completed,
-raw `INT 6` observation and may terminate the recorder with the explicit v10
+raw `INT 6` observation and may terminate the recorder with the explicit v11
 reason `known-unhandled-interrupt`. This is host-process control after the
 observer has written its bounded evidence; it never handles the interrupt or
 changes guest execution. The resulting receipt is diagnostics-only until a
