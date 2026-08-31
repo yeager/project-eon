@@ -74,6 +74,16 @@
 
 namespace {
 
+// A Modern pack never becomes an active renderer input merely because a path
+// was picked.  This session-local state records the result of the strict,
+// hash-bound preflight; the loader rehashes again immediately before decoding
+// any PNG bytes.
+enum class ModernPackAdmission {
+    unselected,
+    ready,
+    rejected,
+};
+
 // SDL's native file-dialog callback may run after the initiating UI event and
 // on another thread. Keep its mailbox alive for the process lifetime: the
 // callback does no renderer, media, or filesystem work, and a late OS
@@ -830,7 +840,7 @@ SDL_FRect aspect_viewport(const float x, const float y, const float maximum_widt
 // settings are a visible opt-in control surface: every label and state name
 // must be supplied by the selected PO catalogue before it reaches the renderer.
 void draw_modern_graphics_popup(SDL_Renderer* renderer,
-    const ModernGraphicsSettings& settings, const bool modern, const bool modern_pack_selected,
+    const ModernGraphicsSettings& settings, const bool modern, const ModernPackAdmission modern_pack_admission,
     const eon::Translator& translator) {
     const auto tr = [&translator](const std::string_view message) {
         return std::string(translator.translate(message));
@@ -864,7 +874,8 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         tr(settings.smooth_scaling ? "ON" : "OFF"),
         tr(settings.scanlines ? "ON" : "OFF"),
         tr(settings.frame ? "ON" : "OFF"),
-        tr(modern_pack_selected ? "ON" : "CHOOSE…"),
+        tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
+            : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "CHOOSE…"),
         tr("OPEN"),
     }};
     const std::array<std::string, original_display_option_count> original_values{{
@@ -3789,6 +3800,39 @@ int main(int argc, char** argv) {
     // candidate before launch; neither route has a default pack location.
     std::optional<std::filesystem::path> selected_modern_pack_manifest =
         request.modern_pack_manifest;
+    std::optional<eon::ModernAssetPackPreflight> selected_modern_pack_preflight;
+    ModernPackAdmission modern_pack_admission = ModernPackAdmission::unselected;
+    const auto clear_modern_pack_admission = [&] {
+        selected_modern_pack_manifest.reset();
+        selected_modern_pack_preflight.reset();
+        modern_pack_admission = ModernPackAdmission::unselected;
+    };
+    const auto admit_modern_pack_for_release = [&](const std::filesystem::path& manifest,
+                                                   const eon::ReleaseArchive& release) {
+        const auto preflight = eon::preflight_modern_asset_pack(manifest, release.game,
+            release.platform, release.sha256);
+        selected_modern_pack_preflight = preflight;
+        if (!preflight.accepted) {
+            // Do not retain an inadmissible path for a later loader. This is
+            // deliberately distinct from the loader's final byte rehash,
+            // which protects against a pack changing after this UI check.
+            selected_modern_pack_manifest.reset();
+            modern_pack_admission = ModernPackAdmission::rejected;
+            std::cerr << "Modern asset pack rejected before launch: " << preflight.error << '\n';
+            return false;
+        }
+        selected_modern_pack_manifest = manifest;
+        modern_pack_admission = ModernPackAdmission::ready;
+        return true;
+    };
+    // Original mode never reads an optional Modern pack. A CLI path is kept
+    // only for the Modern renderer route; this avoids even a manifest access
+    // while the preservation profile is selected.
+    if (request.presentation != eon::Presentation::modern) {
+        clear_modern_pack_admission();
+    } else if (selected_modern_pack_manifest && active_launch) {
+        admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch->release);
+    }
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << '\n';
@@ -4149,6 +4193,8 @@ int main(int argc, char** argv) {
     const auto focus_menu_card = [&](const std::size_t next_focus) {
         card_focus.set(eon::LauncherPage::games, cards.size(), next_focus);
         if (request.platform) return;
+        // A release-bound pack cannot follow a game selection.
+        clear_modern_pack_admission();
         const auto previous_platform = active_platform;
         launcher_route.focus_game(releases, cards[static_cast<std::size_t>(focused)].game);
         if (active_platform != previous_platform) {
@@ -4224,6 +4270,12 @@ int main(int argc, char** argv) {
     const auto launch_menu_selection = [&] {
         const auto resolved = launcher_route.resolve_launch(request, releases);
         if (!resolved) return;
+        // The chosen release card is part of the Modern-pack identity.  A
+        // previously valid candidate becomes rejected rather than silently
+        // following a different language/container/platform selection.
+        if (request.presentation == eon::Presentation::modern && selected_modern_pack_manifest) {
+            admit_modern_pack_for_release(*selected_modern_pack_manifest, resolved->release);
+        }
         active_launch = resolved;
         active_release_sha256 = resolved->request.release_sha256;
         active_release_language = resolved->request.release_language;
@@ -4240,6 +4292,7 @@ int main(int argc, char** argv) {
         const auto platform = platform_cards[static_cast<std::size_t>(focused_platform_card)].platform;
         const auto previous_platform = active_platform;
         if (!launcher_route.choose_platform(releases, platform)) return false;
+        clear_modern_pack_admission();
         if (active_platform != previous_platform) discard_millennium_assets();
         card_focus.reset_after_platform_change();
         return true;
@@ -4250,6 +4303,7 @@ int main(int argc, char** argv) {
         card_focus.set(eon::LauncherPage::releases, language_cards.size(), index);
         if (!launcher_route.choose_release(releases,
                 language_cards[static_cast<std::size_t>(index)].sha256)) return false;
+        clear_modern_pack_admission();
         discard_millennium_assets();
         return true;
     };
@@ -4518,6 +4572,7 @@ int main(int argc, char** argv) {
                 active_platform.reset();
                 active_release_language.reset();
                 active_release_sha256.reset();
+                clear_modern_pack_admission();
                 discard_millennium_assets();
                 focused_platform_card = 0;
                 focused_release_card = 0;
@@ -4540,7 +4595,20 @@ int main(int argc, char** argv) {
             if (mailbox.pending_selection) {
                 if (screen == Screen::menu && launcher_page == LauncherPage::profiles
                     && focused_profile_card == 2 && !custom_profile_ready) {
-                    selected_modern_pack_manifest = std::move(*mailbox.pending_selection);
+                    // The dialog yields an untrusted path.  Bind it to the
+                    // exact release card before F10 may call it ready; no
+                    // extension, pack id, language, or scan order is used as
+                    // a substitute for this original-media identity.
+                    if (const auto resolved = launcher_route.resolve_launch(request, releases)) {
+                        admit_modern_pack_for_release(*mailbox.pending_selection, resolved->release);
+                    } else {
+                        selected_modern_pack_manifest.reset();
+                        selected_modern_pack_preflight = eon::ModernAssetPackPreflight{
+                            false, {}, {}, {}, "No exact original release is selected"};
+                        modern_pack_admission = ModernPackAdmission::rejected;
+                        std::cerr << "Modern asset pack rejected before launch: "
+                                  << selected_modern_pack_preflight->error << '\n';
+                    }
                 }
                 mailbox.pending_selection.reset();
             }
@@ -5494,7 +5562,7 @@ int main(int argc, char** argv) {
             } else {
                 draw_modern_graphics_popup(renderer, modern_graphics_settings,
                     request.presentation == eon::Presentation::modern,
-                    selected_modern_pack_manifest.has_value(), translator);
+                    modern_pack_admission, translator);
             }
         }
         // The 120-FPS option limits only host presentation.  Recovered

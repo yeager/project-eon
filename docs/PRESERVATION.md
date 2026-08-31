@@ -95,6 +95,16 @@ simulation, Original rendering, or original media. The precise syntax and
 integration requirements are recorded in
 [`MODERN_ASSET_PACK_FORMAT.md`](MODERN_ASSET_PACK_FORMAT.md).
 
+Custom's native chooser applies the same validation as a pre-launch
+admission gate against the currently selected release card. Its session-local
+state is **unselected**, **ready**, or **rejected**; only **ready** retains a
+manifest path for a future Modern loader. Selecting another game, platform,
+release identity, or original-data source clears that state rather than
+carrying an art candidate across preservation identities. The loader still
+performs its final revalidation immediately before decode, so the UI result is
+never a time-of-check substitute. Original mode clears an optional CLI pack
+path before it is read and never opens an external pack.
+
 The explicit `--inspect --modern-packs <root>` diagnostic performs that
 admission report only after the filtered original-release reports have been
 rehashed. A valid pack is reported **eligible** only when its complete release

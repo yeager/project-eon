@@ -47,6 +47,12 @@ msgstr "ПАКУНОК СУЧАСНИХ РЕСУРСІВ"
 msgid "CHOOSE…"
 msgstr "ВИБРАТИ…"
 
+msgid "READY"
+msgstr "ГОТОВО"
+
+msgid "REJECTED"
+msgstr "ВІДХИЛЕНО"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ВИБРАТИ ТЕКУ З ОРИГІНАЛЬНИМИ ДАНИМИ ГРИ (O)"
 

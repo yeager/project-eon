@@ -36,6 +36,12 @@ msgstr "ΠΑΚΕΤΟ ΣΥΓΧΡΟΝΩΝ ΠΟΡΩΝ"
 msgid "CHOOSE…"
 msgstr "ΕΠΙΛΕΞΤΕ…"
 
+msgid "READY"
+msgstr "ΕΤΟΙΜΟ"
+
+msgid "REJECTED"
+msgstr "ΑΠΟΡΡΙΦΘΗΚΕ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ΕΠΙΛΟΓΗ ΦΑΚΕΛΟΥ ΑΡΧΙΚΩΝ ΔΕΔΟΜΕΝΩΝ (O)"
 

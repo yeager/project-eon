@@ -47,6 +47,12 @@ msgstr "MODERN VARLIK PAKETİ"
 msgid "CHOOSE…"
 msgstr "SEÇ…"
 
+msgid "READY"
+msgstr "HAZIR"
+
+msgid "REJECTED"
+msgstr "REDDEDİLDİ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ÖZGÜN OYUN VERİSİ KLASÖRÜNÜ SEÇ (O)"
 

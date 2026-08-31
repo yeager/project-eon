@@ -105,8 +105,15 @@ one user-chosen `.eonmodern` candidate only; it supplies no initial folder,
 does not persist a selection, scan directories, or accept multiple paths, and
 does nothing on cancellation. SDL's extension filter is convenience only. The
 candidate remains untrusted until this document's complete manifest and asset
-admission checks bind it to the selected original release. The control is not
-available to mutate a running session or Original presentation.
+validation succeeds against the exact selected game, platform, and outer
+release SHA-256. F10 reports **Ready** only after that preflight; it reports
+**Rejected** and discards the candidate on a malformed, changed, or
+wrong-release pack. Changing a game, platform, release card, or data source
+also discards any prior admission. Immediately before any renderer asset is
+decoded, the loader performs the same strict validation and rehashes its
+declared bytes again, so preflight cannot become a time-of-check substitute.
+The control is not available to mutate a running session or Original
+presentation.
 
 This mapping does not infer original behavior, alter game logic, save data, or
 original media. It creates no cache or extracted output. Other asset IDs remain

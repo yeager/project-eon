@@ -47,6 +47,12 @@ msgstr "モダンアセットパック"
 msgid "CHOOSE…"
 msgstr "選択…"
 
+msgid "READY"
+msgstr "準備完了"
+
+msgid "REJECTED"
+msgstr "拒否"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "オリジナルゲームデータのフォルダーを選択 (O)"
 

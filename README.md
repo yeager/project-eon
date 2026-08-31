@@ -304,8 +304,11 @@ dialog before a session starts. It asks for exactly one `.eonmodern` manifest,
 starts in no default directory, does not remember or scan a pack location, and
 does not make a choice when the dialog is cancelled. The selected candidate is
 session-local and receives the identical manifest, release-hash, asset-hash,
-PNG, and dimensional validation as `--modern-pack`; choosing a file never
-trusts its filename or changes Original mode.
+PNG, and dimensional validation as `--modern-pack`; F10 labels it **Ready**
+only after it is bound to the exact selected original release, otherwise it is
+**Rejected** and discarded. Changing game, platform, release, or data source
+also discards it, and the renderer rehashes it once more immediately before
+decoding. Choosing a file never trusts its filename or changes Original mode.
 
 `--inspect` reports each detected game/platform archive and its recovered
 preservation evidence directly from the supplied media. Its `INSPECTION`

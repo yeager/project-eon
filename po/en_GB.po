@@ -36,6 +36,12 @@ msgstr "MODERN ASSET PACK"
 msgid "CHOOSE…"
 msgstr "CHOOSE…"
 
+msgid "READY"
+msgstr "READY"
+
+msgid "REJECTED"
+msgstr "REJECTED"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "CHOOSE ORIGINAL DATA FOLDER (O)"
 
