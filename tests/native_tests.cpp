@@ -1460,6 +1460,26 @@ int main() {
             "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "en");
         assert(exact_duplicate && exact_duplicate->sha256
             == "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        eon::LaunchRequest menu_candidate;
+        menu_candidate.game = eon::Game::millennium;
+        menu_candidate.platform = eon::Platform::amiga;
+        menu_candidate.release_sha256
+            = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        menu_candidate.release_language = "en";
+        menu_candidate.presentation = eon::Presentation::modern;
+        menu_candidate.presentation_explicit = true;
+        const auto resolved_menu_request = eon::resolve_launch_request_identity(
+            menu_candidate, duplicate_english_releases);
+        assert(resolved_menu_request && resolved_menu_request->game == eon::Game::millennium
+            && resolved_menu_request->platform == eon::Platform::amiga
+            && resolved_menu_request->release_language == "en"
+            && resolved_menu_request->release_sha256 == menu_candidate.release_sha256
+            && resolved_menu_request->presentation == eon::Presentation::modern
+            && resolved_menu_request->presentation_explicit);
+        menu_candidate.release_language = "es";
+        assert(!eon::resolve_launch_request_identity(menu_candidate, duplicate_english_releases));
+        menu_candidate.platform.reset();
+        assert(!eon::resolve_launch_request_identity(menu_candidate, duplicate_english_releases));
 
         assert(eon::normalize_language("sv_SE.UTF-8") == "sv_SE");
         assert(eon::normalize_language("pt-BR") == "pt_BR");

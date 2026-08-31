@@ -116,6 +116,12 @@ enum class PlatformCardStatus { unavailable, release_selection_required, ready }
     const std::vector<ReleaseArchive>& releases, Game game, Platform platform,
     const std::optional<std::string>& requested_sha256,
     const std::optional<std::string>& requested_language);
+// Turn a CLI or card-menu candidate into one immutable launch identity.  The
+// returned request contains the manifest-proven game, platform, language, and
+// outer SHA-256 together; callers must not launch from independently mutable
+// menu fields after this boundary has been crossed.
+[[nodiscard]] std::optional<LaunchRequest> resolve_launch_request_identity(
+    const LaunchRequest& candidate, const std::vector<ReleaseArchive>& releases);
 // Retain a choice only when it belongs to the newly focused game. Otherwise
 // choose that game's first hash-verified platform; no platform means no start.
 [[nodiscard]] std::optional<Platform> select_available_platform(

@@ -352,6 +352,24 @@ std::optional<ReleaseArchive> resolve_release_identity(
     return *match;
 }
 
+std::optional<LaunchRequest> resolve_launch_request_identity(
+    const LaunchRequest& candidate, const std::vector<ReleaseArchive>& releases) {
+    if (!candidate.game || !candidate.platform) return std::nullopt;
+    const auto release = resolve_release_identity(releases, *candidate.game, *candidate.platform,
+        candidate.release_sha256, candidate.release_language);
+    if (!release) return std::nullopt;
+
+    auto resolved = candidate;
+    // These values are copied from one ReleaseArchive only after the exact
+    // identity resolver has checked all four fields together.  In particular,
+    // a language card cannot leave a stale outer-container hash behind.
+    resolved.game = release->game;
+    resolved.platform = release->platform;
+    resolved.release_language = release->language;
+    resolved.release_sha256 = release->sha256;
+    return resolved;
+}
+
 std::optional<Platform> select_available_platform(
     const std::vector<ReleaseArchive>& releases, const Game game,
     const std::optional<Platform> current) {
