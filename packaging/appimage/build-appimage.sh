@@ -94,7 +94,8 @@ for required in \
     exit 1
   fi
 done
-if [ ! -L "$appdir/usr/lib/project-eon/libSDL3.so.0" ] \
+sdl_loader=$(find "$appdir/usr/lib" -type l -name libSDL3.so.0 -print -quit)
+if [ -z "$sdl_loader" ] || [ ! -e "$sdl_loader" ] \
     || ! find "$appdir/usr/lib" -type f -name 'libSDL3.so.*' -print -quit | grep -q .; then
   echo "AppDir lacks the installed private SDL3 runtime" >&2
   exit 1
