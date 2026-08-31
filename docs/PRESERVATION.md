@@ -57,6 +57,14 @@ together. A failed parser/leaf admission leaves no active identity or prior
 adapter. SDL owns only renderer, audio-device, and host-input resources; it
 borrows the admitted adapter and never reloads a release independently.
 
+The launcher carries the same provenance boundary before admission. Its
+source identity is exactly game, platform, original-release language, and
+outer SHA-256; Original/Modern/Custom presentation selection is not a source
+change. Any change to one of those four source fields clears the separately
+installed Modern-pack admission and invokes the full runtime reset before a
+new card route can launch. Keyboard, gamepad, pointer, and touch all use that
+single SDL-free identity comparison.
+
 ## Original and Modern mode contract
 
 Project Eon deliberately distinguishes a preservation result from an
