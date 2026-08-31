@@ -54,6 +54,13 @@ state, identify a faulting original instruction, or interpret the stack words
 as a caller ABI. The bounded one-record limit prevents an exception loop from
 becoming an unbounded raw-result file.
 
+The external Project Eon capture helper separately recognises that completed,
+raw `INT 6` observation and may terminate the recorder with the explicit v10
+reason `known-unhandled-interrupt`. This is host-process control after the
+observer has written its bounded evidence; it never handles the interrupt or
+changes guest execution. The resulting receipt is diagnostics-only until a
+complete genuine title/input/frame capture is available.
+
 One additional experimental CPU-only probe is private to the capture cache: it
 opens a distinct `O_CREAT|O_EXCL` result file only when explicitly configured
 and reads `AX` at the first post-interrupt instruction for `MILL.COM:$020e`

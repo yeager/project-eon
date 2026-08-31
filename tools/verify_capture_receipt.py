@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10"}
 
 
 def load_tool(name: str):
@@ -155,6 +155,20 @@ def verify_millennium_host_input_summary(fields: dict[str, str], directory: Path
         raise ValueError("host-input receipt grammar/count mismatch")
 
 
+def verify_millennium_termination(fields: dict[str, str]) -> None:
+    tool = load_tool("run_millennium_dos_capture")
+    reason = fields.get("termination_reason")
+    if reason not in tool.TERMINATION_REASONS:
+        raise ValueError("Millennium capture has an invalid termination reason")
+    expected_status = {
+        "timeout": "124",
+        "console-safety-cap": "125",
+        "known-unhandled-interrupt": "126",
+    }.get(reason)
+    if expected_status is not None and fields.get("exit_status") != expected_status:
+        raise ValueError("Millennium capture termination reason does not match exit status")
+
+
 def verify(kind: str, directory: Path) -> None:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
@@ -166,17 +180,19 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
-        if version in {"3", "4", "5", "6", "7", "8", "9"} and fields.get("results_raw") == "present":
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw")
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
                     str(sum(counts.values())), shapes):
                 raise ValueError("results_raw grammar/count receipt mismatch")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.raw")
-        if version in {"5", "6", "7", "8", "9"}:
+        if version in {"5", "6", "7", "8", "9", "10"}:
             verify_millennium_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9"}:
+        if version in {"6", "7", "8", "9", "10"}:
             verify_millennium_machine_profile(fields, directory)
+        if version == "10":
+            verify_millennium_termination(fields)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
