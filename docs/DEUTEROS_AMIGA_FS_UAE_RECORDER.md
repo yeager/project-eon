@@ -130,13 +130,16 @@ physical-input timeline, and a defective recorder cannot make the terminal or
 evidence cache grow without bound. A physical input timeline, independent
 review and trace assembly remain required before any runtime admission.
 
-New captures write `capture_receipt_version=3`. They bind both the complete
-console-stream identity and the retained-prefix identity, and validate the
-raw-PC observer grammar, contiguous ordinals, monotonic cycles, reviewed probe
-site set, and finite per-site counts before recording a non-semantic site-count
-summary. Receipt v2 remains verifiable as earlier evidence, but it does not
-contain the v3 raw-observation summary. Verify a completed external capture
-without opening its game media with:
+Current captures write `capture_receipt_version=4`. They bind both the complete
+console-stream identity and the retained-prefix identity, validate the raw-PC
+observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
+set, and finite per-site counts before recording a non-semantic site-count
+summary, and enforce a 64 MiB total-console safety cap. A cap crossing writes
+`recorder_console_over_limit=true`, stops the recorder, preserves the bounded
+prefix for review, and rejects the directory as inadmissible evidence. Receipt
+v2 and v3 remain verifiable as earlier evidence, but they do not contain the
+newer fields. Verify a completed external capture without opening its game
+media with:
 
 ```sh
 python3 tools/verify_capture_receipt.py \
@@ -166,6 +169,19 @@ exactly 256 grammar-validated records: 128 at `0x0001fe84` and 128 at
 This proves that the new receipt gate describes the existing bounded observer
 without widening its evidence: it remains only bootstrap/loader reachability,
 not title entry, input, ABI, display, frame, audio, or gameplay evidence.
+
+On 2026-08-31, the same write-protected preflight was repeated with receipt v4
+and independently accepted by `verify_capture_receipt.py`. The recognised
+outer release and Kickstart archive retained SHA-256
+`f4dc8dd1…e470e04` and `c9521c11…11c42c04`; the run timed out normally after
+15 seconds with an empty console and
+`recorder_console_over_limit=false`. Its raw-PC result remained the same
+28,052-byte, 256-record file with SHA-256
+`1e2cdd13d31fb3b368448b4c24b3ca51501ff18876ce9e8df4260c4c29c26d74`, split
+128/128 across `0x0001fe84` and `0x0001fe96`, and no host-input receipt was
+created. This verifies v4's bounded evidence route only; it does not add a
+title, control, Exec/graphics, bitplane, palette, frame, audio, or gameplay
+fact.
 
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;
