@@ -298,6 +298,12 @@ cards, F10 diagnostics, `--inspect-json`, and `--launch-check-json`. This
 keeps every user-facing diagnostic on the same release/platform recovery fact;
 it has no media path, archive-member, or guest-execution capability.
 
+Every card-menu launch first revokes the prior host-side session resources
+(textures, queued audio, text input and source-bound state) before the shared
+runtime gate rehashes and acquires the new exact release. This lifecycle rule
+does not touch user media and prevents old release-derived presentation data
+from crossing a launcher relaunch boundary.
+
 Each rehashed Atari report includes `ATARI LAUNCH BOUNDARY`, matching the card
 label to a release-specific limitation: Millennium stops before the GEMDOS
 `TRAP #1`/`Fopen` result, input, and later launcher flow; Deuteros stops before
