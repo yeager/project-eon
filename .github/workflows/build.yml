@@ -398,6 +398,29 @@ jobs:
             echo "refusing macOS artifact with possible original game data" >&2
             exit 1
           fi
+          # Exercise the assembled application bundle, not the build-tree
+          # executable, with the same missing-default-data contract verified
+          # for Linux and the installed Windows artifact. The isolated home
+          # stays below Eon's scoped cache and is removed after this package
+          # step; the application must neither create ~/.projecteon nor need
+          # any original game data merely to report that it is absent.
+          package_cache="$HOME/.cache/project-eon-tools/macos-package-validation"
+          mkdir -p "$package_cache"
+          test ! -L "$package_cache"
+          isolated_home=$(mktemp -d "$package_cache/eon-macos-package.XXXXXXXX")
+          trap 'rm -rf -- "$isolated_home"' EXIT
+          if inspect_output=$(HOME="$isolated_home" "$APP/Contents/MacOS/ProjectEon" --inspect 2>&1); then
+            echo "macOS bundle unexpectedly inspected missing default game data" >&2
+            exit 1
+          fi
+          if ! printf '%s\n' "$inspect_output" | grep -Fq "Data path does not exist: \"$isolated_home/.projecteon\""; then
+            echo "macOS bundle did not report its isolated missing default game-data path" >&2
+            exit 1
+          fi
+          if [ -e "$isolated_home/.projecteon" ]; then
+            echo "macOS bundle created its default game-data directory during lookup" >&2
+            exit 1
+          fi
           ditto -c -k --sequesterRsrc --keepParent "$APP" "project-eon-macos-${{ matrix.arch }}.zip"
           unzip -t "project-eon-macos-${{ matrix.arch }}.zip" >/dev/null
           listing=$(unzip -Z1 "project-eon-macos-${{ matrix.arch }}.zip")
