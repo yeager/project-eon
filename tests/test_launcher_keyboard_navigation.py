@@ -116,6 +116,17 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("page_release_cards(1)", pointer_route)
         self.assertIn('"<<"', SOURCE)
 
+    def test_menu_launcher_locale_is_separate_from_original_release_language(self) -> None:
+        self.assertIn("supported_launcher_languages", (ROOT / "src" / "i18n.hpp").read_text(encoding="utf-8"))
+        self.assertIn("cycle_launcher_language", SOURCE)
+        self.assertIn("event.key.key == SDLK_L", SOURCE)
+        self.assertIn("launcher_language_bounds", SOURCE)
+        self.assertIn("translator = eon::Translator::from_language(request.language", SOURCE)
+        locale = SOURCE[SOURCE.index("const auto cycle_launcher_language"):
+                        SOURCE.index("const auto handle_menu_pointer_down")]
+        self.assertNotIn("launcher_route.release_language =", locale)
+        self.assertNotIn("reset_active_runtime", locale)
+
     def test_incremental_scan_revokes_newly_ambiguous_automatic_release(self) -> None:
         self.assertIn("bool release_explicit = false", ROUTE_HEADER)
         self.assertIn("bool LauncherRouteState::reconcile_releases", ROUTE_SOURCE)

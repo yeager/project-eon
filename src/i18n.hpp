@@ -28,4 +28,8 @@ private:
 // "en_GB", retaining a supplied regional catalog before generic fallback.
 [[nodiscard]] std::string normalize_language(std::string_view language);
 
+// Shipped launcher chrome locales, in a stable UI-only order. This list is
+// intentionally unrelated to an original release's immutable language code.
+[[nodiscard]] const std::vector<std::string_view>& supported_launcher_languages();
+
 } // namespace eon
