@@ -83,6 +83,9 @@ msgstr "VERİ KAYNAĞI: DESTEKLENMİYOR"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "REDDEDİLENLER: BOYUT {size}; HASH {hash}; OKUNAMAZ {unreadable}; BAĞLANTILAR {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "DOĞRULANMIŞ SÜRÜMLER: {unique}; YİNELENENLER: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "OYUN SEÇ   |   YUKARI/AŞAĞI: PLATFORM   |   D: VERİ TARAMA   |   F1: ÖZGÜN / MODERN   |   ESC: ÇIK"
 

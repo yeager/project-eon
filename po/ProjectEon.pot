@@ -110,6 +110,10 @@ msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {lin
 msgstr ""
 
 #: src/main.cpp
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr ""
+
+#: src/main.cpp
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr ""
 

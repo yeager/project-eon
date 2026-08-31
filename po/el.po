@@ -72,6 +72,9 @@ msgstr "ΠΗΓΗ ΔΕΔΟΜΕΝΩΝ: ΜΗ ΥΠΟΣΤΗΡΙΖΟΜΕΝΗ"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "ΑΠΟΡΡΙΨΕΙΣ: ΜΕΓΕΘΟΣ {size}; HASH {hash}; ΜΗ ΑΝΑΓΝΩΣΙΜΟ {unreadable}; ΣΥΝΔΕΣΜΟΙ {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "ΕΠΑΛΗΘΕΥΜΕΝΕΣ ΕΚΔΟΣΕΙΣ: {unique}; ΔΙΠΛΟΤΥΠΑ: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ΕΠΙΛΟΓΗ ΠΑΙΧΝΙΔΙΟΥ   |   ΠΑΝΩ/ΚΑΤΩ: ΠΛΑΤΦΟΡΜΑ   |   D: ΕΛΕΓΧΟΣ ΔΕΔΟΜΕΝΩΝ   |   F1: ΠΡΩΤΟΤΥΠΟ / ΣΥΓΧΡΟΝΟ   |   ESC: ΕΞΟΔΟΣ"
 msgid "VERIFIED ORIGINAL DATA"

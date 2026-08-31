@@ -83,6 +83,9 @@ msgstr "डेटा स्रोत: असमर्थित"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "अस्वीकृत: आकार {size}; हैश {hash}; अपठनीय {unreadable}; लिंक {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "सत्यापित रिलीज़: {unique}; प्रतिलिपियाँ: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "गेम चुनें   |   ऊपर/नीचे: प्लेटफ़ॉर्म   |   D: डेटा जाँच   |   F1: मूल / आधुनिक   |   ESC: बाहर निकलें"
 msgid "VERIFIED ORIGINAL DATA"

@@ -83,6 +83,9 @@ msgstr "GEGEVENSBRON: NIET ONDERSTEUND"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "AFWIJZINGEN: GROOTTE {size}; HASH {hash}; ONLEESBAAR {unreadable}; KOPPELINGEN {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "GEVERIFIEERDE UITGAVEN: {unique}; DUPLICATEN: {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "KIES SPEL   |   OMHOOG/OMLAAG: PLATFORM   |   D: DATASCAN   |   F1: ORIGINEEL / MODERN   |   ESC: AFSLUITEN"
 

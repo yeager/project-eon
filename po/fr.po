@@ -83,6 +83,9 @@ msgstr "SOURCE DE DONNÉES : NON PRISE EN CHARGE"
 msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
 msgstr "REJETS : TAILLE {size}; HASH {hash}; ILLISIBLE {unreadable}; LIENS {links}"
 
+msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
+msgstr "ÉDITIONS VÉRIFIÉES : {unique} ; DOUBLONS : {duplicates}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "CHOISIR LE JEU   |   HAUT/BAS : PLATEFORME   |   D : ANALYSE DES DONNÉES   |   F1 : ORIGINAL / MODERNE   |   ÉCHAP : QUITTER"
 msgid "VERIFIED ORIGINAL DATA"

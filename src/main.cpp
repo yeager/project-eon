@@ -4041,6 +4041,20 @@ int main(int argc, char** argv) {
         replace("{links}", snapshot.report.symlink_rejected_entries);
         return text;
     };
+    const auto scanner_admission_text = [&](const eon::ReleaseScanSnapshot& snapshot) {
+        // This is the same aggregate-only recognition result that the CLI
+        // inspection route reports. It deliberately exposes neither a
+        // candidate filename nor a source path, so a rejected archive never
+        // turns into a UI-visible alternate-media catalogue.
+        auto text = tr("VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}");
+        const auto replace = [&](const std::string_view token, const std::size_t value) {
+            const auto position = text.find(token);
+            if (position != std::string::npos) text.replace(position, token.size(), std::to_string(value));
+        };
+        replace("{unique}", snapshot.unique_release_count);
+        replace("{duplicates}", snapshot.report.duplicate_occurrences);
+        return text;
+    };
     // It intentionally has room for the longest shipped translation, rather
     // than treating English text width as the launcher layout contract.
     const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 398.0F, 34.0F};
@@ -5077,17 +5091,18 @@ int main(int argc, char** argv) {
                 const auto snapshot = scanner->snapshot();
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
-                SDL_FRect overlay{64, 548, 1152, 152};
+                SDL_FRect overlay{64, 530, 1152, 178};
                 SDL_RenderFillRect(renderer, &overlay);
-                draw_text(renderer, 86, 570, tr("DATA SCANNER (content hashes, read-only)"));
-                draw_text(renderer, 86, 594, scanner_source_text(snapshot.source_kind));
+                draw_text(renderer, 86, 552, tr("DATA SCANNER (content hashes, read-only)"));
+                draw_text(renderer, 86, 576, scanner_source_text(snapshot.source_kind));
                 const auto scanner_progress = snapshot.discovering
                     ? tr("Discovering files: ") + std::to_string(snapshot.candidate_count)
                     : tr("Files hashed: ") + std::to_string(snapshot.scanned_count)
                         + " / " + std::to_string(snapshot.candidate_count);
-                draw_text(renderer, 86, 618, scanner_progress);
-                draw_text(renderer, 86, 642, scanner_rejections_text(snapshot));
-                draw_text(renderer, 86, 666, snapshot.complete
+                draw_text(renderer, 86, 600, scanner_progress);
+                draw_text(renderer, 86, 624, scanner_rejections_text(snapshot));
+                draw_text(renderer, 86, 648, scanner_admission_text(snapshot));
+                draw_text(renderer, 86, 672, snapshot.complete
                     ? tr("Complete. Only hash-verified original releases are selectable.")
                     : tr("Scanning in progress. Press D to hide this progress panel."));
             }
