@@ -111,6 +111,7 @@ add_executable(project-eon
     src/presentation/modern_presentation_pipeline.cpp
     src/engine/deuteros_amiga_opening.cpp
     src/engine/release_runtime.cpp
+    src/engine/release_runtime_capability.cpp
     src/engine/runtime_session.cpp
     src/engine/deuteros_amiga_title_stage_session.cpp
     src/engine/deuteros_amiga_paula.cpp

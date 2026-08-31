@@ -6,6 +6,7 @@
 #include "presentation_preferences.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/release_runtime.hpp"
+#include "engine/release_runtime_capability.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
@@ -2358,12 +2359,15 @@ int main() {
     // has to retain only rows that match the selected immutable release,
     // while reporting no trace admission merely because media was scanned.
     for (const auto& release : releases) {
+        const auto capability = eon::release_runtime_capability_for(release);
+        assert(capability.has_value());
         const auto diagnostics = eon::runtime_diagnostics_for_release(release);
         assert(diagnostics.game == release.game);
         assert(diagnostics.platform == release.platform);
         assert(diagnostics.language == release.language);
         assert(diagnostics.release_sha256 == release.sha256);
         assert(diagnostics.coverage == eon::platform_coverage(release));
+        assert(diagnostics.coverage == capability->coverage);
         assert(diagnostics.trace_admission == "not-loaded");
         assert(diagnostics.recovery_boundaries.size()
             == eon::recovery_map_for_release(release.sha256).size());
@@ -2382,6 +2386,12 @@ int main() {
         for (const auto& function : diagnostics.functions) {
             assert(eon::release_has_function_map_entry(release.sha256, function.id));
         }
+    }
+    assert(eon::release_runtime_capabilities().size() == eon::release_manifest().size());
+    for (const auto& manifest_release : eon::release_manifest()) {
+        const eon::ReleaseArchive release{manifest_release.game, manifest_release.platform,
+            std::string(manifest_release.language), std::string(manifest_release.sha256), {}};
+        assert(eon::release_runtime_capability_for(release).has_value());
     }
 
     const auto amiga_millennium = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
