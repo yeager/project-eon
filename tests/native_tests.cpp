@@ -1518,6 +1518,32 @@ int main() {
         route.back(duplicate_english_releases);
         assert(route.page == eon::LauncherPage::games);
 
+        // Card focus is deliberately independent from release identity. It
+        // is shared presentation behaviour for keyboard/gamepad navigation,
+        // while a pointer route may set a bounded index directly.
+        eon::LauncherCardFocus focus;
+        assert(focus.current(eon::LauncherPage::games) == 0);
+        focus.move(eon::LauncherPage::games, 2, -1);
+        assert(focus.game == 1);
+        focus.move(eon::LauncherPage::games, 2, 1);
+        assert(focus.game == 0);
+        focus.set(eon::LauncherPage::platforms, 3, 99);
+        assert(focus.platform == 2);
+        focus.first(eon::LauncherPage::platforms, 3);
+        assert(focus.platform == 0);
+        focus.last(eon::LauncherPage::releases, 2);
+        assert(focus.release == 1);
+        focus.set(eon::LauncherPage::profiles, 3, 2);
+        focus.reset_after_platform_change();
+        assert(focus.release == 0 && focus.profile == 0 && focus.game == 0);
+        focus.set(eon::LauncherPage::platforms, 3, 2);
+        focus.set(eon::LauncherPage::releases, 2, 1);
+        focus.set(eon::LauncherPage::profiles, 3, 2);
+        focus.reset_after_game_change();
+        assert(focus.platform == 0 && focus.release == 0 && focus.profile == 0);
+        focus.move(eon::LauncherPage::profiles, 0, 1);
+        assert(focus.profile == 0);
+
         assert(eon::normalize_language("sv_SE.UTF-8") == "sv_SE");
         assert(eon::normalize_language("pt-BR") == "pt_BR");
         assert(eon::normalize_language("C") == "c");

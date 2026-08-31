@@ -19,6 +19,25 @@ enum class Presentation { original, modern };
 // touch routes all drive this one state machine and merely render its page.
 enum class LauncherPage { games, platforms, releases, profiles };
 
+// Focus is presentation state, separate from a selected release identity.
+// Keeping its bounds and wrap behaviour in the SDL-free launcher core means
+// keyboard, gamepad, mouse, and touch can render or set the same focus without
+// making a card index part of a launch request.
+struct LauncherCardFocus {
+    std::size_t game = 0;
+    std::size_t platform = 0;
+    std::size_t release = 0;
+    std::size_t profile = 0;
+
+    [[nodiscard]] std::size_t current(LauncherPage page) const;
+    void set(LauncherPage page, std::size_t count, std::size_t index);
+    void move(LauncherPage page, std::size_t count, int direction);
+    void first(LauncherPage page, std::size_t count);
+    void last(LauncherPage page, std::size_t count);
+    void reset_after_game_change();
+    void reset_after_platform_change();
+};
+
 // Renderer-only preferences shared by CLI startup and the F10 overlay. They
 // never enter a game simulation, save file, or original media access path.
 struct DisplayPreferences {
