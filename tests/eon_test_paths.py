@@ -10,7 +10,7 @@ import tempfile
 def temporary_directory(prefix: str = "eon-test-") -> tempfile.TemporaryDirectory[str]:
     """Create a short-lived directory beneath Eon's cache, never ``/tmp``.
 
-    CI can set ``EON_TEST_TMPDIR`` to its build-local scratch directory. Local
+    CI can set ``EON_TEST_TMPDIR`` to an external scratch directory. Local
     tests otherwise use a user-owned cache outside both the checkout and game
     media. The caller still owns normal ``TemporaryDirectory`` cleanup.
     """
