@@ -364,6 +364,30 @@ else()
     install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
 endif()
 install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")
+
+# PO files are read directly by the launcher, so a package can otherwise carry
+# a syntactically damaged or stale translation without the compiler noticing.
+# Keep validation opt-in and non-generating: it writes temporary .mo probes
+# only beneath the build tree and never rewrites a translator's source catalog.
+find_program(EON_MSGFMT_EXECUTABLE NAMES msgfmt)
+find_program(EON_MSGCMP_EXECUTABLE NAMES msgcmp)
+if(EON_MSGFMT_EXECUTABLE AND EON_MSGCMP_EXECUTABLE)
+    add_custom_target(l10n
+        COMMAND "${CMAKE_COMMAND}"
+            -DPO_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}/po"
+            -DOUTPUT_DIRECTORY="${CMAKE_CURRENT_BINARY_DIR}/eon-l10n"
+            -DMSGFMT_EXECUTABLE="${EON_MSGFMT_EXECUTABLE}"
+            -DMSGCMP_EXECUTABLE="${EON_MSGCMP_EXECUTABLE}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_l10n.cmake"
+        COMMENT "Validating Project Eon's 20 launcher translation catalogs")
+else()
+    add_custom_target(l10n
+        COMMAND "${CMAKE_COMMAND}" -E echo
+            "l10n validation requires gettext tools msgfmt and msgcmp"
+        COMMAND "${CMAKE_COMMAND}" -E false
+        COMMENT "Cannot validate Project Eon translation catalogs")
+endif()
+
 install(FILES README.md
     DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/project-eon")
 install(FILES packaging/debian/copyright
