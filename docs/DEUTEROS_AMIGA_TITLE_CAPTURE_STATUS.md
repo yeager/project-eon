@@ -249,3 +249,14 @@ asked to admit the trace.
 The current external raw-observer design, including its exact FS-UAE source
 revision and non-admission boundary, is in
 [`DEUTEROS_AMIGA_FS_UAE_RECORDER.md`](DEUTEROS_AMIGA_FS_UAE_RECORDER.md).
+
+The next reviewed recorder is receipt v9, pinned in the capture runner as a
+61,505,560-byte aarch64 binary with SHA-256
+`93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f`. It adds
+only a read-only atomic ordinal/frame snapshot to each raw-PC observation.
+Only a successful, non-playback, non-state-management host-delivery receipt
+can advance that snapshot; zero means no such delivery preceded the sample.
+No v9 physical run has been admitted yet. The first v9 no-input run must
+retain zero links and the existing bootstrap boundary before an operator-led
+input run can contribute chronology evidence. Neither run proves a guest poll,
+input acceptance, title execution, display, audio, ABI, or gameplay.

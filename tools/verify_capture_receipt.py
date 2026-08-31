@@ -117,9 +117,9 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
     if fields.get("raw_pc") != "present":
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    raw_format = "v7" if version in {"7", "8"} else "legacy"
-    if version in {"7", "8"} and fields.get("raw_pc_format") != raw_format:
-        raise ValueError("raw_pc format does not match the v7 recorder contract")
+    raw_format = "v9" if version == "9" else "v7" if version in {"7", "8"} else "legacy"
+    if version in {"7", "8", "9"} and fields.get("raw_pc_format") != raw_format:
+        raise ValueError("raw_pc format does not match the reviewed recorder contract")
     counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt", raw_format)
     expected_records = str(sum(counts.values()))
     expected_sites = ",".join(
@@ -139,6 +139,25 @@ def verify_deuteros_raw_pc_opcode_pairs(fields: dict[str, str], directory: Path)
         for site in tool.RAW_PC_SITES if site in pairs)
     if fields.get("raw_pc_opcode_pairs") != expected:
         raise ValueError("raw_pc opcode-pair receipt mismatch")
+
+
+def verify_deuteros_raw_pc_input_chronology(fields: dict[str, str], directory: Path) -> None:
+    """Recompute v9's delivery-before-sample chronology, never guest input state."""
+    tool = load_tool("run_deuteros_amiga_capture")
+    raw = directory / "raw-pc.txt"
+    input_receipt = directory / "host-input-receipt.txt"
+    links = tool.parse_raw_pc_input_links(raw)
+    expected_links = sum(ordinal != 0 for ordinal, _ in links)
+    if (fields.get("raw_pc_input_links"), fields.get("raw_pc_last_input_ordinal")) != (
+            str(expected_links), str(links[-1][0] if links else 0)):
+        raise ValueError("raw_pc input-link receipt mismatch")
+    try:
+        expected_status = tool.raw_pc_input_chronology_status(raw, input_receipt)
+    except tool.CaptureError as error:
+        raise ValueError(f"raw_pc input chronology is invalid: {error}") from error
+    expected_fields = dict(line.split("=", 1) for line in expected_status.splitlines())
+    if any(fields.get(key) != value for key, value in expected_fields.items()):
+        raise ValueError("raw_pc input chronology receipt mismatch")
 
 
 def verify_deuteros_host_input_summary(fields: dict[str, str], directory: Path) -> None:
@@ -257,14 +276,17 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"3", "4", "5", "6", "7", "8"}:
+        if version in {"3", "4", "5", "6", "7", "8", "9"}:
             verify_deuteros_raw_pc_summary(fields, directory, version)
-        if version in {"5", "6", "7", "8"}:
+        if version in {"5", "6", "7", "8", "9"}:
             verify_deuteros_host_input_summary(fields, directory)
-        if version in {"6", "7", "8"}:
+        if version in {"6", "7", "8", "9"}:
             verify_deuteros_timing_profile(fields, directory)
         if version == "8" and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory)
+        if version == "9" and fields.get("raw_pc") == "present":
+            verify_deuteros_raw_pc_opcode_pairs(fields, directory)
+            verify_deuteros_raw_pc_input_chronology(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")

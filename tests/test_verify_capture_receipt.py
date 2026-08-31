@@ -102,6 +102,27 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "opcode-pair"):
                 TOOL.verify_deuteros_raw_pc_opcode_pairs(fields, root)
 
+    def test_v9_deuteros_input_chronology_requires_exact_prior_delivery(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=2 line=3 action=4 state=1\n", encoding="ascii")
+            (root / "raw-pc.txt").write_text(
+                "raw-pc 1 cycles=1 pc=0x0001fe84 ir_opcode=0x7202 memory_opcode=0x7202 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 input_ordinal=0 input_frame=0\n"
+                "raw-pc 2 cycles=2 pc=0x0001fe84 ir_opcode=0x7202 memory_opcode=0x7202 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 input_ordinal=1 input_frame=2\n",
+                encoding="ascii")
+            fields = {"raw_pc": "present", "raw_pc_format": "v9", "raw_pc_records": "2",
+                      "raw_pc_site_counts": "0x0001fe84:2", "raw_pc_input_links": "1",
+                      "raw_pc_last_input_ordinal": "1", "raw_pc_input_chronology": "linked",
+                      "raw_pc_input_chronology_records": "1"}
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "9")
+            TOOL.verify_deuteros_raw_pc_input_chronology(fields, root)
+            fields["raw_pc_input_chronology_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "chronology receipt"):
+                TOOL.verify_deuteros_raw_pc_input_chronology(fields, root)
+
     def test_v5_deuteros_host_input_summary_is_recomputed_from_strict_records(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
