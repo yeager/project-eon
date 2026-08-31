@@ -534,6 +534,7 @@ build, or modify the recorder itself:
 python3 tools/run_millennium_dos_capture.py \
   --source-release /absolute/path/to/Millennium-Return-to-Earth_DOS_EN.zip \
   --recorder /absolute/path/to/reviewed/dosbox-x \
+  --machine-profile svga_s3 \
   --output /home/you/.cache/project-eon-tools/millennium-dos-capture-<UTC>
 ```
 
@@ -553,6 +554,13 @@ under their 8 MiB bounds, and retains only the first 1 MiB of a recorder
 console while hashing/counting its complete transcript. Its output is raw
 external evidence only and still requires assembly, independent validation,
 and review before any new adapter or runtime route can exist.
+
+The v6 receipt binds one finite machine profile: `svga_s3` (the default) or
+`ega`. The selected profile is written as `machine_profile` and independently
+checked against the retained configuration. This supports a reproducible
+comparison of the original loader's own EGA640/MCGA driver selection without
+silently selecting a host fallback. It is still a diagnostic configuration,
+not evidence that either driver returned, rendered a title, or accepted input.
 
 1. Hash the owner-supplied outer archive before and after the run.  Both
    values must equal the table above.  List the ZIP directory with a read-only

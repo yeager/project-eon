@@ -28,6 +28,7 @@ EXPECTED_RELEASE_SIZE = 328_383
 # its hooks and input-receipt contract are part of the provenance boundary.
 EXPECTED_RECORDER_SHA256 = "ab53ed0ef1d921b7379f1668013da39b3a2d0bb41faa1eb6a7a5eb8a15f50325"
 GAME_ROOT = "millennium-return-to-earth-2-2"
+MACHINE_PROFILES = {"svga_s3", "ega"}
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
 # The reviewed recorder caps host input at 256 short text records.  Keep a
@@ -67,10 +68,10 @@ RAW_RESULT_LINE = re.compile(
 HOST_KEY_LINE = re.compile(
     r"host-key ([1-9][0-9]*) ticks=([0-9]+) state=(down|up) "
     r"scancode=0x([0-9a-f]+) sym=0x([0-9a-f]+) mod=0x([0-9a-f]+)\n")
-# v5 retains v4's console-overrun admission boundary and v3 raw-result grammar
-# while binding the reviewed host-key receipt grammar/count. Older evidence
-# remains verifiable without pretending it has the newer fields.
-CAPTURE_RECEIPT_VERSION = "5"
+# v6 retains v5's bounded host-key receipt and adds a finite, independently
+# checked machine-profile declaration.  The profile changes only the external
+# emulator configuration; it never changes the mounted original media.
+CAPTURE_RECEIPT_VERSION = "6"
 
 
 class CaptureError(RuntimeError):
@@ -172,7 +173,7 @@ def require_visible_operator_input(environment: dict[str, str]) -> None:
         raise CaptureError("a visible X11 or Wayland display is required for physical input capture")
 
 
-def recorder_config(game_root: Path) -> str:
+def recorder_config(game_root: Path, machine_profile: str = "svga_s3") -> str:
     """Return the fixed, evidence-reviewed configuration with one read-only game root.
 
     Millennium's 16-bit startup reaches a documented word copy from the last
@@ -183,6 +184,8 @@ def recorder_config(game_root: Path) -> str:
     The resulting configuration remains an explicit, hash-bound capture
     preimage rather than an implicit runtime fallback.
     """
+    if machine_profile not in MACHINE_PROFILES:
+        raise CaptureError("machine profile is not in the reviewed finite profile set")
     return "\n".join((
         "[sdl]",
         "fullscreen=false",
@@ -190,7 +193,7 @@ def recorder_config(game_root: Path) -> str:
         "vsync=false",
         "",
         "[dosbox]",
-        "machine=svga_s3",
+        f"machine={machine_profile}",
         "memsize=16",
         "",
         "[render]",
@@ -408,7 +411,7 @@ def run_capture(args: argparse.Namespace) -> Path:
             raise CaptureError("recognised archive does not expose its expected DOS game root")
         configuration = output / "recorder.conf"
         command_tail = output / "command-tail.txt"
-        write_exclusive(configuration, recorder_config(game_root))
+        write_exclusive(configuration, recorder_config(game_root, args.machine_profile))
         configuration_identity = sha256_file(configuration)
         command = [str(recorder), "-conf", str(configuration), "-fastlaunch", "-c", "c:",
                    "-c", "mill.com 0"]
@@ -471,6 +474,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
+                        f"machine_profile={args.machine_profile}\n"
                         + identity_status("source_release", (after_hash, after_size))
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
@@ -504,6 +508,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="New absolute cache directory for external capture evidence")
     parser.add_argument("--duration-seconds", type=int, default=120,
                         help="Visible operator window duration (15-600; default: 120)")
+    parser.add_argument("--machine-profile", choices=tuple(sorted(MACHINE_PROFILES)), default="svga_s3",
+                        help="Explicit DOSBox-X video-machine profile (default: svga_s3)")
     return parser.parse_args(argv)
 
 
