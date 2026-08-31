@@ -6,7 +6,8 @@ namespace eon {
 namespace {
 
 // Every outer fingerprint and profile span below was measured from the six
-// supplied archives under Hämtningar/.  Keep this table compact: the durable,
+// supplied archives in the local Downloads directory. Keep this table compact:
+// the durable,
 // machine-readable companion in docs/release-manifest.json records the same
 // provenance and is intended for independent preservation tooling.
 constexpr std::array<ReleaseManifestEntry, 8> releases{{
