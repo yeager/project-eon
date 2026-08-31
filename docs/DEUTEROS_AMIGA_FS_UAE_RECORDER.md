@@ -130,9 +130,13 @@ physical-input timeline, and a defective recorder cannot make the terminal or
 evidence cache grow without bound. A physical input timeline, independent
 review and trace assembly remain required before any runtime admission.
 
-New captures write `capture_receipt_version=2`. It binds both the complete
-console-stream identity and the retained-prefix identity. Verify a completed
-external capture without opening its game media with:
+New captures write `capture_receipt_version=3`. They bind both the complete
+console-stream identity and the retained-prefix identity, and validate the
+raw-PC observer grammar, contiguous ordinals, monotonic cycles, reviewed probe
+site set, and finite per-site counts before recording a non-semantic site-count
+summary. Receipt v2 remains verifiable as earlier evidence, but it does not
+contain the v3 raw-observation summary. Verify a completed external capture
+without opening its game media with:
 
 ```sh
 python3 tools/verify_capture_receipt.py \
@@ -141,7 +145,7 @@ python3 tools/verify_capture_receipt.py \
 
 Pre-v2 capture directories remain diagnostic evidence only: their retained
 console prefix was not hash-bound, so they cannot be verifier-admissible.
-Repeat the physical capture rather than upgrading or editing its receipt.
+Repeat a physical capture rather than upgrading or editing its receipt.
 
 On 2026-08-31, a fresh 15-second input-free run against the recognised clean
 outer release and Kickstart was accepted by that verifier as receipt v2. It

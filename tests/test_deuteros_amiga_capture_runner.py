@@ -108,8 +108,23 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         with temporary_directory() as directory:
             raw = Path(directory) / "raw-pc.txt"
             self.assertEqual(TOOL.raw_observation_status(raw, "raw_pc"), "raw_pc=absent\n")
-            raw.write_bytes(b"pc 0x001000\n")
-            self.assertIn("raw_pc_sha256=", TOOL.raw_observation_status(raw, "raw_pc"))
+            observed = (b"raw-pc 1 cycles=1 pc=0x000210d4 opcode=0x4e75 "
+                        b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n"
+                        b"raw-pc 2 cycles=2 pc=0x000210d4 opcode=0x4e75 "
+                        b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n")
+            raw.write_bytes(observed)
+            status = TOOL.raw_observation_status(raw, "raw_pc")
+            self.assertIn("raw_pc_sha256=", status)
+            self.assertIn("raw_pc_records=2\n", status)
+            self.assertIn("raw_pc_site_counts=0x000210d4:2\n", status)
+            raw.write_bytes(b"raw-pc 2 cycles=1 pc=0x000210d4 opcode=0x4e75 "
+                            b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "ordinals"):
+                TOOL.raw_observation_status(raw, "raw_pc")
+            raw.write_bytes(b"raw-pc 1 cycles=1 pc=0x00000001 opcode=0x4e75 "
+                            b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed probe"):
+                TOOL.raw_observation_status(raw, "raw_pc")
             raw.unlink()
             raw.symlink_to("missing")
             with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):

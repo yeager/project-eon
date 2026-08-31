@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSION = "2"
+CAPTURE_RECEIPT_VERSIONS = {"2", "3"}
 
 
 def load_tool(name: str):
@@ -53,11 +53,12 @@ def require_identity(fields: dict[str, str], prefix: str, expected: tuple[str, i
         raise ValueError(f"{prefix} identity does not match the reviewed contract")
 
 
-def require_receipt_schema(fields: dict[str, str]) -> None:
+def require_receipt_schema(fields: dict[str, str]) -> str:
     version = fields.get("capture_receipt_version")
-    if version != CAPTURE_RECEIPT_VERSION:
+    if version not in CAPTURE_RECEIPT_VERSIONS:
         raise ValueError(
-            "capture receipt schema is unsupported; rerun the physical capture with receipt v2")
+            "capture receipt schema is unsupported; rerun the physical capture with receipt v3")
+    return version
 
 
 def is_sha256(value: str | None) -> bool:
@@ -94,11 +95,25 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
         raise ValueError("recorder console receipt mismatch")
 
 
+def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path) -> None:
+    """Verify v3's raw-recorder grammar/count receipt without inferring ABI."""
+    if fields.get("raw_pc") != "present":
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt")
+    expected_records = str(sum(counts.values()))
+    expected_sites = ",".join(
+        f"0x{site:08x}:{counts[site]}" for site in tool.RAW_PC_SITES if site in counts)
+    if (fields.get("raw_pc_records"), fields.get("raw_pc_site_counts")) != (
+            expected_records, expected_sites):
+        raise ValueError("raw_pc grammar/count receipt mismatch")
+
+
 def verify(kind: str, directory: Path) -> None:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
     fields = receipt(directory / "run-status.txt")
-    require_receipt_schema(fields)
+    version = require_receipt_schema(fields)
     if kind == "millennium-dos":
         tool = load_tool("run_millennium_dos_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
@@ -113,6 +128,8 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
+        if version == "3":
+            verify_deuteros_raw_pc_summary(fields, directory)
     verify_console(fields, directory)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")
     actual = digest(config)

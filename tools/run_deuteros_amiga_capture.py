@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import os
 from pathlib import Path
+import re
 import stat
 import subprocess
 import sys
@@ -46,10 +47,24 @@ MAX_INPUT_RECEIPT_BYTES = 64 * 1024
 # operator's terminal, disk, or cache while a capture is being reviewed.
 MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
 MAX_RECORDER_CONSOLE_LOG_BYTES = 1024 * 1024
-# Receipt v2 binds the retained console prefix as well as the complete stream.
-# A verifier must never treat a pre-v2 receipt as if that missing integrity
-# property had been observed.
-CAPTURE_RECEIPT_VERSION = "2"
+# The reviewed recorder's raw-PC observer is intentionally finite and only
+# exposes these investigation sites.  This list is a grammar boundary, not an
+# interpretation of the observed instructions or their ABI effects.
+RAW_PC_SITES = (
+    0x000210D4, 0x00040450, 0x0004046C, 0x0004069A, 0x0001ED80,
+    0x0001EDA6, 0x0001EF74, 0x0001F056, 0x0001F182, 0x0001FE7A,
+    0x0001FE84, 0x0001FE88, 0x0001FE92, 0x0001FE96, 0x0001FBE6,
+)
+MAX_RAW_RECORDS = 4096
+MAX_RAW_RECORDS_PER_SITE = 128
+RAW_PC_LINE = re.compile(
+    r"raw-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
+    r"opcode=0x([0-9a-f]{4}) d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) "
+    r"a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4})\n")
+# Receipt v3 retains v2's console identity and adds a strict, non-semantic
+# grammar/count receipt for raw-PC observations. A verifier keeps accepting
+# v2 evidence; it must not pretend those older receipts contained v3 fields.
+CAPTURE_RECEIPT_VERSION = "3"
 
 
 class CaptureError(RuntimeError):
@@ -199,7 +214,7 @@ def input_receipt_status(path: Path) -> str:
 
 
 def raw_observation_status(path: Path, name: str) -> str:
-    """Bind optional recorder output without accepting arbitrary-size input."""
+    """Bind strict raw-PC observations without assigning runtime semantics."""
     try:
         info = path.lstat()
     except FileNotFoundError:
@@ -210,8 +225,48 @@ def raw_observation_status(path: Path, name: str) -> str:
         raise CaptureError(f"{name} exceeds the bounded recorder contract")
     if info.st_size == 0:
         return f"{name}=empty\n"
+    site_counts = parse_raw_pc_observations(path)
     digest, size = sha256_file(path)
-    return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+    ordered_counts = ",".join(
+        f"0x{site:08x}:{site_counts[site]}" for site in RAW_PC_SITES if site in site_counts)
+    return (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+            f"{name}_records={sum(site_counts.values())}\n"
+            f"{name}_site_counts={ordered_counts}\n")
+
+
+def parse_raw_pc_observations(path: Path) -> dict[int, int]:
+    """Validate the recorder grammar and return reachability counts only.
+
+    This deliberately does not use register values as recovered ABI facts.
+    It makes malformed, reordered, over-cap, or unreviewed-site recorder
+    output a failed external capture instead of an opaque hash-bound blob.
+    """
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("raw_pc is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("raw_pc has a truncated final record")
+    counts: dict[int, int] = {}
+    previous_cycle = -1
+    for expected_ordinal, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = RAW_PC_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("raw_pc contains an invalid recorder record")
+        ordinal, cycle, site = int(match.group(1)), int(match.group(2)), int(match.group(3), 16)
+        if ordinal != expected_ordinal:
+            raise CaptureError("raw_pc record ordinals are not contiguous")
+        if cycle < previous_cycle:
+            raise CaptureError("raw_pc cycles are not monotonic")
+        previous_cycle = cycle
+        if site not in RAW_PC_SITES:
+            raise CaptureError("raw_pc uses an unreviewed probe site")
+        counts[site] = counts.get(site, 0) + 1
+        if counts[site] > MAX_RAW_RECORDS_PER_SITE:
+            raise CaptureError("raw_pc exceeds the per-site recorder cap")
+        if expected_ordinal > MAX_RAW_RECORDS:
+            raise CaptureError("raw_pc exceeds the recorder record cap")
+    return counts
 
 
 def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
