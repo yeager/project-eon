@@ -700,6 +700,62 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         << "}}\n";
 }
 
+// A validated capture is evidence, not a runtime input. This compact export
+// deliberately reports its admitted identity, boundaries and checkpoint
+// counts without serializing local paths, event bytes, media bytes, or
+// artifact paths. It is suitable for preservation dashboards and CI records.
+void report_reference_trace_json(const eon::ReferenceTrace& trace) {
+    std::cout << "{\"schema\":\"project-eon.reference-trace/v1\",\"release\":{\"game\":";
+    write_json_string(std::cout, eon::name(trace.source_release.game));
+    std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(trace.source_release.platform));
+    std::cout << ",\"language\":"; write_json_string(std::cout, trace.source_release.language);
+    std::cout << ",\"sha256\":"; write_json_string(std::cout, trace.source_release.sha256);
+    std::cout << "},\"capture\":{\"start_utc\":"; write_json_string(std::cout, trace.capture_start_utc);
+    std::cout << ",\"end_utc\":"; write_json_string(std::cout, trace.capture_end_utc);
+    std::cout << ",\"emulator_name\":"; write_json_string(std::cout, trace.emulator_name);
+    std::cout << ",\"emulator_version\":"; write_json_string(std::cout, trace.emulator_version);
+    std::cout << ",\"config_sha256\":"; write_json_string(std::cout, trace.config_sha256);
+    std::cout << ",\"command_tail_sha256\":"; write_json_string(std::cout, trace.command_tail_sha256);
+    std::cout << ",\"input_timeline_sha256\":"; write_json_string(std::cout, trace.input_timeline_sha256);
+    std::cout << "},\"adapter\":"; write_json_string(std::cout, trace.adapter);
+    std::cout << ",\"events\":{\"sha256\":"; write_json_string(std::cout, trace.event_sha256);
+    std::cout << ",\"count\":" << trace.event_count << "},\"source\":{\"media_sha256\":";
+    write_json_string(std::cout, trace.source_media_sha256);
+    std::cout << ",\"stage_sha256\":"; write_json_string(std::cout, trace.source_stage_sha256);
+    std::cout << "},\"recovery_boundaries\":[";
+    for (std::size_t index = 0; index < trace.recovery_boundaries.size(); ++index) {
+        if (index != 0) std::cout << ',';
+        const auto& boundary = trace.recovery_boundaries[index];
+        std::cout << "{\"id\":"; write_json_string(std::cout, boundary.id);
+        std::cout << ",\"source_address\":"; write_json_string(std::cout, boundary.source_address);
+        std::cout << ",\"documentation_anchor\":"; write_json_string(std::cout, boundary.documentation_anchor);
+        std::cout << '}';
+    }
+    std::cout << "],\"checkpoints\":{\"interrupts\":" << trace.adapter_interrupt_count
+        << ",\"files\":" << trace.adapter_file_count
+        << ",\"exec\":" << trace.adapter_exec_count
+        << ",\"private_returns\":" << trace.adapter_private_return_count
+        << ",\"callbacks\":" << trace.adapter_callback_count
+        << ",\"frames\":" << trace.adapter_frame_count
+        << ",\"states\":" << trace.adapter_state_count
+        << ",\"display_layouts\":" << trace.adapter_display_layout_count
+        << ",\"bitplane_layouts\":" << trace.adapter_bitplane_layout_count
+        << ",\"palettes\":" << trace.adapter_palette_checkpoint_count
+        << ",\"input\":" << trace.adapter_input_checkpoint_count
+        << ",\"frame_checkpoints\":" << trace.adapter_frame_checkpoint_count
+        << ",\"audio\":" << trace.adapter_audio_checkpoint_count << "},\"artifacts\":[";
+    for (std::size_t index = 0; index < trace.artifacts.size(); ++index) {
+        if (index != 0) std::cout << ',';
+        const auto& artifact = trace.artifacts[index];
+        std::cout << "{\"role\":"; write_json_string(std::cout, artifact.role);
+        std::cout << ",\"size\":" << artifact.size;
+        std::cout << ",\"sha256\":"; write_json_string(std::cout, artifact.sha256);
+        std::cout << ",\"format\":"; write_json_string(std::cout, artifact.format);
+        std::cout << '}';
+    }
+    std::cout << "]}\n";
+}
+
 // Keep the user-facing Atari card label tied to a concise, release-specific
 // provenance statement.  This runs after verify_release_archive() in the
 // inspection loop; it is not a claim that either native boundary is emulated.
@@ -3502,6 +3558,10 @@ int main(int argc, char** argv) {
                     << error.what() << '\n';
                 return 6;
             }
+        }
+        if (request.reference_trace_json) {
+            report_reference_trace_json(trace);
+            return 0;
         }
         std::cout << "REFERENCE TRACE VERIFIED  provenance-only; no replay performed\n"
             << "          " << eon::name(trace.source_release.game) << " / "

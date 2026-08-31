@@ -237,6 +237,13 @@ recovery boundaries, declarative function-map facts, and aggregate scan
 counters—never source paths, filenames, archive members, or original bytes.
 It cannot be combined with asset inventory or Modern-pack inspection.
 
+For a separately assembled, validated reference trace, add
+`--reference-trace-json` to the normal explicit `--reference-trace` command.
+It emits `project-eon.reference-trace/v1`: release and capture hashes,
+adapter/checkpoint counts, recovery boundaries, and artifact identities only.
+It never emits local trace paths, artifact paths, original bytes, or replay
+state, and it remains diagnostics-only.
+
 After a Modern F10/Custom panel is closed, its renderer preferences are stored
 separately from game media: Linux uses
 `$XDG_CONFIG_HOME/project-eon/presentation-v1.ini` (or

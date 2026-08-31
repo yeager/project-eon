@@ -52,6 +52,9 @@ struct LaunchRequest {
     std::optional<Game> game;
     std::optional<Game> verify_game;
     std::optional<std::filesystem::path> reference_trace;
+    // Emits only the hash-bound admission facts for --reference-trace. It
+    // remains a diagnostics-only path and never opens a runtime session.
+    bool reference_trace_json = false;
     // An explicitly supplied Millennium DOS save is a diagnostics-only input.
     // It is parsed read-only and never joins a launch, simulation, or save
     // write path.

@@ -1384,6 +1384,13 @@ int main() {
             platform_option, amiga, trace_option, trace_manifest};
         const auto trace = eon::parse_command_line(9, trace_args);
         assert(trace.request && trace.request->reference_trace == "capture.eontrace");
+        char trace_json_option[] = "--reference-trace-json";
+        char* trace_json_args[] = {program, data_option, custom_path, game_option, millennium,
+            platform_option, amiga, trace_option, trace_manifest, trace_json_option};
+        const auto trace_json = eon::parse_command_line(10, trace_json_args);
+        assert(trace_json.request && trace_json.request->reference_trace_json);
+        char* trace_json_without_trace[] = {program, trace_json_option};
+        assert(!eon::parse_command_line(2, trace_json_without_trace).request);
         char* trace_without_platform[] = {program, data_option, custom_path, game_option, millennium,
             trace_option, trace_manifest};
         assert(!eon::parse_command_line(7, trace_without_platform).request);

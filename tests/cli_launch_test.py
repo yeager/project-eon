@@ -10,6 +10,7 @@ to another release or failing before its SDL event loop starts.
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 import hashlib
 import re
@@ -511,6 +512,32 @@ def main() -> int:
                 raise SystemExit(
                     f"{adapter} was not admitted and reported through the public CLI:\n"
                     f"{trace_report.stdout}\n{trace_report.stderr}"
+                )
+            trace_json_report = subprocess.run(
+                (str(executable), "--data", str(data_directory), "--game", game,
+                    "--platform", platform, "--reference-trace", str(manifest),
+                    "--reference-trace-json"),
+                env=environment, check=False, capture_output=True, text=True,
+            )
+            try:
+                trace_json = json.loads(trace_json_report.stdout)
+            except json.JSONDecodeError as error:
+                raise SystemExit(
+                    f"{adapter} did not produce valid reference-trace diagnostics JSON:\n"
+                    f"{trace_json_report.stdout}\n{trace_json_report.stderr}"
+                ) from error
+            if (trace_json_report.returncode != 0
+                    or trace_json.get("schema") != "project-eon.reference-trace/v1"
+                    or trace_json.get("release", {}).get("sha256") != source_sha256
+                    or trace_json.get("adapter") != adapter
+                    or trace_json.get("events", {}).get("sha256") != hashlib.sha256(events.encode("ascii")).hexdigest()
+                    or not trace_json.get("recovery_boundaries")
+                    or str(manifest) in trace_json_report.stdout
+                    or str(data_directory) in trace_json_report.stdout
+                    or '"path"' in trace_json_report.stdout):
+                raise SystemExit(
+                    f"{adapter} leaked a local path or omitted hash-bound trace diagnostics:\n"
+                    f"{trace_json_report.stdout}\n{trace_json_report.stderr}"
                 )
             # A timestamp-shaped string is not enough provenance: calendar
             # validity is enforced before an otherwise hash-matched genuine
