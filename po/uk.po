@@ -313,6 +313,9 @@ msgstr "ПОТРІБНО ВИБРАТИ ВИДАННЯ"
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr "ЛИШЕ ЗАВАНТАЖЕННЯ ATARI"
 
+msgid "BOOTSTRAP ONLY"
+msgstr "ЛИШЕ ЗАВАНТАЖЕННЯ"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

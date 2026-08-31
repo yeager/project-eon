@@ -121,6 +121,9 @@ msgstr ""
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr ""
 
+msgid "BOOTSTRAP ONLY"
+msgstr ""
+
 #: src/main.cpp
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr ""

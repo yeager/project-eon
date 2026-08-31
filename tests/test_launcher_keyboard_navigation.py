@@ -34,8 +34,9 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME", SOURCE)
         self.assertIn("if (!platform_card_selectable(platform_card_status", ROUTE_SOURCE)
         self.assertIn("RELEASE SELECTION REQUIRED", SOURCE)
-        self.assertIn("ATARI BOOTSTRAP ONLY", SOURCE)
-        self.assertIn("card.platform == eon::Platform::atari_st", SOURCE)
+        self.assertIn("BOOTSTRAP ONLY", SOURCE)
+        self.assertIn("platform_coverage(game, card.platform)", SOURCE)
+        self.assertIn("eon::PlatformCoverage::bootstrap_only", SOURCE)
         self.assertIn("session.choose_platform(releases, platforms[focus.platform])", ROUTE_SOURCE)
 
     def test_card_focus_is_bounded_in_the_shared_launcher_core(self) -> None:

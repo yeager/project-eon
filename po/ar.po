@@ -274,6 +274,9 @@ msgstr "اختيار الإصدار مطلوب"
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr "إقلاع أتاري فقط"
 
+msgid "BOOTSTRAP ONLY"
+msgstr "الإقلاع فقط"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

@@ -824,8 +824,7 @@ void report_platform_admission(const std::vector<eon::ReleaseArchive>& releases)
             // Admission says whether the card can proceed. Coverage is a
             // separate preservation fact: Atari's verified route is a
             // bootstrap, never a synonym for complete native runtime parity.
-            const char* coverage = platform == eon::Platform::atari_st
-                ? "BOOTSTRAP ONLY" : "RECOVERED PATH";
+            const auto coverage = eon::name(eon::platform_coverage(game, platform));
             std::cout << "PLATFORM ADMISSION  " << eon::name(game) << " / "
                 << eon::name(platform) << " / " << admission << " / " << coverage << " / "
                 << languages.size() << " verified original "
@@ -5000,8 +4999,9 @@ int main(int argc, char** argv) {
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46,
                         tr(card.title));
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
-                        selectable && card.platform == eon::Platform::atari_st
-                        ? tr("ATARI BOOTSTRAP ONLY") : status == eon::PlatformCardStatus::release_selection_required
+                        selectable && eon::platform_coverage(game, card.platform)
+                            == eon::PlatformCoverage::bootstrap_only
+                        ? tr("BOOTSTRAP ONLY") : status == eon::PlatformCardStatus::release_selection_required
                         ? tr("RELEASE SELECTION REQUIRED") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner->done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }

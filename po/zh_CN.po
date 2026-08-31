@@ -313,6 +313,9 @@ msgstr "需要选择版本"
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr "仅限 ATARI 引导"
 
+msgid "BOOTSTRAP ONLY"
+msgstr "仅限引导"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

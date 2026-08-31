@@ -285,10 +285,13 @@ establish whether an unprinted sibling language is present.
 The report is derived from scanner identities only and does not execute Atari
 ST GEMDOS/XBIOS services, callbacks, or guest code.
 
-The adjacent coverage field is independent of admission: `BOOTSTRAP ONLY` for
-Atari ST means the platform card can enter its bounded, hash-verified session
-but does not claim full native runtime parity. `RECOVERED PATH` identifies the
-current non-Atari route without granting it additional semantics.
+The adjacent coverage field is independent of admission and comes from one
+explicit game/platform table: `RECOVERED STARTUP` for Millennium DOS,
+`RECOVERED OPENING` for Deuteros Amiga, and `BOOTSTRAP ONLY` for Millennium
+Amiga and both Atari ST releases. It makes a successful card visible but does
+not claim full native runtime parity. Each label identifies only the current
+bounded startup/opening evidence; it does not mean a full game loop, all
+assets, input, audio, state, or save parity.
 
 Each rehashed Atari report includes `ATARI LAUNCH BOUNDARY`, matching the card
 label to a release-specific limitation: Millennium stops before the GEMDOS

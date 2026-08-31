@@ -313,6 +313,9 @@ msgstr "ТРЕБУЕТСЯ ВЫБОР ИЗДАНИЯ"
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr "ТОЛЬКО ЗАГРУЗКА ATARI"
 
+msgid "BOOTSTRAP ONLY"
+msgstr "ТОЛЬКО ЗАГРУЗКА"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

@@ -274,6 +274,9 @@ msgstr "ΑΠΑΙΤΕΙΤΑΙ ΕΠΙΛΟΓΗ ΕΚΔΟΣΗΣ"
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr "ΜΟΝΟ ΕΚΚΙΝΗΣΗ ATARI"
 
+msgid "BOOTSTRAP ONLY"
+msgstr "ΜΟΝΟ ΕΚΚΙΝΗΣΗ"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 
