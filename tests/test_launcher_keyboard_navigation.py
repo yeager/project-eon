@@ -12,6 +12,8 @@ RUNTIME_SOURCE = (ROOT / "src" / "engine" / "release_runtime.cpp").read_text(enc
 RUNTIME_HEADER = (ROOT / "src" / "engine" / "release_runtime.hpp").read_text(encoding="utf-8")
 MENU_RUNTIME_HEADER = (ROOT / "src" / "engine" / "menu_runtime_launch.hpp").read_text(encoding="utf-8")
 MENU_RUNTIME_SOURCE = (ROOT / "src" / "engine" / "menu_runtime_launch.cpp").read_text(encoding="utf-8")
+OPENING_RUNNER_HEADER = (ROOT / "src" / "engine" / "deuteros_amiga_opening_runner.hpp").read_text(encoding="utf-8")
+OPENING_RUNNER_SOURCE = (ROOT / "src" / "engine" / "deuteros_amiga_opening_runner.cpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
         self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", ROUTE_HEADER)
@@ -146,6 +148,17 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RuntimeSessionKind::deuteros_amiga_title_stage", tick)
         self.assertIn("deuteros_amiga_opening_input_held_ = false", tick)
 
+    def test_deuteros_opening_scheduler_stays_outside_the_sdl_loop(self) -> None:
+        self.assertIn("class DeuterosAmigaOpeningRunner", OPENING_RUNNER_HEADER)
+        self.assertIn("scheduler_period_ms = 20", OPENING_RUNNER_HEADER)
+        self.assertIn("maximum_catch_up_ticks = 4", OPENING_RUNNER_HEADER)
+        self.assertIn("coordinator_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("result.resynchronized = true", OPENING_RUNNER_SOURCE)
+        self.assertIn("deuteros_opening_runner->advance(SDL_GetTicks())", SOURCE)
+        opening_loop = SOURCE[SOURCE.index("deuteros_opening_runner->advance(SDL_GetTicks())"):
+                              SOURCE.index("const bool modern", SOURCE.index("deuteros_opening_runner->advance(SDL_GetTicks())"))]
+        self.assertNotIn("runtime_coordinator.tick_deuteros_amiga_opening()", opening_loop)
+
     def test_millennium_terminal_startup_observations_close_input_routing(self) -> None:
         session_header = (ROOT / "src" / "engine" / "runtime_session.hpp").read_text(encoding="utf-8")
         self.assertIn("millennium_dos_sound_driver_boundary", session_header)
@@ -244,7 +257,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RuntimeInputObservation::available_character()", SOURCE)
         self.assertNotIn("millennium_sound_selection_session->accept_ascii_character", SOURCE)
         self.assertNotIn("millennium_title_session->poll_console(true)", SOURCE)
-        self.assertIn("runtime_coordinator.tick_deuteros_amiga_opening()", SOURCE)
+        self.assertIn("deuteros_opening_runner->advance(SDL_GetTicks())", SOURCE)
+        self.assertIn("coordinator_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
         self.assertIn("RuntimeInputObservation::opening_input_held", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::directory", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::archive", SOURCE)
