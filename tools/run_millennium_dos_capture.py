@@ -27,6 +27,14 @@ EXPECTED_RELEASE_SIZE = 328_383
 # The capture helper never accepts a merely executable emulator as a recorder:
 # its hooks and input-receipt contract are part of the provenance boundary.
 EXPECTED_RECORDER_SHA256 = "7b959f7aee3d2db0513db4f14e3075f306e798e25adaeeebd96aedd81aef65da"
+RECORDER_PROTOCOLS = {
+    # v11 is the existing exact callback-loop receipt. Its shape remains the
+    # default so a new diagnostic cannot silently change prior evidence.
+    "v11": ("11", EXPECTED_RECORDER_SHA256),
+    # This separately built recorder retains the immediately preceding normal
+    # core tuple at its own callback boundary. It is observational only.
+    "v12-predecessor": ("12", "20a5ec331ca71e541d2f6d42c1ab49eca0fec5dabf298b6faf51fa45c63c24ed"),
+}
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
 MIN_DURATION_SECONDS = 15
@@ -65,6 +73,14 @@ RAW_RESULT_LINE = re.compile(
     r"ss=0x[0-9a-f]{4} sp=0x[0-9a-f]{4}(?: return_ip=0x[0-9a-f]{4} "
     r"return_cs=0x[0-9a-f]{4} return_flags=0x[0-9a-f]{4} code=0x[0-9a-f]{8})? "
     r"ax=0x[0-9a-f]{4} bx=0x[0-9a-f]{4} cx=0x[0-9a-f]{4} dx=0x[0-9a-f]{4})\n")
+V12_PREDECESSOR_FAULT_LINE = re.compile(
+    r"raw-result\t([1-9][0-9]*) ([1-9][0-9]*) fault=unhandled-interrupt int=0x06 "
+    r"cs=0x[0-9a-f]{4} ip=0x[0-9a-f]{4} ss=0x[0-9a-f]{4} sp=0x[0-9a-f]{4} "
+    r"return_ip=0x[0-9a-f]{4} return_cs=0x[0-9a-f]{4} return_flags=0x[0-9a-f]{4} "
+    r"code=0x[0-9a-f]{8} ax=0x[0-9a-f]{4} bx=0x[0-9a-f]{4} cx=0x[0-9a-f]{4} "
+    r"dx=0x[0-9a-f]{4} predecessor_valid=[01] predecessor_cs=0x[0-9a-f]{4} "
+    r"predecessor_ip=0x[0-9a-f]{4} predecessor_code=0x[0-9a-f]{8} "
+    r"predecessor_recognised_image=[01]\n")
 # The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
 # grammar authenticates the bounded external receipt shape only; it does not
 # claim DOS accepted a key or assign its original-game meaning.
@@ -165,9 +181,11 @@ def validate_source_release(source: Path) -> tuple[str, int]:
     return digest, size
 
 
-def validate_recorder(path: Path) -> tuple[str, int]:
+def validate_recorder(path: Path, expected_sha256: str | None = None) -> tuple[str, int]:
+    if expected_sha256 is None:
+        expected_sha256 = EXPECTED_RECORDER_SHA256
     digest, size = sha256_file(path)
-    if digest != EXPECTED_RECORDER_SHA256:
+    if digest != expected_sha256:
         raise CaptureError("recorder hash does not match the reviewed DOSBox-X build")
     return digest, size
 
@@ -296,7 +314,7 @@ def parse_host_input_receipt(path: Path) -> int:
     return count
 
 
-def raw_observation_status(path: Path, name: str) -> str:
+def raw_observation_status(path: Path, name: str, recorder_protocol: str = "v11") -> str:
     """Bind an optional recorder-owned raw log without reading it unbounded."""
     try:
         info = path.lstat()
@@ -309,12 +327,12 @@ def raw_observation_status(path: Path, name: str) -> str:
     if info.st_size == 0:
         return f"{name}=empty\n"
     if name == "results_raw":
-        return raw_result_status(path, name)
+        return raw_result_status(path, name, recorder_protocol)
     digest, size = sha256_file(path)
     return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
 
 
-def raw_result_labels(path: Path) -> list[str]:
+def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     """Parse finite recorder diagnostics into non-semantic shape labels."""
     try:
         text = path.read_text(encoding="ascii")
@@ -324,7 +342,9 @@ def raw_result_labels(path: Path) -> list[str]:
         raise CaptureError("results_raw has a truncated final record")
     labels: list[str] = []
     for expected, line in enumerate(text.splitlines(keepends=True), start=1):
-        match = RAW_RESULT_LINE.fullmatch(line)
+        match = (V12_PREDECESSOR_FAULT_LINE.fullmatch(line)
+                 if recorder_protocol == "v12-predecessor" and " fault=" in line
+                 else RAW_RESULT_LINE.fullmatch(line))
         if not match:
             raise CaptureError("results_raw contains an invalid recorder record")
         if int(match.group(1)) != expected or int(match.group(2)) != expected:
@@ -346,10 +366,10 @@ def raw_result_labels(path: Path) -> list[str]:
     return labels
 
 
-def parse_raw_results(path: Path) -> dict[str, int]:
+def parse_raw_results(path: Path, recorder_protocol: str = "v11") -> dict[str, int]:
     """Validate only the recorder's known diagnostics-only result grammar."""
     counts: dict[str, int] = {}
-    for label in raw_result_labels(path):
+    for label in raw_result_labels(path, recorder_protocol):
         counts[label] = counts.get(label, 0) + 1
     return counts
 
@@ -394,15 +414,15 @@ def known_v11_early_stop_receipt(path: Path) -> bool:
         return False
 
 
-def raw_result_status(path: Path, name: str) -> str:
-    counts = parse_raw_results(path)
+def raw_result_status(path: Path, name: str, recorder_protocol: str = "v11") -> str:
+    counts = parse_raw_results(path, recorder_protocol)
     digest, size = sha256_file(path)
     summary = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
     return (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
             f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
 
 
-def known_unhandled_interrupt_observed(path: Path) -> bool:
+def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11") -> bool:
     """Return whether the recorder completed its one known raw INT 6 record.
 
     This is a host-side early-stop guard for the already documented DOSBox-X
@@ -426,7 +446,18 @@ def known_unhandled_interrupt_observed(path: Path) -> bool:
     # treat an unfinished line as an observation, and never modify that file.
     if not text.endswith("\n"):
         return False
-    return known_v11_early_stop_receipt(path)
+    if recorder_protocol == "v11":
+        return known_v11_early_stop_receipt(path)
+    if recorder_protocol == "v12-predecessor":
+        try:
+            # This only stops the external callback loop after a complete
+            # bounded shape. It does not admit the new values or make them a
+            # private-interrupt result; two byte-identical receipts are still
+            # required before any documentation or runtime use.
+            return tuple(raw_result_labels(path, recorder_protocol)) == KNOWN_V10_EARLY_STOP_SEQUENCE
+        except CaptureError:
+            return False
+    return False
 
 
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
@@ -482,7 +513,8 @@ def identity_status(name: str, identity: tuple[str, int]) -> str:
 def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
-    recorder_identity = validate_recorder(recorder)
+    receipt_version, recorder_hash = RECORDER_PROTOCOLS[args.recorder_protocol]
+    recorder_identity = validate_recorder(recorder, recorder_hash)
     output = reject_unsafe_output(source, Path(args.output))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
@@ -545,7 +577,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                 exit_status = 125
                 termination_reason = "console-safety-cap"
                 break
-            if known_unhandled_interrupt_observed(output / "results.raw"):
+            if known_unhandled_interrupt_observed(output / "results.raw", args.recorder_protocol):
                 process.kill()
                 process.wait()
                 exit_status = 126
@@ -568,10 +600,11 @@ def run_capture(args: argparse.Namespace) -> Path:
         if (source_hash, source_size) != (after_hash, after_size):
             raise CaptureError("source archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.raw")
-        observation_status = (raw_observation_status(output / "events.raw", "events_raw")
-                              + raw_observation_status(output / "results.raw", "results_raw"))
+        observation_status = (raw_observation_status(output / "events.raw", "events_raw", args.recorder_protocol)
+                              + raw_observation_status(output / "results.raw", "results_raw", args.recorder_protocol))
         write_exclusive(output / "run-status.txt",
-                        f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
+                        f"capture_receipt_version={receipt_version}\n"
+                        f"recorder_protocol={args.recorder_protocol}\n"
                         f"exit_status={exit_status}\ntermination_reason={termination_reason}\n"
                         f"start_unix={started:.6f}\nend_unix={ended:.6f}\n"
                         f"machine_profile={args.machine_profile}\n"
@@ -610,6 +643,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="Visible operator window duration (15-600; default: 120)")
     parser.add_argument("--machine-profile", choices=tuple(sorted(MACHINE_PROFILES)), default="svga_s3",
                         help="Explicit DOSBox-X video-machine profile (default: svga_s3)")
+    parser.add_argument("--recorder-protocol", choices=tuple(sorted(RECORDER_PROTOCOLS)), default="v11",
+                        help="Reviewed recorder output grammar (default: v11)")
     return parser.parse_args(argv)
 
 
