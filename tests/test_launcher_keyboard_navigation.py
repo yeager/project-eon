@@ -100,6 +100,19 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertNotIn('tr("Game: ") + eon::name(selected)', SOURCE)
         self.assertNotIn('card.bounds.h - 46, card.title);', SOURCE)
 
+    def test_menu_can_choose_an_immutable_original_data_folder(self) -> None:
+        # The graphical launcher may begin before the default data directory
+        # exists, then accepts one explicit folder through SDL's native picker.
+        # The callback transfers a path only; the main thread replaces its
+        # bounded read-only scanner and never copies, creates, or unpacks media.
+        self.assertIn("SDL_ShowOpenFolderDialog", SOURCE)
+        self.assertIn("receive_data_directory_dialog_selection", SOURCE)
+        self.assertIn('tr("CHOOSE ORIGINAL DATA FOLDER (O)")', SOURCE)
+        self.assertIn("event.key.key == SDLK_O", SOURCE)
+        self.assertIn("request.data_directory_is_default = false", SOURCE)
+        self.assertIn("scanner = std::make_unique<eon::ReleaseScanner>", SOURCE)
+        self.assertIn("ReleaseScanner advances later in", SOURCE)
+
     def test_profiles_have_two_runtime_modes_and_a_custom_tuning_route(self) -> None:
         self.assertIn("enum class ProfileChoice { original, modern, custom }", SOURCE)
         self.assertIn("Custom is not a third runtime mode", SOURCE)

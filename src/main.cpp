@@ -104,6 +104,31 @@ void SDLCALL receive_modern_pack_dialog_selection(void* userdata,
     mailbox.dialog_open = false;
 }
 
+// Folder selection is a launcher-only, read-only operation.  Keep its
+// mailbox alive for the same reason as the Modern-pack dialog: native SDL
+// dialogs are asynchronous and may complete after the UI event that opened
+// them.  The callback merely transfers an untrusted path to the main thread.
+struct DataDirectoryDialogMailbox {
+    std::mutex mutex;
+    std::optional<std::filesystem::path> pending_selection;
+    bool dialog_open = false;
+};
+
+DataDirectoryDialogMailbox& data_directory_dialog_mailbox() {
+    static auto* mailbox = new DataDirectoryDialogMailbox;
+    return *mailbox;
+}
+
+void SDLCALL receive_data_directory_dialog_selection(void* userdata,
+    const char* const* filelist, int) {
+    auto& mailbox = *static_cast<DataDirectoryDialogMailbox*>(userdata);
+    std::lock_guard lock(mailbox.mutex);
+    if (filelist && filelist[0] && !filelist[1]) {
+        mailbox.pending_selection = std::filesystem::path(filelist[0]);
+    }
+    mailbox.dialog_open = false;
+}
+
 [[nodiscard]] std::vector<std::uint8_t> read_save_for_inspection(
     const std::filesystem::path& path) {
     std::error_code error;
@@ -3286,20 +3311,22 @@ int main(int argc, char** argv) {
         return std::string(translator.translate(message));
     };
     if (request.inspect_save) return inspect_millennium_dos_save(*request.inspect_save);
-    if (!std::filesystem::is_directory(request.data_directory)
+    const bool command_requires_data = request.verify_game || request.inspect_data
+        || request.game || request.reference_trace;
+    if (command_requires_data && !std::filesystem::is_directory(request.data_directory)
         && !std::filesystem::is_regular_file(request.data_directory)) {
         std::cerr << "Data path does not exist: " << request.data_directory << '\n';
         return 2;
     }
-    eon::ReleaseScanner scanner(request.data_directory);
+    auto scanner = std::make_unique<eon::ReleaseScanner>(request.data_directory);
     std::vector<eon::ReleaseArchive> releases;
     // Direct launches and command-line verification intentionally wait for a
     // complete answer. The graphical menu instead advances this scanner after
     // its first frame, mirroring OpenCaptive's non-blocking data scanner.
     if (request.verify_game || request.inspect_data || request.game || request.reference_trace) {
-        while (!scanner.advance(64)) {
+        while (!scanner->advance(64)) {
         }
-        releases = scanner.releases();
+        releases = scanner->releases();
         if (releases.empty()) {
             std::cerr << "No recognised original release archives found.\n";
             return 3;
@@ -3501,7 +3528,7 @@ int main(int argc, char** argv) {
             report_modern_asset_packs(*request.modern_pack_root, inspected_releases);
         }
         if (request.inspect_data) {
-            const auto& report = scanner.report();
+            const auto& report = scanner->report();
             // Filtered inspection intentionally reports only the selected
             // original identity, so it must not imply a complete card state.
             // The unfiltered report has reverified every identity and can
@@ -3842,6 +3869,9 @@ int main(int argc, char** argv) {
     int focused_profile_card = 0;
     bool custom_profile_ready = false;
     bool show_scanner = false;
+    // It intentionally has room for the longest shipped translation, rather
+    // than treating English text width as the launcher layout contract.
+    const SDL_FRect data_directory_picker_bounds{640.0F, 58.0F, 398.0F, 34.0F};
     bool show_modern_graphics_settings = false;
     bool show_modern_runtime_diagnostics = false;
     bool show_recovery_function_map = false;
@@ -4055,11 +4085,27 @@ int main(int argc, char** argv) {
             ? eon::Presentation::original : eon::Presentation::modern;
         launch_menu_selection();
     };
+    const auto open_data_directory_dialog = [&] {
+        if (screen != Screen::menu) return;
+        auto& mailbox = data_directory_dialog_mailbox();
+        {
+            std::lock_guard lock(mailbox.mutex);
+            if (mailbox.dialog_open) return;
+            mailbox.dialog_open = true;
+        }
+        // Do not provide the conventional data directory as an initial
+        // location: a missing default remains an inert lookup and is never
+        // created or persisted merely because the launcher is shown.
+        SDL_ShowOpenFolderDialog(receive_data_directory_dialog_selection, &mailbox,
+            window, nullptr, false);
+    };
     const auto handle_menu_pointer_down = [&](const float x, const float y) {
         // SDL mouse and touch input share one card route. The latter is
         // needed by the iPad build; both still pass through the same
         // hash-verified platform/release admission checks as keyboard focus.
-        if (launcher_page == LauncherPage::games) {
+        if (inside(data_directory_picker_bounds, x, y)) {
+            open_data_directory_dialog();
+        } else if (launcher_page == LauncherPage::games) {
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 if (inside(cards[index].bounds, x, y)) {
                     focus_menu_card(static_cast<int>(index));
@@ -4215,6 +4261,41 @@ int main(int argc, char** argv) {
     std::optional<std::uint64_t> last_capped_present_ns;
     bool running = true;
     while (running) {
+        std::optional<std::filesystem::path> selected_data_directory;
+        {
+            auto& mailbox = data_directory_dialog_mailbox();
+            std::lock_guard lock(mailbox.mutex);
+            if (mailbox.pending_selection) {
+                selected_data_directory = std::move(*mailbox.pending_selection);
+                mailbox.pending_selection.reset();
+            }
+        }
+        if (selected_data_directory && screen == Screen::menu) {
+            std::error_code error;
+            if (std::filesystem::is_directory(*selected_data_directory, error) && !error) {
+                // A selected source replaces only the scanner instance.  No
+                // archive is opened here; ReleaseScanner advances later in
+                // bounded steps and all recognition remains hash-addressed.
+                request.data_directory = *selected_data_directory;
+                request.data_directory_is_default = false;
+                scanner = std::make_unique<eon::ReleaseScanner>(request.data_directory);
+                releases.clear();
+                active_platform.reset();
+                active_release_language.reset();
+                active_release_sha256.reset();
+                discard_millennium_assets();
+                focused_platform_card = 0;
+                focused_release_card = 0;
+                focused_profile_card = 0;
+                custom_profile_ready = false;
+                launcher_page = LauncherPage::games;
+                show_scanner = true;
+                focus_menu_card(focused);
+            } else {
+                std::cerr << "Selected data folder is not accessible: "
+                          << selected_data_directory->string() << '\n';
+            }
+        }
         // SDL may call the dialog callback on another thread. Consume its
         // one explicit candidate only while the same unlaunched Custom modal
         // remains active; a late callback can never alter an active session.
@@ -4430,6 +4511,10 @@ int main(int argc, char** argv) {
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+                if (event.key.key == SDLK_O) {
+                    open_data_directory_dialog();
+                    continue;
+                }
                 const bool previous = event.key.key == SDLK_LEFT || event.key.key == SDLK_UP;
                 const bool next = event.key.key == SDLK_RIGHT || event.key.key == SDLK_DOWN;
                 if (event.key.key == SDLK_ESCAPE && launcher_page != LauncherPage::games) {
@@ -4538,9 +4623,9 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (!scanner.done()) {
-            static_cast<void>(scanner.advance(show_scanner ? 32 : 1));
-            releases = scanner.releases();
+        if (!scanner->done()) {
+            static_cast<void>(scanner->advance(show_scanner ? 32 : 1));
+            releases = scanner->releases();
             if (screen == Screen::menu && !request.platform) focus_menu_card(focused);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
@@ -4639,6 +4724,13 @@ int main(int argc, char** argv) {
                 SDL_RenderTexture(renderer, project_eon_logo_texture, nullptr, &logo_bounds);
             }
             draw_text(renderer, 64, 56, tr("PROJECT EON"));
+            SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
+            SDL_RenderFillRect(renderer, &data_directory_picker_bounds);
+            SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);
+            SDL_RenderRect(renderer, &data_directory_picker_bounds);
+            draw_text(renderer, data_directory_picker_bounds.x + 10.0F,
+                data_directory_picker_bounds.y + 9.0F,
+                tr("CHOOSE ORIGINAL DATA FOLDER (O)"));
             const auto draw_card_border = [&](const SDL_FRect& bounds, const bool active, const bool enabled) {
                 SDL_SetRenderDrawColor(renderer, active ? 255 : enabled ? 185 : 85,
                     active ? 195 : enabled ? 210 : 90, active ? 80 : enabled ? 135 : 90, 255);
@@ -4657,7 +4749,7 @@ int main(int argc, char** argv) {
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 25,
                         tr(card.subtitle));
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h + 16,
-                        available ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
+                        available ? tr("VERIFIED ORIGINAL DATA") : scanner->done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }
             } else if (launcher_page == LauncherPage::platforms) {
@@ -4682,7 +4774,7 @@ int main(int argc, char** argv) {
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
                         selectable && card.platform == eon::Platform::atari_st
                         ? tr("ATARI BOOTSTRAP ONLY") : status == eon::PlatformCardStatus::release_selection_required
-                        ? tr("RELEASE SELECTION REQUIRED") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner.done()
+                        ? tr("RELEASE SELECTION REQUIRED") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner->done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }
             } else if (launcher_page == LauncherPage::releases) {
@@ -4724,9 +4816,9 @@ int main(int argc, char** argv) {
                 SDL_FRect overlay{64, 574, 1152, 104};
                 SDL_RenderFillRect(renderer, &overlay);
                 draw_text(renderer, 86, 596, tr("DATA SCANNER (content hashes, read-only)"));
-                draw_text(renderer, 86, 620, tr("Files scanned: ") + std::to_string(scanner.scanned_count())
-                    + " / " + std::to_string(scanner.candidate_count()));
-                draw_text(renderer, 86, 644, scanner.done()
+                draw_text(renderer, 86, 620, tr("Files scanned: ") + std::to_string(scanner->scanned_count())
+                    + " / " + std::to_string(scanner->candidate_count()));
+                draw_text(renderer, 86, 644, scanner->done()
                     ? tr("Complete. Only hash-verified original releases are selectable.")
                     : tr("Scanning in progress. Press D to hide this progress panel."));
             }
