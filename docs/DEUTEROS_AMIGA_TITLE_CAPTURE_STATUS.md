@@ -133,6 +133,21 @@ resolve the overlay/load mapping, establish execution of the statically
 disassembled title bridge, or admit any title, display, input, audio, ABI, or
 gameplay behaviour.
 
+A separate 15-second, no-input `realtime` repetition on 2026-08-31 used the
+same reviewed recorder and four read-only FUSE layers. It was independently
+accepted as receipt v7. The recognised outer archive and Kickstart ZIP retained
+their required SHA-256 identities after the run; no host-input receipt was
+created. Its 34,196-byte raw-PC record is byte-identical to the first v7
+observation (SHA-256
+`22855e20e766df330ee7caf59d37525d5a69fd74d8663b3a1e3d0316a314c16e`), with
+128 records at each of `$1fe84` and `$1fe96`; the recorder console was empty.
+The fresh configuration identity is
+`4c514bb7efbea8b24e833dbbeb0f9dff9904493289143008edc5018fd2c344c9` (1,111
+bytes). This repeat confirms only the bounded raw-observer route and its
+reproducibility. It does not upgrade the raw hook to original instruction
+provenance or establish title, display, input, audio, ABI, or gameplay
+behaviour.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
