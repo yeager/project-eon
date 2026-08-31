@@ -3405,6 +3405,29 @@ int main() {
             assert(all_release_runtime.observe_input(
                 eon::RuntimeInputObservation::ascii('1'))
                 == eon::RuntimeInputDisposition::rejected);
+            // The exact opening handoff must publish a title-stage boundary,
+            // not retain an input-capable opening snapshot after its final
+            // recovered frame. This loop supplies only the already admitted
+            // physical held observation; it never fabricates title input.
+            bool title_handoff_observed = false;
+            for (std::size_t tick = 0; tick < 128 && !title_handoff_observed; ++tick) {
+                const auto handoff_events = all_release_runtime.tick_deuteros_amiga_opening();
+                title_handoff_observed = handoff_events && handoff_events->title_handoff;
+            }
+            assert(title_handoff_observed);
+            assert(all_release_runtime.session_snapshot());
+            const auto& title_snapshot = *all_release_runtime.session_snapshot();
+            assert(title_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_title_stage
+                && title_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
+                && !title_snapshot.capabilities.decoded_presentation
+                && !title_snapshot.capabilities.audio_observations
+                && !title_snapshot.capabilities.admitted_input);
+            assert(eon::runtime_session_kind_label(title_snapshot.kind)
+                == "DEUTEROS AMIGA TITLE STAGE");
+            assert(all_release_runtime.observe_input(
+                eon::RuntimeInputObservation::opening_input_held(true))
+                == eon::RuntimeInputDisposition::rejected);
+            assert(!all_release_runtime.tick_deuteros_amiga_opening());
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(all_release_runtime.deuteros_atari());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap

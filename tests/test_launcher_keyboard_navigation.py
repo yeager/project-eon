@@ -116,6 +116,16 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("runtime_coordinator.deuteros_amiga()", SOURCE)
         self.assertIn("runtime_coordinator.millennium_dos()", SOURCE)
 
+    def test_deuteros_opening_handoff_publishes_a_fail_closed_title_stage_session(self) -> None:
+        session_header = (ROOT / "src" / "engine" / "runtime_session.hpp").read_text(encoding="utf-8")
+        self.assertIn("deuteros_amiga_title_stage", session_header)
+        self.assertIn("DEUTEROS AMIGA TITLE STAGE", (ROOT / "src" / "engine" / "runtime_session.cpp").read_text(encoding="utf-8"))
+        tick = RUNTIME_SOURCE[RUNTIME_SOURCE.index("tick_deuteros_amiga_opening"):
+                              RUNTIME_SOURCE.index("RuntimeLaunchAdmission admit_runtime_launch")]
+        self.assertIn("events.title_handoff", tick)
+        self.assertIn("RuntimeSessionKind::deuteros_amiga_title_stage", tick)
+        self.assertIn("deuteros_amiga_opening_input_held_ = false", tick)
+
     def test_cli_and_card_routes_share_the_final_runtime_admission_gate(self) -> None:
         self.assertIn("struct RuntimeLaunchAdmission", RUNTIME_HEADER)
         self.assertIn("admit_runtime_launch", RUNTIME_SOURCE)

@@ -172,7 +172,18 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
 std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_amiga_opening() {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
         || !deuteros_amiga_ || deuteros_amiga_->title_handed_off()) return std::nullopt;
-    return deuteros_amiga_->tick(deuteros_amiga_opening_input_held_);
+    auto events = deuteros_amiga_->tick(deuteros_amiga_opening_input_held_);
+    if (events.title_handoff) {
+        // The opening object remains owner of the original ADF/title-stage
+        // evidence, but the live session has crossed its last recovered VBL
+        // frame. Publish the narrower state atomically so diagnostics and
+        // input routing cannot describe or tick a completed opening.
+        if (!active_ || !deuteros_amiga_->title_stage_session()) return std::nullopt;
+        session_snapshot_ = make_runtime_session_snapshot(*active_,
+            RuntimeSessionKind::deuteros_amiga_title_stage);
+        deuteros_amiga_opening_input_held_ = false;
+    }
+    return events;
 }
 
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
