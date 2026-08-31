@@ -4147,17 +4147,18 @@ int main(int argc, char** argv) {
         if (selected == eon::Game::millennium) start_millennium_title();
         if (selected == eon::Game::deuteros) start_deuteros();
     };
+    const auto apply_launcher_navigation = [&](const eon::LauncherSourceIdentity& before) {
+        if (!launcher_interaction.source_changed_since(before)) return;
+        clear_modern_pack_admission();
+        discard_millennium_assets();
+    };
     const auto activate_launcher_card = [&](const std::optional<std::size_t> card) {
-        const auto previous_platform = active_platform;
-        const auto previous_release = active_release_sha256;
+        const auto before = launcher_interaction.source_identity();
         const auto effect = card
             ? launcher_interaction.activate_card(releases, *card)
             : launcher_interaction.activate(releases);
         request.presentation = launcher_session.presentation;
-        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
-            clear_modern_pack_admission();
-            discard_millennium_assets();
-        }
+        apply_launcher_navigation(before);
         if (effect == eon::LauncherInteractionEffect::open_custom_settings) {
             // Custom is a deliberate renderer-only configuration route. It
             // cannot become a third runtime identity or a launch shortcut.
@@ -4167,37 +4168,25 @@ int main(int argc, char** argv) {
         }
     };
     const auto move_launcher_cards = [&](const int direction) {
-        const auto previous_platform = active_platform;
-        const auto previous_release = active_release_sha256;
+        const auto before = launcher_interaction.source_identity();
         launcher_interaction.move(releases, direction);
-        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
-            clear_modern_pack_admission();
-            discard_millennium_assets();
-        }
+        apply_launcher_navigation(before);
         if (launcher_page == eon::LauncherPage::games) {
             if (!active_platform) card_focus.reset_after_game_change();
             focus_active_platform_card();
         }
     };
     const auto edge_launcher_cards = [&](const bool first) {
-        const auto previous_platform = active_platform;
-        const auto previous_release = active_release_sha256;
+        const auto before = launcher_interaction.source_identity();
         if (first) launcher_interaction.first(releases);
         else launcher_interaction.last(releases);
-        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
-            clear_modern_pack_admission();
-            discard_millennium_assets();
-        }
+        apply_launcher_navigation(before);
         if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
     };
     const auto back_launcher_cards = [&] {
-        const auto previous_platform = active_platform;
-        const auto previous_release = active_release_sha256;
+        const auto before = launcher_interaction.source_identity();
         launcher_interaction.back(releases);
-        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
-            clear_modern_pack_admission();
-            discard_millennium_assets();
-        }
+        apply_launcher_navigation(before);
         if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
     };
     const auto open_data_directory_dialog = [&] {
