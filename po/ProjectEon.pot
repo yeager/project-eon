@@ -475,3 +475,7 @@ msgstr ""
 #: src/main.cpp
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
 msgstr ""
+
+#: src/main.cpp
+msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
+msgstr ""

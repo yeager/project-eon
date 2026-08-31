@@ -93,9 +93,23 @@ class CatalogTests(unittest.TestCase):
             with self.subTest(language=language):
                 catalog = po_messages(PO / f"{language}.po")
                 missing = sorted(set(source) - set(catalog))
+                extra = sorted(set(catalog) - set(source))
                 blank = sorted(key for key in source if not catalog.get(key))
                 self.assertEqual(missing, [])
+                self.assertEqual(extra, [])
                 self.assertEqual(blank, [])
+
+    def test_direct_launcher_translation_calls_are_declared_in_the_pot(self) -> None:
+        """A literal passed directly to ``tr`` cannot bypass all 20 catalogs.
+
+        Dynamic diagnostic fragments remain intentionally outside this narrow
+        static check, but every direct user-visible launcher literal must be
+        declared by the one source catalog before it reaches rendering.
+        """
+        source_catalog = po_messages(PO / "ProjectEon.pot")
+        direct_messages = set(re.findall(r'\btr\("((?:[^"\\]|\\.)*)"\)', LAUNCHER_SOURCE))
+        self.assertTrue(direct_messages)
+        self.assertEqual(sorted(direct_messages - set(source_catalog)), [])
 
     def test_card_and_selection_labels_are_catalogued_before_rendering(self) -> None:
         # These labels belong to Project Eon's shell, not to the supplied
