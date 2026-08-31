@@ -698,9 +698,12 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
             const auto& boundary = boundaries[boundary_index];
             std::cout << "{\"id\":"; write_json_string(std::cout, boundary.id);
             std::cout << ",\"profile\":"; write_json_string(std::cout, boundary.parser_profile_id);
+            std::cout << ",\"cpu\":"; write_json_string(std::cout, boundary.cpu);
             std::cout << ",\"source_address\":"; write_json_string(std::cout, boundary.source_address);
             std::cout << ",\"evidence_level\":"; write_json_string(std::cout, boundary.evidence_level);
             std::cout << ",\"runtime_status\":"; write_json_string(std::cout, boundary.runtime_status);
+            std::cout << ",\"documentation_anchor\":";
+            write_json_string(std::cout, boundary.documentation_anchor);
             std::cout << '}';
         }
         std::cout << "],\"function_map\":[";
@@ -719,6 +722,8 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
             std::cout << ",\"evidence_level\":"; write_json_string(std::cout, function.evidence_level);
             std::cout << ",\"uncertainty\":"; write_json_string(std::cout, function.uncertainty);
             std::cout << ",\"runtime_status\":"; write_json_string(std::cout, function.runtime_status);
+            std::cout << ",\"documentation_anchor\":";
+            write_json_string(std::cout, function.documentation_anchor);
             std::cout << '}';
         }
         std::cout << "]}";
