@@ -5,6 +5,11 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 class DisassemblyInventoryTests(unittest.TestCase):
+    def test_status_document_describes_external_report_verifier(self):
+        status = (ROOT / "docs/DISASSEMBLY_STATUS.md").read_text(encoding="utf-8")
+        self.assertIn("tools/verify_disassembly_reports.py", status)
+        self.assertIn("reachability, code/data classification", status)
+
     def test_inventory_covers_exact_releases_with_bounded_profiles(self):
         inventory = json.loads((ROOT / "docs/disassembly-inventory.json").read_text())
         manifest = json.loads((ROOT / "docs/release-manifest.json").read_text())

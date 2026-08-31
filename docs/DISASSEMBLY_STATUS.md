@@ -28,6 +28,28 @@ parity vocabulary, same-release source provenance, and every disassembly
 segment's bounds. It reads only the four committed JSON ledgers; it does not
 open original media, generated reports, captures, or saves.
 
+## External report identity verification
+
+The complete linear candidate reports remain outside the repository because
+they mechanically render copyrighted executable bytes. Their committed SHA-256
+and line-count identities can nevertheless be checked without opening any
+original media:
+
+```sh
+python3 tools/verify_disassembly_reports.py \
+  --report SPAN_ID=/absolute/path/to/retained-report.md \
+  # Repeat --report for every static span id in disassembly-inventory.json.
+```
+
+Every inventory static span must be supplied exactly once. A single retained
+report can be named for more than one span where the inventory intentionally
+records byte-identical aggregate output. The verifier accepts only bounded,
+regular, non-symlink report files outside both `/tmp` and the checkout, then
+checks their exact byte hash and LF line count. It creates no files and never
+copies report or game-media contents. A successful identity check proves only
+that the retained report is the recorded linear listing; it does not establish
+reachability, code/data classification, ABI results, or gameplay semantics.
+
 ## Input identities
 
 | Game | Platform | Container SHA-256 | Principal code/media identity |
