@@ -406,9 +406,10 @@ identity. This applies equally to Atari ST media; the launcher never
 substitutes an Amiga or DOS release or chooses by scan order.
 Release cards reuse only the selected generated platform-card illustration
 with a readable Eon overlay; they contain no original pixels or archive data.
-Verified Atari ST cards are additionally labelled **Atari bootstrap only**.
-They select their exact original media but do not claim unrecovered GEMDOS,
-XBIOS, callback, title, or gameplay parity as a completed game start.
+Every verified card also states its explicit recovery coverage: **Recovered
+startup**, **Recovered opening**, or **Bootstrap only**. These labels select
+their exact original media but never claim unrecovered GEMDOS, XBIOS, callback,
+title, or gameplay parity as a completed game start.
 The two menu cards are newly generated Project Eon artwork inspired by the
 games' broad lunar-recovery and orbital-expansion themes. They contain no
 extracted game assets and are never used inside Original mode.
