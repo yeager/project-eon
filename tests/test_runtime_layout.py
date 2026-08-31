@@ -39,6 +39,13 @@ class RuntimeLayoutTests(unittest.TestCase):
         self.assertIn("tools/verify_replay_fixture.py", CMAKE)
         self.assertIn("It remains opaque to the native", CMAKE)
 
+    def test_ctest_scratch_is_external_to_the_checkout(self) -> None:
+        self.assertIn('set(EON_TEST_TMPDIR "$ENV{EON_TEST_TMPDIR}")', CMAKE)
+        self.assertIn('$ENV{LOCALAPPDATA}/ProjectEon/tests', CMAKE)
+        self.assertIn('$ENV{HOME}/.cache/project-eon-tools/tests', CMAKE)
+        self.assertIn('Set EON_TEST_TMPDIR to an external test scratch directory', CMAKE)
+        self.assertNotIn('set(EON_TEST_TMPDIR "${CMAKE_BINARY_DIR}/eon-test-tmp")', CMAKE)
+
     def test_linux_install_layout_matches_runtime_search_order(self) -> None:
         self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"', CMAKE)
         self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets/branding"', CMAKE)

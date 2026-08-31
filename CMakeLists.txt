@@ -315,7 +315,18 @@ if(BUILD_TESTING)
     # Native fixtures never use the system temporary directory. This protects
     # constrained preservation workstations and keeps test artefacts outside
     # both the checkout and user-supplied game media.
-    set(EON_TEST_TMPDIR "${CMAKE_BINARY_DIR}/eon-test-tmp")
+    # Test scratch remains outside the checkout and all original-media roots.
+    # Callers may provide an explicit external path; otherwise select the
+    # platform's user cache rather than a CMake build directory or /tmp.
+    if(DEFINED ENV{EON_TEST_TMPDIR} AND NOT "$ENV{EON_TEST_TMPDIR}" STREQUAL "")
+        set(EON_TEST_TMPDIR "$ENV{EON_TEST_TMPDIR}")
+    elseif(WIN32 AND DEFINED ENV{LOCALAPPDATA} AND NOT "$ENV{LOCALAPPDATA}" STREQUAL "")
+        set(EON_TEST_TMPDIR "$ENV{LOCALAPPDATA}/ProjectEon/tests")
+    elseif(DEFINED ENV{HOME} AND NOT "$ENV{HOME}" STREQUAL "")
+        set(EON_TEST_TMPDIR "$ENV{HOME}/.cache/project-eon-tools/tests")
+    else()
+        message(FATAL_ERROR "Set EON_TEST_TMPDIR to an external test scratch directory")
+    endif()
     file(MAKE_DIRECTORY "${EON_TEST_TMPDIR}")
     add_test(NAME native-data-detection COMMAND eon-native-tests)
     set_tests_properties(native-data-detection PROPERTIES
