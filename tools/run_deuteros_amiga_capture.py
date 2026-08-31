@@ -176,9 +176,22 @@ def mount_options(mountpoint: Path) -> set[str]:
     return set(completed.stdout.strip().split(","))
 
 
+def mountpoint_is_active(mountpoint: Path) -> bool:
+    """Return whether this exact path, not an ancestor, is still mounted."""
+    completed = subprocess.run(
+        ["findmnt", "-n", "--mountpoint", str(mountpoint), "-o", "TARGET"],
+        check=False, capture_output=True, text=True)
+    return completed.returncode == 0 and completed.stdout.strip() == str(mountpoint)
+
+
 def unmount(mountpoint: Path) -> None:
-    subprocess.run(["fusermount", "-u", str(mountpoint)], check=False,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    """Unmount and prove the FUSE view is gone before reusing the evidence root."""
+    if not mountpoint_is_active(mountpoint):
+        return
+    completed = subprocess.run(["fusermount", "-u", str(mountpoint)], check=False,
+                               capture_output=True, text=True)
+    if completed.returncode != 0 or mountpoint_is_active(mountpoint):
+        raise CaptureError(f"unable to unmount read-only capture view: {mountpoint}")
 
 
 def mount_read_only(source: Path, mountpoint: Path) -> None:

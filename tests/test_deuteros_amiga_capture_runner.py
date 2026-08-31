@@ -6,7 +6,9 @@ import hashlib
 import importlib.util
 import io
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 from eon_test_paths import temporary_directory
 
@@ -41,6 +43,19 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         self.assertIn("use_debugger = 0", configuration)
         self.assertIn("warp_mode = 0", configuration)
         self.assertNotIn("playback_file", configuration.lower())
+
+    def test_unmount_requires_the_exact_fuse_view_to_disappear(self) -> None:
+        with temporary_directory() as directory:
+            mountpoint = Path(directory) / "capture-view"
+            mountpoint.mkdir()
+            self.assertFalse(TOOL.mountpoint_is_active(mountpoint))
+            with mock.patch.object(TOOL.subprocess, "run", side_effect=(
+                    SimpleNamespace(returncode=0, stdout=str(mountpoint) + "\n"),
+                    SimpleNamespace(returncode=1, stdout=""),
+                    SimpleNamespace(returncode=0, stdout=str(mountpoint) + "\n"),
+            )):
+                with self.assertRaisesRegex(TOOL.CaptureError, "unable to unmount"):
+                    TOOL.unmount(mountpoint)
 
     def test_output_rejects_repository_media_and_system_temp_paths(self) -> None:
         with temporary_directory() as directory:
