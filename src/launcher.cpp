@@ -463,10 +463,16 @@ std::optional<ResolvedLaunchRequest> resolve_launch_request_identity(
 
 void LauncherRouteState::focus_game(const std::vector<ReleaseArchive>& releases,
     const Game next_game) {
+    const bool game_changed = game != next_game;
     const auto prior_platform = platform;
     game = next_game;
     platform = select_available_platform(releases, game, platform);
-    if (platform != prior_platform) {
+    // A platform name is not a release identity. In particular, both games
+    // can have Amiga media, so retaining an old game hash merely because the
+    // platform card did not move would create a stale menu route. Clear it
+    // before the new game can enter platforms/releases/profiles; a later
+    // exact resolver may only fill it from this game's scanner identities.
+    if (game_changed || platform != prior_platform) {
         release_language.reset();
         release_sha256.reset();
     }

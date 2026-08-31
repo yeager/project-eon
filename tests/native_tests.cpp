@@ -1755,6 +1755,24 @@ int main() {
             "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"));
         assert(language_controller.source_changed_since(english_identity));
 
+        // Changing games must revoke the previous outer identity even if the
+        // same platform card remains available. No old Millennium Amiga hash
+        // may be visible while Deuteros Amiga is being selected.
+        const std::vector<eon::ReleaseArchive> shared_amiga_games{
+            {eon::Game::millennium, eon::Platform::amiga, "en",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", {}},
+            {eon::Game::deuteros, eon::Platform::amiga, "en",
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", {}},
+        };
+        eon::LauncherRouteState shared_platform_route;
+        shared_platform_route.focus_game(shared_amiga_games, eon::Game::millennium);
+        assert(shared_platform_route.choose_platform(shared_amiga_games, eon::Platform::amiga));
+        assert(shared_platform_route.release_is_selected());
+        shared_platform_route.focus_game(shared_amiga_games, eon::Game::deuteros);
+        assert(shared_platform_route.platform == eon::Platform::amiga);
+        assert(!shared_platform_route.release_language && !shared_platform_route.release_sha256
+            && !shared_platform_route.release_is_selected());
+
         // Presentation and Custom confirmation have the same SDL-free owner
         // as the card route. A Custom card cannot bypass its renderer-only
         // panel, while Original/Modern resolve the identical release identity.
