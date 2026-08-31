@@ -414,6 +414,7 @@ struct ModernRuntimeDiagnostics {
         std::string runtime_status;
     };
     std::string release_identity;
+    std::string runtime_admission = "UNSELECTED";
     // The first hash-checked address is a preservation navigation marker,
     // not a request to execute, emulate, or hook original machine code.
     std::string startup_boundary = "—";
@@ -956,8 +957,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
     draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::pair<const char*, std::string>, 9> rows{{
+    const std::array<std::pair<const char*, std::string>, 10> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
+        {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
         {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
@@ -4412,6 +4414,12 @@ int main(int argc, char** argv) {
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
         diagnostics.release_identity = tr("NOT SELECTED");
+        switch (runtime_coordinator.admission()) {
+        case eon::ReleaseRuntimeAdmission::unselected: diagnostics.runtime_admission = "UNSELECTED"; break;
+        case eon::ReleaseRuntimeAdmission::active: diagnostics.runtime_admission = "ACTIVE"; break;
+        case eon::ReleaseRuntimeAdmission::identity_rejected: diagnostics.runtime_admission = "IDENTITY REJECTED"; break;
+        case eon::ReleaseRuntimeAdmission::archive_rejected: diagnostics.runtime_admission = "ARCHIVE REJECTED"; break;
+        }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");
         if (modern_pack_admission == ModernPackAdmission::ready && selected_modern_pack_preflight
