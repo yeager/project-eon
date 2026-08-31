@@ -317,3 +317,9 @@ msgstr "غير محدود (العرض فقط)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "إعدادات العرض الأصلية"
+
+msgid "Discovering files: "
+msgstr "اكتشاف الملفات: "
+
+msgid "Files hashed: "
+msgstr "الملفات المُجزأة: "

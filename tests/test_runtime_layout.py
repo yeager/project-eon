@@ -43,7 +43,7 @@ class RuntimeLayoutTests(unittest.TestCase):
         self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"', CMAKE)
         self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets/branding"', CMAKE)
         self.assertIn('INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}/project-eon"', CMAKE)
-        self.assertIn('install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")', CMAKE)
+        self.assertIn('install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po"', CMAKE)
         self.assertIn('executable_directory / "po"', I18N)
         self.assertIn('executable_directory / ".." / "share" / "project-eon" / "po"', I18N)
         self.assertIn('base / "assets" / directory / filename', MAIN)

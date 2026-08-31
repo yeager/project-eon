@@ -5045,8 +5045,11 @@ int main(int argc, char** argv) {
                 SDL_FRect overlay{64, 574, 1152, 104};
                 SDL_RenderFillRect(renderer, &overlay);
                 draw_text(renderer, 86, 596, tr("DATA SCANNER (content hashes, read-only)"));
-                draw_text(renderer, 86, 620, tr("Files scanned: ") + std::to_string(scanner->scanned_count())
-                    + " / " + std::to_string(scanner->candidate_count()));
+                const auto scanner_progress = scanner->discovering()
+                    ? tr("Discovering files: ") + std::to_string(scanner->candidate_count())
+                    : tr("Files hashed: ") + std::to_string(scanner->scanned_count())
+                        + " / " + std::to_string(scanner->candidate_count());
+                draw_text(renderer, 86, 620, scanner_progress);
                 draw_text(renderer, 86, 644, scanner->done()
                     ? tr("Complete. Only hash-verified original releases are selectable.")
                     : tr("Scanning in progress. Press D to hide this progress panel."));

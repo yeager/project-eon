@@ -55,25 +55,68 @@ ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
     std::error_code error;
     if (std::filesystem::is_regular_file(directory, error) && !error) {
         candidates_.push_back(directory);
-        report_.candidates = candidates_.size();
+        finish_candidate_inventory();
         return;
     }
     error.clear();
-    for (std::filesystem::recursive_directory_iterator iterator(
-             directory, std::filesystem::directory_options::skip_permission_denied, error), end;
-         !error && iterator != end; iterator.increment(error)) {
-        std::error_code file_error;
-        if (!iterator->is_regular_file(file_error) || file_error) continue;
-        candidates_.push_back(iterator->path());
+    if (std::filesystem::is_directory(directory, error) && !error) {
+        directories_.push_back(directory);
+    } else {
+        // A missing default data directory is an empty, completed scan. The
+        // lookup itself never creates it.
+        finish_candidate_inventory();
     }
+}
+
+void ReleaseScanner::finish_candidate_inventory() {
     std::sort(candidates_.begin(), candidates_.end());
     report_.candidates = candidates_.size();
+    candidate_inventory_complete_ = true;
 }
 
 bool ReleaseScanner::advance(std::size_t max_files) {
-    const auto until = std::min(candidates_.size(), next_candidate_ + max_files);
-    while (next_candidate_ < until) {
+    std::size_t remaining = max_files;
+    while (remaining != 0 && !candidate_inventory_complete_) {
+        if (active_directory_ == std::filesystem::directory_iterator{}) {
+            if (next_directory_ == directories_.size()) {
+                finish_candidate_inventory();
+                break;
+            }
+            std::error_code error;
+            active_directory_ = std::filesystem::directory_iterator(
+                directories_[next_directory_++],
+                std::filesystem::directory_options::skip_permission_denied, error);
+            if (error) {
+                // Directory traversal has no candidate to account for. This
+                // matches the previous recursive scanner: unreadable files,
+                // not inaccessible directories, are part of the aggregate
+                // candidate accounting contract.
+                active_directory_ = {};
+                continue;
+            }
+            if (active_directory_ == std::filesystem::directory_iterator{}) continue;
+        }
+
+        const auto entry = *active_directory_;
+        std::error_code increment_error;
+        active_directory_.increment(increment_error);
+        if (increment_error) {
+            active_directory_ = {};
+        }
+        --remaining;
+
+        std::error_code type_error;
+        if (entry.is_directory(type_error) && !type_error && !entry.is_symlink(type_error)) {
+            directories_.push_back(entry.path());
+            continue;
+        }
+        type_error.clear();
+        if (entry.is_regular_file(type_error) && !type_error) candidates_.push_back(entry.path());
+    }
+
+    while (remaining != 0 && candidate_inventory_complete_ && next_candidate_ < candidates_.size()) {
         const auto& candidate = candidates_[next_candidate_++];
+        --remaining;
         try {
             const auto size = std::filesystem::file_size(candidate);
             const auto manifest = release_manifest();

@@ -317,3 +317,9 @@ msgstr "ΧΩΡΙΣ ΟΡΙΟ (ΜΟΝΟ ΑΠΟΔΟΣΗ)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "ΡΥΘΜΙΣΕΙΣ ΑΡΧΙΚΗΣ ΕΜΦΑΝΙΣΗΣ"
+
+msgid "Discovering files: "
+msgstr "Εντοπισμός αρχείων: "
+
+msgid "Files hashed: "
+msgstr "Αρχεία με κατακερματισμό: "

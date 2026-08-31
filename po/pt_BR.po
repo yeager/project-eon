@@ -356,3 +356,9 @@ msgstr "SEM LIMITE (SOMENTE RENDERIZAÇÃO)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "CONFIGURAÇÕES DE EXIBIÇÃO ORIGINAL"
+
+msgid "Discovering files: "
+msgstr "Descobrindo arquivos: "
+
+msgid "Files hashed: "
+msgstr "Arquivos com hash: "

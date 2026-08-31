@@ -356,3 +356,9 @@ msgstr "OBEGRÄNSAD (ENDAST RENDERING)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "URSPRUNGLIGA VISNINGSINSTÄLLNINGAR"
+
+msgid "Discovering files: "
+msgstr "Söker filer: "
+
+msgid "Files hashed: "
+msgstr "Hashade filer: "

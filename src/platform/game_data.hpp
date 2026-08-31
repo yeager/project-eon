@@ -41,23 +41,38 @@ struct ReleaseScanReport {
     std::size_t unreadable_candidates = 0;
 };
 
-// A bounded, read-only scan over a user-selected directory.  The launcher
-// advances this while rendering so data verification never replaces its first
-// frame with a blocking hash pass.  Recognition remains content-addressed.
+// A bounded, read-only scan over a user-selected directory. Both directory
+// discovery and hashing advance through the same explicit work budget, so the
+// launcher can draw before a large Downloads directory has been enumerated.
+// Candidate paths are sorted only after discovery completes; recognition
+// remains content-addressed and duplicate selection stays deterministic.
 class ReleaseScanner {
 public:
     explicit ReleaseScanner(const std::filesystem::path& directory);
 
-    // Hash at most max_files candidates. Returns true once the scan is done.
+    // Visit or hash at most max_files filesystem entries/candidates. Returns
+    // true once discovery and content hashing are both complete.
     bool advance(std::size_t max_files = 1);
-    [[nodiscard]] bool done() const { return next_candidate_ >= candidates_.size(); }
+    [[nodiscard]] bool done() const {
+        return candidate_inventory_complete_ && next_candidate_ >= candidates_.size();
+    }
+    [[nodiscard]] bool discovering() const { return !candidate_inventory_complete_; }
     [[nodiscard]] std::size_t scanned_count() const { return next_candidate_; }
+    // This is the number discovered so far while enumeration is active, and
+    // the final candidate total once it completes. Callers must consult
+    // discovering() before presenting it as a complete total.
     [[nodiscard]] std::size_t candidate_count() const { return candidates_.size(); }
     [[nodiscard]] const std::vector<ReleaseArchive>& releases() const { return releases_; }
     [[nodiscard]] const ReleaseScanReport& report() const { return report_; }
 
 private:
+    void finish_candidate_inventory();
+
     std::vector<std::filesystem::path> candidates_;
+    std::vector<std::filesystem::path> directories_;
+    std::size_t next_directory_ = 0;
+    std::filesystem::directory_iterator active_directory_;
+    bool candidate_inventory_complete_ = false;
     std::size_t next_candidate_ = 0;
     std::vector<ReleaseArchive> releases_;
     ReleaseScanReport report_;

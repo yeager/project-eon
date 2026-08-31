@@ -317,3 +317,9 @@ msgstr "無制限（描画のみ）"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "オリジナル表示設定"
+
+msgid "Discovering files: "
+msgstr "ファイルを検出中: "
+
+msgid "Files hashed: "
+msgstr "ハッシュ済みファイル: "

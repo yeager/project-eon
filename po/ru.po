@@ -356,3 +356,9 @@ msgstr "БЕЗ ОГРАНИЧЕНИЯ (ТОЛЬКО РЕНДЕРИНГ)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "НАСТРОЙКИ ОРИГИНАЛЬНОГО ОТОБРАЖЕНИЯ"
+
+msgid "Discovering files: "
+msgstr "Поиск файлов: "
+
+msgid "Files hashed: "
+msgstr "Файлы с хешем: "

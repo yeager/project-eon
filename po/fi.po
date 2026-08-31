@@ -317,3 +317,9 @@ msgstr "RAJOITTAMATON (VAIN RENDERÖINTI)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "ALKUPERÄISET NÄYTTÖASETUKSET"
+
+msgid "Discovering files: "
+msgstr "Etsitään tiedostoja: "
+
+msgid "Files hashed: "
+msgstr "Tiivistetyt tiedostot: "

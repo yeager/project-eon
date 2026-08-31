@@ -317,3 +317,9 @@ msgstr "UNCAPPED (RENDER ONLY)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "ORIGINAL DISPLAY SETTINGS"
+
+msgid "Discovering files: "
+msgstr "Discovering files: "
+
+msgid "Files hashed: "
+msgstr "Files hashed: "
