@@ -369,6 +369,23 @@ ModernAssetPackRendererTargets modern_asset_pack_renderer_targets(const ModernAs
     return targets;
 }
 
+ModernAssetPackPreflight preflight_modern_asset_pack(const std::filesystem::path& manifest_path,
+    const Game game, const Platform platform, const std::string_view source_release_sha256) {
+    ModernAssetPackPreflight result;
+    const auto validation = validate_modern_asset_pack(manifest_path);
+    if (!validation.accepted()) { result.error = validation.error; return result; }
+    const auto& pack = validation.pack;
+    if (pack.game != game || pack.platform != platform || pack.source_release_sha256 != source_release_sha256) {
+        result.error = "Modern asset pack does not match the selected original release";
+        return result;
+    }
+    result.accepted = true;
+    result.pack_id = pack.id;
+    result.provenance = pack.provenance;
+    result.targets = modern_asset_pack_renderer_targets(pack);
+    return result;
+}
+
 ModernAssetPackValidation validate_modern_asset_pack(const std::filesystem::path& manifest_path) {
     std::uintmax_t manifest_size = 0;
     std::string error;

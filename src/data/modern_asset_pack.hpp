@@ -52,6 +52,21 @@ struct ModernAssetPackRendererTargets {
 [[nodiscard]] ModernAssetPackRendererTargets modern_asset_pack_renderer_targets(
     const ModernAssetPack& pack);
 
+struct ModernAssetPackPreflight {
+    bool accepted = false;
+    std::string pack_id;
+    std::string provenance;
+    ModernAssetPackRendererTargets targets;
+    std::string error;
+};
+
+// Validate one explicitly chosen manifest against an already hash-verified
+// release identity. This is read-only and does not decode, select, or render
+// assets; callers must revalidate again at actual texture use.
+[[nodiscard]] ModernAssetPackPreflight preflight_modern_asset_pack(
+    const std::filesystem::path& manifest_path, Game game, Platform platform,
+    std::string_view source_release_sha256);
+
 // The first renderable v1 target is intentionally narrow: a 640x400 RGBA PNG
 // replacement for the recovered Millennium DOS English P00 title. This is a
 // renderer input only, not an original resource decoder.
