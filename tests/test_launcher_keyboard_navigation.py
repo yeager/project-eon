@@ -171,6 +171,18 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("session_snapshot_ = std::move(session_snapshot)", runtime_source)
         self.assertIn("session_snapshot_.reset()", runtime_source)
         self.assertIn("make_runtime_session_snapshot", runtime_source)
+
+    def test_dos_text_observations_cross_the_coordinator_not_a_local_session(self) -> None:
+        runtime_source = (ROOT / "src" / "engine" / "release_runtime.cpp").read_text(encoding="utf-8")
+        runtime_header = (ROOT / "src" / "engine" / "runtime_session.hpp").read_text(encoding="utf-8")
+        self.assertIn("RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input", runtime_source)
+        self.assertIn("RuntimeInputObservationKind::ascii_character", runtime_source)
+        self.assertIn("RuntimeInputObservationKind::character_available", runtime_header)
+        self.assertIn("RuntimeInputDisposition::rejected", runtime_source)
+        self.assertIn("RuntimeInputObservation::ascii(event.text.text[0])", SOURCE)
+        self.assertIn("RuntimeInputObservation::available_character()", SOURCE)
+        self.assertNotIn("millennium_sound_selection_session->accept_ascii_character", SOURCE)
+        self.assertNotIn("millennium_title_session->poll_console(true)", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::directory", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::archive", SOURCE)
         self.assertIn("eon::classify_original_data_source", SOURCE)
@@ -264,7 +276,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:
         modal = SOURCE.index("if (show_modern_graphics_settings) {")
         modal_continue = SOURCE.index("                continue;", modal)
-        title_input = SOURCE.index("millennium_title_session->poll_console(true)")
+        title_input = SOURCE.index("RuntimeInputObservation::available_character()")
         menu_input = SOURCE.index("LauncherPage::games", modal_continue)
         self.assertLess(modal, modal_continue)
         self.assertLess(modal_continue, title_input)
@@ -274,7 +286,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # INT 21h/AH=06h branches only on a nonzero console character result.
         # SDL text input is the narrow host availability analogue; a physical
         # key event must not be treated as a made-up DOS character.
-        title_poll = SOURCE.index("millennium_title_session->poll_console(true)")
+        title_poll = SOURCE.index("RuntimeInputObservation::available_character()")
         self.assertIn("SDL_StartTextInput(window)", SOURCE)
         self.assertIn("SDL_StopTextInput(window)", SOURCE)
         text_event = SOURCE.rfind("event.type == SDL_EVENT_TEXT_INPUT", 0, title_poll)
@@ -292,7 +304,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         start = SOURCE.index("const auto start_millennium_title")
         self.assertLess(stop, start)
         self.assertIn("SDL_StopTextInput(window)", SOURCE[stop:start])
-        self.assertIn("millennium_title_session.reset();", SOURCE[stop:start])
+        self.assertIn("millennium_title_session = nullptr;", SOURCE[stop:start])
+        self.assertIn("runtime_coordinator.reset();", SOURCE)
         self.assertIn("reset_active_runtime();\n                    screen = Screen::menu;", SOURCE)
         self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])
 

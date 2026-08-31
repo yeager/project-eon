@@ -43,6 +43,8 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     // new identity. A failed leaf/parser admission must not leave a previous
     // adapter or a half-built replacement observable to SDL.
     std::optional<MillenniumDosRuntimeAssets> millennium_dos;
+    std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection;
+    std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
@@ -89,7 +91,28 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
         return false;
     }
+    try {
+        // These two objects stay inside the release-bound coordinator, rather
+        // than allowing SDL to manufacture or retain a DOS input state. Their
+        // constructors validate the exact parser evidence again.
+        if (millennium_dos && millennium_dos->sound_selection && millennium_dos->sound_selection_prompt) {
+            millennium_dos_sound_selection = std::make_unique<MillenniumDosSoundSelectionSession>(
+                *millennium_dos->sound_selection, millennium_dos->sound_blaster_driver,
+                millennium_dos->covox_driver);
+        } else if (millennium_dos && millennium_dos->title_flow) {
+            millennium_dos_title = std::make_unique<MillenniumDosTitleSession>(*millennium_dos->title_flow);
+        } else if (millennium_dos && millennium_dos->spanish_title_boundary) {
+            millennium_dos_title = std::make_unique<MillenniumDosTitleSession>(
+                *millennium_dos->spanish_title_boundary);
+        }
+    } catch (...) {
+        reset();
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        return false;
+    }
     millennium_dos_ = std::move(millennium_dos);
+    millennium_dos_sound_selection_ = std::move(millennium_dos_sound_selection);
+    millennium_dos_title_ = std::move(millennium_dos_title);
     millennium_amiga_ = std::move(millennium_amiga);
     millennium_atari_ = std::move(millennium_atari);
     deuteros_amiga_ = std::move(deuteros_amiga);
@@ -101,6 +124,8 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    millennium_dos_sound_selection_.reset();
+    millennium_dos_title_.reset();
     millennium_dos_.reset();
     millennium_amiga_.reset();
     millennium_atari_.reset();
@@ -109,6 +134,24 @@ void ReleaseRuntimeCoordinator::reset() {
     session_snapshot_.reset();
     active_.reset();
     admission_ = ReleaseRuntimeAdmission::unselected;
+}
+
+RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
+    const RuntimeInputObservation& observation) {
+    // Do not accept a generic input event just because a session is active.
+    // The two branches below are the complete, typed evidence currently
+    // admitted for Millennium DOS; all other adapters fail closed.
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title) {
+        return RuntimeInputDisposition::rejected;
+    }
+    if (observation.kind == RuntimeInputObservationKind::ascii_character) {
+        if (!millennium_dos_sound_selection_) return RuntimeInputDisposition::rejected;
+        return millennium_dos_sound_selection_->accept_ascii_character(observation.ascii_character)
+            ? RuntimeInputDisposition::boundary_reached : RuntimeInputDisposition::ignored;
+    }
+    if (!millennium_dos_title_) return RuntimeInputDisposition::rejected;
+    return millennium_dos_title_->poll_console(true)
+        ? RuntimeInputDisposition::boundary_reached : RuntimeInputDisposition::ignored;
 }
 
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,

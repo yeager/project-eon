@@ -286,11 +286,13 @@ selected outer release is rehashed and exactly one typed platform adapter is
 constructed. The snapshot holds release identity, the adapter kind, narrowly
 declared presentation/audio observation capabilities, and the next hard
 boundary. It contains no filesystem path, archive member, original bytes, SDL
-object, inferred input mapping, save state, or generic game model. Every
-currently shipped snapshot declares `admitted_input = false`; forwarding a new
-input requires its own caller-connected evidence. Resetting or rejecting a
-launch clears the snapshot atomically with the adapter. This is shared runtime
-plumbing, not a claim that a session is playable or frame-parity complete.
+object, inferred input mapping, save state, or generic game model. The
+Millennium DOS title snapshot alone declares `admitted_input = true`, and its
+coordinator accepts only a literal ASCII sound-choice byte or the separately
+observed nonzero DOS console-availability result. Every other input requires
+its own caller-connected evidence. Resetting or rejecting a launch clears the
+snapshot atomically with the adapter. This is shared runtime plumbing, not a
+claim that a session is playable or frame-parity complete.
 The F10 developer diagnostics page reads this same snapshot; its adapter and
 boundary values are provenance codes, while the visible row labels remain
 translated launcher chrome.

@@ -294,7 +294,7 @@ def main() -> int:
                     "capabilities": {
                         "decoded_presentation": True,
                         "audio_observations": False,
-                        "admitted_input": False,
+                        "admitted_input": True,
                     },
                 },
             }):

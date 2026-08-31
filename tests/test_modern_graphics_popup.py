@@ -269,7 +269,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         modal = SOURCE.index("if (show_modern_graphics_settings) {")
         self.assertIn("SDL_GAMEPAD_BUTTON_BACK", SOURCE[modal:])
         self.assertIn("                continue;", SOURCE[modal:])
-        self.assertLess(modal, SOURCE.index("millennium_title_session->poll_console(true)"))
+        self.assertLess(modal, SOURCE.index("RuntimeInputObservation::available_character()"))
 
     def test_popup_makes_custom_settings_usable_with_touch_without_game_input(self) -> None:
         """A Custom card opened by touch must be dismissible on an iPad."""
@@ -292,7 +292,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertLess(f10_guard, modal)
 
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:
-        title_poll = SOURCE.index("millennium_title_session->poll_console(true)")
+        title_poll = SOURCE.index("RuntimeInputObservation::available_character()")
         f10_guard = SOURCE.rfind("event.key.key == SDLK_F10", 0, title_poll)
         text_input = SOURCE.rfind("event.type == SDL_EVENT_TEXT_INPUT", 0, title_poll)
         self.assertGreaterEqual(f10_guard, 0)
