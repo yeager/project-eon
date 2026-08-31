@@ -11,7 +11,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 8> entries{{
+constexpr std::array<FunctionMapEntry, 10> entries{{
     {"millennium-dos-en-launcher-driver-request", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-launcher", Game::millennium, Platform::dos, "en", "i8086",
      "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e",
@@ -54,6 +54,18 @@ constexpr std::array<FunctionMapEntry, 8> entries{{
      "2200GX.EXE+0x0000", "$0100", "verified-static",
      "selector policy, overlay segment, handler results, resource order, and display effects remain unproven",
      "trace-gated sparse GX startup session", "PRESERVATION.md#millennium-dos-execution-model"},
+    {"millennium-dos-es-title-entry", "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4",
+     "millennium-dos-spanish-title-boundary", Game::millennium, Platform::dos, "es", "i8086",
+     "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7",
+     "TITLES.EXE+0x1a80", "$1b80", "verified-static",
+     "private-driver results, DOS character semantics, child status, frames, and game state remain unproven",
+     "diagnostics only", "PRESERVATION.md#millennium-spanish-dos-floppy-evidence"},
+    {"deuteros-amiga-en-main-entry", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+     "deuteros-amiga-clean-main-stage", Game::deuteros, Platform::amiga, "en", "m68000",
+     "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+     "ADF+0x06f34", "$21734", "verified-static",
+     "decoded disk-read results, Exec/graphics ABI, input, timing, and game state remain unproven",
+     "diagnostics only", "PRESERVATION.md#deuteros-amiga-execution-chain"},
     {"deuteros-amiga-en-title-exec-boundary", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
