@@ -531,7 +531,9 @@ for the already documented, recorder-owned `INT 6` callback boundary. It polls
 only the recorder's newly completed, bounded `results.raw` file and kills the
 external DOSBox-X process after the exact validated raw fault record appears.
 It does not install an interrupt vector, write guest memory, alter registers,
-inject input, or let a partially written line qualify. The helper records
+inject input, or let a partially written line qualify. It accepts the reason
+only for exactly one complete raw fault record; a missing, malformed, or
+repeated fault remains under ordinary timeout/safety-cap handling. The helper records
 `termination_reason=known-unhandled-interrupt` with exit status `126`; receipt
 v10 requires that finite reason/status relationship.
 

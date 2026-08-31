@@ -158,7 +158,7 @@ def verify_millennium_host_input_summary(fields: dict[str, str], directory: Path
         raise ValueError("host-input receipt grammar/count mismatch")
 
 
-def verify_millennium_termination(fields: dict[str, str]) -> None:
+def verify_millennium_termination(fields: dict[str, str], directory: Path) -> None:
     tool = load_tool("run_millennium_dos_capture")
     reason = fields.get("termination_reason")
     if reason not in tool.TERMINATION_REASONS:
@@ -170,6 +170,12 @@ def verify_millennium_termination(fields: dict[str, str]) -> None:
     }.get(reason)
     if expected_status is not None and fields.get("exit_status") != expected_status:
         raise ValueError("Millennium capture termination reason does not match exit status")
+    if reason == "known-unhandled-interrupt":
+        if fields.get("results_raw") != "present":
+            raise ValueError("Millennium early stop requires a retained raw result log")
+        counts = tool.parse_raw_results(directory / "results.raw")
+        if counts.get("fault") != 1:
+            raise ValueError("Millennium early stop requires exactly one raw unhandled-interrupt observation")
 
 
 def verify(kind: str, directory: Path) -> None:
@@ -195,7 +201,7 @@ def verify(kind: str, directory: Path) -> None:
         if version in {"6", "7", "8", "9", "10"}:
             verify_millennium_machine_profile(fields, directory)
         if version == "10":
-            verify_millennium_termination(fields)
+            verify_millennium_termination(fields, directory)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))

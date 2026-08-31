@@ -379,7 +379,11 @@ def known_unhandled_interrupt_observed(path: Path) -> bool:
     if not text.endswith("\n"):
         return False
     try:
-        return "fault" in parse_raw_results(path)
+        # The host-side early stop is justified only by the recorder's one
+        # bounded INT 6 observation.  A different or repeated fault shape is
+        # not interchangeable evidence and must remain under the normal
+        # duration/safety-cap handling rather than acquiring this reason.
+        return parse_raw_results(path).get("fault") == 1
     except CaptureError:
         return False
 

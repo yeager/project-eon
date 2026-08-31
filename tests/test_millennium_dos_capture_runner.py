@@ -162,6 +162,10 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
             results.write_bytes(results.read_bytes() + b"\n")
             self.assertTrue(TOOL.known_unhandled_interrupt_observed(results))
+            results.write_bytes(results.read_bytes() +
+                b"raw-result\t2 2 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
+                b"ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n")
+            self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
             results.write_bytes(b"not a recorder record\n")
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
 

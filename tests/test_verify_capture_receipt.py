@@ -147,14 +147,31 @@ class ReceiptVerifierTests(unittest.TestCase):
                 TOOL.verify_millennium_machine_profile({"machine_profile": "svga_s3"}, root)
 
     def test_v10_millennium_termination_reason_is_bound_to_early_stop_status(self) -> None:
-        TOOL.verify_millennium_termination(
-            {"termination_reason": "known-unhandled-interrupt", "exit_status": "126"})
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "results.raw").write_text(
+                "raw-result\t1 1 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
+                "ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n",
+                encoding="ascii")
+            TOOL.verify_millennium_termination(
+                {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
+                 "results_raw": "present"}, root)
+            (root / "results.raw").write_text(
+                "raw-result\t1 1 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
+                "ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n"
+                "raw-result\t2 2 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
+                "ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(ValueError, "exactly one"):
+                TOOL.verify_millennium_termination(
+                    {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
+                     "results_raw": "present"}, root)
         with self.assertRaisesRegex(ValueError, "termination reason"):
             TOOL.verify_millennium_termination(
-                {"termination_reason": "known-unhandled-interrupt", "exit_status": "124"})
+                {"termination_reason": "known-unhandled-interrupt", "exit_status": "124"}, Path("/"))
         with self.assertRaisesRegex(ValueError, "invalid termination"):
             TOOL.verify_millennium_termination(
-                {"termination_reason": "made-up", "exit_status": "0"})
+                {"termination_reason": "made-up", "exit_status": "0"}, Path("/"))
 
     def test_v6_deuteros_timing_profile_matches_generated_configuration(self) -> None:
         with temporary_directory() as directory:
