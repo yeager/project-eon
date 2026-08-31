@@ -1591,6 +1591,12 @@ int main() {
         assert(!runtime_coordinator.acquire(forged_runtime_launch));
         assert(!runtime_coordinator.active()
             && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::archive_rejected);
+        assert(eon::release_runtime_admission_label(
+            eon::ReleaseRuntimeAdmission::identity_rejected) == "REJECTED: IDENTITY");
+        assert(eon::release_runtime_admission_label(
+            eon::ReleaseRuntimeAdmission::archive_rejected) == "REJECTED: ARCHIVE HASH");
+        assert(eon::release_runtime_admission_label(
+            eon::ReleaseRuntimeAdmission::adapter_rejected) == "REJECTED: ADAPTER");
         runtime_coordinator.reset();
         assert(!runtime_coordinator.active()
             && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::unselected);
@@ -3124,7 +3130,9 @@ int main() {
     // both title pixels and the bounded title/startup evidence together.
     const auto english_dos_runtime = eon::load_millennium_dos_runtime(*english_dos);
     assert(english_dos_runtime && english_dos_runtime->language == "en");
-    assert(english_dos_runtime->title.width == 640 && english_dos_runtime->title.height == 400);
+    // P00's own codec-2 header, not the Modern renderer target tier, fixes
+    // the recovered Original title at 320x200 indexed pixels.
+    assert(english_dos_runtime->title.width == 320 && english_dos_runtime->title.height == 200);
     assert(english_dos_runtime->title.rgba_frames.size() == 1);
     assert(english_dos_runtime->gx_canvas && english_dos_runtime->title_flow
         && english_dos_runtime->sound_selection && english_dos_runtime->sound_selection_prompt
@@ -3137,7 +3145,7 @@ int main() {
     assert(spanish_dos != releases.end());
     const auto spanish_dos_runtime = eon::load_millennium_dos_runtime(*spanish_dos);
     assert(spanish_dos_runtime && spanish_dos_runtime->language == "es");
-    assert(spanish_dos_runtime->title.width == 640 && spanish_dos_runtime->title.height == 400);
+    assert(spanish_dos_runtime->title.width == 320 && spanish_dos_runtime->title.height == 200);
     assert(spanish_dos_runtime->title.rgba_frames.size() == 1);
     assert(spanish_dos_runtime->spanish_title_boundary && !spanish_dos_runtime->gx_canvas
         && !spanish_dos_runtime->title_flow && !spanish_dos_runtime->game_flow
@@ -3152,11 +3160,13 @@ int main() {
     admitted_dos_launch.request.release_sha256 = english_dos->sha256;
     eon::ReleaseRuntimeCoordinator admitted_dos_runtime;
     assert(admitted_dos_runtime.acquire(admitted_dos_launch));
+    assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "READY");
     assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos());
     assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari()
         && !admitted_dos_runtime.deuteros_amiga() && !admitted_dos_runtime.deuteros_atari());
     admitted_dos_runtime.reset();
     assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos());
+    assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
     // Every recognised outer identity admits exactly one engine-owned startup
     // adapter. Reusing the coordinator also proves a prior platform's object
     // is destroyed before the next hash-checked release can become active.

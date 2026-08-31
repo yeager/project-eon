@@ -53,6 +53,15 @@ msgstr "ГОТОВО"
 msgid "REJECTED"
 msgstr "ОТКЛОНЕНО"
 
+msgid "REJECTED: IDENTITY"
+msgstr "ОТКЛОНЕНО: ИДЕНТИЧНОСТЬ"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "ОТКЛОНЕНО: ХЕШ АРХИВА"
+
+msgid "REJECTED: ADAPTER"
+msgstr "ОТКЛОНЕНО: АДАПТЕР"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ВЫБРАТЬ ПАПКУ С ОРИГИНАЛЬНЫМИ ДАННЫМИ ИГРЫ (O)"
 
@@ -333,6 +342,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "НЕ ВЫБРАНО"
+
+msgid "RUNTIME ADMISSION"
+msgstr "ДОПУСК ВЫПОЛНЕНИЯ"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

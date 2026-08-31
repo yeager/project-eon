@@ -53,6 +53,15 @@ msgstr "已就绪"
 msgid "REJECTED"
 msgstr "已拒绝"
 
+msgid "REJECTED: IDENTITY"
+msgstr "已拒绝：身份"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "已拒绝：存档哈希"
+
+msgid "REJECTED: ADAPTER"
+msgstr "已拒绝：适配器"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "选择原始游戏数据文件夹 (O)"
 
@@ -333,6 +342,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "未选择"
+
+msgid "RUNTIME ADMISSION"
+msgstr "运行时准入"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

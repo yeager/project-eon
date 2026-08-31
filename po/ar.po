@@ -42,6 +42,15 @@ msgstr "جاهز"
 msgid "REJECTED"
 msgstr "مرفوض"
 
+msgid "REJECTED: IDENTITY"
+msgstr "مرفوض: الهوية"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "مرفوض: تجزئة الأرشيف"
+
+msgid "REJECTED: ADAPTER"
+msgstr "مرفوض: المهايئ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "اختر مجلد بيانات اللعبة الأصلية (O)"
 
@@ -294,6 +303,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "غير محدد"
+
+msgid "RUNTIME ADMISSION"
+msgstr "قبول وقت التشغيل"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

@@ -42,6 +42,15 @@ msgstr "ΕΤΟΙΜΟ"
 msgid "REJECTED"
 msgstr "ΑΠΟΡΡΙΦΘΗΚΕ"
 
+msgid "REJECTED: IDENTITY"
+msgstr "ΑΠΟΡΡΙΦΘΗΚΕ: ΤΑΥΤΟΤΗΤΑ"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "ΑΠΟΡΡΙΦΘΗΚΕ: HASH ΑΡΧΕΙΟΥ"
+
+msgid "REJECTED: ADAPTER"
+msgstr "ΑΠΟΡΡΙΦΘΗΚΕ: ΠΡΟΣΑΡΜΟΓΕΑΣ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ΕΠΙΛΟΓΗ ΦΑΚΕΛΟΥ ΑΡΧΙΚΩΝ ΔΕΔΟΜΕΝΩΝ (O)"
 
@@ -294,6 +303,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "ΔΕΝ ΕΧΕΙ ΕΠΙΛΕΓΕΙ"
+
+msgid "RUNTIME ADMISSION"
+msgstr "ΑΠΟΔΟΧΗ ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

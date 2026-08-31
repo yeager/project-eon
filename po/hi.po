@@ -53,6 +53,15 @@ msgstr "तैयार"
 msgid "REJECTED"
 msgstr "अस्वीकृत"
 
+msgid "REJECTED: IDENTITY"
+msgstr "अस्वीकृत: पहचान"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "अस्वीकृत: आर्काइव हैश"
+
+msgid "REJECTED: ADAPTER"
+msgstr "अस्वीकृत: अडैप्टर"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "मूल गेम डेटा फ़ोल्डर चुनें (O)"
 
@@ -294,6 +303,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "चयनित नहीं"
+
+msgid "RUNTIME ADMISSION"
+msgstr "रनटाइम स्वीकृति"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"
