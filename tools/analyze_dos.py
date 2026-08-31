@@ -176,9 +176,17 @@ def main() -> None:
     lines = ["# Generated Millennium DOS binary report", ""]
     for name, data in sources:
         report = describe_bytes(Path(name).name, data)
-        listing_offset = 0 if args.complete_linear else report["entry_file_offset"]
-        listing_address = 0x100 if args.complete_linear else report["entry_load_address"]
-        listing_count = len(data) if args.complete_linear else 96
+        complete_linear = args.complete_linear
+        has_entry_listing = complete_linear or report["entry_within_image"]
+        listing_offset = 0 if complete_linear else report["entry_file_offset"]
+        listing_address = 0x100 if complete_linear else report["entry_load_address"]
+        listing_count = len(data) if complete_linear else 96
+        entry_boundary = (
+            "- Entry candidate is within the hash-bound member."
+            if report["entry_within_image"] else
+            "- Entry candidate lies outside the hash-bound member by "
+            f"{report['entry_beyond_image_bytes']} bytes; it is an external runtime boundary, not a static code listing."
+        )
         lines.extend([
             f"## `{report['name']}`",
             "",
@@ -186,20 +194,22 @@ def main() -> None:
             f"- SHA-256: `{hashlib.sha256(data).hexdigest()}`",
             f"- Entry file offset: `0x{report['entry_file_offset']:x}`",
             f"- Entry load address: `0x{report['entry_load_address']:x}`",
+            entry_boundary,
             f"- Syntactic interrupt occurrences: {report['interrupts']}",
             "- Listing scope: " + ("entire image, linear candidate only (code/data unclassified)"
-                if args.complete_linear else "96 bytes from inferred entry candidate"),
+                if complete_linear else ("96 bytes from inferred entry candidate" if has_entry_listing
+                else "no entry listing: inferred target is outside the member")),
             *( ["- Linear coverage: every source byte is rendered as an instruction or explicit `.byte`."]
                if args.complete_linear else [] ),
             "",
             "```asm",
-            *disassemble(
+            *(disassemble(
                 data,
                 listing_address,
                 listing_offset,
                 listing_count,
-                complete_linear=args.complete_linear,
-            ),
+                complete_linear=complete_linear,
+            ) if has_entry_listing else ["; no bytes: inferred entry lies beyond the hash-bound member"]),
             "```",
             "",
             "Selected strings:",
