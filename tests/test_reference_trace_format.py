@@ -126,13 +126,18 @@ class ReferenceTraceFormatTests(unittest.TestCase):
     def test_declarative_adapter_boundary_maps_are_documented_and_compiled(self):
         code = TRACE_VALIDATOR.read_text(encoding="utf-8")
         documented = FORMAT.read_text(encoding="utf-8")
+        section_start = documented.index("### Declarative diagnostic boundary map")
+        section_end = documented.index("For the two physical-media adapters", section_start)
+        documented_map = documented[section_start:section_end]
         for adapter, boundaries in self.recovery_boundaries.items():
             with self.subTest(adapter=adapter):
                 self.assertIn(f'AdapterRecoveryMap{{"{adapter}"', code)
-                self.assertIn(f"`{adapter}`", documented)
+                row = next((line for line in documented_map.splitlines()
+                            if line.startswith(f"| `{adapter}` |")), "")
+                self.assertTrue(row, f"missing declarative boundary-map row for {adapter}")
                 for boundary in boundaries:
                     self.assertIn(f'"{boundary}"', code)
-                    self.assertIn(f"`{boundary}`", documented)
+                    self.assertIn(f"`{boundary}`", row)
 
     def test_title_display_v5_requires_real_hash_bound_artifacts_without_runtime_replay(self):
         code = TRACE_VALIDATOR.read_text(encoding="utf-8")
