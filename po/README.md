@@ -5,6 +5,12 @@ Project Eon reads UTF-8 GNU PO source files directly at runtime.  Keep one
 as `pt_BR.po` and `zh_CN.po` are selected for their language family too.
 English strings are source text and deliberately have no PO file.
 
+Run `cmake --build <build-directory> --target l10n` before packaging. It uses
+GNU gettext's `msgfmt` and `msgcmp` to validate PO syntax and ensure each of
+the 20 shipped catalogs matches `ProjectEon.pot`. The target writes temporary
+`.mo` probes only under the build directory; it never rewrites translation
+sources or original game data.
+
 The built application first looks beside itself and in its installed shared
 data directory; development builds also use this source directory. Packaging
 must keep all 20 catalogs, not merely the active developer locale:
