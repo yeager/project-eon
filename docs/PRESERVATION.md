@@ -72,6 +72,10 @@ unchanged path to `ReleaseScanner`. It does not inspect, open, extract, cache,
 or infer a release from the picker result. The scanner remains the sole
 bounded, hash-addressed recogniser, so a selected regular file is only a
 candidate until normal archive-size and SHA-256 verification succeeds.
+Directory traversal applies the same non-symlink rule to every encountered
+entry. Rejected links are counted only in the aggregate scan diagnostics; a
+link target, its name, and any bytes outside the selected collection are never
+opened or reported.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract

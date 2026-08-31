@@ -31,6 +31,8 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         body = MAIN[start:MAIN.index("SDL_FRect aspect_viewport", start)]
         self.assertIn(r'\"project-eon.inspect/v1\"', body)
         self.assertIn(r'\"function_map\"', body)
+        self.assertIn(r'\"source_kind\"', body)
+        self.assertIn(r'\"symlink_rejected_entries\"', body)
         self.assertIn("runtime_diagnostics_for_release(release)", body)
         self.assertIn("diagnostics.functions", body)
         self.assertNotIn("release.path", body)
