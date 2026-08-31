@@ -75,8 +75,17 @@ std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& d
 }
 
 void verify_release_archive(const ReleaseArchive& release) {
+    static_cast<void>(VerifiedReleaseMedia::open(release));
+}
+
+VerifiedReleaseMedia VerifiedReleaseMedia::open(const ReleaseArchive& release) {
     static_cast<void>(require_manifest_identity(release));
-    static_cast<void>(ZipArchive::open_verified(release.path, release.sha256));
+    return VerifiedReleaseMedia(release, ZipArchive::open_verified(release.path, release.sha256));
+}
+
+std::optional<std::vector<std::uint8_t>> VerifiedReleaseMedia::extract(
+    const std::string_view expected_asset_sha256) const {
+    return archive_.extract_asset_by_sha256(expected_asset_sha256);
 }
 
 std::vector<ArchiveAsset> inventory_verified_release(const ReleaseArchive& release) {

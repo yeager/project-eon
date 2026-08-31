@@ -3238,6 +3238,15 @@ int main() {
     // its platform/language metadata and the exact bytes reopened from disk
     // to one manifest identity, closing the scan-to-use provenance gap.
     eon::verify_release_archive(*english_dos);
+    // The coordinator uses this one verified, in-memory view for every
+    // adapter leaf during a single admission. It is an exact rehash of the
+    // supplied archive, never an extracted media cache.
+    const auto verified_dos_media = eon::VerifiedReleaseMedia::open(*english_dos);
+    const auto verified_title = verified_dos_media.extract(
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678");
+    assert(verified_title && !verified_title->empty());
+    const auto verified_dos_runtime = eon::load_millennium_dos_runtime(verified_dos_media);
+    assert(verified_dos_runtime && verified_dos_runtime->language == "en");
     const auto verified_dos_assets = eon::inventory_verified_release(*english_dos);
     assert(!verified_dos_assets.empty());
     // This exercises the SDL-free factory against the genuine recognised

@@ -33,8 +33,9 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         admission_ = ReleaseRuntimeAdmission::identity_rejected;
         return false;
     }
+    std::optional<VerifiedReleaseMedia> media;
     try {
-        verify_release_archive(launch.release);
+        media = VerifiedReleaseMedia::open(launch.release);
     } catch (...) {
         admission_ = ReleaseRuntimeAdmission::archive_rejected;
         return false;
@@ -54,17 +55,17 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     case Game::millennium:
         switch (launch.release.platform) {
         case Platform::dos:
-            millennium_dos = load_millennium_dos_runtime(launch.release);
+            millennium_dos = load_millennium_dos_runtime(*media);
             if (millennium_dos) session_snapshot = make_runtime_session_snapshot(launch,
                 RuntimeSessionKind::millennium_dos_title);
             break;
         case Platform::amiga:
-            millennium_amiga = load_millennium_amiga_runtime(launch.release);
+            millennium_amiga = load_millennium_amiga_runtime(*media);
             if (millennium_amiga) session_snapshot = make_runtime_session_snapshot(launch,
                 RuntimeSessionKind::millennium_amiga_bootstrap);
             break;
         case Platform::atari_st:
-            millennium_atari = load_millennium_atari_runtime(launch.release);
+            millennium_atari = load_millennium_atari_runtime(*media);
             if (millennium_atari) session_snapshot = make_runtime_session_snapshot(launch,
                 RuntimeSessionKind::millennium_atari_bootstrap);
             break;
@@ -74,12 +75,12 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         switch (launch.release.platform) {
         case Platform::dos: break;
         case Platform::amiga:
-            deuteros_amiga = load_deuteros_amiga_runtime(launch.release);
+            deuteros_amiga = load_deuteros_amiga_runtime(*media);
             if (deuteros_amiga) session_snapshot = make_runtime_session_snapshot(launch,
                 RuntimeSessionKind::deuteros_amiga_opening);
             break;
         case Platform::atari_st:
-            deuteros_atari = load_deuteros_atari_runtime(launch.release);
+            deuteros_atari = load_deuteros_atari_runtime(*media);
             if (deuteros_atari) session_snapshot = make_runtime_session_snapshot(launch,
                 RuntimeSessionKind::deuteros_atari_bootstrap);
             break;
@@ -190,37 +191,61 @@ RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinat
 }
 
 std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const ReleaseArchive& release) {
+    try { return load_deuteros_amiga_runtime(VerifiedReleaseMedia::open(release)); }
+    catch (...) { return {}; }
+}
+
+std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const VerifiedReleaseMedia& media) {
+    const auto& release = media.release();
     if (release.game != Game::deuteros || release.platform != Platform::amiga || release.language != "en") return {};
     constexpr auto clean_system_adf = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
     try {
-        const auto image = extract_verified_release_asset(release, clean_system_adf);
+        const auto image = media.extract(clean_system_adf);
         return image ? std::make_unique<DeuterosAmigaOpening>(std::move(*image)) : nullptr;
     } catch (...) { return {}; }
 }
 
 std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(const ReleaseArchive& release) {
+    try { return load_deuteros_atari_runtime(VerifiedReleaseMedia::open(release)); }
+    catch (...) { return {}; }
+}
+
+std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(const VerifiedReleaseMedia& media) {
+    const auto& release = media.release();
     if (release.game != Game::deuteros || release.platform != Platform::atari_st || release.language != "en") return {};
     constexpr auto disk = "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
     try {
-        const auto image = extract_verified_release_asset(release, disk);
+        const auto image = media.extract(disk);
         return image ? std::make_unique<DeuterosAtariBootstrapSession>(std::move(*image)) : nullptr;
     } catch (...) { return {}; }
 }
 
 std::unique_ptr<MillenniumAmigaBootstrapSession> load_millennium_amiga_runtime(const ReleaseArchive& release) {
+    try { return load_millennium_amiga_runtime(VerifiedReleaseMedia::open(release)); }
+    catch (...) { return {}; }
+}
+
+std::unique_ptr<MillenniumAmigaBootstrapSession> load_millennium_amiga_runtime(const VerifiedReleaseMedia& media) {
+    const auto& release = media.release();
     if (release.game != Game::millennium || release.platform != Platform::amiga || release.language != "en") return {};
     constexpr auto adf = "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
     try {
-        const auto image = extract_verified_release_asset(release, adf);
+        const auto image = media.extract(adf);
         return image ? std::make_unique<MillenniumAmigaBootstrapSession>(std::move(*image)) : nullptr;
     } catch (...) { return {}; }
 }
 
 std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(const ReleaseArchive& release) {
+    try { return load_millennium_atari_runtime(VerifiedReleaseMedia::open(release)); }
+    catch (...) { return {}; }
+}
+
+std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(const VerifiedReleaseMedia& media) {
+    const auto& release = media.release();
     if (release.game != Game::millennium || release.platform != Platform::atari_st || release.language != "en") return {};
     constexpr auto disk = "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
     try {
-        const auto image = extract_verified_release_asset(release, disk);
+        const auto image = media.extract(disk);
         if (!image) return {};
         const Fat12Disk volume(*image);
         const auto* executable = volume.find("MILENIUM.TOS");
@@ -230,6 +255,13 @@ std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(c
 
 std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
     const ReleaseArchive& release) {
+    try { return load_millennium_dos_runtime(VerifiedReleaseMedia::open(release)); }
+    catch (...) { return std::nullopt; }
+}
+
+std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
+    const VerifiedReleaseMedia& media) {
+    const auto& release = media.release();
     // These profiles are asserted only for the selected DOS language. A
     // caller that selected Amiga, Atari ST, or an unrecognised DOS edition
     // receives no runtime object rather than a scan-order substitute.
@@ -259,7 +291,7 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         if (release.language == "es") {
             constexpr auto spanish_image_sha256 =
                 "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
-            const auto image = extract_verified_release_asset(release, spanish_image_sha256);
+            const auto image = media.extract(spanish_image_sha256);
             if (!image) return std::nullopt;
             const Fat12Disk disk(*image);
             const auto* title_entry = disk.find("TITLE.LIB");
@@ -292,7 +324,7 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
                 .initial_save = std::nullopt,
             };
         }
-        const auto bytes = extract_verified_release_asset(release, title_lib_sha256);
+        const auto bytes = media.extract(title_lib_sha256);
         if (!bytes) return std::nullopt;
         const MillenniumDosLib title_lib(*bytes);
         const auto* p00 = title_lib.find("P00");
@@ -300,15 +332,15 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         const auto resource = title_lib.read(*p00);
         const auto bitmap = decode_millennium_dos_bitmap(resource);
         const auto palette = decode_millennium_dos_palette(resource, bitmap);
-        const auto gx_bytes = extract_verified_release_asset(release, gx_lib_sha256);
-        const auto titles = extract_verified_release_asset(release, titles_sha256);
-        const auto launcher = extract_verified_release_asset(release, launcher_sha256);
-        const auto game = extract_verified_release_asset(release, game_sha256);
-        const auto initial_save = extract_verified_release_asset(release, initial_save_sha256);
-        const auto ega640 = extract_verified_release_asset(release, ega640_sha256);
-        const auto mcga = extract_verified_release_asset(release, mcga_sha256);
-        const auto sound_blaster = extract_verified_release_asset(release, sound_blaster_sha256);
-        const auto covox = extract_verified_release_asset(release, covox_sha256);
+        const auto gx_bytes = media.extract(gx_lib_sha256);
+        const auto titles = media.extract(titles_sha256);
+        const auto launcher = media.extract(launcher_sha256);
+        const auto game = media.extract(game_sha256);
+        const auto initial_save = media.extract(initial_save_sha256);
+        const auto ega640 = media.extract(ega640_sha256);
+        const auto mcga = media.extract(mcga_sha256);
+        const auto sound_blaster = media.extract(sound_blaster_sha256);
+        const auto covox = media.extract(covox_sha256);
         if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga
             || !sound_blaster || !covox) {
             return std::nullopt;

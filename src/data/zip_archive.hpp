@@ -46,6 +46,11 @@ public:
 
     [[nodiscard]] const std::vector<ZipEntry>& entries() const { return entries_; }
     [[nodiscard]] std::vector<std::uint8_t> extract(const ZipEntry& entry) const;
+    // Walk this already-admitted in-memory archive without reopening its
+    // source path. Nested ZIP members are decoded transiently and remain
+    // bounded by the same parser limits as path-based extraction.
+    [[nodiscard]] std::optional<std::vector<std::uint8_t>> extract_asset_by_sha256(
+        std::string_view expected_sha256, unsigned maximum_nesting = 2) const;
 
 private:
     std::vector<std::uint8_t> bytes_;

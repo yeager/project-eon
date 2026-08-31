@@ -137,13 +137,23 @@ struct RuntimeLaunchAdmission {
 
 [[nodiscard]] std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(
     const ReleaseArchive& release);
+[[nodiscard]] std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(
+    const VerifiedReleaseMedia& media);
 [[nodiscard]] std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(
     const ReleaseArchive& release);
+[[nodiscard]] std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(
+    const VerifiedReleaseMedia& media);
 [[nodiscard]] std::unique_ptr<MillenniumAmigaBootstrapSession> load_millennium_amiga_runtime(
     const ReleaseArchive& release);
+[[nodiscard]] std::unique_ptr<MillenniumAmigaBootstrapSession> load_millennium_amiga_runtime(
+    const VerifiedReleaseMedia& media);
 [[nodiscard]] std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(
     const ReleaseArchive& release);
+[[nodiscard]] std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(
+    const VerifiedReleaseMedia& media);
 [[nodiscard]] std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
     const ReleaseArchive& release);
+[[nodiscard]] std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
+    const VerifiedReleaseMedia& media);
 
 } // namespace eon

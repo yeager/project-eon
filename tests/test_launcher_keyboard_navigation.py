@@ -92,9 +92,14 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
             "load_deuteros_atari_runtime",
         ):
             with self.subTest(loader=loader):
-                start = RUNTIME_SOURCE.rindex(f"{loader}(")
-                signature = RUNTIME_SOURCE[start:RUNTIME_SOURCE.index(") {", start) + 3]
-                self.assertIn("const ReleaseArchive& release", signature)
+                declaration = RUNTIME_HEADER[RUNTIME_HEADER.index(loader):]
+                self.assertIn("const ReleaseArchive& release", declaration)
+                self.assertIn("const VerifiedReleaseMedia& media", declaration)
+        acquire = RUNTIME_SOURCE[RUNTIME_SOURCE.index("bool ReleaseRuntimeCoordinator::acquire"):
+                                 RUNTIME_SOURCE.index("std::optional<DeuterosAmigaVmEvents>")]
+        self.assertIn("VerifiedReleaseMedia::open(launch.release)", acquire)
+        self.assertNotIn("verify_release_archive(launch.release)", acquire)
+        self.assertIn("load_millennium_dos_runtime(*media)", acquire)
         self.assertNotIn("eon::load_deuteros_amiga_runtime(", SOURCE)
         self.assertNotIn("eon::load_millennium_dos_runtime(", SOURCE)
         self.assertIn("runtime_coordinator.deuteros_amiga()", SOURCE)
