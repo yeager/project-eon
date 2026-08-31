@@ -4375,8 +4375,12 @@ int main(int argc, char** argv) {
     };
     const auto move_launcher_cards = [&](const int direction) {
         const auto previous_platform = active_platform;
+        const auto previous_release = active_release_sha256;
         launcher_interaction.move(releases, direction);
-        if (active_platform != previous_platform) discard_millennium_assets();
+        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
+            clear_modern_pack_admission();
+            discard_millennium_assets();
+        }
         if (launcher_page == eon::LauncherPage::games) {
             if (!active_platform) card_focus.reset_after_game_change();
             focus_active_platform_card();
@@ -4384,9 +4388,23 @@ int main(int argc, char** argv) {
     };
     const auto edge_launcher_cards = [&](const bool first) {
         const auto previous_platform = active_platform;
+        const auto previous_release = active_release_sha256;
         if (first) launcher_interaction.first(releases);
         else launcher_interaction.last(releases);
-        if (active_platform != previous_platform) discard_millennium_assets();
+        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
+            clear_modern_pack_admission();
+            discard_millennium_assets();
+        }
+        if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
+    };
+    const auto back_launcher_cards = [&] {
+        const auto previous_platform = active_platform;
+        const auto previous_release = active_release_sha256;
+        launcher_interaction.back(releases);
+        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
+            clear_modern_pack_admission();
+            discard_millennium_assets();
+        }
         if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
     };
     const auto open_data_directory_dialog = [&] {
@@ -4801,7 +4819,7 @@ int main(int argc, char** argv) {
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
-                    launcher_interaction.back(releases);
+                    back_launcher_cards();
                 }
                 else running = false;
                 // Escape is a single navigation action. Do not let this same
@@ -4816,7 +4834,7 @@ int main(int argc, char** argv) {
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
-                    launcher_interaction.back(releases);
+                    back_launcher_cards();
                 } else running = false;
                 // Keep Back equivalent to Escape and consume it before the
                 // game/menu controls can reinterpret the input.
