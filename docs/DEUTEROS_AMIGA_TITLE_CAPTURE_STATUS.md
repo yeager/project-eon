@@ -99,6 +99,16 @@ window as a path to a title/display probe for this route. It does not identify
 the loader's missing condition or establish any title, input, display, audio,
 ABI, or gameplay fact.
 
+On 2026-08-31, a separately labelled 30-second `warp` diagnostic was accepted
+as receipt v6. It binds `timing_profile=warp` to the generated FS-UAE
+configuration, retains the unchanged 42,132-byte raw-PC file with SHA-256
+`92dcc35ea0b05102e23a96176eb56550b3a4028ac7712de8dc19dd21b4ef2db6`, and
+again records exactly 128 observations each at `$1fe84`, `$1fe96`, and
+`$210d4`, with no host-input receipt and an empty console. This does not add a
+title/display probe or identify the missing condition. Warp is a
+reachability-only diagnostic profile and cannot establish timing, input,
+display, audio, ABI, gameplay, or preservation behaviour.
+
 On 2026-08-31, a subsequent 15-second, no-input capture exercised the v3
 receipt format. The verifier accepted the externally stored receipt, which
 binds the unchanged recognised outer archive, Kickstart ZIP and reviewed
