@@ -122,14 +122,15 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
 
     def test_runtime_shortcuts_do_not_promote_original_to_modern(self) -> None:
         # Original/Modern is decided by the profile cards before launch. F10
-        # remains the settings route for Modern/Custom, but must never turn an
+        # may expose Original's display-only controls, but must never turn an
         # Original session into a different presentation behind the user's
         # back; F1 is intentionally inert for the same reason.
         f10 = SOURCE.index("event.key.key == SDLK_F10")
-        f10_guard = SOURCE.index(
-            "if (request.presentation != eon::Presentation::modern) continue;", f10)
         f1 = SOURCE.index("event.key.key == SDLK_F1 && !event.key.repeat")
-        self.assertLess(f10, f10_guard)
+        f10_block = SOURCE[f10:f1]
+        self.assertIn("Original exposes only its two", f10_block)
+        self.assertIn("never switches into Modern", f10_block)
+        self.assertNotIn("request.presentation = eon::Presentation::modern", f10_block)
         self.assertIn("Presentation is chosen by the profile card before launch.", SOURCE[f1:f1 + 500])
 
     def test_back_navigation_consumes_one_event_and_moves_one_card_page(self) -> None:

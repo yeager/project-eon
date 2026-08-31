@@ -314,3 +314,6 @@ msgstr "120 FPS (العرض فقط)"
 
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr "غير محدود (العرض فقط)"
+
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr "إعدادات العرض الأصلية"

@@ -324,6 +324,7 @@ constexpr std::array<const char*, 5> modern_graphics_preset_names{{
 constexpr std::array<const char*, 3> render_pacing_names{{
     "VSYNC (DISPLAY)", "120 FPS (RENDER ONLY)", "UNCAPPED (RENDER ONLY)",
 }};
+constexpr int original_display_option_count = 2;
 constexpr int modern_graphics_option_count = 10;
 
 // These renderer-space bounds are shared by drawing and touch handling.  A
@@ -692,7 +693,7 @@ SDL_FRect aspect_viewport(const float x, const float y, const float maximum_widt
 // settings are a visible opt-in control surface: every label and state name
 // must be supplied by the selected PO catalogue before it reaches the renderer.
 void draw_modern_graphics_popup(SDL_Renderer* renderer,
-    const ModernGraphicsSettings& settings, const bool modern_pack_selected,
+    const ModernGraphicsSettings& settings, const bool modern, const bool modern_pack_selected,
     const eon::Translator& translator) {
     const auto tr = [&translator](const std::string_view message) {
         return std::string(translator.translate(message));
@@ -703,12 +704,16 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
     SDL_RenderRect(renderer, &modern_graphics_popup_bounds);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    draw_text(renderer, 390, 174, tr("MODERN GRAPHICS SETTINGS"));
+    if (modern) draw_text(renderer, 390, 174, tr("MODERN GRAPHICS SETTINGS"));
+    else draw_text(renderer, 390, 174, tr("ORIGINAL DISPLAY SETTINGS"));
     draw_text(renderer, 390, 212, tr("UP/DOWN: SELECT   LEFT/RIGHT: CHANGE   F10: CLOSE"));
     draw_text(renderer, 390, 232, tr("TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"));
     constexpr std::array<const char*, modern_graphics_option_count> names{{
         "GRAPHICS PRESET", "OUTPUT RESOLUTION", "ASPECT RATIO", "RENDER PACING", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
         "MODERN ASSET PACK", "DEVELOPER DIAGNOSTICS",
+    }};
+    constexpr std::array<const char*, original_display_option_count> original_names{{
+        "OUTPUT RESOLUTION", "ASPECT RATIO",
     }};
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
     const std::array<std::string, modern_graphics_option_count> values{{
@@ -723,15 +728,26 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         tr(modern_pack_selected ? "ON" : "CHOOSE…"),
         tr("OPEN"),
     }};
-    for (std::size_t index = 0; index < names.size(); ++index) {
+    const std::array<std::string, original_display_option_count> original_values{{
+        std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
+        tr(display_aspect_names.at(settings.aspect_ratio_index)),
+    }};
+    // Original permits only output viewport choices. They are host renderer
+    // state, so they preserve decoded source pixels, media, input, timing,
+    // simulation and save bytes while meeting the same display requirement.
+    const auto option_count = modern ? modern_graphics_option_count : original_display_option_count;
+    for (int option = 0; option < option_count; ++option) {
+        const auto index = static_cast<std::size_t>(option);
         SDL_SetRenderDrawColor(renderer, index == static_cast<std::size_t>(settings.focused_option)
                 ? 255 : 205, index == static_cast<std::size_t>(settings.focused_option) ? 195 : 225,
             index == static_cast<std::size_t>(settings.focused_option) ? 80 : 235, 255);
         draw_text(renderer, 390, modern_graphics_option_first_baseline
             + static_cast<float>(index) * modern_graphics_option_stride,
-            std::string(index == static_cast<std::size_t>(settings.focused_option) ? "> " : "  ") + tr(names[index]));
+            std::string(index == static_cast<std::size_t>(settings.focused_option) ? "> " : "  ")
+                + tr(modern ? names[index] : original_names[index]));
         draw_text(renderer, 690, modern_graphics_option_first_baseline
-            + static_cast<float>(index) * modern_graphics_option_stride, values[index]);
+            + static_cast<float>(index) * modern_graphics_option_stride,
+            modern ? values[index] : original_values[index]);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
     draw_text(renderer, 390, 692, tr("SETTINGS APPLY TO SDL RENDERING ONLY."));
@@ -4228,10 +4244,22 @@ int main(int argc, char** argv) {
         }
     };
     const auto change_modern_graphics_option = [&](const int direction) {
+        const bool modern_renderer = request.presentation == eon::Presentation::modern;
+        if (!modern_renderer) {
+            if (modern_graphics_settings.focused_option == 0) cycle_output_resolution(direction);
+            else if (modern_graphics_settings.focused_option == 1) cycle_aspect_ratio(direction);
+            return;
+        }
         switch (modern_graphics_settings.focused_option) {
         case 0: cycle_modern_graphics_preset(modern_graphics_settings, direction); break;
-        case 1: cycle_output_resolution(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
-        case 2: cycle_aspect_ratio(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
+        case 1:
+            cycle_output_resolution(direction);
+            mark_modern_graphics_custom(modern_graphics_settings);
+            break;
+        case 2:
+            cycle_aspect_ratio(direction);
+            mark_modern_graphics_custom(modern_graphics_settings);
+            break;
         case 3: cycle_render_pacing(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
         case 4: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction;
             mark_modern_graphics_custom(modern_graphics_settings); break;
@@ -4257,6 +4285,10 @@ int main(int argc, char** argv) {
         show_modern_graphics_settings = false;
         if (screen == Screen::menu && launcher_page == LauncherPage::profiles
             && focused_profile_card == 2) custom_profile_ready = true;
+    };
+    const auto visible_graphics_option_count = [&] {
+        return request.presentation == eon::Presentation::modern
+            ? modern_graphics_option_count : original_display_option_count;
     };
     std::optional<std::uint64_t> last_capped_present_ns;
     bool running = true;
@@ -4315,12 +4347,9 @@ int main(int argc, char** argv) {
             if (event.type == SDL_EVENT_QUIT) running = false;
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
                 // F10 is consumed by Project Eon's renderer chrome, never by
-                // original DOS/Amiga input.  It deliberately does not switch
-                // an already-started Original launch into Modern: selecting
-                // Original is a preservation contract, not a provisional
-                // default that a runtime key may silently replace.  Modern
-                // and Custom launches retain the in-game settings popup.
-                if (request.presentation != eon::Presentation::modern) continue;
+                // original DOS/Amiga input. Original exposes only its two
+                // display-only controls; it never switches into Modern or
+                // enables a filter, art pack, pacing change, or diagnostic.
                 if (show_modern_runtime_diagnostics) {
                     // F10 follows the displayed back target: the function
                     // map returns to diagnostics, while diagnostics returns
@@ -4331,6 +4360,8 @@ int main(int argc, char** argv) {
                 }
                 if (!show_modern_graphics_settings) clear_deuteros_opening_input();
                 show_modern_graphics_settings = !show_modern_graphics_settings;
+                modern_graphics_settings.focused_option = std::min(
+                    modern_graphics_settings.focused_option, visible_graphics_option_count() - 1);
                 if (!show_modern_graphics_settings && screen == Screen::menu
                     && launcher_page == LauncherPage::profiles
                     && focused_profile_card == 2) custom_profile_ready = true;
@@ -4375,11 +4406,11 @@ int main(int argc, char** argv) {
                         close_modern_graphics_settings();
                     } else if (event.key.key == SDLK_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + modern_graphics_option_count - 1)
-                                % modern_graphics_option_count;
+                            (modern_graphics_settings.focused_option + visible_graphics_option_count() - 1)
+                                % visible_graphics_option_count();
                     } else if (event.key.key == SDLK_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % modern_graphics_option_count;
+                            (modern_graphics_settings.focused_option + 1) % visible_graphics_option_count();
                     } else if (event.key.key == SDLK_LEFT || event.key.key == SDLK_RIGHT) {
                         change_modern_graphics_option(event.key.key == SDLK_LEFT ? -1 : 1);
                     }
@@ -4388,11 +4419,11 @@ int main(int argc, char** argv) {
                         close_modern_graphics_settings();
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + modern_graphics_option_count - 1)
-                                % modern_graphics_option_count;
+                            (modern_graphics_settings.focused_option + visible_graphics_option_count() - 1)
+                                % visible_graphics_option_count();
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                         modern_graphics_settings.focused_option =
-                            (modern_graphics_settings.focused_option + 1) % modern_graphics_option_count;
+                            (modern_graphics_settings.focused_option + 1) % visible_graphics_option_count();
                     } else if (event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT
                         || event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
                         change_modern_graphics_option(
@@ -4417,7 +4448,7 @@ int main(int argc, char** argv) {
                         const auto first_row_top = modern_graphics_option_first_baseline - 22.0F;
                         const auto row = static_cast<int>((y - first_row_top)
                             / modern_graphics_option_stride);
-                        if (row >= 0 && row < modern_graphics_option_count) {
+                        if (row >= 0 && row < visible_graphics_option_count()) {
                             modern_graphics_settings.focused_option = row;
                             change_modern_graphics_option(1);
                         }
@@ -5247,6 +5278,7 @@ int main(int argc, char** argv) {
                 }
             } else {
                 draw_modern_graphics_popup(renderer, modern_graphics_settings,
+                    request.presentation == eon::Presentation::modern,
                     selected_modern_pack_manifest.has_value(), translator);
             }
         }

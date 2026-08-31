@@ -314,3 +314,6 @@ msgstr "120 FPS (केवल रेंडर)"
 
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr "असीमित (केवल रेंडर)"
+
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr "मूल प्रदर्शन सेटिंग्स"

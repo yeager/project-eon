@@ -353,3 +353,6 @@ msgstr "120 FPS（仅渲染）"
 
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr "不限帧（仅渲染）"
+
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr "原始显示设置"

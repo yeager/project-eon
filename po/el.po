@@ -314,3 +314,6 @@ msgstr "120 FPS (ΜΟΝΟ ΑΠΟΔΟΣΗ)"
 
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr "ΧΩΡΙΣ ΟΡΙΟ (ΜΟΝΟ ΑΠΟΔΟΣΗ)"
+
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr "ΡΥΘΜΙΣΕΙΣ ΑΡΧΙΚΗΣ ΕΜΦΑΝΙΣΗΣ"

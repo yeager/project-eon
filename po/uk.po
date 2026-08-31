@@ -353,3 +353,6 @@ msgstr "120 FPS (ЛИШЕ РЕНДЕРИНГ)"
 
 msgid "UNCAPPED (RENDER ONLY)"
 msgstr "БЕЗ ОБМЕЖЕНЬ (ЛИШЕ РЕНДЕРИНГ)"
+
+msgid "ORIGINAL DISPLAY SETTINGS"
+msgstr "НАЛАШТУВАННЯ ОРИГІНАЛЬНОГО ВІДОБРАЖЕННЯ"
