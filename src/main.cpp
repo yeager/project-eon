@@ -3,6 +3,7 @@
 #include "presentation_preferences.hpp"
 #include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/release_runtime.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
@@ -3809,28 +3810,31 @@ int main(int argc, char** argv) {
     auto& active_platform = launcher_route.platform;
     auto& active_release_language = launcher_route.release_language;
     auto& active_release_sha256 = launcher_route.release_sha256;
-    std::optional<eon::ResolvedLaunchRequest> active_launch;
+    eon::ReleaseRuntimeCoordinator runtime_coordinator;
+    const auto active_launch = [&]() -> const std::optional<eon::ResolvedLaunchRequest>& {
+        return runtime_coordinator.active();
+    };
     if (request.game && active_platform) {
         auto launch_candidate = request;
         launch_candidate.platform = active_platform;
         launch_candidate.release_sha256 = active_release_sha256;
         launch_candidate.release_language = active_release_language;
-        active_launch = eon::resolve_launch_request_identity(launch_candidate, releases);
-        if (!active_launch) {
+        const auto resolved = eon::resolve_launch_request_identity(launch_candidate, releases);
+        if (!resolved || !runtime_coordinator.acquire(*resolved)) {
             std::cerr << "The selected game and platform need one exact verified original release. "
                          "Use --release-sha256 when several outer containers share a language; "
                          "no scan-order fallback was selected.\n";
             return 4;
         }
-        active_release_sha256 = active_launch->request.release_sha256;
-        active_release_language = active_launch->request.release_language;
+        active_release_sha256 = resolved->request.release_sha256;
+        active_release_language = resolved->request.release_language;
     }
     const auto resolve_active_release = [&](const eon::Game game) -> std::optional<eon::ReleaseArchive> {
-        if (!active_launch || active_launch->request.game != game) return std::nullopt;
-        return active_launch->release;
+        if (!active_launch() || active_launch()->request.game != game) return std::nullopt;
+        return active_launch()->release;
     };
-    auto millennium_assets = active_launch && active_launch->release.game == eon::Game::millennium
-        ? load_millennium_launch_assets(active_launch->release) : std::nullopt;
+    auto millennium_assets = active_launch() && active_launch()->release.game == eon::Game::millennium
+        ? load_millennium_launch_assets(active_launch()->release) : std::nullopt;
     // The command-line path is an initial explicit selection, not a mutable
     // request object. Custom's native picker may replace this session-local
     // candidate before launch; neither route has a default pack location.
@@ -3866,8 +3870,8 @@ int main(int argc, char** argv) {
     // while the preservation profile is selected.
     if (request.presentation != eon::Presentation::modern) {
         clear_modern_pack_admission();
-    } else if (selected_modern_pack_manifest && active_launch) {
-        admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch->release);
+    } else if (selected_modern_pack_manifest && active_launch()) {
+        admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch()->release);
     }
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
@@ -4277,7 +4281,7 @@ int main(int argc, char** argv) {
         // Changing the source is a hard preservation boundary.  Nothing
         // derived from the former exact archive may remain addressable while
         // the next bounded scan is still incomplete.
-        active_launch.reset();
+        runtime_coordinator.reset();
         stop_millennium_title();
         millennium_game_session.reset();
         millennium_state_page = 0;
@@ -4346,7 +4350,7 @@ int main(int argc, char** argv) {
         if (request.presentation == eon::Presentation::modern && selected_modern_pack_manifest) {
             admit_modern_pack_for_release(*selected_modern_pack_manifest, resolved->release);
         }
-        active_launch = resolved;
+        if (!runtime_coordinator.acquire(*resolved)) return;
         active_release_sha256 = resolved->request.release_sha256;
         active_release_language = resolved->request.release_language;
         selected = launcher_route.game;

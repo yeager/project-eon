@@ -5,6 +5,7 @@
 #include "launcher_text.hpp"
 #include "presentation_preferences.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/release_runtime.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
@@ -1522,6 +1523,23 @@ int main() {
         assert(!eon::resolve_launch_request_identity(menu_candidate, duplicate_english_releases));
         menu_candidate.platform.reset();
         assert(!eon::resolve_launch_request_identity(menu_candidate, duplicate_english_releases));
+
+        // The SDL-free runtime boundary rejects forged/stale identity DTOs
+        // before retaining any media source. It has no previous selection to
+        // fall back to when revalidation cannot open the asserted archive.
+        eon::ReleaseRuntimeCoordinator runtime_coordinator;
+        eon::ResolvedLaunchRequest forged_runtime_launch;
+        forged_runtime_launch.request.game = eon::Game::millennium;
+        forged_runtime_launch.request.platform = eon::Platform::amiga;
+        forged_runtime_launch.request.release_language = "en";
+        forged_runtime_launch.request.release_sha256 =
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        forged_runtime_launch.release = duplicate_english_releases.front();
+        forged_runtime_launch.release.platform = eon::Platform::dos;
+        assert(!runtime_coordinator.acquire(forged_runtime_launch));
+        assert(!runtime_coordinator.active());
+        runtime_coordinator.reset();
+        assert(!runtime_coordinator.active());
 
         // The whole card route is SDL-independent: input devices only choose
         // cards, while platform/release admission and back-navigation have
