@@ -1115,7 +1115,7 @@ int main() {
             "event\t21 210 palette-checkpoint site=0x0001eda6 source_address=0x0001ed24 destination_address=0x00012ecc word_count=0x0014 rgb4_sha256=5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55 rgba_palette_format=rgba8888-rgb4-expanded-nibbles rgba_palette_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
             "event\t22 220 input-checkpoint callback_site=0x0001f056 selector_site=0x0001fe7a queue_sha256=0000000000000000000000000000000000000000000000000000000000000000 input_timeline_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
             "event\t23 230 frame-checkpoint display_base=0x0000ab00 rgba_width=0x0140 rgba_height=0x00c8 rgba_format=rgba8888-row-major bitplanes_sha256=fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490 rgba_sha256=0000000000000000000000000000000000000000000000000000000000000000\n"
-            "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000000 pcm_format=s16le-interleaved pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
+            "event\t24 240 audio-checkpoint sample_rate=0x00002710 channels=0x02 sample_frames=0x00000001 pcm_format=s16le-interleaved pcm_sha256=0000000000000000000000000000000000000000000000000000000000000000\n";
         eon::DeuterosAmigaTitleDisplayReferenceTraceDiagnostics display_diagnostics;
         assert(eon::validate_deuteros_amiga_title_display_reference_events(
             title_display_events, display_diagnostics, trace_error));
@@ -1137,7 +1137,7 @@ int main() {
             && display_diagnostics.rgba_sha256 == std::string(64, '0')
             && display_diagnostics.audio_sample_rate == "0x00002710"
             && display_diagnostics.audio_channels == "0x02"
-            && display_diagnostics.audio_sample_frames == "0x00000000"
+            && display_diagnostics.audio_sample_frames == "0x00000001"
             && display_diagnostics.pcm_sha256 == std::string(64, '0'));
         assert(!eon::validate_deuteros_amiga_title_display_reference_events(
             title_display_events, display_diagnostics, trace_error,
@@ -1157,6 +1157,11 @@ int main() {
             std::string_view("s16le-interleaved").size(), "f32le-interleaved");
         assert(!eon::validate_deuteros_amiga_title_display_reference_events(
             unspecified_pcm_format, display_diagnostics, trace_error));
+        auto zero_audio_frames{title_display_events};
+        zero_audio_frames.replace(zero_audio_frames.find("sample_frames=0x00000001"),
+            std::string_view("sample_frames=0x00000001").size(), "sample_frames=0x00000000");
+        assert(!eon::validate_deuteros_amiga_title_display_reference_events(
+            zero_audio_frames, display_diagnostics, trace_error));
         title_display_events.replace(title_display_events.find("site=0x0001eda6"),
             std::string_view("site=0x0001eda6").size(), "site=0x0001eda7");
         assert(!eon::validate_deuteros_amiga_title_display_reference_events(
