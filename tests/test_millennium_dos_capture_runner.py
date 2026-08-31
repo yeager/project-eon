@@ -99,6 +99,13 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             status = TOOL.input_receipt_status(receipt)
             self.assertIn("host_input_receipt=present\n", status)
             self.assertIn(f"host_input_receipt_bytes={len(observed)}\n", status)
+            self.assertIn("host_input_receipt_records=1\n", status)
+            receipt.write_bytes(b"host-key 2 ticks=2 state=down scancode=0x1 sym=0x2 mod=0x0\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "ordinals"):
+                TOOL.input_receipt_status(receipt)
+            receipt.write_bytes(b"host-key 1 ticks=2 state=pressed scancode=0x1 sym=0x2 mod=0x0\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
+                TOOL.input_receipt_status(receipt)
             receipt.unlink()
             receipt.symlink_to("missing")
             with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
