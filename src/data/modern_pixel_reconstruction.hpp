@@ -2,9 +2,26 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
+
+// Kept outside SDL so renderer caches can be invalidated and unit-tested
+// without creating a window. This is a renderer choice, never a game option.
+enum class ModernPixelReconstruction { off, scale2x, scale4x };
+
+// A transient Modern texture is reusable only when every renderer-relevant
+// source fact matches. The key deliberately stores an already admitted
+// release digest and a symbolic decoded-source identity, never a local path,
+// archive member, media byte span, save, input or simulation state.
+struct ModernReconstructionCacheKey {
+    std::string release_sha256;
+    std::string source_id;
+    std::uint64_t source_tick = 0;
+    ModernPixelReconstruction reconstruction = ModernPixelReconstruction::off;
+    constexpr bool operator==(const ModernReconstructionCacheKey&) const = default;
+};
 
 // A transient, deterministic Modern renderer operation over an already
 // decoded original RGBA surface.  It deliberately has no file or cache API:

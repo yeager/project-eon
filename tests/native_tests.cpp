@@ -1281,6 +1281,26 @@ int main() {
     }
     assert_original_data_source_classification();
     assert_modern_asset_pack_admission();
+    // Modern reconstruction cache identity is renderer-only and complete:
+    // a release, source, VM tick or reconstruction-mode change must never
+    // reuse a derived texture. It deliberately contains no source path,
+    // input, save or original media bytes.
+    const eon::ModernReconstructionCacheKey reconstruction_key{
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "deuteros.amiga.opening", 7, eon::ModernPixelReconstruction::scale2x};
+    assert(reconstruction_key == reconstruction_key);
+    assert((reconstruction_key != eon::ModernReconstructionCacheKey{
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "deuteros.amiga.opening", 7, eon::ModernPixelReconstruction::scale4x}));
+    assert((reconstruction_key != eon::ModernReconstructionCacheKey{
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "deuteros.amiga.opening", 8, eon::ModernPixelReconstruction::scale2x}));
+    assert((reconstruction_key != eon::ModernReconstructionCacheKey{
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "deuteros.amiga.opening", 7, eon::ModernPixelReconstruction::scale2x}));
+    assert((reconstruction_key != eon::ModernReconstructionCacheKey{
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "millennium.dos.title", 7, eon::ModernPixelReconstruction::scale2x}));
     // Modern Scale2x is a renderer-only, in-memory reconstruction. This
     // asymmetric pattern proves it is not merely a texture filtering mode and
     // that it cannot write through its input span.
