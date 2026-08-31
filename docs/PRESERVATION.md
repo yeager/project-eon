@@ -279,6 +279,19 @@ including unique verified-release and duplicate-occurrence counts. It is a
 presentation of the existing admission result, not a second scanner or a path
 to launch an unrecognised candidate.
 
+### Runtime session envelope
+
+`ReleaseRuntimeCoordinator` publishes a `RuntimeSessionSnapshot` only after the
+selected outer release is rehashed and exactly one typed platform adapter is
+constructed. The snapshot holds release identity, the adapter kind, narrowly
+declared presentation/audio observation capabilities, and the next hard
+boundary. It contains no filesystem path, archive member, original bytes, SDL
+object, inferred input mapping, save state, or generic game model. Every
+currently shipped snapshot declares `admitted_input = false`; forwarding a new
+input requires its own caller-connected evidence. Resetting or rejecting a
+launch clears the snapshot atomically with the adapter. This is shared runtime
+plumbing, not a claim that a session is playable or frame-parity complete.
+
 For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
 rehashed game/platform card state. `READY` has exactly one verified original
 language, or has English among its verified languages and therefore uses the

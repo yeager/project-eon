@@ -2,6 +2,7 @@
 
 #include "launcher.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/runtime_session.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
@@ -72,6 +73,12 @@ public:
     void reset();
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return active_; }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return admission_; }
+    // A populated snapshot is proof that one exact adapter was constructed
+    // after rehashing. It contains no source path or original bytes and is
+    // cleared together with the adapter on every reset/rejection.
+    [[nodiscard]] const std::optional<RuntimeSessionSnapshot>& session_snapshot() const {
+        return session_snapshot_;
+    }
     [[nodiscard]] const MillenniumDosRuntimeAssets* millennium_dos() const {
         return millennium_dos_ ? &*millennium_dos_ : nullptr;
     }
@@ -95,6 +102,7 @@ private:
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari_;
+    std::optional<RuntimeSessionSnapshot> session_snapshot_;
     ReleaseRuntimeAdmission admission_ = ReleaseRuntimeAdmission::unselected;
 };
 

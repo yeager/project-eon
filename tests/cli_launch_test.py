@@ -288,6 +288,15 @@ def main() -> int:
                 },
                 "coverage": "RECOVERED STARTUP",
                 "runtime_admission": "READY",
+                "runtime_session": {
+                    "kind": "MILLENNIUM DOS TITLE",
+                    "boundary": "RECOVERED PRESENTATION BOUNDARY",
+                    "capabilities": {
+                        "decoded_presentation": True,
+                        "audio_observations": False,
+                        "admitted_input": False,
+                    },
+                },
             }):
         raise SystemExit(
             "--launch-check-json did not report the exact admitted release without SDL:\n"
