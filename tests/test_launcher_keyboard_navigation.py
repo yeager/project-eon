@@ -70,7 +70,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
                        SOURCE.index("enum class ProfileChoice")]
         self.assertIn("std::string sha256", cards)
         self.assertIn("available_release_identities", SOURCE)
-        self.assertIn("launcher_route.choose_release", SOURCE)
+        self.assertIn("launcher_session.choose_release", SOURCE)
         self.assertIn("release_sha256 = release->sha256", ROUTE_SOURCE)
         self.assertIn("truncated_identity_hash(card.sha256)", SOURCE)
 
@@ -128,7 +128,10 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_profiles_have_two_runtime_modes_and_a_custom_tuning_route(self) -> None:
         self.assertIn("enum class ProfileChoice { original, modern, custom }", SOURCE)
         self.assertIn("Custom is not a third runtime mode", SOURCE)
-        self.assertIn("request.presentation = eon::Presentation::modern", SOURCE)
+        self.assertIn("launcher_session.begin_custom()", SOURCE)
+        self.assertIn("launcher_session.choose_original()", SOURCE)
+        self.assertIn("launcher_session.choose_modern()", SOURCE)
+        self.assertIn("struct LauncherSessionState", (ROOT / "src" / "launcher.hpp").read_text(encoding="utf-8"))
         self.assertIn("custom_profile_ready", SOURCE)
         self.assertIn("CUSTOM SETTINGS READY", SOURCE)
 
@@ -151,7 +154,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # card first; a single-language platform returns to platforms.
         self.assertIn("Escape is a single navigation action", SOURCE)
         self.assertIn("Keep Back equivalent to Escape", SOURCE)
-        self.assertGreaterEqual(SOURCE.count("launcher_route.back(releases);"), 3)
+        self.assertGreaterEqual(SOURCE.count("launcher_session.back(releases);"), 3)
         self.assertIn("available_release_identities(releases, game, *platform).size() > 1", ROUTE_SOURCE)
 
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:

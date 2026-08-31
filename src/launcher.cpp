@@ -518,6 +518,75 @@ std::optional<ResolvedLaunchRequest> LauncherRouteState::resolve_launch(
     return resolve_launch_request_identity(candidate, releases);
 }
 
+void LauncherSessionState::choose_original() {
+    presentation = Presentation::original;
+    custom_profile_ready = false;
+    custom_profile_pending = false;
+}
+
+void LauncherSessionState::choose_modern() {
+    presentation = Presentation::modern;
+    custom_profile_ready = false;
+    custom_profile_pending = false;
+}
+
+void LauncherSessionState::begin_custom() {
+    presentation = Presentation::modern;
+    custom_profile_ready = false;
+    custom_profile_pending = true;
+}
+
+void LauncherSessionState::confirm_custom() {
+    // Custom has no separate runtime identity: confirmation only permits the
+    // same explicit Modern presentation after its renderer-only panel closes.
+    presentation = Presentation::modern;
+    custom_profile_ready = true;
+    custom_profile_pending = false;
+}
+
+void LauncherSessionState::invalidate_custom() {
+    custom_profile_ready = false;
+    custom_profile_pending = false;
+}
+
+void LauncherSessionState::focus_game(const std::vector<ReleaseArchive>& releases,
+    const Game game) {
+    route.focus_game(releases, game);
+    invalidate_custom();
+}
+
+bool LauncherSessionState::choose_platform(const std::vector<ReleaseArchive>& releases,
+    const Platform platform) {
+    if (!route.choose_platform(releases, platform)) return false;
+    invalidate_custom();
+    return true;
+}
+
+bool LauncherSessionState::choose_release(const std::vector<ReleaseArchive>& releases,
+    const std::string_view sha256) {
+    if (!route.choose_release(releases, sha256)) return false;
+    invalidate_custom();
+    return true;
+}
+
+void LauncherSessionState::back(const std::vector<ReleaseArchive>& releases) {
+    route.back(releases);
+    invalidate_custom();
+}
+
+bool LauncherSessionState::can_launch() const {
+    return route.release_is_selected() && !custom_profile_pending;
+}
+
+std::optional<ResolvedLaunchRequest> LauncherSessionState::resolve_launch(
+    const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const {
+    if (!can_launch()) return std::nullopt;
+    auto candidate = base;
+    candidate.presentation = presentation;
+    candidate.presentation_explicit = true;
+    return route.resolve_launch(candidate, releases);
+}
+
 std::optional<Platform> select_available_platform(
     const std::vector<ReleaseArchive>& releases, const Game game,
     const std::optional<Platform> current) {

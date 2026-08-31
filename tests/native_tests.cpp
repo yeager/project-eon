@@ -1541,12 +1541,36 @@ int main() {
         const auto route_launch = route.resolve_launch(menu_candidate, duplicate_english_releases);
         assert(route_launch && route_launch->release.sha256
             == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-        route.back(duplicate_english_releases);
-        assert(route.page == eon::LauncherPage::releases);
-        route.back(duplicate_english_releases);
-        assert(route.page == eon::LauncherPage::platforms);
-        route.back(duplicate_english_releases);
-        assert(route.page == eon::LauncherPage::games);
+
+        // Presentation and Custom confirmation have the same SDL-free owner
+        // as the card route. A Custom card cannot bypass its renderer-only
+        // panel, while Original/Modern resolve the identical release identity.
+        eon::LauncherSessionState session;
+        session.route = route;
+        session.choose_original();
+        const auto original_launch = session.resolve_launch(menu_candidate, duplicate_english_releases);
+        assert(original_launch && original_launch->request.presentation == eon::Presentation::original
+            && original_launch->release.sha256 == route_launch->release.sha256);
+        session.choose_modern();
+        const auto modern_launch = session.resolve_launch(menu_candidate, duplicate_english_releases);
+        assert(modern_launch && modern_launch->request.presentation == eon::Presentation::modern
+            && modern_launch->release.sha256 == route_launch->release.sha256);
+        session.begin_custom();
+        assert(!session.custom_profile_ready && session.custom_profile_pending && !session.can_launch()
+            && !session.resolve_launch(menu_candidate, duplicate_english_releases));
+        session.confirm_custom();
+        assert(session.custom_profile_ready && !session.custom_profile_pending && session.can_launch());
+        const auto custom_launch = session.resolve_launch(menu_candidate, duplicate_english_releases);
+        assert(custom_launch && custom_launch->request.presentation == eon::Presentation::modern
+            && custom_launch->release.sha256 == route_launch->release.sha256);
+        session.invalidate_custom();
+        assert(!session.custom_profile_ready && session.can_launch());
+        session.back(duplicate_english_releases);
+        assert(session.route.page == eon::LauncherPage::releases && !session.custom_profile_ready);
+        session.back(duplicate_english_releases);
+        assert(session.route.page == eon::LauncherPage::platforms);
+        session.back(duplicate_english_releases);
+        assert(session.route.page == eon::LauncherPage::games);
 
         // Card focus is deliberately independent from release identity. It
         // is shared presentation behaviour for keyboard/gamepad navigation,
