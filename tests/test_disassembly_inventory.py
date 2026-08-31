@@ -10,6 +10,14 @@ class DisassemblyInventoryTests(unittest.TestCase):
         self.assertIn("tools/verify_disassembly_reports.py", status)
         self.assertIn("reachability, code/data classification", status)
 
+    def test_mill22a_candidate_report_remains_file_relative_and_unproven(self):
+        tool = (ROOT / "tools" / "analyze_atari_st_config.py").read_text(encoding="utf-8")
+        status = (ROOT / "docs" / "DISASSEMBLY_STATUS.md").read_text(encoding="utf-8")
+        self.assertIn("MILL22A.INF", tool)
+        self.assertIn("output must not already exist", tool)
+        self.assertIn("file-image-relative, unrelocated", tool)
+        self.assertIn("MILL22A.INF", status)
+
     def test_inventory_covers_exact_releases_with_bounded_profiles(self):
         inventory = json.loads((ROOT / "docs/disassembly-inventory.json").read_text())
         manifest = json.loads((ROOT / "docs/release-manifest.json").read_text())

@@ -807,7 +807,11 @@ cluster 3 and is 7,506 bytes. Its exact file-chain SHA-256 is
 `74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6`; its
 first recovered words are `0x4ef9 0x0002aa88`. Those are retained strictly as
 file and machine-word facts, not interpreted as a configuration schema or
-executed. A read-only inventory scan covers all seven supplied Millennium ST
+executed. `tools/analyze_atari_st_config.py` can produce an external,
+byte-complete M68000 candidate report for this exact file. Its offsets are
+file-image-relative and its entry is explicitly unproven: the recovered Fread
+setup has competing candidate load locations, so the report neither chooses a
+runtime base nor claims reachability. A read-only inventory scan covers all seven supplied Millennium ST
 images: five expose valid FAT12 volumes and four contain a regular
 `MILL22A.inf` entry. The other two are raw/protected media and therefore have
 no FAT12 pathname namespace to substitute. Project Eon reads a present entry
