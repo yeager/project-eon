@@ -63,6 +63,10 @@ or one of three deliberately non-sensitive rejection classes: **identity**,
 declined a launch without exposing a local path, archive member, original
 bytes, or parser exception.
 
+The profile-card page mirrors a failed final admission using that same limited
+vocabulary. This gives the user actionable startup feedback before opening F10
+while preserving the same no-path/no-member/no-exception disclosure boundary.
+
 The launcher carries the same provenance boundary before admission. Its
 source identity is exactly game, platform, original-release language, and
 outer SHA-256; Original/Modern/Custom presentation selection is not a source

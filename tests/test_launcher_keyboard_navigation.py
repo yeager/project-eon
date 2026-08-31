@@ -95,6 +95,13 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("runtime_coordinator.deuteros_amiga()", SOURCE)
         self.assertIn("runtime_coordinator.millennium_dos()", SOURCE)
 
+    def test_profile_launch_rejections_are_visible_without_media_details(self) -> None:
+        self.assertIn("std::string launcher_runtime_admission", SOURCE)
+        self.assertIn('launcher_runtime_admission = "REJECTED: IDENTITY"', SOURCE)
+        self.assertIn("release_runtime_admission_label(runtime_coordinator.admission())", SOURCE)
+        self.assertIn('tr("RUNTIME ADMISSION")', SOURCE)
+        self.assertNotIn("launcher_runtime_admission = resolved->release.path", SOURCE)
+
     def test_returning_to_launcher_resets_the_active_release_runtime(self) -> None:
         # Escape and gamepad Back must not retain an active archive, texture,
         # audio stream, or recovered VM behind a newly visible launcher.
