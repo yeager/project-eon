@@ -4609,6 +4609,12 @@ proof of the runtime's read-only boundary.
 The Windows Inno Setup installer follows the same rule: it installs only
 Project Eon and its own runtime resources, and does not pre-create
 `<install-directory>\\data`.
+The Linux AppImage is built from the same CMake install tree, with a reviewed
+AppImage runtime and builder verified by SHA-256 before use. It is extracted
+only into an external cache directory for CI validation; the verifier checks
+the launcher, private SDL runtime, cards, branding, fonts, localization
+catalogues, absent default `~/.projecteon` path, and rejected media extensions.
+The artifact therefore neither embeds nor initializes original game data.
 Before Inno runs, CI also applies an explicit allowlist to the complete staging
 tree. This is stricter than rejecting game-media extensions: an unexpected
 non-media file inside recursively packaged `assets` or `po` is rejected rather

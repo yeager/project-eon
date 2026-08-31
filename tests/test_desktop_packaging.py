@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 VERIFIER = ROOT / "packaging" / "verify-desktop-package.sh"
 POLICY_VERIFIER = ROOT / "packaging" / "verify-distribution-policy.sh"
 MACOS_CLOSURE_VERIFIER = ROOT / "packaging" / "macos" / "verify-dylib-closure.sh"
+APPIMAGE_BUILDER = ROOT / "packaging" / "appimage" / "build-appimage.sh"
+APPIMAGE_VERIFIER = ROOT / "packaging" / "appimage" / "verify-appimage.sh"
+APPIMAGE_RUNNER = ROOT / "packaging" / "appimage" / "AppRun"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
 
@@ -25,6 +28,8 @@ class DesktopPackagingTests(unittest.TestCase):
         if os.name != "nt":
             subprocess.run(["bash", "-n", str(VERIFIER)], check=True)
             subprocess.run(["bash", "-n", str(POLICY_VERIFIER)], check=True)
+            subprocess.run(["bash", "-n", str(APPIMAGE_BUILDER)], check=True)
+            subprocess.run(["bash", "-n", str(APPIMAGE_VERIFIER)], check=True)
         source = VERIFIER.read_text(encoding="utf-8")
         for extension in ("zip", "adf", "st", "msa", "stx", "img", "hfe", "ipf", "scp",
                           "ctr", "lha", "lzh", "lzx", "exe", "com"):
@@ -56,6 +61,30 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertNotIn("isolated_home=$(mktemp -d)", source)
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("rpm cpio desktop-file-utils lintian rpmlint zlib1g-dev", workflow)
+
+    def test_appimage_route_is_pinned_media_free_and_manifested(self) -> None:
+        builder = APPIMAGE_BUILDER.read_text(encoding="utf-8")
+        verifier = APPIMAGE_VERIFIER.read_text(encoding="utf-8")
+        runner = APPIMAGE_RUNNER.read_text(encoding="utf-8")
+        for source in (builder, verifier):
+            self.assertIn("outside /tmp", source)
+            self.assertIn("prohibited original-media", source)
+            self.assertIn(".adf", source)
+            self.assertIn(".stx", source)
+            self.assertIn(".exe", source)
+        self.assertIn("--runtime-file", builder)
+        self.assertIn("cmake --install", builder)
+        self.assertIn("APPIMAGE_EXTRACT_AND_RUN=1", builder)
+        self.assertIn("AppImage created its default game-data directory during lookup", verifier)
+        self.assertIn("--appimage-extract", verifier)
+        self.assertIn('exec "$appdir/usr/bin/project-eon" "$@"', runner)
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("Fetch pinned AppImage build tools", workflow)
+        self.assertIn("a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0", workflow)
+        self.assertIn("1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf", workflow)
+        self.assertIn("sha256sum --check --strict", workflow)
+        self.assertIn("Verify AppImage contents contain no game media", workflow)
+        self.assertIn("package/appimage/*.AppImage", workflow)
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
