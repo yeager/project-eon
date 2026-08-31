@@ -1571,6 +1571,14 @@ int main() {
         assert(session.route.page == eon::LauncherPage::platforms);
         session.back(duplicate_english_releases);
         assert(session.route.page == eon::LauncherPage::games);
+        session.begin_custom();
+        session.reset_for_data(eon::Game::deuteros);
+        assert(session.route.page == eon::LauncherPage::games
+            && session.route.game == eon::Game::deuteros
+            && !session.route.platform && !session.route.release_language
+            && !session.route.release_sha256
+            && session.presentation == eon::Presentation::original
+            && !session.custom_profile_ready && !session.custom_profile_pending);
 
         // Card focus is deliberately independent from release identity. It
         // is shared presentation behaviour for keyboard/gamepad navigation,

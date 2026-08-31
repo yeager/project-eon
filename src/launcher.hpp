@@ -142,6 +142,7 @@ struct LauncherSessionState {
     [[nodiscard]] bool choose_release(const std::vector<ReleaseArchive>& releases,
         std::string_view sha256);
     void back(const std::vector<ReleaseArchive>& releases);
+    void reset_for_data(Game initial_game);
     [[nodiscard]] bool can_launch() const;
     [[nodiscard]] std::optional<ResolvedLaunchRequest> resolve_launch(
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const;

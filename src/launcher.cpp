@@ -574,6 +574,18 @@ void LauncherSessionState::back(const std::vector<ReleaseArchive>& releases) {
     invalidate_custom();
 }
 
+void LauncherSessionState::reset_for_data(const Game initial_game) {
+    // A new scanner has no authority to inherit a platform/release/profile
+    // from the previous user-supplied source. Keep only the currently focused
+    // game card; it is presentation focus rather than original-media identity.
+    route.page = LauncherPage::games;
+    route.game = initial_game;
+    route.platform.reset();
+    route.release_language.reset();
+    route.release_sha256.reset();
+    choose_original();
+}
+
 bool LauncherSessionState::can_launch() const {
     return route.release_is_selected() && !custom_profile_pending;
 }
