@@ -1774,8 +1774,8 @@ int main() {
         const auto route_launch = route.resolve_launch(menu_candidate, duplicate_english_releases);
         assert(route_launch && route_launch->release.sha256
             == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-        const auto route_admission = eon::admit_runtime_launch(runtime_coordinator,
-            route_candidate, duplicate_english_releases);
+        const auto route_admission = eon::launch_runtime_candidate(route_candidate,
+            duplicate_english_releases, runtime_coordinator);
         assert(route_admission.admission == eon::ReleaseRuntimeAdmission::archive_rejected);
         assert(!runtime_coordinator.active());
 
