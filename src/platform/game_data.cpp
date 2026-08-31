@@ -44,6 +44,16 @@ bool is_original_data_source(const OriginalDataSourceKind kind) {
     return kind == OriginalDataSourceKind::directory || kind == OriginalDataSourceKind::archive;
 }
 
+std::string_view name(const OriginalDataSourceKind kind) {
+    switch (kind) {
+    case OriginalDataSourceKind::missing: return "missing";
+    case OriginalDataSourceKind::directory: return "directory";
+    case OriginalDataSourceKind::archive: return "archive";
+    case OriginalDataSourceKind::unsupported: return "unsupported";
+    }
+    return "unsupported";
+}
+
 std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& directory) {
     ReleaseScanner scanner(directory);
     while (!scanner.advance(64)) {
@@ -68,7 +78,8 @@ std::optional<std::vector<std::uint8_t>> extract_verified_release_asset(
 }
 
 ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
-    switch (classify_original_data_source(directory)) {
+    report_.source_kind = classify_original_data_source(directory);
+    switch (report_.source_kind) {
     case OriginalDataSourceKind::archive:
         candidates_.push_back(directory);
         finish_candidate_inventory();
@@ -127,18 +138,27 @@ bool ReleaseScanner::advance(std::size_t max_files) {
         --remaining;
 
         std::error_code type_error;
-        if (entry.is_directory(type_error) && !type_error && !entry.is_symlink(type_error)) {
+        const auto type = entry.symlink_status(type_error);
+        if (type_error) continue;
+        if (std::filesystem::is_symlink(type)) {
+            ++report_.symlink_rejected_entries;
+            continue;
+        }
+        if (std::filesystem::is_directory(type)) {
             directories_.push_back(entry.path());
             continue;
         }
-        type_error.clear();
-        if (entry.is_regular_file(type_error) && !type_error) candidates_.push_back(entry.path());
+        if (std::filesystem::is_regular_file(type)) candidates_.push_back(entry.path());
     }
 
     while (remaining != 0 && candidate_inventory_complete_ && next_candidate_ < candidates_.size()) {
         const auto& candidate = candidates_[next_candidate_++];
         --remaining;
         try {
+            if (classify_original_data_source(candidate) != OriginalDataSourceKind::archive) {
+                ++report_.unreadable_candidates;
+                continue;
+            }
             const auto size = std::filesystem::file_size(candidate);
             const auto manifest = release_manifest();
             if (std::none_of(manifest.begin(), manifest.end(),

@@ -36,6 +36,7 @@ enum class OriginalDataSourceKind {
 [[nodiscard]] OriginalDataSourceKind classify_original_data_source(
     const std::filesystem::path& path);
 [[nodiscard]] bool is_original_data_source(OriginalDataSourceKind kind);
+[[nodiscard]] std::string_view name(OriginalDataSourceKind kind);
 
 // Counts are deliberately aggregate-only: a preservation scan must make its
 // admission decision auditable without exposing unrecognised filenames or
@@ -43,6 +44,7 @@ enum class OriginalDataSourceKind {
 // read of a complete outer archive whose hash matches the manifest.  Multiple
 // occurrences of the same content identity are represented by one release.
 struct ReleaseScanReport {
+    OriginalDataSourceKind source_kind = OriginalDataSourceKind::missing;
     std::size_t candidates = 0;
     // These two rejection counters make the admission boundary observable
     // without reporting user filenames. A size rejection was never hashed;
@@ -55,6 +57,10 @@ struct ReleaseScanReport {
     std::size_t verified_occurrences = 0;
     std::size_t duplicate_occurrences = 0;
     std::size_t unreadable_candidates = 0;
+    // Links are rejected before either traversal or candidate hashing. This
+    // keeps a selected collection from silently reaching media outside its
+    // explicit directory boundary while preserving only an aggregate count.
+    std::size_t symlink_rejected_entries = 0;
 };
 
 // A bounded, read-only scan over a user-selected directory or one archive.

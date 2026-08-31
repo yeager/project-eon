@@ -575,6 +575,13 @@ void assert_original_data_source_classification() {
         assert(eon::classify_original_data_source(redirected)
             == eon::OriginalDataSourceKind::unsupported);
     }
+    eon::ReleaseScanner scanner(root);
+    while (!scanner.advance(1)) {
+    }
+    assert(scanner.report().source_kind == eon::OriginalDataSourceKind::directory);
+    assert(scanner.report().candidates == 1);
+    assert(scanner.report().size_rejected_candidates == 1);
+    assert(scanner.report().symlink_rejected_entries == (symlink_error ? 0U : 1U));
     std::filesystem::remove_all(root);
 }
 

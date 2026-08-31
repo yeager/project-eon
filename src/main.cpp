@@ -715,11 +715,14 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         }
         std::cout << "]}";
     }
-    std::cout << "],\"scan\":{\"candidates\":" << scan.candidates
+    std::cout << "],\"scan\":{\"source_kind\":";
+    write_json_string(std::cout, eon::name(scan.source_kind));
+    std::cout << ",\"candidates\":" << scan.candidates
         << ",\"manifest_size_matches\":" << scan.size_candidates
         << ",\"hashed\":" << scan.hashed_candidates
         << ",\"verified_occurrences\":" << scan.verified_occurrences
         << ",\"duplicate_occurrences\":" << scan.duplicate_occurrences
+        << ",\"symlink_rejected_entries\":" << scan.symlink_rejected_entries
         << "}}\n";
 }
 
@@ -3576,7 +3579,8 @@ int main(int argc, char** argv) {
             if (!request.game && !request.platform && !request.release_language) {
                 report_platform_admission(inspected_releases);
             }
-            std::cout << "SCAN SUMMARY  " << report.candidates << " candidates; "
+            std::cout << "SCAN SUMMARY  " << eon::name(report.source_kind) << " source; "
+                << report.candidates << " candidates; "
                 << report.size_rejected_candidates << " size-rejected (not hashed); "
                 << report.size_candidates << " manifest-size matches; "
                 << report.hashed_candidates << " hashed; "
@@ -3584,6 +3588,7 @@ int main(int argc, char** argv) {
                 << report.verified_occurrences << " verified occurrences; "
                 << releases.size() << " unique releases; "
                 << report.duplicate_occurrences << " duplicate occurrences; "
+                << report.symlink_rejected_entries << " symlink entries rejected; "
                 << report.unreadable_candidates << " unreadable candidates\n";
         }
         if (!found) {

@@ -159,7 +159,8 @@ within a frame budget and then hashed in deterministic lexical order; an
 archive is one bounded candidate. The picker neither opens nor trusts either
 source. The same non-symlink directory-or-regular-file classifier is used by
 the launcher, CLI, and scanner, and Project Eon never copies, unpacks, creates,
-or modifies selected data.
+or modifies selected data. When scanning a directory, links inside it are also
+rejected rather than silently following media outside the selected collection.
 
 Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right
 selects a card on the current page, and South/A or Start activates it. During
