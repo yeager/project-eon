@@ -75,6 +75,54 @@ std::filesystem::path default_data_directory(const char* executable_path) {
 
 } // namespace
 
+std::size_t LauncherCardFocus::current(const LauncherPage page) const {
+    switch (page) {
+    case LauncherPage::games: return game;
+    case LauncherPage::platforms: return platform;
+    case LauncherPage::releases: return release;
+    case LauncherPage::profiles: return profile;
+    }
+    return 0;
+}
+
+void LauncherCardFocus::set(const LauncherPage page, const std::size_t count,
+    const std::size_t index) {
+    if (count == 0) return;
+    const auto bounded = std::min(index, count - 1U);
+    switch (page) {
+    case LauncherPage::games: game = bounded; break;
+    case LauncherPage::platforms: platform = bounded; break;
+    case LauncherPage::releases: release = bounded; break;
+    case LauncherPage::profiles: profile = bounded; break;
+    }
+}
+
+void LauncherCardFocus::move(const LauncherPage page, const std::size_t count,
+    const int direction) {
+    if (count == 0 || direction == 0) return;
+    const auto index = current(page);
+    set(page, count, direction < 0 ? (index + count - 1U) % count : (index + 1U) % count);
+}
+
+void LauncherCardFocus::first(const LauncherPage page, const std::size_t count) {
+    set(page, count, 0);
+}
+
+void LauncherCardFocus::last(const LauncherPage page, const std::size_t count) {
+    if (count != 0) set(page, count, count - 1U);
+}
+
+void LauncherCardFocus::reset_after_game_change() {
+    platform = 0;
+    release = 0;
+    profile = 0;
+}
+
+void LauncherCardFocus::reset_after_platform_change() {
+    release = 0;
+    profile = 0;
+}
+
 std::string usage() {
     return
         "Usage:\n"

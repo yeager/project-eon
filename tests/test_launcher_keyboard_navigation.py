@@ -24,7 +24,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("select_available_release_sha256", ROUTE_SOURCE)
         self.assertIn("if (english.size() == 1)", ROUTE_SOURCE)
         self.assertIn("page = release_sha256 ? LauncherPage::profiles : LauncherPage::releases", ROUTE_SOURCE)
-        self.assertIn("choose_platform_card(static_cast<int>(index));", SOURCE)
+        self.assertIn("choose_platform_card(index);", SOURCE)
 
     def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
         self.assertIn("eon::platform_card_status(releases, game, card.platform)", SOURCE)
@@ -34,7 +34,17 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RELEASE SELECTION REQUIRED", SOURCE)
         self.assertIn("ATARI BOOTSTRAP ONLY", SOURCE)
         self.assertIn("card.platform == eon::Platform::atari_st", SOURCE)
-        self.assertIn("choose_platform_card(static_cast<int>(index));", SOURCE)
+        self.assertIn("choose_platform_card(index);", SOURCE)
+
+    def test_card_focus_is_bounded_in_the_shared_launcher_core(self) -> None:
+        self.assertIn("struct LauncherCardFocus", ROUTE_HEADER)
+        self.assertIn("void move(LauncherPage page, std::size_t count, int direction)", ROUTE_HEADER)
+        self.assertIn("if (count == 0 || direction == 0) return;", ROUTE_SOURCE)
+        self.assertIn("reset_after_game_change", ROUTE_SOURCE)
+        self.assertIn("card_focus.move(eon::LauncherPage::games", SOURCE)
+        self.assertIn("card_focus.move(eon::LauncherPage::platforms", SOURCE)
+        self.assertIn("card_focus.move(eon::LauncherPage::releases", SOURCE)
+        self.assertIn("card_focus.move(eon::LauncherPage::profiles", SOURCE)
 
     def test_platform_cards_are_game_specific_before_media_availability_is_shown(self) -> None:
         # Deuteros supports Amiga and Atari ST. A missing archive must render
