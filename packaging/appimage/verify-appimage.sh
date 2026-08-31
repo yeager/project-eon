@@ -49,7 +49,8 @@ for required in \
     exit 1
   fi
 done
-if ! find "$appdir/usr/lib" -type f -name libSDL3.so.0 -print -quit | grep -q .; then
+if [ ! -L "$appdir/usr/lib/project-eon/libSDL3.so.0" ] \
+    || ! find "$appdir/usr/lib" -type f -name 'libSDL3.so.*' -print -quit | grep -q .; then
   echo "AppImage lacks its installed private SDL3 runtime" >&2
   exit 1
 fi
