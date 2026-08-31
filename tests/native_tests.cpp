@@ -1591,6 +1591,10 @@ int main() {
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
         assert(source_controller.source_changed_since(no_change));
         const auto first_identity = source_controller.source_identity();
+        source_controller.session.choose_modern();
+        assert(!source_controller.source_changed_since(first_identity));
+        source_controller.session.choose_original();
+        assert(!source_controller.source_changed_since(first_identity));
         assert(source_controller.session.choose_release(duplicate_english_releases,
             "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
         assert(source_controller.source_changed_since(first_identity));
