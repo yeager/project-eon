@@ -284,6 +284,7 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
     # An externally retained checkpoint can join a developer's CTest run only
     # through an explicit absolute directory. It remains opaque to the native
     # tests and is never copied into the build tree or a package.
@@ -315,8 +316,13 @@ if(BUILD_TESTING)
     add_test(NAME native-data-detection COMMAND eon-native-tests)
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+    add_test(NAME cli-default-data-read-only
+        COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_default_data_test.py"
+            "$<TARGET_FILE:project-eon>")
+    set_tests_properties(cli-default-data-read-only PROPERTIES
+        ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     if(EON_REPLAY_FIXTURE_DIR)
-        find_package(Python3 COMPONENTS Interpreter REQUIRED)
         add_test(NAME verify-external-replay-fixture
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_replay_fixture.py"
@@ -326,7 +332,6 @@ if(BUILD_TESTING)
     # explicitly supplies it receives a separate black-box launch test for
     # every supported platform path.
     if(EON_REAL_DATA_DIR)
-        find_package(Python3 COMPONENTS Interpreter REQUIRED)
         # Keep test-only manifests and fixture media out of /tmp as well as
         # out of user-supplied original media. The test script rejects a
         # missing value rather than falling back to the system temp directory.
