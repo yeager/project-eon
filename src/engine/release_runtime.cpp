@@ -16,19 +16,23 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         || *launch.request.platform != launch.release.platform
         || *launch.request.release_sha256 != launch.release.sha256
         || *launch.request.release_language != launch.release.language) {
+        admission_ = ReleaseRuntimeAdmission::identity_rejected;
         return false;
     }
     try {
         verify_release_archive(launch.release);
     } catch (...) {
+        admission_ = ReleaseRuntimeAdmission::archive_rejected;
         return false;
     }
     active_ = launch;
+    admission_ = ReleaseRuntimeAdmission::active;
     return true;
 }
 
 void ReleaseRuntimeCoordinator::reset() {
     active_.reset();
+    admission_ = ReleaseRuntimeAdmission::unselected;
 }
 
 std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const ReleaseArchive& release) {

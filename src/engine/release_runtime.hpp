@@ -10,6 +10,8 @@
 
 namespace eon {
 
+enum class ReleaseRuntimeAdmission { unselected, active, identity_rejected, archive_rejected };
+
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
 // outside this class; this is the common source boundary for every platform
@@ -19,9 +21,11 @@ public:
     [[nodiscard]] bool acquire(const ResolvedLaunchRequest& launch);
     void reset();
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return active_; }
+    [[nodiscard]] ReleaseRuntimeAdmission admission() const { return admission_; }
 
 private:
     std::optional<ResolvedLaunchRequest> active_;
+    ReleaseRuntimeAdmission admission_ = ReleaseRuntimeAdmission::unselected;
 };
 
 [[nodiscard]] std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(
