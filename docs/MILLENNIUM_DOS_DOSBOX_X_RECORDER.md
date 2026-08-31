@@ -44,7 +44,7 @@ This establishes the observer's no-input behaviour only; it does not record a
 physical key, title poll, guest acceptance, frame, audio, or playable state.
 
 The currently reviewed diagnostic build is SHA-256
-`6cd6be57b3487d9141b360de209fe9d21205ddd3cefefe2b065b1831be63b2be`.
+`7b959f7aee3d2db0513db4f14e3075f306e798e25adaeeebd96aedd81aef65da`.
 In addition to the pre-existing raw result sites, its callback default handler
 retains exactly one raw `unhandled-interrupt` record when an exception-vector
 callback loops. The record reports the callback's machine register state and
@@ -72,6 +72,9 @@ neither handler code, return values, driver state, title output, nor gameplay.
 It then records at most one `private-handler-entry` only if the normal core
 reaches that same captured `CS:IP`. This proves only the observed control-flow
 edge; it neither decodes nor replaces the handler and has no ABI meaning.
+At most once, a subsequent `TITLES.EXE:$0129` return records raw `AX` and
+FLAGS only when that endpoint was reached first. This is an ordered caller
+re-entry observation, not a handler return contract or branch interpretation.
 
 The design is locked to the locally inspected DOSBox-X source revision
 `234797680781567e18c374c9e62da24de5423db0` and the Project Eon adapters

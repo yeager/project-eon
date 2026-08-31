@@ -26,7 +26,7 @@ EXPECTED_RELEASE_SHA256 = "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630c
 EXPECTED_RELEASE_SIZE = 328_383
 # The capture helper never accepts a merely executable emulator as a recorder:
 # its hooks and input-receipt contract are part of the provenance boundary.
-EXPECTED_RECORDER_SHA256 = "6cd6be57b3487d9141b360de209fe9d21205ddd3cefefe2b065b1831be63b2be"
+EXPECTED_RECORDER_SHA256 = "7b959f7aee3d2db0513db4f14e3075f306e798e25adaeeebd96aedd81aef65da"
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
 MIN_DURATION_SECONDS = 15
@@ -60,6 +60,7 @@ RAW_RESULT_LINE = re.compile(
     r"source-call=0x0511 ax=0x([0-9a-f]{4}))|"
     r"private-vector image=titles\.exe pc=0x0127 int=0x91 vector_ip=0x[0-9a-f]{4} vector_cs=0x[0-9a-f]{4}|"
     r"private-handler-entry int=0x91 cs=0x[0-9a-f]{4} ip=0x[0-9a-f]{4}|"
+    r"private-handler-return int=0x91 caller=titles\.exe pc=0x0129 ax=0x[0-9a-f]{4} flags=0x[0-9a-f]{4}|"
     r"fault=unhandled-interrupt int=0x06 cs=0x[0-9a-f]{4} ip=0x[0-9a-f]{4} "
     r"ss=0x[0-9a-f]{4} sp=0x[0-9a-f]{4}(?: return_ip=0x[0-9a-f]{4} "
     r"return_cs=0x[0-9a-f]{4} return_flags=0x[0-9a-f]{4} code=0x[0-9a-f]{8})? "
@@ -70,10 +71,10 @@ RAW_RESULT_LINE = re.compile(
 HOST_KEY_LINE = re.compile(
     r"host-key ([1-9][0-9]*) ticks=([0-9]+) state=(down|up) "
     r"scancode=0x([0-9a-f]+) sym=0x([0-9a-f]+) mod=0x([0-9a-f]+)\n")
-# v8 retains v7's raw IVT snapshot and records at most one transition to that
-# endpoint in the normal core. It is control-flow provenance, not a handler
-# implementation, ABI result, or replacement dispatch.
-CAPTURE_RECEIPT_VERSION = "8"
+# v9 binds the first post-handler caller re-entry to v8's observed endpoint.
+# Its AX and FLAGS are raw machine state only; they are not a private ABI or a
+# runtime result contract.
+CAPTURE_RECEIPT_VERSION = "9"
 
 
 class CaptureError(RuntimeError):
@@ -332,6 +333,8 @@ def parse_raw_results(path: Path) -> dict[str, int]:
             label = "private-vector"
         elif line.startswith(prefix + "private-handler-entry "):
             label = "private-handler-entry"
+        elif line.startswith(prefix + "private-handler-return "):
+            label = "private-handler-return"
         else:
             label = f"{match.group(3)}:{match.group(4)}"
         counts[label] = counts.get(label, 0) + 1
