@@ -121,6 +121,11 @@ opened or reported. `ReleaseScanSnapshot` is the one SDL-free diagnostic
 projection shared by the card-menu `D` panel and `--inspect-json`: source
 shape, scan phase/progress, aggregate rejection counters, and verified-release
 count may be shown; media paths, filenames, archive members, and bytes may not.
+If an incremental scan changes a previously unique platform into a
+multi-release platform, Project Eon revokes its automatic release selection
+and returns to the generated Original-release cards. Only a release identity
+the user explicitly chose may remain selected across that discovery event; no
+new container, language, or platform is substituted.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract

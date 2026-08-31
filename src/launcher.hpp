@@ -126,6 +126,10 @@ struct LauncherRouteState {
     std::optional<Platform> platform;
     std::optional<std::string> release_language;
     std::optional<std::string> release_sha256;
+    // A unique release may be selected automatically while the scanner has
+    // one identity. If a later scan result makes that platform ambiguous, the
+    // user must see and choose an Original-release card before launch.
+    bool release_explicit = false;
 
     void focus_game(const std::vector<ReleaseArchive>& releases, Game next_game);
     [[nodiscard]] bool choose_platform(const std::vector<ReleaseArchive>& releases,
@@ -134,6 +138,10 @@ struct LauncherRouteState {
         std::string_view next_sha256);
     void enter_platforms();
     void back(const std::vector<ReleaseArchive>& releases);
+    // Scanner results arrive incrementally. Revalidate this route only
+    // against the supplied recognised identities and revoke an automatic
+    // selection if it becomes ambiguous; never substitute another release.
+    [[nodiscard]] bool reconcile_releases(const std::vector<ReleaseArchive>& releases);
     [[nodiscard]] bool release_is_selected() const;
     // Build the selected card route as a candidate only. The engine performs
     // the final scanner-identity resolution and runtime admission; this
@@ -165,6 +173,7 @@ struct LauncherSessionState {
         std::string_view sha256);
     void back(const std::vector<ReleaseArchive>& releases);
     void reset_for_data(Game initial_game);
+    [[nodiscard]] bool reconcile_releases(const std::vector<ReleaseArchive>& releases);
     [[nodiscard]] bool can_launch() const;
     [[nodiscard]] std::optional<LaunchRequest> launch_request(const LaunchRequest& base) const;
     [[nodiscard]] std::optional<ResolvedLaunchRequest> resolve_launch(

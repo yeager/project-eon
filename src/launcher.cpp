@@ -475,6 +475,7 @@ void LauncherRouteState::focus_game(const std::vector<ReleaseArchive>& releases,
     if (game_changed || platform != prior_platform) {
         release_language.reset();
         release_sha256.reset();
+        release_explicit = false;
     }
 }
 
@@ -485,6 +486,7 @@ bool LauncherRouteState::choose_platform(const std::vector<ReleaseArchive>& rele
         platform = next_platform;
         release_language.reset();
         release_sha256.reset();
+        release_explicit = false;
     }
     release_sha256 = select_available_release_sha256(releases, game, *platform, release_sha256);
     if (const auto release = resolve_release_identity(releases, game, *platform,
@@ -505,6 +507,7 @@ bool LauncherRouteState::choose_release(const std::vector<ReleaseArchive>& relea
     if (!release) return false;
     release_sha256 = release->sha256;
     release_language = release->language;
+    release_explicit = true;
     page = LauncherPage::profiles;
     return true;
 }
@@ -526,6 +529,36 @@ void LauncherRouteState::back(const std::vector<ReleaseArchive>& releases) {
     case LauncherPage::games:
         break;
     }
+}
+
+bool LauncherRouteState::reconcile_releases(const std::vector<ReleaseArchive>& releases) {
+    if (!platform) return false;
+    const auto identities = available_release_identities(releases, game, *platform);
+    if (identities.empty()) {
+        const bool changed = release_is_selected() || platform.has_value();
+        platform.reset();
+        release_language.reset();
+        release_sha256.reset();
+        release_explicit = false;
+        if (page != LauncherPage::games) page = LauncherPage::platforms;
+        return changed;
+    }
+    if (!release_sha256) return false;
+    const auto selected = std::find_if(identities.begin(), identities.end(), [this](const auto& candidate) {
+        return candidate.sha256 == *release_sha256;
+    });
+    if (selected == identities.end() || (!release_explicit && identities.size() > 1)) {
+        release_language.reset();
+        release_sha256.reset();
+        release_explicit = false;
+        page = LauncherPage::releases;
+        return true;
+    }
+    if (release_language != selected->language) {
+        release_language = selected->language;
+        return true;
+    }
+    return false;
 }
 
 bool LauncherRouteState::release_is_selected() const {
@@ -614,7 +647,14 @@ void LauncherSessionState::reset_for_data(const Game initial_game) {
     route.platform.reset();
     route.release_language.reset();
     route.release_sha256.reset();
+    route.release_explicit = false;
     choose_original();
+}
+
+bool LauncherSessionState::reconcile_releases(const std::vector<ReleaseArchive>& releases) {
+    if (!route.reconcile_releases(releases)) return false;
+    invalidate_custom();
+    return true;
 }
 
 bool LauncherSessionState::can_launch() const {
@@ -662,6 +702,7 @@ void LauncherInteractionController::synchronize(const std::vector<ReleaseArchive
     if (session.route.page == LauncherPage::games) {
         session.focus_game(releases, launcher_games[focus.game]);
     }
+    static_cast<void>(session.reconcile_releases(releases));
     // Automatic selection is still a real card selection. Keep focus on its
     // visible platform rather than leaving Enter/South-A on an unavailable
     // neighbouring card after a partial scan changes the available release.
