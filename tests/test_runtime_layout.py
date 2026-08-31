@@ -33,6 +33,12 @@ class RuntimeLayoutTests(unittest.TestCase):
         self.assertIn("Documents/ProjectEon", README)
         self.assertIn("Documents/ProjectEon", PRESERVATION)
 
+    def test_external_replay_fixture_ctest_is_explicit_and_media_free(self) -> None:
+        self.assertIn("EON_REPLAY_FIXTURE_DIR", CMAKE)
+        self.assertIn("verify-external-replay-fixture", CMAKE)
+        self.assertIn("tools/verify_replay_fixture.py", CMAKE)
+        self.assertIn("It remains opaque to the native", CMAKE)
+
     def test_linux_install_layout_matches_runtime_search_order(self) -> None:
         self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"', CMAKE)
         self.assertIn('DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets/branding"', CMAKE)

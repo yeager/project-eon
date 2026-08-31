@@ -280,6 +280,11 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING)
+    # An externally retained checkpoint can join a developer's CTest run only
+    # through an explicit absolute directory. It remains opaque to the native
+    # tests and is never copied into the build tree or a package.
+    set(EON_REPLAY_FIXTURE_DIR "" CACHE PATH
+        "Absolute external Project Eon replay-fixture directory to verify with CTest")
     add_executable(eon-native-tests
         tests/native_tests.cpp
         ${EON_RUNTIME_SOURCES}
@@ -306,6 +311,13 @@ if(BUILD_TESTING)
     add_test(NAME native-data-detection COMMAND eon-native-tests)
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+    if(EON_REPLAY_FIXTURE_DIR)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        add_test(NAME verify-external-replay-fixture
+            COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_replay_fixture.py"
+                --fixture "${EON_REPLAY_FIXTURE_DIR}")
+    endif()
     # Commercial game data is never available in CI.  A developer build that
     # explicitly supplies it receives a separate black-box launch test for
     # every supported platform path.
