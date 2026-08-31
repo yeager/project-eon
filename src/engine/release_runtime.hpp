@@ -93,6 +93,19 @@ private:
     ReleaseRuntimeAdmission admission_ = ReleaseRuntimeAdmission::unselected;
 };
 
+// The one common final launch gate for CLI and card-menu candidates. It
+// resolves a menu/CLI DTO through scanner-produced identities and only then
+// acquires the platform adapter. An absent or stale candidate clears any
+// prior runtime just like a rejected archive/parser boundary.
+struct RuntimeLaunchAdmission {
+    ReleaseRuntimeAdmission admission = ReleaseRuntimeAdmission::unselected;
+    [[nodiscard]] bool accepted() const { return admission == ReleaseRuntimeAdmission::active; }
+};
+
+[[nodiscard]] RuntimeLaunchAdmission admit_runtime_launch(
+    ReleaseRuntimeCoordinator& coordinator, const std::optional<LaunchRequest>& candidate,
+    const std::vector<ReleaseArchive>& releases);
+
 [[nodiscard]] std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(
     const ReleaseArchive& release);
 [[nodiscard]] std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(

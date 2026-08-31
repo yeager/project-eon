@@ -88,6 +88,21 @@ void ReleaseRuntimeCoordinator::reset() {
     admission_ = ReleaseRuntimeAdmission::unselected;
 }
 
+RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
+    const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {
+    if (!candidate) {
+        coordinator.reset();
+        return {ReleaseRuntimeAdmission::identity_rejected};
+    }
+    const auto resolved = resolve_launch_request_identity(*candidate, releases);
+    if (!resolved) {
+        coordinator.reset();
+        return {ReleaseRuntimeAdmission::identity_rejected};
+    }
+    static_cast<void>(coordinator.acquire(*resolved));
+    return {coordinator.admission()};
+}
+
 std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const ReleaseArchive& release) {
     if (release.game != Game::deuteros || release.platform != Platform::amiga || release.language != "en") return {};
     constexpr auto clean_system_adf = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";

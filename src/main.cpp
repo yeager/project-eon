@@ -3640,19 +3640,17 @@ int main(int argc, char** argv) {
         launch_candidate.platform = active_platform;
         launch_candidate.release_sha256 = active_release_sha256;
         launch_candidate.release_language = active_release_language;
-        const auto resolved = eon::resolve_launch_request_identity(launch_candidate, releases);
-        if (!resolved || !runtime_coordinator.acquire(*resolved)) {
-            launcher_runtime_admission = !resolved ? "REJECTED: IDENTITY"
-                : std::string(eon::release_runtime_admission_label(runtime_coordinator.admission()));
+        const auto admission = eon::admit_runtime_launch(runtime_coordinator, launch_candidate, releases);
+        launcher_runtime_admission = std::string(
+            eon::release_runtime_admission_label(admission.admission));
+        if (!admission.accepted()) {
             std::cerr << "The selected game and platform need one exact verified original release. "
-                         "Use --release-sha256 when several outer containers share a language; "
-                         "no scan-order fallback was selected.\n";
+                     "Use --release-sha256 when several outer containers share a language; "
+                     "no scan-order fallback was selected.\n";
             return 4;
         }
-        launcher_runtime_admission = std::string(
-            eon::release_runtime_admission_label(runtime_coordinator.admission()));
-        active_release_sha256 = resolved->request.release_sha256;
-        active_release_language = resolved->request.release_language;
+        active_release_sha256 = active_launch()->request.release_sha256;
+        active_release_language = active_launch()->request.release_language;
     }
     const auto resolve_active_release = [&](const eon::Game game) -> std::optional<eon::ReleaseArchive> {
         if (!active_launch() || active_launch()->request.game != game) return std::nullopt;
@@ -4188,31 +4186,27 @@ int main(int argc, char** argv) {
         deuteros_title_resource.reset();
     };
     const auto launch_menu_selection = [&] {
-        const auto resolved = launcher_session.resolve_launch(request, releases);
-        if (!resolved) {
-            launcher_runtime_admission = "REJECTED: IDENTITY";
-            return;
-        }
+        const auto candidate = launcher_session.launch_request(request);
+        const auto admission = eon::admit_runtime_launch(runtime_coordinator, candidate, releases);
+        launcher_runtime_admission = std::string(
+            eon::release_runtime_admission_label(admission.admission));
+        if (!admission.accepted()) return;
         // The chosen release card is part of the Modern-pack identity.  A
         // previously valid candidate becomes rejected rather than silently
-        // following a different language/container/platform selection.
-        if (request.presentation == eon::Presentation::modern && selected_modern_pack_manifest) {
-            admit_modern_pack_for_release(*selected_modern_pack_manifest, resolved->release);
+        // following a different language/container/platform selection. Read
+        // the one identity already resolved and rehashed by the common gate;
+        // do not independently resolve card fields a second time here.
+        if (candidate->presentation == eon::Presentation::modern
+            && selected_modern_pack_manifest) {
+            admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch()->release);
         }
-        if (!runtime_coordinator.acquire(*resolved)) {
-            launcher_runtime_admission = std::string(
-                eon::release_runtime_admission_label(runtime_coordinator.admission()));
-            return;
-        }
-        launcher_runtime_admission = std::string(
-            eon::release_runtime_admission_label(runtime_coordinator.admission()));
         millennium_assets = runtime_coordinator.millennium_dos();
         millennium_amiga_session = runtime_coordinator.millennium_amiga();
         millennium_atari_session = runtime_coordinator.millennium_atari();
         deuteros_opening = runtime_coordinator.deuteros_amiga();
         deuteros_atari_session = runtime_coordinator.deuteros_atari();
-        active_release_sha256 = resolved->request.release_sha256;
-        active_release_language = resolved->request.release_language;
+        active_release_sha256 = active_launch()->request.release_sha256;
+        active_release_language = active_launch()->request.release_language;
         selected = launcher_route.game;
         screen = Screen::launching;
         if (selected == eon::Game::millennium) start_millennium_title();

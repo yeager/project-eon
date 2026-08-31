@@ -507,8 +507,7 @@ bool LauncherRouteState::release_is_selected() const {
     return platform.has_value() && release_sha256.has_value() && release_language.has_value();
 }
 
-std::optional<ResolvedLaunchRequest> LauncherRouteState::resolve_launch(
-    const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const {
+std::optional<LaunchRequest> LauncherRouteState::launch_request(const LaunchRequest& base) const {
     if (!release_is_selected()) return std::nullopt;
     auto candidate = base;
     candidate.game = game;
@@ -516,7 +515,13 @@ std::optional<ResolvedLaunchRequest> LauncherRouteState::resolve_launch(
     candidate.release_language = release_language;
     candidate.release_sha256 = release_sha256;
     candidate.presentation_explicit = true;
-    return resolve_launch_request_identity(candidate, releases);
+    return candidate;
+}
+
+std::optional<ResolvedLaunchRequest> LauncherRouteState::resolve_launch(
+    const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const {
+    const auto candidate = launch_request(base);
+    return candidate ? resolve_launch_request_identity(*candidate, releases) : std::nullopt;
 }
 
 void LauncherSessionState::choose_original() {
@@ -591,13 +596,19 @@ bool LauncherSessionState::can_launch() const {
     return route.release_is_selected() && !custom_profile_pending;
 }
 
+std::optional<LaunchRequest> LauncherSessionState::launch_request(const LaunchRequest& base) const {
+    if (!can_launch()) return std::nullopt;
+    auto candidate = route.launch_request(base);
+    if (!candidate) return std::nullopt;
+    candidate->presentation = presentation;
+    candidate->presentation_explicit = true;
+    return candidate;
+}
+
 std::optional<ResolvedLaunchRequest> LauncherSessionState::resolve_launch(
     const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const {
-    if (!can_launch()) return std::nullopt;
-    auto candidate = base;
-    candidate.presentation = presentation;
-    candidate.presentation_explicit = true;
-    return route.resolve_launch(candidate, releases);
+    const auto candidate = launch_request(base);
+    return candidate ? resolve_launch_request_identity(*candidate, releases) : std::nullopt;
 }
 
 namespace {

@@ -1597,6 +1597,11 @@ int main() {
             eon::ReleaseRuntimeAdmission::archive_rejected) == "REJECTED: ARCHIVE HASH");
         assert(eon::release_runtime_admission_label(
             eon::ReleaseRuntimeAdmission::adapter_rejected) == "REJECTED: ADAPTER");
+        // The common CLI/card-menu admission gate clears any previous runtime
+        // before rejecting an absent route candidate.
+        assert(eon::admit_runtime_launch(runtime_coordinator, std::nullopt,
+            duplicate_english_releases).admission == eon::ReleaseRuntimeAdmission::identity_rejected);
+        assert(!runtime_coordinator.active());
         runtime_coordinator.reset();
         assert(!runtime_coordinator.active()
             && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::unselected);
@@ -1628,9 +1633,16 @@ int main() {
         assert(route.choose_release(duplicate_english_releases,
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
         assert(route.page == eon::LauncherPage::profiles && route.release_is_selected());
+        const auto route_candidate = route.launch_request(menu_candidate);
+        assert(route_candidate && route_candidate->release_sha256
+            == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         const auto route_launch = route.resolve_launch(menu_candidate, duplicate_english_releases);
         assert(route_launch && route_launch->release.sha256
             == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        const auto route_admission = eon::admit_runtime_launch(runtime_coordinator,
+            route_candidate, duplicate_english_releases);
+        assert(route_admission.admission == eon::ReleaseRuntimeAdmission::archive_rejected);
+        assert(!runtime_coordinator.active());
 
         // Cache invalidation is keyed to the complete release provenance,
         // not card focus or presentation. The SDL layer may therefore safely
