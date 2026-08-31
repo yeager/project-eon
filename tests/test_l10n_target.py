@@ -30,6 +30,7 @@ class L10nTargetTests(unittest.TestCase):
             self.assertIn(f"Language: {catalog}\\n", text)
             self.assertIn("Content-Type: text/plain; charset=UTF-8\\n", text)
             self.assertIn("Content-Transfer-Encoding: 8bit\\n", text)
+            self.assertNotIn("#, fuzzy", text)
 
     def test_linux_ci_installs_gettext_and_runs_the_target(self) -> None:
         self.assertIn("cmake ninja-build gettext zlib1g-dev", WORKFLOW)
