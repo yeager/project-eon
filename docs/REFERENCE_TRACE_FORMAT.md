@@ -363,7 +363,7 @@ to this same clean system ADF and title-stage hash:
 - the pre/post values of the title response queue at `$1eec0..$1eed3` and
   pending word `$1eed6`, plus the exact callback-table selection source at
   `$1ee20..$1eebf` identified by its existing source hash;
-- the incoming D0 at `$1fe7a`, both local `$1feaa` call/return observations,
+- the incoming D0 at `$1fe7a`, both local `$1fea8` call/return observations,
   and the pre/post dispatch cells `$1f98c`, `$1f98e`, `$1f99c`, `$1f974`,
   `$1f970`, `$1f96c`, `$1f994`, and `$1f998`.
 
@@ -409,7 +409,7 @@ segments are two `exec-return` records at `$40450`, one
 and `callback-registration-return` at `$1ef74`. It then requires a pre queue
 snapshot at `$1eec0`, a callback entry at `$1f056` with the full ten raw bytes
 at A0 `+4..+d`, and a post queue snapshot. Finally it requires the `$1fe7a`
-selector input, the two observed `$1feaa` local call/return pairs, and pre/post
+selector input, the two observed `$1fea8` local call/return pairs, and pre/post
 snapshots of every documented dispatch cell at `$1fbe6`.
 
 Queue records pin the 20 queue bytes, pending word, and the 160-byte
