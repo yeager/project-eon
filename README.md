@@ -347,7 +347,10 @@ game data.
 The final aggregate `SCAN SUMMARY` makes recognition reviewable without
 turning unknown files into a catalogue: it records candidate, size-rejected
 (not hashed), size-match, hash, hash-rejected, verified-occurrence,
-duplicate-occurrence, unique-release, and read-failure counts. Identical
+duplicate-occurrence, unique-release, unbound-direct-media, and read-failure
+counts. A hash-verified loose physical-media leaf is preserved as unbound
+evidence only: it never makes a card startable without a separately documented
+complete direct-media-set identity. Identical
 verified archives found more than once are one release, with the lexically
 first path used as the deterministic read-only source.
 

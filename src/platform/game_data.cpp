@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <cstdint>
 #include <stdexcept>
 #include <system_error>
 
@@ -24,6 +25,18 @@ const ReleaseManifestEntry& require_manifest_identity(const ReleaseArchive& rele
         throw std::runtime_error("Release metadata is not an exact recognised manifest identity");
     }
     return *found;
+}
+
+bool has_manifest_leaf_size(const std::uintmax_t size) {
+    return std::any_of(parser_profile_manifest().begin(), parser_profile_manifest().end(),
+        [size](const auto& profile) { return profile.leaf_size == size; });
+}
+
+bool is_manifest_leaf(const std::string_view sha256, const std::uintmax_t size) {
+    return std::any_of(parser_profile_manifest().begin(), parser_profile_manifest().end(),
+        [sha256, size](const auto& profile) {
+            return profile.leaf_size == size && profile.leaf_sha256 == sha256;
+        });
 }
 
 } // namespace
@@ -166,14 +179,18 @@ bool ReleaseScanner::advance(std::size_t max_files) {
             }
             const auto size = std::filesystem::file_size(candidate);
             const auto manifest = release_manifest();
-            if (std::none_of(manifest.begin(), manifest.end(),
-                    [size](const auto& known) { return known.size == size; })) {
+            const bool outer_size_matches = std::any_of(manifest.begin(), manifest.end(),
+                [size](const auto& known) { return known.size == size; });
+            const bool direct_size_matches = has_manifest_leaf_size(size);
+            if (!outer_size_matches && !direct_size_matches) {
                 ++report_.size_rejected_candidates;
                 continue;
             }
-            ++report_.size_candidates;
+            if (outer_size_matches) ++report_.size_candidates;
+            if (direct_size_matches) ++report_.direct_media_size_candidates;
             const auto fingerprint = to_hex(sha256_file(candidate));
             ++report_.hashed_candidates;
+            if (direct_size_matches) ++report_.direct_media_hashed_candidates;
             const auto found = std::find_if(manifest.begin(), manifest.end(),
                 [&fingerprint](const auto& known) { return fingerprint == known.sha256; });
             if (found != manifest.end()) {
@@ -188,6 +205,18 @@ bool ReleaseScanner::advance(std::size_t max_files) {
                     // the first path as a deterministic in-place read target
                     // and record every additional copy/link as evidence only.
                     ++report_.duplicate_occurrences;
+                }
+            } else if (is_manifest_leaf(fingerprint, size)) {
+                ++report_.verified_direct_media_occurrences;
+                const auto existing = std::find_if(unbound_direct_media_.begin(),
+                    unbound_direct_media_.end(), [&fingerprint](const auto& media) {
+                        return media.sha256 == fingerprint;
+                    });
+                if (existing == unbound_direct_media_.end()) {
+                    unbound_direct_media_.push_back({fingerprint,
+                        static_cast<std::uint64_t>(size), candidate});
+                } else {
+                    ++report_.duplicate_direct_media_occurrences;
                 }
             } else {
                 // The complete outer archive was read but does not have a
@@ -206,6 +235,8 @@ bool ReleaseScanner::advance(std::size_t max_files) {
     std::sort(releases_.begin(), releases_.end(), [](const auto& left, const auto& right) {
         return left.sha256 < right.sha256;
     });
+    std::sort(unbound_direct_media_.begin(), unbound_direct_media_.end(),
+        [](const auto& left, const auto& right) { return left.sha256 < right.sha256; });
     return true;
 }
 

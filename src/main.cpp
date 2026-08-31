@@ -743,10 +743,16 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
     std::cout << ",\"candidates\":" << scan_snapshot.candidate_count
         << ",\"size_rejected_candidates\":" << scan.size_rejected_candidates
         << ",\"manifest_size_matches\":" << scan.size_candidates
+        << ",\"direct_media_size_matches\":" << scan.direct_media_size_candidates
         << ",\"hashed\":" << scan.hashed_candidates
+        << ",\"direct_media_hashed\":" << scan.direct_media_hashed_candidates
         << ",\"hash_rejected_candidates\":" << scan.hash_rejected_candidates
         << ",\"verified_occurrences\":" << scan.verified_occurrences
         << ",\"duplicate_occurrences\":" << scan.duplicate_occurrences
+        << ",\"verified_unbound_direct_media_occurrences\":"
+        << scan.verified_direct_media_occurrences
+        << ",\"duplicate_unbound_direct_media_occurrences\":"
+        << scan.duplicate_direct_media_occurrences
         << ",\"unreadable_candidates\":" << scan.unreadable_candidates
         << ",\"symlink_rejected_entries\":" << scan.symlink_rejected_entries
         << "}}\n";
@@ -3616,7 +3622,10 @@ int main(int argc, char** argv) {
                 << report.hash_rejected_candidates << " hash-rejected; "
                 << report.verified_occurrences << " verified occurrences; "
                 << releases.size() << " unique releases; "
+                << report.verified_direct_media_occurrences << " verified unbound direct-media occurrences; "
+                << scanner->unbound_direct_media().size() << " unique unbound direct-media leaves; "
                 << report.duplicate_occurrences << " duplicate occurrences; "
+                << report.duplicate_direct_media_occurrences << " duplicate unbound direct-media occurrences; "
                 << report.symlink_rejected_entries << " symlink entries rejected; "
                 << report.unreadable_candidates << " unreadable candidates\n";
         }
