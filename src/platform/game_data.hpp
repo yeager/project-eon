@@ -21,6 +21,18 @@ struct ReleaseArchive {
     std::filesystem::path path;
 };
 
+// A hash-recognised physical leaf encountered outside a recognised release
+// container.  It is deliberately *not* a ReleaseArchive: one disk can be
+// shared by several container releases, and a leaf alone does not prove that
+// every disk/file required by an original release is present.  Keeping this
+// evidence separate lets the scanner preserve direct ADF/ST/DOS-image facts
+// without inventing a launchable release identity.
+struct UnboundDirectMedia {
+    std::string sha256;
+    std::uint64_t size = 0;
+    std::filesystem::path path;
+};
+
 // Every caller must classify an original-media root through this one boundary.
 // A directory is enumerated incrementally; a regular file is one candidate
 // archive.  Symlinks and every other filesystem object are deliberately not
@@ -54,6 +66,14 @@ struct ReleaseScanReport {
     std::size_t size_candidates = 0;
     std::size_t hashed_candidates = 0;
     std::size_t hash_rejected_candidates = 0;
+    // Direct physical media are independently hash-addressed against leaf
+    // evidence from the parser manifest. They never increase the release
+    // count and cannot make a launcher card startable until a complete direct
+    // media-set identity is documented in the manifest.
+    std::size_t direct_media_size_candidates = 0;
+    std::size_t direct_media_hashed_candidates = 0;
+    std::size_t verified_direct_media_occurrences = 0;
+    std::size_t duplicate_direct_media_occurrences = 0;
     std::size_t verified_occurrences = 0;
     std::size_t duplicate_occurrences = 0;
     std::size_t unreadable_candidates = 0;
@@ -100,6 +120,9 @@ public:
     // discovering() before presenting it as a complete total.
     [[nodiscard]] std::size_t candidate_count() const { return candidates_.size(); }
     [[nodiscard]] const std::vector<ReleaseArchive>& releases() const { return releases_; }
+    [[nodiscard]] const std::vector<UnboundDirectMedia>& unbound_direct_media() const {
+        return unbound_direct_media_;
+    }
     [[nodiscard]] const ReleaseScanReport& report() const { return report_; }
     [[nodiscard]] ReleaseScanSnapshot snapshot() const;
 
@@ -113,6 +136,7 @@ private:
     bool candidate_inventory_complete_ = false;
     std::size_t next_candidate_ = 0;
     std::vector<ReleaseArchive> releases_;
+    std::vector<UnboundDirectMedia> unbound_direct_media_;
     ReleaseScanReport report_;
 };
 

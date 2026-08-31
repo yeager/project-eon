@@ -589,6 +589,8 @@ void assert_original_data_source_classification() {
     assert(complete_snapshot.unique_release_count == 0);
     assert(complete_snapshot.report.candidates == 1);
     assert(complete_snapshot.report.size_rejected_candidates == 1);
+    assert(complete_snapshot.report.verified_direct_media_occurrences == 0);
+    assert(scanner.unbound_direct_media().empty());
     assert(complete_snapshot.report.symlink_rejected_entries == (symlink_error ? 0U : 1U));
     std::filesystem::remove_all(root);
 }
@@ -2103,6 +2105,11 @@ int main() {
         + incremental_scanner.report().unreadable_candidates
         == incremental_scanner.report().size_candidates);
     assert(incremental_scanner.report().verified_occurrences == 6);
+    // The supplied corpus contains recognised outer archives. A leaf found
+    // outside such an archive would remain unbound evidence and cannot alter
+    // this release count or platform admission table.
+    assert(incremental_scanner.report().verified_direct_media_occurrences == 0);
+    assert(incremental_scanner.unbound_direct_media().empty());
     assert(incremental_scanner.report().hash_rejected_candidates
         <= incremental_scanner.report().hashed_candidates);
     assert(incremental_scanner.report().duplicate_occurrences == 0);
@@ -3367,6 +3374,8 @@ int main() {
     assert(direct_archive_scanner.report().hashed_candidates == 1);
     assert(direct_archive_scanner.report().hash_rejected_candidates == 0);
     assert(direct_archive_scanner.report().verified_occurrences == 1);
+    assert(direct_archive_scanner.report().verified_direct_media_occurrences == 0);
+    assert(direct_archive_scanner.unbound_direct_media().empty());
     assert(direct_archive_scanner.report().duplicate_occurrences == 0);
     assert(direct_archive_scanner.report().unreadable_candidates == 0);
     const auto sfx1_bytes = eon::extract_verified_release_asset(*english_dos,

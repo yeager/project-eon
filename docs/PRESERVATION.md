@@ -41,6 +41,19 @@ before retaining the value. It clears any prior identity before each acquire
 attempt and on source replacement. A malformed, stale, or replaced archive
 therefore leaves no active identity for a loader to consume.
 
+### Direct-media evidence boundary
+
+The scanner also recognises a loose physical-media leaf only when its exact
+size and SHA-256 occur in the parser-profile manifest. Such an observation is
+reported as **unbound direct media**, separately from recognised releases. It
+does not create a `ReleaseArchive`, light a platform card, or permit a launch:
+the same ADF, ST image, or DOS disk can occur in more than one container, and
+one verified leaf does not prove that the complete original media set is
+available. A future direct-media launch path must add a separately documented
+complete-set identity (ordered members, hashes, platform, language, and
+evidence) before it can reach `ReleaseRuntimeCoordinator`. No archive is
+constructed, unpacked, copied, or substituted in the meantime.
+
 The five current native bootstrap/opening adapters—Millennium DOS/Amiga/Atari
 ST and Deuteros Amiga/Atari ST—are SDL-free engine factories behind that
 boundary. They select only their named hash-verified leaf and return no
@@ -259,7 +272,8 @@ own complete media set and runtime path are recovered.
 
 The direct-media scanner discovers one filesystem entry at a time, then sorts
 the complete regular-file candidate set lexically before hashing only files
-whose byte length occurs in the outer-release manifest. Discovery and hashing
+whose byte length occurs in either the outer-release manifest or the
+hash-addressed parser-leaf manifest. Discovery and hashing
 share the launcher work budget, so a large data directory cannot delay its
 first SDL frame. It never opens a ZIP, extracts a leaf, or selects a game by
 name during recognition. A digest match is one *verified occurrence*. Equal
@@ -269,7 +283,8 @@ path is retained as the deterministic in-place source and later occurrences
 are counted, not silently treated as separate editions.
 
 `--inspect` prints aggregate `SCAN SUMMARY` counters: candidates, files rejected
-by a non-manifest size (which are not hashed), manifest-size matches, hashed
+by a size absent from both manifests (which are not hashed), outer
+manifest-size matches, direct-media leaf-size matches, hashed
 candidates, manifest-sized hash rejections, verified and duplicate occurrences,
 unique releases, and unreadable candidates. The report deliberately does not
 print unrecognised filenames or infer their platform: it makes admission and
