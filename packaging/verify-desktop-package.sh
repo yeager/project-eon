@@ -161,6 +161,14 @@ for package in "$@"; do
     echo "$package desktop launcher does not start the installed runtime" >&2
     exit 1
   fi
+  if ! grep -Fxq 'Icon=project-eon' "$desktop_entry"; then
+    echo "$package desktop launcher does not declare the Project Eon icon" >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$contents" | grep -Fq 'usr/share/icons/hicolor/256x256/apps/project-eon.png'; then
+    echo "$package lacks its installed Project Eon application icon" >&2
+    exit 1
+  fi
   for required in \
       "assets/cards/millennium.png" "assets/cards/deuteros.png" \
       "assets/cards/dos-platform-v1.png" "assets/cards/amiga-platform-v1.png" \
@@ -172,6 +180,10 @@ for package in "$@"; do
       exit 1
     fi
   done
+  if ! printf '%s\n' "$contents" | grep -Fq 'assets/branding/project-eon-logo-v1.png'; then
+    echo "$package lacks the launcher branding resource" >&2
+    exit 1
+  fi
   # Unicode launcher rendering is entirely bundle-backed.  Verify every
   # reviewed Noto file and its OFL license so installation cannot silently
   # fall back to a workstation font for an otherwise shipped locale.

@@ -809,19 +809,29 @@ bool inside(const SDL_FRect& rectangle, float x, float y) {
         && y >= rectangle.y && y <= rectangle.y + rectangle.h;
 }
 
-SDL_Texture* load_card(SDL_Renderer* renderer, const char* filename) {
+SDL_Texture* load_launcher_asset(SDL_Renderer* renderer, const char* directory,
+    const char* filename) {
     const auto base = std::filesystem::path(SDL_GetBasePath());
     const std::array<std::filesystem::path, 4> candidates{{
-        base / "assets" / "cards" / filename,
-        base / "Resources" / "assets" / "cards" / filename,
-        std::filesystem::path(EON_ASSET_DIR) / "cards" / filename,
-        std::filesystem::path("assets") / "cards" / filename,
+        base / "assets" / directory / filename,
+        base / "Resources" / "assets" / directory / filename,
+        std::filesystem::path(EON_ASSET_DIR) / directory / filename,
+        std::filesystem::path("assets") / directory / filename,
     }};
     for (const auto& path : candidates) {
         if (SDL_Texture* texture = IMG_LoadTexture(renderer, path.string().c_str())) return texture;
     }
-    std::cerr << "Unable to load card " << filename << ": " << SDL_GetError() << '\n';
+    std::cerr << "Unable to load launcher asset " << directory << '/' << filename << ": "
+              << SDL_GetError() << '\n';
     return nullptr;
+}
+
+SDL_Texture* load_card(SDL_Renderer* renderer, const char* filename) {
+    return load_launcher_asset(renderer, "cards", filename);
+}
+
+SDL_Texture* load_branding_texture(SDL_Renderer* renderer, const char* filename) {
+    return load_launcher_asset(renderer, "branding", filename);
 }
 
 std::optional<std::filesystem::path> find_font_directory() {
@@ -3587,6 +3597,9 @@ int main(int argc, char** argv) {
         {ProfileChoice::custom, "CUSTOM", "TUNE MODERN SETTINGS", "custom-profile-v1.png", {864, 188, 352, 308}},
     }};
     for (auto& card : profile_cards) card.texture = load_card(renderer, card.filename);
+    // Project Eon branding is original launcher artwork, never recovered game
+    // pixels. It remains a renderer-only menu resource in every profile.
+    SDL_Texture* project_eon_logo_texture = load_branding_texture(renderer, "project-eon-logo-v1.png");
     std::unique_ptr<eon::DeuterosAmigaOpening> deuteros_opening;
     std::unique_ptr<eon::DeuterosAmigaPaulaMixer> deuteros_paula;
     SDL_AudioStream* deuteros_audio_stream = nullptr;
@@ -4619,6 +4632,10 @@ int main(int argc, char** argv) {
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
 
         if (screen == Screen::menu) {
+            if (project_eon_logo_texture) {
+                const SDL_FRect logo_bounds{1060.0F, 18.0F, 150.0F, 150.0F};
+                SDL_RenderTexture(renderer, project_eon_logo_texture, nullptr, &logo_bounds);
+            }
             draw_text(renderer, 64, 56, tr("PROJECT EON"));
             const auto draw_card_border = [&](const SDL_FRect& bounds, const bool active, const bool enabled) {
                 SDL_SetRenderDrawColor(renderer, active ? 255 : enabled ? 185 : 85,
@@ -5159,6 +5176,7 @@ int main(int argc, char** argv) {
     }
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
+    SDL_DestroyTexture(project_eon_logo_texture);
     if (millennium_title_text_input_active) SDL_StopTextInput(window);
     SDL_DestroyTexture(millennium_preview_texture);
     SDL_DestroyTexture(millennium_modern_preview_texture);

@@ -85,6 +85,7 @@ def required_paths() -> set[str]:
         ROOT + "Resources/assets/cards/original-profile-v1.png",
         ROOT + "Resources/assets/cards/modern-profile-v1.png",
         ROOT + "Resources/assets/cards/custom-profile-v1.png",
+        ROOT + "Resources/assets/branding/project-eon-logo-v1.png",
     }
     required.update(ROOT + "Resources/assets/fonts/" + font for font in FONTS)
     required.update(ROOT + "Resources/po/" + catalog + ".po" for catalog in CATALOGS)

@@ -18,6 +18,7 @@ LAUNCHER = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")
 MAIN = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
 INNO = (ROOT / "packaging" / "windows" / "project-eon.iss").read_text(encoding="utf-8")
+WINDOWS_RESOURCE = (ROOT / "packaging" / "windows" / "project-eon.rc").read_text(encoding="utf-8")
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 PRESERVATION = (ROOT / "docs" / "PRESERVATION.md").read_text(encoding="utf-8")
 
@@ -34,22 +35,25 @@ class RuntimeLayoutTests(unittest.TestCase):
 
     def test_linux_install_layout_matches_runtime_search_order(self) -> None:
         self.assertIn('install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', CMAKE)
+        self.assertIn('DESTINATION "${CMAKE_INSTALL_BINDIR}/assets/branding"', CMAKE)
         self.assertIn('install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', CMAKE)
         self.assertIn('install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")', CMAKE)
         self.assertIn('executable_directory / "po"', I18N)
         self.assertIn('executable_directory / ".." / "share" / "project-eon" / "po"', I18N)
-        self.assertIn('base / "assets" / "cards"', MAIN)
+        self.assertIn('base / "assets" / directory / filename', MAIN)
+        self.assertIn('base / "assets" / directory / filename', MAIN)
         self.assertIn('base / "assets" / "fonts"', MAIN)
 
     def test_apple_bundle_layout_matches_runtime_search_order(self) -> None:
         self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/assets/cards"', CMAKE)
+        self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/assets/branding"', CMAKE)
         self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/assets/fonts"', CMAKE)
         self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/po"', CMAKE)
-        self.assertIn('base / "Resources" / "assets" / "cards"', MAIN)
+        self.assertIn('base / "Resources" / "assets" / directory / filename', MAIN)
         self.assertIn('base / "Resources" / "assets" / "fonts"', MAIN)
         self.assertIn('executable_directory / ".." / "Resources" / "po"', I18N)
         self.assertIn('executable_directory / "Resources" / "po"', I18N)
-        self.assertIn('mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/Resources/po"', WORKFLOW)
+        self.assertIn('mkdir -p "$APP/Contents/MacOS/assets/cards" "$APP/Contents/MacOS/assets/branding"', WORKFLOW)
 
     def test_public_docs_distinguish_stx_metadata_reads_from_flattening(self) -> None:
         self.assertIn("physical media such as STX remain in their original container form", README)
@@ -59,9 +63,14 @@ class RuntimeLayoutTests(unittest.TestCase):
 
     def test_windows_stage_matches_runtime_search_order_without_data_directory(self) -> None:
         self.assertIn('Copy-Item po/*.po dist/po/', WORKFLOW)
+        self.assertIn('Copy-Item assets/branding/* dist/assets/branding/', WORKFLOW)
         self.assertIn('Copy-Item $sdlTtf.FullName dist/SDL3_ttf.dll', WORKFLOW)
         self.assertIn('Source: "{#StagingDir}\\SDL3_ttf.dll"', INNO)
         self.assertIn('Source: "{#StagingDir}\\po\\*"; DestDir: "{app}\\po"', INNO)
+        self.assertIn('SetupIconFile={#StagingDir}\\assets\\branding\\project-eon.ico', INNO)
+        self.assertIn('target_sources(project-eon PRIVATE packaging/windows/project-eon.rc)', CMAKE)
+        self.assertIn('IDI_PROJECT_EON ICON', WINDOWS_RESOURCE)
+        self.assertIn('assets\\\\branding\\\\project-eon.ico', WINDOWS_RESOURCE)
         self.assertNotIn('DestDir: "{app}\\data', INNO)
 
 

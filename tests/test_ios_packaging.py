@@ -19,6 +19,7 @@ FONTS = ("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanaga
 CARDS = ("millennium.png", "deuteros.png", "dos-platform-v1.png", "amiga-platform-v1.png",
          "atari-st-platform-v1.png", "original-profile-v1.png", "modern-profile-v1.png",
          "custom-profile-v1.png")
+BRANDING = ("project-eon-logo-v1.png",)
 
 
 @unittest.skipUnless(os.name != "nt" and shutil.which("bash") and shutil.which("unzip"),
@@ -50,6 +51,7 @@ class IosPackagingTests(unittest.TestCase):
 <key>LSSupportsOpeningDocumentsInPlace</key><true/>
 </dict></plist>""", encoding="utf-8")
         for resource in (*(f"Resources/assets/cards/{card}" for card in CARDS),
+                         *(f"Resources/assets/branding/{logo}" for logo in BRANDING),
                          *(f"Resources/assets/fonts/{font}" for font in FONTS),
                          *(f"Resources/po/{catalog}.po" for catalog in CATALOGS)):
             path = app / resource
@@ -76,7 +78,9 @@ class IosPackagingTests(unittest.TestCase):
     def test_ci_stages_reviewed_resources_when_ninja_omits_ios_bundle_sources(self):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('mkdir -p "$APP/Resources/assets/cards"', workflow)
+        self.assertIn('mkdir -p "$APP/Resources/assets/cards" "$APP/Resources/assets/branding"', workflow)
         self.assertIn('cp assets/cards/*.png "$APP/Resources/assets/cards/"', workflow)
+        self.assertIn('cp assets/branding/project-eon-logo-v1.png "$APP/Resources/assets/branding/"', workflow)
         self.assertIn('cp po/{ar,de,el,en_GB,es,fi,fr,hi,it,ja,ko,nl,no,pl,pt_BR,ru,sv,tr,uk,zh_CN}.po', workflow)
 
     def test_ios_bundle_has_an_install_destination(self):
@@ -96,7 +100,8 @@ class IosPackagingTests(unittest.TestCase):
     def test_ios_resource_locations_match_runtime_lookups(self):
         main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
         i18n = (ROOT / "src" / "i18n.cpp").read_text(encoding="utf-8")
-        self.assertIn('base / "Resources" / "assets" / "cards"', main)
+        self.assertIn('base / "Resources" / "assets" / directory / filename', main)
+        self.assertIn('load_branding_texture(renderer, "project-eon-logo-v1.png")', main)
         self.assertIn('executable_directory / "Resources" / "po"', i18n)
 
     def test_ios_keeps_user_media_out_of_the_ipa_but_files_visible_at_runtime(self):
@@ -127,6 +132,7 @@ class IosPackagingTests(unittest.TestCase):
             self.assertIn("Payload/ProjectEon.app/project-eon", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/millennium.png", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/cards/custom-profile-v1.png", listing)
+            self.assertIn("Payload/ProjectEon.app/Resources/assets/branding/project-eon-logo-v1.png", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/assets/fonts/NotoSansSC-Regular.otf", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/sv.po", listing)
             self.assertIn("Payload/ProjectEon.app/Resources/po/zh_CN.po", listing)
