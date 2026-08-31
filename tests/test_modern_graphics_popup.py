@@ -288,7 +288,8 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         modal = SOURCE.index("if (show_modern_graphics_settings) {", f10_guard)
         f10_block = SOURCE[f10_guard:modal]
         self.assertIn("clear_deuteros_opening_input();", f10_block)
-        self.assertIn("deuteros_input_pressed = false;", SOURCE)
+        self.assertIn("RuntimeInputObservation::opening_input_held(false)", SOURCE)
+        self.assertIn("runtime_coordinator.tick_deuteros_amiga_opening()", SOURCE)
         self.assertLess(f10_guard, modal)
 
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:

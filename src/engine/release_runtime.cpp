@@ -130,6 +130,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_.reset();
     millennium_atari_.reset();
     deuteros_amiga_.reset();
+    deuteros_amiga_opening_input_held_ = false;
     deuteros_atari_.reset();
     session_snapshot_.reset();
     active_.reset();
@@ -141,7 +142,20 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
     // Do not accept a generic input event just because a session is active.
     // The two branches below are the complete, typed evidence currently
     // admitted for Millennium DOS; all other adapters fail closed.
-    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title) {
+    if (!session_snapshot_) {
+        return RuntimeInputDisposition::rejected;
+    }
+    if (session_snapshot_->kind == RuntimeSessionKind::deuteros_amiga_opening) {
+        if (observation.kind != RuntimeInputObservationKind::opening_input_held) {
+            return RuntimeInputDisposition::rejected;
+        }
+        deuteros_amiga_opening_input_held_ = observation.ascii_character != '\0';
+        return RuntimeInputDisposition::observed;
+    }
+    if (session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title) {
+        return RuntimeInputDisposition::rejected;
+    }
+    if (observation.kind == RuntimeInputObservationKind::opening_input_held) {
         return RuntimeInputDisposition::rejected;
     }
     if (observation.kind == RuntimeInputObservationKind::ascii_character) {
@@ -152,6 +166,12 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
     if (!millennium_dos_title_) return RuntimeInputDisposition::rejected;
     return millennium_dos_title_->poll_console(true)
         ? RuntimeInputDisposition::boundary_reached : RuntimeInputDisposition::ignored;
+}
+
+std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_amiga_opening() {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
+        || !deuteros_amiga_ || deuteros_amiga_->title_handed_off()) return std::nullopt;
+    return deuteros_amiga_->tick(deuteros_amiga_opening_input_held_);
 }
 
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,

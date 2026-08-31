@@ -33,7 +33,7 @@ enum class RuntimeSessionBoundary {
 // only two independently evidenced DOS values and are rejected for every
 // other active adapter: an ASCII byte for MILL.COM's literal sound chooser,
 // or the nonzero availability result of TITLES.EXE's DOS console poll.
-enum class RuntimeInputObservationKind { ascii_character, character_available };
+enum class RuntimeInputObservationKind { ascii_character, character_available, opening_input_held };
 
 struct RuntimeInputObservation {
     RuntimeInputObservationKind kind = RuntimeInputObservationKind::ascii_character;
@@ -44,9 +44,12 @@ struct RuntimeInputObservation {
     [[nodiscard]] static RuntimeInputObservation available_character() {
         return {RuntimeInputObservationKind::character_available, '\0'};
     }
+    [[nodiscard]] static RuntimeInputObservation opening_input_held(const bool held) {
+        return {RuntimeInputObservationKind::opening_input_held, held ? '\1' : '\0'};
+    }
 };
 
-enum class RuntimeInputDisposition { rejected, ignored, boundary_reached };
+enum class RuntimeInputDisposition { rejected, ignored, observed, boundary_reached };
 
 [[nodiscard]] std::string_view runtime_session_kind_label(RuntimeSessionKind kind);
 [[nodiscard]] std::string_view runtime_session_boundary_label(RuntimeSessionBoundary boundary);

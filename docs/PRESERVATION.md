@@ -289,8 +289,11 @@ boundary. It contains no filesystem path, archive member, original bytes, SDL
 object, inferred input mapping, save state, or generic game model. The
 Millennium DOS title snapshot alone declares `admitted_input = true`, and its
 coordinator accepts only a literal ASCII sound-choice byte or the separately
-observed nonzero DOS console-availability result. Every other input requires
-its own caller-connected evidence. Resetting or rejecting a launch clears the
+observed nonzero DOS console-availability result. The Deuteros Amiga opening
+snapshot likewise permits only its recovered held input signal and advances
+one 20 ms opening tick through the coordinator; it does not name a generic
+keybinding or authorize title/gameplay input. Every other input requires its
+own caller-connected evidence. Resetting or rejecting a launch clears the
 snapshot atomically with the adapter. This is shared runtime plumbing, not a
 claim that a session is playable or frame-parity complete.
 The F10 developer diagnostics page reads this same snapshot; its adapter and

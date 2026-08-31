@@ -3309,7 +3309,16 @@ int main() {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
                 && session_snapshot.capabilities.decoded_presentation
                 && session_snapshot.capabilities.audio_observations
-                && !session_snapshot.capabilities.admitted_input);
+                && session_snapshot.capabilities.admitted_input);
+            const auto ticks_before = all_release_runtime.deuteros_amiga()->ticks();
+            assert(all_release_runtime.observe_input(
+                eon::RuntimeInputObservation::opening_input_held(true))
+                == eon::RuntimeInputDisposition::observed);
+            const auto events = all_release_runtime.tick_deuteros_amiga_opening();
+            assert(events && all_release_runtime.deuteros_amiga()->ticks() == ticks_before + 1U);
+            assert(all_release_runtime.observe_input(
+                eon::RuntimeInputObservation::ascii('1'))
+                == eon::RuntimeInputDisposition::rejected);
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(all_release_runtime.deuteros_atari());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
