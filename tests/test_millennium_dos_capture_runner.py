@@ -152,6 +152,19 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.raw_observation_status(path, "events_raw")
 
+    def test_known_unhandled_interrupt_requires_one_complete_valid_raw_record(self) -> None:
+        with temporary_directory() as directory:
+            results = Path(directory) / "results.raw"
+            self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
+            results.write_bytes(
+                b"raw-result\t1 1 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
+                b"ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101")
+            self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
+            results.write_bytes(results.read_bytes() + b"\n")
+            self.assertTrue(TOOL.known_unhandled_interrupt_observed(results))
+            results.write_bytes(b"not a recorder record\n")
+            self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""
         with temporary_directory() as directory:

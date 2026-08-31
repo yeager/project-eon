@@ -306,7 +306,7 @@ the whole physical-observation window on host I/O. A verifier accepts v2 and
 v3 historical receipts, while v4 requires `recorder_console_over_limit=false`.
 
 Receipt v2 first bound the retained console prefix as well as the complete
-transcript; current Millennium captures write `capture_receipt_version=5`.
+transcript; current Millennium captures write `capture_receipt_version=10`.
 V5 additionally validates a present recorder-owned host-key receipt as at
 most 256 contiguous ASCII records in the reviewed SDL grammar and records its
 count. Scancodes, symbols and modifiers remain opaque host observations until
@@ -523,6 +523,32 @@ The run was again rejected after its console exceeded the 64 MiB cap
 is an ordered raw-state observation only. It does not identify handler bytes,
 assign a meaning to `AX` or flags, establish the following title branch, or
 prove title rendering, input, audio, or gameplay.
+
+### Receipt-v10 bounded callback-loop stop (diagnostics only)
+
+On 2026-08-31, the capture helper gained an explicit host-side stop condition
+for the already documented, recorder-owned `INT 6` callback boundary. It polls
+only the recorder's newly completed, bounded `results.raw` file and kills the
+external DOSBox-X process after the exact validated raw fault record appears.
+It does not install an interrupt vector, write guest memory, alter registers,
+inject input, or let a partially written line qualify. The helper records
+`termination_reason=known-unhandled-interrupt` with exit status `126`; receipt
+v10 requires that finite reason/status relationship.
+
+The first fresh input-free, write-protected run stopped after 0.71 seconds,
+before any console overrun. The archive retained its recognised SHA-256
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`; the
+reviewed recorder remained
+`7b959f7aee3d2db0513db4f14e3075f306e798e25adaeeebd96aedd81aef65da`.
+Its 786-byte, eight-record raw-result stream is unchanged from the v9
+diagnostic (`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`).
+The 4,636-byte complete console digest is
+`91ba9451979bac2b8ae8c128cd9c25517c64bdcc847103b7550646f2e3a0508f`; it was
+not truncated or over the safety cap. `verify_capture_receipt.py` accepted the
+external receipt. This verifies that the runner can retain the known emulator
+boundary efficiently. It does not make the diagnostic a reference trace or
+prove driver behaviour, title pixels, input acceptance, audio, a gameplay
+state, or an original-game fault.
 
 ## Audited local route
 

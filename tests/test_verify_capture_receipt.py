@@ -26,6 +26,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "7"}), "7")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "8"}), "8")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "9"}), "9")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "10"}), "10")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
@@ -129,6 +130,16 @@ class ReceiptVerifierTests(unittest.TestCase):
             TOOL.verify_millennium_machine_profile({"machine_profile": "ega"}, root)
             with self.assertRaisesRegex(ValueError, "does not match"):
                 TOOL.verify_millennium_machine_profile({"machine_profile": "svga_s3"}, root)
+
+    def test_v10_millennium_termination_reason_is_bound_to_early_stop_status(self) -> None:
+        TOOL.verify_millennium_termination(
+            {"termination_reason": "known-unhandled-interrupt", "exit_status": "126"})
+        with self.assertRaisesRegex(ValueError, "termination reason"):
+            TOOL.verify_millennium_termination(
+                {"termination_reason": "known-unhandled-interrupt", "exit_status": "124"})
+        with self.assertRaisesRegex(ValueError, "invalid termination"):
+            TOOL.verify_millennium_termination(
+                {"termination_reason": "made-up", "exit_status": "0"})
 
     def test_v6_deuteros_timing_profile_matches_generated_configuration(self) -> None:
         with temporary_directory() as directory:

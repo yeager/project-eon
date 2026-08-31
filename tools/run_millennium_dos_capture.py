@@ -74,7 +74,8 @@ HOST_KEY_LINE = re.compile(
 # v9 binds the first post-handler caller re-entry to v8's observed endpoint.
 # Its AX and FLAGS are raw machine state only; they are not a private ABI or a
 # runtime result contract.
-CAPTURE_RECEIPT_VERSION = "9"
+CAPTURE_RECEIPT_VERSION = "10"
+TERMINATION_REASONS = {"emulator-exit", "timeout", "console-safety-cap", "known-unhandled-interrupt"}
 
 
 class CaptureError(RuntimeError):
@@ -353,6 +354,36 @@ def raw_result_status(path: Path, name: str) -> str:
             f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
 
 
+def known_unhandled_interrupt_observed(path: Path) -> bool:
+    """Return whether the recorder completed its one known raw INT 6 record.
+
+    This is a host-side early-stop guard for the already documented DOSBox-X
+    callback loop.  It reads no guest memory and does not install a handler;
+    it merely stops the external process once the recorder has durably written
+    the bounded observation that cannot lead to a playable capture.
+    """
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return False
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        return False
+    if info.st_size == 0 or info.st_size > MAX_RAW_OBSERVATION_BYTES:
+        return False
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError:
+        return False
+    # A recorder append can be in progress while this helper polls.  Never
+    # treat an unfinished line as an observation, and never modify that file.
+    if not text.endswith("\n"):
+        return False
+    try:
+        return "fault" in parse_raw_results(path)
+    except CaptureError:
+        return False
+
+
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
     """Drain an emulator console while retaining only a bounded evidence prefix.
 
@@ -457,6 +488,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         console_thread = threading.Thread(target=drain_console, name="project-eon-dos-console", daemon=True)
         console_thread.start()
         deadline = time.monotonic() + args.duration_seconds
+        termination_reason = "emulator-exit"
         while True:
             exit_status = process.poll()
             if exit_status is not None:
@@ -466,11 +498,19 @@ def run_capture(args: argparse.Namespace) -> Path:
                 process.kill()
                 process.wait()
                 exit_status = 125
+                termination_reason = "console-safety-cap"
+                break
+            if known_unhandled_interrupt_observed(output / "results.raw"):
+                process.kill()
+                process.wait()
+                exit_status = 126
+                termination_reason = "known-unhandled-interrupt"
                 break
             if remaining <= 0:
                 process.kill()
                 process.wait()
                 exit_status = 124
+                termination_reason = "timeout"
                 break
             console_over_limit.wait(timeout=min(0.1, remaining))
         console_thread.join()
@@ -487,7 +527,8 @@ def run_capture(args: argparse.Namespace) -> Path:
                               + raw_observation_status(output / "results.raw", "results_raw"))
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
-                        f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
+                        f"exit_status={exit_status}\ntermination_reason={termination_reason}\n"
+                        f"start_unix={started:.6f}\nend_unix={ended:.6f}\n"
                         f"machine_profile={args.machine_profile}\n"
                         + identity_status("source_release", (after_hash, after_size))
                         + identity_status("recorder", recorder_identity)
