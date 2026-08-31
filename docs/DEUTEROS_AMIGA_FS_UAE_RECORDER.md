@@ -157,6 +157,16 @@ this validates the read-only v2 evidence route only. It does not establish a
 title entry, physical control, Exec or graphics return, bitplane, palette,
 frame, audio checkpoint, or interactive game state.
 
+Immediately after the v3 grammar/count gate was added, another 15-second
+input-free run through the same read-only route was accepted as receipt v3.
+Its 28,052-byte raw-PC output has the same SHA-256
+`1e2cdd13d31fb3b368448b4c24b3ca51501ff18876ce9e8df4260c4c29c26d74` and
+exactly 256 grammar-validated records: 128 at `0x0001fe84` and 128 at
+`0x0001fe96`. The host-input receipt remains absent and the console is empty.
+This proves that the new receipt gate describes the existing bounded observer
+without widening its evidence: it remains only bootstrap/loader reachability,
+not title entry, input, ABI, display, frame, audio, or gameplay evidence.
+
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;
 the delivery receipt path did not create a file, so FS-UAE's startup

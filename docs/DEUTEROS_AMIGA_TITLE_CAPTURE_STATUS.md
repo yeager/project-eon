@@ -89,6 +89,16 @@ This independently reconfirms only the bounded bootstrap/loader sites over a
 longer real-media run. It does not reach a title/display probe site and does
 not establish input, frame, audio, callback, ABI, or gameplay behaviour.
 
+On 2026-08-31, a subsequent 15-second, no-input capture exercised the v3
+receipt format. The verifier accepted the externally stored receipt, which
+binds the unchanged recognised outer archive, Kickstart ZIP and reviewed
+recorder. Its raw-PC observer file is 28,052 bytes with SHA-256
+`1e2cdd13d31fb3b368448b4c24b3ca51501ff18876ce9e8df4260c4c29c26d74` and has
+256 grammar-checked records: 128 at `$1fe84` and 128 at `$1fe96`. The receipt
+records no host input and an empty console. It validates the upgraded
+read-only evidence route only; it is not a title/display capture and admits
+no input, Exec/graphics ABI, frame, audio or gameplay behaviour.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
