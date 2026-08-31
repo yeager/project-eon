@@ -191,6 +191,9 @@ msgstr "픽셀 재구성"
 msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X(메모리 전용)"
 
+msgid "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (MEMORY ONLY)"
+
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "끔(원본 픽셀)"
 

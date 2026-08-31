@@ -152,6 +152,9 @@ msgstr "पिक्सेल पुनर्निर्माण"
 msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X (केवल मेमोरी)"
 
+msgid "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (MEMORY ONLY)"
+
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "बंद (मूल पिक्सेल)"
 
