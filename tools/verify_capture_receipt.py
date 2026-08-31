@@ -302,7 +302,11 @@ def main() -> int:
     parser.add_argument("--capture", type=Path, required=True)
     args = parser.parse_args()
     try: verify(args.kind, args.capture)
-    except (OSError, ValueError, KeyError) as error:
+    # The bounded grammar helpers are intentionally shared with the capture
+    # runners. They reject malformed recorder lines with their own
+    # RuntimeError-derived CaptureError, which must be a normal fail-closed
+    # receipt rejection here rather than an uncaught verifier traceback.
+    except (OSError, ValueError, KeyError, RuntimeError) as error:
         print(f"CAPTURE RECEIPT REJECTED  {error}")
         return 2
     print(f"CAPTURE RECEIPT VERIFIED  {args.kind}  {args.capture}")
