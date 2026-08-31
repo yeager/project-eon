@@ -3076,6 +3076,42 @@ int main() {
         && !admitted_dos_runtime.deuteros_amiga() && !admitted_dos_runtime.deuteros_atari());
     admitted_dos_runtime.reset();
     assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos());
+    // Every recognised outer identity admits exactly one engine-owned startup
+    // adapter. Reusing the coordinator also proves a prior platform's object
+    // is destroyed before the next hash-checked release can become active.
+    eon::ReleaseRuntimeCoordinator all_release_runtime;
+    for (const auto& release : releases) {
+        eon::ResolvedLaunchRequest launch;
+        launch.release = release;
+        launch.request.game = release.game;
+        launch.request.platform = release.platform;
+        launch.request.release_language = release.language;
+        launch.request.release_sha256 = release.sha256;
+        assert(all_release_runtime.acquire(launch));
+        const auto adapter_count = static_cast<int>(all_release_runtime.millennium_dos() != nullptr)
+            + static_cast<int>(all_release_runtime.millennium_amiga() != nullptr)
+            + static_cast<int>(all_release_runtime.millennium_atari() != nullptr)
+            + static_cast<int>(all_release_runtime.deuteros_amiga() != nullptr)
+            + static_cast<int>(all_release_runtime.deuteros_atari() != nullptr);
+        assert(adapter_count == 1);
+        if (release.game == eon::Game::millennium && release.platform == eon::Platform::dos) {
+            assert(all_release_runtime.millennium_dos());
+        } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::amiga) {
+            assert(all_release_runtime.millennium_amiga());
+        } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st) {
+            assert(all_release_runtime.millennium_atari());
+        } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
+            assert(all_release_runtime.deuteros_amiga());
+        } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
+            assert(all_release_runtime.deuteros_atari());
+        } else {
+            assert(false && "unrecognised release reached runtime admission");
+        }
+    }
+    all_release_runtime.reset();
+    assert(!all_release_runtime.active() && !all_release_runtime.millennium_dos()
+        && !all_release_runtime.millennium_amiga() && !all_release_runtime.millennium_atari()
+        && !all_release_runtime.deuteros_amiga() && !all_release_runtime.deuteros_atari());
     auto forged_release_metadata = *english_dos;
     forged_release_metadata.language = "es";
     bool rejected_forged_release_metadata = false;
