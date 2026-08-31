@@ -4422,6 +4422,9 @@ int main() {
             rejected = true;
         }
         assert(rejected);
+        assert(observed_game_session.last_first_special_action_trace());
+        assert(observed_game_session.reconstructed_runtime_byte(0x07f9)
+            == std::optional<std::uint8_t>{0x5b});
     }
     const auto observed_second_special = observed_game_session.observe_second_special_action({0xda3a, 1});
     assert(observed_second_special.action == 0x0c);
