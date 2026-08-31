@@ -230,6 +230,15 @@ launch always requires `--platform`: Project Eon will not select a different
 platform's release when the choice is omitted. Use the card menu or
 `--inspect --game <game>` to see the hash-verified choices first.
 
+After a Modern F10/Custom panel is closed, its renderer preferences are stored
+separately from game media: Linux uses
+`$XDG_CONFIG_HOME/project-eon/presentation-v1.ini` (or
+`~/.config/project-eon/`), macOS uses Application Support, and Windows uses
+`%APPDATA%/ProjectEon/`. The file contains only Eon's output, aspect, preset,
+filter, and pacing selections. It is never created while merely reading game
+data, never stored in the data directory, and never changes original media or
+saves. Explicit `--resolution` and `--aspect` options override its values.
+
 Verify genuine release archives by SHA-256 without opening SDL:
 
 ```sh

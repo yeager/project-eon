@@ -165,10 +165,12 @@ ParseResult parse_command_line(int argc, char** argv) {
             if (!parse_display_resolution(value, request.display)) {
                 return {{}, "Unsupported resolution: " + std::string(value), false};
             }
+            request.display_resolution_explicit = true;
         } else if (argument == "--aspect") {
             if (!parse_display_aspect(value, request.display)) {
                 return {{}, "Unknown aspect ratio: " + std::string(value), false};
             }
+            request.display_aspect_explicit = true;
         } else if (argument == "--language" || argument == "-l") {
             request.language = normalize_language(value);
             if (request.language.empty()) return {{}, "Unknown language: " + std::string(value), false};

@@ -1,5 +1,6 @@
 #include "launcher.hpp"
 #include "launcher_text.hpp"
+#include "presentation_preferences.hpp"
 #include "i18n.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
@@ -3318,6 +3319,20 @@ int main(int argc, char** argv) {
         return std::string(translator.translate(message));
     };
     if (request.inspect_save) return inspect_millennium_dos_save(*request.inspect_save);
+    const auto presentation_preferences_path = eon::default_presentation_preferences_path();
+    const auto saved_presentation_preferences = eon::load_presentation_preferences(
+        presentation_preferences_path);
+    if (saved_presentation_preferences) {
+        if (!request.display_resolution_explicit) {
+            request.display.width = output_resolutions.at(
+                saved_presentation_preferences->output_resolution_index).width;
+            request.display.height = output_resolutions.at(
+                saved_presentation_preferences->output_resolution_index).height;
+        }
+        if (!request.display_aspect_explicit) {
+            request.display.aspect_ratio_index = saved_presentation_preferences->aspect_ratio_index;
+        }
+    }
     const bool command_requires_data = request.verify_game || request.inspect_data
         || request.game || request.reference_trace;
     if (command_requires_data && !std::filesystem::is_directory(request.data_directory)
@@ -4135,6 +4150,22 @@ int main(int argc, char** argv) {
     ModernGraphicsSettings modern_graphics_settings;
     modern_graphics_settings.output_resolution_index = output_resolution_index_for(request.display);
     modern_graphics_settings.aspect_ratio_index = request.display.aspect_ratio_index;
+    if (saved_presentation_preferences) {
+        const auto& saved = *saved_presentation_preferences;
+        if (!request.display_resolution_explicit) {
+            modern_graphics_settings.output_resolution_index = saved.output_resolution_index;
+        }
+        if (!request.display_aspect_explicit) {
+            modern_graphics_settings.aspect_ratio_index = saved.aspect_ratio_index;
+        }
+        apply_modern_graphics_preset(modern_graphics_settings,
+            static_cast<ModernGraphicsPreset>(saved.modern_preset_index));
+        modern_graphics_settings.render_pacing = static_cast<RenderPacing>(saved.render_pacing_index);
+        modern_graphics_settings.pixel_reconstruction = saved.pixel_reconstruction;
+        modern_graphics_settings.smooth_scaling = saved.smooth_scaling;
+        modern_graphics_settings.scanlines = saved.scanlines;
+        modern_graphics_settings.frame = saved.frame;
+    }
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
         diagnostics.release_identity = tr("NOT SELECTED");
@@ -4219,6 +4250,10 @@ int main(int argc, char** argv) {
             std::cerr << "Unable to set renderer frame pacing: " << SDL_GetError() << '\n';
         }
     };
+    if (!SDL_SetRenderVSync(renderer,
+            modern_graphics_settings.render_pacing == RenderPacing::vsync ? 1 : 0)) {
+        std::cerr << "Unable to apply saved renderer frame pacing: " << SDL_GetError() << '\n';
+    }
     const auto change_modern_graphics_option = [&](const int direction) {
         const bool modern_renderer = request.presentation == eon::Presentation::modern;
         if (!modern_renderer) {
@@ -4259,6 +4294,22 @@ int main(int argc, char** argv) {
         recovery_function_map_page = 0;
         show_modern_runtime_diagnostics = false;
         show_modern_graphics_settings = false;
+        if (request.presentation == eon::Presentation::modern) {
+            const eon::PresentationPreferences preferences{
+                modern_graphics_settings.output_resolution_index,
+                modern_graphics_settings.aspect_ratio_index,
+                static_cast<std::size_t>(modern_graphics_settings.preset),
+                static_cast<std::size_t>(modern_graphics_settings.render_pacing),
+                modern_graphics_settings.pixel_reconstruction,
+                modern_graphics_settings.smooth_scaling,
+                modern_graphics_settings.scanlines,
+                modern_graphics_settings.frame,
+            };
+            if (!eon::save_presentation_preferences(presentation_preferences_path, preferences)) {
+                std::cerr << "Unable to save Modern presentation preferences: "
+                          << presentation_preferences_path << '\n';
+            }
+        }
         if (screen == Screen::menu && launcher_page == LauncherPage::profiles
             && focused_profile_card == 2) custom_profile_ready = true;
     };
