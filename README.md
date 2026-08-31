@@ -244,6 +244,16 @@ launch always requires `--platform`: Project Eon will not select a different
 platform's release when the choice is omitted. Use the card menu or
 `--inspect --game <game>` to see the hash-verified choices first.
 
+To validate the complete hash-bound startup route without creating an SDL
+window, add `--launch-check`. It resolves one exact release, rehashes the
+outer archive, and constructs its platform adapter, then exits before any
+rendering, audio, input, game timing, or save activity:
+
+```sh
+./build/project-eon --data "$HOME/Downloads" --game deuteros \
+  --platform amiga --presentation modern --launch-check
+```
+
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It
 contains only game/platform/language/release hashes plus hash-bound startup and

@@ -1409,6 +1409,16 @@ int main() {
             direct_game_without_platform_args);
         assert(!direct_game_without_platform.request);
         assert(direct_game_without_platform.error.find("requires --platform") != std::string::npos);
+        char launch_check_option[] = "--launch-check";
+        char* launch_check_args[] = {program, game_option, millennium, platform_option, dos,
+            launch_check_option};
+        const auto launch_check = eon::parse_command_line(6, launch_check_args);
+        assert(launch_check.request && launch_check.request->launch_check);
+        char* launch_check_without_target_args[] = {program, launch_check_option};
+        assert(!eon::parse_command_line(2, launch_check_without_target_args).request);
+        char* launch_check_with_inspect_args[] = {program, inspect_option, game_option, millennium,
+            platform_option, dos, launch_check_option};
+        assert(!eon::parse_command_line(7, launch_check_with_inspect_args).request);
         char release_language_option[] = "--release-language";
         char spanish_release[] = "es";
         char* spanish_release_args[] = {program, game_option, millennium, platform_option, dos,

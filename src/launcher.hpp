@@ -72,6 +72,10 @@ struct LaunchRequest {
     // Preservation-only leaf manifest. It is intentionally opt-in because
     // `--inspect` normally reports recovered structure, not every filename.
     bool inventory_assets = false;
+    // Validates one full release/runtime admission without creating SDL
+    // objects or entering a game loop. It is a startup diagnostic, never a
+    // substitute runtime or replay mode.
+    bool launch_check = false;
     std::optional<Platform> platform;
     // Language of the immutable original release, distinct from the launcher
     // UI locale above.  A release selection must never infer this from the

@@ -74,6 +74,11 @@ adapter. A missing/stale candidate resets the coordinator; no prior runtime
 can survive a failed later route. Renderer pack preflight reads that one
 already admitted identity rather than resolving menu fields independently.
 
+`--launch-check` exposes this same final gate as a bounded CLI diagnostic. It
+requires an explicit game/platform, emits only game/platform/language and the
+safe admission result, and exits before SDL initialization. It is not an
+emulator, replay, renderer, input path, audio path, or save operation.
+
 The launcher carries the same provenance boundary before admission. Its
 source identity is exactly game, platform, original-release language, and
 outer SHA-256; Original/Modern/Custom presentation selection is not a source
