@@ -93,6 +93,17 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("eon::load_deuteros_amiga_runtime(*release)", SOURCE)
         self.assertIn("eon::load_millennium_dos_runtime(*release)", SOURCE)
 
+    def test_returning_to_launcher_resets_the_active_release_runtime(self) -> None:
+        # Escape and gamepad Back must not retain an active archive, texture,
+        # audio stream, or recovered VM behind a newly visible launcher.
+        reset = SOURCE.index("const auto reset_active_runtime")
+        self.assertIn("runtime_coordinator.reset();", SOURCE[reset:reset + 1100])
+        self.assertIn("reset_deuteros_runtime();", SOURCE[reset:reset + 1100])
+        escape = SOURCE.rfind("if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)")
+        self.assertIn("reset_active_runtime();", SOURCE[escape:escape + 450])
+        gamepad_back = SOURCE.rfind("event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK")
+        self.assertIn("reset_active_runtime();", SOURCE[gamepad_back:gamepad_back + 500])
+
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
         # If a game has only Amiga/Atari media, selecting its game card must
         # not leave Enter/South-A focused on the disabled DOS card.
@@ -128,7 +139,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_replacing_data_source_invalidates_every_release_bound_runtime(self) -> None:
         # A new scanner cannot inherit a resolved archive, decoded frames, VM
         # state, queued audio, or a Modern sequence from its predecessor.
-        reset = SOURCE.index("const auto reset_runtime_for_data")
+        reset = SOURCE.index("const auto reset_active_runtime")
         source_change = SOURCE.index("if (selected_data_directory && screen == Screen::menu)")
         self.assertLess(reset, source_change)
         reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
@@ -153,7 +164,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
             with self.subTest(clearing=clearing):
                 self.assertIn(clearing, deuteros_body)
         switch_body = SOURCE[source_change:SOURCE.index("} else {", source_change)]
-        self.assertIn("reset_runtime_for_data();", switch_body)
+        self.assertIn("reset_active_runtime();", switch_body)
 
     def test_profiles_have_two_runtime_modes_and_a_custom_tuning_route(self) -> None:
         self.assertIn("enum class ProfileChoice { original, modern, custom }", SOURCE)
@@ -224,7 +235,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(stop, start)
         self.assertIn("SDL_StopTextInput(window)", SOURCE[stop:start])
         self.assertIn("millennium_title_session.reset();", SOURCE[stop:start])
-        self.assertIn("stop_millennium_title();\n                    screen = Screen::menu;", SOURCE)
+        self.assertIn("reset_active_runtime();\n                    screen = Screen::menu;", SOURCE)
         self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])
 
     def test_touch_cards_share_the_verified_mouse_admission_route(self) -> None:
