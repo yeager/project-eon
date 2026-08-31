@@ -125,20 +125,20 @@ void SDLCALL receive_modern_pack_dialog_selection(void* userdata,
 // asynchronous and may complete after the UI event that opened them.  The
 // callback merely transfers one untrusted path and its requested shape to the
 // main thread.
-enum class OriginalDataSourceKind {
+enum class OriginalDataSourceDialogKind {
     directory,
     archive,
 };
 
 struct OriginalDataSourceSelection {
     std::filesystem::path path;
-    OriginalDataSourceKind kind;
+    OriginalDataSourceDialogKind kind;
 };
 
 struct OriginalDataSourceDialogMailbox {
     std::mutex mutex;
     std::optional<OriginalDataSourceSelection> pending_selection;
-    OriginalDataSourceKind requested_kind = OriginalDataSourceKind::directory;
+    OriginalDataSourceDialogKind requested_kind = OriginalDataSourceDialogKind::directory;
     bool dialog_open = false;
 };
 
@@ -3340,8 +3340,8 @@ int main(int argc, char** argv) {
     }
     const bool command_requires_data = request.verify_game || request.inspect_data
         || request.game || request.reference_trace;
-    if (command_requires_data && !std::filesystem::is_directory(request.data_directory)
-        && !std::filesystem::is_regular_file(request.data_directory)) {
+    if (command_requires_data && !eon::is_original_data_source(
+            eon::classify_original_data_source(request.data_directory))) {
         std::cerr << "Data path does not exist: " << request.data_directory << '\n';
         return 2;
     }
@@ -4208,7 +4208,7 @@ int main(int argc, char** argv) {
         apply_launcher_navigation(before);
         if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
     };
-    const auto open_original_data_source_dialog = [&](const OriginalDataSourceKind kind) {
+    const auto open_original_data_source_dialog = [&](const OriginalDataSourceDialogKind kind) {
         if (screen != Screen::menu) return;
         auto& mailbox = original_data_source_dialog_mailbox();
         {
@@ -4220,7 +4220,7 @@ int main(int argc, char** argv) {
         // Do not provide the conventional data directory as an initial
         // location: a missing default remains an inert lookup and is never
         // created or persisted merely because the launcher is shown.
-        if (kind == OriginalDataSourceKind::directory) {
+        if (kind == OriginalDataSourceDialogKind::directory) {
             SDL_ShowOpenFolderDialog(receive_original_data_source_dialog_selection, &mailbox,
                 window, nullptr, false);
         } else {
@@ -4233,9 +4233,9 @@ int main(int argc, char** argv) {
         // needed by the iPad build; both still pass through the same
         // hash-verified platform/release admission checks as keyboard focus.
         if (inside(data_directory_picker_bounds, x, y)) {
-            open_original_data_source_dialog(OriginalDataSourceKind::directory);
+            open_original_data_source_dialog(OriginalDataSourceDialogKind::directory);
         } else if (inside(data_archive_picker_bounds, x, y)) {
-            open_original_data_source_dialog(OriginalDataSourceKind::archive);
+            open_original_data_source_dialog(OriginalDataSourceDialogKind::archive);
         } else if (launcher_page == LauncherPage::games) {
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 if (inside(cards[index].bounds, x, y)) {
@@ -4468,19 +4468,17 @@ int main(int argc, char** argv) {
             }
         }
         if (selected_original_data_source && screen == Screen::menu) {
-            std::error_code error;
-            // Do not follow a selected symlink into an implicitly different
-            // collection. The path shape chosen in the native dialog is part
-            // of the handoff contract; ReleaseScanner receives that exact
-            // directory or regular archive only after this boundary check.
-            const auto status = std::filesystem::symlink_status(
-                selected_original_data_source->path, error);
-            const auto is_directory = !error && !std::filesystem::is_symlink(status)
-                && selected_original_data_source->kind == OriginalDataSourceKind::directory
-                && std::filesystem::is_directory(status);
-            const auto is_archive = !error && !std::filesystem::is_symlink(status)
-                && selected_original_data_source->kind == OriginalDataSourceKind::archive
-                && std::filesystem::is_regular_file(status);
+            // The path shape chosen in the native dialog is part of the
+            // handoff contract. The shared classifier rejects symlinks before
+            // ReleaseScanner receives the exact directory or regular archive.
+            const auto source_kind = eon::classify_original_data_source(
+                selected_original_data_source->path);
+            const auto is_directory = selected_original_data_source->kind
+                    == OriginalDataSourceDialogKind::directory
+                && source_kind == eon::OriginalDataSourceKind::directory;
+            const auto is_archive = selected_original_data_source->kind
+                    == OriginalDataSourceDialogKind::archive
+                && source_kind == eon::OriginalDataSourceKind::archive;
             if (is_directory || is_archive) {
                 // A selected source replaces only the scanner instance.  No
                 // archive is opened here; ReleaseScanner advances later in
@@ -4722,11 +4720,11 @@ int main(int argc, char** argv) {
                 && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                 if (event.key.key == SDLK_O) {
-                    open_original_data_source_dialog(OriginalDataSourceKind::directory);
+                    open_original_data_source_dialog(OriginalDataSourceDialogKind::directory);
                     continue;
                 }
                 if (event.key.key == SDLK_A) {
-                    open_original_data_source_dialog(OriginalDataSourceKind::archive);
+                    open_original_data_source_dialog(OriginalDataSourceDialogKind::archive);
                     continue;
                 }
                 const bool previous = event.key.key == SDLK_LEFT || event.key.key == SDLK_UP;

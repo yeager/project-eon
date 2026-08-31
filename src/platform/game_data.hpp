@@ -21,6 +21,22 @@ struct ReleaseArchive {
     std::filesystem::path path;
 };
 
+// Every caller must classify an original-media root through this one boundary.
+// A directory is enumerated incrementally; a regular file is one candidate
+// archive.  Symlinks and every other filesystem object are deliberately not
+// accepted: selecting one must not silently redirect a hash-bound scan to a
+// different collection after the source was chosen.
+enum class OriginalDataSourceKind {
+    missing,
+    directory,
+    archive,
+    unsupported,
+};
+
+[[nodiscard]] OriginalDataSourceKind classify_original_data_source(
+    const std::filesystem::path& path);
+[[nodiscard]] bool is_original_data_source(OriginalDataSourceKind kind);
+
 // Counts are deliberately aggregate-only: a preservation scan must make its
 // admission decision auditable without exposing unrecognised filenames or
 // treating them as a fallback catalogue.  A "verified occurrence" is one
@@ -41,11 +57,12 @@ struct ReleaseScanReport {
     std::size_t unreadable_candidates = 0;
 };
 
-// A bounded, read-only scan over a user-selected directory. Both directory
-// discovery and hashing advance through the same explicit work budget, so the
-// launcher can draw before a large Downloads directory has been enumerated.
-// Candidate paths are sorted only after discovery completes; recognition
-// remains content-addressed and duplicate selection stays deterministic.
+// A bounded, read-only scan over a user-selected directory or one archive.
+// Both directory discovery and hashing advance through the same explicit work
+// budget, so the launcher can draw before a large Downloads directory has
+// been enumerated. Candidate paths are sorted only after discovery completes;
+// recognition remains content-addressed and duplicate selection stays
+// deterministic.
 class ReleaseScanner {
 public:
     explicit ReleaseScanner(const std::filesystem::path& directory);
