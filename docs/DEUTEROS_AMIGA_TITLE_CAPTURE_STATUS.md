@@ -89,6 +89,16 @@ This independently reconfirms only the bounded bootstrap/loader sites over a
 longer real-media run. It does not reach a title/display probe site and does
 not establish input, frame, audio, callback, ABI, or gameplay behaviour.
 
+On 2026-08-31, the same physical, write-protected no-input route was extended
+to 120 seconds. Receipt v5 was accepted by `verify_capture_receipt.py`; it
+retained the same 42,132-byte raw-PC file (SHA-256
+`92dcc35ea0b05102e23a96176eb56550b3a4028ac7712de8dc19dd21b4ef2db6`) with
+128 records each at `$1fe84`, `$1fe96`, and `$210d4`, no host-input receipt,
+and an empty console. This rules out passive duration up to that bounded
+window as a path to a title/display probe for this route. It does not identify
+the loader's missing condition or establish any title, input, display, audio,
+ABI, or gameplay fact.
+
 On 2026-08-31, a subsequent 15-second, no-input capture exercised the v3
 receipt format. The verifier accepted the externally stored receipt, which
 binds the unchanged recognised outer archive, Kickstart ZIP and reviewed
