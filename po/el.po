@@ -277,6 +277,15 @@ msgstr "ΜΟΝΟ ΕΚΚΙΝΗΣΗ ATARI"
 msgid "BOOTSTRAP ONLY"
 msgstr "ΜΟΝΟ ΕΚΚΙΝΗΣΗ"
 
+msgid "RECOVERY COVERAGE"
+msgstr "ΕΥΡΟΣ ΑΝΑΚΤΗΣΗΣ"
+
+msgid "RECOVERED STARTUP"
+msgstr "ΑΝΑΚΤΗΜΕΝΗ ΕΚΚΙΝΗΣΗ"
+
+msgid "RECOVERED OPENING"
+msgstr "ΑΝΑΚΤΗΜΕΝΗ ΕΙΣΑΓΩΓΗ"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

@@ -316,6 +316,15 @@ msgstr "ТОЛЬКО ЗАГРУЗКА ATARI"
 msgid "BOOTSTRAP ONLY"
 msgstr "ТОЛЬКО ЗАГРУЗКА"
 
+msgid "RECOVERY COVERAGE"
+msgstr "ОХВАТ ВОССТАНОВЛЕНИЯ"
+
+msgid "RECOVERED STARTUP"
+msgstr "ВОССТАНОВЛЕННЫЙ ЗАПУСК"
+
+msgid "RECOVERED OPENING"
+msgstr "ВОССТАНОВЛЕННОЕ ВСТУПЛЕНИЕ"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

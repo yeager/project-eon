@@ -49,6 +49,7 @@
 #include "data/startup_boundary.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
+#include "platform/platform_coverage.hpp"
 #include "display_geometry.hpp"
 
 #include <SDL3/SDL.h>
@@ -427,6 +428,7 @@ struct ModernRuntimeDiagnostics {
     };
     std::string release_identity;
     std::string runtime_admission = "NOT SELECTED";
+    std::string recovery_coverage = "—";
     // The first hash-checked address is a preservation navigation marker,
     // not a request to execute, emulate, or hook original machine code.
     std::string startup_boundary = "—";
@@ -678,6 +680,8 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(release.platform));
         std::cout << ",\"language\":"; write_json_string(std::cout, release.language);
         std::cout << ",\"sha256\":"; write_json_string(std::cout, release.sha256);
+        std::cout << ",\"coverage\":";
+        write_json_string(std::cout, eon::name(diagnostics.coverage));
         std::cout << ",\"startup_boundary\":";
         if (const auto& startup = diagnostics.startup_boundary) {
             std::cout << "{\"profile\":"; write_json_string(std::cout, startup->parser_profile_id);
@@ -952,9 +956,10 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
     draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::pair<const char*, std::string>, 10> rows{{
+    const std::array<std::pair<const char*, std::string>, 11> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
         {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
+        {"RECOVERY COVERAGE", tr(diagnostics.recovery_coverage)},
         {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
@@ -973,7 +978,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"FRAME PACING", tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing)))},
     }};
     for (std::size_t index = 0; index < rows.size(); ++index) {
-        const float y = 250.0F + static_cast<float>(index) * 37.0F;
+        const float y = 232.0F + static_cast<float>(index) * 34.0F;
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
         draw_text(renderer, 390, y, tr(rows[index].first));
         SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
@@ -3716,7 +3721,10 @@ int main(int argc, char** argv) {
             write_json_string(std::cout, active_launch()->release.language);
             std::cout << ",\"sha256\":";
             write_json_string(std::cout, active_launch()->release.sha256);
-            std::cout << "},\"runtime_admission\":";
+            std::cout << "},\"coverage\":";
+            const auto diagnostics = eon::runtime_diagnostics_for_release(active_launch()->release);
+            write_json_string(std::cout, eon::name(diagnostics.coverage));
+            std::cout << ",\"runtime_admission\":";
             write_json_string(std::cout,
                 eon::release_runtime_admission_label(runtime_coordinator.admission()));
             std::cout << "}\n";
@@ -4397,6 +4405,7 @@ int main(int argc, char** argv) {
         diagnostics.release_identity = tr(launcher_game_label(release->game)) + " / "
             + tr(launcher_platform_label(release->platform)) + " / " + release->language
             + " / " + truncated_identity_hash(release->sha256);
+        diagnostics.recovery_coverage = std::string(eon::name(report.coverage));
         if (const auto& boundary = report.startup_boundary) {
             diagnostics.startup_boundary = boundary->parser_profile_id
                 + " / " + std::string(boundary->source_address);

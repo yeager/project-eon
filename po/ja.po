@@ -277,6 +277,15 @@ msgstr "ATARI ブートストラップのみ"
 msgid "BOOTSTRAP ONLY"
 msgstr "ブートストラップのみ"
 
+msgid "RECOVERY COVERAGE"
+msgstr "復元範囲"
+
+msgid "RECOVERED STARTUP"
+msgstr "復元済み起動"
+
+msgid "RECOVERED OPENING"
+msgstr "復元済みオープニング"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

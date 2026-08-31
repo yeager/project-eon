@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platform/game_data.hpp"
+#include "platform/platform_coverage.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -46,6 +47,7 @@ struct RuntimeDiagnosticsReport {
     Platform platform = Platform::dos;
     std::string language;
     std::string release_sha256;
+    PlatformCoverage coverage = PlatformCoverage::bootstrap_only;
     std::optional<RuntimeDiagnosticStartupBoundary> startup_boundary;
     std::vector<RuntimeDiagnosticRecoveryBoundary> recovery_boundaries;
     std::vector<RuntimeDiagnosticFunction> functions;

@@ -168,6 +168,7 @@ add_executable(project-eon
     src/data/sha256.cpp
     src/data/zip_archive.cpp
     src/platform/game_data.cpp
+    src/platform/platform_coverage.cpp
 )
 target_include_directories(project-eon PRIVATE src)
 target_compile_definitions(project-eon PRIVATE

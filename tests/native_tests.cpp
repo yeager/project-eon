@@ -2212,6 +2212,7 @@ int main() {
         assert(diagnostics.platform == release.platform);
         assert(diagnostics.language == release.language);
         assert(diagnostics.release_sha256 == release.sha256);
+        assert(diagnostics.coverage == eon::platform_coverage(release.game, release.platform));
         assert(diagnostics.trace_admission == "not-loaded");
         assert(diagnostics.recovery_boundaries.size()
             == eon::recovery_map_for_release(release.sha256).size());
