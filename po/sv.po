@@ -48,6 +48,21 @@ msgstr "VÄLJ MAPP MED ORIGINALSPELDATA (O)"
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "VÄLJ ARKIV MED ORIGINALSPELDATA (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "DATAKÄLLA: MAPP"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "DATAKÄLLA: ARKIV"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "DATAKÄLLA: SAKNAS"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "DATAKÄLLA: STÖDS INTE"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "AVVISADE: STORLEK {size}; HASH {hash}; OLÄSBAR {unreadable}; LÄNKAR {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VÄLJ SPEL   |   UPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERN   |   ESC: AVSLUTA"
 

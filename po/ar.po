@@ -48,6 +48,21 @@ msgstr "اختر مجلد بيانات اللعبة الأصلية (O)"
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "اختر أرشيف اللعبة الأصلي (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "مصدر البيانات: مجلد"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "مصدر البيانات: أرشيف"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "مصدر البيانات: مفقود"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "مصدر البيانات: غير مدعوم"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "المرفوضات: الحجم {size}; التجزئة {hash}; غير قابل للقراءة {unreadable}; الروابط {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "اختر اللعبة   |   أعلى/أسفل: المنصة   |   D: فحص البيانات   |   F1: أصلي / حديث   |   ESC: خروج"
 msgid "VERIFIED ORIGINAL DATA"

@@ -59,6 +59,21 @@ msgstr "원본 게임 데이터 폴더 선택 (O)"
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "원본 게임 아카이브 선택 (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "데이터 원본: 폴더"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "데이터 원본: 아카이브"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "데이터 원본: 없음"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "데이터 원본: 지원 안 함"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "거부: 크기 {size}; 해시 {hash}; 읽을 수 없음 {unreadable}; 링크 {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "게임 선택   |   위/아래: 플랫폼   |   D: 데이터 검사   |   F1: 원본 / 현대식   |   ESC: 종료"
 

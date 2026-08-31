@@ -100,6 +100,11 @@ ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
     }
 }
 
+ReleaseScanSnapshot ReleaseScanner::snapshot() const {
+    return {report_.source_kind, discovering(), done(), candidate_count(), scanned_count(),
+        releases_.size(), report_};
+}
+
 void ReleaseScanner::finish_candidate_inventory() {
     std::sort(candidates_.begin(), candidates_.end());
     report_.candidates = candidates_.size();

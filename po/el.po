@@ -48,6 +48,21 @@ msgstr "ΕΠΙΛΟΓΗ ΦΑΚΕΛΟΥ ΑΡΧΙΚΩΝ ΔΕΔΟΜΕΝΩΝ (O)"
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "ΕΠΙΛΟΓΗ ΑΡΧΕΙΟΥ ΠΡΩΤΟΤΥΠΟΥ ΠΑΙΧΝΙΔΙΟΥ (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "ΠΗΓΗ ΔΕΔΟΜΕΝΩΝ: ΚΑΤΑΛΟΓΟΣ"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "ΠΗΓΗ ΔΕΔΟΜΕΝΩΝ: ΑΡΧΕΙΟ"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "ΠΗΓΗ ΔΕΔΟΜΕΝΩΝ: ΛΕΙΠΕΙ"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "ΠΗΓΗ ΔΕΔΟΜΕΝΩΝ: ΜΗ ΥΠΟΣΤΗΡΙΖΟΜΕΝΗ"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "ΑΠΟΡΡΙΨΕΙΣ: ΜΕΓΕΘΟΣ {size}; HASH {hash}; ΜΗ ΑΝΑΓΝΩΣΙΜΟ {unreadable}; ΣΥΝΔΕΣΜΟΙ {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ΕΠΙΛΟΓΗ ΠΑΙΧΝΙΔΙΟΥ   |   ΠΑΝΩ/ΚΑΤΩ: ΠΛΑΤΦΟΡΜΑ   |   D: ΕΛΕΓΧΟΣ ΔΕΔΟΜΕΝΩΝ   |   F1: ΠΡΩΤΟΤΥΠΟ / ΣΥΓΧΡΟΝΟ   |   ESC: ΕΞΟΔΟΣ"
 msgid "VERIFIED ORIGINAL DATA"

@@ -147,6 +147,18 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("scanner = std::make_unique<eon::ReleaseScanner>", SOURCE)
         self.assertIn("ReleaseScanner advances later in", SOURCE)
 
+    def test_scanner_overlay_uses_the_shared_aggregate_only_snapshot(self) -> None:
+        overlay = SOURCE.index("if (show_scanner) {")
+        body = SOURCE[overlay:SOURCE.index("        } else {", overlay)]
+        self.assertIn("const auto snapshot = scanner->snapshot();", body)
+        self.assertIn("scanner_source_text(snapshot.source_kind)", body)
+        self.assertIn("scanner_rejections_text(snapshot)", body)
+        self.assertIn('tr("DATA SOURCE: DIRECTORY")', SOURCE)
+        self.assertIn('tr("DATA SOURCE: ARCHIVE")', SOURCE)
+        self.assertIn('tr("DATA SOURCE: MISSING")', SOURCE)
+        self.assertIn('tr("DATA SOURCE: UNSUPPORTED")', SOURCE)
+        self.assertIn('tr("REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}")', SOURCE)
+
     def test_replacing_data_source_invalidates_every_release_bound_runtime(self) -> None:
         # A new scanner cannot inherit a resolved archive, decoded frames, VM
         # state, queued audio, or a Modern sequence from its predecessor.

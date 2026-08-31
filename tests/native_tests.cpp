@@ -576,12 +576,20 @@ void assert_original_data_source_classification() {
             == eon::OriginalDataSourceKind::unsupported);
     }
     eon::ReleaseScanner scanner(root);
+    const auto initial_snapshot = scanner.snapshot();
+    assert(initial_snapshot.source_kind == eon::OriginalDataSourceKind::directory);
+    assert(initial_snapshot.discovering && !initial_snapshot.complete);
+    assert(initial_snapshot.candidate_count == 0 && initial_snapshot.scanned_count == 0);
     while (!scanner.advance(1)) {
     }
-    assert(scanner.report().source_kind == eon::OriginalDataSourceKind::directory);
-    assert(scanner.report().candidates == 1);
-    assert(scanner.report().size_rejected_candidates == 1);
-    assert(scanner.report().symlink_rejected_entries == (symlink_error ? 0U : 1U));
+    const auto complete_snapshot = scanner.snapshot();
+    assert(complete_snapshot.complete && !complete_snapshot.discovering);
+    assert(complete_snapshot.source_kind == eon::OriginalDataSourceKind::directory);
+    assert(complete_snapshot.candidate_count == 1 && complete_snapshot.scanned_count == 1);
+    assert(complete_snapshot.unique_release_count == 0);
+    assert(complete_snapshot.report.candidates == 1);
+    assert(complete_snapshot.report.size_rejected_candidates == 1);
+    assert(complete_snapshot.report.symlink_rejected_entries == (symlink_error ? 0U : 1U));
     std::filesystem::remove_all(root);
 }
 

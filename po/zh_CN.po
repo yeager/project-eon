@@ -59,6 +59,21 @@ msgstr "选择原始游戏数据文件夹 (O)"
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "选择原始游戏归档 (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "数据来源：文件夹"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "数据来源：归档"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "数据来源：缺失"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "数据来源：不受支持"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "已拒绝：大小 {size}；哈希 {hash}；不可读取 {unreadable}；链接 {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "选择游戏   |   上/下：平台   |   D：扫描数据   |   F1：原版 / 现代   |   ESC：退出"
 

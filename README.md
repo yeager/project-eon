@@ -161,6 +161,9 @@ source. The same non-symlink directory-or-regular-file classifier is used by
 the launcher, CLI, and scanner, and Project Eon never copies, unpacks, creates,
 or modifies selected data. When scanning a directory, links inside it are also
 rejected rather than silently following media outside the selected collection.
+Press `D` in the start menu to view the same aggregate-only source, progress,
+and rejection diagnostics as the CLI inspection report. It never displays
+unrecognised names, paths, archive members, or original bytes.
 
 Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right
 selects a card on the current page, and South/A or Start activates it. During

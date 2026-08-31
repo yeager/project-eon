@@ -32,10 +32,16 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn(r'\"project-eon.inspect/v1\"', body)
         self.assertIn(r'\"function_map\"', body)
         self.assertIn(r'\"source_kind\"', body)
+        self.assertIn(r'\"scanned_candidates\"', body)
+        self.assertIn(r'\"unique_releases\"', body)
+        self.assertIn(r'\"size_rejected_candidates\"', body)
+        self.assertIn(r'\"hash_rejected_candidates\"', body)
+        self.assertIn(r'\"unreadable_candidates\"', body)
         self.assertIn(r'\"symlink_rejected_entries\"', body)
         self.assertIn("runtime_diagnostics_for_release(release)", body)
         self.assertIn("diagnostics.functions", body)
         self.assertNotIn("release.path", body)
+        self.assertNotIn("scan_snapshot.path", body)
 
     def test_trace_json_is_diagnostics_only_and_omits_local_paths(self) -> None:
         self.assertIn('argument == "--reference-trace-json"', LAUNCHER)

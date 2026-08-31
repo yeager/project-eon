@@ -63,6 +63,20 @@ struct ReleaseScanReport {
     std::size_t symlink_rejected_entries = 0;
 };
 
+// An aggregate-only view of one scanner instant. It intentionally contains no
+// candidate path, filename, archive member, or media byte. The card menu and
+// CLI diagnostics consume this same value so neither presentation can invent
+// a separate interpretation of missing or rejected original data.
+struct ReleaseScanSnapshot {
+    OriginalDataSourceKind source_kind = OriginalDataSourceKind::missing;
+    bool discovering = false;
+    bool complete = false;
+    std::size_t candidate_count = 0;
+    std::size_t scanned_count = 0;
+    std::size_t unique_release_count = 0;
+    ReleaseScanReport report;
+};
+
 // A bounded, read-only scan over a user-selected directory or one archive.
 // Both directory discovery and hashing advance through the same explicit work
 // budget, so the launcher can draw before a large Downloads directory has
@@ -87,6 +101,7 @@ public:
     [[nodiscard]] std::size_t candidate_count() const { return candidates_.size(); }
     [[nodiscard]] const std::vector<ReleaseArchive>& releases() const { return releases_; }
     [[nodiscard]] const ReleaseScanReport& report() const { return report_; }
+    [[nodiscard]] ReleaseScanSnapshot snapshot() const;
 
 private:
     void finish_candidate_inventory();
