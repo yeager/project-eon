@@ -108,6 +108,7 @@ add_executable(project-eon
     src/i18n.cpp
     src/launcher.cpp
     src/presentation_preferences.cpp
+    src/presentation/modern_presentation_pipeline.cpp
     src/engine/deuteros_amiga_opening.cpp
     src/engine/release_runtime.cpp
     src/engine/runtime_session.cpp

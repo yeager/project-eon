@@ -47,6 +47,7 @@
 #include "data/millennium_dos_reference_trace.hpp"
 #include "data/millennium_amiga_reference_trace.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
+#include "presentation/modern_presentation_pipeline.hpp"
 #include "data/modern_asset_pack.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
@@ -1338,6 +1339,31 @@ int main() {
         malformed_reconstruction_rejected = true;
     }
     assert(malformed_reconstruction_rejected);
+    // The presentation pipeline owns only transient reconstructed pixels. It
+    // revokes them whenever the complete renderer source identity changes;
+    // a failed source is remembered for that key and cannot fall back to a
+    // previous release/frame/mode surface.
+    eon::ModernPresentationPipeline reconstruction_pipeline;
+    const auto* pipeline_surface = reconstruction_pipeline.resolve(reconstruction_key,
+        reconstruction_source, 3, 3);
+    assert(pipeline_surface && pipeline_surface->width == 6 && pipeline_surface->height == 6);
+    assert(reconstruction_pipeline.matches(reconstruction_key));
+    assert(!reconstruction_pipeline.failure());
+    const auto changed_pipeline_key = eon::ModernReconstructionCacheKey{
+        reconstruction_key.release_sha256, reconstruction_key.source_id, 8,
+        eon::ModernPixelReconstruction::scale4x};
+    const auto* changed_pipeline_surface = reconstruction_pipeline.resolve(changed_pipeline_key,
+        reconstruction_source, 3, 3);
+    assert(changed_pipeline_surface && changed_pipeline_surface->width == 12
+        && changed_pipeline_surface->height == 12);
+    const auto malformed_pipeline_key = eon::ModernReconstructionCacheKey{
+        reconstruction_key.release_sha256, reconstruction_key.source_id, 9,
+        eon::ModernPixelReconstruction::scale2x};
+    assert(!reconstruction_pipeline.resolve(malformed_pipeline_key, reconstruction_source, 2, 3));
+    assert(reconstruction_pipeline.matches(malformed_pipeline_key));
+    assert(reconstruction_pipeline.failure());
+    reconstruction_pipeline.reset();
+    assert(!reconstruction_pipeline.attempted_key() && !reconstruction_pipeline.failure());
     {
         char program[] = "project-eon";
         char* args[] = {program};

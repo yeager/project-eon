@@ -197,16 +197,21 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertNotIn("filesystem", header)
         self.assertNotIn("SDL_", header)
         self.assertIn("deuteros_preview_source_tick", SOURCE)
-        self.assertIn("deuteros_modern_preview_attempted_key", SOURCE)
-        self.assertIn("deuteros_modern_preview_key", SOURCE)
-        self.assertIn("millennium_modern_preview_key", SOURCE)
+        pipeline_header = (ROOT / "src" / "presentation" / "modern_presentation_pipeline.hpp").read_text(encoding="utf-8")
+        pipeline_source = (ROOT / "src" / "presentation" / "modern_presentation_pipeline.cpp").read_text(encoding="utf-8")
+        self.assertIn("ModernPresentationPipeline deuteros_modern_pipeline", SOURCE)
+        self.assertIn("ModernPresentationPipeline millennium_modern_pipeline", SOURCE)
+        self.assertIn("class ModernPresentationPipeline", pipeline_header)
+        self.assertIn("ModernReconstructedSurface", pipeline_header)
+        self.assertIn("reconstruct_rgba_scale4x", pipeline_source)
+        self.assertNotIn("SDL_", pipeline_header + pipeline_source)
         self.assertIn('"millennium.dos.title"', SOURCE)
         self.assertIn('"deuteros.amiga.opening"', SOURCE)
-        self.assertIn("*millennium_modern_preview_key != requested_key", SOURCE)
-        self.assertIn("*deuteros_modern_preview_key != *deuteros_requested_key", SOURCE)
+        self.assertIn("millennium_modern_pipeline.matches(requested_key)", SOURCE)
+        self.assertIn("deuteros_modern_pipeline.matches(requested_key)", SOURCE)
         self.assertIn("deuteros_opening->ticks()", SOURCE)
         self.assertIn("deuteros_opening->rgba_frame()", SOURCE)
-        self.assertIn("reconstruct_rgba_scale2x(*frame", SOURCE)
+        self.assertIn("deuteros_modern_pipeline.resolve(requested_key, *frame", SOURCE)
         self.assertIn("SDL_DestroyTexture(modern_preview_texture)", SOURCE)
 
     def test_deuteros_external_opening_pack_is_modern_only_and_tick_bound(self) -> None:
@@ -227,7 +232,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("if (modern)", render_block)
         self.assertIn("refresh_deuteros_external_modern_texture(source_tick", render_block)
         self.assertLess(render_block.index("refresh_deuteros_external_modern_texture"),
-                        render_block.index("reconstruct_rgba_scale2x(*frame"))
+                        render_block.index("deuteros_modern_pipeline.resolve(requested_key, *frame"))
 
     def test_deuteros_title_handoff_stops_host_vm_scheduling(self) -> None:
         """The retained frame is presentation evidence, never a fake title VM."""
