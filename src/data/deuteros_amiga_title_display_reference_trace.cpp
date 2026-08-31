@@ -16,6 +16,11 @@ bool hex(const std::string_view value, const std::size_t digits) {
     for (const auto c : value.substr(2U)) if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
     return true;
 }
+bool nonzero_hex(const std::string_view value, const std::size_t digits) {
+    if (!hex(value, digits)) return false;
+    for (const auto c : value.substr(2U)) if (c != '0') return true;
+    return false;
+}
 bool sha(const std::string_view value) {
     if (value.size() != 64U) return false;
     for (const auto c : value) if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
@@ -108,7 +113,9 @@ bool validate_deuteros_amiga_title_display_reference_events(
         else if (step == Step::frame && type == "frame-checkpoint" && exact(fields, {"display_base", "rgba_width", "rgba_height", "rgba_format", "bitplanes_sha256", "rgba_sha256"})
             && fields.at("display_base") == "0x0000ab00" && fields.at("rgba_width") == "0x0140" && fields.at("rgba_height") == "0x00c8" && fields.at("rgba_format") == "rgba8888-row-major" && fields.at("bitplanes_sha256") == "fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490" && sha(fields.at("rgba_sha256"))) { accepted = true; step = Step::audio; diagnostics.bitplanes_sha256 = std::string(fields.at("bitplanes_sha256")); diagnostics.rgba_sha256 = std::string(fields.at("rgba_sha256")); ++diagnostics.frame_checkpoint_count; }
         else if (step == Step::audio && type == "audio-checkpoint" && exact(fields, {"sample_rate", "channels", "sample_frames", "pcm_format", "pcm_sha256"})
-            && hex(fields.at("sample_rate"), 8) && hex(fields.at("channels"), 2) && hex(fields.at("sample_frames"), 8) && fields.at("pcm_format") == "s16le-interleaved" && sha(fields.at("pcm_sha256"))) { accepted = true; step = Step::complete; diagnostics.audio_sample_rate = std::string(fields.at("sample_rate")); diagnostics.audio_channels = std::string(fields.at("channels")); diagnostics.audio_sample_frames = std::string(fields.at("sample_frames")); diagnostics.pcm_sha256 = std::string(fields.at("pcm_sha256")); ++diagnostics.audio_checkpoint_count; }
+            && nonzero_hex(fields.at("sample_rate"), 8) && nonzero_hex(fields.at("channels"), 2)
+            && nonzero_hex(fields.at("sample_frames"), 8) && fields.at("pcm_format") == "s16le-interleaved"
+            && sha(fields.at("pcm_sha256"))) { accepted = true; step = Step::complete; diagnostics.audio_sample_rate = std::string(fields.at("sample_rate")); diagnostics.audio_channels = std::string(fields.at("channels")); diagnostics.audio_sample_frames = std::string(fields.at("sample_frames")); diagnostics.pcm_sha256 = std::string(fields.at("pcm_sha256")); ++diagnostics.audio_checkpoint_count; }
         if (!accepted) { error = "Deuteros title-display event is outside the v4 ordered raw-observation schema"; return false; }
         ++diagnostics.event_count;
         previous_sequence = sequence;
