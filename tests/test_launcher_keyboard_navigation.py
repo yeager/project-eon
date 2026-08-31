@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 ROUTE_HEADER = (ROOT / "src" / "launcher.hpp").read_text(encoding="utf-8")
 ROUTE_SOURCE = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")
+RUNTIME_SOURCE = (ROOT / "src" / "engine" / "release_runtime.cpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
         self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", ROUTE_HEADER)
@@ -78,18 +79,22 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # session. A loader searching the mutable scanner list again could
         # accidentally make an exact release card into a scan-order decision.
         self.assertIn("const auto resolve_active_release", SOURCE)
-        for loader in (
-            "load_millennium_launch_assets",
-            "load_deuteros_opening",
-            "load_millennium_atari_bootstrap",
-            "load_millennium_amiga_bootstrap",
-            "load_deuteros_atari_bootstrap",
-        ):
+        for loader in ("load_millennium_launch_assets",):
             with self.subTest(loader=loader):
                 start = SOURCE.index(f"{loader}(")
                 signature = SOURCE[start:SOURCE.index(") {", start) + 3]
                 self.assertIn("const eon::ReleaseArchive& release", signature)
-        self.assertIn("load_deuteros_opening(*release)", SOURCE)
+        for loader in (
+            "load_deuteros_amiga_runtime",
+            "load_millennium_atari_runtime",
+            "load_millennium_amiga_runtime",
+            "load_deuteros_atari_runtime",
+        ):
+            with self.subTest(loader=loader):
+                start = RUNTIME_SOURCE.index(f"{loader}(")
+                signature = RUNTIME_SOURCE[start:RUNTIME_SOURCE.index(") {", start) + 3]
+                self.assertIn("const ReleaseArchive& release", signature)
+        self.assertIn("eon::load_deuteros_amiga_runtime(*release)", SOURCE)
         self.assertIn("load_millennium_launch_assets(*release)", SOURCE)
 
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:

@@ -3380,77 +3380,6 @@ std::optional<MillenniumDosLaunchAssets> load_millennium_launch_assets(
     }
 }
 
-std::unique_ptr<eon::DeuterosAmigaOpening> load_deuteros_opening(
-    const eon::ReleaseArchive& release) {
-    if (release.game != eon::Game::deuteros || release.platform != eon::Platform::amiga
-        || release.language != "en") return {};
-    constexpr auto clean_system_adf =
-        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
-    try {
-        const auto image = eon::extract_verified_release_asset(release, clean_system_adf);
-        if (!image) return {};
-        return std::make_unique<eon::DeuterosAmigaOpening>(std::move(*image));
-    } catch (const std::exception& error) {
-        std::cerr << "Unable to start Deuteros opening: " << error.what() << '\n';
-        return {};
-    }
-}
-
-std::unique_ptr<eon::MillenniumAtariBootstrapSession> load_millennium_atari_bootstrap(
-    const eon::ReleaseArchive& release) {
-    if (release.game != eon::Game::millennium || release.platform != eon::Platform::atari_st
-        || release.language != "en") return {};
-    constexpr auto equinox_disk_sha256 =
-        "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
-    try {
-        const auto image = eon::extract_verified_release_asset(release, equinox_disk_sha256);
-        if (!image) return {};
-        const eon::Fat12Disk disk(*image);
-        const auto* executable = disk.find("MILENIUM.TOS");
-        if (!executable) return {};
-        return std::make_unique<eon::MillenniumAtariBootstrapSession>(
-            disk, disk.read(*executable));
-    } catch (const std::exception& error) {
-        std::cerr << "Unable to start Millennium Atari ST bootstrap: " << error.what() << '\n';
-        return {};
-    }
-}
-
-std::unique_ptr<eon::MillenniumAmigaBootstrapSession> load_millennium_amiga_bootstrap(
-    const eon::ReleaseArchive& release) {
-    if (release.game != eon::Game::millennium || release.platform != eon::Platform::amiga
-        || release.language != "en") return {};
-    constexpr auto defjam_adf_sha256 =
-        "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
-    try {
-        const auto image = eon::extract_verified_release_asset(release, defjam_adf_sha256);
-        if (!image) return {};
-        return std::make_unique<eon::MillenniumAmigaBootstrapSession>(std::move(*image));
-    } catch (const std::exception& error) {
-        std::cerr << "Unable to start Millennium Amiga bootstrap: " << error.what() << '\n';
-        return {};
-    }
-}
-
-std::unique_ptr<eon::DeuterosAtariBootstrapSession> load_deuteros_atari_bootstrap(
-    const eon::ReleaseArchive& release) {
-    if (release.game != eon::Game::deuteros || release.platform != eon::Platform::atari_st
-        || release.language != "en") return {};
-    // This is the supplied Replicants Disk 1 whose boot code contains the
-    // verified raw-stage sequence. Other protected ST disks remain detected,
-    // but are never silently substituted for this bounded path.
-    constexpr auto replicants_disk1_sha256 =
-        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
-    try {
-        const auto image = eon::extract_verified_release_asset(release, replicants_disk1_sha256);
-        if (!image) return {};
-        return std::make_unique<eon::DeuterosAtariBootstrapSession>(std::move(*image));
-    } catch (const std::exception& error) {
-        std::cerr << "Unable to start Deuteros Atari ST bootstrap: " << error.what() << '\n';
-        return {};
-    }
-}
-
 // Modern packs are intentionally a report-only preservation boundary.  This
 // routine does not retain a pack object beyond inspection, nor does it create
 // a default directory, decode an asset, or give a renderer any pack choice.
@@ -4296,8 +4225,8 @@ int main(int argc, char** argv) {
         stop_millennium_title();
         const auto release = resolve_active_release(eon::Game::millennium);
         if (!release) return;
-        millennium_atari_session = load_millennium_atari_bootstrap(*release);
-        millennium_amiga_session = load_millennium_amiga_bootstrap(*release);
+        millennium_atari_session = eon::load_millennium_atari_runtime(*release);
+        millennium_amiga_session = eon::load_millennium_amiga_runtime(*release);
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
         // MILL.COM's sound prompt occurs before the title child request. For
@@ -4333,8 +4262,8 @@ int main(int argc, char** argv) {
         reset_deuteros_runtime();
         const auto release = resolve_active_release(eon::Game::deuteros);
         if (!release) return;
-        deuteros_atari_session = load_deuteros_atari_bootstrap(*release);
-        deuteros_opening = load_deuteros_opening(*release);
+        deuteros_atari_session = eon::load_deuteros_atari_runtime(*release);
+        deuteros_opening = eon::load_deuteros_amiga_runtime(*release);
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
@@ -4946,7 +4875,7 @@ int main(int argc, char** argv) {
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && !deuteros_opening && eon::deuteros_amiga_opening_supported(active_platform)) {
             if (const auto release = resolve_active_release(eon::Game::deuteros)) {
-                deuteros_opening = load_deuteros_opening(*release);
+                deuteros_opening = eon::load_deuteros_amiga_runtime(*release);
             }
             create_deuteros_opening_texture();
             start_deuteros_audio();
@@ -4956,7 +4885,7 @@ int main(int argc, char** argv) {
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && active_platform == eon::Platform::atari_st && !deuteros_atari_session) {
             if (const auto release = resolve_active_release(eon::Game::deuteros)) {
-                deuteros_atari_session = load_deuteros_atari_bootstrap(*release);
+                deuteros_atari_session = eon::load_deuteros_atari_runtime(*release);
             }
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
