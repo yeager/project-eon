@@ -16,11 +16,40 @@ require_tool() {
   fi
 }
 
+# CPack otherwise inherits the build host's umask for implicitly created
+# staging directories.  Distribution payload directories are application
+# resources, never mutable game-data locations, so reject group/world-writable
+# modes before native Debian/RPM policy tooling sees the artifact.
+require_755_directories() {
+  local format="$1"
+  local package="$2"
+  local bad_directories
+  case "$format" in
+    deb)
+      require_tool dpkg-deb
+      bad_directories="$(dpkg-deb -c "$package" | awk '$1 ~ /^d/ && $1 != "drwxr-xr-x" { print; bad = 1 } END { exit bad }')" || true
+      ;;
+    rpm)
+      bad_directories="$(rpm -qplv "$package" | awk '$1 ~ /^d/ && $1 != "drwxr-xr-x" { print; bad = 1 } END { exit bad }')" || true
+      ;;
+    *)
+      echo "unknown directory permission format: $format" >&2
+      exit 2
+      ;;
+  esac
+  if [ -n "$bad_directories" ]; then
+    echo "package contains directories that are not 0755: $package" >&2
+    printf '%s\n' "$bad_directories" >&2
+    exit 1
+  fi
+}
+
 for package in "$@"; do
   test -f "$package"
   case "$package" in
     *.deb)
       require_tool lintian
+      require_755_directories deb "$package"
       # mentors.debian.net runs Lintian before accepting an upload. Treat
       # warning-or-higher findings as a failure; informational and pedantic
       # diagnostics remain visible without redefining Debian policy.
@@ -30,6 +59,7 @@ for package in "$@"; do
       require_tool rpm
       require_tool rpmlint
       require_tool rpmspec
+      require_755_directories rpm "$package"
       # Verify the generated package header/payload, then parse the exact
       # CPack-generated spec rather than a disconnected template.
       rpm --checksig --nogpg "$package"
