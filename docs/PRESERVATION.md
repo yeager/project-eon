@@ -63,6 +63,14 @@ outer SHA-256; Original/Modern/Custom presentation selection is not a source
 change. Any change to one of those four source fields clears the separately
 installed Modern-pack admission and invokes the full runtime reset before a
 new card route can launch. Keyboard, gamepad, pointer, and touch all use that
+same route. Its native data-source picker has separate explicit choices for a
+directory and for one archive because the host API exposes those shapes through
+different dialogs. The callback transfers only the selected path plus that
+declared shape; the main thread accepts only a non-symlink directory or regular
+file and passes the unchanged path to `ReleaseScanner`. It does not inspect, open,
+extract, cache, or infer a release from the picker result. The scanner remains
+the sole bounded, hash-addressed recogniser, so a selected regular file is only
+a candidate until normal archive-size and SHA-256 verification succeeds.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract

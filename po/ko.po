@@ -56,6 +56,9 @@ msgstr "거부됨"
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "원본 게임 데이터 폴더 선택 (O)"
 
+msgid "CHOOSE ORIGINAL ARCHIVE (A)"
+msgstr "원본 게임 아카이브 선택 (A)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "게임 선택   |   위/아래: 플랫폼   |   D: 데이터 검사   |   F1: 원본 / 현대식   |   ESC: 종료"
 

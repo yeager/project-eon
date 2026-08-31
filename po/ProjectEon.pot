@@ -77,6 +77,10 @@ msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr ""
 
 #: src/main.cpp
+msgid "CHOOSE ORIGINAL ARCHIVE (A)"
+msgstr ""
+
+#: src/main.cpp
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr ""
 

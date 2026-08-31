@@ -56,6 +56,9 @@ msgstr "अस्वीकृत"
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "मूल गेम डेटा फ़ोल्डर चुनें (O)"
 
+msgid "CHOOSE ORIGINAL ARCHIVE (A)"
+msgstr "मूल गेम संग्रह चुनें (A)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "गेम चुनें   |   ऊपर/नीचे: प्लेटफ़ॉर्म   |   D: डेटा जाँच   |   F1: मूल / आधुनिक   |   ESC: बाहर निकलें"
 msgid "VERIFIED ORIGINAL DATA"
