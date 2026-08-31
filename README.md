@@ -145,7 +145,9 @@ language's media. Original and Modern
 cards start directly. The Custom card is not a third runtime mode: it opens
 Modern's fine-tuning panel, then presents an explicit start action using those
 Modern settings. Mouse and iPad touch input activate the same card-admission
-route; keyboard and gamepad users can move through each card page with the
+route. A device-independent launcher state machine owns those transitions, so
+keyboard, gamepad, mouse, and touch cannot follow different release-admission
+rules. Keyboard and gamepad users can move through each card page with the
 D-pad or arrow keys and activate the highlighted card with Enter, Space, South/A, or
 Start; Escape returns to the preceding card page.
 

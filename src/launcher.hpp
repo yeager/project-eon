@@ -15,6 +15,10 @@ namespace eon {
 // presentation for a supplied original release.
 enum class Presentation { original, modern };
 
+// The card launcher has no SDL dependency: keyboard, gamepad, pointer, and
+// touch routes all drive this one state machine and merely render its page.
+enum class LauncherPage { games, platforms, releases, profiles };
+
 // Renderer-only preferences shared by CLI startup and the F10 overlay. They
 // never enter a game simulation, save file, or original media access path.
 struct DisplayPreferences {
@@ -66,6 +70,28 @@ struct LaunchRequest {
 struct ResolvedLaunchRequest {
     LaunchRequest request;
     ReleaseArchive release;
+};
+
+// This is presentation-only navigation state. It contains no source paths or
+// original bytes, and its only transition into a runnable session is the
+// hash-bound resolve_launch() call below.
+struct LauncherRouteState {
+    LauncherPage page = LauncherPage::games;
+    Game game = Game::millennium;
+    std::optional<Platform> platform;
+    std::optional<std::string> release_language;
+    std::optional<std::string> release_sha256;
+
+    void focus_game(const std::vector<ReleaseArchive>& releases, Game next_game);
+    [[nodiscard]] bool choose_platform(const std::vector<ReleaseArchive>& releases,
+        Platform next_platform);
+    [[nodiscard]] bool choose_release(const std::vector<ReleaseArchive>& releases,
+        std::string_view next_sha256);
+    void enter_platforms();
+    void back(const std::vector<ReleaseArchive>& releases);
+    [[nodiscard]] bool release_is_selected() const;
+    [[nodiscard]] std::optional<ResolvedLaunchRequest> resolve_launch(
+        const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const;
 };
 
 struct ParseResult {

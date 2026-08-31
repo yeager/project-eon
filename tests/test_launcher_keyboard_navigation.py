@@ -6,9 +6,12 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+ROUTE_HEADER = (ROOT / "src" / "launcher.hpp").read_text(encoding="utf-8")
+ROUTE_SOURCE = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
-        self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", SOURCE)
+        self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", ROUTE_HEADER)
+        self.assertIn("struct LauncherRouteState", ROUTE_HEADER)
         self.assertIn("platform_cards_for_game", SOURCE)
         self.assertIn("eon::supported_platforms(game)", SOURCE)
         self.assertIn("std::array<ProfileCard, 3>", SOURCE)
@@ -18,22 +21,20 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
 
     def test_english_defaults_only_for_a_unique_outer_release(self) -> None:
         self.assertIn("available_release_identities", SOURCE)
-        self.assertIn("select_available_release_sha256", SOURCE)
-        self.assertIn("if (english.size() == 1)", (ROOT / "src" / "launcher.cpp").read_text())
-        self.assertIn("English is the default original edition only when it identifies exactly one", SOURCE)
-        self.assertIn("advance_after_platform_selection", SOURCE)
-        advance = SOURCE[SOURCE.index("advance_after_platform_selection"):]
-        self.assertIn("active_release_sha256 ? LauncherPage::profiles", advance)
+        self.assertIn("select_available_release_sha256", ROUTE_SOURCE)
+        self.assertIn("if (english.size() == 1)", ROUTE_SOURCE)
+        self.assertIn("page = release_sha256 ? LauncherPage::profiles : LauncherPage::releases", ROUTE_SOURCE)
+        self.assertIn("choose_platform_card(static_cast<int>(index));", SOURCE)
 
     def test_platform_cards_are_hash_verified_and_disabled_when_missing(self) -> None:
         self.assertIn("eon::platform_card_status(releases, game, card.platform)", SOURCE)
         self.assertIn("eon::platform_card_selectable(status)", SOURCE)
         self.assertIn("UNAVAILABLE PLATFORM CARDS CANNOT START A GAME", SOURCE)
-        self.assertIn("if (!eon::platform_card_selectable(status)) return false;", SOURCE)
+        self.assertIn("if (!platform_card_selectable(platform_card_status", ROUTE_SOURCE)
         self.assertIn("RELEASE SELECTION REQUIRED", SOURCE)
         self.assertIn("ATARI BOOTSTRAP ONLY", SOURCE)
         self.assertIn("card.platform == eon::Platform::atari_st", SOURCE)
-        self.assertIn("&& choose_platform_card(static_cast<int>(index))", SOURCE)
+        self.assertIn("choose_platform_card(static_cast<int>(index));", SOURCE)
 
     def test_platform_cards_are_game_specific_before_media_availability_is_shown(self) -> None:
         # Deuteros supports Amiga and Atari ST. A missing archive must render
@@ -50,8 +51,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("no physical-media fallback or substitution", SOURCE)
 
     def test_ambiguous_or_missing_platform_cards_cannot_start_a_game(self) -> None:
-        self.assertIn("!active_platform || !active_release_sha256", SOURCE)
-        self.assertIn("eon::resolve_release_identity", SOURCE)
+        self.assertIn("release_is_selected()", ROUTE_SOURCE)
+        self.assertIn("resolve_launch_request_identity(candidate, releases)", ROUTE_SOURCE)
         self.assertIn("no scan-order fallback was selected", SOURCE)
 
     def test_release_cards_carry_exact_outer_identity(self) -> None:
@@ -59,7 +60,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
                        SOURCE.index("enum class ProfileChoice")]
         self.assertIn("std::string sha256", cards)
         self.assertIn("available_release_identities", SOURCE)
-        self.assertIn("active_release_sha256 = language_cards", SOURCE)
+        self.assertIn("launcher_route.choose_release", SOURCE)
+        self.assertIn("release_sha256 = release->sha256", ROUTE_SOURCE)
         self.assertIn("truncated_identity_hash(card.sha256)", SOURCE)
 
     def test_runtime_loaders_consume_the_resolved_outer_identity(self) -> None:
@@ -139,7 +141,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # card first; a single-language platform returns to platforms.
         self.assertIn("Escape is a single navigation action", SOURCE)
         self.assertIn("Keep Back equivalent to Escape", SOURCE)
-        self.assertGreaterEqual(SOURCE.count("release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms"), 2)
+        self.assertGreaterEqual(SOURCE.count("launcher_route.back(releases);"), 3)
+        self.assertIn("available_release_identities(releases, game, *platform).size() > 1", ROUTE_SOURCE)
 
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:
         modal = SOURCE.index("if (show_modern_graphics_settings) {")

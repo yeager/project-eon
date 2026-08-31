@@ -370,6 +370,83 @@ std::optional<ResolvedLaunchRequest> resolve_launch_request_identity(
     return {{std::move(resolved), std::move(*release)}};
 }
 
+void LauncherRouteState::focus_game(const std::vector<ReleaseArchive>& releases,
+    const Game next_game) {
+    const auto prior_platform = platform;
+    game = next_game;
+    platform = select_available_platform(releases, game, platform);
+    if (platform != prior_platform) {
+        release_language.reset();
+        release_sha256.reset();
+    }
+}
+
+bool LauncherRouteState::choose_platform(const std::vector<ReleaseArchive>& releases,
+    const Platform next_platform) {
+    if (!platform_card_selectable(platform_card_status(releases, game, next_platform))) return false;
+    if (platform != next_platform) {
+        platform = next_platform;
+        release_language.reset();
+        release_sha256.reset();
+    }
+    release_sha256 = select_available_release_sha256(releases, game, *platform, release_sha256);
+    if (const auto release = resolve_release_identity(releases, game, *platform,
+            release_sha256, std::nullopt)) {
+        release_language = release->language;
+    } else {
+        release_language.reset();
+    }
+    page = release_sha256 ? LauncherPage::profiles : LauncherPage::releases;
+    return true;
+}
+
+bool LauncherRouteState::choose_release(const std::vector<ReleaseArchive>& releases,
+    const std::string_view next_sha256) {
+    if (!platform) return false;
+    const auto release = resolve_release_identity(releases, game, *platform,
+        std::string(next_sha256), std::nullopt);
+    if (!release) return false;
+    release_sha256 = release->sha256;
+    release_language = release->language;
+    page = LauncherPage::profiles;
+    return true;
+}
+
+void LauncherRouteState::enter_platforms() { page = LauncherPage::platforms; }
+
+void LauncherRouteState::back(const std::vector<ReleaseArchive>& releases) {
+    switch (page) {
+    case LauncherPage::profiles:
+        page = platform && available_release_identities(releases, game, *platform).size() > 1
+            ? LauncherPage::releases : LauncherPage::platforms;
+        break;
+    case LauncherPage::releases:
+        page = LauncherPage::platforms;
+        break;
+    case LauncherPage::platforms:
+        page = LauncherPage::games;
+        break;
+    case LauncherPage::games:
+        break;
+    }
+}
+
+bool LauncherRouteState::release_is_selected() const {
+    return platform.has_value() && release_sha256.has_value() && release_language.has_value();
+}
+
+std::optional<ResolvedLaunchRequest> LauncherRouteState::resolve_launch(
+    const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const {
+    if (!release_is_selected()) return std::nullopt;
+    auto candidate = base;
+    candidate.game = game;
+    candidate.platform = platform;
+    candidate.release_language = release_language;
+    candidate.release_sha256 = release_sha256;
+    candidate.presentation_explicit = true;
+    return resolve_launch_request_identity(candidate, releases);
+}
+
 std::optional<Platform> select_available_platform(
     const std::vector<ReleaseArchive>& releases, const Game game,
     const std::optional<Platform> current) {
