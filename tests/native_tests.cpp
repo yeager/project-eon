@@ -700,6 +700,12 @@ void assert_modern_asset_pack_admission() {
         render_root / "pack.eonmodern", release_hash);
     assert(preferred_surface.asset_id == "millennium.dos.title.png-1280x800"
         && preferred_surface.png == png_4x);
+    const auto render_validation = eon::validate_modern_asset_pack(render_root / "pack.eonmodern");
+    assert(render_validation.accepted());
+    const auto render_targets = eon::modern_asset_pack_renderer_targets(render_validation.pack);
+    assert(render_targets.millennium_dos_title_640x400);
+    assert(render_targets.millennium_dos_title_1280x800);
+    assert(render_targets.deuteros_amiga_opening_640x400_frames == 0);
     {
         std::ofstream output(png, std::ios::binary | std::ios::trunc);
         output.write(reinterpret_cast<const char*>(png_bytes.data()),
