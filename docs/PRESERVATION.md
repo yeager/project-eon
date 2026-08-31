@@ -126,6 +126,12 @@ multi-release platform, Project Eon revokes its automatic release selection
 and returns to the generated Original-release cards. Only a release identity
 the user explicitly chose may remain selected across that discovery event; no
 new container, language, or platform is substituted.
+
+The generated macOS app bundle is smoke-tested before archiving with an empty,
+isolated home directory. Its `--inspect` result must report the absent
+`~/.projecteon` path without creating it; this tests the finished bundled
+executable and dylib closure without requiring, copying, or packaging game
+media.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract
