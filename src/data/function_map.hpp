@@ -4,6 +4,7 @@
 
 #include <span>
 #include <string_view>
+#include <vector>
 
 namespace eon {
 
@@ -31,8 +32,18 @@ struct FunctionMapEntry {
 };
 
 [[nodiscard]] std::span<const FunctionMapEntry> function_map();
-[[nodiscard]] std::span<const FunctionMapEntry> function_map_for_release(
+// Function-map declarations are documentation-order records, not an index.
+// Return an explicit filtered snapshot so adding a function for an existing
+// release later in the declaration cannot silently hide it behind another
+// platform's row. This API is diagnostics-only and is not called in any
+// frame-critical execution path.
+[[nodiscard]] std::vector<FunctionMapEntry> function_map_for_release(
     std::string_view release_sha256);
+// Structural validation for declarative diagnostics. This accepts only the
+// two explicitly documented address spaces and deliberately does not compare
+// a function asset to a parser-profile leaf: some verified functions reside
+// in a derived PRG or staged image rather than the outer disk span.
+[[nodiscard]] bool function_map_entry_is_well_formed(const FunctionMapEntry& entry);
 [[nodiscard]] bool release_has_function_map_entry(
     std::string_view release_sha256, std::string_view entry_id);
 

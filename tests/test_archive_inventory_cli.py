@@ -46,6 +46,7 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn("diagnostics.coverage", body)
         self.assertIn("boundary.cpu", body)
         self.assertIn("boundary.documentation_anchor", body)
+        self.assertIn("function.address_space", body)
         self.assertIn("function.documentation_anchor", body)
         self.assertIn("diagnostics.functions", body)
         self.assertNotIn("release.path", body)
