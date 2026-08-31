@@ -51,11 +51,21 @@ def ascii_strings(data: bytes, minimum: int = 4) -> list[tuple[int, str]]:
 def describe_bytes(name: str, data: bytes) -> dict:
     """Describe one in-memory DOS image without changing its source media."""
     jump = initial_near_jump(data)
+    entry_file_offset = jump.file_offset if jump else 0
+    # A flat DOS image can deliberately transfer into a separately prepared
+    # runtime region.  That target is not source code merely because an 8086
+    # decoder can assign mnemonics to zero-filled bytes past the member end.
+    # Keep the candidate address for preservation accounting, but expose the
+    # member boundary so consumers cannot silently turn an external runtime
+    # dependency into a false static code map.
+    entry_within_image = entry_file_offset < len(data)
     return {
         "name": name,
         "size": len(data),
-        "entry_file_offset": jump.file_offset if jump else 0,
+        "entry_file_offset": entry_file_offset,
         "entry_load_address": jump.load_address if jump else 0x100,
+        "entry_within_image": entry_within_image,
+        "entry_beyond_image_bytes": max(0, entry_file_offset - len(data)),
         "interrupts": {f"0x{key:02x}": value for key, value in interrupt_counts(data).most_common()},
         "strings": [{"offset": offset, "text": text} for offset, text in ascii_strings(data)],
     }

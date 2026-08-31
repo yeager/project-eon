@@ -367,6 +367,13 @@ The callback PC is DOSBox-X's default exception-vector handler, not an
 original Millennium location. The three following stack words and all-zero
 four-byte read are raw callback-context values only; they do not establish a
 faulting instruction, a loaded driver segment, a return ABI, or a game result.
+The hash-bound linear byte inventory independently maps the observed
+`return_ip=$1900` to `TITLES.EXE` file offset `+$1800` under its stated
+COM-style candidate origin and renders the first four source bytes there as
+zero-valued, unclassified bytes. This corroborates only the recorder's
+four-byte value for that candidate mapping; it does not prove that the stack
+return uses that mapping, identify an invalid opcode, or explain why the
+original execution reaches the exception vector.
 This probe confirms that the `INT 6` loop happens after the existing title
 prefix and remains an emulator/driver boundary. Its 522-byte raw-result file
 SHA-256 is

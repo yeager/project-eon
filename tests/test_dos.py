@@ -25,7 +25,17 @@ class DosAnalysisTests(unittest.TestCase):
         report = describe_bytes("MILL.COM", b"\xe9\x00\x00\xcd\x21HELLO\0")
         self.assertEqual(report["name"], "MILL.COM")
         self.assertEqual(report["entry_file_offset"], 3)
+        self.assertTrue(report["entry_within_image"])
+        self.assertEqual(report["entry_beyond_image_bytes"], 0)
         self.assertEqual(report["interrupts"], {"0x21": 1})
+
+    def test_entry_beyond_member_is_an_explicit_runtime_boundary(self):
+        # The near target is file offset 0x13, two bytes past this exact
+        # member.  A linear decoder must not manufacture original code there.
+        report = describe_bytes("TITLES.EXE", b"\xe9\x10\x00" + bytes(14))
+        self.assertEqual(report["entry_file_offset"], 0x13)
+        self.assertFalse(report["entry_within_image"])
+        self.assertEqual(report["entry_beyond_image_bytes"], 2)
 
 
 if __name__ == "__main__":
