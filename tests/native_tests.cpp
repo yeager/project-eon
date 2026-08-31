@@ -1538,8 +1538,10 @@ int main() {
         forged_runtime_launch.release.platform = eon::Platform::dos;
         assert(!runtime_coordinator.acquire(forged_runtime_launch));
         assert(!runtime_coordinator.active());
+        assert(runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::identity_rejected);
         runtime_coordinator.reset();
-        assert(!runtime_coordinator.active());
+        assert(!runtime_coordinator.active()
+            && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::unselected);
 
         // The whole card route is SDL-independent: input devices only choose
         // cards, while platform/release admission and back-navigation have
