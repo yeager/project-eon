@@ -44,6 +44,9 @@ struct LaunchRequest {
     // original release before the external bytes are used.
     std::optional<std::filesystem::path> modern_pack_manifest;
     bool inspect_data = false;
+    // Deterministic preservation diagnostics for tooling. It never reports
+    // paths, filenames, archive members, or original bytes.
+    bool inspect_json = false;
     // Preservation-only leaf manifest. It is intentionally opt-in because
     // `--inspect` normally reports recovered structure, not every filename.
     bool inventory_assets = false;
