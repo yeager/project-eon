@@ -76,6 +76,17 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "grammar/count"):
                 TOOL.verify_deuteros_host_input_summary(fields, root)
 
+    def test_v5_millennium_host_input_summary_is_recomputed_from_strict_records(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            receipt = root / "host-input-receipt.raw"
+            receipt.write_text("host-key 1 ticks=2 state=down scancode=0x1 sym=0x2 mod=0x0\n", encoding="ascii")
+            fields = {"host_input_receipt": "present", "host_input_receipt_records": "1"}
+            TOOL.verify_millennium_host_input_summary(fields, root)
+            fields["host_input_receipt_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_millennium_host_input_summary(fields, root)
+
     def test_console_requires_a_bounded_retained_file(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
@@ -94,9 +105,12 @@ class ReceiptVerifierTests(unittest.TestCase):
 
     def test_v4_rejects_a_console_safety_overrun(self) -> None:
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "4")
+        TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "5")
         TOOL.verify_console_admission({}, "3")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "4")
+        with self.assertRaisesRegex(ValueError, "safety cap"):
+            TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "5")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({}, "4")
 

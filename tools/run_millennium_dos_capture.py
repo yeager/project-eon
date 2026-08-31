@@ -34,6 +34,7 @@ MAX_DURATION_SECONDS = 600
 # generous, fixed ceiling here so a damaged or substituted recorder cannot
 # turn a receipt status check into unbounded host-side I/O.
 MAX_INPUT_RECEIPT_BYTES = 64 * 1024
+MAX_INPUT_RECEIPT_RECORDS = 256
 MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
 # A defective external recorder can print a tight exception loop. Retain a
 # reviewable prefix while hashing and counting the complete byte stream, rather
@@ -60,9 +61,16 @@ RAW_RESULT_LINE = re.compile(
     r"ss=0x[0-9a-f]{4} sp=0x[0-9a-f]{4}(?: return_ip=0x[0-9a-f]{4} "
     r"return_cs=0x[0-9a-f]{4} return_flags=0x[0-9a-f]{4} code=0x[0-9a-f]{8})? "
     r"ax=0x[0-9a-f]{4} bx=0x[0-9a-f]{4} cx=0x[0-9a-f]{4} dx=0x[0-9a-f]{4})\n")
-# v4 adds an explicit console-overrun admission boundary while preserving v2
-# and v3 verification for captures made before that safety condition was bound.
-CAPTURE_RECEIPT_VERSION = "4"
+# The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
+# grammar authenticates the bounded external receipt shape only; it does not
+# claim DOS accepted a key or assign its original-game meaning.
+HOST_KEY_LINE = re.compile(
+    r"host-key ([1-9][0-9]*) ticks=([0-9]+) state=(down|up) "
+    r"scancode=0x([0-9a-f]+) sym=0x([0-9a-f]+) mod=0x([0-9a-f]+)\n")
+# v5 retains v4's console-overrun admission boundary and v3 raw-result grammar
+# while binding the reviewed host-key receipt grammar/count. Older evidence
+# remains verifiable without pretending it has the newer fields.
+CAPTURE_RECEIPT_VERSION = "5"
 
 
 class CaptureError(RuntimeError):
@@ -250,10 +258,33 @@ def input_receipt_status(path: Path) -> str:
         raise CaptureError("host-input receipt exceeds the bounded recorder contract")
     if info.st_size == 0:
         return "host_input_receipt=empty\n"
+    record_count = parse_host_input_receipt(path)
     digest, size = sha256_file(path)
     return ("host_input_receipt=present\n"
             f"host_input_receipt_sha256={digest}\n"
-            f"host_input_receipt_bytes={size}\n")
+            f"host_input_receipt_bytes={size}\n"
+            f"host_input_receipt_records={record_count}\n")
+
+
+def parse_host_input_receipt(path: Path) -> int:
+    """Validate the finite SDL host-key receipt without decoding DOS input."""
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("host-input receipt is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("host-input receipt has a truncated final record")
+    count = 0
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = HOST_KEY_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("host-input receipt contains an invalid recorder record")
+        if int(match.group(1)) != expected:
+            raise CaptureError("host-input receipt record ordinals are not contiguous")
+        count = expected
+        if count > MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("host-input receipt exceeds the recorder record cap")
+    return count
 
 
 def raw_observation_status(path: Path, name: str) -> str:

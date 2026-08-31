@@ -306,7 +306,11 @@ the whole physical-observation window on host I/O. A verifier accepts v2 and
 v3 historical receipts, while v4 requires `recorder_console_over_limit=false`.
 
 Receipt v2 first bound the retained console prefix as well as the complete
-transcript; current Millennium captures write `capture_receipt_version=4`.
+transcript; current Millennium captures write `capture_receipt_version=5`.
+V5 additionally validates a present recorder-owned host-key receipt as at
+most 256 contiguous ASCII records in the reviewed SDL grammar and records its
+count. Scancodes, symbols and modifiers remain opaque host observations until
+a genuine DOS poll/result/frame sequence proves their original meaning.
 Verify a completed external capture without reading game media:
 
 ```sh
@@ -425,6 +429,17 @@ observed. Therefore neither that host-side record nor any raw diagnostic is
 admitted as an input delivery, private DOS ABI, title state, audio, frame, or
 gameplay fact. All raw evidence remains outside the repository and supplied
 media.
+
+### Receipt-v5 host-key grammar probe (explicitly rejected diagnostic)
+
+The v5 runner was exercised against the same rehashed English DOS archive. It
+reached the 64 MiB console boundary after 2.35 seconds, writing
+`exit_status=125`, `recorder_console_total_bytes=67188395` and
+`recorder_console_over_limit=true`; no host-key receipt was created. It bound
+the same five raw diagnostic records, and the corrected verifier rejected the
+directory as inadmissible. This confirms that v5's host-key grammar/count gate
+does not weaken the v4+ console-overrun boundary. It supplies no DOS input,
+title, frame, audio, ABI, or gameplay fact.
 
 ## Audited local route
 
