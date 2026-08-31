@@ -28,6 +28,22 @@ const ReleaseManifestEntry& require_manifest_identity(const ReleaseArchive& rele
 
 } // namespace
 
+OriginalDataSourceKind classify_original_data_source(const std::filesystem::path& path) {
+    std::error_code error;
+    const auto status = std::filesystem::symlink_status(path, error);
+    if (error || status.type() == std::filesystem::file_type::not_found) {
+        return OriginalDataSourceKind::missing;
+    }
+    if (std::filesystem::is_symlink(status)) return OriginalDataSourceKind::unsupported;
+    if (std::filesystem::is_directory(status)) return OriginalDataSourceKind::directory;
+    if (std::filesystem::is_regular_file(status)) return OriginalDataSourceKind::archive;
+    return OriginalDataSourceKind::unsupported;
+}
+
+bool is_original_data_source(const OriginalDataSourceKind kind) {
+    return kind == OriginalDataSourceKind::directory || kind == OriginalDataSourceKind::archive;
+}
+
 std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& directory) {
     ReleaseScanner scanner(directory);
     while (!scanner.advance(64)) {
@@ -52,19 +68,24 @@ std::optional<std::vector<std::uint8_t>> extract_verified_release_asset(
 }
 
 ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
-    std::error_code error;
-    if (std::filesystem::is_regular_file(directory, error) && !error) {
+    switch (classify_original_data_source(directory)) {
+    case OriginalDataSourceKind::archive:
         candidates_.push_back(directory);
         finish_candidate_inventory();
         return;
-    }
-    error.clear();
-    if (std::filesystem::is_directory(directory, error) && !error) {
+    case OriginalDataSourceKind::directory:
         directories_.push_back(directory);
-    } else {
+        return;
+    case OriginalDataSourceKind::missing:
         // A missing default data directory is an empty, completed scan. The
         // lookup itself never creates it.
         finish_candidate_inventory();
+        return;
+    case OriginalDataSourceKind::unsupported:
+        // Do not traverse devices, FIFOs, sockets, or symlinks. They cannot
+        // provide an exact user-selected original-media identity.
+        finish_candidate_inventory();
+        return;
     }
 }
 

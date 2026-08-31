@@ -547,6 +547,37 @@ void assert_deuteros_amiga_post_exec_third_service(const std::vector<std::uint8_
     }
 }
 
+void assert_original_data_source_classification() {
+    const auto test_tmpdir = std::getenv("EON_TEST_TMPDIR");
+    assert(test_tmpdir && *test_tmpdir);
+    const auto temporary_root = std::filesystem::path(test_tmpdir);
+    std::filesystem::create_directories(temporary_root);
+    const auto nonce = std::to_string(
+        std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    const auto root = temporary_root / ("project-eon-data-source-" + nonce);
+    assert(eon::classify_original_data_source(root) == eon::OriginalDataSourceKind::missing);
+    std::filesystem::create_directories(root);
+    assert(eon::classify_original_data_source(root) == eon::OriginalDataSourceKind::directory);
+    const auto archive = root / "original-media.zip";
+    {
+        std::ofstream output(archive, std::ios::binary);
+        output << "fixture";
+    }
+    assert(eon::classify_original_data_source(archive) == eon::OriginalDataSourceKind::archive);
+    assert(eon::is_original_data_source(eon::OriginalDataSourceKind::directory));
+    assert(eon::is_original_data_source(eon::OriginalDataSourceKind::archive));
+    assert(!eon::is_original_data_source(eon::OriginalDataSourceKind::missing));
+    assert(!eon::is_original_data_source(eon::OriginalDataSourceKind::unsupported));
+    std::error_code symlink_error;
+    const auto redirected = root / "redirected-media.zip";
+    std::filesystem::create_symlink(archive, redirected, symlink_error);
+    if (!symlink_error) {
+        assert(eon::classify_original_data_source(redirected)
+            == eon::OriginalDataSourceKind::unsupported);
+    }
+    std::filesystem::remove_all(root);
+}
+
 void assert_modern_asset_pack_admission() {
     const auto test_tmpdir = std::getenv("EON_TEST_TMPDIR");
     assert(test_tmpdir && *test_tmpdir);
@@ -1233,6 +1264,7 @@ int main() {
         assert(!eon::validate_deuteros_amiga_title_display_reference_events(
             title_display_events, display_diagnostics, trace_error));
     }
+    assert_original_data_source_classification();
     assert_modern_asset_pack_admission();
     // Modern Scale2x is a renderer-only, in-memory reconstruction. This
     // asymmetric pattern proves it is not merely a texture filtering mode and
