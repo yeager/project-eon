@@ -1,4 +1,5 @@
 #include "engine/release_runtime.hpp"
+#include "engine/release_runtime_capability.hpp"
 
 #include "platform/game_data.hpp"
 #include "data/fat12.hpp"
@@ -40,6 +41,11 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         admission_ = ReleaseRuntimeAdmission::archive_rejected;
         return false;
     }
+    const auto capability = release_runtime_capability_for(launch.release);
+    if (!capability) {
+        admission_ = ReleaseRuntimeAdmission::identity_rejected;
+        return false;
+    }
     // Construct one typed adapter into local storage before publishing the
     // new identity. A failed leaf/parser admission must not leave a previous
     // adapter or a half-built replacement observable to SDL.
@@ -51,41 +57,29 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari;
     std::optional<RuntimeSessionSnapshot> session_snapshot;
-    switch (launch.release.game) {
-    case Game::millennium:
-        switch (launch.release.platform) {
-        case Platform::dos:
+    switch (capability->adapter) {
+    case ReleaseRuntimeAdapter::millennium_dos:
             millennium_dos = load_millennium_dos_runtime(*media);
-            if (millennium_dos) session_snapshot = make_runtime_session_snapshot(launch,
-                RuntimeSessionKind::millennium_dos_title);
             break;
-        case Platform::amiga:
+    case ReleaseRuntimeAdapter::millennium_amiga:
             millennium_amiga = load_millennium_amiga_runtime(*media);
-            if (millennium_amiga) session_snapshot = make_runtime_session_snapshot(launch,
-                RuntimeSessionKind::millennium_amiga_bootstrap);
             break;
-        case Platform::atari_st:
+    case ReleaseRuntimeAdapter::millennium_atari:
             millennium_atari = load_millennium_atari_runtime(*media);
-            if (millennium_atari) session_snapshot = make_runtime_session_snapshot(launch,
-                RuntimeSessionKind::millennium_atari_bootstrap);
             break;
-        }
-        break;
-    case Game::deuteros:
-        switch (launch.release.platform) {
-        case Platform::dos: break;
-        case Platform::amiga:
+    case ReleaseRuntimeAdapter::deuteros_amiga:
             deuteros_amiga = load_deuteros_amiga_runtime(*media);
-            if (deuteros_amiga) session_snapshot = make_runtime_session_snapshot(launch,
-                RuntimeSessionKind::deuteros_amiga_opening);
             break;
-        case Platform::atari_st:
+    case ReleaseRuntimeAdapter::deuteros_atari:
             deuteros_atari = load_deuteros_atari_runtime(*media);
-            if (deuteros_atari) session_snapshot = make_runtime_session_snapshot(launch,
-                RuntimeSessionKind::deuteros_atari_bootstrap);
             break;
-        }
-        break;
+    }
+    if (millennium_dos || millennium_amiga || millennium_atari || deuteros_amiga || deuteros_atari) {
+        session_snapshot = make_runtime_session_snapshot(launch, capability->initial_kind);
+        // The table is the declared admission contract; a changed generic
+        // kind helper must not silently broaden this release's boundary.
+        session_snapshot->boundary = capability->initial_boundary;
+        session_snapshot->capabilities = capability->initial_capabilities;
     }
     if (!session_snapshot || (!millennium_dos && !millennium_amiga && !millennium_atari
         && !deuteros_amiga && !deuteros_atari)) {

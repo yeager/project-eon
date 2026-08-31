@@ -1,0 +1,33 @@
+#pragma once
+
+#include "engine/runtime_session.hpp"
+#include "platform/platform_coverage.hpp"
+
+#include <optional>
+#include <string_view>
+#include <vector>
+
+namespace eon {
+
+// A capability is a hash-bound statement of what Eon may construct for one
+// original release. It is not an emulator configuration or parity claim.
+enum class ReleaseRuntimeAdapter { millennium_dos, millennium_amiga, millennium_atari,
+    deuteros_amiga, deuteros_atari };
+
+struct ReleaseRuntimeCapability {
+    std::string_view release_sha256;
+    Game game;
+    Platform platform;
+    std::string_view language;
+    ReleaseRuntimeAdapter adapter;
+    PlatformCoverage coverage;
+    RuntimeSessionKind initial_kind;
+    RuntimeSessionBoundary initial_boundary;
+    RuntimeSessionCapabilities initial_capabilities;
+};
+
+[[nodiscard]] const std::vector<ReleaseRuntimeCapability>& release_runtime_capabilities();
+[[nodiscard]] std::optional<ReleaseRuntimeCapability> release_runtime_capability_for(
+    const ReleaseArchive& release);
+
+} // namespace eon

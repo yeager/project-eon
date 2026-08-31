@@ -1,4 +1,5 @@
 #include "platform/platform_coverage.hpp"
+#include "engine/release_runtime_capability.hpp"
 
 namespace eon {
 
@@ -25,14 +26,8 @@ PlatformCoverage platform_coverage(const Game game, const Platform platform) {
 }
 
 PlatformCoverage platform_coverage(const ReleaseArchive& release) {
-    // Spanish DOS has title presentation evidence but no recovered executable
-    // hand-off. It must not inherit the English DOS startup claim.
-    if (release.game == Game::millennium && release.platform == Platform::dos
-        && release.language == "es"
-        && release.sha256 == "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4") {
-        return PlatformCoverage::bootstrap_only;
-    }
-    return platform_coverage(release.game, release.platform);
+    const auto capability = release_runtime_capability_for(release);
+    return capability ? capability->coverage : PlatformCoverage::bootstrap_only;
 }
 
 std::string_view name(const PlatformCoverage coverage) {

@@ -4576,6 +4576,20 @@ claiming that the original title stage has started.
 
 ## Current boundary
 
+### Release runtime capability admission
+
+`src/engine/release_runtime_capability.cpp` is the compiled, declarative
+runtime-capability map for every recognised outer archive. Each row binds the
+outer SHA-256 together with game, platform and language to one adapter,
+initial session kind, visible recovery coverage and allowed presentation/input
+observations. Runtime admission requires all four identity fields to match
+before opening original media; a missing or forged row fails closed. This
+prevents a release from inheriting a sibling platform or language's recovery
+claim. For example, Spanish Millennium DOS is admitted only to its documented
+title-presentation boundary and reports `BOOTSTRAP ONLY`; it does not inherit
+the English executable-startup evidence. The native tests assert a one-to-one
+mapping between the capability rows and the release manifest.
+
 Release recognition, archive traversal, selected FAT12 content, Deuteros ADF
 geometry/checksums, its first two load stages, two resource headers, and the
 first verified palette bank and both bitmap layouts are implemented and tested. Audio

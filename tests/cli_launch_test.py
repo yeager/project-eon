@@ -231,7 +231,7 @@ def main() -> int:
         raise SystemExit(f"--inspect-json did not emit JSON: {error}") from error
     expected_json_coverage = {
         ("Millennium 2.2", "DOS", "en"): "RECOVERED STARTUP",
-        ("Millennium 2.2", "DOS", "es"): "RECOVERED STARTUP",
+        ("Millennium 2.2", "DOS", "es"): "BOOTSTRAP ONLY",
         ("Millennium 2.2", "Amiga", "en"): "BOOTSTRAP ONLY",
         ("Millennium 2.2", "Atari ST", "en"): "BOOTSTRAP ONLY",
         ("Deuteros", "Amiga", "en"): "RECOVERED OPENING",
