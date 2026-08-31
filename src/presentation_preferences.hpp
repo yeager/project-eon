@@ -14,7 +14,8 @@ struct PresentationPreferences {
     std::size_t aspect_ratio_index = 0;
     std::size_t modern_preset_index = 0;
     std::size_t render_pacing_index = 0;
-    bool pixel_reconstruction = true;
+    // 0=off, 1=Scale2x, 2=Scale4x. This remains host presentation state.
+    std::size_t pixel_reconstruction_index = 1;
     bool smooth_scaling = true;
     bool scanlines = false;
     bool frame = true;
