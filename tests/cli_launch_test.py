@@ -216,6 +216,60 @@ def main() -> int:
     if "RECOVERY MAP  " not in data_dir_inspection.stdout:
         raise SystemExit("--inspect did not report the hash-bound recovery map")
 
+    # The JSON report is a complete release-exact preservation index, not a
+    # filename inventory. Check every supplied release, including bootstrap
+    # platforms, so a future serializer cannot quietly omit a CPU, source
+    # boundary, or documentation link while its human-oriented sibling still
+    # appears plausible.
+    inspect_json = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--inspect-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        inspect_payload = json.loads(inspect_json.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"--inspect-json did not emit JSON: {error}") from error
+    expected_json_coverage = {
+        ("Millennium 2.2", "DOS", "en"): "RECOVERED STARTUP",
+        ("Millennium 2.2", "DOS", "es"): "RECOVERED STARTUP",
+        ("Millennium 2.2", "Amiga", "en"): "BOOTSTRAP ONLY",
+        ("Millennium 2.2", "Atari ST", "en"): "BOOTSTRAP ONLY",
+        ("Deuteros", "Amiga", "en"): "RECOVERED OPENING",
+        ("Deuteros", "Atari ST", "en"): "BOOTSTRAP ONLY",
+    }
+    reported_json_coverage = {
+        (release["game"], release["platform"], release["language"]): release["coverage"]
+        for release in inspect_payload.get("releases", [])
+    }
+    if (inspect_json.returncode != 0
+            or inspect_payload.get("schema") != "project-eon.inspect/v1"
+            or reported_json_coverage != expected_json_coverage):
+        raise SystemExit(
+            "--inspect-json did not retain the complete release/coverage inventory:\n"
+            f"{inspect_json.stdout}\n{inspect_json.stderr}"
+        )
+    for release in inspect_payload["releases"]:
+        for boundary in release["recovery_boundaries"]:
+            required_boundary_fields = {
+                "id", "profile", "cpu", "source_address", "evidence_level",
+                "runtime_status", "documentation_anchor",
+            }
+            if (not required_boundary_fields <= boundary.keys()
+                    or not boundary["cpu"]
+                    or not boundary["documentation_anchor"].startswith("PRESERVATION.md#")):
+                raise SystemExit(f"--inspect-json recovery boundary lost preservation fields: {boundary}")
+        for function in release["function_map"]:
+            required_function_fields = {
+                "id", "profile", "cpu", "source_asset_sha256", "source_offset",
+                "runtime_address", "evidence_level", "uncertainty", "runtime_status",
+                "documentation_anchor",
+            }
+            if (not required_function_fields <= function.keys()
+                    or not function["documentation_anchor"].startswith("PRESERVATION.md#")):
+                raise SystemExit(f"--inspect-json function lost preservation fields: {function}")
+    if any(token in inspect_json.stdout for token in (str(data_directory), "Hämtningar", "Downloads")):
+        raise SystemExit("--inspect-json exposed a local original-media path")
+
     launch_check_json = subprocess.run(
         (str(executable), "--data", str(data_directory), "--game", "millennium",
             "--platform", "dos", "--presentation", "original", "--launch-check-json"),

@@ -419,6 +419,12 @@ mixing provenance from related editions. The composition reports
 release never implies that a reference trace, ABI, renderer, or game session
 has been admitted.
 
+`--inspect-json` exports every safe field from those admitted declarations:
+the recovery-boundary CPU and documentation anchor, and the function-map
+documentation anchor, in addition to their identities, source/runtime
+addresses, evidence level, status and uncertainty. It deliberately omits
+local source paths, captured events and original bytes.
+
 Every bounded parser profile in the release manifest has exactly one map row.
 This includes data and format readers as well as recovered control-flow
 boundaries: a map address may therefore be a verified leaf/file offset rather
