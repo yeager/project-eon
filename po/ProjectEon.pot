@@ -81,6 +81,26 @@ msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr ""
 
 #: src/main.cpp
+msgid "DATA SOURCE: DIRECTORY"
+msgstr ""
+
+#: src/main.cpp
+msgid "DATA SOURCE: ARCHIVE"
+msgstr ""
+
+#: src/main.cpp
+msgid "DATA SOURCE: MISSING"
+msgstr ""
+
+#: src/main.cpp
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr ""
+
+#: src/main.cpp
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr ""
+
+#: src/main.cpp
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr ""
 

@@ -59,6 +59,21 @@ msgstr "ÖZGÜN OYUN VERİSİ KLASÖRÜNÜ SEÇ (O)"
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "ÖZGÜN OYUN ARŞİVİNİ SEÇ (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "VERİ KAYNAĞI: KLASÖR"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "VERİ KAYNAĞI: ARŞİV"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "VERİ KAYNAĞI: EKSİK"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "VERİ KAYNAĞI: DESTEKLENMİYOR"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "REDDEDİLENLER: BOYUT {size}; HASH {hash}; OKUNAMAZ {unreadable}; BAĞLANTILAR {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "OYUN SEÇ   |   YUKARI/AŞAĞI: PLATFORM   |   D: VERİ TARAMA   |   F1: ÖZGÜN / MODERN   |   ESC: ÇIK"
 

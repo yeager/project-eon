@@ -59,6 +59,21 @@ msgstr "ВИБРАТИ ТЕКУ З ОРИГІНАЛЬНИМИ ДАНИМИ ГР�
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "ВИБРАТИ АРХІВ ОРИГІНАЛЬНОЇ ГРИ (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "ДЖЕРЕЛО ДАНИХ: ТЕКА"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "ДЖЕРЕЛО ДАНИХ: АРХІВ"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "ДЖЕРЕЛО ДАНИХ: ВІДСУТНЄ"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "ДЖЕРЕЛО ДАНИХ: НЕ ПІДТРИМУЄТЬСЯ"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "ВІДХИЛЕНО: РОЗМІР {size}; ХЕШ {hash}; НЕЧИТАБЕЛЬНЕ {unreadable}; ПОСИЛАННЯ {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВИБРАТИ ГРУ   |   ВГОРУ/ВНИЗ: ПЛАТФОРМА   |   D: ПЕРЕВІРКА ДАНИХ   |   F1: ОРИГІНАЛ / СУЧАСНИЙ   |   ESC: ВИЙТИ"
 

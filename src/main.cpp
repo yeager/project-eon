@@ -664,7 +664,8 @@ void write_json_string(std::ostream& output, const std::string_view value) {
 // directory. Consumers can therefore preserve/review identity and boundaries
 // without turning a report into a media catalogue.
 void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
-    const eon::ReleaseScanReport& scan) {
+    const eon::ReleaseScanSnapshot& scan_snapshot) {
+    const auto& scan = scan_snapshot.report;
     std::cout << "{\"schema\":\"project-eon.inspect/v1\",\"releases\":[";
     for (std::size_t index = 0; index < releases.size(); ++index) {
         if (index != 0) std::cout << ',';
@@ -716,12 +717,19 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         std::cout << "]}";
     }
     std::cout << "],\"scan\":{\"source_kind\":";
-    write_json_string(std::cout, eon::name(scan.source_kind));
-    std::cout << ",\"candidates\":" << scan.candidates
+    write_json_string(std::cout, eon::name(scan_snapshot.source_kind));
+    std::cout << ",\"discovering\":" << (scan_snapshot.discovering ? "true" : "false")
+        << ",\"complete\":" << (scan_snapshot.complete ? "true" : "false")
+        << ",\"scanned_candidates\":" << scan_snapshot.scanned_count
+        << ",\"unique_releases\":" << scan_snapshot.unique_release_count;
+    std::cout << ",\"candidates\":" << scan_snapshot.candidate_count
+        << ",\"size_rejected_candidates\":" << scan.size_rejected_candidates
         << ",\"manifest_size_matches\":" << scan.size_candidates
         << ",\"hashed\":" << scan.hashed_candidates
+        << ",\"hash_rejected_candidates\":" << scan.hash_rejected_candidates
         << ",\"verified_occurrences\":" << scan.verified_occurrences
         << ",\"duplicate_occurrences\":" << scan.duplicate_occurrences
+        << ",\"unreadable_candidates\":" << scan.unreadable_candidates
         << ",\"symlink_rejected_entries\":" << scan.symlink_rejected_entries
         << "}}\n";
 }
@@ -3564,7 +3572,7 @@ int main(int argc, char** argv) {
                 std::cerr << "No recognised original release matches the requested inspection filters.\n";
                 return 5;
             }
-            report_inspection_json(inspected_releases, scanner->report());
+            report_inspection_json(inspected_releases, scanner->snapshot());
             return 0;
         }
         if (request.modern_pack_root) {
@@ -3958,6 +3966,27 @@ int main(int argc, char** argv) {
     auto& focused_profile_card = card_focus.profile;
     auto& custom_profile_ready = launcher_session.custom_profile_ready;
     bool show_scanner = false;
+    const auto scanner_source_text = [&](const eon::OriginalDataSourceKind source_kind) {
+        switch (source_kind) {
+        case eon::OriginalDataSourceKind::directory: return tr("DATA SOURCE: DIRECTORY");
+        case eon::OriginalDataSourceKind::archive: return tr("DATA SOURCE: ARCHIVE");
+        case eon::OriginalDataSourceKind::missing: return tr("DATA SOURCE: MISSING");
+        case eon::OriginalDataSourceKind::unsupported: return tr("DATA SOURCE: UNSUPPORTED");
+        }
+        return tr("DATA SOURCE: UNSUPPORTED");
+    };
+    const auto scanner_rejections_text = [&](const eon::ReleaseScanSnapshot& snapshot) {
+        auto text = tr("REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}");
+        const auto replace = [&](const std::string_view token, const std::size_t value) {
+            const auto position = text.find(token);
+            if (position != std::string::npos) text.replace(position, token.size(), std::to_string(value));
+        };
+        replace("{size}", snapshot.report.size_rejected_candidates);
+        replace("{hash}", snapshot.report.hash_rejected_candidates);
+        replace("{unreadable}", snapshot.report.unreadable_candidates);
+        replace("{links}", snapshot.report.symlink_rejected_entries);
+        return text;
+    };
     // It intentionally has room for the longest shipped translation, rather
     // than treating English text width as the launcher layout contract.
     const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 398.0F, 34.0F};
@@ -4960,17 +4989,20 @@ int main(int argc, char** argv) {
                 }
             }
             if (show_scanner) {
+                const auto snapshot = scanner->snapshot();
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 220);
-                SDL_FRect overlay{64, 574, 1152, 104};
+                SDL_FRect overlay{64, 548, 1152, 152};
                 SDL_RenderFillRect(renderer, &overlay);
-                draw_text(renderer, 86, 596, tr("DATA SCANNER (content hashes, read-only)"));
-                const auto scanner_progress = scanner->discovering()
-                    ? tr("Discovering files: ") + std::to_string(scanner->candidate_count())
-                    : tr("Files hashed: ") + std::to_string(scanner->scanned_count())
-                        + " / " + std::to_string(scanner->candidate_count());
-                draw_text(renderer, 86, 620, scanner_progress);
-                draw_text(renderer, 86, 644, scanner->done()
+                draw_text(renderer, 86, 570, tr("DATA SCANNER (content hashes, read-only)"));
+                draw_text(renderer, 86, 594, scanner_source_text(snapshot.source_kind));
+                const auto scanner_progress = snapshot.discovering
+                    ? tr("Discovering files: ") + std::to_string(snapshot.candidate_count)
+                    : tr("Files hashed: ") + std::to_string(snapshot.scanned_count)
+                        + " / " + std::to_string(snapshot.candidate_count);
+                draw_text(renderer, 86, 618, scanner_progress);
+                draw_text(renderer, 86, 642, scanner_rejections_text(snapshot));
+                draw_text(renderer, 86, 666, snapshot.complete
                     ? tr("Complete. Only hash-verified original releases are selectable.")
                     : tr("Scanning in progress. Press D to hide this progress panel."));
             }

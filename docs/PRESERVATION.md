@@ -75,7 +75,10 @@ candidate until normal archive-size and SHA-256 verification succeeds.
 Directory traversal applies the same non-symlink rule to every encountered
 entry. Rejected links are counted only in the aggregate scan diagnostics; a
 link target, its name, and any bytes outside the selected collection are never
-opened or reported.
+opened or reported. `ReleaseScanSnapshot` is the one SDL-free diagnostic
+projection shared by the card-menu `D` panel and `--inspect-json`: source
+shape, scan phase/progress, aggregate rejection counters, and verified-release
+count may be shown; media paths, filenames, archive members, and bytes may not.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract

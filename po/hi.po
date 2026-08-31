@@ -59,6 +59,21 @@ msgstr "मूल गेम डेटा फ़ोल्डर चुनें (
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "मूल गेम संग्रह चुनें (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "डेटा स्रोत: फ़ोल्डर"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "डेटा स्रोत: संग्रह"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "डेटा स्रोत: अनुपलब्ध"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "डेटा स्रोत: असमर्थित"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "अस्वीकृत: आकार {size}; हैश {hash}; अपठनीय {unreadable}; लिंक {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "गेम चुनें   |   ऊपर/नीचे: प्लेटफ़ॉर्म   |   D: डेटा जाँच   |   F1: मूल / आधुनिक   |   ESC: बाहर निकलें"
 msgid "VERIFIED ORIGINAL DATA"

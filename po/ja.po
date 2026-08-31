@@ -59,6 +59,21 @@ msgstr "オリジナルゲームデータのフォルダーを選択 (O)"
 msgid "CHOOSE ORIGINAL ARCHIVE (A)"
 msgstr "オリジナルゲームアーカイブを選択 (A)"
 
+msgid "DATA SOURCE: DIRECTORY"
+msgstr "データソース: フォルダー"
+
+msgid "DATA SOURCE: ARCHIVE"
+msgstr "データソース: アーカイブ"
+
+msgid "DATA SOURCE: MISSING"
+msgstr "データソース: なし"
+
+msgid "DATA SOURCE: UNSUPPORTED"
+msgstr "データソース: 非対応"
+
+msgid "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"
+msgstr "拒否: サイズ {size}; ハッシュ {hash}; 読み取り不能 {unreadable}; リンク {links}"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ゲームを選択   |   上下: プラットフォーム   |   D: データを検査   |   F1: オリジナル / モダン   |   ESC: 終了"
 msgid "VERIFIED ORIGINAL DATA"
