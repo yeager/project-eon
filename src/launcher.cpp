@@ -139,7 +139,8 @@ std::string usage() {
         "               [--language <language>]\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --verify-data millennium|deuteros\n\n"
         "  project-eon --data <directory-or-archive> --game millennium|deuteros\n"
-        "               --platform dos|amiga|atari-st --reference-trace <manifest.eontrace>\n\n"
+        "               --platform dos|amiga|atari-st --reference-trace <manifest.eontrace>\n"
+        "               [--reference-trace-json]\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect\n"
         "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
         "               [--release-language en|es]\n"
@@ -180,6 +181,10 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
         if (argument == "--inventory") {
             request.inventory_assets = true;
+            continue;
+        }
+        if (argument == "--reference-trace-json") {
+            request.reference_trace_json = true;
             continue;
         }
         if (index + 1 >= argc) return {{}, "Missing value for " + std::string(argument), false};
@@ -240,7 +245,7 @@ ParseResult parse_command_line(int argc, char** argv) {
         return {{}, "--game and --verify-data cannot be combined", false};
     }
     if (request.inspect_save && (!request.data_directory_is_default || request.game || request.verify_game || request.inspect_data
-        || request.reference_trace || request.modern_pack_root || request.modern_pack_manifest
+        || request.reference_trace || request.reference_trace_json || request.modern_pack_root || request.modern_pack_manifest
         || request.platform || request.release_language || request.release_sha256
         || request.presentation_explicit)) {
         return {{}, "--inspect-save is standalone; it never selects game data, a release, or runtime", false};
@@ -278,6 +283,9 @@ ParseResult parse_command_line(int argc, char** argv) {
         if (request.verify_game || request.inspect_data) {
             return {{}, "--reference-trace cannot be combined with --verify-data or --inspect", false};
         }
+    }
+    if (request.reference_trace_json && !request.reference_trace) {
+        return {{}, "--reference-trace-json requires --reference-trace", false};
     }
     if (request.platform && !request.game) return {{}, "--platform requires --game", false};
     if ((request.release_language || request.release_sha256) && (!request.game || !request.platform)) {

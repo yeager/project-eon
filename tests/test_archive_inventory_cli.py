@@ -35,6 +35,18 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn("release_has_function_map_entry(release.sha256, function.id)", body)
         self.assertNotIn("release.path", body)
 
+    def test_trace_json_is_diagnostics_only_and_omits_local_paths(self) -> None:
+        self.assertIn('argument == "--reference-trace-json"', LAUNCHER)
+        self.assertIn("--reference-trace-json requires --reference-trace", LAUNCHER)
+        start = MAIN.index("void report_reference_trace_json")
+        body = MAIN[start:MAIN.index("SDL_FRect aspect_viewport", start)]
+        self.assertIn(r'\"project-eon.reference-trace/v1\"', body)
+        self.assertIn(r'\"recovery_boundaries\"', body)
+        self.assertIn(r'\"artifacts\"', body)
+        self.assertNotIn("trace.manifest_path", body)
+        self.assertNotIn("trace.events_path", body)
+        self.assertNotIn("artifact.path", body)
+
 
 if __name__ == "__main__":
     unittest.main()
