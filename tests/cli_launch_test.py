@@ -232,6 +232,7 @@ def main() -> int:
                     "game": "Millennium 2.2", "platform": "DOS", "language": "en",
                     "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
                 },
+                "coverage": "RECOVERED STARTUP",
                 "runtime_admission": "READY",
             }):
         raise SystemExit(

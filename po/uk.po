@@ -316,6 +316,15 @@ msgstr "ЛИШЕ ЗАВАНТАЖЕННЯ ATARI"
 msgid "BOOTSTRAP ONLY"
 msgstr "ЛИШЕ ЗАВАНТАЖЕННЯ"
 
+msgid "RECOVERY COVERAGE"
+msgstr "ОХОПЛЕННЯ ВІДНОВЛЕННЯ"
+
+msgid "RECOVERED STARTUP"
+msgstr "ВІДНОВЛЕНИЙ ЗАПУСК"
+
+msgid "RECOVERED OPENING"
+msgstr "ВІДНОВЛЕНИЙ ПОЧАТОК"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

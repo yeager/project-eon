@@ -34,6 +34,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         end = SOURCE.index("std::size_t output_resolution_index_for", start)
         diagnostics = SOURCE[start:end]
         self.assertIn("release_identity", diagnostics)
+        self.assertIn("recovery_coverage", diagnostics)
         self.assertIn("startup_boundary", diagnostics)
         self.assertIn("recovery_boundary_count", diagnostics)
         self.assertIn("trace_admission", diagnostics)
@@ -47,7 +48,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
         for label in (
             "MODERN RUNTIME DIAGNOSTICS", "RELEASE IDENTITY",
-            "STARTUP BOUNDARY", "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "MODERN PACK",
+            "RECOVERY COVERAGE", "STARTUP BOUNDARY", "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "MODERN PACK",
             "PACK RENDER TARGETS", "RENDERER SETTINGS",
             "FRAME PACING", "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
         ):

@@ -277,6 +277,15 @@ msgstr "केवल अटारी बूटस्ट्रैप"
 msgid "BOOTSTRAP ONLY"
 msgstr "केवल बूटस्ट्रैप"
 
+msgid "RECOVERY COVERAGE"
+msgstr "पुनर्प्राप्ति दायरा"
+
+msgid "RECOVERED STARTUP"
+msgstr "पुनर्प्राप्त प्रारंभ"
+
+msgid "RECOVERED OPENING"
+msgstr "पुनर्प्राप्त आरंभ"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

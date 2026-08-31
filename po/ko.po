@@ -316,6 +316,15 @@ msgstr "ATARI 부트스트랩 전용"
 msgid "BOOTSTRAP ONLY"
 msgstr "부트스트랩 전용"
 
+msgid "RECOVERY COVERAGE"
+msgstr "복구 범위"
+
+msgid "RECOVERED STARTUP"
+msgstr "복구된 시작"
+
+msgid "RECOVERED OPENING"
+msgstr "복구된 오프닝"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

@@ -277,6 +277,15 @@ msgstr "إقلاع أتاري فقط"
 msgid "BOOTSTRAP ONLY"
 msgstr "الإقلاع فقط"
 
+msgid "RECOVERY COVERAGE"
+msgstr "نطاق الاسترداد"
+
+msgid "RECOVERED STARTUP"
+msgstr "بدء التشغيل المستعاد"
+
+msgid "RECOVERED OPENING"
+msgstr "الافتتاحية المستعادة"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

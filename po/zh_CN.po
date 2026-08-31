@@ -316,6 +316,15 @@ msgstr "仅限 ATARI 引导"
 msgid "BOOTSTRAP ONLY"
 msgstr "仅限引导"
 
+msgid "RECOVERY COVERAGE"
+msgstr "恢复范围"
+
+msgid "RECOVERED STARTUP"
+msgstr "已恢复启动"
+
+msgid "RECOVERED OPENING"
+msgstr "已恢复开场"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

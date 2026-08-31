@@ -293,6 +293,11 @@ not claim full native runtime parity. Each label identifies only the current
 bounded startup/opening evidence; it does not mean a full game loop, all
 assets, input, audio, state, or save parity.
 
+`platform_coverage` is an SDL-free compiled contract consumed by the platform
+cards, F10 diagnostics, `--inspect-json`, and `--launch-check-json`. This
+keeps every user-facing diagnostic on the same release/platform recovery fact;
+it has no media path, archive-member, or guest-execution capability.
+
 Each rehashed Atari report includes `ATARI LAUNCH BOUNDARY`, matching the card
 label to a release-specific limitation: Millennium stops before the GEMDOS
 `TRAP #1`/`Fopen` result, input, and later launcher flow; Deuteros stops before

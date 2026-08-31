@@ -125,6 +125,18 @@ msgid "BOOTSTRAP ONLY"
 msgstr ""
 
 #: src/main.cpp
+msgid "RECOVERY COVERAGE"
+msgstr ""
+
+#: src/platform/platform_coverage.cpp
+msgid "RECOVERED STARTUP"
+msgstr ""
+
+#: src/platform/platform_coverage.cpp
+msgid "RECOVERED OPENING"
+msgstr ""
+
+#: src/main.cpp
 msgid "ORIGINAL DATA NOT FOUND"
 msgstr ""
 
