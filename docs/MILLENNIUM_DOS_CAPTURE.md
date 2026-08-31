@@ -636,6 +636,47 @@ one into a private-interrupt ABI, title result, or gameplay claim. It is not
 part of the v11 receipt grammar and cannot be added to a reference trace until
 at least two write-protected captures agree on its exact byte-level shape.
 
+### Receipt-v12 predecessor observation (diagnostics only)
+
+That separate experiment is now retained as the explicit
+`v12-predecessor` recorder protocol. Its external DOSBox-X binary is
+127,284,720 bytes with SHA-256
+`20a5ec331ca71e541d2f6d42c1ab49eca0fec5dabf298b6faf51fa45c63c24ed`.
+The helper accepts it only when `--recorder-protocol v12-predecessor` is
+spelled explicitly; v11 remains the default and still requires its older
+byte-exact early-stop receipt.
+
+The v12 fault record adds exactly four observational fields after the v11
+register dump: `predecessor_valid`, `predecessor_cs:ip`, four bytes at that
+tuple, and `predecessor_recognised_image`. The recorder stores those values at
+the normal-core instruction boundary and only serializes them if its own
+unhandled-interrupt callback is reached. It neither maps an additional image
+nor changes a vector, guest register, guest memory, input, scheduler, DOS
+result, or title flow.
+
+Two separately prepared, operator-visible, write-protected `svga_s3` captures
+on 2026-08-31 passed the receipt verifier. Both retained the same five event
+records (367 bytes, SHA-256
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`) and
+the same eight-record v12 result stream (909 bytes, SHA-256
+`ad55dc005728deb5381eb6434259cde2555074ceac1690d9552e44b2af38d393`). The
+new final record says `predecessor_valid=1`, `predecessor_cs:ip=f000:ca60`,
+`predecessor_code=fe380300`, and `predecessor_recognised_image=0`. The first
+and second generated configurations were respectively 340 bytes with
+SHA-256 `15783df2e33e0afad5d09136f93d681f1ab6d5d2c52afb0fd78b900b5cb0a8ae`
+and `c1a8da432d78de33382d560fa14dae599cc6d196d715466a87108f22be4ac789`.
+Neither run produced a host-input receipt; both stopped with external status
+`126` / `known-unhandled-interrupt`, and both rehashed the source archive to
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` after
+the run.
+
+This reproducibly locates the recorded predecessor outside the recorder's
+currently recognised original-image map. It is therefore evidence about the
+emulator callback boundary only. It is not evidence for a guest `INT 6`
+instruction, a private DOS ABI, a title result, executable handoff, display,
+input, audio, simulation, or gameplay state; it is not added to a reference
+trace or consumed by Project Eon runtime code.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the

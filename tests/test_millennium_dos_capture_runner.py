@@ -175,6 +175,19 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             results.write_bytes(b"not a recorder record\n")
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
 
+    def test_v12_predecessor_stop_requires_the_complete_bounded_shape(self) -> None:
+        with temporary_directory() as directory:
+            results = Path(directory) / "results.raw"
+            payload = TOOL.KNOWN_V11_EARLY_STOP_RAW.replace(
+                b"ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n",
+                b"ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101 predecessor_valid=1 "
+                b"predecessor_cs=0xf000 predecessor_ip=0xca60 predecessor_code=0xfe380300 "
+                b"predecessor_recognised_image=0\n")
+            results.write_bytes(payload)
+            self.assertTrue(TOOL.known_unhandled_interrupt_observed(results, "v12-predecessor"))
+            results.write_bytes(payload.replace(b"predecessor_recognised_image=0", b"predecessor_recognised_image=2"))
+            self.assertFalse(TOOL.known_unhandled_interrupt_observed(results, "v12-predecessor"))
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""
         with temporary_directory() as directory:

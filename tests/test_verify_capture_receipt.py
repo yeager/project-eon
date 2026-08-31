@@ -28,6 +28,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "9"}), "9")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "10"}), "10")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "11"}), "11")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "12"}), "12")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
