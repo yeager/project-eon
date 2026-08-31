@@ -76,6 +76,9 @@ struct LaunchRequest {
     // objects or entering a game loop. It is a startup diagnostic, never a
     // substitute runtime or replay mode.
     bool launch_check = false;
+    // Machine-readable form of the same bounded launch check. It emits only
+    // release identity and the safe admission result.
+    bool launch_check_json = false;
     std::optional<Platform> platform;
     // Language of the immutable original release, distinct from the launcher
     // UI locale above.  A release selection must never infer this from the

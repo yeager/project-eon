@@ -3708,6 +3708,21 @@ int main(int argc, char** argv) {
             std::cerr << "Launch check has no admitted original release.\n";
             return 4;
         }
+        if (request.launch_check_json) {
+            std::cout << "{\"schema\":\"project-eon.launch-check/v1\",\"release\":{\"game\":";
+            write_json_string(std::cout, eon::name(active_launch()->release.game));
+            std::cout << ",\"platform\":";
+            write_json_string(std::cout, eon::name(active_launch()->release.platform));
+            std::cout << ",\"language\":";
+            write_json_string(std::cout, active_launch()->release.language);
+            std::cout << ",\"sha256\":";
+            write_json_string(std::cout, active_launch()->release.sha256);
+            std::cout << "},\"runtime_admission\":";
+            write_json_string(std::cout,
+                eon::release_runtime_admission_label(runtime_coordinator.admission()));
+            std::cout << "}\n";
+            return 0;
+        }
         std::cout << "LAUNCH CHECK  " << eon::name(active_launch()->release.game) << " / "
                   << eon::name(active_launch()->release.platform) << " / "
                   << active_launch()->release.language << " / "

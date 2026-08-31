@@ -136,6 +136,7 @@ std::string usage() {
         "               [--release-language en|es] [--release-sha256 <64-lowercase-hex>]\n"
         "               [--presentation original|modern] [--modern-pack <pack.eonmodern>]\n\n"
         "               [--launch-check]\n\n"
+        "               [--launch-check-json]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
         "               [--language <language>]\n\n"
@@ -187,6 +188,11 @@ ParseResult parse_command_line(int argc, char** argv) {
         }
         if (argument == "--launch-check") {
             request.launch_check = true;
+            continue;
+        }
+        if (argument == "--launch-check-json") {
+            request.launch_check = true;
+            request.launch_check_json = true;
             continue;
         }
         if (argument == "--reference-trace-json") {
@@ -253,7 +259,7 @@ ParseResult parse_command_line(int argc, char** argv) {
     if (request.inspect_save && (!request.data_directory_is_default || request.game || request.verify_game || request.inspect_data
         || request.reference_trace || request.reference_trace_json || request.modern_pack_root || request.modern_pack_manifest
         || request.platform || request.release_language || request.release_sha256
-        || request.presentation_explicit || request.launch_check)) {
+        || request.presentation_explicit || request.launch_check || request.launch_check_json)) {
         return {{}, "--inspect-save is standalone; it never selects game data, a release, or runtime", false};
     }
     if (request.verify_game && request.inspect_data) {
