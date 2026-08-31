@@ -43,13 +43,16 @@ for required in \
     "$appdir/usr/share/project-eon/assets/cards/millennium.png" \
     "$appdir/usr/share/project-eon/assets/branding/project-eon-logo-v1.png" \
     "$appdir/usr/share/project-eon/assets/fonts/NotoSans-Regular.ttf" \
-    "$appdir/usr/share/project-eon/po/sv.po" \
-    "$appdir/usr/lib/project-eon/libSDL3.so.0"; do
+    "$appdir/usr/share/project-eon/po/sv.po"; do
   if [ ! -e "$required" ]; then
     echo "AppImage lacks required payload: $required" >&2
     exit 1
   fi
 done
+if ! find "$appdir/usr/lib" -type f -name libSDL3.so.0 -print -quit | grep -q .; then
+  echo "AppImage lacks its installed private SDL3 runtime" >&2
+  exit 1
+fi
 if ! "$appdir/AppRun" --help 2>&1 | grep -Fq 'Usage:'; then
   echo "AppImage launcher did not run its packaged executable" >&2
   exit 1
