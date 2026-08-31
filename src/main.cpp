@@ -671,6 +671,25 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
             std::cout << ",\"runtime_status\":"; write_json_string(std::cout, boundary.runtime_status);
             std::cout << '}';
         }
+        std::cout << "],\"function_map\":[";
+        const auto functions = eon::function_map_for_release(release.sha256);
+        bool first_function = true;
+        for (const auto& function : functions) {
+            if (!eon::release_has_function_map_entry(release.sha256, function.id)) continue;
+            if (!first_function) std::cout << ',';
+            first_function = false;
+            std::cout << "{\"id\":"; write_json_string(std::cout, function.id);
+            std::cout << ",\"profile\":"; write_json_string(std::cout, function.parser_profile_id);
+            std::cout << ",\"cpu\":"; write_json_string(std::cout, function.cpu);
+            std::cout << ",\"source_asset_sha256\":";
+            write_json_string(std::cout, function.source_asset_sha256);
+            std::cout << ",\"source_offset\":"; write_json_string(std::cout, function.source_offset);
+            std::cout << ",\"runtime_address\":"; write_json_string(std::cout, function.runtime_address);
+            std::cout << ",\"evidence_level\":"; write_json_string(std::cout, function.evidence_level);
+            std::cout << ",\"uncertainty\":"; write_json_string(std::cout, function.uncertainty);
+            std::cout << ",\"runtime_status\":"; write_json_string(std::cout, function.runtime_status);
+            std::cout << '}';
+        }
         std::cout << "]}";
     }
     std::cout << "],\"scan\":{\"candidates\":" << scan.candidates

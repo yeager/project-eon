@@ -24,6 +24,17 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn("asset.sha256", body)
         self.assertIn("asset.path", body)
 
+    def test_json_inspection_includes_only_hash_bound_function_map_facts(self) -> None:
+        self.assertIn('argument == "--inspect-json"', LAUNCHER)
+        self.assertIn("--inspect-json reports release-level diagnostics only", LAUNCHER)
+        start = MAIN.index("void report_inspection_json")
+        body = MAIN[start:MAIN.index("SDL_FRect aspect_viewport", start)]
+        self.assertIn(r'\"project-eon.inspect/v1\"', body)
+        self.assertIn(r'\"function_map\"', body)
+        self.assertIn("function_map_for_release(release.sha256)", body)
+        self.assertIn("release_has_function_map_entry(release.sha256, function.id)", body)
+        self.assertNotIn("release.path", body)
+
 
 if __name__ == "__main__":
     unittest.main()

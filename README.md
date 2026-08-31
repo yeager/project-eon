@@ -233,9 +233,9 @@ platform's release when the choice is omitted. Use the card menu or
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It
 contains only game/platform/language/release hashes plus hash-bound startup and
-recovery boundaries and aggregate scan counters—never source paths, filenames,
-archive members, or original bytes. It cannot be combined with asset inventory
-or Modern-pack inspection.
+recovery boundaries, declarative function-map facts, and aggregate scan
+counters—never source paths, filenames, archive members, or original bytes.
+It cannot be combined with asset inventory or Modern-pack inspection.
 
 After a Modern F10/Custom panel is closed, its renderer preferences are stored
 separately from game media: Linux uses
