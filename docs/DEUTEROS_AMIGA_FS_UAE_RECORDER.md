@@ -129,6 +129,9 @@ Consequently a no-input preflight cannot silently look like an empty
 physical-input timeline, and a defective recorder cannot make the terminal or
 evidence cache grow without bound. A physical input timeline, independent
 review and trace assembly remain required before any runtime admission.
+Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
+unmount rejects the run rather than silently leaving a read-only source view
+inside a later evidence directory.
 
 Current captures write `capture_receipt_version=4`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
@@ -182,6 +185,13 @@ outer release and Kickstart archive retained SHA-256
 created. This verifies v4's bounded evidence route only; it does not add a
 title, control, Exec/graphics, bitplane, palette, frame, audio, or gameplay
 fact.
+
+The v4 route was also repeated after the checked-unmount contract was added.
+The receipt verified with the same bounded raw-PC result and no host-input
+receipt, both original archive hashes remained unchanged, and all four exact
+outer/disk/ROM mountpoints were absent after cleanup. This is lifecycle
+evidence for the capture tool only, not an additional title or gameplay
+observation.
 
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;
