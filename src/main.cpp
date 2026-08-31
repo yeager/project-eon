@@ -4940,8 +4940,16 @@ int main(int argc, char** argv) {
         }
 
         if (!scanner->done()) {
+            const auto source_before_scan = launcher_interaction.source_identity();
             static_cast<void>(scanner->advance(show_scanner ? 32 : 1));
             releases = scanner->releases();
+            // A scan can discover a second verified container after an
+            // earlier unique release was shown. Reconcile through the common
+            // card controller so that no automatic selection can silently
+            // become an ambiguous launch, and revoke all source-bound SDL
+            // state if that reconciliation changes the identity.
+            launcher_interaction.synchronize(releases);
+            apply_launcher_navigation(source_before_scan);
             if (screen == Screen::menu && !request.platform) focus_menu_card(focused);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros

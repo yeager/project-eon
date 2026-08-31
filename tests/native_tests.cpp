@@ -1724,6 +1724,29 @@ int main() {
         assert(route_admission.admission == eon::ReleaseRuntimeAdmission::archive_rejected);
         assert(!runtime_coordinator.active());
 
+        // Scanner completion can reveal a second container after a platform
+        // had one automatic release. That auto-selection must be revoked and
+        // shown as a release-card choice; an identity picked explicitly by
+        // the user remains exact and stable.
+        const std::vector<eon::ReleaseArchive> initially_unique_releases{
+            {eon::Game::millennium, eon::Platform::amiga, "en",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", {}},
+        };
+        eon::LauncherRouteState incremental_route;
+        incremental_route.focus_game(initially_unique_releases, eon::Game::millennium);
+        assert(incremental_route.choose_platform(initially_unique_releases, eon::Platform::amiga));
+        assert(incremental_route.page == eon::LauncherPage::profiles
+            && incremental_route.release_is_selected() && !incremental_route.release_explicit);
+        assert(incremental_route.reconcile_releases(duplicate_english_releases));
+        assert(incremental_route.page == eon::LauncherPage::releases
+            && !incremental_route.release_is_selected());
+        assert(incremental_route.choose_release(duplicate_english_releases,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+        assert(incremental_route.release_explicit);
+        assert(!incremental_route.reconcile_releases(duplicate_english_releases));
+        assert(incremental_route.page == eon::LauncherPage::profiles
+            && incremental_route.release_is_selected());
+
         // Cache invalidation is keyed to the complete release provenance,
         // not card focus or presentation. The SDL layer may therefore safely
         // retain resources for an identical selection and must revoke them

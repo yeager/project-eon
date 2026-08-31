@@ -79,6 +79,17 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("Borrowed from the selected generated platform card", SOURCE)
         self.assertIn("SDL_RenderTexture(renderer, card.texture", SOURCE)
 
+    def test_incremental_scan_revokes_newly_ambiguous_automatic_release(self) -> None:
+        self.assertIn("bool release_explicit = false", ROUTE_HEADER)
+        self.assertIn("bool LauncherRouteState::reconcile_releases", ROUTE_SOURCE)
+        self.assertIn("!release_explicit && identities.size() > 1", ROUTE_SOURCE)
+        self.assertIn("page = LauncherPage::releases", ROUTE_SOURCE)
+        self.assertIn("session.reconcile_releases(releases)", ROUTE_SOURCE)
+        scanner_update = SOURCE.index("const auto source_before_scan")
+        scanner_body = SOURCE[scanner_update:SOURCE.index("if (screen == Screen::launching", scanner_update)]
+        self.assertIn("launcher_interaction.synchronize(releases);", scanner_body)
+        self.assertIn("apply_launcher_navigation(source_before_scan);", scanner_body)
+
     def test_runtime_loaders_consume_the_resolved_outer_identity(self) -> None:
         # The launcher must resolve a media identity once before it enters a
         # session. A loader searching the mutable scanner list again could
