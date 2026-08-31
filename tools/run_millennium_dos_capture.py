@@ -26,7 +26,7 @@ EXPECTED_RELEASE_SHA256 = "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630c
 EXPECTED_RELEASE_SIZE = 328_383
 # The capture helper never accepts a merely executable emulator as a recorder:
 # its hooks and input-receipt contract are part of the provenance boundary.
-EXPECTED_RECORDER_SHA256 = "ab53ed0ef1d921b7379f1668013da39b3a2d0bb41faa1eb6a7a5eb8a15f50325"
+EXPECTED_RECORDER_SHA256 = "1bacb843a3c1684ce4da78cac809ef6e272b5fdabb7262a01cda2b9b1b571665"
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
 MIN_DURATION_SECONDS = 15
@@ -58,6 +58,7 @@ RAW_RESULT_LINE = re.compile(
     r"(?:image=(mill\.com|titles\.exe) pc=0x(020e|0213|0129) "
     r"(?:source-int=0x(21|91) source-ax=0x([0-9a-f]{4}) ax=0x([0-9a-f]{4})|"
     r"source-call=0x0511 ax=0x([0-9a-f]{4}))|"
+    r"private-vector image=titles\.exe pc=0x0127 int=0x91 vector_ip=0x[0-9a-f]{4} vector_cs=0x[0-9a-f]{4}|"
     r"fault=unhandled-interrupt int=0x06 cs=0x[0-9a-f]{4} ip=0x[0-9a-f]{4} "
     r"ss=0x[0-9a-f]{4} sp=0x[0-9a-f]{4}(?: return_ip=0x[0-9a-f]{4} "
     r"return_cs=0x[0-9a-f]{4} return_flags=0x[0-9a-f]{4} code=0x[0-9a-f]{8})? "
@@ -68,10 +69,10 @@ RAW_RESULT_LINE = re.compile(
 HOST_KEY_LINE = re.compile(
     r"host-key ([1-9][0-9]*) ticks=([0-9]+) state=(down|up) "
     r"scancode=0x([0-9a-f]+) sym=0x([0-9a-f]+) mod=0x([0-9a-f]+)\n")
-# v6 retains v5's bounded host-key receipt and adds a finite, independently
-# checked machine-profile declaration.  The profile changes only the external
-# emulator configuration; it never changes the mounted original media.
-CAPTURE_RECEIPT_VERSION = "6"
+# v7 retains v6's bounded machine-profile declaration and admits one raw,
+# one-shot snapshot of the already-installed INT 91h IVT vector at the
+# observed title request. It is not an interrupt ABI or a replacement handler.
+CAPTURE_RECEIPT_VERSION = "7"
 
 
 class CaptureError(RuntimeError):
@@ -323,8 +324,13 @@ def parse_raw_results(path: Path) -> dict[str, int]:
             raise CaptureError("results_raw contains an invalid recorder record")
         if int(match.group(1)) != expected or int(match.group(2)) != expected:
             raise CaptureError("results_raw record counters are not contiguous")
-        label = "fault" if line.startswith("raw-result\t" + str(expected) + " " + str(expected) + " fault=") else (
-            f"{match.group(3)}:{match.group(4)}")
+        prefix = "raw-result\t" + str(expected) + " " + str(expected) + " "
+        if line.startswith(prefix + "fault="):
+            label = "fault"
+        elif line.startswith(prefix + "private-vector "):
+            label = "private-vector"
+        else:
+            label = f"{match.group(3)}:{match.group(4)}"
         counts[label] = counts.get(label, 0) + 1
         if expected > MAX_RAW_RESULT_RECORDS:
             raise CaptureError("results_raw exceeds the recorder record cap")

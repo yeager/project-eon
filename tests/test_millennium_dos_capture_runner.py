@@ -132,6 +132,11 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             status = TOOL.raw_observation_status(results, "results_raw")
             self.assertIn("results_raw_records=1\n", status)
             self.assertIn("results_raw_shapes=mill.com:020e:1\n", status)
+            results.write_bytes(
+                b"raw-result\t1 1 private-vector image=titles.exe pc=0x0127 int=0x91 "
+                b"vector_ip=0x1234 vector_cs=0xabcd\n")
+            status = TOOL.raw_observation_status(results, "results_raw")
+            self.assertIn("results_raw_shapes=private-vector:1\n", status)
             results.write_bytes(b"raw-result\t2 2 image=mill.com pc=0x020e source-int=0x21 source-ax=0x2591 ax=0x2591\n")
             with self.assertRaisesRegex(TOOL.CaptureError, "counters"):
                 TOOL.raw_observation_status(results, "results_raw")
