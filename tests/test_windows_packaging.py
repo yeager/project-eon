@@ -39,6 +39,9 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("installed package lacks staged file", workflow)
         self.assertIn("Get-FileHash -Algorithm SHA256", workflow)
         self.assertIn("installed package must not create a game-data directory", workflow)
+        self.assertIn("did not retain its Windows default data boundary", workflow)
+        self.assertIn("Data path does not exist:", workflow)
+        self.assertIn("created its default game-data directory during lookup", workflow)
         self.assertIn("installed Project Eon executable did not load and print its CLI usage", workflow)
 
     def test_ci_rejects_unreviewed_files_before_inno_recurses_stage_directories(self) -> None:

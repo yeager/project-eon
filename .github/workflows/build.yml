@@ -605,10 +605,25 @@ jobs:
             throw "installed package contains possible original game media: $($media.FullName -join ', ')"
           }
 
+          # Exercise the installed executable's actual Windows default-data
+          # lookup. Unlike --help, --inspect reaches the scanner boundary and
+          # must name <install-dir>\data without creating it or falling back
+          # to HOME/.projecteon.
+          $installedExecutable = Join-Path $installRoot "project-eon.exe"
+          $inspect = & $installedExecutable --inspect 2>&1 | Out-String
+          $expectedDataPath = Join-Path $installRoot "data"
+          if ($LASTEXITCODE -ne 2 -or
+              $inspect -notmatch [regex]::Escape("Data path does not exist: `"$expectedDataPath`"")) {
+            throw "installed Project Eon executable did not retain its Windows default data boundary: $inspect"
+          }
+          if (Test-Path -LiteralPath $expectedDataPath) {
+            throw "installed Project Eon executable created its default game-data directory during lookup"
+          }
+
           # --help returns before SDL initialization or any data scan.  It is
           # a real Windows loader smoke test for the executable and all of its
           # packaged DLL dependencies, without supplying synthetic game data.
-          $usage = & (Join-Path $installRoot "project-eon.exe") --help 2>&1 | Out-String
+          $usage = & $installedExecutable --help 2>&1 | Out-String
           if ($LASTEXITCODE -ne 0 -or $usage -notmatch "Without --data/--data-dir") {
             throw "installed Project Eon executable did not load and print its CLI usage: $usage"
           }
