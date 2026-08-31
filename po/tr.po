@@ -86,6 +86,15 @@ msgstr "REDDEDİLENLER: BOYUT {size}; HASH {hash}; OKUNAMAZ {unreadable}; BAĞLA
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "DOĞRULANMIŞ SÜRÜMLER: {unique}; YİNELENENLER: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "OTURUM BAĞDAŞTIRICISI"
+
+msgid "SESSION BOUNDARY"
+msgstr "OTURUM SINIRI"
+
+msgid "SESSION CAPABILITIES"
+msgstr "OTURUM YETENEKLERİ"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "OYUN SEÇ   |   YUKARI/AŞAĞI: PLATFORM   |   D: VERİ TARAMA   |   F1: ÖZGÜN / MODERN   |   ESC: ÇIK"
 

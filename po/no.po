@@ -86,6 +86,15 @@ msgstr "AVVIST: STØRRELSE {size}; HASH {hash}; ULESBAR {unreadable}; LENKER {li
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "VERIFISERTE UTGIVELSER: {unique}; DUPLIKATER: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "ØKTADAPTER"
+
+msgid "SESSION BOUNDARY"
+msgstr "ØKTGRENSE"
+
+msgid "SESSION CAPABILITIES"
+msgstr "ØKTEGENSKAPER"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VELG SPILL   |   OPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERNE   |   ESC: AVSLUTT"
 

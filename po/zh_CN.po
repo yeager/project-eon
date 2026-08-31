@@ -86,6 +86,15 @@ msgstr "已拒绝：大小 {size}；哈希 {hash}；不可读取 {unreadable}；
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "已验证版本：{unique}；重复项：{duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "会话适配器"
+
+msgid "SESSION BOUNDARY"
+msgstr "会话边界"
+
+msgid "SESSION CAPABILITIES"
+msgstr "会话能力"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "选择游戏   |   上/下：平台   |   D：扫描数据   |   F1：原版 / 现代   |   ESC：退出"
 

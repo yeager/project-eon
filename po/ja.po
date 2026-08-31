@@ -86,6 +86,15 @@ msgstr "拒否: サイズ {size}; ハッシュ {hash}; 読み取り不能 {unrea
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "検証済みリリース: {unique}; 重複: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "セッションアダプター"
+
+msgid "SESSION BOUNDARY"
+msgstr "セッション境界"
+
+msgid "SESSION CAPABILITIES"
+msgstr "セッション機能"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ゲームを選択   |   上下: プラットフォーム   |   D: データを検査   |   F1: オリジナル / モダン   |   ESC: 終了"
 msgid "VERIFIED ORIGINAL DATA"

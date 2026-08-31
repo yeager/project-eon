@@ -75,6 +75,15 @@ msgstr "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {li
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "SESSION ADAPTER"
+
+msgid "SESSION BOUNDARY"
+msgstr "SESSION BOUNDARY"
+
+msgid "SESSION CAPABILITIES"
+msgstr "SESSION CAPABILITIES"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgid "VERIFIED ORIGINAL DATA"

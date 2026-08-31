@@ -428,6 +428,12 @@ struct ModernRuntimeDiagnostics {
     };
     std::string release_identity;
     std::string runtime_admission = "NOT SELECTED";
+    // These originate exclusively from ReleaseRuntimeCoordinator's admitted
+    // session snapshot. They never reconstruct session state from launcher
+    // focus or add an SDL-side media/input path.
+    std::string session_adapter = "NOT SELECTED";
+    std::string session_boundary = "—";
+    std::string session_capabilities = "—";
     std::string recovery_coverage = "—";
     // The first hash-checked address is a preservation navigation marker,
     // not a request to execute, emulate, or hook original machine code.
@@ -961,9 +967,12 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
     draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::pair<const char*, std::string>, 11> rows{{
+    const std::array<std::pair<const char*, std::string>, 14> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
         {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
+        {"SESSION ADAPTER", diagnostics.session_adapter},
+        {"SESSION BOUNDARY", diagnostics.session_boundary},
+        {"SESSION CAPABILITIES", diagnostics.session_capabilities},
         {"RECOVERY COVERAGE", tr(diagnostics.recovery_coverage)},
         {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
@@ -983,14 +992,14 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"FRAME PACING", tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing)))},
     }};
     for (std::size_t index = 0; index < rows.size(); ++index) {
-        const float y = 232.0F + static_cast<float>(index) * 34.0F;
+        const float y = 226.0F + static_cast<float>(index) * 30.0F;
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
         draw_text(renderer, 390, y, tr(rows[index].first));
         SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
         draw_text(renderer, 390, y + 20.0F, rows[index].second);
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
-    draw_text(renderer, 390, 630, tr("DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."));
+    draw_text(renderer, 390, 656, tr("DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."));
 }
 
 // The function map is deliberately its own diagnostics subpage.  Unlike a
@@ -4433,6 +4442,17 @@ int main(int argc, char** argv) {
         diagnostics.release_identity = tr("NOT SELECTED");
         diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
             runtime_coordinator.admission()));
+        if (const auto& session = runtime_coordinator.session_snapshot()) {
+            diagnostics.session_adapter = std::string(eon::runtime_session_kind_label(session->kind));
+            diagnostics.session_boundary = std::string(
+                eon::runtime_session_boundary_label(session->boundary));
+            // Capability values are compact diagnostic codes, like recovery
+            // map addresses. Only their launcher row label is translated.
+            diagnostics.session_capabilities = "PRESENTATION="
+                + std::string(session->capabilities.decoded_presentation ? "Y" : "N")
+                + " / AUDIO=" + (session->capabilities.audio_observations ? "Y" : "N")
+                + " / INPUT=" + (session->capabilities.admitted_input ? "Y" : "N");
+        }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");
         if (modern_pack_admission == ModernPackAdmission::ready && selected_modern_pack_preflight
