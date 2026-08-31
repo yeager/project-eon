@@ -581,6 +581,8 @@ void assert_original_data_source_classification() {
     assert(initial_snapshot.source_kind == eon::OriginalDataSourceKind::directory);
     assert(initial_snapshot.discovering && !initial_snapshot.complete);
     assert(initial_snapshot.candidate_count == 0 && initial_snapshot.scanned_count == 0);
+    assert(initial_snapshot.unique_release_count == 0
+        && initial_snapshot.unique_unbound_direct_media_count == 0);
     while (!scanner.advance(1)) {
     }
     const auto complete_snapshot = scanner.snapshot();
@@ -588,6 +590,7 @@ void assert_original_data_source_classification() {
     assert(complete_snapshot.source_kind == eon::OriginalDataSourceKind::directory);
     assert(complete_snapshot.candidate_count == 1 && complete_snapshot.scanned_count == 1);
     assert(complete_snapshot.unique_release_count == 0);
+    assert(complete_snapshot.unique_unbound_direct_media_count == 0);
     assert(complete_snapshot.report.candidates == 1);
     assert(complete_snapshot.report.size_rejected_candidates == 1);
     assert(complete_snapshot.report.verified_direct_media_occurrences == 0);

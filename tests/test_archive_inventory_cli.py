@@ -35,6 +35,7 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn(r'\"source_kind\"', body)
         self.assertIn(r'\"scanned_candidates\"', body)
         self.assertIn(r'\"unique_releases\"', body)
+        self.assertIn(r'\"unique_unbound_direct_media\"', body)
         self.assertIn(r'\"size_rejected_candidates\"', body)
         self.assertIn(r'\"direct_media_size_matches\"', body)
         self.assertIn(r'\"verified_unbound_direct_media_occurrences\"', body)

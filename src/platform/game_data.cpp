@@ -115,7 +115,7 @@ ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
 
 ReleaseScanSnapshot ReleaseScanner::snapshot() const {
     return {report_.source_kind, discovering(), done(), candidate_count(), scanned_count(),
-        releases_.size(), report_};
+        releases_.size(), unbound_direct_media_.size(), report_};
 }
 
 void ReleaseScanner::finish_candidate_inventory() {
