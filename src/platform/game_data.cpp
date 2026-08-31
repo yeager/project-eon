@@ -78,7 +78,10 @@ bool ReleaseScanner::advance(std::size_t max_files) {
             const auto size = std::filesystem::file_size(candidate);
             const auto manifest = release_manifest();
             if (std::none_of(manifest.begin(), manifest.end(),
-                    [size](const auto& known) { return known.size == size; })) continue;
+                    [size](const auto& known) { return known.size == size; })) {
+                ++report_.size_rejected_candidates;
+                continue;
+            }
             ++report_.size_candidates;
             const auto fingerprint = to_hex(sha256_file(candidate));
             ++report_.hashed_candidates;
@@ -97,6 +100,12 @@ bool ReleaseScanner::advance(std::size_t max_files) {
                     // and record every additional copy/link as evidence only.
                     ++report_.duplicate_occurrences;
                 }
+            } else {
+                // The complete outer archive was read but does not have a
+                // recognised identity. Keep this aggregate evidence so an
+                // alternate/cracked/repacked release cannot disappear into
+                // the generic candidate total.
+                ++report_.hash_rejected_candidates;
             }
         } catch (const std::exception&) {
             // A file may disappear during a scan. It is simply not a verified

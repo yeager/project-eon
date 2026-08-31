@@ -1639,6 +1639,10 @@ int main() {
     assert(incremental_scanner.done());
     assert(incremental_scanner.releases().size() == 6);
     assert(incremental_scanner.report().candidates == incremental_scanner.candidate_count());
+    assert(incremental_scanner.report().candidates
+        == incremental_scanner.report().size_rejected_candidates
+            + incremental_scanner.report().hashed_candidates
+            + incremental_scanner.report().unreadable_candidates);
     // Other user files may share a release's byte length, so only the hash
     // identity count is corpus-fixed. Every size-admitted candidate is either
     // completely hashed or explicitly accounted as unreadable.
@@ -1647,6 +1651,8 @@ int main() {
         + incremental_scanner.report().unreadable_candidates
         == incremental_scanner.report().size_candidates);
     assert(incremental_scanner.report().verified_occurrences == 6);
+    assert(incremental_scanner.report().hash_rejected_candidates
+        <= incremental_scanner.report().hashed_candidates);
     assert(incremental_scanner.report().duplicate_occurrences == 0);
     assert(incremental_scanner.report().unreadable_candidates == 0);
     const auto releases = eon::find_release_archives(data_directory);
@@ -2724,8 +2730,10 @@ int main() {
     assert(direct_archive_scanner.releases().size() == 1);
     assert(direct_archive_scanner.releases().front().sha256 == english_dos->sha256);
     assert(direct_archive_scanner.report().candidates == 1);
+    assert(direct_archive_scanner.report().size_rejected_candidates == 0);
     assert(direct_archive_scanner.report().size_candidates == 1);
     assert(direct_archive_scanner.report().hashed_candidates == 1);
+    assert(direct_archive_scanner.report().hash_rejected_candidates == 0);
     assert(direct_archive_scanner.report().verified_occurrences == 1);
     assert(direct_archive_scanner.report().duplicate_occurrences == 0);
     assert(direct_archive_scanner.report().unreadable_candidates == 0);

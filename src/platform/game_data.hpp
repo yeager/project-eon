@@ -28,8 +28,14 @@ struct ReleaseArchive {
 // occurrences of the same content identity are represented by one release.
 struct ReleaseScanReport {
     std::size_t candidates = 0;
+    // These two rejection counters make the admission boundary observable
+    // without reporting user filenames. A size rejection was never hashed;
+    // a hash rejection had a manifest-sized byte stream but no manifest
+    // content identity. Neither is a supported release or a fallback.
+    std::size_t size_rejected_candidates = 0;
     std::size_t size_candidates = 0;
     std::size_t hashed_candidates = 0;
+    std::size_t hash_rejected_candidates = 0;
     std::size_t verified_occurrences = 0;
     std::size_t duplicate_occurrences = 0;
     std::size_t unreadable_candidates = 0;

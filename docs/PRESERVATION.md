@@ -165,11 +165,12 @@ release card and one CLI launch target; the first lexical path is retained as
 the deterministic in-place source and later occurrences are counted, not
 silently treated as separate editions.
 
-`--inspect` prints aggregate `SCAN SUMMARY` counters: candidates, manifest-size
-matches, hashed candidates, verified and duplicate occurrences, unique
-releases, and unreadable candidates. The report deliberately does not print
-unrecognised filenames or infer their platform: it makes admission and scanner
-failures auditable while preserving the strict content-addressed boundary.
+`--inspect` prints aggregate `SCAN SUMMARY` counters: candidates, files rejected
+by a non-manifest size (which are not hashed), manifest-size matches, hashed
+candidates, manifest-sized hash rejections, verified and duplicate occurrences,
+unique releases, and unreadable candidates. The report deliberately does not
+print unrecognised filenames or infer their platform: it makes admission and
+scanner failures auditable while preserving the strict content-addressed boundary.
 
 For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
 rehashed game/platform card state. `READY` has exactly one verified original
