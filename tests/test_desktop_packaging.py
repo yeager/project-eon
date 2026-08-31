@@ -80,6 +80,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("CPACK_DEBIAN_FILE_NAME DEB-DEFAULT", cmake)
         self.assertIn('set(CPACK_DEBIAN_PACKAGE_SECTION "utils")', cmake)
         self.assertIn("SDLTTF_VENDORED OFF", cmake)
+        self.assertIn("if(SDLTTF_VENDORED)", cmake)
         self.assertIn("file(RPATH_REMOVE", cmake)
         self.assertIn("--strip-unneeded", cmake)
         self.assertIn("project-eon.lintian-overrides", cmake)

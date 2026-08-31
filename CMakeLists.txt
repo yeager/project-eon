@@ -48,12 +48,13 @@ if(NOT SDL3_image_FOUND)
 endif()
 
 # SDL_ttf's source archive intentionally omits its FreeType/HarfBuzz gitlinks.
-# Fetch all three source snapshots by immutable object ID and SHA-256, then
-# stage the two explicitly pinned dependencies in SDL_ttf's expected source
-# tree. This avoids CMake's `GIT_SHALLOW` fallback to `--no-single-branch`,
-# which fetches the whole SDL_ttf history when resolving a raw commit. The
-# portable iPadOS/macOS/Windows routes use that pinned shaping stack, while
-# Linux packages use their declared distribution dependencies.
+# The portable iPadOS/macOS/Windows routes fetch all three source snapshots by
+# immutable object ID and SHA-256, then stage the two explicitly pinned
+# dependencies in SDL_ttf's expected source tree. This avoids CMake's
+# `GIT_SHALLOW` fallback to `--no-single-branch`, which fetches the whole
+# SDL_ttf history when resolving a raw commit. Linux packages use their
+# declared distribution dependencies and therefore do not fetch unused
+# vendored copies.
 # Linux packages link SDL_ttf against distribution FreeType/HarfBuzz rather
 # than embedding those libraries. Desktop builds on macOS/Windows retain the
 # pinned portable fallback because their packaging routes have no compatible
@@ -72,28 +73,32 @@ FetchContent_Declare(SDL3_ttf
     URL_HASH SHA256=5024f953a5ce207e87ae73e09644ec3e5357d9907952209035b88bdaeac7edeb
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-FetchContent_Declare(eon_sdl3_ttf_freetype
-    URL https://codeload.github.com/libsdl-org/freetype/tar.gz/9973564cfa63763a3e4ac67c09147899539b1e07
-    URL_HASH SHA256=026a05a49d114a1235d2926f4c03a9330e4b1a6efe7c217ec9607904c32907d4
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_Declare(eon_sdl3_ttf_harfbuzz
-    URL https://codeload.github.com/libsdl-org/harfbuzz/tar.gz/564bf9818a18709776856533829c0c04950773d6
-    URL_HASH SHA256=a448dd6c22d8e1e1cf39438c662251c1f97f810b8780eed4a6d6ada948c99ddc
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-# FetchContent_MakeAvailable would add SDL_ttf before its gitlinks can be
-# staged. Populate the three verified archives first, then add SDL_ttf once.
+if(SDLTTF_VENDORED)
+    FetchContent_Declare(eon_sdl3_ttf_freetype
+        URL https://codeload.github.com/libsdl-org/freetype/tar.gz/9973564cfa63763a3e4ac67c09147899539b1e07
+        URL_HASH SHA256=026a05a49d114a1235d2926f4c03a9330e4b1a6efe7c217ec9607904c32907d4
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_Declare(eon_sdl3_ttf_harfbuzz
+        URL https://codeload.github.com/libsdl-org/harfbuzz/tar.gz/564bf9818a18709776856533829c0c04950773d6
+        URL_HASH SHA256=a448dd6c22d8e1e1cf39438c662251c1f97f810b8780eed4a6d6ada948c99ddc
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+endif()
+# FetchContent_MakeAvailable would add SDL_ttf before its portable gitlinks
+# can be staged. Populate the verified source snapshots first, then add it.
 if(POLICY CMP0169)
     cmake_policy(SET CMP0169 OLD)
 endif()
 FetchContent_Populate(SDL3_ttf)
-FetchContent_Populate(eon_sdl3_ttf_freetype)
-FetchContent_Populate(eon_sdl3_ttf_harfbuzz)
-file(COPY "${eon_sdl3_ttf_freetype_SOURCE_DIR}/"
-    DESTINATION "${sdl3_ttf_SOURCE_DIR}/external/freetype")
-file(COPY "${eon_sdl3_ttf_harfbuzz_SOURCE_DIR}/"
-    DESTINATION "${sdl3_ttf_SOURCE_DIR}/external/harfbuzz")
+if(SDLTTF_VENDORED)
+    FetchContent_Populate(eon_sdl3_ttf_freetype)
+    FetchContent_Populate(eon_sdl3_ttf_harfbuzz)
+    file(COPY "${eon_sdl3_ttf_freetype_SOURCE_DIR}/"
+        DESTINATION "${sdl3_ttf_SOURCE_DIR}/external/freetype")
+    file(COPY "${eon_sdl3_ttf_harfbuzz_SOURCE_DIR}/"
+        DESTINATION "${sdl3_ttf_SOURCE_DIR}/external/harfbuzz")
+endif()
 add_subdirectory("${sdl3_ttf_SOURCE_DIR}" "${sdl3_ttf_BINARY_DIR}" EXCLUDE_FROM_ALL)
 
 add_executable(project-eon
