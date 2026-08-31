@@ -354,11 +354,17 @@ bool validate_events(const std::filesystem::path& path, const std::uintmax_t exp
     return true;
 }
 
-bool validate_millennium_dos_english_events(const std::filesystem::path& path,
-                                             const std::uintmax_t expected_size,
-                                             const std::string_view expected_sha256,
-                                             MillenniumDosEnglishReferenceTraceDiagnostics& diagnostics,
-                                             std::string& error) {
+// Every semantic adapter consumes the same immutable, external event-pair
+// boundary. Keep size verification, the pre-parse hash, bounded read, and
+// post-parse hash in one place so a new adapter cannot accidentally accept a
+// changed capture or skip the second identity check. `validate` receives only
+// the bounded bytes; it has no access to a runtime session or original media.
+template <typename Diagnostics, typename Validator>
+bool validate_adapter_events(const std::filesystem::path& path,
+                             const std::uintmax_t expected_size,
+                             const std::string_view expected_sha256,
+                             Diagnostics& diagnostics, Validator&& validate,
+                             std::string& error) {
     std::uintmax_t observed_size = 0;
     if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
     if (observed_size != expected_size) {
@@ -379,12 +385,12 @@ bool validate_millennium_dos_english_events(const std::filesystem::path& path,
         error = "Unable to read reference trace events";
         return false;
     }
-    std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     if (stream.bad()) {
         error = "Unable to read reference trace events";
         return false;
     }
-    if (!validate_millennium_dos_english_reference_events(contents, diagnostics, error)) return false;
+    if (!validate(contents, diagnostics, error)) return false;
     try {
         if (to_hex(sha256_file(path)) != expected_sha256) {
             error = "Reference trace events changed while it was being validated";
@@ -395,6 +401,15 @@ bool validate_millennium_dos_english_events(const std::filesystem::path& path,
         return false;
     }
     return true;
+}
+
+bool validate_millennium_dos_english_events(const std::filesystem::path& path,
+                                             const std::uintmax_t expected_size,
+                                             const std::string_view expected_sha256,
+                                             MillenniumDosEnglishReferenceTraceDiagnostics& diagnostics,
+                                             std::string& error) {
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_millennium_dos_english_reference_events, error);
 }
 
 bool validate_millennium_dos_gx_startup_events(const std::filesystem::path& path,
@@ -402,38 +417,8 @@ bool validate_millennium_dos_gx_startup_events(const std::filesystem::path& path
                                                 const std::string_view expected_sha256,
                                                 MillenniumDosGxStartupReferenceTraceDiagnostics& diagnostics,
                                                 std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) { error = "Unable to read reference trace events"; return false; }
-    std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (stream.bad() || !validate_millennium_dos_gx_startup_reference_events(contents, diagnostics, error)) {
-        if (stream.bad()) error = "Unable to read reference trace events";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_millennium_dos_gx_startup_reference_events, error);
 }
 
 bool validate_millennium_dos_title_init_events(const std::filesystem::path& path,
@@ -441,38 +426,8 @@ bool validate_millennium_dos_title_init_events(const std::filesystem::path& path
                                                const std::string_view expected_sha256,
                                                MillenniumDosTitleInitReferenceTraceDiagnostics& diagnostics,
                                                std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) { error = "Unable to read reference trace events"; return false; }
-    std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (stream.bad() || !validate_millennium_dos_title_init_reference_events(contents, diagnostics, error)) {
-        if (stream.bad()) error = "Unable to read reference trace events";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_millennium_dos_title_init_reference_events, error);
 }
 
 bool validate_deuteros_atari_events(const std::filesystem::path& path,
@@ -480,42 +435,8 @@ bool validate_deuteros_atari_events(const std::filesystem::path& path,
                                     const std::string_view expected_sha256,
                                     DeuterosAtariReferenceTraceDiagnostics& diagnostics,
                                     std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (stream.bad()) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    if (!validate_deuteros_atari_reference_events(contents, diagnostics, error)) return false;
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_deuteros_atari_reference_events, error);
 }
 
 bool validate_deuteros_amiga_events(const std::filesystem::path& path,
@@ -523,87 +444,16 @@ bool validate_deuteros_amiga_events(const std::filesystem::path& path,
                                     const std::string_view expected_sha256,
                                     DeuterosAmigaReferenceTraceDiagnostics& diagnostics,
                                     std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    // Reading through istreambuf_iterator may finish with a clean stream on
-    // some standard-library implementations, so only a real I/O failure
-    // rejects this already bounded and hashed file.
-    if (stream.bad()) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    if (!validate_deuteros_amiga_title_reference_events(contents, diagnostics, error)) return false;
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_deuteros_amiga_title_reference_events, error);
 }
 
 bool validate_deuteros_amiga_title_bridge_events(
     const std::filesystem::path& path, const std::uintmax_t expected_size,
     const std::string_view expected_sha256,
     DeuterosAmigaTitleBridgeReferenceTraceDiagnostics& diagnostics, std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (stream.bad()) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    if (!validate_deuteros_amiga_title_bridge_reference_events(contents, diagnostics, error)) return false;
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_deuteros_amiga_title_bridge_reference_events, error);
 }
 
 bool validate_deuteros_amiga_title_display_events(
@@ -611,85 +461,20 @@ bool validate_deuteros_amiga_title_display_events(
     const std::string_view expected_sha256,
     const std::string_view expected_input_timeline_sha256,
     DeuterosAmigaTitleDisplayReferenceTraceDiagnostics& diagnostics, std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (stream.bad()
-        || !validate_deuteros_amiga_title_display_reference_events(
-            contents, diagnostics, error, expected_input_timeline_sha256)) {
-        if (stream.bad()) error = "Unable to read reference trace events";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        [expected_input_timeline_sha256](const std::string_view contents, auto& target,
+            std::string& validation_error) {
+            return validate_deuteros_amiga_title_display_reference_events(
+                contents, target, validation_error, expected_input_timeline_sha256);
+        }, error);
 }
 
 bool validate_deuteros_amiga_main_stage_events(
     const std::filesystem::path& path, const std::uintmax_t expected_size,
     const std::string_view expected_sha256,
     DeuterosAmigaMainStageReferenceTraceDiagnostics& diagnostics, std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    if (stream.bad()
-        || !validate_deuteros_amiga_main_stage_reference_events(contents, diagnostics, error)) {
-        if (stream.bad()) error = "Unable to read reference trace events";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_deuteros_amiga_main_stage_reference_events, error);
 }
 
 bool validate_millennium_amiga_events(const std::filesystem::path& path,
@@ -697,43 +482,8 @@ bool validate_millennium_amiga_events(const std::filesystem::path& path,
                                       const std::string_view expected_sha256,
                                       MillenniumAmigaReferenceTraceDiagnostics& diagnostics,
                                       std::string& error) {
-    std::uintmax_t observed_size = 0;
-    if (!regular_file_size(path, maximum_events_size, observed_size, error)) return false;
-    if (observed_size != expected_size) {
-        error = "Reference trace events size does not match its manifest";
-        return false;
-    }
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events SHA-256 does not match its manifest";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to hash reference trace events";
-        return false;
-    }
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    const std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    // See the corresponding DOS adapter reader above.
-    if (stream.bad()) {
-        error = "Unable to read reference trace events";
-        return false;
-    }
-    if (!validate_millennium_amiga_english_reference_events(contents, diagnostics, error)) return false;
-    try {
-        if (to_hex(sha256_file(path)) != expected_sha256) {
-            error = "Reference trace events changed while it was being validated";
-            return false;
-        }
-    } catch (const std::exception&) {
-        error = "Unable to rehash reference trace events";
-        return false;
-    }
-    return true;
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_millennium_amiga_english_reference_events, error);
 }
 
 bool hexadecimal_u64(const std::string_view value, std::uint64_t& result) {
