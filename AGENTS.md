@@ -10,7 +10,7 @@ never claim parity or invent behaviour that evidence does not support.
 
 - Original game data is user supplied and read in place only. Never unpack,
   copy, install, mutate, redistribute, or commit it.
-- Prefer real supplied media under `Hämtningar/` for local verification; never
+- Prefer real supplied media in the local Downloads directory for verification; never
   create synthetic replacements when an original asset or state is available.
 - Keep parsers bounded and hash-addressed. Treat malformed or unproven formats
   as explicit preservation boundaries.
