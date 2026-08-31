@@ -5,6 +5,7 @@
 #include "launcher_text.hpp"
 #include "presentation_preferences.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
 #include "engine/menu_runtime_launch.hpp"
@@ -3529,12 +3530,19 @@ int main() {
                 && session_snapshot.capabilities.decoded_presentation
                 && session_snapshot.capabilities.audio_observations
                 && session_snapshot.capabilities.admitted_input);
-            const auto ticks_before = all_release_runtime.deuteros_amiga()->ticks();
+            eon::DeuterosAmigaOpeningRunner opening_runner(all_release_runtime, 1'000);
+            assert(opening_runner.advance(1'019).events.empty());
             assert(all_release_runtime.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::observed);
-            const auto events = all_release_runtime.tick_deuteros_amiga_opening();
-            assert(events && all_release_runtime.deuteros_amiga()->ticks() == ticks_before + 1U);
+            const auto first_advance = opening_runner.advance(1'020);
+            assert(first_advance.events.size() == 1 && !first_advance.resynchronized);
+            const auto catch_up = opening_runner.advance(1'100);
+            assert(catch_up.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
+                && !catch_up.resynchronized);
+            const auto resynchronized = opening_runner.advance(1'220);
+            assert(resynchronized.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
+                && resynchronized.resynchronized && opening_runner.scheduled_tick() == 1'220);
             assert(all_release_runtime.observe_input(
                 eon::RuntimeInputObservation::ascii('1'))
                 == eon::RuntimeInputDisposition::rejected);
@@ -3544,10 +3552,11 @@ int main() {
             // physical held observation; it never fabricates title input.
             bool title_handoff_observed = false;
             for (std::size_t tick = 0; tick < 128 && !title_handoff_observed; ++tick) {
-                const auto handoff_events = all_release_runtime.tick_deuteros_amiga_opening();
-                title_handoff_observed = handoff_events && handoff_events->title_handoff;
+                const auto handoff_events = opening_runner.advance(1'240 + tick * 20U);
+                title_handoff_observed = handoff_events.title_handoff;
             }
             assert(title_handoff_observed);
+            assert(opening_runner.stopped() && opening_runner.advance(9'999).events.empty());
             assert(all_release_runtime.session_snapshot());
             const auto& title_snapshot = *all_release_runtime.session_snapshot();
             assert(title_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_title_stage

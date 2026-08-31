@@ -110,6 +110,7 @@ add_executable(project-eon
     src/presentation_preferences.cpp
     src/presentation/modern_presentation_pipeline.cpp
     src/engine/deuteros_amiga_opening.cpp
+    src/engine/deuteros_amiga_opening_runner.cpp
     src/engine/menu_runtime_launch.cpp
     src/engine/release_runtime.cpp
     src/engine/release_runtime_capability.cpp

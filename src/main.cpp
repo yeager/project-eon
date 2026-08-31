@@ -9,6 +9,7 @@
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/menu_runtime_launch.hpp"
+#include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
@@ -4137,7 +4138,7 @@ int main(int argc, char** argv) {
     bool show_modern_runtime_diagnostics = false;
     bool show_recovery_function_map = false;
     std::size_t recovery_function_map_page = 0;
-    std::uint64_t deuteros_last_tick = SDL_GetTicks();
+    std::optional<eon::DeuterosAmigaOpeningRunner> deuteros_opening_runner;
     const auto clear_deuteros_opening_input = [&] {
         // The recovered `$14` path receives only a held host signal. A
         // launcher-modal transition is not an original input poll, so it
@@ -4285,7 +4286,7 @@ int main(int argc, char** argv) {
         preview_texture = nullptr;
         modern_preview_texture = nullptr;
         discard_deuteros_external_modern_sequence();
-        deuteros_last_tick = SDL_GetTicks();
+        deuteros_opening_runner.reset();
     };
     const auto reset_active_runtime = [&] {
         // Leaving a launch or changing its source is a hard preservation
@@ -4338,7 +4339,7 @@ int main(int argc, char** argv) {
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
-        deuteros_last_tick = SDL_GetTicks();
+        deuteros_opening_runner.emplace(runtime_coordinator, SDL_GetTicks());
         deuteros_title_resource.reset();
     };
     const auto launch_menu_selection = [&] {
@@ -5007,29 +5008,18 @@ int main(int argc, char** argv) {
             create_deuteros_opening_texture();
             start_deuteros_audio();
             load_deuteros_external_modern_sequence();
-            deuteros_last_tick = SDL_GetTicks();
+            deuteros_opening_runner.emplace(runtime_coordinator, SDL_GetTicks());
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && active_platform == eon::Platform::atari_st && !deuteros_atari_session) {
             deuteros_atari_session = runtime_coordinator.deuteros_atari();
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && deuteros_opening && !deuteros_opening->title_handed_off()) {
-            constexpr std::uint64_t scheduler_period_ms = 20;
-            constexpr std::size_t maximum_catch_up_ticks = 4;
-            const auto now = SDL_GetTicks();
-            std::size_t tick_count = 0;
-            while (now - deuteros_last_tick >= scheduler_period_ms
-                && tick_count < maximum_catch_up_ticks
-                // The handoff tick has already composed its final verified
-                // opening frame.  The next original instructions cross the
-                // unrecovered Exec/graphics boundary, so do not turn later
-                // host catch-up iterations into no-op pseudo-emulation.
-                && !deuteros_opening->title_handed_off()) {
-                const auto events = runtime_coordinator.tick_deuteros_amiga_opening();
-                if (!events) break;
+            && deuteros_opening && deuteros_opening_runner) {
+            const auto advance = deuteros_opening_runner->advance(SDL_GetTicks());
+            for (const auto& events : advance.events) {
                 if (deuteros_paula) {
-                    for (const auto& sound : events->sounds) {
+                    for (const auto& sound : events.sounds) {
                         if (!deuteros_paula->submit(sound) && sound.sound != 0) {
                             std::cerr << "Deuteros event uses unsupported Paula descriptor "
                                 << sound.sound << " / mask 0x" << std::hex << sound.channels
@@ -5037,13 +5027,13 @@ int main(int argc, char** argv) {
                         }
                     }
                 }
-                if (!events->alternate_resources.empty()) {
+                if (!events.alternate_resources.empty()) {
                     // Opcode $0f exposes this original bundle-relative target.
                     // It is retained as evidence for the subsequent verified
                     // stage, not given an invented title/menu interpretation.
-                    deuteros_title_resource = events->alternate_resources.front().resource_relative_offset;
+                    deuteros_title_resource = events.alternate_resources.front().resource_relative_offset;
                 }
-                if (events->title_handoff) {
+                if (events.title_handoff) {
                     // The original opening returns to bootstrap here. Drop
                     // any host-side preview PCM rather than letting it play
                     // under the unexecuted title stage.
@@ -5052,12 +5042,6 @@ int main(int argc, char** argv) {
                     }
                     deuteros_paula.reset();
                 }
-                deuteros_last_tick += scheduler_period_ms;
-                ++tick_count;
-            }
-            if (tick_count == maximum_catch_up_ticks
-                && now - deuteros_last_tick >= scheduler_period_ms) {
-                deuteros_last_tick = now;
             }
             // VM events are proven at 50 Hz, but the exact relation between
             // that scheduler and host-device latency is not yet recovered.
