@@ -1539,6 +1539,11 @@ int main() {
         assert(!runtime_coordinator.acquire(forged_runtime_launch));
         assert(!runtime_coordinator.active());
         assert(runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::identity_rejected);
+        forged_runtime_launch.request.platform = eon::Platform::dos;
+        forged_runtime_launch.release.path = "missing-release-archive.zip";
+        assert(!runtime_coordinator.acquire(forged_runtime_launch));
+        assert(!runtime_coordinator.active()
+            && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::archive_rejected);
         runtime_coordinator.reset();
         assert(!runtime_coordinator.active()
             && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::unselected);
