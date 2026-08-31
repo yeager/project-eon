@@ -608,6 +608,22 @@ bytes). This validates the new v11 host stop and recorder-route
 reproducibility only; it establishes no guest handler result, title, input,
 frame, audio, ABI, or gameplay behaviour.
 
+A second independently prepared v11 directory repeated that exact input-free,
+operator-visible route on 2026-08-31. The receipt verifier again accepted the
+directory after the source archive was rehashed unchanged. It stopped after
+0.81 seconds with `known-unhandled-interrupt` / exit `126`; no host-input
+receipt was recorded. Its event and raw-result identities remained exactly
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`
+(367 bytes) and
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`
+(786 bytes). The fresh configuration and bounded console identities were
+`1183643e54d075ab3c2f455ccd942b249d54ee6d01410fa237b9faba4566d9c8`
+(336 bytes) and
+`08faffb6881c4311eb80cbcfad219abec8545cc6b1251d0d548fb4be457acc45`
+(4,625 bytes). This is a third independently retained reproduction of the
+same recorder stop condition, not evidence for an original interrupt result,
+title, input, frame, audio, or gameplay transition.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
