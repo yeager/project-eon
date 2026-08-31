@@ -5005,12 +5005,16 @@ int main(int argc, char** argv) {
                     }
                     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
                     draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_platform_card), selectable);
-                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 46,
+                    // Coverage is a project capability, while the final row
+                    // is this scan's immutable-media admission. Showing both
+                    // prevents a recovered path from being mistaken for an
+                    // installed release, or a present archive for parity.
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 68,
                         tr(card.title));
-                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 22,
-                        selectable && eon::platform_coverage(game, card.platform)
-                            == eon::PlatformCoverage::bootstrap_only
-                        ? tr("BOOTSTRAP ONLY") : status == eon::PlatformCardStatus::release_selection_required
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 44,
+                        tr(eon::name(eon::platform_coverage(game, card.platform))));
+                    draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 20,
+                        status == eon::PlatformCardStatus::release_selection_required
                         ? tr("RELEASE SELECTION REQUIRED") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner->done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }

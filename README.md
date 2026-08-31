@@ -361,7 +361,8 @@ Their separate coverage field says `RECOVERED STARTUP`, `RECOVERED OPENING`,
 or `BOOTSTRAP ONLY`. It is calculated per game/platform rather than inferred
 from platform names, so admission is never presented as a parity claim. The
 same field is available in the read-only `--inspect-json` and
-`--launch-check-json` reports and in F10 diagnostics.
+`--launch-check-json` reports and in F10 diagnostics. Every platform card
+also shows coverage separately from current original-data admission.
 Each verified Atari report also has a release-specific `ATARI LAUNCH BOUNDARY`:
 Millennium stops before its GEMDOS `Fopen` result and later launcher control
 flow, while Deuteros stops before protected XBIOS/callback behavior and state
