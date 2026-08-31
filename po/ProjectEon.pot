@@ -65,6 +65,14 @@ msgid "CHOOSE…"
 msgstr ""
 
 #: src/main.cpp
+msgid "READY"
+msgstr ""
+
+#: src/main.cpp
+msgid "REJECTED"
+msgstr ""
+
+#: src/main.cpp
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr ""
 

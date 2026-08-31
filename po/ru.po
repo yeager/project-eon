@@ -47,6 +47,12 @@ msgstr "ПАКЕТ СОВРЕМЕННЫХ РЕСУРСОВ"
 msgid "CHOOSE…"
 msgstr "ВЫБРАТЬ…"
 
+msgid "READY"
+msgstr "ГОТОВО"
+
+msgid "REJECTED"
+msgstr "ОТКЛОНЕНО"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ВЫБРАТЬ ПАПКУ С ОРИГИНАЛЬНЫМИ ДАННЫМИ ИГРЫ (O)"
 

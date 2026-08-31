@@ -104,10 +104,11 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn('tr(settings.smooth_scaling ? "ON" : "OFF")', popup)
         self.assertIn('tr(settings.scanlines ? "ON" : "OFF")', popup)
         self.assertIn('tr(settings.frame ? "ON" : "OFF")', popup)
-        self.assertIn('tr(modern_pack_selected ? "ON" : "CHOOSE…")', popup)
+        self.assertIn('ModernPackAdmission::ready ? "READY"', popup)
+        self.assertIn('ModernPackAdmission::rejected ? "REJECTED" : "CHOOSE…"', popup)
 
     def test_custom_can_explicitly_choose_a_modern_pack_without_autodiscovery(self) -> None:
-        """A native dialog submits one candidate; existing loaders still validate it."""
+        """A native dialog preflights one candidate before loaders revalidate it."""
         self.assertIn("SDL_ShowOpenFileDialog", SOURCE)
         self.assertIn('mailbox.filter_label = tr("MODERN ASSET PACK")', SOURCE)
         self.assertIn('mailbox.filter = {mailbox.filter_label.c_str(), "eonmodern"}', SOURCE)
@@ -115,6 +116,9 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertNotIn('"Modern asset pack", "eonmodern"', SOURCE)
         self.assertIn("receive_modern_pack_dialog_selection", SOURCE)
         self.assertIn("selected_modern_pack_manifest", SOURCE)
+        self.assertIn("admit_modern_pack_for_release", SOURCE)
+        self.assertIn("preflight_modern_asset_pack", SOURCE)
+        self.assertIn("ModernPackAdmission::rejected", SOURCE)
         self.assertIn("request.modern_pack_manifest", SOURCE)
         self.assertIn("screen != Screen::menu || launcher_page != LauncherPage::profiles", SOURCE)
         self.assertIn("focused_profile_card != 2 || custom_profile_ready", SOURCE)

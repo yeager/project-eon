@@ -47,6 +47,12 @@ msgstr "PACCHETTO DI RISORSE MODERNE"
 msgid "CHOOSE…"
 msgstr "SCEGLI…"
 
+msgid "READY"
+msgstr "PRONTO"
+
+msgid "REJECTED"
+msgstr "RIFIUTATO"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "SCEGLI LA CARTELLA DEI DATI ORIGINALI (O)"
 

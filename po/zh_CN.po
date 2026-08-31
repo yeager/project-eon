@@ -47,6 +47,12 @@ msgstr "现代资源包"
 msgid "CHOOSE…"
 msgstr "选择…"
 
+msgid "READY"
+msgstr "已就绪"
+
+msgid "REJECTED"
+msgstr "已拒绝"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "选择原始游戏数据文件夹 (O)"
 

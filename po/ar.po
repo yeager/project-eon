@@ -36,6 +36,12 @@ msgstr "حزمة أصول حديثة"
 msgid "CHOOSE…"
 msgstr "اختر…"
 
+msgid "READY"
+msgstr "جاهز"
+
+msgid "REJECTED"
+msgstr "مرفوض"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "اختر مجلد بيانات اللعبة الأصلية (O)"
 

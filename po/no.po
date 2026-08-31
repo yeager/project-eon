@@ -47,6 +47,12 @@ msgstr "MODERNE RESSURSPAKKE"
 msgid "CHOOSE…"
 msgstr "VELG…"
 
+msgid "READY"
+msgstr "KLAR"
+
+msgid "REJECTED"
+msgstr "AVVIST"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "VELG MAPPE MED ORIGINALE SPILLDATA (O)"
 

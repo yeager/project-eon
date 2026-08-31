@@ -47,6 +47,12 @@ msgstr "모던 에셋 팩"
 msgid "CHOOSE…"
 msgstr "선택…"
 
+msgid "READY"
+msgstr "준비됨"
+
+msgid "REJECTED"
+msgstr "거부됨"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "원본 게임 데이터 폴더 선택 (O)"
 

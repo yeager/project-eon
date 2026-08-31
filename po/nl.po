@@ -47,6 +47,12 @@ msgstr "MODERN ASSETPAKKET"
 msgid "CHOOSE…"
 msgstr "KIEZEN…"
 
+msgid "READY"
+msgstr "GEREED"
+
+msgid "REJECTED"
+msgstr "GEWEIGERD"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "KIES MAP MET ORIGINELE SPELGEGEVENS (O)"
 

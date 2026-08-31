@@ -47,6 +47,12 @@ msgstr "PAKIET NOWOCZESNYCH ZASOBÓW"
 msgid "CHOOSE…"
 msgstr "WYBIERZ…"
 
+msgid "READY"
+msgstr "GOTOWY"
+
+msgid "REJECTED"
+msgstr "ODRZUCONO"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "WYBIERZ FOLDER Z ORYGINALNYMI DANYMI GRY (O)"
 

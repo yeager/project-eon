@@ -47,6 +47,12 @@ msgstr "PACK DE RESSOURCES MODERNES"
 msgid "CHOOSE…"
 msgstr "CHOISIR…"
 
+msgid "READY"
+msgstr "PRÊT"
+
+msgid "REJECTED"
+msgstr "REFUSÉ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "CHOISIR LE DOSSIER DES DONNÉES ORIGINALES (O)"
 

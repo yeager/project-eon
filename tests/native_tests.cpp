@@ -702,6 +702,17 @@ void assert_modern_asset_pack_admission() {
         && preferred_surface.png == png_4x);
     const auto render_validation = eon::validate_modern_asset_pack(render_root / "pack.eonmodern");
     assert(render_validation.accepted());
+    const auto render_preflight = eon::preflight_modern_asset_pack(render_root / "pack.eonmodern",
+        eon::Game::millennium, eon::Platform::dos, release_hash);
+    assert(render_preflight.accepted);
+    assert(render_preflight.pack_id == "render-title");
+    assert(render_preflight.provenance == "independently-created");
+    assert(render_preflight.targets.millennium_dos_title_640x400);
+    const auto wrong_release_preflight = eon::preflight_modern_asset_pack(render_root / "pack.eonmodern",
+        eon::Game::millennium, eon::Platform::dos,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    assert(!wrong_release_preflight.accepted);
+    assert(wrong_release_preflight.error == "Modern asset pack does not match the selected original release");
     const auto render_targets = eon::modern_asset_pack_renderer_targets(render_validation.pack);
     assert(render_targets.millennium_dos_title_640x400);
     assert(render_targets.millennium_dos_title_1280x800);

@@ -36,6 +36,12 @@ msgstr "MODERNT RESURSPAKET"
 msgid "CHOOSE…"
 msgstr "VÄLJ…"
 
+msgid "READY"
+msgstr "KLAR"
+
+msgid "REJECTED"
+msgstr "AVVISAD"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "VÄLJ MAPP MED ORIGINALSPELDATA (O)"
 
