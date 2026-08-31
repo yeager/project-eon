@@ -41,6 +41,16 @@ python3 tools/verify_disassembly_reports.py \
   # Repeat --report for every static span id in disassembly-inventory.json.
 ```
 
+For a normal complete-report set, pass one explicit external directory instead.
+The verifier matches files only by the committed SHA-256 plus LF line count;
+filenames are not evidence, and one report can satisfy several spans with the
+same committed identity:
+
+```sh
+python3 tools/verify_disassembly_reports.py \
+  --report-directory /home/user/.cache/project-eon-tools/whole-disassembly
+```
+
 Every inventory static span must be supplied exactly once. A single retained
 report can be named for more than one span where the inventory intentionally
 records byte-identical aggregate output. The verifier accepts only bounded,
