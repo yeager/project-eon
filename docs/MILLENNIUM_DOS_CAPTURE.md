@@ -624,6 +624,18 @@ receipt was recorded. Its event and raw-result identities remained exactly
 same recorder stop condition, not evidence for an original interrupt result,
 title, input, frame, audio, or gameplay transition.
 
+The next recorder experiment must be built as a separate, hash-identified
+external binary. Before the recorder-owned unhandled-interrupt callback is
+entered, it must retain the immediately preceding normal-core `CS:IP` tuple
+and its four raw bytes, together with an explicit flag saying whether that
+tuple belongs to a currently recognised original image. It must only observe
+those values: no vector installation, register/memory write, input injection,
+or changed scheduling is admissible. That predecessor record can distinguish
+an emulator-owned callback edge from a guest-code edge without turning either
+one into a private-interrupt ABI, title result, or gameplay claim. It is not
+part of the v11 receipt grammar and cannot be added to a reference trace until
+at least two write-protected captures agree on its exact byte-level shape.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
