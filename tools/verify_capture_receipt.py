@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4"}
 
 
 def load_tool(name: str):
@@ -57,7 +57,7 @@ def require_receipt_schema(fields: dict[str, str]) -> str:
     version = fields.get("capture_receipt_version")
     if version not in CAPTURE_RECEIPT_VERSIONS:
         raise ValueError(
-            "capture receipt schema is unsupported; rerun the physical capture with receipt v3")
+            "capture receipt schema is unsupported; rerun the physical capture with the current receipt format")
     return version
 
 
@@ -95,6 +95,12 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
         raise ValueError("recorder console receipt mismatch")
 
 
+def verify_console_admission(fields: dict[str, str], version: str) -> None:
+    """Reject a v4 recorder runaway without rewriting its retained evidence."""
+    if version == "4" and fields.get("recorder_console_over_limit") != "false":
+        raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
+
+
 def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path) -> None:
     """Verify v3's raw-recorder grammar/count receipt without inferring ABI."""
     if fields.get("raw_pc") != "present":
@@ -120,7 +126,7 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
-        if version == "3" and fields.get("results_raw") == "present":
+        if version in {"3", "4"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw")
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
@@ -134,9 +140,10 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version == "3":
+        if version in {"3", "4"}:
             verify_deuteros_raw_pc_summary(fields, directory)
     verify_console(fields, directory)
+    verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")
     actual = digest(config)
     if (fields.get("configuration_sha256"), fields.get("configuration_bytes")) != (actual[0], str(actual[1])):

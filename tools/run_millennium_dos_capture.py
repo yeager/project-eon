@@ -39,6 +39,12 @@ MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
 # reviewable prefix while hashing and counting the complete byte stream, rather
 # than letting terminal output or an evidence cache grow without limit.
 MAX_RECORDER_CONSOLE_LOG_BYTES = 1024 * 1024
+# Hashing a stream indefinitely still permits a defective recorder to consume
+# host CPU and pipe bandwidth for the entire operator window.  Stop the
+# recorder once it crosses this deliberately generous cap, retain its bounded
+# prefix, and leave a rejected-but-reviewable receipt instead of silently
+# treating the partial diagnostic as a normal timeout.
+MAX_RECORDER_CONSOLE_TOTAL_BYTES = 64 * 1024 * 1024
 # Receipt v2 binds the retained console prefix as well as the complete stream.
 # A verifier must never treat a pre-v2 receipt as if that missing integrity
 # property had been observed.
@@ -54,9 +60,9 @@ RAW_RESULT_LINE = re.compile(
     r"ss=0x[0-9a-f]{4} sp=0x[0-9a-f]{4}(?: return_ip=0x[0-9a-f]{4} "
     r"return_cs=0x[0-9a-f]{4} return_flags=0x[0-9a-f]{4} code=0x[0-9a-f]{8})? "
     r"ax=0x[0-9a-f]{4} bx=0x[0-9a-f]{4} cx=0x[0-9a-f]{4} dx=0x[0-9a-f]{4})\n")
-# v3 adds syntax/count evidence while preserving v2 verification for captures
-# made before raw-result grammar was bound into the receipt.
-CAPTURE_RECEIPT_VERSION = "3"
+# v4 adds an explicit console-overrun admission boundary while preserving v2
+# and v3 verification for captures made before that safety condition was bound.
+CAPTURE_RECEIPT_VERSION = "4"
 
 
 class CaptureError(RuntimeError):
@@ -66,11 +72,13 @@ class CaptureError(RuntimeError):
 class RecorderConsoleStatus:
     """Small importlib-safe value object for a bounded console receipt."""
 
-    def __init__(self, total_bytes: int, sha256: str, retained_bytes: int, retained_sha256: str) -> None:
+    def __init__(self, total_bytes: int, sha256: str, retained_bytes: int,
+                 retained_sha256: str, over_limit: bool) -> None:
         self.total_bytes = total_bytes
         self.sha256 = sha256
         self.retained_bytes = retained_bytes
         self.retained_sha256 = retained_sha256
+        self.over_limit = over_limit
 
     @property
     def truncated(self) -> bool:
@@ -297,12 +305,15 @@ def raw_result_status(path: Path, name: str) -> str:
             f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
 
 
-def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
+def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
     """Drain an emulator console while retaining only a bounded evidence prefix.
 
     The full transcript is hashed and counted as it is read. This preserves a
     stable identity for a pathological recorder output without keeping an
-    unbounded error loop on disk or blocking the emulator on a full pipe.
+    unbounded error loop on disk or blocking the emulator on a full pipe.  It
+    signals the owner as soon as the total safety cap is crossed, but continues
+    draining until that owner terminates the child; stopping the reader first
+    would deadlock the child on its stdout pipe.
     """
     digest = hashlib.sha256()
     retained_digest = hashlib.sha256()
@@ -315,6 +326,8 @@ def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
                 break
             total += len(chunk)
             digest.update(chunk)
+            if total > MAX_RECORDER_CONSOLE_TOTAL_BYTES:
+                over_limit.set()
             if retained < MAX_RECORDER_CONSOLE_LOG_BYTES:
                 keep = chunk[:MAX_RECORDER_CONSOLE_LOG_BYTES - retained]
                 destination.write(keep)
@@ -322,7 +335,8 @@ def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
                 retained += len(keep)
         destination.flush()
         os.fsync(destination.fileno())
-    return RecorderConsoleStatus(total, digest.hexdigest(), retained, retained_digest.hexdigest())
+    return RecorderConsoleStatus(total, digest.hexdigest(), retained, retained_digest.hexdigest(),
+                                 over_limit.is_set())
 
 
 def recorder_console_status(status: RecorderConsoleStatus) -> str:
@@ -331,7 +345,8 @@ def recorder_console_status(status: RecorderConsoleStatus) -> str:
             f"recorder_console_total_bytes={status.total_bytes}\n"
             f"recorder_console_retained_bytes={status.retained_bytes}\n"
             f"recorder_console_retained_sha256={status.retained_sha256}\n"
-            f"recorder_console_truncated={'true' if status.truncated else 'false'}\n")
+            f"recorder_console_truncated={'true' if status.truncated else 'false'}\n"
+            f"recorder_console_over_limit={'true' if status.over_limit else 'false'}\n")
 
 
 def identity_status(name: str, identity: tuple[str, int]) -> str:
@@ -382,21 +397,34 @@ def run_capture(args: argparse.Namespace) -> Path:
         console_path = output / "recorder-console.log"
         console_result: list[RecorderConsoleStatus] = []
         console_errors: list[BaseException] = []
+        console_over_limit = threading.Event()
 
         def drain_console() -> None:
             try:
-                console_result.append(capture_bounded_console(process.stdout, console_path))
+                console_result.append(capture_bounded_console(process.stdout, console_path,
+                                                              console_over_limit))
             except BaseException as error:  # Propagate after process cleanup.
                 console_errors.append(error)
 
         console_thread = threading.Thread(target=drain_console, name="project-eon-dos-console", daemon=True)
         console_thread.start()
-        try:
-            exit_status = process.wait(timeout=args.duration_seconds)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait()
-            exit_status = 124
+        deadline = time.monotonic() + args.duration_seconds
+        while True:
+            exit_status = process.poll()
+            if exit_status is not None:
+                break
+            remaining = deadline - time.monotonic()
+            if console_over_limit.is_set():
+                process.kill()
+                process.wait()
+                exit_status = 125
+                break
+            if remaining <= 0:
+                process.kill()
+                process.wait()
+                exit_status = 124
+                break
+            console_over_limit.wait(timeout=min(0.1, remaining))
         console_thread.join()
         if console_errors:
             raise CaptureError(f"unable to retain bounded recorder console: {console_errors[0]}")
@@ -416,6 +444,9 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
                         + receipt_status + observation_status + recorder_console_status(console_result[0]))
+        if console_result[0].over_limit:
+            raise CaptureError(
+                "recorder console exceeded the 64 MiB safety cap; evidence was retained but is not admitted")
         print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
     except Exception:
