@@ -143,6 +143,16 @@ Pre-v2 capture directories remain diagnostic evidence only: their retained
 console prefix was not hash-bound, so they cannot be verifier-admissible.
 Repeat the physical capture rather than upgrading or editing its receipt.
 
+On 2026-08-31, a fresh 15-second input-free run against the recognised clean
+outer release and Kickstart was accepted by that verifier as receipt v2. It
+recorded a 28,052-byte, 256-record raw-PC observation with SHA-256
+`1e2cdd13d31fb3b368448b4c24b3ca51501ff18876ce9e8df4260c4c29c26d74` and an
+empty, hash-bound FS-UAE console. No host-input receipt was created. The
+record cap stopped at the existing observer sites `0x1fe84` and `0x1fe96`;
+this validates the read-only v2 evidence route only. It does not establish a
+title entry, physical control, Exec or graphics return, bitplane, palette,
+frame, audio checkpoint, or interactive game state.
+
 On 2026-08-30 the new delivery observer passed an eight-second no-input
 preflight. The raw-PC observer produced its expected 384 site-capped records;
 the delivery receipt path did not create a file, so FS-UAE's startup
