@@ -5112,7 +5112,13 @@ int main(int argc, char** argv) {
                     SDL_RenderFillRect(renderer, &card.bounds);
                     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
                     draw_card_border(card.bounds, index == static_cast<std::size_t>(focused_release_card), true);
-                    const auto label = card.language == "es" ? tr("SPANISH") : tr("ENGLISH");
+                    // Language is part of the hash-bound original identity.
+                    // Only the two currently catalogued labels are localized;
+                    // a future recognised language must remain visibly its
+                    // exact manifest code rather than being mislabelled as
+                    // English by a launcher fallback.
+                    const auto label = card.language == "es" ? tr("SPANISH")
+                        : card.language == "en" ? tr("ENGLISH") : card.language;
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 84,
                         active_platform ? tr(launcher_platform_label(*active_platform)) : tr("UNKNOWN PLATFORM"));
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 126, label);
