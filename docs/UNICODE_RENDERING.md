@@ -17,7 +17,8 @@ allowed to consult a host font library.
 
 At runtime, `src/main.cpp` searches only Project Eon's resource layouts:
 
-- `assets/fonts` next to a desktop executable;
+- `assets/fonts` next to an unpacked desktop executable, or
+  `../share/project-eon/assets/fonts` in an installed Linux package;
 - `Resources/assets/fonts` in an Apple application bundle;
 - the development asset directory or local development layout.
 

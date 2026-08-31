@@ -328,7 +328,10 @@ endif()
 # DEB/RPM artifacts remain launchable without proprietary media or a
 # workstation-local /usr/local SDL install.
 if(UNIX AND NOT APPLE)
-    set_target_properties(project-eon PROPERTIES INSTALL_RPATH "$ORIGIN")
+    # Keep bundled runtime libraries out of /usr/bin.  Their package-private
+    # directory is both a normal Linux layout and an explicit loader boundary.
+    set_target_properties(project-eon PROPERTIES
+        INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}/project-eon")
     install(FILES
         "$<TARGET_FILE:SDL3::SDL3>"
         "$<TARGET_SONAME_FILE:SDL3::SDL3>"
@@ -336,7 +339,7 @@ if(UNIX AND NOT APPLE)
         "$<TARGET_SONAME_FILE:SDL3_image::SDL3_image>"
         "$<TARGET_FILE:SDL3_ttf::SDL3_ttf>"
         "$<TARGET_SONAME_FILE:SDL3_ttf::SDL3_ttf>"
-        DESTINATION "${CMAKE_INSTALL_BINDIR}")
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/project-eon")
     # Desktop packages must expose the media-free card launcher through the
     # host application menu. The entry runs only Project Eon; it names no
     # original archive, data path, or mutable save location.
@@ -346,12 +349,46 @@ if(UNIX AND NOT APPLE)
         DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps"
         RENAME "project-eon.png")
 endif()
-install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
-install(FILES assets/branding/project-eon-logo-v1.png
-    DESTINATION "${CMAKE_INSTALL_BINDIR}/assets/branding")
-install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+if(UNIX AND NOT APPLE)
+    # Installed Linux applications use shared data, never /usr/bin/assets.
+    install(DIRECTORY assets/cards
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets")
+    install(FILES assets/branding/project-eon-logo-v1.png
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets/branding")
+    install(DIRECTORY assets/fonts
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets")
+else()
+    install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+    install(FILES assets/branding/project-eon-logo-v1.png
+        DESTINATION "${CMAKE_INSTALL_BINDIR}/assets/branding")
+    install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+endif()
 install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")
-install(FILES README.md LICENSE DESTINATION "${CMAKE_INSTALL_DOCDIR}")
+install(FILES README.md
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/project-eon")
+install(FILES packaging/debian/copyright
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/project-eon"
+    RENAME copyright)
+install(FILES packaging/debian/changelog.Debian
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/project-eon")
+if(UNIX AND NOT APPLE)
+    install(FILES docs/project-eon.6
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/man/man6")
+    # Debian policy expects packaged changelogs and manual pages compressed.
+    # This runs only against CMake's package staging root, never user media.
+    # Keep CMAKE_INSTALL_PREFIX unresolved until CPack executes the install;
+    # a developer configure may use /usr/local while a DEB package stages /usr.
+    install(CODE [[
+execute_process(
+  COMMAND gzip -9n -f
+    "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/doc/project-eon/changelog.Debian"
+    "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/man/man6/project-eon.6"
+  RESULT_VARIABLE eon_gzip_result)
+if(NOT eon_gzip_result EQUAL 0)
+  message(FATAL_ERROR "Unable to compress Debian policy documentation")
+endif()
+]])
+endif()
 
 set(CPACK_PACKAGE_NAME "project-eon")
 set(CPACK_PACKAGE_VENDOR "Project Eon contributors")
@@ -360,6 +397,13 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "SDL3 reimplementation project for Millennium 2.2 and Deuteros")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER
+    "Daniel Nylander <1206564+yeager@users.noreply.github.com>")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/yeager/project-eon")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+    "Preservation-first SDL3 reimplementation launcher for Millennium 2.2 and Deuteros.\n Project Eon reads user-supplied original media in place and never distributes game data.")
+set(CPACK_DEBIAN_PACKAGE_RELEASE "1")
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 # DEB/RPM artifacts install below /usr, independent of the developer's local
 # CMAKE_INSTALL_PREFIX.  SDL3, SDL_image, and SDL_ttf are private payload
 # libraries in that directory; tell dpkg-shlibdeps where to find them so it
@@ -368,7 +412,12 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "games")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS
-    "${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}")
+    "${CPACK_PACKAGING_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/project-eon")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
+set(CPACK_RPM_PACKAGE_URL "https://github.com/yeager/project-eon")
+set(CPACK_RPM_PACKAGE_DESCRIPTION
+    "Preservation-first SDL3 reimplementation launcher for Millennium 2.2 and Deuteros. Project Eon reads user-supplied original media in place and never distributes game data.")
+set(CPACK_RPM_PACKAGE_RELEASE "1")
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 include(CPack)

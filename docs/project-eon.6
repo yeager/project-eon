@@ -1,0 +1,33 @@
+.TH PROJECT-EON 6 "August 2026" "Project Eon" "Games"
+.SH NAME
+project-eon \- preservation-first Millennium 2.2 and Deuteros launcher
+.SH SYNOPSIS
+.B project-eon
+.RI [ options ]
+.SH DESCRIPTION
+.B project-eon
+starts Project Eon, an SDL3 reimplementation project for Millennium 2.2 and
+Deuteros.  It does not include or unpack game data.  Original media is supplied
+by the user, hash-verified, and read in place.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Show command-line usage and exit.
+.TP
+.BI \-\-data " path"
+Use a user-supplied directory or archive as the read-only data source.
+.TP
+.BI \-\-game " millennium|deuteros"
+Select a game after its exact original release has been verified.
+.TP
+.B \-\-inspect
+Report recognised, user-supplied media without launching a game.
+.SH FILES
+.TP
+.I ~/.projecteon
+Default user-supplied data location on Linux.  Looking it up does not create it.
+.SH COPYRIGHT
+Project Eon is distributed under the MIT License.  Millennium 2.2 and Deuteros
+game data is not distributed with Project Eon.
+.SH SEE ALSO
+.BR project-eon (6)

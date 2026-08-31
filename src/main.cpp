@@ -812,9 +812,10 @@ bool inside(const SDL_FRect& rectangle, float x, float y) {
 SDL_Texture* load_launcher_asset(SDL_Renderer* renderer, const char* directory,
     const char* filename) {
     const auto base = std::filesystem::path(SDL_GetBasePath());
-    const std::array<std::filesystem::path, 4> candidates{{
+    const std::array<std::filesystem::path, 5> candidates{{
         base / "assets" / directory / filename,
         base / "Resources" / "assets" / directory / filename,
+        base / ".." / "share" / "project-eon" / "assets" / directory / filename,
         std::filesystem::path(EON_ASSET_DIR) / directory / filename,
         std::filesystem::path("assets") / directory / filename,
     }};
@@ -836,9 +837,10 @@ SDL_Texture* load_branding_texture(SDL_Renderer* renderer, const char* filename)
 
 std::optional<std::filesystem::path> find_font_directory() {
     const auto base = std::filesystem::path(SDL_GetBasePath());
-    const std::array<std::filesystem::path, 4> candidates{{
+    const std::array<std::filesystem::path, 5> candidates{{
         base / "assets" / "fonts",
         base / "Resources" / "assets" / "fonts",
+        base / ".." / "share" / "project-eon" / "assets" / "fonts",
         std::filesystem::path(EON_FONT_DIR),
         std::filesystem::path("assets") / "fonts",
     }};

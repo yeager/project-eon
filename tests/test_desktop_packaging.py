@@ -12,6 +12,7 @@ from eon_test_paths import temporary_directory
 
 ROOT = Path(__file__).resolve().parents[1]
 VERIFIER = ROOT / "packaging" / "verify-desktop-package.sh"
+POLICY_VERIFIER = ROOT / "packaging" / "verify-distribution-policy.sh"
 MACOS_CLOSURE_VERIFIER = ROOT / "packaging" / "macos" / "verify-dylib-closure.sh"
 WORKFLOW = ROOT / ".github" / "workflows" / "build.yml"
 
@@ -23,13 +24,14 @@ class DesktopPackagingTests(unittest.TestCase):
         # runtime to parse it with.
         if os.name != "nt":
             subprocess.run(["bash", "-n", str(VERIFIER)], check=True)
+            subprocess.run(["bash", "-n", str(POLICY_VERIFIER)], check=True)
         source = VERIFIER.read_text(encoding="utf-8")
         for extension in ("zip", "adf", "st", "msa", "stx", "img", "hfe", "ipf", "scp",
                           "ctr", "lha", "lzh", "lzx", "exe", "com"):
             with self.subTest(extension=extension):
                 self.assertIn(extension, source)
-        self.assertIn("assets/cards/millennium.png", source)
-        self.assertIn("assets/branding/project-eon-logo-v1.png", source)
+        self.assertIn("share/project-eon/assets/cards/millennium.png", source)
+        self.assertIn("share/project-eon/assets/branding/project-eon-logo-v1.png", source)
         self.assertIn("Icon=project-eon", source)
         self.assertIn("NotoSansSC-Regular.otf", source)
         self.assertIn("OFL-1.1.txt", source)
@@ -42,7 +44,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("rpm2cpio", source)
         self.assertIn('rpm_query=(rpm --dbpath "$rpm_database")', source)
         self.assertIn("workstation's package-manager state", source)
-        self.assertIn("package layout regression", source)
+        self.assertIn("package-relative runpath", source)
         self.assertIn('HOME="$isolated_home" "$executable" --inspect', source)
         self.assertIn("created its default game-data directory during lookup", source)
         self.assertIn("isolated missing default game-data path", source)
@@ -53,18 +55,31 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertNotIn("temporary=$(mktemp -d)", source)
         self.assertNotIn("isolated_home=$(mktemp -d)", source)
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("rpm cpio desktop-file-utils zlib1g-dev", workflow)
+        self.assertIn("rpm cpio desktop-file-utils lintian rpmlint zlib1g-dev", workflow)
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("Verify package contents contain no game media", workflow)
         self.assertIn("bash packaging/verify-desktop-package.sh package/deb/*.deb package/rpm/*.rpm", workflow)
+        self.assertIn("Enforce Debian mentors and RPM package policy", workflow)
+        self.assertIn("bash packaging/verify-distribution-policy.sh package/deb/*.deb package/rpm/*.rpm", workflow)
+
+    def test_distribution_policy_gate_uses_debian_and_rpm_native_tools(self) -> None:
+        source = POLICY_VERIFIER.read_text(encoding="utf-8")
+        self.assertIn("lintian --profile debian --pedantic --fail-on warning", source)
+        self.assertIn("rpmspec --parse", source)
+        self.assertIn("rpmlint --strict", source)
+        self.assertIn("rpm --checksig --nogpg", source)
 
     def test_debian_package_generates_system_dependencies_without_host_sdl(self) -> None:
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertIn('set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")', cmake)
         self.assertIn("set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)", cmake)
         self.assertIn("CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS", cmake)
+        self.assertIn("CPACK_DEBIAN_PACKAGE_MAINTAINER", cmake)
+        self.assertIn("CPACK_DEBIAN_FILE_NAME DEB-DEFAULT", cmake)
+        self.assertIn("CPACK_RPM_PACKAGE_URL", cmake)
+        self.assertIn("CPACK_RPM_FILE_NAME RPM-DEFAULT", cmake)
 
     def test_ci_validates_macos_archive_and_windows_runtime_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
