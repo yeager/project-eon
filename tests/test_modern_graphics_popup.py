@@ -6,6 +6,10 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+OPENING_RUNNER_SOURCE = (ROOT / "src" / "engine" / "deuteros_amiga_opening_runner.cpp").read_text(
+    encoding="utf-8")
+OPENING_RUNNER_HEADER = (ROOT / "src" / "engine" / "deuteros_amiga_opening_runner.hpp").read_text(
+    encoding="utf-8")
 
 
 class ModernGraphicsPopupTests(unittest.TestCase):
@@ -242,12 +246,18 @@ class ModernGraphicsPopupTests(unittest.TestCase):
 
     def test_deuteros_title_handoff_stops_host_vm_scheduling(self) -> None:
         """The retained frame is presentation evidence, never a fake title VM."""
-        scheduler = SOURCE.index("constexpr std::uint64_t scheduler_period_ms = 20")
-        renderer = SOURCE.index("const auto source_tick = deuteros_opening->ticks()", scheduler)
+        # Timing belongs to the SDL-free runner; main only consumes its
+        # release-bound event stream and clears preview audio at handoff.
+        self.assertIn("scheduler_period_ms = 20", OPENING_RUNNER_HEADER)
+        self.assertIn("maximum_catch_up_ticks", OPENING_RUNNER_HEADER)
+        self.assertIn("coordinator_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("result.title_handoff", OPENING_RUNNER_SOURCE)
+        scheduler = SOURCE.index("deuteros_opening_runner->advance(SDL_GetTicks())")
+        renderer = SOURCE.index("const bool modern", scheduler)
         scheduler_block = SOURCE[scheduler:renderer]
-        self.assertIn("&& !deuteros_opening->title_handed_off())", scheduler_block)
-        self.assertIn("unrecovered Exec/graphics boundary", scheduler_block)
+        self.assertIn("if (events.title_handoff)", scheduler_block)
         self.assertIn("SDL_ClearAudioStream(deuteros_audio_stream)", scheduler_block)
+        self.assertIn("TITLE-STAGE EXECUTION IS NOT YET RECOVERED", SOURCE)
 
     def test_deuteros_title_panel_shows_only_session_provenance_before_exec(self) -> None:
         panel = SOURCE.index("const auto& title_stage = deuteros_opening->title_stage_session();")
@@ -300,7 +310,8 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         f10_block = SOURCE[f10_guard:modal]
         self.assertIn("clear_deuteros_opening_input();", f10_block)
         self.assertIn("RuntimeInputObservation::opening_input_held(false)", SOURCE)
-        self.assertIn("runtime_coordinator.tick_deuteros_amiga_opening()", SOURCE)
+        self.assertIn("deuteros_opening_runner->advance(SDL_GetTicks())", SOURCE)
+        self.assertIn("coordinator_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
         self.assertLess(f10_guard, modal)
 
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:
