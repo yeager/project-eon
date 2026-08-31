@@ -13,6 +13,14 @@ foreach(catalog IN LISTS catalogs)
     if(NOT EXISTS "${catalog_path}")
         message(FATAL_ERROR "missing required Project Eon catalog: ${catalog_path}")
     endif()
+    # src/i18n.cpp deliberately ignores fuzzy entries. A catalog with one
+    # cannot claim full runtime coverage merely because gettext can compare it
+    # to a nearby source message.
+    file(READ "${catalog_path}" catalog_source)
+    string(FIND "${catalog_source}" "#, fuzzy" fuzzy_offset)
+    if(NOT fuzzy_offset EQUAL -1)
+        message(FATAL_ERROR "runtime-ignored fuzzy entry in: ${catalog_path}")
+    endif()
     execute_process(
         COMMAND "${MSGFMT_EXECUTABLE}" --check -o "${OUTPUT_DIRECTORY}/${catalog}.mo" "${catalog_path}"
         RESULT_VARIABLE msgfmt_status)
@@ -20,7 +28,7 @@ foreach(catalog IN LISTS catalogs)
         message(FATAL_ERROR "invalid PO syntax or metadata: ${catalog_path}")
     endif()
     execute_process(
-        COMMAND "${MSGCMP_EXECUTABLE}" --use-fuzzy "${catalog_path}" "${PO_DIRECTORY}/ProjectEon.pot"
+        COMMAND "${MSGCMP_EXECUTABLE}" "${catalog_path}" "${PO_DIRECTORY}/ProjectEon.pot"
         RESULT_VARIABLE msgcmp_status)
     if(NOT msgcmp_status EQUAL 0)
         message(FATAL_ERROR "catalog does not match ProjectEon.pot: ${catalog_path}")
