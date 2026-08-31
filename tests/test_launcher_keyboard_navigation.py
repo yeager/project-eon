@@ -90,8 +90,10 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
                 start = RUNTIME_SOURCE.rindex(f"{loader}(")
                 signature = RUNTIME_SOURCE[start:RUNTIME_SOURCE.index(") {", start) + 3]
                 self.assertIn("const ReleaseArchive& release", signature)
-        self.assertIn("eon::load_deuteros_amiga_runtime(*release)", SOURCE)
-        self.assertIn("eon::load_millennium_dos_runtime(*release)", SOURCE)
+        self.assertNotIn("eon::load_deuteros_amiga_runtime(", SOURCE)
+        self.assertNotIn("eon::load_millennium_dos_runtime(", SOURCE)
+        self.assertIn("runtime_coordinator.deuteros_amiga()", SOURCE)
+        self.assertIn("runtime_coordinator.millennium_dos()", SOURCE)
 
     def test_returning_to_launcher_resets_the_active_release_runtime(self) -> None:
         # Escape and gamepad Back must not retain an active archive, texture,
@@ -156,8 +158,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         deuteros_body = SOURCE[deuteros_reset:reset]
         for clearing in (
             "SDL_ClearAudioStream(deuteros_audio_stream)",
-            "deuteros_opening.reset();",
-            "deuteros_atari_session.reset();",
+            "deuteros_opening = nullptr;",
+            "deuteros_atari_session = nullptr;",
             "deuteros_title_resource.reset();",
             "discard_deuteros_external_modern_sequence();",
         ):
