@@ -149,6 +149,14 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             self.assertIn("raw_pc_sha256=", status)
             self.assertIn("raw_pc_records=2\n", status)
             self.assertIn("raw_pc_site_counts=0x000210d4:2\n", status)
+            v7_observed = (b"raw-pc 1 cycles=1 pc=0x000210d4 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                           b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n")
+            raw.write_bytes(v7_observed)
+            v7_status = TOOL.raw_observation_status(raw, "raw_pc", "v7")
+            self.assertIn("raw_pc_format=v7\n", v7_status)
+            self.assertIn("raw_pc_records=1\n", v7_status)
+            with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
+                TOOL.raw_observation_status(raw, "raw_pc")
             raw.write_bytes(b"raw-pc 2 cycles=1 pc=0x000210d4 opcode=0x4e75 "
                             b"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n")
             with self.assertRaisesRegex(TOOL.CaptureError, "ordinals"):

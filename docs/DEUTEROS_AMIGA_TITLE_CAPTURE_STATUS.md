@@ -119,6 +119,20 @@ records no host input and an empty console. It validates the upgraded
 read-only evidence route only; it is not a title/display capture and admits
 no input, Exec/graphics ABI, frame, audio or gameplay behaviour.
 
+On 2026-08-31, receipt v7 introduced a separate cycle-exact prefetched IR word
+and memory word at the observed PC. A 15-second, no-input `realtime` run was
+accepted by `verify_capture_receipt.py` with recorder SHA-256
+`59635e876004536273708a04b6109831aa9d4fa6fb4e50663bc5e201cc450697`.
+Its 34,196-byte raw-PC file has SHA-256
+`22855e20e766df330ee7caf59d37525d5a69fd74d8663b3a1e3d0316a314c16e` and
+contains 256 records: 128 at `$1fe84` and 128 at `$1fe96`. At those two
+observed addresses the separately recorded IR and memory words agree within
+this run (`$7202` and `$7208`, respectively). That result describes emulator
+state at the raw hook only. It does not identify original-media instructions,
+resolve the overlay/load mapping, establish execution of the statically
+disassembled title bridge, or admit any title, display, input, audio, ABI, or
+gameplay behaviour.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation

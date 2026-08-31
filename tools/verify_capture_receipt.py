@@ -97,7 +97,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5", "6", "7", "8", "9"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6", "7", "8", "9", "10"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
 
 
@@ -112,12 +112,15 @@ def verify_millennium_machine_profile(fields: dict[str, str], directory: Path) -
         raise ValueError("machine profile does not match the generated configuration")
 
 
-def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path) -> None:
+def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, version: str) -> None:
     """Verify v3's raw-recorder grammar/count receipt without inferring ABI."""
     if fields.get("raw_pc") != "present":
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt")
+    raw_format = "v7" if version == "7" else "legacy"
+    if version == "7" and fields.get("raw_pc_format") != raw_format:
+        raise ValueError("raw_pc format does not match the v7 recorder contract")
+    counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt", raw_format)
     expected_records = str(sum(counts.values()))
     expected_sites = ",".join(
         f"0x{site:08x}:{counts[site]}" for site in tool.RAW_PC_SITES if site in counts)
@@ -200,11 +203,11 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"3", "4", "5", "6"}:
-            verify_deuteros_raw_pc_summary(fields, directory)
+        if version in {"3", "4", "5", "6", "7"}:
+            verify_deuteros_raw_pc_summary(fields, directory, version)
         if version in {"5", "6"}:
             verify_deuteros_host_input_summary(fields, directory)
-        if version == "6":
+        if version in {"6", "7"}:
             verify_deuteros_timing_profile(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
