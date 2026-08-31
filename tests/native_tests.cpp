@@ -1789,14 +1789,16 @@ int main() {
         return 0;
     }
     eon::ReleaseScanner incremental_scanner(data_directory);
-    assert(incremental_scanner.candidate_count() >= 6);
+    assert(incremental_scanner.discovering());
     assert(!incremental_scanner.done());
     const auto scanned_before = incremental_scanner.scanned_count();
     static_cast<void>(incremental_scanner.advance(1));
-    assert(incremental_scanner.scanned_count() == scanned_before + 1);
+    assert(incremental_scanner.scanned_count() == scanned_before);
     while (!incremental_scanner.advance(2)) {
     }
     assert(incremental_scanner.done());
+    assert(!incremental_scanner.discovering());
+    assert(incremental_scanner.candidate_count() >= 6);
     assert(incremental_scanner.releases().size() == 6);
     assert(incremental_scanner.report().candidates == incremental_scanner.candidate_count());
     assert(incremental_scanner.report().candidates

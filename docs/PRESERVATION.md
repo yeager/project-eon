@@ -167,14 +167,16 @@ own complete media set and runtime path are recovered.
 
 ### Scanner admission and duplicate accounting
 
-The direct-media scanner first enumerates regular files in lexical path order,
-then hashes only files whose byte length occurs in the outer-release manifest.
-It never opens a ZIP, extracts a leaf, or selects a game by name during
-recognition. A digest match is one *verified occurrence*. Equal digest matches
-at multiple locations (including a user-created link) are deduplicated to one
-release card and one CLI launch target; the first lexical path is retained as
-the deterministic in-place source and later occurrences are counted, not
-silently treated as separate editions.
+The direct-media scanner discovers one filesystem entry at a time, then sorts
+the complete regular-file candidate set lexically before hashing only files
+whose byte length occurs in the outer-release manifest. Discovery and hashing
+share the launcher work budget, so a large data directory cannot delay its
+first SDL frame. It never opens a ZIP, extracts a leaf, or selects a game by
+name during recognition. A digest match is one *verified occurrence*. Equal
+digest matches at multiple locations (including a user-created link) are
+deduplicated to one release card and one CLI launch target; the first lexical
+path is retained as the deterministic in-place source and later occurrences
+are counted, not silently treated as separate editions.
 
 `--inspect` prints aggregate `SCAN SUMMARY` counters: candidates, files rejected
 by a non-manifest size (which are not hashed), manifest-size matches, hashed

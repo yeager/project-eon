@@ -486,3 +486,11 @@ msgstr ""
 #: src/main.cpp
 msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
 msgstr ""
+
+#: src/main.cpp
+msgid "Discovering files: "
+msgstr ""
+
+#: src/main.cpp
+msgid "Files hashed: "
+msgstr ""

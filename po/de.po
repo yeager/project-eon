@@ -317,3 +317,9 @@ msgstr "UNBEGRENZT (NUR RENDERING)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "ORIGINALE ANZEIGEEINSTELLUNGEN"
+
+msgid "Discovering files: "
+msgstr "Dateien werden gesucht: "
+
+msgid "Files hashed: "
+msgstr "Gehashte Dateien: "

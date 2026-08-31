@@ -356,3 +356,9 @@ msgstr "제한 없음 (렌더링만)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "원본 표시 설정"
+
+msgid "Discovering files: "
+msgstr "파일 검색 중: "
+
+msgid "Files hashed: "
+msgstr "해시된 파일: "

@@ -317,3 +317,9 @@ msgstr "SIN LÍMITE (SOLO RENDERIZADO)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "AJUSTES DE PANTALLA ORIGINAL"
+
+msgid "Discovering files: "
+msgstr "Descubriendo archivos: "
+
+msgid "Files hashed: "
+msgstr "Archivos con hash: "

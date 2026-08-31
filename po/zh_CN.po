@@ -356,3 +356,9 @@ msgstr "不限帧（仅渲染）"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "原始显示设置"
+
+msgid "Discovering files: "
+msgstr "正在发现文件："
+
+msgid "Files hashed: "
+msgstr "已哈希文件："

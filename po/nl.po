@@ -356,3 +356,9 @@ msgstr "ONGELIMITEERD (ALLEEN RENDERING)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "ORIGINELE WEERGAVE-INSTELLINGEN"
+
+msgid "Discovering files: "
+msgstr "Bestanden zoeken: "
+
+msgid "Files hashed: "
+msgstr "Gehashte bestanden: "

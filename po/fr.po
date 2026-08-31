@@ -317,3 +317,9 @@ msgstr "SANS LIMITE (RENDU UNIQUEMENT)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "PARAMÈTRES D’AFFICHAGE D’ORIGINE"
+
+msgid "Discovering files: "
+msgstr "Recherche des fichiers : "
+
+msgid "Files hashed: "
+msgstr "Fichiers hachés : "

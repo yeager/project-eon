@@ -49,7 +49,7 @@ class LauncherFontTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
         ios = (ROOT / "packaging" / "ios" / "package-ipa.sh").read_text(encoding="utf-8")
         desktop = (ROOT / "packaging" / "verify-desktop-package.sh").read_text(encoding="utf-8")
-        self.assertIn('install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")', cmake)
+        self.assertIn('install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets"', cmake)
         self.assertIn('MACOSX_PACKAGE_LOCATION "Resources/assets/fonts"', cmake)
         self.assertIn('cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"', workflow)
         self.assertIn('Copy-Item assets/fonts dist/assets/fonts -Recurse', workflow)

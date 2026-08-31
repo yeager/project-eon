@@ -356,3 +356,9 @@ msgstr "BEZ LIMITU (TYLKO RENDEROWANIE)"
 
 msgid "ORIGINAL DISPLAY SETTINGS"
 msgstr "ORYGINALNE USTAWIENIA WYŚWIETLANIA"
+
+msgid "Discovering files: "
+msgstr "Wykrywanie plików: "
+
+msgid "Files hashed: "
+msgstr "Pliki z hashem: "
