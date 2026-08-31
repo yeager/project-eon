@@ -195,10 +195,10 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("launch_runtime_candidate(candidate, releases, coordinator)", MENU_RUNTIME_SOURCE)
         self.assertIn("coordinator.active()", MENU_RUNTIME_SOURCE)
         self.assertIn("admit_runtime_launch(coordinator, candidate, releases)", MENU_RUNTIME_SOURCE)
-        self.assertIn("eon::launch_runtime_candidate(launch_candidate, releases", SOURCE)
-        self.assertIn("eon::launch_menu_runtime(launcher_session, request, releases", SOURCE)
+        self.assertIn("runtime.launch_direct(launch_candidate, releases)", SOURCE)
+        self.assertIn("runtime.launch_menu(launcher_session, request, releases)", SOURCE)
         launch = SOURCE.index("const auto launch_menu_selection")
-        admission = SOURCE.index("eon::launch_menu_runtime", launch)
+        admission = SOURCE.index("runtime.launch_menu", launch)
         self.assertIn("reset_active_runtime();", SOURCE[launch:admission])
 
     def test_profile_launch_rejections_are_visible_without_media_details(self) -> None:
@@ -212,12 +212,28 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # Escape and gamepad Back must not retain an active archive, texture,
         # audio stream, or recovered VM behind a newly visible launcher.
         reset = SOURCE.index("const auto reset_active_runtime")
-        self.assertIn("runtime_coordinator.reset();", SOURCE[reset:reset + 1100])
+        self.assertIn("runtime.reset();", SOURCE[reset:reset + 1100])
         self.assertIn("reset_deuteros_runtime();", SOURCE[reset:reset + 1100])
         escape = SOURCE.rfind("if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)")
         self.assertIn("reset_active_runtime();", SOURCE[escape:escape + 450])
         gamepad_back = SOURCE.rfind("event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK")
         self.assertIn("reset_active_runtime();", SOURCE[gamepad_back:gamepad_back + 500])
+
+    def test_runtime_lifecycle_controller_keeps_sdl_borrows_outside_the_engine(self) -> None:
+        self.assertIn("class LauncherRuntimeController", MENU_RUNTIME_HEADER)
+        self.assertIn("requires_revocation_for", MENU_RUNTIME_HEADER)
+        self.assertIn("LauncherRuntimeController(LauncherRuntimeController&&) = delete", MENU_RUNTIME_HEADER)
+        self.assertNotIn("SDL_", MENU_RUNTIME_HEADER + MENU_RUNTIME_SOURCE)
+        self.assertNotIn("filesystem", MENU_RUNTIME_HEADER + MENU_RUNTIME_SOURCE)
+        self.assertIn("auto& runtime_coordinator = runtime.coordinator();", SOURCE)
+        reset = SOURCE.index("const auto reset_active_runtime")
+        reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
+        self.assertLess(reset_body.index("stop_millennium_title();"), reset_body.index("runtime.reset();"))
+        self.assertLess(reset_body.index("discard_millennium_assets();"), reset_body.index("runtime.reset();"))
+        self.assertLess(reset_body.index("reset_deuteros_runtime();"), reset_body.index("runtime.reset();"))
+        navigation = SOURCE[SOURCE.index("const auto apply_launcher_navigation"):
+                            SOURCE.index("const auto activate_launcher_card")]
+        self.assertIn("runtime.requires_revocation_for(launcher_interaction.source_identity())", navigation)
 
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
         # If a game has only Amiga/Atari media, selecting its game card must
@@ -310,7 +326,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(reset, source_change)
         reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
         for clearing in (
-            "runtime_coordinator.reset();",
+            "runtime.reset();",
             "stop_millennium_title();",
             "millennium_game_session.reset();",
             "discard_millennium_assets();",
@@ -401,7 +417,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(stop, start)
         self.assertIn("SDL_StopTextInput(window)", SOURCE[stop:start])
         self.assertIn("millennium_title_session = nullptr;", SOURCE[stop:start])
-        self.assertIn("runtime_coordinator.reset();", SOURCE)
+        self.assertIn("runtime.reset();", SOURCE)
         self.assertIn("reset_active_runtime();\n                    screen = Screen::menu;", SOURCE)
         self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])
 
