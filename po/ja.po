@@ -330,5 +330,11 @@ msgstr "オリジナル表示設定"
 msgid "Discovering files: "
 msgstr "ファイルを検出中: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "ハッシュ済みファイル: "

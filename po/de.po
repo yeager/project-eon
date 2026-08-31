@@ -330,5 +330,11 @@ msgstr "ORIGINALE ANZEIGEEINSTELLUNGEN"
 msgid "Discovering files: "
 msgstr "Dateien werden gesucht: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Gehashte Dateien: "

@@ -103,6 +103,11 @@ release identity, or original-data source clears that state rather than
 carrying an art candidate across preservation identities. The loader still
 performs its final revalidation immediately before decode, so the UI result is
 never a time-of-check substitute. Original mode clears an optional CLI pack
+before any pack access. Modern's F10 developer readout may show only the
+preflight admission state, compact pack ID/provenance, and declared renderer
+targets. It never shows the local manifest path or validation error, opens no
+pack, and labels targets as declared rather than uploaded or active; final
+hash verification remains exclusively at decode.
 path before it is read and never opens an external pack.
 
 The explicit `--inspect --modern-packs <root>` diagnostic performs that

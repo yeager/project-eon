@@ -37,6 +37,8 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("startup_boundary", diagnostics)
         self.assertIn("recovery_boundary_count", diagnostics)
         self.assertIn("trace_admission", diagnostics)
+        self.assertIn("modern_pack", diagnostics)
+        self.assertIn("modern_pack_targets", diagnostics)
         self.assertNotIn("sdl_vsync", diagnostics)
         self.assertIn("truncated_identity_hash", diagnostics)
         self.assertNotIn("save", diagnostics)
@@ -45,7 +47,8 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
         for label in (
             "MODERN RUNTIME DIAGNOSTICS", "RELEASE IDENTITY",
-            "STARTUP BOUNDARY", "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "RENDERER SETTINGS",
+            "STARTUP BOUNDARY", "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "MODERN PACK",
+            "PACK RENDER TARGETS", "RENDERER SETTINGS",
             "FRAME PACING", "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
         ):
             with self.subTest(label=label):
@@ -54,9 +57,16 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("render_pacing_names", popup)
         self.assertIn("RECOVERY FUNCTION MAP", SOURCE)
         self.assertIn("runtime_diagnostics_for_release(*release)", SOURCE)
+        self.assertIn("selected_modern_pack_preflight", SOURCE)
+        self.assertIn("modern_pack_admission", SOURCE)
+        self.assertIn("modern_pack_renderer_targets_summary", SOURCE)
+        self.assertIn("truncated_diagnostic_value", SOURCE)
         self.assertIn("runtime_diagnostics_for_release(release)", SOURCE)
         self.assertIn("report_startup_boundary", SOURCE)
         self.assertIn("DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.", SOURCE)
+        self.assertNotIn("manifest_path", popup)
+        self.assertNotIn("preflight.error", popup)
+        self.assertNotIn("load_millennium", popup)
 
     def test_function_map_is_paged_read_only_provenance_not_a_hook_table(self) -> None:
         popup_start = SOURCE.index("void draw_recovery_function_map_popup")

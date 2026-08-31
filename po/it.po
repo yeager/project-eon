@@ -330,5 +330,11 @@ msgstr "IMPOSTAZIONI DI VISUALIZZAZIONE ORIGINALI"
 msgid "Discovering files: "
 msgstr "Ricerca dei file: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "File con hash: "

@@ -423,6 +423,12 @@ msgstr ""
 msgid "TRACE ADMISSION"
 msgstr ""
 
+msgid "MODERN PACK"
+msgstr ""
+
+msgid "PACK RENDER TARGETS"
+msgstr ""
+
 #: src/main.cpp
 msgid "NOT LOADED"
 msgstr ""

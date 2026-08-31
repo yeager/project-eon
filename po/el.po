@@ -330,5 +330,11 @@ msgstr "ΡΥΘΜΙΣΕΙΣ ΑΡΧΙΚΗΣ ΕΜΦΑΝΙΣΗΣ"
 msgid "Discovering files: "
 msgstr "Εντοπισμός αρχείων: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Αρχεία με κατακερματισμό: "

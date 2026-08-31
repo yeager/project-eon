@@ -330,5 +330,11 @@ msgstr "AJUSTES DE PANTALLA ORIGINAL"
 msgid "Discovering files: "
 msgstr "Descubriendo archivos: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Archivos con hash: "

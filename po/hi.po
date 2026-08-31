@@ -330,5 +330,11 @@ msgstr "मूल प्रदर्शन सेटिंग्स"
 msgid "Discovering files: "
 msgstr "फ़ाइलें खोजी जा रही हैं: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "हैश की गई फ़ाइलें: "

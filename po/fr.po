@@ -330,5 +330,11 @@ msgstr "PARAMÈTRES D’AFFICHAGE D’ORIGINE"
 msgid "Discovering files: "
 msgstr "Recherche des fichiers : "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Fichiers hachés : "

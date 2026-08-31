@@ -330,5 +330,11 @@ msgstr "إعدادات العرض الأصلية"
 msgid "Discovering files: "
 msgstr "اكتشاف الملفات: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "الملفات المُجزأة: "
