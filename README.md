@@ -153,7 +153,9 @@ route. A device-independent launcher state machine owns those transitions, so
 keyboard, gamepad, mouse, and touch cannot follow different release-admission
 rules. Keyboard and gamepad users can move through each card page with the
 D-pad or arrow keys and activate the highlighted card with Enter, Space, South/A, or
-Start; Escape returns to the preceding card page. Mouse and touch users can
+Start; Escape returns to the preceding card page. Press `L` or click/tap the
+visible `L: <code>` button to cycle the launcher UI language; it changes only
+Project Eon's interface, never the original release language. Mouse and touch users can
 use the visible `<<` control to go back and the release-page controls to page
 through identities.
 
@@ -210,8 +212,9 @@ The launcher UI is translated through the portable gettext-style catalogs in
 English, Spanish, Finnish, French, Hindi, Italian, Japanese, Korean, Dutch,
 Norwegian, Polish, Brazilian Portuguese, Russian, Swedish, Turkish, Ukrainian,
 and Simplified Chinese. English is the default launcher language. Select a
-launcher language with `--language sv` (or `-l sv`) to opt into another
-catalog.
+launcher language with `--language sv` (or `-l sv`) to choose the initial UI
+language, or cycle it in the start menu with `L`/the language button. This
+never changes the immutable original-release language.
 Only Project Eon's own UI is translated—original game text remains sourced from
 the selected original media. All 20 UTF-8 catalogs are rendered through the
 bundled, hash-reviewed SDL_ttf/Noto fallback chain; Project Eon never selects a

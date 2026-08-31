@@ -3368,7 +3368,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     auto request = *parsed.request;
-    const auto translator = eon::Translator::from_language(request.language,
+    auto translator = eon::Translator::from_language(request.language,
         argc > 0 ? std::filesystem::path(argv[0]) : std::filesystem::path{});
     active_translator = &translator;
     const auto tr = [&translator](std::string_view message) {
@@ -4135,6 +4135,7 @@ int main(int argc, char** argv) {
     // than treating English text width as the launcher layout contract.
     const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 398.0F, 34.0F};
     const SDL_FRect data_archive_picker_bounds{640.0F, 56.0F, 398.0F, 34.0F};
+    const SDL_FRect launcher_language_bounds{230.0F, 16.0F, 170.0F, 34.0F};
     // These are Eon-shell controls, rendered in the same logical coordinate
     // space as cards. They contain no release identity and therefore cannot
     // select or launch original media by themselves.
@@ -4459,11 +4460,28 @@ int main(int argc, char** argv) {
                 window, nullptr, 0, nullptr, false);
         }
     };
+    const auto cycle_launcher_language = [&](const int direction) {
+        const auto& languages = eon::supported_launcher_languages();
+        const auto current = eon::normalize_language(request.language);
+        const auto found = std::find(languages.begin(), languages.end(), current);
+        const auto index = found == languages.end() ? std::size_t{0}
+            : static_cast<std::size_t>(std::distance(languages.begin(), found));
+        const auto next = direction < 0 ? (index + languages.size() - 1U) % languages.size()
+            : (index + 1U) % languages.size();
+        request.language = std::string(languages[next]);
+        translator = eon::Translator::from_language(request.language,
+            argc > 0 ? std::filesystem::path(argv[0]) : std::filesystem::path{});
+        // This changes Eon's chrome only. `release_language` remains the
+        // selected original archive identity and never follows UI locale.
+        active_translator = &translator;
+    };
     const auto handle_menu_pointer_down = [&](const float x, const float y) {
         // SDL mouse and touch input share one card route. The latter is
         // needed by the iPad build; both still pass through the same
         // hash-verified platform/release admission checks as keyboard focus.
-        if (launcher_page != LauncherPage::games && inside(launcher_back_bounds, x, y)) {
+        if (inside(launcher_language_bounds, x, y)) {
+            cycle_launcher_language(1);
+        } else if (launcher_page != LauncherPage::games && inside(launcher_back_bounds, x, y)) {
             back_launcher_cards();
         } else if (launcher_page == LauncherPage::releases
             && inside(release_page_previous_bounds, x, y)) {
@@ -4971,6 +4989,10 @@ int main(int argc, char** argv) {
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+                if (event.key.key == SDLK_L) {
+                    cycle_launcher_language(1);
+                    continue;
+                }
                 if (event.key.key == SDLK_O) {
                     open_original_data_source_dialog(OriginalDataSourceDialogKind::directory);
                     continue;
@@ -5105,6 +5127,12 @@ int main(int argc, char** argv) {
                 SDL_RenderTexture(renderer, project_eon_logo_texture, nullptr, &logo_bounds);
             }
             draw_text(renderer, 64, 56, tr("PROJECT EON"));
+            SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
+            SDL_RenderFillRect(renderer, &launcher_language_bounds);
+            SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);
+            SDL_RenderRect(renderer, &launcher_language_bounds);
+            draw_text(renderer, launcher_language_bounds.x + 10.0F,
+                launcher_language_bounds.y + 9.0F, "L: " + eon::normalize_language(request.language));
             SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
             SDL_RenderFillRect(renderer, &data_directory_picker_bounds);
             SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);

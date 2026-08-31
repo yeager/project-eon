@@ -57,6 +57,14 @@ std::string normalize_language(std::string_view language) {
     return !normalized.empty() && normalized.back() != '_' ? normalized : std::string{};
 }
 
+const std::vector<std::string_view>& supported_launcher_languages() {
+    static const std::vector<std::string_view> languages{
+        "en", "ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it",
+        "ja", "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN",
+    };
+    return languages;
+}
+
 Translator Translator::from_po_file(const std::filesystem::path& path) {
     Translator translator;
     std::ifstream file(path, std::ios::binary);
