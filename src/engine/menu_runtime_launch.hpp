@@ -21,6 +21,32 @@ struct RuntimeCandidateLaunchResult {
     const std::optional<LaunchRequest>& candidate,
     const std::vector<ReleaseArchive>& releases, ReleaseRuntimeCoordinator& coordinator);
 
+// Owns the live adapter identity for the launcher. SDL remains responsible
+// for destroying textures/audio/input borrows when this controller reports a
+// revocation; this class owns only the coordinator and its safe provenance.
+class LauncherRuntimeController {
+public:
+    LauncherRuntimeController() = default;
+    LauncherRuntimeController(const LauncherRuntimeController&) = delete;
+    LauncherRuntimeController& operator=(const LauncherRuntimeController&) = delete;
+    LauncherRuntimeController(LauncherRuntimeController&&) = delete;
+    LauncherRuntimeController& operator=(LauncherRuntimeController&&) = delete;
+    [[nodiscard]] RuntimeCandidateLaunchResult launch_direct(const LaunchRequest& candidate,
+        const std::vector<ReleaseArchive>& releases);
+    [[nodiscard]] RuntimeCandidateLaunchResult launch_menu(const LauncherSessionState& session,
+        const LaunchRequest& base, const std::vector<ReleaseArchive>& releases);
+    // Pure query: main must discard SDL-side borrows before reset() invalidates
+    // the coordinator-owned adapters that supplied them.
+    [[nodiscard]] bool requires_revocation_for(const LauncherSourceIdentity& source) const;
+    void reset();
+    [[nodiscard]] ReleaseRuntimeCoordinator& coordinator() { return coordinator_; }
+    [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return coordinator_.active(); }
+    [[nodiscard]] ReleaseRuntimeAdmission admission() const { return coordinator_.admission(); }
+
+private:
+    ReleaseRuntimeCoordinator coordinator_;
+};
+
 // The card menu has exactly one transition into a live release adapter.  This
 // SDL-free gate deliberately receives session state, scanner identities and
 // the runtime coordinator rather than card indexes, paths or adapters.  It

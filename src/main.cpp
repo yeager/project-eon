@@ -3668,23 +3668,23 @@ int main(int argc, char** argv) {
     auto& active_platform = launcher_route.platform;
     auto& active_release_language = launcher_route.release_language;
     auto& active_release_sha256 = launcher_route.release_sha256;
-    eon::ReleaseRuntimeCoordinator runtime_coordinator;
+    eon::LauncherRuntimeController runtime;
+    auto& runtime_coordinator = runtime.coordinator();
     // This status is limited to the same three media-safe admission classes
     // exposed by F10. It gives a rejected profile-card launch an immediate
     // visible result without retaining a path, leaf name, or parser error in
     // the start menu.
     std::string launcher_runtime_admission = std::string(
-        eon::release_runtime_admission_label(runtime_coordinator.admission()));
+        eon::release_runtime_admission_label(runtime.admission()));
     const auto active_launch = [&]() -> const std::optional<eon::ResolvedLaunchRequest>& {
-        return runtime_coordinator.active();
+        return runtime.active();
     };
     if (request.game && active_platform) {
         auto launch_candidate = request;
         launch_candidate.platform = active_platform;
         launch_candidate.release_sha256 = active_release_sha256;
         launch_candidate.release_language = active_release_language;
-        const auto admission = eon::launch_runtime_candidate(launch_candidate, releases,
-            runtime_coordinator);
+        const auto admission = runtime.launch_direct(launch_candidate, releases);
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(admission.admission));
         if (!admission.accepted()) {
@@ -4301,14 +4301,17 @@ int main(int argc, char** argv) {
         // addressable while the launcher is visible or a new bounded scan is
         // incomplete. The release card itself remains a selection only; a
         // later launch must reacquire and rehash it from scratch.
-        runtime_coordinator.reset();
-        launcher_runtime_admission = std::string(
-            eon::release_runtime_admission_label(runtime_coordinator.admission()));
         stop_millennium_title();
         millennium_game_session.reset();
         millennium_state_page = 0;
         discard_millennium_assets();
         reset_deuteros_runtime();
+        // SDL-side pointers above borrow coordinator-owned adapters. Destroy
+        // every borrow and dependent mixer/runner before invalidating those
+        // adapters at the common runtime boundary.
+        runtime.reset();
+        launcher_runtime_admission = std::string(
+            eon::release_runtime_admission_label(runtime.admission()));
     };
     const auto start_millennium_title = [&] {
         // A title session is intentionally one-shot after its observed
@@ -4356,10 +4359,9 @@ int main(int argc, char** argv) {
         // the preceding route returned normally, so an attempted re-launch
         // can never present a frame or queued sample from another release.
         reset_active_runtime();
-        const auto menu_launch = eon::launch_menu_runtime(launcher_session, request, releases,
-            runtime_coordinator);
+        const auto menu_launch = runtime.launch_menu(launcher_session, request, releases);
         launcher_runtime_admission = std::string(
-            eon::release_runtime_admission_label(menu_launch.admission.admission));
+            eon::release_runtime_admission_label(menu_launch.admission));
         if (!menu_launch.accepted()) return;
         // The chosen release card is part of the Modern-pack identity.  A
         // previously valid candidate becomes rejected rather than silently
@@ -4388,7 +4390,9 @@ int main(int argc, char** argv) {
         // All four must revoke the prior admitted adapter before a different
         // game/platform/language/hash can be presented or launched.
         clear_modern_pack_admission();
-        reset_active_runtime();
+        if (runtime.requires_revocation_for(launcher_interaction.source_identity())) {
+            reset_active_runtime();
+        }
     };
     const auto activate_launcher_card = [&](const std::optional<std::size_t> card) {
         const auto before = launcher_interaction.source_identity();
