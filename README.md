@@ -138,8 +138,10 @@ Millennium offers DOS, Amiga, and Atari ST; Deuteros offers Amiga and Atari
 ST. Every supported platform card visibly reports whether hash-verified
 original media is currently available; unavailable cards are dimmed and cannot
 proceed or start a game. Unsupported targets are never shown as if their media
-were merely missing. The selected platform is carried into the launch request,
-so the menu never substitutes another platform's media. Original and Modern
+were merely missing. Before either profile starts, the selected game, platform,
+release language, and full outer SHA-256 are resolved together into one
+immutable launch request, so the menu never substitutes another platform's or
+language's media. Original and Modern
 cards start directly. The Custom card is not a third runtime mode: it opens
 Modern's fine-tuning panel, then presents an explicit start action using those
 Modern settings. Mouse and iPad touch input activate the same card-admission

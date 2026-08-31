@@ -3981,12 +3981,14 @@ identity hash; direct CLI launch requires `--release-sha256`. This keeps an
 unrecognised, incomplete, or ambiguous real-media candidate from becoming an
 implicit Atari ST (or other platform) fallback or a scan-order selection.
 
-After CLI or card resolution, every runtime loader receives that resolved
-`ReleaseArchive` object directly. It does not search the incrementally scanned
-release list a second time by language, platform, or hash. Modern-pack
-admission and F10 diagnostics use the same resolver. The identity therefore
-stays fixed from card selection through Original/Modern resource reads,
-bootstrap/opening construction, and provenance display.
+After CLI or card resolution, the launcher first constructs one immutable
+`LaunchRequest` whose game, platform, language, and outer SHA-256 have all
+been copied from the same resolved `ReleaseArchive`. Every runtime loader then
+receives that resolved archive object directly. It does not search the
+incrementally scanned release list a second time by language, platform, or
+hash. Modern-pack admission and F10 diagnostics use the same resolver. The
+identity therefore stays fixed from card selection through Original/Modern
+resource reads, bootstrap/opening construction, and provenance display.
 
 Mouse and touch cards share this exact admission route. On iPadOS an
 `SDL_EVENT_FINGER_DOWN` normalized coordinate is converted through the active

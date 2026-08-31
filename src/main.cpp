@@ -3578,22 +3578,30 @@ int main(int argc, char** argv) {
     std::optional<std::string> active_release_language = request.release_language;
     std::optional<std::string> active_release_sha256 = request.release_sha256;
     std::optional<eon::ReleaseArchive> initial_release;
+    std::optional<eon::LaunchRequest> active_launch_request;
     if (request.game && active_platform) {
-        initial_release = eon::resolve_release_identity(releases, *request.game,
-            *active_platform, active_release_sha256, active_release_language);
-        if (!initial_release) {
+        auto launch_candidate = request;
+        launch_candidate.platform = active_platform;
+        launch_candidate.release_sha256 = active_release_sha256;
+        launch_candidate.release_language = active_release_language;
+        active_launch_request = eon::resolve_launch_request_identity(launch_candidate, releases);
+        if (!active_launch_request) {
             std::cerr << "The selected game and platform need one exact verified original release. "
                          "Use --release-sha256 when several outer containers share a language; "
                          "no scan-order fallback was selected.\n";
             return 4;
         }
-        active_release_sha256 = initial_release->sha256;
-        active_release_language = initial_release->language;
+        initial_release = eon::resolve_release_identity(releases, *active_launch_request->game,
+            *active_launch_request->platform, active_launch_request->release_sha256,
+            active_launch_request->release_language);
+        active_release_sha256 = active_launch_request->release_sha256;
+        active_release_language = active_launch_request->release_language;
     }
     const auto resolve_active_release = [&](const eon::Game game) -> std::optional<eon::ReleaseArchive> {
-        if (!active_platform || !active_release_sha256) return std::nullopt;
-        return eon::resolve_release_identity(releases, game, *active_platform,
-            active_release_sha256, active_release_language);
+        if (!active_launch_request || active_launch_request->game != game
+            || !active_launch_request->platform) return std::nullopt;
+        return eon::resolve_release_identity(releases, game, *active_launch_request->platform,
+            active_launch_request->release_sha256, active_launch_request->release_language);
     };
     auto millennium_assets = initial_release && initial_release->game == eon::Game::millennium
         ? load_millennium_launch_assets(*initial_release) : std::nullopt;
@@ -4036,9 +4044,18 @@ int main(int argc, char** argv) {
     };
     const auto launch_menu_selection = [&] {
         const auto game = cards[static_cast<std::size_t>(focused)].game;
-        if (!active_platform || !active_release_sha256
-            || !eon::resolve_release_identity(releases, game, *active_platform,
-                active_release_sha256, active_release_language)) return;
+        if (!active_platform || !active_release_sha256) return;
+        auto launch_candidate = request;
+        launch_candidate.game = game;
+        launch_candidate.platform = active_platform;
+        launch_candidate.release_sha256 = active_release_sha256;
+        launch_candidate.release_language = active_release_language;
+        launch_candidate.presentation_explicit = true;
+        const auto resolved = eon::resolve_launch_request_identity(launch_candidate, releases);
+        if (!resolved) return;
+        active_launch_request = resolved;
+        active_release_sha256 = resolved->release_sha256;
+        active_release_language = resolved->release_language;
         selected = game;
         screen = Screen::launching;
         if (selected == eon::Game::millennium) start_millennium_title();
