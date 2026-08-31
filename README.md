@@ -275,11 +275,11 @@ Inspection neither extracts files to disk nor creates, alters, or substitutes
 game data.
 
 The final aggregate `SCAN SUMMARY` makes recognition reviewable without
-turning unknown files into a catalogue: it records candidate, size-match,
-hash, verified-occurrence, duplicate-occurrence, unique-release, and read
-failure counts. Identical verified archives found more than once are one
-release, with the lexically first path used as the deterministic read-only
-source.
+turning unknown files into a catalogue: it records candidate, size-rejected
+(not hashed), size-match, hash, hash-rejected, verified-occurrence,
+duplicate-occurrence, unique-release, and read-failure counts. Identical
+verified archives found more than once are one release, with the lexically
+first path used as the deterministic read-only source.
 
 An unfiltered inspection also prints a `PLATFORM ADMISSION` row for every
 verified game/platform pair. `READY` means exactly one verified original

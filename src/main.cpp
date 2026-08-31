@@ -3498,8 +3498,10 @@ int main(int argc, char** argv) {
                 report_platform_admission(inspected_releases);
             }
             std::cout << "SCAN SUMMARY  " << report.candidates << " candidates; "
+                << report.size_rejected_candidates << " size-rejected (not hashed); "
                 << report.size_candidates << " manifest-size matches; "
                 << report.hashed_candidates << " hashed; "
+                << report.hash_rejected_candidates << " hash-rejected; "
                 << report.verified_occurrences << " verified occurrences; "
                 << releases.size() << " unique releases; "
                 << report.duplicate_occurrences << " duplicate occurrences; "
