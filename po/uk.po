@@ -86,6 +86,15 @@ msgstr "ВІДХИЛЕНО: РОЗМІР {size}; ХЕШ {hash}; НЕЧИТАБЕ
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "ПЕРЕВІРЕНІ ВИДАННЯ: {unique}; ДУБЛІКАТИ: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "АДАПТЕР СЕАНСУ"
+
+msgid "SESSION BOUNDARY"
+msgstr "МЕЖА СЕАНСУ"
+
+msgid "SESSION CAPABILITIES"
+msgstr "МОЖЛИВОСТІ СЕАНСУ"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВИБРАТИ ГРУ   |   ВГОРУ/ВНИЗ: ПЛАТФОРМА   |   D: ПЕРЕВІРКА ДАНИХ   |   F1: ОРИГІНАЛ / СУЧАСНИЙ   |   ESC: ВИЙТИ"
 

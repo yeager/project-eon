@@ -86,6 +86,15 @@ msgstr "अस्वीकृत: आकार {size}; हैश {hash}; अप�
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "सत्यापित रिलीज़: {unique}; प्रतिलिपियाँ: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "सत्र एडेप्टर"
+
+msgid "SESSION BOUNDARY"
+msgstr "सत्र सीमा"
+
+msgid "SESSION CAPABILITIES"
+msgstr "सत्र क्षमताएँ"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "गेम चुनें   |   ऊपर/नीचे: प्लेटफ़ॉर्म   |   D: डेटा जाँच   |   F1: मूल / आधुनिक   |   ESC: बाहर निकलें"
 msgid "VERIFIED ORIGINAL DATA"

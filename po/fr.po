@@ -86,6 +86,15 @@ msgstr "REJETS : TAILLE {size}; HASH {hash}; ILLISIBLE {unreadable}; LIENS {lin
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "ÉDITIONS VÉRIFIÉES : {unique} ; DOUBLONS : {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "ADAPTATEUR DE SESSION"
+
+msgid "SESSION BOUNDARY"
+msgstr "LIMITE DE SESSION"
+
+msgid "SESSION CAPABILITIES"
+msgstr "CAPACITÉS DE SESSION"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "CHOISIR LE JEU   |   HAUT/BAS : PLATEFORME   |   D : ANALYSE DES DONNÉES   |   F1 : ORIGINAL / MODERNE   |   ÉCHAP : QUITTER"
 msgid "VERIFIED ORIGINAL DATA"

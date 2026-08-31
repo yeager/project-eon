@@ -291,6 +291,9 @@ currently shipped snapshot declares `admitted_input = false`; forwarding a new
 input requires its own caller-connected evidence. Resetting or rejecting a
 launch clears the snapshot atomically with the adapter. This is shared runtime
 plumbing, not a claim that a session is playable or frame-parity complete.
+The F10 developer diagnostics page reads this same snapshot; its adapter and
+boundary values are provenance codes, while the visible row labels remain
+translated launcher chrome.
 
 For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
 rehashed game/platform card state. `READY` has exactly one verified original

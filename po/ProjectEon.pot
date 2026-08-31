@@ -492,6 +492,18 @@ msgid "RUNTIME ADMISSION"
 msgstr ""
 
 #: src/main.cpp
+msgid "SESSION ADAPTER"
+msgstr ""
+
+#: src/main.cpp
+msgid "SESSION BOUNDARY"
+msgstr ""
+
+#: src/main.cpp
+msgid "SESSION CAPABILITIES"
+msgstr ""
+
+#: src/main.cpp
 msgid "RENDERER SETTINGS"
 msgstr ""
 

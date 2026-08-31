@@ -75,6 +75,15 @@ msgstr "ΑΠΟΡΡΙΨΕΙΣ: ΜΕΓΕΘΟΣ {size}; HASH {hash}; ΜΗ ΑΝΑΓ�
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "ΕΠΑΛΗΘΕΥΜΕΝΕΣ ΕΚΔΟΣΕΙΣ: {unique}; ΔΙΠΛΟΤΥΠΑ: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "ΠΡΟΣΑΡΜΟΓΕΑΣ ΣΥΝΕΔΡΙΑΣ"
+
+msgid "SESSION BOUNDARY"
+msgstr "ΟΡΙΟ ΣΥΝΕΔΡΙΑΣ"
+
+msgid "SESSION CAPABILITIES"
+msgstr "ΔΥΝΑΤΟΤΗΤΕΣ ΣΥΝΕΔΡΙΑΣ"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ΕΠΙΛΟΓΗ ΠΑΙΧΝΙΔΙΟΥ   |   ΠΑΝΩ/ΚΑΤΩ: ΠΛΑΤΦΟΡΜΑ   |   D: ΕΛΕΓΧΟΣ ΔΕΔΟΜΕΝΩΝ   |   F1: ΠΡΩΤΟΤΥΠΟ / ΣΥΓΧΡΟΝΟ   |   ESC: ΕΞΟΔΟΣ"
 msgid "VERIFIED ORIGINAL DATA"

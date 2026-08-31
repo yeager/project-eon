@@ -48,6 +48,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
         for label in (
             "MODERN RUNTIME DIAGNOSTICS", "RELEASE IDENTITY",
+            "RUNTIME ADMISSION", "SESSION ADAPTER", "SESSION BOUNDARY", "SESSION CAPABILITIES",
             "RECOVERY COVERAGE", "STARTUP BOUNDARY", "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "MODERN PACK",
             "PACK RENDER TARGETS", "RENDERER SETTINGS",
             "FRAME PACING", "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
@@ -58,6 +59,11 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("render_pacing_names", popup)
         self.assertIn("RECOVERY FUNCTION MAP", SOURCE)
         self.assertIn("runtime_diagnostics_for_release(*release)", SOURCE)
+        self.assertIn("runtime_coordinator.session_snapshot()", SOURCE)
+        self.assertIn("runtime_session_kind_label(session->kind)", SOURCE)
+        self.assertIn("runtime_session_boundary_label(session->boundary)", SOURCE)
+        self.assertIn('"PRESENTATION="', SOURCE)
+        self.assertIn('" / INPUT="', SOURCE)
         self.assertIn("selected_modern_pack_preflight", SOURCE)
         self.assertIn("modern_pack_admission", SOURCE)
         self.assertIn("modern_pack_renderer_targets_summary", SOURCE)

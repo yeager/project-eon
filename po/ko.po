@@ -86,6 +86,15 @@ msgstr "거부: 크기 {size}; 해시 {hash}; 읽을 수 없음 {unreadable}; �
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "검증된 릴리스: {unique}; 중복: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "세션 어댑터"
+
+msgid "SESSION BOUNDARY"
+msgstr "세션 경계"
+
+msgid "SESSION CAPABILITIES"
+msgstr "세션 기능"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "게임 선택   |   위/아래: 플랫폼   |   D: 데이터 검사   |   F1: 원본 / 현대식   |   ESC: 종료"
 

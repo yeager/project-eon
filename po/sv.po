@@ -75,6 +75,15 @@ msgstr "AVVISADE: STORLEK {size}; HASH {hash}; OLÄSBAR {unreadable}; LÄNKAR {l
 msgid "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"
 msgstr "VERIFIERADE UTGÅVOR: {unique}; DUBBLETTER: {duplicates}"
 
+msgid "SESSION ADAPTER"
+msgstr "SESSIONADAPTER"
+
+msgid "SESSION BOUNDARY"
+msgstr "SESSIONSGRÄNS"
+
+msgid "SESSION CAPABILITIES"
+msgstr "SESSIONSKAPACITET"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "VÄLJ SPEL   |   UPP/NED: PLATTFORM   |   D: DATASKANNING   |   F1: ORIGINAL / MODERN   |   ESC: AVSLUTA"
 
