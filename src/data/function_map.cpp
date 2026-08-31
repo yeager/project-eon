@@ -11,7 +11,13 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 10> entries{{
+constexpr std::array<FunctionMapEntry, 12> entries{{
+    {"millennium-amiga-en-resident-independent-entry", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
+     "millennium-amiga-shared-resident", Game::millennium, Platform::amiga, "en", "m68000",
+     "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e",
+     "ADF+0x16908", "$68508", "verified-static",
+     "D3, the tested runtime byte, both branch outcomes, and external targets remain unproven",
+     "diagnostics only", "PRESERVATION.md#millennium-amiga-raw-loader-evidence"},
     {"millennium-dos-en-launcher-driver-request", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-launcher", Game::millennium, Platform::dos, "en", "i8086",
      "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e",
@@ -66,6 +72,12 @@ constexpr std::array<FunctionMapEntry, 10> entries{{
      "ADF+0x06f34", "$21734", "verified-static",
      "decoded disk-read results, Exec/graphics ABI, input, timing, and game state remain unproven",
      "diagnostics only", "PRESERVATION.md#deuteros-amiga-execution-chain"},
+    {"deuteros-atari-en-copied-dispatcher", "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+     "deuteros-atari-replicants-first-stage", Game::deuteros, Platform::atari_st, "en", "m68000",
+     "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7",
+     "track-2+0x00c4", "$1ec4", "verified-static",
+     "the preceding raw-read result, dispatcher state word, vector choice, callback ABI, and XBIOS effects remain unproven",
+     "diagnostics only", "PRESERVATION.md#deuteros-atari-st-protected-media-boot-chain"},
     {"deuteros-amiga-en-title-exec-boundary", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",
