@@ -14,6 +14,12 @@ namespace eon {
 // or a fabricated common input model.
 enum class RuntimeSessionKind {
     millennium_dos_title,
+    // The English launcher accepted one literal sound-driver selection but
+    // stopped before that original driver's ABI is known.
+    millennium_dos_sound_driver_boundary,
+    // TITLES.EXE took its local nonzero-console path but its process/launcher
+    // return and 2200ad.exe request remain unobserved.
+    millennium_dos_title_handoff_boundary,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,
     deuteros_amiga_opening,

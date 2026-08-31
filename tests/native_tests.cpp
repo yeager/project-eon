@@ -3344,14 +3344,48 @@ int main() {
         == eon::RuntimeInputDisposition::boundary_reached);
     assert(admitted_dos_runtime.millennium_dos_sound_selection()->selected_original_filename()
         == "ssbl.drv");
+    assert(admitted_dos_runtime.session_snapshot());
+    const auto& sound_driver_snapshot = *admitted_dos_runtime.session_snapshot();
+    assert(sound_driver_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_sound_driver_boundary
+        && sound_driver_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
+        && !sound_driver_snapshot.capabilities.decoded_presentation
+        && !sound_driver_snapshot.capabilities.audio_observations
+        && !sound_driver_snapshot.capabilities.admitted_input);
+    assert(eon::runtime_session_kind_label(sound_driver_snapshot.kind)
+        == "MILLENNIUM DOS SOUND DRIVER BOUNDARY");
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
-        == eon::RuntimeInputDisposition::ignored);
+        == eon::RuntimeInputDisposition::rejected);
     assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari()
         && !admitted_dos_runtime.deuteros_amiga() && !admitted_dos_runtime.deuteros_atari());
     admitted_dos_runtime.reset();
     assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos()
         && !admitted_dos_runtime.session_snapshot());
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
+    // The Spanish release has no recovered sound-driver route. Its one
+    // availability observation must instead become the explicit TITLES.EXE
+    // return boundary and refuse further host input.
+    eon::ResolvedLaunchRequest admitted_spanish_launch;
+    admitted_spanish_launch.release = *spanish_dos;
+    admitted_spanish_launch.request.game = eon::Game::millennium;
+    admitted_spanish_launch.request.platform = eon::Platform::dos;
+    admitted_spanish_launch.request.release_language = "es";
+    admitted_spanish_launch.request.release_sha256 = spanish_dos->sha256;
+    eon::ReleaseRuntimeCoordinator admitted_spanish_runtime;
+    assert(admitted_spanish_runtime.acquire(admitted_spanish_launch));
+    assert(admitted_spanish_runtime.observe_input(eon::RuntimeInputObservation::available_character())
+        == eon::RuntimeInputDisposition::boundary_reached);
+    assert(admitted_spanish_runtime.session_snapshot());
+    const auto& spanish_handoff_snapshot = *admitted_spanish_runtime.session_snapshot();
+    assert(spanish_handoff_snapshot.kind
+            == eon::RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        && spanish_handoff_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
+        && !spanish_handoff_snapshot.capabilities.decoded_presentation
+        && !spanish_handoff_snapshot.capabilities.audio_observations
+        && !spanish_handoff_snapshot.capabilities.admitted_input);
+    assert(eon::runtime_session_kind_label(spanish_handoff_snapshot.kind)
+        == "MILLENNIUM DOS TITLE HANDOFF BOUNDARY");
+    assert(admitted_spanish_runtime.observe_input(eon::RuntimeInputObservation::available_character())
+        == eon::RuntimeInputDisposition::rejected);
     // Every recognised outer identity admits exactly one engine-owned startup
     // adapter. Reusing the coordinator also proves a prior platform's object
     // is destroyed before the next hash-checked release can become active.

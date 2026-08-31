@@ -126,6 +126,16 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RuntimeSessionKind::deuteros_amiga_title_stage", tick)
         self.assertIn("deuteros_amiga_opening_input_held_ = false", tick)
 
+    def test_millennium_terminal_startup_observations_close_input_routing(self) -> None:
+        session_header = (ROOT / "src" / "engine" / "runtime_session.hpp").read_text(encoding="utf-8")
+        self.assertIn("millennium_dos_sound_driver_boundary", session_header)
+        self.assertIn("millennium_dos_title_handoff_boundary", session_header)
+        observe = RUNTIME_SOURCE[RUNTIME_SOURCE.index("RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input"):
+                                 RUNTIME_SOURCE.index("tick_deuteros_amiga_opening")]
+        self.assertIn("RuntimeSessionKind::millennium_dos_sound_driver_boundary", observe)
+        self.assertIn("RuntimeSessionKind::millennium_dos_title_handoff_boundary", observe)
+        self.assertIn("if (!active_) return RuntimeInputDisposition::rejected", observe)
+
     def test_cli_and_card_routes_share_the_final_runtime_admission_gate(self) -> None:
         self.assertIn("struct RuntimeLaunchAdmission", RUNTIME_HEADER)
         self.assertIn("admit_runtime_launch", RUNTIME_SOURCE)
