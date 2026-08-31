@@ -399,6 +399,8 @@ shows separate release cards with a short hash and the CLI requires
 `--release-sha256`; `--release-language` can narrow but never collapse that
 identity. This applies equally to Atari ST media; the launcher never
 substitutes an Amiga or DOS release or chooses by scan order.
+Release cards reuse only the selected generated platform-card illustration
+with a readable Eon overlay; they contain no original pixels or archive data.
 Verified Atari ST cards are additionally labelled **Atari bootstrap only**.
 They select their exact original media but do not claim unrecovered GEMDOS,
 XBIOS, callback, title, or gameplay parity as a completed game start.

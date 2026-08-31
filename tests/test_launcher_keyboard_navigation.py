@@ -75,6 +75,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("session.choose_release(releases, identities[focus.release].sha256)", ROUTE_SOURCE)
         self.assertIn("release_sha256 = release->sha256", ROUTE_SOURCE)
         self.assertIn("truncated_identity_hash(card.sha256)", SOURCE)
+        self.assertIn("Borrowed from the selected generated platform card", SOURCE)
+        self.assertIn("SDL_RenderTexture(renderer, card.texture", SOURCE)
 
     def test_runtime_loaders_consume_the_resolved_outer_identity(self) -> None:
         # The launcher must resolve a media identity once before it enters a
