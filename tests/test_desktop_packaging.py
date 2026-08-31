@@ -44,6 +44,12 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('HOME="$isolated_home" "$executable" --inspect', source)
         self.assertIn("created its default game-data directory during lookup", source)
         self.assertIn("isolated missing default game-data path", source)
+        self.assertIn("EON_PACKAGE_TEST_TMPDIR", source)
+        self.assertIn("project-eon-tools/package-validation", source)
+        self.assertIn('mktemp -d "$scratch_root/eon-package.XXXXXXXX"', source)
+        self.assertIn("outside /tmp", source)
+        self.assertNotIn("temporary=$(mktemp -d)", source)
+        self.assertNotIn("isolated_home=$(mktemp -d)", source)
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("rpm cpio desktop-file-utils zlib1g-dev", workflow)
 

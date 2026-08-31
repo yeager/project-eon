@@ -85,6 +85,14 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn('set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)', cmake)
         self.assertIn('set(CMAKE_OSX_DEPLOYMENT_TARGET "15.0" CACHE STRING "" FORCE)', cmake)
 
+    def test_ipa_packager_uses_only_project_eon_cache_scratch(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("EON_IPA_PACKAGE_TEST_TMPDIR", source)
+        self.assertIn("project-eon-tools/ipa-packaging", source)
+        self.assertIn('mktemp -d "$scratch_root/eon-ipa.XXXXXXXX"', source)
+        self.assertIn("outside /tmp", source)
+        self.assertNotIn("stage=$(mktemp -d)", source)
+
     def test_ios_resource_locations_match_runtime_lookups(self):
         main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
         i18n = (ROOT / "src" / "i18n.cpp").read_text(encoding="utf-8")

@@ -8,8 +8,27 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
-# Keep each extracted DEB isolated from the build tree and remove only the
-# explicit mktemp directories after validation, including on a failed check.
+# Keep package inspection outside both the checkout and system temporary
+# storage.  A caller can select an existing Project Eon cache root, while the
+# default is safe for local and CI runs without game media.
+scratch_root="${EON_PACKAGE_TEST_TMPDIR:-${HOME}/.cache/project-eon-tools/package-validation}"
+case "$scratch_root" in
+  /tmp|/tmp/*|""|[^/]* )
+    echo "EON package scratch root must be absolute and outside /tmp" >&2
+    exit 2
+    ;;
+esac
+mkdir -p -- "$scratch_root"
+if [ -L "$scratch_root" ] || [ ! -d "$scratch_root" ]; then
+  echo "EON package scratch root must be an existing non-symlink directory" >&2
+  exit 2
+fi
+make_temporary_directory() {
+  mktemp -d "$scratch_root/eon-package.XXXXXXXX"
+}
+
+# Remove only explicit directories created under the validated cache root,
+# including on a failed check.
 temporary_directories=()
 cleanup() {
   local temporary
@@ -40,7 +59,7 @@ for package in "$@"; do
       # Exercise the installed artifact rather than a build-tree executable.
       # The loader trace must resolve all three staged SDL libraries through
       # the executable's $ORIGIN runpath; no game media or display is needed.
-      temporary=$(mktemp -d)
+      temporary=$(make_temporary_directory)
       temporary_directories+=("$temporary")
       dpkg-deb --extract "$package" "$temporary"
       executable="$temporary/usr/bin/project-eon"
@@ -66,7 +85,7 @@ for package in "$@"; do
       # file query. Give this verifier a fresh database under the same
       # disposable extraction root so it neither locks nor depends on the
       # workstation's package-manager state.
-      temporary=$(mktemp -d)
+      temporary=$(make_temporary_directory)
       temporary_directories+=("$temporary")
       rpm_database="$temporary/rpmdb"
       mkdir -p "$rpm_database"
@@ -112,7 +131,7 @@ for package in "$@"; do
   # ~/.projecteon while only looking for it. This is intentionally an
   # end-to-end check: package listing checks alone cannot prove the installed
   # binary retained the read-only default-data boundary.
-  isolated_home=$(mktemp -d)
+  isolated_home=$(make_temporary_directory)
   temporary_directories+=("$isolated_home")
   if inspect_output=$(HOME="$isolated_home" "$executable" --inspect 2>&1); then
     echo "$package unexpectedly inspected missing default game data" >&2

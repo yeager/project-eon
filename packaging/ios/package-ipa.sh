@@ -48,7 +48,23 @@ for catalog in ar de el en_GB es fi fr hi it ja ko nl no pl pt_BR ru sv tr uk zh
     exit 1
   fi
 done
-stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
+# Stage the IPA only beneath Eon's cache.  Do not use the system temporary
+# directory: the package workflow has the same no-/tmp preservation contract
+# as media scanners, recorders, and test fixtures.
+scratch_root="${EON_IPA_PACKAGE_TEST_TMPDIR:-${HOME}/.cache/project-eon-tools/ipa-packaging}"
+case "$scratch_root" in
+  /tmp|/tmp/*|""|[^/]* )
+    echo "EON IPA scratch root must be absolute and outside /tmp" >&2
+    exit 2
+    ;;
+esac
+mkdir -p -- "$scratch_root"
+if [ -L "$scratch_root" ] || [ ! -d "$scratch_root" ]; then
+  echo "EON IPA scratch root must be an existing non-symlink directory" >&2
+  exit 2
+fi
+stage=$(mktemp -d "$scratch_root/eon-ipa.XXXXXXXX")
+trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/Payload"
 cp -R "$app" "$stage/Payload/ProjectEon.app"
 (cd "$stage" && /usr/bin/zip -qr "$ipa" Payload)
