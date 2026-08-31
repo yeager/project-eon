@@ -183,7 +183,12 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # card first; a single-language platform returns to platforms.
         self.assertIn("Escape is a single navigation action", SOURCE)
         self.assertIn("Keep Back equivalent to Escape", SOURCE)
-        self.assertGreaterEqual(SOURCE.count("launcher_interaction.back(releases);"), 2)
+        self.assertIn("const auto back_launcher_cards", SOURCE)
+        self.assertGreaterEqual(SOURCE.count("back_launcher_cards();"), 2)
+        back = SOURCE[SOURCE.index("const auto back_launcher_cards"):
+                      SOURCE.index("const auto open_data_directory_dialog")]
+        self.assertIn("clear_modern_pack_admission();", back)
+        self.assertIn("discard_millennium_assets();", back)
         self.assertIn("available_release_identities(releases, game, *platform).size() > 1", ROUTE_SOURCE)
 
     def test_modern_popup_consumes_events_before_game_or_menu_input(self) -> None:
