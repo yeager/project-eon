@@ -137,6 +137,13 @@ Runtime diagnostics are also manifest-bound before composing recovery or
 function-map rows. This identity check reads no path or media bytes; it rejects
 a forged game/platform/language/hash DTO rather than letting it borrow another
 release's diagnostic map.
+
+When the recovered Deuteros Amiga opening reaches its exact `$0f` title-stage
+handoff, the live runtime snapshot changes from **Deuteros Amiga Opening** to
+**Deuteros Amiga Title Stage**. The latter is a no-input bootstrap boundary:
+it retains only the already validated title-stage provenance and refuses later
+opening ticks or host input, rather than presenting a fabricated title screen
+or crossing the unresolved Exec ABI.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract

@@ -8,6 +8,7 @@ std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
     case RuntimeSessionKind::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
     case RuntimeSessionKind::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case RuntimeSessionKind::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
+    case RuntimeSessionKind::deuteros_amiga_title_stage: return "DEUTEROS AMIGA TITLE STAGE";
     case RuntimeSessionKind::deuteros_atari_bootstrap: return "DEUTEROS ATARI ST BOOTSTRAP";
     }
     return "UNKNOWN";
@@ -43,6 +44,12 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
         snapshot.capabilities.decoded_presentation = true;
         snapshot.capabilities.audio_observations = true;
         snapshot.capabilities.admitted_input = true;
+        break;
+    case RuntimeSessionKind::deuteros_amiga_title_stage:
+        // The title handoff proves only the loaded original interval and its
+        // local pre-Exec writes. Do not retain opening presentation/audio or
+        // route another host input signal into the unresolved title ABI.
+        snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
         break;
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:

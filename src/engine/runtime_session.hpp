@@ -17,6 +17,9 @@ enum class RuntimeSessionKind {
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,
     deuteros_amiga_opening,
+    // The verified opening handed one exact original title stage to its first
+    // unresolved Exec boundary. It is not a rendered title or input session.
+    deuteros_amiga_title_stage,
     deuteros_atari_bootstrap,
 };
 
