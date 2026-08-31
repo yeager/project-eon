@@ -121,6 +121,32 @@ struct LauncherRouteState {
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const;
 };
 
+// One SDL-free owner for the mutable card-session state. The route owns the
+// immutable original-release selection; this wrapper owns the selected
+// presentation and Custom's explicit confirmation gate. It intentionally
+// does not know about renderer packs, dialogs, textures, or game sessions.
+struct LauncherSessionState {
+    LauncherRouteState route;
+    Presentation presentation = Presentation::original;
+    bool custom_profile_ready = false;
+    bool custom_profile_pending = false;
+
+    void choose_original();
+    void choose_modern();
+    void begin_custom();
+    void confirm_custom();
+    void invalidate_custom();
+    void focus_game(const std::vector<ReleaseArchive>& releases, Game game);
+    [[nodiscard]] bool choose_platform(const std::vector<ReleaseArchive>& releases,
+        Platform platform);
+    [[nodiscard]] bool choose_release(const std::vector<ReleaseArchive>& releases,
+        std::string_view sha256);
+    void back(const std::vector<ReleaseArchive>& releases);
+    [[nodiscard]] bool can_launch() const;
+    [[nodiscard]] std::optional<ResolvedLaunchRequest> resolve_launch(
+        const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const;
+};
+
 struct ParseResult {
     std::optional<LaunchRequest> request;
     std::string error;
