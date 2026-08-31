@@ -1470,12 +1470,15 @@ int main() {
         menu_candidate.presentation_explicit = true;
         const auto resolved_menu_request = eon::resolve_launch_request_identity(
             menu_candidate, duplicate_english_releases);
-        assert(resolved_menu_request && resolved_menu_request->game == eon::Game::millennium
-            && resolved_menu_request->platform == eon::Platform::amiga
-            && resolved_menu_request->release_language == "en"
-            && resolved_menu_request->release_sha256 == menu_candidate.release_sha256
-            && resolved_menu_request->presentation == eon::Presentation::modern
-            && resolved_menu_request->presentation_explicit);
+        assert(resolved_menu_request
+            && resolved_menu_request->request.game == eon::Game::millennium
+            && resolved_menu_request->request.platform == eon::Platform::amiga
+            && resolved_menu_request->request.release_language == "en"
+            && resolved_menu_request->request.release_sha256 == menu_candidate.release_sha256
+            && resolved_menu_request->request.presentation == eon::Presentation::modern
+            && resolved_menu_request->request.presentation_explicit
+            && resolved_menu_request->release.sha256 == menu_candidate.release_sha256
+            && resolved_menu_request->release.language == "en");
         menu_candidate.release_language = "es";
         assert(!eon::resolve_launch_request_identity(menu_candidate, duplicate_english_releases));
         menu_candidate.platform.reset();

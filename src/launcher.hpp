@@ -60,6 +60,14 @@ struct LaunchRequest {
     std::string language;
 };
 
+// The one admission result a live session is allowed to consume.  Keeping the
+// original, scanner-produced archive next to its normalized request prevents a
+// later lookup from accidentally following changed menu state or scan order.
+struct ResolvedLaunchRequest {
+    LaunchRequest request;
+    ReleaseArchive release;
+};
+
 struct ParseResult {
     std::optional<LaunchRequest> request;
     std::string error;
@@ -120,7 +128,7 @@ enum class PlatformCardStatus { unavailable, release_selection_required, ready }
 // returned request contains the manifest-proven game, platform, language, and
 // outer SHA-256 together; callers must not launch from independently mutable
 // menu fields after this boundary has been crossed.
-[[nodiscard]] std::optional<LaunchRequest> resolve_launch_request_identity(
+[[nodiscard]] std::optional<ResolvedLaunchRequest> resolve_launch_request_identity(
     const LaunchRequest& candidate, const std::vector<ReleaseArchive>& releases);
 // Retain a choice only when it belongs to the newly focused game. Otherwise
 // choose that game's first hash-verified platform; no platform means no start.
