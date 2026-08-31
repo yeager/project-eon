@@ -1,4 +1,5 @@
 #include "platform/game_data.hpp"
+#include "display_geometry.hpp"
 #include "launcher.hpp"
 #include "i18n.hpp"
 #include "launcher_text.hpp"
@@ -860,6 +861,28 @@ void assert_modern_asset_pack_admission() {
 } // namespace
 
 int main() {
+    const auto four_by_three = eon::fit_display_aspect_viewport(64.0F, 250.0F,
+        576.0F, 400.0F, 4.0F / 3.0F);
+    assert(std::fabs(four_by_three.x - 85.333336F) < 0.001F);
+    assert(four_by_three.y == 250.0F);
+    assert(std::fabs(four_by_three.width - 533.333313F) < 0.001F);
+    assert(four_by_three.height == 400.0F);
+    const auto wide = eon::fit_display_aspect_viewport(64.0F, 250.0F,
+        576.0F, 400.0F, 16.0F / 9.0F);
+    assert(wide.x == 64.0F);
+    assert(std::fabs(wide.y - 288.0F) < 0.001F);
+    assert(wide.width == 576.0F);
+    assert(std::fabs(wide.height - 324.0F) < 0.001F);
+    for (const auto invalid_ratio : {0.0F, -1.0F}) {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::fit_display_aspect_viewport(0.0F, 0.0F,
+                1.0F, 1.0F, invalid_ratio));
+        } catch (const std::invalid_argument&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
   const auto millennium_startup = eon::startup_boundary_for_release(
       "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123");
   assert(millennium_startup.has_value());

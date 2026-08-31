@@ -103,6 +103,7 @@ add_subdirectory("${sdl3_ttf_SOURCE_DIR}" "${sdl3_ttf_BINARY_DIR}" EXCLUDE_FROM_
 
 add_executable(project-eon
     src/main.cpp
+    src/display_geometry.cpp
     src/launcher_text.cpp
     src/i18n.cpp
     src/launcher.cpp
