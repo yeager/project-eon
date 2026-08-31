@@ -23,4 +23,10 @@ struct ModernReconstructedSurface {
 ModernReconstructedSurface reconstruct_rgba_scale2x(
     std::span<const std::uint8_t> original_rgba, int width, int height);
 
+// Edge-aware Scale4x, defined as two bounded Scale2x passes. Each output
+// pixel is consequently selected from the supplied decoded source surface;
+// this produces no files, cache entries, colours, game state, or media edits.
+ModernReconstructedSurface reconstruct_rgba_scale4x(
+    std::span<const std::uint8_t> original_rgba, int width, int height);
+
 } // namespace eon
