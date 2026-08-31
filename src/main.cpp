@@ -3732,6 +3732,28 @@ int main(int argc, char** argv) {
             std::cout << ",\"runtime_admission\":";
             write_json_string(std::cout,
                 eon::release_runtime_admission_label(runtime_coordinator.admission()));
+            // The coordinator owns this snapshot; do not reconstruct a
+            // parallel session identity from mutable launcher state. It is
+            // intentionally limited to adapter/boundary/capability facts and
+            // never serializes source paths, original bytes, SDL state or an
+            // inferred game input contract.
+            std::cout << ",\"runtime_session\":";
+            if (const auto& session = runtime_coordinator.session_snapshot()) {
+                std::cout << "{\"kind\":";
+                write_json_string(std::cout, eon::runtime_session_kind_label(session->kind));
+                std::cout << ",\"boundary\":";
+                write_json_string(std::cout,
+                    eon::runtime_session_boundary_label(session->boundary));
+                std::cout << ",\"capabilities\":{\"decoded_presentation\":"
+                    << (session->capabilities.decoded_presentation ? "true" : "false")
+                    << ",\"audio_observations\":"
+                    << (session->capabilities.audio_observations ? "true" : "false")
+                    << ",\"admitted_input\":"
+                    << (session->capabilities.admitted_input ? "true" : "false")
+                    << "}}";
+            } else {
+                std::cout << "null";
+            }
             std::cout << "}\n";
             return 0;
         }

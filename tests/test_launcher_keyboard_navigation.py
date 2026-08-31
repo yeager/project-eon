@@ -159,6 +159,18 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn('tr("CHOOSE ORIGINAL ARCHIVE (A)")', SOURCE)
         self.assertIn("event.key.key == SDLK_O", SOURCE)
         self.assertIn("event.key.key == SDLK_A", SOURCE)
+
+    def test_runtime_coordinator_publishes_only_a_sanitized_session_snapshot(self) -> None:
+        runtime_session = (ROOT / "src" / "engine" / "runtime_session.hpp").read_text(encoding="utf-8")
+        runtime_source = (ROOT / "src" / "engine" / "release_runtime.cpp").read_text(encoding="utf-8")
+        self.assertIn("struct RuntimeSessionSnapshot", runtime_session)
+        self.assertIn("RuntimeSessionCapabilities", runtime_session)
+        self.assertIn("bool admitted_input = false", runtime_session)
+        self.assertNotIn("filesystem", runtime_session)
+        self.assertNotIn("SDL_", runtime_session)
+        self.assertIn("session_snapshot_ = std::move(session_snapshot)", runtime_source)
+        self.assertIn("session_snapshot_.reset()", runtime_source)
+        self.assertIn("make_runtime_session_snapshot", runtime_source)
         self.assertIn("OriginalDataSourceDialogKind::directory", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::archive", SOURCE)
         self.assertIn("eon::classify_original_data_source", SOURCE)

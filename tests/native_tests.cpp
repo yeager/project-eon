@@ -3210,10 +3210,26 @@ int main() {
     assert(admitted_dos_runtime.acquire(admitted_dos_launch));
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "READY");
     assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos());
+    assert(admitted_dos_runtime.session_snapshot());
+    const auto& dos_session_snapshot = *admitted_dos_runtime.session_snapshot();
+    assert(dos_session_snapshot.game == eon::Game::millennium
+        && dos_session_snapshot.platform == eon::Platform::dos
+        && dos_session_snapshot.language == "en"
+        && dos_session_snapshot.release_sha256 == english_dos->sha256
+        && dos_session_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_title
+        && dos_session_snapshot.boundary
+            == eon::RuntimeSessionBoundary::recovered_presentation_boundary
+        && dos_session_snapshot.capabilities.decoded_presentation
+        && !dos_session_snapshot.capabilities.audio_observations
+        && !dos_session_snapshot.capabilities.admitted_input);
+    assert(eon::runtime_session_kind_label(dos_session_snapshot.kind) == "MILLENNIUM DOS TITLE");
+    assert(eon::runtime_session_boundary_label(dos_session_snapshot.boundary)
+        == "RECOVERED PRESENTATION BOUNDARY");
     assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari()
         && !admitted_dos_runtime.deuteros_amiga() && !admitted_dos_runtime.deuteros_atari());
     admitted_dos_runtime.reset();
-    assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos());
+    assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos()
+        && !admitted_dos_runtime.session_snapshot());
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
     // Every recognised outer identity admits exactly one engine-owned startup
     // adapter. Reusing the coordinator also proves a prior platform's object
@@ -3227,6 +3243,12 @@ int main() {
         launch.request.release_language = release.language;
         launch.request.release_sha256 = release.sha256;
         assert(all_release_runtime.acquire(launch));
+        assert(all_release_runtime.session_snapshot());
+        const auto& session_snapshot = *all_release_runtime.session_snapshot();
+        assert(session_snapshot.game == release.game && session_snapshot.platform == release.platform
+            && session_snapshot.language == release.language
+            && session_snapshot.release_sha256 == release.sha256
+            && !session_snapshot.capabilities.admitted_input);
         const auto adapter_count = static_cast<int>(all_release_runtime.millennium_dos() != nullptr)
             + static_cast<int>(all_release_runtime.millennium_amiga() != nullptr)
             + static_cast<int>(all_release_runtime.millennium_atari() != nullptr)
@@ -3235,19 +3257,31 @@ int main() {
         assert(adapter_count == 1);
         if (release.game == eon::Game::millennium && release.platform == eon::Platform::dos) {
             assert(all_release_runtime.millennium_dos());
+            assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_title
+                && session_snapshot.capabilities.decoded_presentation);
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::amiga) {
             assert(all_release_runtime.millennium_amiga());
+            assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_amiga_bootstrap
+                && !session_snapshot.capabilities.decoded_presentation);
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st) {
             assert(all_release_runtime.millennium_atari());
+            assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
+                && !session_snapshot.capabilities.decoded_presentation);
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(all_release_runtime.deuteros_amiga());
+            assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
+                && session_snapshot.capabilities.decoded_presentation
+                && session_snapshot.capabilities.audio_observations);
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(all_release_runtime.deuteros_atari());
+            assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
+                && !session_snapshot.capabilities.decoded_presentation);
         } else {
             assert(false && "unrecognised release reached runtime admission");
         }
     }
     all_release_runtime.reset();
+    assert(!all_release_runtime.session_snapshot());
     assert(!all_release_runtime.active() && !all_release_runtime.millennium_dos()
         && !all_release_runtime.millennium_amiga() && !all_release_runtime.millennium_atari()
         && !all_release_runtime.deuteros_amiga() && !all_release_runtime.deuteros_atari());

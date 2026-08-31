@@ -47,24 +47,45 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari;
+    std::optional<RuntimeSessionSnapshot> session_snapshot;
     switch (launch.release.game) {
     case Game::millennium:
         switch (launch.release.platform) {
-        case Platform::dos: millennium_dos = load_millennium_dos_runtime(launch.release); break;
-        case Platform::amiga: millennium_amiga = load_millennium_amiga_runtime(launch.release); break;
-        case Platform::atari_st: millennium_atari = load_millennium_atari_runtime(launch.release); break;
+        case Platform::dos:
+            millennium_dos = load_millennium_dos_runtime(launch.release);
+            if (millennium_dos) session_snapshot = make_runtime_session_snapshot(launch,
+                RuntimeSessionKind::millennium_dos_title);
+            break;
+        case Platform::amiga:
+            millennium_amiga = load_millennium_amiga_runtime(launch.release);
+            if (millennium_amiga) session_snapshot = make_runtime_session_snapshot(launch,
+                RuntimeSessionKind::millennium_amiga_bootstrap);
+            break;
+        case Platform::atari_st:
+            millennium_atari = load_millennium_atari_runtime(launch.release);
+            if (millennium_atari) session_snapshot = make_runtime_session_snapshot(launch,
+                RuntimeSessionKind::millennium_atari_bootstrap);
+            break;
         }
         break;
     case Game::deuteros:
         switch (launch.release.platform) {
         case Platform::dos: break;
-        case Platform::amiga: deuteros_amiga = load_deuteros_amiga_runtime(launch.release); break;
-        case Platform::atari_st: deuteros_atari = load_deuteros_atari_runtime(launch.release); break;
+        case Platform::amiga:
+            deuteros_amiga = load_deuteros_amiga_runtime(launch.release);
+            if (deuteros_amiga) session_snapshot = make_runtime_session_snapshot(launch,
+                RuntimeSessionKind::deuteros_amiga_opening);
+            break;
+        case Platform::atari_st:
+            deuteros_atari = load_deuteros_atari_runtime(launch.release);
+            if (deuteros_atari) session_snapshot = make_runtime_session_snapshot(launch,
+                RuntimeSessionKind::deuteros_atari_bootstrap);
+            break;
         }
         break;
     }
-    if (!millennium_dos && !millennium_amiga && !millennium_atari
-        && !deuteros_amiga && !deuteros_atari) {
+    if (!session_snapshot || (!millennium_dos && !millennium_amiga && !millennium_atari
+        && !deuteros_amiga && !deuteros_atari)) {
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
         return false;
     }
@@ -73,6 +94,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     millennium_atari_ = std::move(millennium_atari);
     deuteros_amiga_ = std::move(deuteros_amiga);
     deuteros_atari_ = std::move(deuteros_atari);
+    session_snapshot_ = std::move(session_snapshot);
     active_ = launch;
     admission_ = ReleaseRuntimeAdmission::active;
     return true;
@@ -84,6 +106,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_atari_.reset();
     deuteros_amiga_.reset();
     deuteros_atari_.reset();
+    session_snapshot_.reset();
     active_.reset();
     admission_ = ReleaseRuntimeAdmission::unselected;
 }
