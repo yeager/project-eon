@@ -448,6 +448,26 @@ directory as inadmissible. This confirms that v5's host-key grammar/count gate
 does not weaken the v4+ console-overrun boundary. It supplies no DOS input,
 title, frame, audio, ABI, or gameplay fact.
 
+### Receipt-v6 EGA machine-profile probe (explicitly rejected diagnostic)
+
+On 2026-08-31, the v6 helper ran the exact English DOS archive through its
+separately declared `machine_profile=ega` configuration. The archive and
+reviewed recorder identities remained `e6e7044b…9cab2a123` and
+`ab53ed0e…15f50325`; the 335-byte configuration has SHA-256
+`bb091ae1d7ea2306019999e1c0616f7e0ae09c18b027402a1e12a9e66b028014`.
+The recorder still observed the original `mcga.bin` load request, followed by
+the existing title request/return prefix and the same `INT 6` callback shape.
+Its 522-byte raw-result file has SHA-256
+`978b239dc3823b3b2beed746b1ac5b441b83fc8d4c7157c9b1e10c290507d205`.
+
+The console crossed the 64 MiB cap after roughly 2.03 seconds
+(`67,189,462` bytes; retained-prefix SHA-256
+`fcf11e2109f8d821aa9c87667aceebdac6813cd0c46fb41fa05dc4e425922a2c), so
+the v6 verifier correctly rejected the receipt. This is negative configuration
+diagnostics only: `machine=ega` did not force an EGA driver request in this
+observed prefix, and neither the request nor the rejected raw output proves a
+driver result, a title, input delivery, or gameplay.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
