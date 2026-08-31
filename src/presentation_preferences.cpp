@@ -83,7 +83,8 @@ std::optional<PresentationPreferences> load_presentation_preferences(const std::
 bool save_presentation_preferences(const std::filesystem::path& path,
     const PresentationPreferences& preferences) {
     if (preferences.output_resolution_index > 2 || preferences.aspect_ratio_index > 2
-        || preferences.modern_preset_index > 4 || preferences.render_pacing_index > 2) return false;
+        || preferences.modern_preset_index > 4 || preferences.render_pacing_index > 2
+        || preferences.pixel_reconstruction_index > 2) return false;
     std::error_code error;
     std::filesystem::create_directories(path.parent_path(), error);
     if (error) return false;
