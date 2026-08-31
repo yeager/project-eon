@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# AppImage entry point for Project Eon. The executable retains its existing
+# package-relative RUNPATH and shared-data lookup beneath usr/, so this wrapper
+# neither selects game data nor creates a default media directory.
+set -eu
+
+appdir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec "$appdir/usr/bin/project-eon" "$@"

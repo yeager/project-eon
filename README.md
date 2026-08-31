@@ -535,9 +535,12 @@ currently recognised releases have reached campaign parity.
 
 GitHub Actions builds and tests Linux, macOS, and Windows, runs the preservation
 tool tests without commercial game data, and scans the complete Git history
-with Gitleaks. CI also produces non-published test artifacts: `.deb` and
-`.rpm` packages, separate macOS arm64 and x86_64 app bundles, a Windows Inno
-Setup installer, and an arm64 iPadOS `.ipa`. The iPadOS artifact is unsigned
+with Gitleaks. CI also produces non-published test artifacts: `.deb`, `.rpm`,
+and x86_64 AppImage Linux packages; separate macOS arm64 and x86_64 app
+bundles; a Windows Inno Setup installer; and an arm64 iPadOS `.ipa`. The
+AppImage builder uses a runtime supplied by a SHA-256-locked AppImage tool;
+an upstream change fails the build until a reviewed hash update is committed.
+The iPadOS artifact is unsigned
 for sideload signing with the user's own certificate and provisioning profile.
 Its packaging step independently validates the final IPA archive before upload:
 the archive must contain a structurally valid arm64 executable Mach-O and iPad `Info.plist`, the
