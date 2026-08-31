@@ -2,6 +2,7 @@
 #include "i18n.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <string_view>
 
@@ -597,6 +598,135 @@ std::optional<ResolvedLaunchRequest> LauncherSessionState::resolve_launch(
     candidate.presentation = presentation;
     candidate.presentation_explicit = true;
     return route.resolve_launch(candidate, releases);
+}
+
+namespace {
+
+constexpr std::array<Game, 2> launcher_games{Game::millennium, Game::deuteros};
+constexpr std::size_t launcher_profile_count = 3;
+
+std::size_t card_count_for(const LauncherSessionState& session,
+    const std::vector<ReleaseArchive>& releases) {
+    switch (session.route.page) {
+    case LauncherPage::games: return launcher_games.size();
+    case LauncherPage::platforms: return supported_platforms(session.route.game).size();
+    case LauncherPage::releases:
+        return session.route.platform
+            ? available_release_identities(releases, session.route.game, *session.route.platform).size()
+            : 0;
+    case LauncherPage::profiles: return launcher_profile_count;
+    }
+    return 0;
+}
+
+} // namespace
+
+void LauncherInteractionController::synchronize(const std::vector<ReleaseArchive>& releases) {
+    focus.set(LauncherPage::games, launcher_games.size(), focus.game);
+    if (session.route.page == LauncherPage::games) {
+        session.focus_game(releases, launcher_games[focus.game]);
+    }
+    // Automatic selection is still a real card selection. Keep focus on its
+    // visible platform rather than leaving Enter/South-A on an unavailable
+    // neighbouring card after a partial scan changes the available release.
+    if (session.route.platform) {
+        const auto platforms = supported_platforms(session.route.game);
+        const auto selected = std::find(platforms.begin(), platforms.end(), *session.route.platform);
+        if (selected != platforms.end()) {
+            focus.set(LauncherPage::platforms, platforms.size(),
+                static_cast<std::size_t>(std::distance(platforms.begin(), selected)));
+        }
+    }
+    const auto count = card_count_for(session, releases);
+    focus.set(session.route.page, count, focus.current(session.route.page));
+}
+
+void LauncherInteractionController::move(const std::vector<ReleaseArchive>& releases, const int direction) {
+    const auto page = session.route.page;
+    focus.move(page, card_count_for(session, releases), direction);
+    if (page == LauncherPage::games) synchronize(releases);
+    if (page == LauncherPage::profiles) session.invalidate_custom();
+}
+
+void LauncherInteractionController::first(const std::vector<ReleaseArchive>& releases) {
+    const auto page = session.route.page;
+    focus.first(page, card_count_for(session, releases));
+    if (page == LauncherPage::games) synchronize(releases);
+    if (page == LauncherPage::profiles) session.invalidate_custom();
+}
+
+void LauncherInteractionController::last(const std::vector<ReleaseArchive>& releases) {
+    const auto page = session.route.page;
+    focus.last(page, card_count_for(session, releases));
+    if (page == LauncherPage::games) synchronize(releases);
+    if (page == LauncherPage::profiles) session.invalidate_custom();
+}
+
+void LauncherInteractionController::back(const std::vector<ReleaseArchive>& releases) {
+    session.back(releases);
+    synchronize(releases);
+}
+
+LauncherInteractionEffect LauncherInteractionController::activate(
+    const std::vector<ReleaseArchive>& releases) {
+    switch (session.route.page) {
+    case LauncherPage::games:
+        focus.reset_after_game_change();
+        synchronize(releases);
+        session.route.enter_platforms();
+        return LauncherInteractionEffect::none;
+    case LauncherPage::platforms: {
+        const auto platforms = supported_platforms(session.route.game);
+        if (platforms.empty()) {
+            session.route.page = LauncherPage::games;
+            return LauncherInteractionEffect::none;
+        }
+        focus.set(LauncherPage::platforms, platforms.size(), focus.platform);
+        if (!session.choose_platform(releases, platforms[focus.platform])) return LauncherInteractionEffect::none;
+        focus.reset_after_platform_change();
+        return LauncherInteractionEffect::none;
+    }
+    case LauncherPage::releases: {
+        if (!session.route.platform) return LauncherInteractionEffect::none;
+        const auto identities = available_release_identities(releases,
+            session.route.game, *session.route.platform);
+        if (identities.empty()) {
+            session.route.page = LauncherPage::platforms;
+            return LauncherInteractionEffect::none;
+        }
+        focus.set(LauncherPage::releases, identities.size(), focus.release);
+        static_cast<void>(session.choose_release(releases, identities[focus.release].sha256));
+        return LauncherInteractionEffect::none;
+    }
+    case LauncherPage::profiles:
+        focus.set(LauncherPage::profiles, launcher_profile_count, focus.profile);
+        if (focus.profile == 0) session.choose_original();
+        else if (focus.profile == 1) session.choose_modern();
+        else if (session.custom_profile_ready) return session.can_launch()
+            ? LauncherInteractionEffect::launch : LauncherInteractionEffect::none;
+        else {
+            session.begin_custom();
+            return LauncherInteractionEffect::open_custom_settings;
+        }
+        return session.can_launch() ? LauncherInteractionEffect::launch : LauncherInteractionEffect::none;
+    }
+    return LauncherInteractionEffect::none;
+}
+
+LauncherInteractionEffect LauncherInteractionController::activate_card(
+    const std::vector<ReleaseArchive>& releases, const std::size_t index) {
+    const auto page = session.route.page;
+    const auto count = card_count_for(session, releases);
+    if (index >= count) return LauncherInteractionEffect::none;
+    focus.set(page, count, index);
+    if (page == LauncherPage::games) synchronize(releases);
+    return activate(releases);
+}
+
+void LauncherInteractionController::reset_for_data(const Game initial_game) {
+    session.reset_for_data(initial_game);
+    focus.game = initial_game == Game::millennium ? 0 : 1;
+    focus.reset_after_game_change();
 }
 
 std::optional<Platform> select_available_platform(

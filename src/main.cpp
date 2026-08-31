@@ -3799,7 +3799,8 @@ int main(int argc, char** argv) {
     }
     // A CLI platform request is fixed.  The start menu can otherwise choose
     // among the hash-verified platform releases it has actually discovered.
-    eon::LauncherSessionState launcher_session;
+    eon::LauncherInteractionController launcher_interaction;
+    auto& launcher_session = launcher_interaction.session;
     auto& launcher_route = launcher_session.route;
     launcher_route.game = request.game.value_or(eon::Game::millennium);
     launcher_route.platform = request.platform;
@@ -4142,7 +4143,7 @@ int main(int argc, char** argv) {
     Screen screen = request.game ? Screen::launching : Screen::menu;
     auto& launcher_page = launcher_route.page;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
-    eon::LauncherCardFocus card_focus;
+    auto& card_focus = launcher_interaction.focus;
     auto& focused = card_focus.game;
     auto& focused_platform_card = card_focus.platform;
     auto& focused_release_card = card_focus.release;
@@ -4231,7 +4232,7 @@ int main(int argc, char** argv) {
         // A release-bound pack cannot follow a game selection.
         clear_modern_pack_admission();
         const auto previous_platform = active_platform;
-        launcher_session.focus_game(releases, cards[static_cast<std::size_t>(focused)].game);
+        launcher_interaction.synchronize(releases);
         if (active_platform != previous_platform) {
             discard_millennium_assets();
         }
@@ -4353,42 +4354,40 @@ int main(int argc, char** argv) {
         if (selected == eon::Game::millennium) start_millennium_title();
         if (selected == eon::Game::deuteros) start_deuteros();
     };
-    const auto choose_platform_card = [&](const std::size_t index) {
-        const auto platform_cards = platform_cards_for_game(
-            cards[static_cast<std::size_t>(focused)].game);
-        if (platform_cards.empty()) return false;
-        card_focus.set(eon::LauncherPage::platforms, platform_cards.size(), index);
-        const auto platform = platform_cards[static_cast<std::size_t>(focused_platform_card)].platform;
+    const auto activate_launcher_card = [&](const std::optional<std::size_t> card) {
         const auto previous_platform = active_platform;
-        if (!launcher_session.choose_platform(releases, platform)) return false;
-        clear_modern_pack_admission();
-        if (active_platform != previous_platform) discard_millennium_assets();
-        card_focus.reset_after_platform_change();
-        return true;
-    };
-    const auto choose_release_language_card = [&](const std::size_t index) {
-        const auto language_cards = release_language_cards();
-        if (index >= language_cards.size()) return false;
-        card_focus.set(eon::LauncherPage::releases, language_cards.size(), index);
-        if (!launcher_session.choose_release(releases,
-                language_cards[static_cast<std::size_t>(index)].sha256)) return false;
-        clear_modern_pack_admission();
-        discard_millennium_assets();
-        return true;
-    };
-    const auto choose_profile_card = [&](const ProfileChoice choice) {
-        if (choice == ProfileChoice::custom) {
-            // Custom is not a third runtime mode. It is the deliberate
-            // launcher route for tuning Modern's renderer-only options.
-            launcher_session.begin_custom();
-            request.presentation = launcher_session.presentation;
-            show_modern_graphics_settings = true;
-            return;
-        }
-        if (choice == ProfileChoice::original) launcher_session.choose_original();
-        else launcher_session.choose_modern();
+        const auto previous_release = active_release_sha256;
+        const auto effect = card
+            ? launcher_interaction.activate_card(releases, *card)
+            : launcher_interaction.activate(releases);
         request.presentation = launcher_session.presentation;
-        launch_menu_selection();
+        if (active_platform != previous_platform || active_release_sha256 != previous_release) {
+            clear_modern_pack_admission();
+            discard_millennium_assets();
+        }
+        if (effect == eon::LauncherInteractionEffect::open_custom_settings) {
+            // Custom is a deliberate renderer-only configuration route. It
+            // cannot become a third runtime identity or a launch shortcut.
+            show_modern_graphics_settings = true;
+        } else if (effect == eon::LauncherInteractionEffect::launch) {
+            launch_menu_selection();
+        }
+    };
+    const auto move_launcher_cards = [&](const int direction) {
+        const auto previous_platform = active_platform;
+        launcher_interaction.move(releases, direction);
+        if (active_platform != previous_platform) discard_millennium_assets();
+        if (launcher_page == eon::LauncherPage::games) {
+            if (!active_platform) card_focus.reset_after_game_change();
+            focus_active_platform_card();
+        }
+    };
+    const auto edge_launcher_cards = [&](const bool first) {
+        const auto previous_platform = active_platform;
+        if (first) launcher_interaction.first(releases);
+        else launcher_interaction.last(releases);
+        if (active_platform != previous_platform) discard_millennium_assets();
+        if (launcher_page == eon::LauncherPage::games) focus_active_platform_card();
     };
     const auto open_data_directory_dialog = [&] {
         if (screen != Screen::menu) return;
@@ -4413,8 +4412,7 @@ int main(int argc, char** argv) {
         } else if (launcher_page == LauncherPage::games) {
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 if (inside(cards[index].bounds, x, y)) {
-                    focus_menu_card(index);
-                    launcher_route.enter_platforms();
+                    activate_launcher_card(index);
                 }
             }
         } else if (launcher_page == LauncherPage::platforms) {
@@ -4422,21 +4420,18 @@ int main(int argc, char** argv) {
                 cards[static_cast<std::size_t>(focused)].game);
             for (std::size_t index = 0; index < platform_cards.size(); ++index) {
                 if (inside(platform_cards[index].bounds, x, y)) {
-                    choose_platform_card(index);
+                    activate_launcher_card(index);
                 }
             }
         } else if (launcher_page == LauncherPage::releases) {
             const auto language_cards = release_language_cards();
             for (std::size_t index = 0; index < language_cards.size(); ++index) {
-                if (inside(language_cards[index].bounds, x, y)
-                    && choose_release_language_card(index)) {}
+                if (inside(language_cards[index].bounds, x, y)) activate_launcher_card(index);
             }
         } else {
             for (std::size_t index = 0; index < profile_cards.size(); ++index) {
                 if (!inside(profile_cards[index].bounds, x, y)) continue;
-                card_focus.set(eon::LauncherPage::profiles, profile_cards.size(), index);
-                if (index == 2 && custom_profile_ready) launch_menu_selection();
-                else choose_profile_card(profile_cards[index].choice);
+                activate_launcher_card(index);
             }
         }
     };
@@ -4648,13 +4643,10 @@ int main(int argc, char** argv) {
                 request.data_directory_is_default = false;
                 scanner = std::make_unique<eon::ReleaseScanner>(request.data_directory);
                 releases.clear();
-                launcher_session.reset_for_data(cards[static_cast<std::size_t>(focused)].game);
+                launcher_interaction.reset_for_data(cards[static_cast<std::size_t>(focused)].game);
                 request.presentation = launcher_session.presentation;
                 clear_modern_pack_admission();
                 reset_runtime_for_data();
-                focused_platform_card = 0;
-                focused_release_card = 0;
-                focused_profile_card = 0;
                 show_scanner = true;
                 focus_menu_card(focused);
             } else {
@@ -4809,7 +4801,7 @@ int main(int argc, char** argv) {
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
-                    launcher_session.back(releases);
+                    launcher_interaction.back(releases);
                 }
                 else running = false;
                 // Escape is a single navigation action. Do not let this same
@@ -4824,7 +4816,7 @@ int main(int argc, char** argv) {
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
-                    launcher_session.back(releases);
+                    launcher_interaction.back(releases);
                 } else running = false;
                 // Keep Back equivalent to Escape and consume it before the
                 // game/menu controls can reinterpret the input.
@@ -4889,106 +4881,21 @@ int main(int argc, char** argv) {
                 }
                 const bool previous = event.key.key == SDLK_LEFT || event.key.key == SDLK_UP;
                 const bool next = event.key.key == SDLK_RIGHT || event.key.key == SDLK_DOWN;
-                if (event.key.key == SDLK_ESCAPE && launcher_page != LauncherPage::games) {
-                    launcher_session.back(releases);
-                } else if (launcher_page == LauncherPage::games) {
-                    if (previous || next) {
-                        card_focus.move(eon::LauncherPage::games, cards.size(), previous ? -1 : 1);
-                        focus_menu_card(focused);
-                    }
-                    else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        launcher_route.enter_platforms();
-                    }
-                } else if (launcher_page == LauncherPage::platforms) {
-                    const auto platform_cards = platform_cards_for_game(
-                        cards[static_cast<std::size_t>(focused)].game);
-                    if (platform_cards.empty()) {
-                        launcher_page = LauncherPage::games;
-                        continue;
-                    }
-                    if (previous || next) {
-                        card_focus.move(eon::LauncherPage::platforms, platform_cards.size(), previous ? -1 : 1);
-                    } else if (event.key.key == SDLK_HOME) {
-                        card_focus.first(eon::LauncherPage::platforms, platform_cards.size());
-                    } else if (event.key.key == SDLK_END) {
-                        card_focus.last(eon::LauncherPage::platforms, platform_cards.size());
-                    }
-                    else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        choose_platform_card(focused_platform_card);
-                    }
-                } else if (launcher_page == LauncherPage::releases) {
-                    const auto language_cards = release_language_cards();
-                    if (language_cards.empty()) {
-                        launcher_page = LauncherPage::platforms;
-                    } else if (previous || next) {
-                        card_focus.move(eon::LauncherPage::releases, language_cards.size(), previous ? -1 : 1);
-                    } else if (event.key.key == SDLK_HOME) {
-                        card_focus.first(eon::LauncherPage::releases, language_cards.size());
-                    }
-                    else if (event.key.key == SDLK_END) {
-                        card_focus.last(eon::LauncherPage::releases, language_cards.size());
-                    } else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        if (choose_release_language_card(focused_release_card)) {}
-                    }
-                } else {
-                    if (previous || next) {
-                        card_focus.move(eon::LauncherPage::profiles, profile_cards.size(), previous ? -1 : 1);
-                        launcher_session.invalidate_custom();
-                    } else if (event.key.key == SDLK_HOME) {
-                        card_focus.first(eon::LauncherPage::profiles, profile_cards.size());
-                    } else if (event.key.key == SDLK_END) {
-                        card_focus.last(eon::LauncherPage::profiles, profile_cards.size());
-                    }
-                    else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        if (focused_profile_card == 2 && custom_profile_ready) launch_menu_selection();
-                        else choose_profile_card(profile_cards[static_cast<std::size_t>(focused_profile_card)].choice);
-                    }
+                if (previous || next) move_launcher_cards(previous ? -1 : 1);
+                else if (event.key.key == SDLK_HOME) edge_launcher_cards(true);
+                else if (event.key.key == SDLK_END) edge_launcher_cards(false);
+                else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
+                    activate_launcher_card(std::nullopt);
                 }
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
                 const auto button = event.gbutton.button;
                 if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT || button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
-                    if (launcher_page == LauncherPage::games) {
-                        card_focus.move(eon::LauncherPage::games, cards.size(), -1);
-                        focus_menu_card(focused);
-                    }
-                    else if (launcher_page == LauncherPage::platforms) {
-                        const auto count = platform_cards_for_game(
-                            cards[static_cast<std::size_t>(focused)].game).size();
-                        card_focus.move(eon::LauncherPage::platforms, count, -1);
-                    }
-                    else if (launcher_page == LauncherPage::releases) {
-                        card_focus.move(eon::LauncherPage::releases, release_language_cards().size(), -1);
-                    }
-                    else {
-                        card_focus.move(eon::LauncherPage::profiles, profile_cards.size(), -1);
-                        launcher_session.invalidate_custom();
-                    }
+                    move_launcher_cards(-1);
                 } else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
-                    if (launcher_page == LauncherPage::games) {
-                        card_focus.move(eon::LauncherPage::games, cards.size(), 1);
-                        focus_menu_card(focused);
-                    }
-                    else if (launcher_page == LauncherPage::platforms) {
-                        const auto count = platform_cards_for_game(
-                            cards[static_cast<std::size_t>(focused)].game).size();
-                        card_focus.move(eon::LauncherPage::platforms, count, 1);
-                    }
-                    else if (launcher_page == LauncherPage::releases) {
-                        card_focus.move(eon::LauncherPage::releases, release_language_cards().size(), 1);
-                    }
-                    else {
-                        card_focus.move(eon::LauncherPage::profiles, profile_cards.size(), 1);
-                        launcher_session.invalidate_custom();
-                    }
+                    move_launcher_cards(1);
                 } else if (button == SDL_GAMEPAD_BUTTON_SOUTH || button == SDL_GAMEPAD_BUTTON_START) {
-                    if (launcher_page == LauncherPage::games) launcher_route.enter_platforms();
-                    else if (launcher_page == LauncherPage::platforms) {
-                        choose_platform_card(focused_platform_card);
-                    } else if (launcher_page == LauncherPage::releases) {
-                        if (choose_release_language_card(focused_release_card)) {}
-                    } else if (focused_profile_card == 2 && custom_profile_ready) launch_menu_selection();
-                    else choose_profile_card(profile_cards[static_cast<std::size_t>(focused_profile_card)].choice);
+                    activate_launcher_card(std::nullopt);
                 }
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN
