@@ -16,6 +16,18 @@ name only parser profiles and source leaves bound to that exact release and
 must retain an explicit unresolved boundary; coverage never upgrades unknown
 ABI behaviour to executable code.
 
+Run the repository-only cross-ledger check after changing a release manifest,
+recovery map, parity row, or static-span record:
+
+```sh
+python3 tools/verify_preservation_ledger.py
+```
+
+It validates the exact release universe, parser/recovery one-to-one mapping,
+parity vocabulary, same-release source provenance, and every disassembly
+segment's bounds. It reads only the four committed JSON ledgers; it does not
+open original media, generated reports, captures, or saves.
+
 ## Input identities
 
 | Game | Platform | Container SHA-256 | Principal code/media identity |
