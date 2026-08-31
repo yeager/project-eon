@@ -117,8 +117,8 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
     if fields.get("raw_pc") != "present":
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    raw_format = "v7" if version == "7" else "legacy"
-    if version == "7" and fields.get("raw_pc_format") != raw_format:
+    raw_format = "v7" if version in {"7", "8"} else "legacy"
+    if version in {"7", "8"} and fields.get("raw_pc_format") != raw_format:
         raise ValueError("raw_pc format does not match the v7 recorder contract")
     counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt", raw_format)
     expected_records = str(sum(counts.values()))
@@ -127,6 +127,18 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
     if (fields.get("raw_pc_records"), fields.get("raw_pc_site_counts")) != (
             expected_records, expected_sites):
         raise ValueError("raw_pc grammar/count receipt mismatch")
+
+
+def verify_deuteros_raw_pc_opcode_pairs(fields: dict[str, str], directory: Path) -> None:
+    """Recompute v8's opaque IR/memory-pair summary without inferring an ABI."""
+    tool = load_tool("run_deuteros_amiga_capture")
+    _, pairs = tool.parse_raw_pc_summary(directory / "raw-pc.txt", "v7")
+    expected = ",".join(
+        f"0x{site:08x}:" + "+".join(
+            f"{ir:04x}/{memory:04x}" for ir, memory in sorted(pairs[site]))
+        for site in tool.RAW_PC_SITES if site in pairs)
+    if fields.get("raw_pc_opcode_pairs") != expected:
+        raise ValueError("raw_pc opcode-pair receipt mismatch")
 
 
 def verify_deuteros_host_input_summary(fields: dict[str, str], directory: Path) -> None:
@@ -210,12 +222,14 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"3", "4", "5", "6", "7"}:
+        if version in {"3", "4", "5", "6", "7", "8"}:
             verify_deuteros_raw_pc_summary(fields, directory, version)
-        if version in {"5", "6"}:
+        if version in {"5", "6", "7", "8"}:
             verify_deuteros_host_input_summary(fields, directory)
-        if version in {"6", "7"}:
+        if version in {"6", "7", "8"}:
             verify_deuteros_timing_profile(fields, directory)
+        if version == "8" and fields.get("raw_pc") == "present":
+            verify_deuteros_raw_pc_opcode_pairs(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")

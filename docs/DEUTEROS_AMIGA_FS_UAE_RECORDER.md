@@ -142,7 +142,7 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-Current captures write `capture_receipt_version=7`. They bind both the complete
+Current captures write `capture_receipt_version=8`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
@@ -155,7 +155,10 @@ receipt as at most 256
 contiguous ASCII records in the reviewed `host-input` grammar and records its
 count. Receipt v7 additionally requires the separate `ir_opcode` and
 `memory_opcode` raw-PC fields; it rejects a legacy single-opcode line rather
-than silently reinterpreting it. The action and state integers remain opaque: this binds delivery-file
+than silently reinterpreting it. Receipt v8 recomputes a canonical per-site
+summary of the observed IR/memory word pairs from the raw-PC file. It does not
+assign those words an original-media, instruction, or ABI meaning. The action
+and state integers remain opaque: this binds delivery-file
 integrity, not a game input meaning or acceptance result. Receipt v2–v4 remain
 verifiable as earlier evidence, but they do not contain the newer fields.
 Verify a completed external capture without opening its game media with:
