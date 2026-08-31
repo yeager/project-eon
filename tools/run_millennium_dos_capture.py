@@ -34,6 +34,10 @@ RECORDER_PROTOCOLS = {
     # This separately built recorder retains the immediately preceding normal
     # core tuple at its own callback boundary. It is observational only.
     "v12-predecessor": ("12", "20a5ec331ca71e541d2f6d42c1ab49eca0fec5dabf298b6faf51fa45c63c24ed"),
+    # v13 correlates only observer ordinals: a visible SDL key event and the
+    # original title's next documented INT 21h/AH=06h poll. It neither reads
+    # the DOS result nor captures/derives a title frame, audio, or action.
+    "v13-title-poll": ("13", "07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b"),
 }
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
@@ -81,6 +85,9 @@ V12_PREDECESSOR_FAULT_LINE = re.compile(
     r"dx=0x[0-9a-f]{4} predecessor_valid=[01] predecessor_cs=0x[0-9a-f]{4} "
     r"predecessor_ip=0x[0-9a-f]{4} predecessor_code=0x[0-9a-f]{8} "
     r"predecessor_recognised_image=[01]\n")
+TITLE_INPUT_POLL_LINE = re.compile(
+    r"raw-result\t([1-9][0-9]*) ([1-9][0-9]*) title-input-poll "
+    r"image=titles\.exe pc=0x0d0a host_key_ordinal=([0-9]+) ah=0x06 dl=0xff\n")
 # The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
 # grammar authenticates the bounded external receipt shape only; it does not
 # claim DOS accepted a key or assign its original-game meaning.
@@ -342,15 +349,20 @@ def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
         raise CaptureError("results_raw has a truncated final record")
     labels: list[str] = []
     for expected, line in enumerate(text.splitlines(keepends=True), start=1):
-        match = (V12_PREDECESSOR_FAULT_LINE.fullmatch(line)
-                 if recorder_protocol == "v12-predecessor" and " fault=" in line
-                 else RAW_RESULT_LINE.fullmatch(line))
+        title_poll = (TITLE_INPUT_POLL_LINE.fullmatch(line)
+                      if recorder_protocol == "v13-title-poll" and " title-input-poll " in line
+                      else None)
+        match = title_poll or (V12_PREDECESSOR_FAULT_LINE.fullmatch(line)
+            if recorder_protocol == "v12-predecessor" and " fault=" in line
+            else RAW_RESULT_LINE.fullmatch(line))
         if not match:
             raise CaptureError("results_raw contains an invalid recorder record")
         if int(match.group(1)) != expected or int(match.group(2)) != expected:
             raise CaptureError("results_raw record counters are not contiguous")
         prefix = "raw-result\t" + str(expected) + " " + str(expected) + " "
-        if line.startswith(prefix + "fault="):
+        if title_poll:
+            label = "title-input-poll"
+        elif line.startswith(prefix + "fault="):
             label = "fault"
         elif line.startswith(prefix + "private-vector "):
             label = "private-vector"
@@ -364,6 +376,67 @@ def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
         if expected > MAX_RAW_RESULT_RECORDS:
             raise CaptureError("results_raw exceeds the recorder record cap")
     return labels
+
+
+def title_input_poll_ordinals(path: Path, recorder_protocol: str = "v11") -> list[int]:
+    """Read v13 chronology records without assigning a DOS input result.
+
+    Each ordinal names the count of host SDL key events observed before this
+    exact original INT 21h/AH=06h call. It is not an input-delivery receipt,
+    and its absence cannot be replaced by a synthesized poll or frame.
+    """
+    if recorder_protocol != "v13-title-poll":
+        return []
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("results_raw is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("results_raw has a truncated final record")
+    ordinals: list[int] = []
+    for line in text.splitlines(keepends=True):
+        match = TITLE_INPUT_POLL_LINE.fullmatch(line)
+        if not match:
+            continue
+        ordinal = int(match.group(3))
+        if ordinals and ordinal <= ordinals[-1]:
+            raise CaptureError("title-input poll host-key ordinals are not strictly increasing")
+        ordinals.append(ordinal)
+        if len(ordinals) > 32:
+            raise CaptureError("title-input poll observations exceed the recorder cap")
+    return ordinals
+
+
+def title_input_checkpoint_status(results_path: Path, input_receipt_path: Path,
+                                  recorder_protocol: str = "v11") -> str:
+    """Summarize v13's observable chronology without claiming delivery.
+
+    A host key followed by a title poll proves neither DOS carry/AL nor a
+    title action. The receipt calls it a correlation only, and rejects an
+    impossible recorder ordinal beyond the independently recorded host keys.
+    """
+    if recorder_protocol != "v13-title-poll":
+        return ""
+    polls = title_input_poll_ordinals(results_path, recorder_protocol)
+    try:
+        info = input_receipt_path.lstat()
+    except FileNotFoundError:
+        host_keys = 0
+        host_state = "absent"
+    else:
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+            raise CaptureError("host-input receipt is not a regular non-symlink file")
+        host_keys = parse_host_input_receipt(input_receipt_path) if info.st_size else 0
+        host_state = "present" if info.st_size else "empty"
+    if any(ordinal > host_keys for ordinal in polls):
+        raise CaptureError("title-input poll names a host-key ordinal absent from the receipt")
+    correlated = bool(polls and polls[-1] > 0)
+    state = "host-key-and-poll" if correlated else "poll-only" if polls else (
+        "host-key-only" if host_keys else "absent")
+    return (f"title_input_checkpoint={state}\n"
+            f"title_input_checkpoint_host_receipt={host_state}\n"
+            f"title_input_checkpoint_polls={len(polls)}\n"
+            f"title_input_checkpoint_last_host_key_ordinal={polls[-1] if polls else 0}\n")
 
 
 def parse_raw_results(path: Path, recorder_protocol: str = "v11") -> dict[str, int]:
@@ -418,8 +491,13 @@ def raw_result_status(path: Path, name: str, recorder_protocol: str = "v11") -> 
     counts = parse_raw_results(path, recorder_protocol)
     digest, size = sha256_file(path)
     summary = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
-    return (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
-            f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
+    status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+              f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
+    if recorder_protocol == "v13-title-poll":
+        polls = title_input_poll_ordinals(path, recorder_protocol)
+        status += (f"{name}_title_input_polls={len(polls)}\n"
+                   f"{name}_last_host_key_ordinal={polls[-1] if polls else 0}\n")
+    return status
 
 
 def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11") -> bool:
@@ -457,6 +535,12 @@ def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11
             return tuple(raw_result_labels(path, recorder_protocol)) == KNOWN_V10_EARLY_STOP_SEQUENCE
         except CaptureError:
             return False
+    if recorder_protocol == "v13-title-poll":
+        # The legacy callback-loop receipt remains a bounded diagnostic stop
+        # when no title poll was reached. Any poll-bearing run stays alive for
+        # the operator's configured duration so it cannot be mistaken for a
+        # completed input-to-frame capture.
+        return known_v11_early_stop_receipt(path)
     return False
 
 
@@ -602,6 +686,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         receipt_status = input_receipt_status(output / "host-input-receipt.raw")
         observation_status = (raw_observation_status(output / "events.raw", "events_raw", args.recorder_protocol)
                               + raw_observation_status(output / "results.raw", "results_raw", args.recorder_protocol))
+        title_checkpoint_status = title_input_checkpoint_status(output / "results.raw",
+            output / "host-input-receipt.raw", args.recorder_protocol)
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={receipt_version}\n"
                         f"recorder_protocol={args.recorder_protocol}\n"
@@ -611,7 +697,8 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("source_release", (after_hash, after_size))
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
-                        + receipt_status + observation_status + recorder_console_status(console_result[0]))
+                        + receipt_status + observation_status + title_checkpoint_status
+                        + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
                 "recorder console exceeded the 64 MiB safety cap; evidence was retained but is not admitted")

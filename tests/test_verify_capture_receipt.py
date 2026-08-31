@@ -29,6 +29,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "10"}), "10")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "11"}), "11")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "12"}), "12")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "13"}), "13")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
@@ -148,6 +149,8 @@ class ReceiptVerifierTests(unittest.TestCase):
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "9")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "10")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "11")
+        TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "12")
+        TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "13")
         TOOL.verify_console_admission({}, "3")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "4")
@@ -155,6 +158,28 @@ class ReceiptVerifierTests(unittest.TestCase):
             TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "5")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({}, "4")
+
+    def test_v13_recomputes_host_key_to_title_poll_chronology(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            results = root / "results.raw"
+            keys = root / "host-input-receipt.raw"
+            keys.write_text(
+                "host-key 1 ticks=2 state=down scancode=0x1 sym=0x2 mod=0x0\n"
+                "host-key 2 ticks=3 state=up scancode=0x1 sym=0x2 mod=0x0\n", encoding="ascii")
+            results.write_text(
+                "raw-result\t1 1 title-input-poll image=titles.exe pc=0x0d0a "
+                "host_key_ordinal=2 ah=0x06 dl=0xff\n", encoding="ascii")
+            capture = TOOL.load_tool("run_millennium_dos_capture")
+            fields = dict(line.split("=", 1) for line in
+                capture.title_input_checkpoint_status(results, keys, "v13-title-poll").splitlines())
+            fields.update(dict(line.split("=", 1) for line in
+                capture.raw_result_status(results, "results_raw", "v13-title-poll").splitlines()
+                if line.startswith("results_raw_title_input") or line.startswith("results_raw_last_host")))
+            TOOL.verify_millennium_title_input_checkpoint(fields, root)
+            fields["title_input_checkpoint"] = "accepted"
+            with self.assertRaisesRegex(ValueError, "checkpoint receipt mismatch"):
+                TOOL.verify_millennium_title_input_checkpoint(fields, root)
 
     def test_v6_millennium_machine_profile_matches_generated_configuration(self) -> None:
         with temporary_directory() as directory:

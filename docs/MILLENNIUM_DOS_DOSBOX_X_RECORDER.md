@@ -61,6 +61,20 @@ observer has written its bounded evidence; it never handles the interrupt or
 changes guest execution. The resulting receipt is diagnostics-only until a
 complete genuine title/input/frame capture is available.
 
+The next reviewed external build is the v13 title-poll observer, SHA-256
+`07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b`.
+It adds an atomic recorder-local ordinal whenever the existing SDL receipt
+observer sees a physical key press or release. At the exact original
+`TITLES.EXE:$0d0a` `INT 21h/AH=06h, DL=$ff` site it emits at most one raw
+`title-input-poll` record for the baseline and for each new host ordinal (32
+records maximum). The record contains only that prior host ordinal and the
+unchanged pre-interrupt AH/DL values. It does not read the DOS return, carry,
+AL, keyboard buffer, title state, video surface, or audio stream; it neither
+injects a key nor calls mapper/keyboard APIs. Project Eon's v13 receipt
+rejects a poll ordinal that is absent from the separate host receipt and labels
+a valid ordering **host-key-and-poll**, deliberately not “delivered” or
+“accepted”. No physical v13 capture has yet been admitted.
+
 One additional experimental CPU-only probe is private to the capture cache: it
 opens a distinct `O_CREAT|O_EXCL` result file only when explicitly configured
 and reads `AX` at the first post-interrupt instruction for `MILL.COM:$020e`
@@ -189,6 +203,14 @@ This receipt is an independent host-input timeline, not a DOS input result.
 A future capture must bind its press/release pair to the recorder's
 `TITLES.EXE:0x0d0a` poll and resulting frame/state evidence before Project Eon
 can claim the original title accepted an action.
+
+The v13 observer adds the bounded chronology link only: it snapshots the
+number of prior SDL receipt records at that original poll and uses a relaxed
+atomic counter because the GUI and normal CPU paths need not share a scheduler
+thread. It never asserts a happens-before relationship with guest keyboard
+delivery. A frame, palette, audio, result-register, or `EXEC` checkpoint still
+requires a separately reviewed observer and two physical write-protected
+captures before any trace grammar or runtime adapter may use it.
 
 ## Review and admission
 

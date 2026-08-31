@@ -152,6 +152,38 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.raw_observation_status(path, "events_raw")
 
+    def test_v13_title_poll_binds_only_a_prior_host_receipt_ordinal(self) -> None:
+        """A poll chronology is not promoted to a DOS key result or title action."""
+        with temporary_directory() as directory:
+            root = Path(directory)
+            results = root / "results.raw"
+            keys = root / "host-input-receipt.raw"
+            keys.write_bytes(
+                b"host-key 1 ticks=2 state=down scancode=0x1 sym=0x2 mod=0x0\n"
+                b"host-key 2 ticks=3 state=up scancode=0x1 sym=0x2 mod=0x0\n")
+            results.write_bytes(
+                b"raw-result\t1 1 title-input-poll image=titles.exe pc=0x0d0a "
+                b"host_key_ordinal=2 ah=0x06 dl=0xff\n")
+            self.assertEqual(TOOL.title_input_poll_ordinals(results, "v13-title-poll"), [2])
+            status = TOOL.raw_result_status(results, "results_raw", "v13-title-poll")
+            self.assertIn("results_raw_title_input_polls=1\n", status)
+            self.assertIn("results_raw_last_host_key_ordinal=2\n", status)
+            checkpoint = TOOL.title_input_checkpoint_status(results, keys, "v13-title-poll")
+            self.assertIn("title_input_checkpoint=host-key-and-poll\n", checkpoint)
+            self.assertNotIn("accepted", checkpoint)
+            results.write_bytes(
+                b"raw-result\t1 1 title-input-poll image=titles.exe pc=0x0d0a "
+                b"host_key_ordinal=3 ah=0x06 dl=0xff\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "absent from the receipt"):
+                TOOL.title_input_checkpoint_status(results, keys, "v13-title-poll")
+            results.write_bytes(
+                b"raw-result\t1 1 title-input-poll image=titles.exe pc=0x0d0a "
+                b"host_key_ordinal=2 ah=0x06 dl=0xff\n"
+                b"raw-result\t2 2 title-input-poll image=titles.exe pc=0x0d0a "
+                b"host_key_ordinal=2 ah=0x06 dl=0xff\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "strictly increasing"):
+                TOOL.title_input_poll_ordinals(results, "v13-title-poll")
+
     def test_known_unhandled_interrupt_requires_complete_v11_raw_receipt(self) -> None:
         with temporary_directory() as directory:
             results = Path(directory) / "results.raw"

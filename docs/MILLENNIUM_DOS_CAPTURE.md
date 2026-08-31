@@ -272,6 +272,25 @@ still provide a physical host-key receipt and a trace schema that binds a real
 poll/result/frame sequence; Eon does not retry the prior AUTOTYPE timings as a
 substitute.
 
+### V13 physical key-to-poll chronology (prepared, no capture admitted)
+
+The external v13 DOSBox-X build is hash-bound as
+`07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b` and is
+selectable only as `--recorder-protocol v13-title-poll`. It preserves the
+existing visible-window requirement and produces no input receipt until a
+physical SDL key event reaches the emulator. For each new observed key ordinal,
+it can retain one bounded raw observation at the original
+`TITLES.EXE:$0d0a` `INT 21h/AH=06h` poll. The receipt independently verifies
+that the poll's claimed ordinal exists in the host-key file. This proves only
+the recorder's ordering of two observations; it is not evidence of key
+delivery to DOS, AL/carry output, accepted menu input, frame, palette, audio,
+`EXEC`, private return, title state, or playable gameplay.
+
+No physical v13 run is recorded in this repository. A future operator must
+retain two write-protected captures with the full external receipt, then add
+separately reviewed display/audio observation evidence before proposing any
+reference-trace or runtime admission.
+
 ### Wrap-compatibility probe (not input evidence)
 
 A fresh 15-second input-free probe used that explicit configuration against the
