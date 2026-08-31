@@ -3611,10 +3611,13 @@ DOS return nor `2200AD.EXE` startup. No host action invokes a handler, mutates
 documented but are not host-bound until their input production and state
 prerequisites are recovered.
 
-Project Eon's **host** F10 opens a Modern SDL graphics popup with smooth
-scaling, scanline, and renderer-frame toggles. It is explicitly consumed before
-the title availability poll and is not an original F10 action: it changes only
-host rendering and never original pixels, game logic, runtime state, or saves.
+Project Eon's **host** F10 is explicitly consumed before the title availability
+poll and is not an original F10 action. In Original it exposes only output
+resolution and aspect ratio; these centre and scale the same recovered frame
+without changing source pixels, game logic, runtime state, timing, or saves.
+Modern additionally exposes smooth scaling, scanline, renderer-frame and other
+explicit renderer-only toggles. Neither panel maps F10 into the original
+action-dispatch range.
 
 `MillenniumDosGameSession` can now retain a non-owning view of the authenticated
 English `2200AD.EXE` specifically for offline/runtime-trace observation of the

@@ -159,18 +159,22 @@ the same verified physical input signal as Space/Enter; it is not mapped to any
 invented title or gameplay action.
 
 The profile card fixes Original or Modern before a game starts; F1 deliberately
-does not switch an active session. F10 opens Modern graphics settings only for
-a Modern or Custom launch; Up/Down and Left/Right (or the gamepad D-pad)
-select and change its renderer-only options, while Escape or gamepad Back
-closes the panel. On touch devices, tap an option row to cycle it or tap
-outside the dialog to close it; this uses the same renderer-space coordinates
-as the card menu and stays modal. Resolution presets control the SDL window only. Aspect-ratio
-presets are Original 4:3 (the default), Square Pixels 8:5, and Widescreen
-16:9. The renderer fits and centres its viewport within the available region;
-it never crops a recovered frame or independently stretches width and height.
-Frame pacing defaults to display VSync; Custom can instead cap SDL presentation
-at 120 FPS or present uncapped. These choices never change a recovered game
-tick, input poll, original pixel or save byte.
+does not switch an active session. F10 always opens Project Eon's input-modal
+renderer panel and never becomes original-game input. In Original it exposes
+only output resolution and aspect ratio. In Modern or Custom it additionally
+offers renderer presets, scaling, scanlines, frame, pacing, external Modern
+art selection, and read-only diagnostics. Up/Down and Left/Right (or the
+gamepad D-pad) select and change the visible renderer-only options, while
+Escape or gamepad Back closes the panel. On touch devices, tap an option row
+to cycle it or tap outside the dialog to close it; this uses the same
+renderer-space coordinates as the card menu and stays modal. Resolution presets
+control the SDL window only. Aspect-ratio presets are Original 4:3 (the
+default), Square Pixels 8:5, and Widescreen 16:9. The renderer fits and
+centres its viewport within the available region; it never crops a recovered
+frame or independently stretches width and height. Frame pacing defaults to
+display VSync; Modern/Custom can instead cap SDL presentation at 120 FPS or
+present uncapped. These choices never change a recovered game tick, input
+poll, original pixel or save byte.
 The panel is input-modal: it consumes all other keyboard and gamepad controls,
 so no launcher command or recovered original-game signal can be sent behind
 it. These controls never become original-game input mappings.
