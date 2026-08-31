@@ -4271,7 +4271,7 @@ child return, or run either target's unrecovered ABI.
 The three exact Spanish FAT12 programs (`IBM.COM`, `TITLES.EXE`, and
 `2200AD.EXE`) now have a joint byte-complete linear candidate report. Its
 external report SHA-256 is
-`c669eae3731eefdeec7d4872e320f09208746ffba3666657dc2c5f3c1b8ab257` (29,510
+`9d9834ecf9acc62877e4d757d1c0ba1b87d9045fa7f918238f7d8d00171bfd61` (29,513
 lines). Each entry uses the COM-style `$0100` candidate origin, but the report
 does not choose DOS/private/BIOS return values, child status, code/data
 classification, input semantics, or a game state.
