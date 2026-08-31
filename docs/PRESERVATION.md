@@ -498,8 +498,12 @@ has been admitted.
 
 `--inspect-json` exports every safe field from those admitted declarations:
 the recovery-boundary CPU and documentation anchor, and the function-map
-documentation anchor, in addition to their identities, source/runtime
-addresses, evidence level, status and uncertainty. It deliberately omits
+documentation anchor and `address_space`, in addition to their identities,
+source/runtime addresses, evidence level, status and uncertainty. A function
+map address defaults to `runtime`; the explicit
+`image-relative-unrelocated` value means the original image offset is known
+but GEMDOS relocation/load base is not. The latter is never displayed or
+treated as a guest program counter. It deliberately omits
 local source paths, captured events and original bytes.
 
 Every bounded parser profile in the release manifest has exactly one map row.
