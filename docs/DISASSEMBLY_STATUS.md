@@ -118,6 +118,13 @@ never be read as a runtime address map. Millennium Amiga's opaque transformed
 raw stage remains intentionally outside this table until a loader result
 establishes its runtime image and entry relationship.
 
+On 2026-08-31, `tools/verify_disassembly_reports.py` accepted the complete
+current set: 14 static spans represented by seven external reports. The check
+used explicit external paths, so it neither copied reports into this checkout
+nor required them to share one directory. This verifies report identity only;
+it does not change any entry, reachability, code/data, ABI, or gameplay
+boundary recorded above.
+
 ## Variant separation
 
 The following identities are recognised forensic inputs, not interchangeable
