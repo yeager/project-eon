@@ -416,7 +416,7 @@ identity. This applies equally to Atari ST media; the launcher never
 substitutes an Amiga or DOS release or chooses by scan order.
 Release cards reuse only the selected generated platform-card illustration
 with a readable Eon overlay; they contain no original pixels or archive data.
-Every verified card also states its explicit recovery coverage: **Recovered
+Every verified card also states its release-specific recovery coverage: **Recovered
 startup**, **Recovered opening**, or **Bootstrap only**. These labels select
 their exact original media but never claim unrecovered GEMDOS, XBIOS, callback,
 title, or gameplay parity as a completed game start.

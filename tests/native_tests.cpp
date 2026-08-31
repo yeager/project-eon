@@ -1584,6 +1584,9 @@ int main() {
         assert(eon::name(eon::PlatformCoverage::recovered_startup) == "RECOVERED STARTUP");
         assert(eon::name(eon::PlatformCoverage::recovered_opening) == "RECOVERED OPENING");
         assert(eon::name(eon::PlatformCoverage::bootstrap_only) == "BOOTSTRAP ONLY");
+        const eon::ReleaseArchive spanish_dos{eon::Game::millennium, eon::Platform::dos, "es",
+            "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", {}};
+        assert(eon::platform_coverage(spanish_dos) == eon::PlatformCoverage::bootstrap_only);
         const auto deuteros_supported = eon::supported_platforms(eon::Game::deuteros);
         assert((deuteros_supported
             == std::vector<eon::Platform>{eon::Platform::amiga, eon::Platform::atari_st}));
@@ -2360,7 +2363,7 @@ int main() {
         assert(diagnostics.platform == release.platform);
         assert(diagnostics.language == release.language);
         assert(diagnostics.release_sha256 == release.sha256);
-        assert(diagnostics.coverage == eon::platform_coverage(release.game, release.platform));
+        assert(diagnostics.coverage == eon::platform_coverage(release));
         assert(diagnostics.trace_admission == "not-loaded");
         assert(diagnostics.recovery_boundaries.size()
             == eon::recovery_map_for_release(release.sha256).size());
