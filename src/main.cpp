@@ -46,6 +46,7 @@
 #include "data/startup_boundary.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
+#include "display_geometry.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_dialog.h>
@@ -676,16 +677,11 @@ void report_verified_release_inventory(const eon::ReleaseArchive& release) {
 SDL_FRect aspect_viewport(const float x, const float y, const float maximum_width,
     const float maximum_height, const ModernGraphicsSettings& settings) {
     const auto ratio = display_aspect_ratios.at(settings.aspect_ratio_index);
-    float width = maximum_width;
-    float height = width / ratio;
-    if (height > maximum_height) {
-        height = maximum_height;
-        width = height * ratio;
-    }
-    // Center inside the allocated presentation region.  This makes a wider
-    // or narrower chosen ratio deliberate and legible, never a clipped crop.
-    return {x + (maximum_width - width) / 2.0F, y + (maximum_height - height) / 2.0F,
-        width, height};
+    const auto viewport = eon::fit_display_aspect_viewport(
+        x, y, maximum_width, maximum_height, ratio);
+    // Center inside the allocated presentation region. This makes a wider or
+    // narrower chosen ratio deliberate and legible, never a clipped crop.
+    return {viewport.x, viewport.y, viewport.width, viewport.height};
 }
 
 // Keep this overlay's translation boundary explicit. draw_text() also has a

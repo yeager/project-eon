@@ -23,8 +23,10 @@ original texture bytes. Cinematic and High contrast are visual presentation
 looks, not accessibility claims or alterations to original pixels.
 
 Output resolution, aspect ratio and frame pacing also remain renderer controls.
-The viewport is centered into the selected ratio, avoiding unintended
-independent width and height stretching. Pacing offers display VSync (the
+The viewport is fitted and centered into the selected ratio, never cropped or
+independently stretched. The shared geometry contract rejects non-finite or
+non-positive bounds and ratios rather than passing malformed viewport values
+to SDL; native tests cover the 4:3 and 16:9 F10 preview fits. Pacing offers display VSync (the
 default), a precise 120-FPS presentation cap, or uncapped presentation. The
 cap delays only SDL presentation after a frame has been rendered; it never
 changes a recovered scheduler, original input poll, save byte, or game tick.
