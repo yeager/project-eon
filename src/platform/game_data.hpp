@@ -94,6 +94,7 @@ struct ReleaseScanSnapshot {
     std::size_t candidate_count = 0;
     std::size_t scanned_count = 0;
     std::size_t unique_release_count = 0;
+    std::size_t unique_unbound_direct_media_count = 0;
     ReleaseScanReport report;
 };
 

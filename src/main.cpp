@@ -740,7 +740,9 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
     std::cout << ",\"discovering\":" << (scan_snapshot.discovering ? "true" : "false")
         << ",\"complete\":" << (scan_snapshot.complete ? "true" : "false")
         << ",\"scanned_candidates\":" << scan_snapshot.scanned_count
-        << ",\"unique_releases\":" << scan_snapshot.unique_release_count;
+        << ",\"unique_releases\":" << scan_snapshot.unique_release_count
+        << ",\"unique_unbound_direct_media\":"
+        << scan_snapshot.unique_unbound_direct_media_count;
     std::cout << ",\"candidates\":" << scan_snapshot.candidate_count
         << ",\"size_rejected_candidates\":" << scan.size_rejected_candidates
         << ",\"manifest_size_matches\":" << scan.size_candidates
