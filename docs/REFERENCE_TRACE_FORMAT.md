@@ -126,6 +126,7 @@ similar platform's evidence.
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-shared-resident` |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
 | `deuteros-amiga-en-main-copy-loop-v3` | `deuteros-amiga-main-stage` |
+| `deuteros-amiga-en-title-bridge-v3` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
 | `deuteros-amiga-en-title-display-v4` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
 | `deuteros-amiga-en-title-display-artifacts-v5` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
 
