@@ -49,11 +49,13 @@ MillenniumDosFirstSpecialActionPrefix MillenniumDosGameSession::observe_first_sp
     if (game_executable_.empty()) {
         throw std::runtime_error("Millennium DOS special-action observation needs original executable");
     }
+    if (observation.address != 0x07f9) {
+        throw std::runtime_error("Millennium DOS first special-action observation has an unsupported runtime address");
+    }
     clear_last_observation();
     const auto trace = evaluate_millennium_dos_first_special_action_prefix(
         game_executable_, observation.value);
-    if (trace.action != flow_.special_action_0 || trace.runtime_byte_address != 0x07f9
-        || observation.address != trace.runtime_byte_address) {
+    if (trace.action != flow_.special_action_0 || trace.runtime_byte_address != observation.address) {
         throw std::runtime_error("Unsupported Millennium DOS first special-action profile");
     }
     last_special_action_ = trace.action;
@@ -74,11 +76,13 @@ MillenniumDosSecondSpecialActionPrefix MillenniumDosGameSession::observe_second_
     if (game_executable_.empty()) {
         throw std::runtime_error("Millennium DOS special-action observation needs original executable");
     }
+    if (observation.address != 0xda3a) {
+        throw std::runtime_error("Millennium DOS second special-action observation has an unsupported runtime address");
+    }
     clear_last_observation();
     const auto trace = evaluate_millennium_dos_second_special_action_prefix(
         game_executable_, observation.value);
-    if (trace.action != flow_.special_action_1 || trace.runtime_byte_address != 0xda3a
-        || observation.address != trace.runtime_byte_address) {
+    if (trace.action != flow_.special_action_1 || trace.runtime_byte_address != observation.address) {
         throw std::runtime_error("Unsupported Millennium DOS second special-action profile");
     }
     last_special_action_ = trace.action;
