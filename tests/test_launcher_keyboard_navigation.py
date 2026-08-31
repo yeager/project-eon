@@ -132,7 +132,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(reset, source_change)
         reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
         for clearing in (
-            "active_launch.reset();",
+            "runtime_coordinator.reset();",
             "stop_millennium_title();",
             "millennium_game_session.reset();",
             "discard_millennium_assets();",
