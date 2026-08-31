@@ -165,6 +165,19 @@ This confirms the new receipt schema and the existing bootstrap observation
 only; it does not prove title execution, instruction provenance, display,
 input, audio, ABI, or gameplay behaviour.
 
+A further 15-second, input-free `realtime` repetition on 2026-08-31 was
+accepted independently by `verify_capture_receipt.py` as receipt v8. Its
+fresh generated configuration had SHA-256
+`c4a6161fa0c9d9abcbc188c918d8458c905284748f890204c81082cca262e825`
+(1,069 bytes); the recognised outer release, Kickstart archive, and reviewed
+recorder retained their required identities before and after the run. The
+raw-PC observation was again byte-identical (`22855e20e766df330ee7caf59d37525d5a69fd74d8663b3a1e3d0316a314c16e`,
+34,196 bytes), with 128 records at each of `$1fe84` and `$1fe96`, the same
+opaque `7202/7202` and `7208/7208` IR/memory pairs, no host-input receipt,
+and an empty recorder console. This is repeatability evidence for the bounded
+read-only recorder route only. It still does not establish title execution,
+instruction provenance, display, input acceptance, audio, ABI, or gameplay.
+
 ## Direct title-stage observations
 
 The built-in UAE debugger stopped at the title-stage display-initialisation
