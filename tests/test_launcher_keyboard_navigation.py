@@ -125,6 +125,36 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("scanner = std::make_unique<eon::ReleaseScanner>", SOURCE)
         self.assertIn("ReleaseScanner advances later in", SOURCE)
 
+    def test_replacing_data_source_invalidates_every_release_bound_runtime(self) -> None:
+        # A new scanner cannot inherit a resolved archive, decoded frames, VM
+        # state, queued audio, or a Modern sequence from its predecessor.
+        reset = SOURCE.index("const auto reset_runtime_for_data")
+        source_change = SOURCE.index("if (selected_data_directory && screen == Screen::menu)")
+        self.assertLess(reset, source_change)
+        reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
+        for clearing in (
+            "active_launch.reset();",
+            "stop_millennium_title();",
+            "millennium_game_session.reset();",
+            "discard_millennium_assets();",
+            "reset_deuteros_runtime();",
+        ):
+            with self.subTest(clearing=clearing):
+                self.assertIn(clearing, reset_body)
+        deuteros_reset = SOURCE.index("const auto reset_deuteros_runtime")
+        deuteros_body = SOURCE[deuteros_reset:reset]
+        for clearing in (
+            "SDL_ClearAudioStream(deuteros_audio_stream)",
+            "deuteros_opening.reset();",
+            "deuteros_atari_session.reset();",
+            "deuteros_title_resource.reset();",
+            "discard_deuteros_external_modern_sequence();",
+        ):
+            with self.subTest(clearing=clearing):
+                self.assertIn(clearing, deuteros_body)
+        switch_body = SOURCE[source_change:SOURCE.index("} else {", source_change)]
+        self.assertIn("reset_runtime_for_data();", switch_body)
+
     def test_profiles_have_two_runtime_modes_and_a_custom_tuning_route(self) -> None:
         self.assertIn("enum class ProfileChoice { original, modern, custom }", SOURCE)
         self.assertIn("Custom is not a third runtime mode", SOURCE)

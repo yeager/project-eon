@@ -4248,6 +4248,41 @@ int main(int argc, char** argv) {
         millennium_sound_selection_session.reset();
         millennium_title_session.reset();
     };
+    const auto reset_deuteros_runtime = [&] {
+        // A replacement scanner has no authority to retain decoded frames,
+        // VM state, queued audio, or an external Modern sequence from the
+        // preceding user-supplied release.  Keep the SDL audio device itself
+        // open, but flush it before discarding the source-bound mixer.
+        clear_deuteros_opening_input();
+        if (deuteros_audio_stream) {
+            static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
+        }
+        deuteros_paula.reset();
+        deuteros_opening.reset();
+        deuteros_atari_session.reset();
+        deuteros_title_resource.reset();
+        deuteros_preview_rgba.reset();
+        deuteros_preview_source_tick.reset();
+        deuteros_modern_preview_attempted_tick.reset();
+        deuteros_modern_preview_source_tick.reset();
+        if (preview_texture) SDL_DestroyTexture(preview_texture);
+        if (modern_preview_texture) SDL_DestroyTexture(modern_preview_texture);
+        preview_texture = nullptr;
+        modern_preview_texture = nullptr;
+        discard_deuteros_external_modern_sequence();
+        deuteros_last_tick = SDL_GetTicks();
+    };
+    const auto reset_runtime_for_data = [&] {
+        // Changing the source is a hard preservation boundary.  Nothing
+        // derived from the former exact archive may remain addressable while
+        // the next bounded scan is still incomplete.
+        active_launch.reset();
+        stop_millennium_title();
+        millennium_game_session.reset();
+        millennium_state_page = 0;
+        discard_millennium_assets();
+        reset_deuteros_runtime();
+    };
     const auto start_millennium_title = [&] {
         // A title session is intentionally one-shot after its observed
         // character-availability hand-off. Returning from the launcher or
@@ -4290,8 +4325,7 @@ int main(int argc, char** argv) {
     };
     const auto start_deuteros = [&] {
         stop_millennium_title();
-        clear_deuteros_opening_input();
-        discard_deuteros_external_modern_sequence();
+        reset_deuteros_runtime();
         const auto release = resolve_active_release(eon::Game::deuteros);
         if (!release) return;
         deuteros_atari_session = load_deuteros_atari_bootstrap(*release);
@@ -4614,16 +4648,13 @@ int main(int argc, char** argv) {
                 request.data_directory_is_default = false;
                 scanner = std::make_unique<eon::ReleaseScanner>(request.data_directory);
                 releases.clear();
-                active_platform.reset();
-                active_release_language.reset();
-                active_release_sha256.reset();
+                launcher_session.reset_for_data(cards[static_cast<std::size_t>(focused)].game);
+                request.presentation = launcher_session.presentation;
                 clear_modern_pack_admission();
-                discard_millennium_assets();
+                reset_runtime_for_data();
                 focused_platform_card = 0;
                 focused_release_card = 0;
                 focused_profile_card = 0;
-                launcher_session.invalidate_custom();
-                launcher_page = LauncherPage::games;
                 show_scanner = true;
                 focus_menu_card(focused);
             } else {
