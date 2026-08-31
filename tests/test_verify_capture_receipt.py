@@ -150,19 +150,21 @@ class ReceiptVerifierTests(unittest.TestCase):
         with temporary_directory() as directory:
             root = Path(directory)
             (root / "results.raw").write_text(
-                "raw-result\t1 1 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
+                "raw-result\t1 1 image=mill.com pc=0x020e source-int=0x21 source-ax=0x2591 ax=0x2591\n"
+                "raw-result\t2 2 image=mill.com pc=0x0213 source-call=0x0511 ax=0x0000\n"
+                "raw-result\t3 3 private-vector image=titles.exe pc=0x0127 int=0x91 vector_ip=0x0000 vector_cs=0x087e\n"
+                "raw-result\t4 4 private-handler-entry int=0x91 cs=0x087e ip=0x0000\n"
+                "raw-result\t5 5 private-handler-return int=0x91 caller=titles.exe pc=0x0129 ax=0x0101 flags=0x7202\n"
+                "raw-result\t6 6 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0101\n"
+                "raw-result\t7 7 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0000\n"
+                "raw-result\t8 8 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
                 "ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n",
                 encoding="ascii")
             TOOL.verify_millennium_termination(
                 {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
                  "results_raw": "present"}, root)
-            (root / "results.raw").write_text(
-                "raw-result\t1 1 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
-                "ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n"
-                "raw-result\t2 2 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
-                "ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n",
-                encoding="ascii")
-            with self.assertRaisesRegex(ValueError, "exactly one"):
+            (root / "results.raw").write_text("raw-result\t1 1 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n", encoding="ascii")
+            with self.assertRaisesRegex(ValueError, "exact v10"):
                 TOOL.verify_millennium_termination(
                     {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
                      "results_raw": "present"}, root)

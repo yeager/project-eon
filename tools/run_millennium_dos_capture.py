@@ -314,15 +314,15 @@ def raw_observation_status(path: Path, name: str) -> str:
     return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
 
 
-def parse_raw_results(path: Path) -> dict[str, int]:
-    """Validate only the recorder's known diagnostics-only result grammar."""
+def raw_result_labels(path: Path) -> list[str]:
+    """Parse finite recorder diagnostics into non-semantic shape labels."""
     try:
         text = path.read_text(encoding="ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("results_raw is not ASCII recorder output") from error
     if not text.endswith("\n"):
         raise CaptureError("results_raw has a truncated final record")
-    counts: dict[str, int] = {}
+    labels: list[str] = []
     for expected, line in enumerate(text.splitlines(keepends=True), start=1):
         match = RAW_RESULT_LINE.fullmatch(line)
         if not match:
@@ -340,10 +340,32 @@ def parse_raw_results(path: Path) -> dict[str, int]:
             label = "private-handler-return"
         else:
             label = f"{match.group(3)}:{match.group(4)}"
-        counts[label] = counts.get(label, 0) + 1
+        labels.append(label)
         if expected > MAX_RAW_RESULT_RECORDS:
             raise CaptureError("results_raw exceeds the recorder record cap")
+    return labels
+
+
+def parse_raw_results(path: Path) -> dict[str, int]:
+    """Validate only the recorder's known diagnostics-only result grammar."""
+    counts: dict[str, int] = {}
+    for label in raw_result_labels(path):
+        counts[label] = counts.get(label, 0) + 1
     return counts
+
+
+KNOWN_V10_EARLY_STOP_SEQUENCE = (
+    "mill.com:020e", "mill.com:0213", "private-vector", "private-handler-entry",
+    "private-handler-return", "titles.exe:0129", "titles.exe:0129", "fault",
+)
+
+
+def known_v10_early_stop_sequence(path: Path) -> bool:
+    """Check v10's observed diagnostic order without assigning it an ABI."""
+    try:
+        return tuple(raw_result_labels(path)) == KNOWN_V10_EARLY_STOP_SEQUENCE
+    except CaptureError:
+        return False
 
 
 def raw_result_status(path: Path, name: str) -> str:
@@ -378,14 +400,7 @@ def known_unhandled_interrupt_observed(path: Path) -> bool:
     # treat an unfinished line as an observation, and never modify that file.
     if not text.endswith("\n"):
         return False
-    try:
-        # The host-side early stop is justified only by the recorder's one
-        # bounded INT 6 observation.  A different or repeated fault shape is
-        # not interchangeable evidence and must remain under the normal
-        # duration/safety-cap handling rather than acquiring this reason.
-        return parse_raw_results(path).get("fault") == 1
-    except CaptureError:
-        return False
+    return known_v10_early_stop_sequence(path)
 
 
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:

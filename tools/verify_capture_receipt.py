@@ -173,9 +173,8 @@ def verify_millennium_termination(fields: dict[str, str], directory: Path) -> No
     if reason == "known-unhandled-interrupt":
         if fields.get("results_raw") != "present":
             raise ValueError("Millennium early stop requires a retained raw result log")
-        counts = tool.parse_raw_results(directory / "results.raw")
-        if counts.get("fault") != 1:
-            raise ValueError("Millennium early stop requires exactly one raw unhandled-interrupt observation")
+        if not tool.known_v10_early_stop_sequence(directory / "results.raw"):
+            raise ValueError("Millennium early stop requires the exact v10 raw diagnostic sequence")
 
 
 def verify(kind: str, directory: Path) -> None:
