@@ -277,8 +277,6 @@ struct ProfileCard {
     SDL_Texture* texture = nullptr;
 };
 
-using PreviewAnimation = eon::MillenniumDosPreviewAnimation;
-
 // Modern options are renderer state only. They are deliberately independent
 // from original input, media, simulation state and save bytes.
 enum class ModernGraphicsPreset { clean, crt, cinematic, high_contrast, custom };
@@ -467,8 +465,6 @@ std::size_t output_resolution_index_for(const eon::DisplayPreferences& display) 
     }
     throw std::runtime_error("Unsupported validated display resolution");
 }
-
-using MillenniumDosLaunchAssets = eon::MillenniumDosRuntimeAssets;
 
 void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text) {
     const auto translated = active_translator ? active_translator->translate(text) : std::string_view(text);
