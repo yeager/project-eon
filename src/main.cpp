@@ -3683,7 +3683,8 @@ int main(int argc, char** argv) {
         launch_candidate.platform = active_platform;
         launch_candidate.release_sha256 = active_release_sha256;
         launch_candidate.release_language = active_release_language;
-        const auto admission = eon::admit_runtime_launch(runtime_coordinator, launch_candidate, releases);
+        const auto admission = eon::launch_runtime_candidate(launch_candidate, releases,
+            runtime_coordinator);
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(admission.admission));
         if (!admission.accepted()) {
