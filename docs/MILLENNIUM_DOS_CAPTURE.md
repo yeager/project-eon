@@ -506,6 +506,24 @@ normal core transferred to the captured IVT endpoint in this raw diagnostic
 run. It does not prove a specific loaded-image identity, decode the endpoint,
 assign its return ABI, or establish title output, input, audio, or gameplay.
 
+### Receipt-v9 private-handler-return probe (explicitly rejected diagnostic)
+
+On 2026-08-31, the v9 recorder bound the first raw caller re-entry to the
+previously observed normal-core handler edge. It recorded the ordered sequence
+`TITLES.EXE:$0127` → IVT `087e:0000` → `TITLES.EXE:$0129`, with raw
+`AX=$0101` and `FLAGS=$7202` at that first caller re-entry. The exact
+eight-record, 786-byte raw-result file has SHA-256
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`; the
+reviewed recorder is SHA-256
+`7b959f7aee3d2db0513db4f14e3075f306e798e25adaeeebd96aedd81aef65da`.
+
+The run was again rejected after its console exceeded the 64 MiB cap
+(`67,200,061` bytes; retained-prefix SHA-256
+`30dc6a266fa9c1f1d723e7dcca1f1c93a2474fd3a90ca5a95bb6ca0310e37510`). This
+is an ordered raw-state observation only. It does not identify handler bytes,
+assign a meaning to `AX` or flags, establish the following title branch, or
+prove title rendering, input, audio, or gameplay.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
