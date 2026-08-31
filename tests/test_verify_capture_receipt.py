@@ -85,6 +85,21 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "format"):
                 TOOL.verify_deuteros_raw_pc_summary(fields, root, "7")
 
+    def test_v8_deuteros_raw_summary_recomputes_opaque_opcode_pairs(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            raw = root / "raw-pc.txt"
+            raw.write_text(
+                "raw-pc 1 cycles=1 pc=0x0001fe84 ir_opcode=0x7202 memory_opcode=0x7202 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n"
+                "raw-pc 2 cycles=2 pc=0x0001fe84 ir_opcode=0x7203 memory_opcode=0x7202 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000\n", encoding="ascii")
+            fields = {"raw_pc_opcode_pairs": "0x0001fe84:7202/7202+7203/7202"}
+            TOOL.verify_deuteros_raw_pc_opcode_pairs(fields, root)
+            fields["raw_pc_opcode_pairs"] = "0x0001fe84:7202/7202"
+            with self.assertRaisesRegex(ValueError, "opcode-pair"):
+                TOOL.verify_deuteros_raw_pc_opcode_pairs(fields, root)
+
     def test_v5_deuteros_host_input_summary_is_recomputed_from_strict_records(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)

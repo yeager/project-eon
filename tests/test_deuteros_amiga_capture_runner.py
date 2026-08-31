@@ -155,6 +155,7 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             v7_status = TOOL.raw_observation_status(raw, "raw_pc", "v7")
             self.assertIn("raw_pc_format=v7\n", v7_status)
             self.assertIn("raw_pc_records=1\n", v7_status)
+            self.assertIn("raw_pc_opcode_pairs=0x000210d4:4e75/4e75\n", v7_status)
             with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
                 TOOL.raw_observation_status(raw, "raw_pc")
             raw.write_bytes(b"raw-pc 2 cycles=1 pc=0x000210d4 opcode=0x4e75 "

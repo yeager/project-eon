@@ -86,7 +86,7 @@ HOST_INPUT_LINE = re.compile(
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
 # Receipt v6 additionally binds the finite recorder timing profile. Older
 # evidence remains verifiable without pretending it has the newer field.
-CAPTURE_RECEIPT_VERSION = "7"
+CAPTURE_RECEIPT_VERSION = "8"
 
 
 class CaptureError(RuntimeError):
@@ -293,13 +293,20 @@ def raw_observation_status(path: Path, name: str, raw_format: str = "legacy") ->
         raise CaptureError(f"{name} exceeds the bounded recorder contract")
     if info.st_size == 0:
         return f"{name}=empty\n"
-    site_counts = parse_raw_pc_observations(path, raw_format)
+    site_counts, site_opcode_pairs = parse_raw_pc_summary(path, raw_format)
     digest, size = sha256_file(path)
     ordered_counts = ",".join(
         f"0x{site:08x}:{site_counts[site]}" for site in RAW_PC_SITES if site in site_counts)
-    return (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
-            f"{name}_format={raw_format}\n{name}_records={sum(site_counts.values())}\n"
-            f"{name}_site_counts={ordered_counts}\n")
+    status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+              f"{name}_format={raw_format}\n{name}_records={sum(site_counts.values())}\n"
+              f"{name}_site_counts={ordered_counts}\n")
+    if raw_format == "v7":
+        ordered_pairs = ",".join(
+            f"0x{site:08x}:" + "+".join(
+                f"{ir:04x}/{memory:04x}" for ir, memory in sorted(site_opcode_pairs[site]))
+            for site in RAW_PC_SITES if site in site_opcode_pairs)
+        status += f"{name}_opcode_pairs={ordered_pairs}\n"
+    return status
 
 
 def parse_raw_pc_observations(path: Path, raw_format: str = "legacy") -> dict[int, int]:
@@ -309,6 +316,11 @@ def parse_raw_pc_observations(path: Path, raw_format: str = "legacy") -> dict[in
     It makes malformed, reordered, over-cap, or unreviewed-site recorder
     output a failed external capture instead of an opaque hash-bound blob.
     """
+    return parse_raw_pc_summary(path, raw_format)[0]
+
+
+def parse_raw_pc_summary(path: Path, raw_format: str = "legacy") -> tuple[dict[int, int], dict[int, set[tuple[int, int]]]]:
+    """Validate raw records and retain opaque v7 IR/memory pairs per probe site."""
     if raw_format == "legacy":
         matcher = RAW_PC_LEGACY_LINE
     elif raw_format == "v7":
@@ -322,6 +334,7 @@ def parse_raw_pc_observations(path: Path, raw_format: str = "legacy") -> dict[in
     if not text.endswith("\n"):
         raise CaptureError("raw_pc has a truncated final record")
     counts: dict[int, int] = {}
+    opcode_pairs: dict[int, set[tuple[int, int]]] = {}
     previous_cycle = -1
     for expected_ordinal, line in enumerate(text.splitlines(keepends=True), start=1):
         match = matcher.fullmatch(line)
@@ -336,11 +349,13 @@ def parse_raw_pc_observations(path: Path, raw_format: str = "legacy") -> dict[in
         if site not in RAW_PC_SITES:
             raise CaptureError("raw_pc uses an unreviewed probe site")
         counts[site] = counts.get(site, 0) + 1
+        if raw_format == "v7":
+            opcode_pairs.setdefault(site, set()).add((int(match.group(4), 16), int(match.group(5), 16)))
         if counts[site] > MAX_RAW_RECORDS_PER_SITE:
             raise CaptureError("raw_pc exceeds the per-site recorder cap")
         if expected_ordinal > MAX_RAW_RECORDS:
             raise CaptureError("raw_pc exceeds the recorder record cap")
-    return counts
+    return counts, opcode_pairs
 
 
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
