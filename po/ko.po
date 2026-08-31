@@ -53,6 +53,15 @@ msgstr "준비됨"
 msgid "REJECTED"
 msgstr "거부됨"
 
+msgid "REJECTED: IDENTITY"
+msgstr "거부됨: 식별 정보"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "거부됨: 아카이브 해시"
+
+msgid "REJECTED: ADAPTER"
+msgstr "거부됨: 어댑터"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "원본 게임 데이터 폴더 선택 (O)"
 
@@ -333,6 +342,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "선택되지 않음"
+
+msgid "RUNTIME ADMISSION"
+msgstr "런타임 승인"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

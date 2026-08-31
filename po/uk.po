@@ -53,6 +53,15 @@ msgstr "ГОТОВО"
 msgid "REJECTED"
 msgstr "ВІДХИЛЕНО"
 
+msgid "REJECTED: IDENTITY"
+msgstr "ВІДХИЛЕНО: ІДЕНТИЧНІСТЬ"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "ВІДХИЛЕНО: ХЕШ АРХІВУ"
+
+msgid "REJECTED: ADAPTER"
+msgstr "ВІДХИЛЕНО: АДАПТЕР"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ВИБРАТИ ТЕКУ З ОРИГІНАЛЬНИМИ ДАНИМИ ГРИ (O)"
 
@@ -333,6 +342,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "НЕ ВИБРАНО"
+
+msgid "RUNTIME ADMISSION"
+msgstr "ДОПУСК ВИКОНАННЯ"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

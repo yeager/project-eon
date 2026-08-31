@@ -952,7 +952,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
     const std::array<std::pair<const char*, std::string>, 10> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
-        {"TRACE ADMISSION", tr(diagnostics.runtime_admission)},
+        {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
         {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
@@ -4322,13 +4322,8 @@ int main(int argc, char** argv) {
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
         diagnostics.release_identity = tr("NOT SELECTED");
-        switch (runtime_coordinator.admission()) {
-        case eon::ReleaseRuntimeAdmission::unselected: diagnostics.runtime_admission = "NOT SELECTED"; break;
-        case eon::ReleaseRuntimeAdmission::active: diagnostics.runtime_admission = "READY"; break;
-        case eon::ReleaseRuntimeAdmission::identity_rejected: diagnostics.runtime_admission = "REJECTED"; break;
-        case eon::ReleaseRuntimeAdmission::archive_rejected: diagnostics.runtime_admission = "REJECTED"; break;
-        case eon::ReleaseRuntimeAdmission::adapter_rejected: diagnostics.runtime_admission = "REJECTED"; break;
-        }
+        diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
+            runtime_coordinator.admission()));
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");
         if (modern_pack_admission == ModernPackAdmission::ready && selected_modern_pack_preflight

@@ -53,6 +53,15 @@ msgstr "準備完了"
 msgid "REJECTED"
 msgstr "拒否"
 
+msgid "REJECTED: IDENTITY"
+msgstr "拒否: 識別情報"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "拒否: アーカイブハッシュ"
+
+msgid "REJECTED: ADAPTER"
+msgstr "拒否: アダプター"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "オリジナルゲームデータのフォルダーを選択 (O)"
 
@@ -294,6 +303,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "未選択"
+
+msgid "RUNTIME ADMISSION"
+msgstr "実行時受け入れ"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

@@ -15,6 +15,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace eon {
@@ -22,6 +23,12 @@ namespace eon {
 enum class ReleaseRuntimeAdmission {
     unselected, active, identity_rejected, archive_rejected, adapter_rejected,
 };
+
+// This is intentionally a small, media-safe diagnostic vocabulary. It
+// describes only which preservation boundary declined admission; it never
+// surfaces archive paths, member names, original bytes, or parser exceptions.
+[[nodiscard]] std::string_view release_runtime_admission_label(
+    ReleaseRuntimeAdmission admission);
 
 // Immutable decoded pixels remain derived from the caller's already verified
 // original media. This DTO deliberately contains no SDL objects, and its

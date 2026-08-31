@@ -53,6 +53,15 @@ msgstr "HAZIR"
 msgid "REJECTED"
 msgstr "REDDEDİLDİ"
 
+msgid "REJECTED: IDENTITY"
+msgstr "REDDEDİLDİ: KİMLİK"
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr "REDDEDİLDİ: ARŞİV ÖZETİ"
+
+msgid "REJECTED: ADAPTER"
+msgstr "REDDEDİLDİ: BAĞDAŞTIRICI"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ÖZGÜN OYUN VERİSİ KLASÖRÜNÜ SEÇ (O)"
 
@@ -333,6 +342,9 @@ msgstr "NOT LOADED"
 
 msgid "NOT SELECTED"
 msgstr "SEÇİLMEDİ"
+
+msgid "RUNTIME ADMISSION"
+msgstr "ÇALIŞMA ZAMANI KABULÜ"
 
 msgid "RENDERER SETTINGS"
 msgstr "RENDERER SETTINGS"

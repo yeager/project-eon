@@ -652,7 +652,7 @@ def main() -> int:
         subprocess.run(
             (str(executable), "--data", str(data_directory), "--game", "millennium",
                 "--platform", "dos", "--presentation", "original"),
-            env=environment, check=False, capture_output=True, text=True, timeout=2,
+            env=environment, check=False, capture_output=True, text=True, timeout=1,
         )
     except subprocess.TimeoutExpired:
         pass
@@ -676,7 +676,7 @@ def main() -> int:
         try:
             completed = subprocess.run(
                 command, env=environment, check=False, capture_output=True,
-                text=True, timeout=2,
+                text=True, timeout=1,
             )
         except subprocess.TimeoutExpired:
             continue

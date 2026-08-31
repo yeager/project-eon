@@ -8,6 +8,17 @@
 
 namespace eon {
 
+std::string_view release_runtime_admission_label(const ReleaseRuntimeAdmission admission) {
+    switch (admission) {
+    case ReleaseRuntimeAdmission::unselected: return "NOT SELECTED";
+    case ReleaseRuntimeAdmission::active: return "READY";
+    case ReleaseRuntimeAdmission::identity_rejected: return "REJECTED: IDENTITY";
+    case ReleaseRuntimeAdmission::archive_rejected: return "REJECTED: ARCHIVE HASH";
+    case ReleaseRuntimeAdmission::adapter_rejected: return "REJECTED: ADAPTER";
+    }
+    return "REJECTED: ADAPTER";
+}
+
 bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     reset();
     // A launcher card can produce this object only through exact hash
@@ -79,7 +90,7 @@ void ReleaseRuntimeCoordinator::reset() {
 
 std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const ReleaseArchive& release) {
     if (release.game != Game::deuteros || release.platform != Platform::amiga || release.language != "en") return {};
-    constexpr auto clean_system_adf = "6ea0cc68d3af37203a885032eddf7c28e8396abb59d8c9cd3792f1308bdec38";
+    constexpr auto clean_system_adf = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
     try {
         const auto image = extract_verified_release_asset(release, clean_system_adf);
         return image ? std::make_unique<DeuterosAmigaOpening>(std::move(*image)) : nullptr;

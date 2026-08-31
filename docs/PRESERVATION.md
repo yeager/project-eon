@@ -57,6 +57,12 @@ together. A failed parser/leaf admission leaves no active identity or prior
 adapter. SDL owns only renderer, audio-device, and host-input resources; it
 borrows the admitted adapter and never reloads a release independently.
 
+The F10 developer readout reports the result as **ready**, **not selected**,
+or one of three deliberately non-sensitive rejection classes: **identity**,
+**archive hash**, or **adapter**. It identifies the preservation boundary that
+declined a launch without exposing a local path, archive member, original
+bytes, or parser exception.
+
 The launcher carries the same provenance boundary before admission. Its
 source identity is exactly game, platform, original-release language, and
 outer SHA-256; Original/Modern/Custom presentation selection is not a source

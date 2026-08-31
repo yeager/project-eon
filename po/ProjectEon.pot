@@ -72,6 +72,15 @@ msgstr ""
 msgid "REJECTED"
 msgstr ""
 
+msgid "REJECTED: IDENTITY"
+msgstr ""
+
+msgid "REJECTED: ARCHIVE HASH"
+msgstr ""
+
+msgid "REJECTED: ADAPTER"
+msgstr ""
+
 #: src/main.cpp
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr ""
@@ -458,6 +467,9 @@ msgid "NOT LOADED"
 msgstr ""
 
 msgid "NOT SELECTED"
+msgstr ""
+
+msgid "RUNTIME ADMISSION"
 msgstr ""
 
 #: src/main.cpp
