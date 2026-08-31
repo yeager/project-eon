@@ -42,6 +42,9 @@ msgstr "MODERN VARLIK PAKETİ"
 msgid "CHOOSE…"
 msgstr "SEÇ…"
 
+msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
+msgstr "ÖZGÜN OYUN VERİSİ KLASÖRÜNÜ SEÇ (O)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "OYUN SEÇ   |   YUKARI/AŞAĞI: PLATFORM   |   D: VERİ TARAMA   |   F1: ÖZGÜN / MODERN   |   ESC: ÇIK"
 

@@ -147,6 +147,11 @@ route; keyboard and gamepad users can move through each card page with the
 D-pad or arrow keys and activate the highlighted card with Enter, Space, South/A, or
 Start; Escape returns to the preceding card page.
 
+Use **Choose Original Data Folder** (or `O`) in the menu to select a media
+folder without restarting the launcher. The folder is handed to the same
+bounded, read-only hash scanner as `--data`; Project Eon never copies,
+unpacks, creates, or modifies the selected data.
+
 Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right
 selects a card on the current page, and South/A or Start activates it. During
 the recovered Deuteros Amiga opening, hold South/A for

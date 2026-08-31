@@ -30,6 +30,9 @@ msgstr "حزمة أصول حديثة"
 msgid "CHOOSE…"
 msgstr "اختر…"
 
+msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
+msgstr "اختر مجلد بيانات اللعبة الأصلية (O)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "اختر اللعبة   |   أعلى/أسفل: المنصة   |   D: فحص البيانات   |   F1: أصلي / حديث   |   ESC: خروج"
 msgid "VERIFIED ORIGINAL DATA"

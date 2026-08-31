@@ -42,6 +42,9 @@ msgstr "ПАКЕТ СОВРЕМЕННЫХ РЕСУРСОВ"
 msgid "CHOOSE…"
 msgstr "ВЫБРАТЬ…"
 
+msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
+msgstr "ВЫБРАТЬ ПАПКУ С ОРИГИНАЛЬНЫМИ ДАННЫМИ ИГРЫ (O)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВЫБРАТЬ ИГРУ   |   ВВЕРХ/ВНИЗ: ПЛАТФОРМА   |   D: ПРОВЕРКА ДАННЫХ   |   F1: ОРИГИНАЛ / СОВРЕМЕННЫЙ   |   ESC: ВЫХОД"
 

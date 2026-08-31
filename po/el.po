@@ -30,6 +30,9 @@ msgstr "ΠΑΚΕΤΟ ΣΥΓΧΡΟΝΩΝ ΠΟΡΩΝ"
 msgid "CHOOSE…"
 msgstr "ΕΠΙΛΕΞΤΕ…"
 
+msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
+msgstr "ΕΠΙΛΟΓΗ ΦΑΚΕΛΟΥ ΑΡΧΙΚΩΝ ΔΕΔΟΜΕΝΩΝ (O)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ΕΠΙΛΟΓΗ ΠΑΙΧΝΙΔΙΟΥ   |   ΠΑΝΩ/ΚΑΤΩ: ΠΛΑΤΦΟΡΜΑ   |   D: ΕΛΕΓΧΟΣ ΔΕΔΟΜΕΝΩΝ   |   F1: ΠΡΩΤΟΤΥΠΟ / ΣΥΓΧΡΟΝΟ   |   ESC: ΕΞΟΔΟΣ"
 msgid "VERIFIED ORIGINAL DATA"

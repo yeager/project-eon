@@ -42,6 +42,9 @@ msgstr "ПАКУНОК СУЧАСНИХ РЕСУРСІВ"
 msgid "CHOOSE…"
 msgstr "ВИБРАТИ…"
 
+msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
+msgstr "ВИБРАТИ ТЕКУ З ОРИГІНАЛЬНИМИ ДАНИМИ ГРИ (O)"
+
 msgid "SELECT GAME   |   UP/DOWN: PLATFORM   |   D: DATA SCAN   |   F1: ORIGINAL / MODERN   |   ESC: QUIT"
 msgstr "ВИБРАТИ ГРУ   |   ВГОРУ/ВНИЗ: ПЛАТФОРМА   |   D: ПЕРЕВІРКА ДАНИХ   |   F1: ОРИГІНАЛ / СУЧАСНИЙ   |   ESC: ВИЙТИ"
 
