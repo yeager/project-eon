@@ -221,10 +221,17 @@ struct ParseResult {
 // until that choice is recorded.
 enum class PlatformCardStatus { unavailable, release_selection_required, ready };
 
+// Admission answers whether exact original media can be selected. Coverage is
+// deliberately separate: it says only how far the current recovered native
+// path reaches, never whether the original game is at parity.
+enum class PlatformCoverage { recovered_startup, recovered_opening, bootstrap_only };
+
 [[nodiscard]] PlatformCardStatus platform_card_status(
     const std::vector<ReleaseArchive>& releases, Game game, Platform platform);
 [[nodiscard]] bool platform_card_selectable(PlatformCardStatus status);
 [[nodiscard]] bool platform_card_startable(PlatformCardStatus status);
+[[nodiscard]] PlatformCoverage platform_coverage(Game game, Platform platform);
+[[nodiscard]] std::string_view name(PlatformCoverage coverage);
 // The launcher must distinguish an unsupported platform from a supported
 // platform whose original media is absent. This fixed support catalogue is
 // deliberately independent of the scanner's hash-verified availability.

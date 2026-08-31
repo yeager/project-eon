@@ -1505,6 +1505,19 @@ int main() {
         assert((eon::supported_platforms(eon::Game::millennium)
             == std::vector<eon::Platform>{eon::Platform::dos, eon::Platform::amiga,
                 eon::Platform::atari_st}));
+        assert(eon::platform_coverage(eon::Game::millennium, eon::Platform::dos)
+            == eon::PlatformCoverage::recovered_startup);
+        assert(eon::platform_coverage(eon::Game::millennium, eon::Platform::amiga)
+            == eon::PlatformCoverage::bootstrap_only);
+        assert(eon::platform_coverage(eon::Game::millennium, eon::Platform::atari_st)
+            == eon::PlatformCoverage::bootstrap_only);
+        assert(eon::platform_coverage(eon::Game::deuteros, eon::Platform::amiga)
+            == eon::PlatformCoverage::recovered_opening);
+        assert(eon::platform_coverage(eon::Game::deuteros, eon::Platform::atari_st)
+            == eon::PlatformCoverage::bootstrap_only);
+        assert(eon::name(eon::PlatformCoverage::recovered_startup) == "RECOVERED STARTUP");
+        assert(eon::name(eon::PlatformCoverage::recovered_opening) == "RECOVERED OPENING");
+        assert(eon::name(eon::PlatformCoverage::bootstrap_only) == "BOOTSTRAP ONLY");
         const auto deuteros_supported = eon::supported_platforms(eon::Game::deuteros);
         assert((deuteros_supported
             == std::vector<eon::Platform>{eon::Platform::amiga, eon::Platform::atari_st}));

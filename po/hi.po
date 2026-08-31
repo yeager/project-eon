@@ -274,6 +274,9 @@ msgstr "रिलीज़ चयन आवश्यक"
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr "केवल अटारी बूटस्ट्रैप"
 
+msgid "BOOTSTRAP ONLY"
+msgstr "केवल बूटस्ट्रैप"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 

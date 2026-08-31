@@ -274,6 +274,9 @@ msgstr "リリースの選択が必要です"
 msgid "ATARI BOOTSTRAP ONLY"
 msgstr "ATARI ブートストラップのみ"
 
+msgid "BOOTSTRAP ONLY"
+msgstr "ブートストラップのみ"
+
 msgid "DEVELOPER DIAGNOSTICS"
 msgstr "DEVELOPER DIAGNOSTICS"
 
