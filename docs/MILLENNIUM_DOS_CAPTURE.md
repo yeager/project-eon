@@ -555,6 +555,25 @@ boundary efficiently. It does not make the diagnostic a reference trace or
 prove driver behaviour, title pixels, input acceptance, audio, a gameplay
 state, or an original-game fault.
 
+On 2026-08-31, the same reviewed recorder and the unchanged, write-protected
+English archive were run again through the capture helper after the ordered
+v10 sequence gate was introduced. The externally retained receipt was accepted
+by `verify_capture_receipt.py` and stopped after 0.71 seconds with
+`termination_reason=known-unhandled-interrupt` and exit status `126`. Its
+eight-record `results.raw` is byte-identical to the prior observation (786
+bytes, SHA-256
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`), and
+its five-record event stream is likewise unchanged (367 bytes, SHA-256
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`). The
+new configuration identity is
+`cc9c804489a994e4104f07acd70f6e3f3f9db65fb256a7710b99e8e6bb4bbffb` (344
+bytes); the bounded 4,633-byte console identity is
+`07d42e63460748f842a4875336addcf4412f77ef42e2cd82803f654ef6b1cac9`.
+No host-input receipt was created and the archive still hashed to
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` after
+the run. This is a reproducibility check of the recorder boundary, not new
+evidence for a driver result, title, input, frame, audio, or gameplay state.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
