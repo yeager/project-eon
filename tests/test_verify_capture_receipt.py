@@ -27,6 +27,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "8"}), "8")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "9"}), "9")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "10"}), "10")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "11"}), "11")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
@@ -130,6 +131,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "8")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "9")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "10")
+        TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "11")
         TOOL.verify_console_admission({}, "3")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "4")
@@ -146,7 +148,7 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "does not match"):
                 TOOL.verify_millennium_machine_profile({"machine_profile": "svga_s3"}, root)
 
-    def test_v10_millennium_termination_reason_is_bound_to_early_stop_status(self) -> None:
+    def test_millennium_termination_reason_is_bound_to_its_receipt_version(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
             (root / "results.raw").write_text(
@@ -162,18 +164,29 @@ class ReceiptVerifierTests(unittest.TestCase):
                 encoding="ascii")
             TOOL.verify_millennium_termination(
                 {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
-                 "results_raw": "present"}, root)
+                 "results_raw": "present"}, root, "10")
+            (root / "results.raw").write_bytes(TOOL.load_tool("run_millennium_dos_capture").KNOWN_V11_EARLY_STOP_RAW)
+            TOOL.verify_millennium_termination(
+                {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
+                 "results_raw": "present"}, root, "11")
+            altered = bytearray((root / "results.raw").read_bytes())
+            altered[-17] ^= 0x01
+            (root / "results.raw").write_bytes(altered)
+            with self.assertRaisesRegex(ValueError, "exact v11"):
+                TOOL.verify_millennium_termination(
+                    {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
+                     "results_raw": "present"}, root, "11")
             (root / "results.raw").write_text("raw-result\t1 1 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n", encoding="ascii")
             with self.assertRaisesRegex(ValueError, "exact v10"):
                 TOOL.verify_millennium_termination(
                     {"termination_reason": "known-unhandled-interrupt", "exit_status": "126",
-                     "results_raw": "present"}, root)
+                     "results_raw": "present"}, root, "10")
         with self.assertRaisesRegex(ValueError, "termination reason"):
             TOOL.verify_millennium_termination(
-                {"termination_reason": "known-unhandled-interrupt", "exit_status": "124"}, Path("/"))
+                {"termination_reason": "known-unhandled-interrupt", "exit_status": "124"}, Path("/"), "11")
         with self.assertRaisesRegex(ValueError, "invalid termination"):
             TOOL.verify_millennium_termination(
-                {"termination_reason": "made-up", "exit_status": "0"}, Path("/"))
+                {"termination_reason": "made-up", "exit_status": "0"}, Path("/"), "11")
 
     def test_v6_deuteros_timing_profile_matches_generated_configuration(self) -> None:
         with temporary_directory() as directory:

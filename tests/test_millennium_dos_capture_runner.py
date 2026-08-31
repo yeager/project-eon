@@ -152,7 +152,7 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.raw_observation_status(path, "events_raw")
 
-    def test_known_unhandled_interrupt_requires_complete_v10_raw_sequence(self) -> None:
+    def test_known_unhandled_interrupt_requires_complete_v11_raw_receipt(self) -> None:
         with temporary_directory() as directory:
             results = Path(directory) / "results.raw"
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
@@ -162,19 +162,13 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
             results.write_bytes(results.read_bytes() + b"\n")
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
-            prefix = (
-                b"raw-result\t1 1 image=mill.com pc=0x020e source-int=0x21 source-ax=0x2591 ax=0x2591\n"
-                b"raw-result\t2 2 image=mill.com pc=0x0213 source-call=0x0511 ax=0x0000\n"
-                b"raw-result\t3 3 private-vector image=titles.exe pc=0x0127 int=0x91 vector_ip=0x0000 vector_cs=0x087e\n"
-                b"raw-result\t4 4 private-handler-entry int=0x91 cs=0x087e ip=0x0000\n"
-                b"raw-result\t5 5 private-handler-return int=0x91 caller=titles.exe pc=0x0129 ax=0x0101 flags=0x7202\n"
-                b"raw-result\t6 6 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0101\n"
-                b"raw-result\t7 7 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0000\n"
-                b"raw-result\t8 8 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
-                b"ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n")
-            results.write_bytes(prefix)
+            results.write_bytes(TOOL.KNOWN_V11_EARLY_STOP_RAW)
             self.assertTrue(TOOL.known_unhandled_interrupt_observed(results))
-            results.write_bytes(results.read_bytes() +
+            altered = bytearray(TOOL.KNOWN_V11_EARLY_STOP_RAW)
+            altered[-17] ^= 0x01
+            results.write_bytes(altered)
+            self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
+            results.write_bytes(TOOL.KNOWN_V11_EARLY_STOP_RAW +
                 b"raw-result\t9 9 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
                 b"ss=0x0a8d sp=0xc9bf ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n")
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))

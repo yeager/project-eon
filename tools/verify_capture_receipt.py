@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11"}
 
 
 def load_tool(name: str):
@@ -97,7 +97,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5", "6", "7", "8", "9", "10"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6", "7", "8", "9", "10", "11"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
 
 
@@ -158,7 +158,7 @@ def verify_millennium_host_input_summary(fields: dict[str, str], directory: Path
         raise ValueError("host-input receipt grammar/count mismatch")
 
 
-def verify_millennium_termination(fields: dict[str, str], directory: Path) -> None:
+def verify_millennium_termination(fields: dict[str, str], directory: Path, version: str) -> None:
     tool = load_tool("run_millennium_dos_capture")
     reason = fields.get("termination_reason")
     if reason not in tool.TERMINATION_REASONS:
@@ -173,8 +173,10 @@ def verify_millennium_termination(fields: dict[str, str], directory: Path) -> No
     if reason == "known-unhandled-interrupt":
         if fields.get("results_raw") != "present":
             raise ValueError("Millennium early stop requires a retained raw result log")
-        if not tool.known_v10_early_stop_sequence(directory / "results.raw"):
+        if version == "10" and not tool.known_v10_early_stop_sequence(directory / "results.raw"):
             raise ValueError("Millennium early stop requires the exact v10 raw diagnostic sequence")
+        if version == "11" and not tool.known_v11_early_stop_receipt(directory / "results.raw"):
+            raise ValueError("Millennium early stop requires the exact v11 raw diagnostic receipt")
 
 
 def verify(kind: str, directory: Path) -> None:
@@ -188,19 +190,19 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10"} and fields.get("results_raw") == "present":
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw")
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
                     str(sum(counts.values())), shapes):
                 raise ValueError("results_raw grammar/count receipt mismatch")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.raw")
-        if version in {"5", "6", "7", "8", "9", "10"}:
+        if version in {"5", "6", "7", "8", "9", "10", "11"}:
             verify_millennium_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9", "10"}:
+        if version in {"6", "7", "8", "9", "10", "11"}:
             verify_millennium_machine_profile(fields, directory)
-        if version == "10":
-            verify_millennium_termination(fields, directory)
+        if version in {"10", "11"}:
+            verify_millennium_termination(fields, directory, version)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))

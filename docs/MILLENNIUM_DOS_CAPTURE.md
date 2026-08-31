@@ -574,6 +574,23 @@ No host-input receipt was created and the archive still hashed to
 the run. This is a reproducibility check of the recorder boundary, not new
 evidence for a driver result, title, input, frame, audio, or gameplay state.
 
+### Receipt-v11 exact callback-loop receipt (diagnostics only)
+
+The current helper retains the v10 historical verifier and emits receipt v11
+for new runs. It permits the early host stop only when the complete 786-byte
+raw result stream is byte-identical to the two independently retained
+observations (SHA-256
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`). This
+binds the two returns, private-vector chain, fault site, stack words, code
+word, and recorded general registers as one external recorder diagnostic. A
+change to even one byte is not classified as the known loop and instead
+remains subject to ordinary timeout or console-safety handling.
+
+This is a stricter host-process safety condition only. It does not assign an
+ABI to the private interrupt, explain the exception, replay the record,
+provide a guest result, or establish title, input, frame, audio, or gameplay
+behaviour.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the

@@ -74,7 +74,7 @@ HOST_KEY_LINE = re.compile(
 # v9 binds the first post-handler caller re-entry to v8's observed endpoint.
 # Its AX and FLAGS are raw machine state only; they are not a private ABI or a
 # runtime result contract.
-CAPTURE_RECEIPT_VERSION = "10"
+CAPTURE_RECEIPT_VERSION = "11"
 TERMINATION_REASONS = {"emulator-exit", "timeout", "console-safety-cap", "known-unhandled-interrupt"}
 
 
@@ -359,12 +359,38 @@ KNOWN_V10_EARLY_STOP_SEQUENCE = (
     "private-handler-return", "titles.exe:0129", "titles.exe:0129", "fault",
 )
 
+# This is the complete, twice-observed recorder diagnostic that terminates the
+# host process.  It is deliberately a recorder receipt, not a DOS interrupt
+# contract: Eon neither consumes nor interprets these values at runtime.  A
+# byte-exact gate prevents a different INT 6 or changed machine state from
+# being silently classified as the known callback loop.
+KNOWN_V11_EARLY_STOP_RAW = (
+    b"raw-result\t1 1 image=mill.com pc=0x020e source-int=0x21 source-ax=0x2591 ax=0x2591\n"
+    b"raw-result\t2 2 image=mill.com pc=0x0213 source-call=0x0511 ax=0x0000\n"
+    b"raw-result\t3 3 private-vector image=titles.exe pc=0x0127 int=0x91 vector_ip=0x0000 vector_cs=0x087e\n"
+    b"raw-result\t4 4 private-handler-entry int=0x91 cs=0x087e ip=0x0000\n"
+    b"raw-result\t5 5 private-handler-return int=0x91 caller=titles.exe pc=0x0129 ax=0x0101 flags=0x7202\n"
+    b"raw-result\t6 6 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0101\n"
+    b"raw-result\t7 7 image=titles.exe pc=0x0129 source-int=0x91 source-ax=0x0000 ax=0x0000\n"
+    b"raw-result\t8 8 fault=unhandled-interrupt int=0x06 cs=0xf000 ip=0xca64 "
+    b"ss=0x0a8d sp=0xc9bf return_ip=0x1900 return_cs=0x0e70 return_flags=0x7047 "
+    b"code=0x00000000 ax=0x00a0 bx=0x6101 cx=0x178b dx=0x6101\n"
+)
+
 
 def known_v10_early_stop_sequence(path: Path) -> bool:
     """Check v10's observed diagnostic order without assigning it an ABI."""
     try:
         return tuple(raw_result_labels(path)) == KNOWN_V10_EARLY_STOP_SEQUENCE
     except CaptureError:
+        return False
+
+
+def known_v11_early_stop_receipt(path: Path) -> bool:
+    """Check the complete observed callback-loop diagnostic without ABI inference."""
+    try:
+        return path.read_bytes() == KNOWN_V11_EARLY_STOP_RAW
+    except OSError:
         return False
 
 
@@ -400,7 +426,7 @@ def known_unhandled_interrupt_observed(path: Path) -> bool:
     # treat an unfinished line as an observation, and never modify that file.
     if not text.endswith("\n"):
         return False
-    return known_v10_early_stop_sequence(path)
+    return known_v11_early_stop_receipt(path)
 
 
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
