@@ -3425,6 +3425,7 @@ int main() {
         && !all_release_runtime.deuteros_amiga() && !all_release_runtime.deuteros_atari());
     auto forged_release_metadata = *english_dos;
     forged_release_metadata.language = "es";
+    assert(!eon::is_recognised_release_identity(forged_release_metadata));
     bool rejected_forged_release_metadata = false;
     try {
         eon::verify_release_archive(forged_release_metadata);
@@ -3432,8 +3433,16 @@ int main() {
         rejected_forged_release_metadata = true;
     }
     assert(rejected_forged_release_metadata);
+    bool rejected_forged_diagnostics = false;
+    try {
+        static_cast<void>(eon::runtime_diagnostics_for_release(forged_release_metadata));
+    } catch (const std::runtime_error&) {
+        rejected_forged_diagnostics = true;
+    }
+    assert(rejected_forged_diagnostics);
     auto forged_release_hash = *english_dos;
     forged_release_hash.sha256.assign(64, '0');
+    assert(!eon::is_recognised_release_identity(forged_release_hash));
     bool rejected_forged_release_hash = false;
     try {
         static_cast<void>(eon::extract_verified_release_asset(forged_release_hash,

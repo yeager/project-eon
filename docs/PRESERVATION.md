@@ -132,6 +132,11 @@ isolated home directory. Its `--inspect` result must report the absent
 `~/.projecteon` path without creating it; this tests the finished bundled
 executable and dylib closure without requiring, copying, or packaging game
 media.
+
+Runtime diagnostics are also manifest-bound before composing recovery or
+function-map rows. This identity check reads no path or media bytes; it rejects
+a forged game/platform/language/hash DTO rather than letting it borrow another
+release's diagnostic map.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract
