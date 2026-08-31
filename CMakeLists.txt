@@ -342,6 +342,15 @@ endif()
 # executable creates/uses its data directory and reads user-supplied archives
 # and disk images in place through the verified scanners.
 include(GNUInstallDirs)
+# Do not inherit a developer workstation's umask into a distributable DEB or
+# RPM.  In particular, a group-writable `/usr/share` tree is rejected by
+# Debian-quality tooling and is not an appropriate permission contract for a
+# read-only launcher resource bundle.  This affects only staging directories;
+# it never changes user-supplied original media.
+set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
+    OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_EXECUTE
+    WORLD_READ WORLD_EXECUTE)
 # Apple bundle targets require a BUNDLE destination.  Keep it separate from
 # the desktop runtime rule so an iPadOS cross-build can configure and stage
 # ProjectEon.app before the unsigned IPA packaging guard examines it.
@@ -379,18 +388,23 @@ endif()
 if(UNIX AND NOT APPLE)
     # Installed Linux applications use shared data, never /usr/bin/assets.
     install(DIRECTORY assets/cards
-        DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets")
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"
+        DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     install(FILES assets/branding/project-eon-logo-v1.png
         DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets/branding")
     install(DIRECTORY assets/fonts
-        DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets")
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"
+        DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 else()
-    install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+    install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets"
+        DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
     install(FILES assets/branding/project-eon-logo-v1.png
         DESTINATION "${CMAKE_INSTALL_BINDIR}/assets/branding")
-    install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets")
+    install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets"
+        DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()
-install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po")
+install(DIRECTORY po/ DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/po"
+    DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 # PO files are read directly by the launcher, so a package can otherwise carry
 # a syntactically damaged or stale translation without the compiler noticing.

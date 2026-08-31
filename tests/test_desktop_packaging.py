@@ -67,6 +67,10 @@ class DesktopPackagingTests(unittest.TestCase):
     def test_distribution_policy_gate_uses_debian_and_rpm_native_tools(self) -> None:
         source = POLICY_VERIFIER.read_text(encoding="utf-8")
         self.assertIn("lintian --profile debian --pedantic --fail-on warning", source)
+        self.assertIn("require_755_directories", source)
+        self.assertIn("dpkg-deb -c", source)
+        self.assertIn("rpm -qplv", source)
+        self.assertIn("directories that are not 0755", source)
         self.assertIn("rpmspec --parse", source)
         self.assertIn("rpmlint --strict", source)
         self.assertIn("rpm --checksig --nogpg", source)
@@ -86,6 +90,8 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("project-eon.lintian-overrides", cmake)
         self.assertIn("CPACK_RPM_PACKAGE_URL", cmake)
         self.assertIn("CPACK_RPM_FILE_NAME RPM-DEFAULT", cmake)
+        self.assertIn("CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS", cmake)
+        self.assertIn("DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE", cmake)
 
     def test_ci_validates_macos_archive_and_windows_runtime_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
