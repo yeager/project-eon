@@ -130,6 +130,14 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "does not match"):
                 TOOL.verify_millennium_machine_profile({"machine_profile": "svga_s3"}, root)
 
+    def test_v6_deuteros_timing_profile_matches_generated_configuration(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "deuteros-amiga-capture.fs-uae").write_text("warp_mode = 1\n", encoding="utf-8")
+            TOOL.verify_deuteros_timing_profile({"timing_profile": "warp"}, root)
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                TOOL.verify_deuteros_timing_profile({"timing_profile": "realtime"}, root)
+
 
 if __name__ == "__main__":
     unittest.main()

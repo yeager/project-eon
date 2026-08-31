@@ -135,6 +135,17 @@ def verify_deuteros_host_input_summary(fields: dict[str, str], directory: Path) 
         raise ValueError("host-input receipt grammar/count mismatch")
 
 
+def verify_deuteros_timing_profile(fields: dict[str, str], directory: Path) -> None:
+    """Bind v6's finite timing label to the generated FS-UAE configuration."""
+    profile = fields.get("timing_profile")
+    tool = load_tool("run_deuteros_amiga_capture")
+    if profile not in tool.TIMING_PROFILES:
+        raise ValueError("timing profile is not in the reviewed finite profile set")
+    configuration = (directory / "deuteros-amiga-capture.fs-uae").read_text(encoding="utf-8")
+    if f"warp_mode = {tool.TIMING_PROFILES[profile]}\n" not in configuration:
+        raise ValueError("timing profile does not match the generated configuration")
+
+
 def verify_millennium_host_input_summary(fields: dict[str, str], directory: Path) -> None:
     if fields.get("host_input_receipt") != "present":
         return
@@ -173,10 +184,12 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"3", "4", "5"}:
+        if version in {"3", "4", "5", "6"}:
             verify_deuteros_raw_pc_summary(fields, directory)
-        if version == "5":
+        if version in {"5", "6"}:
             verify_deuteros_host_input_summary(fields, directory)
+        if version == "6":
+            verify_deuteros_timing_profile(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")

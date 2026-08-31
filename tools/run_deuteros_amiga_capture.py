@@ -39,6 +39,10 @@ DISK2_IMAGE = "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 2 of 2
 KICKSTART_IMAGE = "Kickstart v1.3 r34.005 (1987-12)(Commodore)(A500-A1000-A2000-CDTV)[!].rom"
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
+# A finite timing profile makes a reachability diagnostic reproducible without
+# confusing it with time-faithful capture evidence. Warp never establishes
+# original timing, gameplay, or title-screen behaviour.
+TIMING_PROFILES = {"realtime": "0", "warp": "1"}
 # The reviewed delivery observer writes a bounded physical-input receipt.
 # Never hash an arbitrary-size file merely because a recorder path was set.
 MAX_INPUT_RECEIPT_BYTES = 64 * 1024
@@ -73,10 +77,9 @@ RAW_PC_LINE = re.compile(
 HOST_INPUT_LINE = re.compile(
     r"host-input ([1-9][0-9]*) frame=(-?[0-9]+) line=(-?[0-9]+) "
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
-# Receipt v5 retains v4's console-overrun boundary and v3 raw-PC summary while
-# binding the reviewed host-delivery receipt grammar/count. Older evidence
-# remains verifiable without pretending it has the newer field.
-CAPTURE_RECEIPT_VERSION = "5"
+# Receipt v6 additionally binds the finite recorder timing profile. Older
+# evidence remains verifiable without pretending it has the newer field.
+CAPTURE_RECEIPT_VERSION = "6"
 
 
 class CaptureError(RuntimeError):
@@ -366,7 +369,12 @@ def identity_status(name: str, identity: tuple[str, int]) -> str:
     return f"{name}_sha256={digest}\n{name}_bytes={size}\n"
 
 
-def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path) -> str:
+def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path,
+                    timing_profile: str = "realtime") -> str:
+    try:
+        warp_mode = TIMING_PROFILES[timing_profile]
+    except KeyError as error:
+        raise CaptureError("timing profile is not in the reviewed finite profile set") from error
     return "\n".join((
         "# Ephemeral physical-input capture configuration; no debugger or playback.",
         "amiga_model = A500",
@@ -383,7 +391,7 @@ def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path) -> 
         "console_debugger = 0",
         "use_debugger = 0",
         "uae_sound_output = interrupts",
-        "warp_mode = 0",
+        f"warp_mode = {warp_mode}",
         "",
     ))
 
@@ -421,7 +429,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         validate_identity(disk2, "clean Deuteros disk 2", EXPECTED_DISK2_SHA256, 901_120)
         validate_identity(rom, "Kickstart ROM", EXPECTED_ROM_SHA256, 262_144)
         configuration = output / "deuteros-amiga-capture.fs-uae"
-        write_exclusive(configuration, recorder_config(disk1, disk2, rom, output))
+        write_exclusive(configuration, recorder_config(
+            disk1, disk2, rom, output, args.timing_profile))
         configuration_identity = sha256_file(configuration)
         command = [str(recorder), str(configuration)]
         write_exclusive(output / "command-tail.txt", " ".join(command) + "\n")
@@ -483,6 +492,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         observation_status = raw_observation_status(output / "raw-pc.txt", "raw_pc")
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
+                        f"timing_profile={args.timing_profile}\n"
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
                         + identity_status("source_release", release_after)
                         + identity_status("kickstart_archive", kickstart_after)
@@ -507,6 +517,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--recorder", required=True, help="Absolute reviewed FS-UAE recorder binary path")
     parser.add_argument("--output", required=True, help="New absolute cache directory for external capture evidence")
     parser.add_argument("--duration-seconds", type=int, default=120, help="Visible operator window duration (15-600; default: 120)")
+    parser.add_argument("--timing-profile", choices=tuple(sorted(TIMING_PROFILES)), default="realtime",
+                        help="Recorder timing profile (default: realtime; warp is diagnostic only)")
     return parser.parse_args(argv)
 
 

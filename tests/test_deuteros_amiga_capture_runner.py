@@ -44,6 +44,16 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         self.assertIn("warp_mode = 0", configuration)
         self.assertNotIn("playback_file", configuration.lower())
 
+    def test_timing_profile_is_finite_and_bound_into_configuration(self) -> None:
+        configuration = TOOL.recorder_config(
+            Path("/safe/disk1.adf"), Path("/safe/disk2.adf"), Path("/safe/kickstart.rom"),
+            Path("/safe/capture"), "warp")
+        self.assertIn("warp_mode = 1", configuration)
+        with self.assertRaisesRegex(TOOL.CaptureError, "finite profile set"):
+            TOOL.recorder_config(
+                Path("/safe/disk1.adf"), Path("/safe/disk2.adf"), Path("/safe/kickstart.rom"),
+                Path("/safe/capture"), "unbounded")
+
     def test_unmount_requires_the_exact_fuse_view_to_disappear(self) -> None:
         with temporary_directory() as directory:
             mountpoint = Path(directory) / "capture-view"

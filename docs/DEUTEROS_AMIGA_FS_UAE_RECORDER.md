@@ -109,8 +109,14 @@ python3 tools/run_deuteros_amiga_capture.py \
   --source-release /absolute/path/to/Deuteros-The-Next-Millennium_Amiga_EN.zip \
   --kickstart-archive '/absolute/path/to/Kickstart v1.3 r34.005 (1987-12)(Commodore)(A500-A1000-A2000-CDTV)[!].zip' \
   --recorder /absolute/path/to/reviewed/fs-uae \
+  --timing-profile realtime \
   --output /home/you/.cache/project-eon-tools/deuteros-amiga-capture-<UTC>
 ```
+
+`realtime` is the default and the only timing-faithful capture profile. The
+finite `warp` profile is allowed solely for separately labelled diagnostic
+reachability work; it is receipt-bound but cannot establish original timing,
+gameplay, or title-screen behaviour.
 
 It admits only the documented outer ZIPs, reviewed recorder binary, clean
 Disk 1/Disk 2 ADFs and Kickstart ROM hashes. It mounts the outer release, each
@@ -133,14 +139,16 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-Current captures write `capture_receipt_version=5`. They bind both the complete
+Current captures write `capture_receipt_version=6`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
 summary, and enforce a 64 MiB total-console safety cap. A cap crossing writes
 `recorder_console_over_limit=true`, stops the recorder, preserves the bounded
 prefix for review, and rejects the directory as inadmissible evidence. Receipt
-v5 also validates a present FS-UAE host-delivery receipt as at most 256
+v6 also binds the finite `realtime` or diagnostic-only `warp` timing profile
+to the generated configuration, and validates a present FS-UAE host-delivery
+receipt as at most 256
 contiguous ASCII records in the reviewed `host-input` grammar and records its
 count. The action and state integers remain opaque: this binds delivery-file
 integrity, not a game input meaning or acceptance result. Receipt v2–v4 remain
