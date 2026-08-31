@@ -102,6 +102,16 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "opcode-pair"):
                 TOOL.verify_deuteros_raw_pc_opcode_pairs(fields, root)
 
+    def test_v9_deuteros_opcode_pairs_use_the_v9_grammar(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "raw-pc.txt").write_text(
+                "raw-pc 1 cycles=1 pc=0x0001fe84 ir_opcode=0x7202 memory_opcode=0x7202 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=0 input_frame=0\n", encoding="ascii")
+            fields = {"raw_pc_opcode_pairs": "0x0001fe84:7202/7202"}
+            TOOL.verify_deuteros_raw_pc_opcode_pairs(fields, root, "v9")
+
     def test_v9_deuteros_input_chronology_requires_exact_prior_delivery(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)

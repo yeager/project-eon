@@ -129,10 +129,11 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
         raise ValueError("raw_pc grammar/count receipt mismatch")
 
 
-def verify_deuteros_raw_pc_opcode_pairs(fields: dict[str, str], directory: Path) -> None:
-    """Recompute v8's opaque IR/memory-pair summary without inferring an ABI."""
+def verify_deuteros_raw_pc_opcode_pairs(fields: dict[str, str], directory: Path,
+                                        raw_format: str = "v7") -> None:
+    """Recompute a v7/v9 opaque IR/memory-pair summary without inferring an ABI."""
     tool = load_tool("run_deuteros_amiga_capture")
-    _, pairs = tool.parse_raw_pc_summary(directory / "raw-pc.txt", "v7")
+    _, pairs = tool.parse_raw_pc_summary(directory / "raw-pc.txt", raw_format)
     expected = ",".join(
         f"0x{site:08x}:" + "+".join(
             f"{ir:04x}/{memory:04x}" for ir, memory in sorted(pairs[site]))
@@ -285,7 +286,7 @@ def verify(kind: str, directory: Path) -> None:
         if version == "8" and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory)
         if version == "9" and fields.get("raw_pc") == "present":
-            verify_deuteros_raw_pc_opcode_pairs(fields, directory)
+            verify_deuteros_raw_pc_opcode_pairs(fields, directory, "v9")
             verify_deuteros_raw_pc_input_chronology(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)

@@ -256,7 +256,15 @@ The next reviewed recorder is receipt v9, pinned in the capture runner as a
 only a read-only atomic ordinal/frame snapshot to each raw-PC observation.
 Only a successful, non-playback, non-state-management host-delivery receipt
 can advance that snapshot; zero means no such delivery preceded the sample.
-No v9 physical run has been admitted yet. The first v9 no-input run must
-retain zero links and the existing bootstrap boundary before an operator-led
-input run can contribute chronology evidence. Neither run proves a guest poll,
-input acceptance, title execution, display, audio, ABI, or gameplay.
+On 2026-08-31, the first v9 15-second no-input preflight was independently
+accepted by `verify_capture_receipt.py`. Its cache-only receipt retained the
+recognised outer release, Kickstart archive, reviewed recorder and generated
+configuration identities. The recorder timed out normally with an empty
+console, no host-input receipt, and zero input links. Its 256 raw-PC records
+(41,876 bytes, SHA-256
+`fd52c57cb44a402fc7b9ddbeea0e8d1867dd09e8851f586ef515d6aba8698c39`)
+were capped at the existing bootstrap sites: 128 at `0x0001fe84` with
+`7202/7202` and 128 at `0x0001fe96` with `7208/7208`. This admits the v9
+receipt/verifier route and its zero-link chronology only. It does not prove a
+guest poll, input acceptance, title execution, display, audio, ABI, or
+gameplay; an operator-led physical-input run remains separately required.

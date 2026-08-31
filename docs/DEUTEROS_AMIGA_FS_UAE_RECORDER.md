@@ -187,6 +187,19 @@ Pre-v2 capture directories remain diagnostic evidence only: their retained
 console prefix was not hash-bound, so they cannot be verifier-admissible.
 Repeat a physical capture rather than upgrading or editing its receipt.
 
+On 2026-08-31, the reviewed v9 binary completed a fresh 15-second realtime,
+input-free preflight against the exact recognised outer release and Kickstart
+archive. Its external cache receipt was accepted by
+`verify_capture_receipt.py` after the verifier recomputed the v9 (rather than
+v7) IR/memory opcode grammar. It retained an empty console, no host-input
+receipt, and no delivery-to-CPU links. The bounded raw-PC observation is
+41,876 bytes with SHA-256
+`fd52c57cb44a402fc7b9ddbeea0e8d1867dd09e8851f586ef515d6aba8698c39`: 256
+records, split 128/128 between `0x0001fe84` (`7202/7202`) and `0x0001fe96`
+(`7208/7208`). This validates the read-only receipt path and no-input
+chronology only; it does not admit guest input, title execution, display,
+audio, ABI, or gameplay evidence.
+
 On 2026-08-31, a fresh 15-second input-free run against the recognised clean
 outer release and Kickstart was accepted by that verifier as receipt v2. It
 recorded a 28,052-byte, 256-record raw-PC observation with SHA-256
