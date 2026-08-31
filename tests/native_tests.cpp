@@ -1240,6 +1240,10 @@ int main() {
     const std::array<std::uint8_t, 4> expected_edge_pixel{{255, 0, 0, 255}};
     assert(std::equal(expected_edge_pixel.begin(), expected_edge_pixel.end(),
         reconstructed.rgba.begin() + (2U * 6U + 2U) * 4U));
+    const auto reconstructed_4x = eon::reconstruct_rgba_scale4x(reconstruction_source, 3, 3);
+    assert(reconstructed_4x.width == 12 && reconstructed_4x.height == 12);
+    assert(reconstructed_4x.rgba.size() == 576);
+    assert(reconstruction_source == source_copy);
     bool malformed_reconstruction_rejected = false;
     try {
         static_cast<void>(eon::reconstruct_rgba_scale2x(reconstruction_source, 2, 3));

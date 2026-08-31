@@ -34,6 +34,14 @@ Any individual output, ratio, pacing, Scale2x, filtering, scanline or frame
 change switches the panel to Custom. Original has no path to invoke these
 settings.
 
+The renderer library also provides a bounded transient **Scale4x** primitive
+for a future explicit Custom control. It is exactly two Scale2x passes over
+already decoded RGBA pixels, subject to a four-times-smaller source pixel
+budget before its intermediate allocation. It has no file, cache, pack,
+media, or simulation API. This is implementation groundwork only: the shipped
+F10 selector continues to expose the documented Scale2x choice until the
+Scale4x UI value and all launcher catalogues are added together.
+
 The F10 panel also contains a read-only **Developer diagnostics** page. It
 reports only launcher-owned facts: the selected hash identity in abbreviated
 form, game/platform/language, the number of declarative recovery-map

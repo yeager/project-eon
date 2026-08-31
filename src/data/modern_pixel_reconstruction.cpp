@@ -75,4 +75,19 @@ ModernReconstructedSurface reconstruct_rgba_scale2x(
     return result;
 }
 
+ModernReconstructedSurface reconstruct_rgba_scale4x(
+    const std::span<const std::uint8_t> original_rgba, const int width, const int height) {
+    if (width <= 0 || height <= 0) throw std::runtime_error("Scale4x source dimensions must be positive");
+    const auto source_width = static_cast<std::size_t>(width);
+    const auto source_height = static_cast<std::size_t>(height);
+    if (source_width > maximum_source_pixels / source_height
+        || source_width * source_height > maximum_source_pixels / 4U) {
+        throw std::runtime_error("Scale4x source exceeds bounded pixel budget");
+    }
+    // Keep the first surface local and move its transient bytes straight into
+    // the second pass. Neither pass has an I/O path or retains the source.
+    auto first = reconstruct_rgba_scale2x(original_rgba, width, height);
+    return reconstruct_rgba_scale2x(first.rgba, first.width, first.height);
+}
+
 } // namespace eon
