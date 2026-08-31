@@ -487,6 +487,25 @@ that any handler return, title state, frame, audio, input, or gameplay
 occurred. It is retained solely as the next hash-bound runtime-address
 boundary for recovery.
 
+### Receipt-v8 private-handler-entry probe (explicitly rejected diagnostic)
+
+On 2026-08-31, the v8 recorder retained one additional raw control-flow
+observation. After the same `TITLES.EXE:$0127` IVT snapshot (`087e:0000`),
+the normal CPU core reached exactly `087e:0000` before the two previously
+observed post-`INT 91h` words at `TITLES.EXE:$0129`. The exact seven-record,
+688-byte raw-result file has SHA-256
+`4708431edd9552150298e5df64aadcc9bd36f27064c765a5ceec936cc94e361b`; the
+reviewed recorder is SHA-256
+`6cd6be57b3487d9141b360de209fe9d21205ddd3cefefe2b065b1831be63b2be`.
+
+This configuration again hit the console safety cap (`67,225,827` bytes;
+retained-prefix SHA-256
+`0e092c09f5e7dc836341695705dfec400f319b17d6ccbf9db8da41a61142617b`) and is
+therefore rejected by the v8 verifier. The new edge proves only that the
+normal core transferred to the captured IVT endpoint in this raw diagnostic
+run. It does not prove a specific loaded-image identity, decode the endpoint,
+assign its return ABI, or establish title output, input, audio, or gameplay.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
