@@ -19,6 +19,14 @@ struct MillenniumDosRuntimeByteEffect {
     std::uint8_t value = 0;
 };
 
+// A value observed at one exact native runtime address.  This is deliberately
+// not a host-side state value: callers must preserve which original cell was
+// sampled before asking a hash-bound prefix evaluator to use it.
+struct MillenniumDosRuntimeByteObservation {
+    std::uint16_t address = 0;
+    std::uint8_t value = 0;
+};
+
 // Host-side observation of the original loop's *already polled* AL byte.  It
 // deliberately does not invoke native handlers or mutate the original save.
 class MillenniumDosGameSession {
@@ -44,12 +52,12 @@ public:
     // original runtime state, not an SDL key mapping or a value made up by the
     // host. Requires the non-owning original-executable constructor.
     [[nodiscard]] MillenniumDosFirstSpecialActionPrefix
-    observe_first_special_action(std::uint8_t observed_runtime_byte);
+    observe_first_special_action(MillenniumDosRuntimeByteObservation observation);
     // Action $0c has no pre-helper write. This records whether the supplied
     // native gate blocks it or reaches its first helper boundary. Requires the
     // non-owning original-executable constructor.
     [[nodiscard]] MillenniumDosSecondSpecialActionPrefix
-    observe_second_special_action(std::uint8_t observed_runtime_byte);
+    observe_second_special_action(MillenniumDosRuntimeByteObservation observation);
     [[nodiscard]] std::optional<MillenniumDosFirstSpecialActionPrefix>
     last_first_special_action_trace() const { return last_first_special_action_trace_; }
     [[nodiscard]] std::optional<MillenniumDosSecondSpecialActionPrefix>

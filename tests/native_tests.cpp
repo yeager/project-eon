@@ -4396,14 +4396,14 @@ int main() {
     {
         bool rejected = false;
         try {
-            static_cast<void>(game_session.observe_first_special_action(0));
+            static_cast<void>(game_session.observe_first_special_action({0x07f9, 0}));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
         assert(rejected);
     }
     eon::MillenniumDosGameSession observed_game_session(game_flow, *game_executable);
-    const auto observed_first_special = observed_game_session.observe_first_special_action(0x5a);
+    const auto observed_first_special = observed_game_session.observe_first_special_action({0x07f9, 0x5a});
     assert(observed_first_special.action == 0x0b);
     assert(observed_game_session.last_special_action() == std::optional<std::uint8_t>{0x0b});
     assert(observed_game_session.last_first_special_action_trace());
@@ -4414,7 +4414,16 @@ int main() {
     assert(observed_game_session.last_special_runtime_byte_effect()->value == 0x5b);
     assert(observed_game_session.reconstructed_runtime_byte(0x07f9)
         == std::optional<std::uint8_t>{0x5b});
-    const auto observed_second_special = observed_game_session.observe_second_special_action(1);
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(observed_game_session.observe_first_special_action({0xda3a, 0x5a}));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    const auto observed_second_special = observed_game_session.observe_second_special_action({0xda3a, 1});
     assert(observed_second_special.action == 0x0c);
     assert(observed_second_special.outcome
         == eon::MillenniumDosSecondSpecialActionOutcome::blocked_by_runtime_byte);
@@ -4431,7 +4440,7 @@ int main() {
         eon::MillenniumDosGameSession altered_session(game_flow, altered_special_handler);
         bool rejected = false;
         try {
-            static_cast<void>(altered_session.observe_first_special_action(0));
+            static_cast<void>(altered_session.observe_first_special_action({0x07f9, 0}));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
