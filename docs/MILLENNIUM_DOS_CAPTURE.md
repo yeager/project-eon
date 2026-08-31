@@ -591,6 +591,23 @@ ABI to the private interrupt, explain the exception, replay the record,
 provide a guest result, or establish title, input, frame, audio, or gameplay
 behaviour.
 
+On 2026-08-31, a fresh 15-second operator-visible `svga_s3` run exercised the
+v11 helper through a new `archivemount -o ro` view of the recognised archive.
+The verifier accepted the external receipt. It stopped after 0.72 seconds with
+`termination_reason=known-unhandled-interrupt` and exit status `126`; the
+source archive retained SHA-256
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` after
+the run. No host-input receipt was created. The five-record event file is
+again 367 bytes with SHA-256
+`eaa6c537373b5a3e118f769c740ba97b59ba78595351685ec2ad79e05f7e0cda`, and the
+complete raw result receipt is again 786 bytes with SHA-256
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`. The
+fresh generated configuration has SHA-256
+`16fc67bb158262056a1acc0d95d14a620b0fe6ee43c2355d18ba0d94127a1ffe` (336
+bytes). This validates the new v11 host stop and recorder-route
+reproducibility only; it establishes no guest handler result, title, input,
+frame, audio, ABI, or gameplay behaviour.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
