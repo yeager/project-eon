@@ -468,6 +468,25 @@ diagnostics only: `machine=ega` did not force an EGA driver request in this
 observed prefix, and neither the request nor the rejected raw output proves a
 driver result, a title, input delivery, or gameplay.
 
+### Receipt-v7 private-vector probe (explicitly rejected diagnostic)
+
+On 2026-08-31, the v7 recorder added one bounded IVT observation at the
+already byte-locked `TITLES.EXE:$0127` request. With the default `svga_s3`
+profile, it recorded `INT 91h` vector `087e:0000` before original interrupt
+dispatch. The exact six-record, 622-byte raw-result file has SHA-256
+`d98893c7b2da41b611b7445781881839348757305730c698cb79ab34c8fd1a45`; its
+reviewed-recorder identity is
+`1bacb843a3c1684ce4da78cac809ef6e272b5fdabb7262a01cda2b9b1b571665`.
+
+The same run reached the console safety cap after roughly 2.19 seconds
+(`67,187,894` bytes; retained-prefix SHA-256
+`081b7bf216671e623f99c703045b717a74b154d54eb2ad4d6015d9e11b77f255`) and
+the v7 verifier rejected it. The raw vector endpoint is not evidence that a
+specific driver loaded successfully, that bytes at `087e:0000` executed, or
+that any handler return, title state, frame, audio, input, or gameplay
+occurred. It is retained solely as the next hash-bound runtime-address
+boundary for recovery.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
