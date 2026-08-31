@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +21,25 @@ class DisassemblyInventoryTests(unittest.TestCase):
         self.assertIn("output must be outside the repository", tool)
         self.assertIn("file-image-relative, unrelocated", tool)
         self.assertIn("MILL22A.INF", status)
+
+    def test_mill22a_tool_rejects_checkout_and_system_scratch_before_media_read(self):
+        tool = ROOT / "tools" / "analyze_atari_st_config.py"
+        arguments = (
+            "--archive", "missing.zip", "--nested-member", "missing-inner.zip",
+            "--disk-member", "missing.st", "--disk-sha256", "0" * 64,
+            "--file-sha256", "1" * 64,
+        )
+        for output, expected in (
+            (ROOT / "forbidden-report.md", "output must be outside the repository"),
+            (Path("/tmp") / "forbidden-project-eon-report.md", "output must be outside /tmp"),
+        ):
+            with self.subTest(output=output):
+                completed = subprocess.run(
+                    (sys.executable, str(tool), *arguments, "--output", str(output)),
+                    cwd=ROOT, check=False, capture_output=True, text=True,
+                )
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn(expected, completed.stderr)
 
     def test_inventory_covers_exact_releases_with_bounded_profiles(self):
         inventory = json.loads((ROOT / "docs/disassembly-inventory.json").read_text())
