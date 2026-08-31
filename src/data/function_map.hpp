@@ -27,6 +27,7 @@ struct FunctionMapEntry {
     std::string_view uncertainty;
     std::string_view runtime_status;
     std::string_view documentation_anchor;
+    std::string_view address_space = "runtime";
 };
 
 [[nodiscard]] std::span<const FunctionMapEntry> function_map();

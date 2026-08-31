@@ -65,7 +65,7 @@ RuntimeDiagnosticsReport runtime_diagnostics_for_release(const ReleaseArchive& r
             std::string(function.source_asset_sha256), std::string(function.source_offset),
             std::string(function.runtime_address), std::string(function.evidence_level),
             std::string(function.uncertainty), std::string(function.runtime_status),
-            std::string(function.documentation_anchor)});
+            std::string(function.documentation_anchor), std::string(function.address_space)});
     }
     return report;
 }

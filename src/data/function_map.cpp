@@ -11,7 +11,14 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 12> entries{{
+constexpr std::array<FunctionMapEntry, 13> entries{{
+    {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+     "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
+     "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
+     "MILENIUM.TOS+0x001c", "+0x0000", "verified-static",
+     "GEMDOS relocation, runtime load base, TOS/XBIOS results, and execution remain unproven",
+     "diagnostics only", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
+     "image-relative-unrelocated"},
     {"millennium-amiga-en-resident-independent-entry", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
      "millennium-amiga-shared-resident", Game::millennium, Platform::amiga, "en", "m68000",
      "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e",

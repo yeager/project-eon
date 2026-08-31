@@ -29,7 +29,11 @@ class RecoveryMapTests(unittest.TestCase):
                 self.assertEqual(entry["evidence_level"], "verified-static")
                 self.assertRegex(entry["source_asset_sha256"], r"^[0-9a-f]{64}$")
                 self.assertTrue(entry["source_offset"])
-                self.assertTrue(entry["runtime_address"].startswith("$"))
+                address_space = entry.get("address_space", "runtime")
+                self.assertIn(address_space, {"runtime", "image-relative-unrelocated"})
+                self.assertTrue(entry["runtime_address"].startswith("$")
+                                if address_space == "runtime"
+                                else entry["runtime_address"].startswith("+0x"))
                 self.assertTrue(entry["uncertainty"])
                 self.assertTrue(entry["runtime_status"])
                 self.assertIn(entry["documentation_anchor"].split("#", 1)[1], anchors)

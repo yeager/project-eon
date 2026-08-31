@@ -40,6 +40,7 @@ struct RuntimeDiagnosticFunction {
     std::string uncertainty;
     std::string runtime_status;
     std::string documentation_anchor;
+    std::string address_space;
 };
 
 struct RuntimeDiagnosticsReport {
