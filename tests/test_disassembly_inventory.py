@@ -15,6 +15,8 @@ class DisassemblyInventoryTests(unittest.TestCase):
         status = (ROOT / "docs" / "DISASSEMBLY_STATUS.md").read_text(encoding="utf-8")
         self.assertIn("MILL22A.INF", tool)
         self.assertIn("output must not already exist", tool)
+        self.assertIn("output must be outside /tmp", tool)
+        self.assertIn("output must be outside the repository", tool)
         self.assertIn("file-image-relative, unrelocated", tool)
         self.assertIn("MILL22A.INF", status)
 

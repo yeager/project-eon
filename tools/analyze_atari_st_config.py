@@ -18,6 +18,20 @@ from zipfile import ZipFile
 from analyze_atari_st_prg import fat12_member
 
 
+def require_external_output(path: Path) -> None:
+    """Reject report destinations that could commit or use system scratch."""
+    resolved = path.resolve(strict=False)
+    repository = Path(__file__).resolve().parents[1]
+    if resolved == Path("/tmp") or Path("/tmp") in resolved.parents:
+        raise SystemExit("output must be outside /tmp")
+    if resolved == repository or repository in resolved.parents:
+        raise SystemExit("output must be outside the repository")
+    if path.exists():
+        raise SystemExit("output must not already exist")
+    if not path.parent.is_dir():
+        raise SystemExit("output parent directory must already exist")
+
+
 def linear_listing(data: bytes) -> list[str]:
     try:
         from capstone import CS_ARCH_M68K, CS_MODE_BIG_ENDIAN, CS_MODE_M68K_000, Cs
@@ -46,8 +60,7 @@ def main() -> None:
     parser.add_argument("--file-sha256", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    if args.output.exists():
-        raise SystemExit("output must not already exist")
+    require_external_output(args.output)
     try:
         with ZipFile(args.archive) as outer:
             nested = outer.read(args.nested_member)
