@@ -23,6 +23,12 @@ void require_release_identity(const ReleaseArchive& release, const Game game,
 } // namespace
 
 RuntimeDiagnosticsReport runtime_diagnostics_for_release(const ReleaseArchive& release) {
+    // Diagnostics are declarative and do not reopen user media, but they are
+    // still release-bound: a forged DTO must never borrow the named map rows
+    // belonging to a different game, platform, or language.
+    if (!is_recognised_release_identity(release)) {
+        throw std::runtime_error("Runtime diagnostics release is not an exact recognised manifest identity");
+    }
     RuntimeDiagnosticsReport report;
     report.game = release.game;
     report.platform = release.platform;

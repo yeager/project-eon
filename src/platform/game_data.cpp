@@ -74,6 +74,15 @@ std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& d
     return scanner.releases();
 }
 
+bool is_recognised_release_identity(const ReleaseArchive& release) {
+    try {
+        static_cast<void>(require_manifest_identity(release));
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 void verify_release_archive(const ReleaseArchive& release) {
     static_cast<void>(VerifiedReleaseMedia::open(release));
 }

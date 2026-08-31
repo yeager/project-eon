@@ -161,6 +161,10 @@ private:
 
 [[nodiscard]] std::vector<ReleaseArchive> find_release_archives(
     const std::filesystem::path& directory);
+// Check only the declarative game/platform/language/hash tuple. This performs
+// no filesystem access and is used by media-safe diagnostics before they read
+// recovery/function-map rows for a release.
+[[nodiscard]] bool is_recognised_release_identity(const ReleaseArchive& release);
 // Re-open an already discovered release only through its full manifest
 // identity. These helpers verify the exact in-memory outer bytes used for the
 // following archive walk, so recognised media cannot be swapped after scan.

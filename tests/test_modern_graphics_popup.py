@@ -44,6 +44,12 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("truncated_identity_hash", diagnostics)
         self.assertNotIn("save", diagnostics)
 
+    def test_diagnostics_reject_forged_release_metadata_before_map_composition(self) -> None:
+        source = (ROOT / "src" / "data" / "runtime_diagnostics.cpp").read_text(encoding="utf-8")
+        self.assertIn("is_recognised_release_identity(release)", source)
+        self.assertIn("exact recognised manifest identity", source)
+        self.assertIn("do not reopen user media", source)
+
         popup_start = SOURCE.index("void draw_modern_runtime_diagnostics_popup")
         popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
         for label in (
