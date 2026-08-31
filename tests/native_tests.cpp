@@ -1269,6 +1269,14 @@ int main() {
         char* inspect_args[] = {program, inspect_option};
         const auto inspect = eon::parse_command_line(2, inspect_args);
         assert(inspect.request && inspect.request->inspect_data);
+        char inspect_json_option[] = "--inspect-json";
+        char* inspect_json_args[] = {program, inspect_json_option};
+        const auto inspect_json = eon::parse_command_line(2, inspect_json_args);
+        assert(inspect_json.request && inspect_json.request->inspect_data
+            && inspect_json.request->inspect_json);
+        char inventory_option[] = "--inventory";
+        char* inspect_json_inventory_args[] = {program, inspect_json_option, inventory_option};
+        assert(!eon::parse_command_line(3, inspect_json_inventory_args).request);
         char inspect_save_option[] = "--inspect-save";
         char inspect_save_path[] = "/original/2200SAVE.I";
         char* inspect_save_args[] = {program, inspect_save_option, inspect_save_path};

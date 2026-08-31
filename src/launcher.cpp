@@ -94,6 +94,8 @@ std::string usage() {
         "               [--release-language en|es]\n"
         "               [--inventory]\n"
         "               [--modern-packs <explicit-pack-root>]\n\n"
+        "  project-eon [--data|--data-dir <directory-or-archive>] --inspect-json\n"
+        "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n\n"
         "  project-eon --inspect-save <2200SAVE.I|verified Millennium DOS archive>\n\n"
 #if defined(__APPLE__) && TARGET_OS_IPHONE
         "Without --data/--data-dir, iPadOS reads user-supplied media from Documents/ProjectEon.\n"
@@ -118,6 +120,11 @@ ParseResult parse_command_line(int argc, char** argv) {
         if (argument == "--help" || argument == "-h") return {{}, {}, true};
         if (argument == "--inspect") {
             request.inspect_data = true;
+            continue;
+        }
+        if (argument == "--inspect-json") {
+            request.inspect_data = true;
+            request.inspect_json = true;
             continue;
         }
         if (argument == "--inventory") {
@@ -192,6 +199,9 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.inventory_assets && !request.inspect_data) {
         return {{}, "--inventory requires --inspect; it is a read-only preservation report", false};
+    }
+    if (request.inspect_json && (request.inventory_assets || request.modern_pack_root)) {
+        return {{}, "--inspect-json reports release-level diagnostics only; do not combine it with --inventory or --modern-packs", false};
     }
     if (request.modern_pack_root && !request.inspect_data) {
         return {{}, "--modern-packs requires --inspect; it is diagnostics-only and never selects a renderer pack", false};

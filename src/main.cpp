@@ -608,6 +608,79 @@ void report_startup_boundary(const eon::ReleaseArchive& release) {
         << boundary->unresolved << '\n';
 }
 
+void write_json_string(std::ostream& output, const std::string_view value) {
+    output << '"';
+    for (const unsigned char character : value) {
+        switch (character) {
+        case '"': output << "\\\""; break;
+        case '\\': output << "\\\\"; break;
+        case '\b': output << "\\b"; break;
+        case '\f': output << "\\f"; break;
+        case '\n': output << "\\n"; break;
+        case '\r': output << "\\r"; break;
+        case '\t': output << "\\t"; break;
+        default:
+            if (character < 0x20U) {
+                constexpr char hexadecimal[] = "0123456789abcdef";
+                output << "\\u00" << hexadecimal[character >> 4U]
+                    << hexadecimal[character & 0x0fU];
+            } else {
+                output << static_cast<char>(character);
+            }
+        }
+    }
+    output << '"';
+}
+
+// This is intentionally a compact release-level API, not an inventory
+// export. It serializes only facts already admitted by the scanner and never
+// includes a path, filename, archive member, asset byte, or user-supplied
+// directory. Consumers can therefore preserve/review identity and boundaries
+// without turning a report into a media catalogue.
+void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
+    const eon::ReleaseScanReport& scan) {
+    std::cout << "{\"schema\":\"project-eon.inspect/v1\",\"releases\":[";
+    for (std::size_t index = 0; index < releases.size(); ++index) {
+        if (index != 0) std::cout << ',';
+        const auto& release = releases[index];
+        std::cout << "{\"game\":"; write_json_string(std::cout, eon::name(release.game));
+        std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(release.platform));
+        std::cout << ",\"language\":"; write_json_string(std::cout, release.language);
+        std::cout << ",\"sha256\":"; write_json_string(std::cout, release.sha256);
+        std::cout << ",\"startup_boundary\":";
+        if (const auto startup = eon::startup_boundary_for_release(release.sha256)) {
+            std::cout << "{\"profile\":"; write_json_string(std::cout, startup->parser_profile_id);
+            std::cout << ",\"source_address\":"; write_json_string(std::cout, startup->source_address);
+            std::cout << ",\"unresolved\":"; write_json_string(std::cout, startup->unresolved);
+            std::cout << '}';
+        } else {
+            std::cout << "null";
+        }
+        std::cout << ",\"recovery_boundaries\":[";
+        const auto boundaries = eon::recovery_map_for_release(release.sha256);
+        for (std::size_t boundary_index = 0; boundary_index < boundaries.size(); ++boundary_index) {
+            if (boundary_index != 0) std::cout << ',';
+            const auto& boundary = boundaries[boundary_index];
+            if (!eon::release_has_recovery_map_entry(release.sha256, boundary.id)) {
+                throw std::runtime_error("Recovery-map entry lost its parser-profile binding");
+            }
+            std::cout << "{\"id\":"; write_json_string(std::cout, boundary.id);
+            std::cout << ",\"profile\":"; write_json_string(std::cout, boundary.parser_profile_id);
+            std::cout << ",\"source_address\":"; write_json_string(std::cout, boundary.source_address);
+            std::cout << ",\"evidence_level\":"; write_json_string(std::cout, boundary.evidence_level);
+            std::cout << ",\"runtime_status\":"; write_json_string(std::cout, boundary.runtime_status);
+            std::cout << '}';
+        }
+        std::cout << "]}";
+    }
+    std::cout << "],\"scan\":{\"candidates\":" << scan.candidates
+        << ",\"manifest_size_matches\":" << scan.size_candidates
+        << ",\"hashed\":" << scan.hashed_candidates
+        << ",\"verified_occurrences\":" << scan.verified_occurrences
+        << ",\"duplicate_occurrences\":" << scan.duplicate_occurrences
+        << "}}\n";
+}
+
 // Keep the user-facing Atari card label tied to a concise, release-specific
 // provenance statement.  This runs after verify_release_archive() in the
 // inspection loop; it is not a claim that either native boundary is emulated.
@@ -3489,7 +3562,7 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (request.verify_game || request.inspect_data) {
-        if (request.inspect_data) {
+        if (request.inspect_data && !request.inspect_json) {
             std::cout << "INSPECTION  read-only provenance scan; original media stays in place\n";
         }
         bool found = false;
@@ -3515,6 +3588,7 @@ int main(int argc, char** argv) {
             }
             found = true;
             inspected_releases.push_back(release);
+            if (request.inspect_json) continue;
             std::cout << "VERIFIED  " << eon::name(release.game) << " / "
                 << eon::name(release.platform) << " / " << release.language << '\n'
                 << "          " << release.sha256 << '\n'
@@ -3545,6 +3619,14 @@ int main(int argc, char** argv) {
                 report_millennium_atari_st(release);
             }
             if (request.inventory_assets) report_verified_release_inventory(release);
+        }
+        if (request.inspect_json) {
+            if (!found) {
+                std::cerr << "No recognised original release matches the requested inspection filters.\n";
+                return 5;
+            }
+            report_inspection_json(inspected_releases, scanner->report());
+            return 0;
         }
         if (request.modern_pack_root) {
             report_modern_asset_packs(*request.modern_pack_root, inspected_releases);
