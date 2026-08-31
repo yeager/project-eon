@@ -286,8 +286,10 @@ are counted, not silently treated as separate editions.
 by a size absent from both manifests (which are not hashed), outer
 manifest-size matches, direct-media leaf-size matches, hashed
 candidates, manifest-sized hash rejections, verified and duplicate occurrences,
-unique releases, and unreadable candidates. The report deliberately does not
-print unrecognised filenames or infer their platform: it makes admission and
+unique releases, unique unbound direct-media leaves, and unreadable candidates.
+The matching `--inspect-json` scan object carries the same aggregate totals
+without paths, filenames, member names, or media bytes. The report deliberately
+does not print unrecognised filenames or infer their platform: it makes admission and
 scanner failures auditable while preserving the strict content-addressed boundary.
 The launcher's `D` scanner panel consumes the same immutable aggregate snapshot,
 including unique verified-release and duplicate-occurrence counts. It is a

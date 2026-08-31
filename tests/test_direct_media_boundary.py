@@ -23,6 +23,7 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         self.assertIn("### Direct-media evidence boundary", documentation)
         self.assertIn("does not create a `ReleaseArchive`", documentation)
         self.assertIn("complete-set identity", documentation)
+        self.assertIn("unique unbound direct-media leaves", documentation)
 
 
 if __name__ == "__main__":
