@@ -369,5 +369,11 @@ msgstr "ORYGINALNE USTAWIENIA WYŚWIETLANIA"
 msgid "Discovering files: "
 msgstr "Wykrywanie plików: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Pliki z hashem: "

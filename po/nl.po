@@ -369,5 +369,11 @@ msgstr "ORIGINELE WEERGAVE-INSTELLINGEN"
 msgid "Discovering files: "
 msgstr "Bestanden zoeken: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Gehashte bestanden: "

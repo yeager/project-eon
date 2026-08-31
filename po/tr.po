@@ -369,5 +369,11 @@ msgstr "ORİJİNAL GÖRÜNTÜ AYARLARI"
 msgid "Discovering files: "
 msgstr "Dosyalar aranıyor: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Karması alınan dosyalar: "

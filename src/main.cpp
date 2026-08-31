@@ -419,7 +419,39 @@ struct ModernRuntimeDiagnostics {
     std::size_t recovery_boundary_count = 0;
     std::vector<RecoveryFunction> recovery_functions;
     std::string trace_admission = "NOT LOADED";
+    // This comes only from the launcher preflight object. It does not expose
+    // a local path, decode an external asset, or imply the renderer loaded it.
+    std::string modern_pack = "NOT SELECTED";
+    std::string modern_pack_targets = "—";
 };
+
+[[nodiscard]] std::string modern_pack_renderer_targets_summary(
+    const eon::ModernAssetPackRendererTargets& targets) {
+    std::vector<std::string> entries;
+    if (targets.millennium_dos_title_640x400 || targets.millennium_dos_title_1280x800) {
+        entries.push_back("TITLE 640/1280="
+            + std::string(targets.millennium_dos_title_640x400 ? "Y" : "N")
+            + "/" + std::string(targets.millennium_dos_title_1280x800 ? "Y" : "N"));
+    }
+    if (targets.deuteros_amiga_opening_640x400_frames
+        || targets.deuteros_amiga_opening_1280x800_frames) {
+        entries.push_back("OPENING 640/1280="
+            + std::to_string(targets.deuteros_amiga_opening_640x400_frames) + "/"
+            + std::to_string(eon::deuteros_amiga_held_opening_frame_count) + ","
+            + std::to_string(targets.deuteros_amiga_opening_1280x800_frames) + "/"
+            + std::to_string(eon::deuteros_amiga_held_opening_frame_count));
+    }
+    if (entries.empty()) return "—";
+    std::string summary = entries.front();
+    for (std::size_t index = 1; index < entries.size(); ++index) summary += "; " + entries[index];
+    return summary;
+}
+
+[[nodiscard]] std::string truncated_diagnostic_value(const std::string_view value,
+    const std::size_t maximum_characters = 22U) {
+    if (value.size() <= maximum_characters) return std::string(value);
+    return std::string(value.substr(0, maximum_characters - 1U)) + "…";
+}
 
 [[nodiscard]] std::string truncated_identity_hash(const std::string_view hash) {
     // The launcher needs enough identity to correlate an on-screen readout
@@ -923,11 +955,13 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
     draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::pair<const char*, std::string>, 7> rows{{
+    const std::array<std::pair<const char*, std::string>, 9> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
         {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
+        {"MODERN PACK", diagnostics.modern_pack},
+        {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
         {"RENDERER SETTINGS", std::to_string(resolution.width) + "x" + std::to_string(resolution.height)
             + " / " + tr(display_aspect_names.at(settings.aspect_ratio_index))
@@ -941,7 +975,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"FRAME PACING", tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing)))},
     }};
     for (std::size_t index = 0; index < rows.size(); ++index) {
-        const float y = 262.0F + static_cast<float>(index) * 43.0F;
+        const float y = 250.0F + static_cast<float>(index) * 37.0F;
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
         draw_text(renderer, 390, y, tr(rows[index].first));
         SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
@@ -4396,6 +4430,15 @@ int main(int argc, char** argv) {
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
         diagnostics.release_identity = tr("NOT SELECTED");
+        diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
+            : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");
+        if (modern_pack_admission == ModernPackAdmission::ready && selected_modern_pack_preflight
+            && selected_modern_pack_preflight->accepted) {
+            diagnostics.modern_pack += " / " + truncated_diagnostic_value(selected_modern_pack_preflight->pack_id)
+                + " / " + truncated_diagnostic_value(selected_modern_pack_preflight->provenance);
+            diagnostics.modern_pack_targets = modern_pack_renderer_targets_summary(
+                selected_modern_pack_preflight->targets);
+        }
         // In the menu, show the currently focused game/platform/release
         // choice; after launch, show the fixed session selection. This is a
         // live UI readout, not a second admission path.

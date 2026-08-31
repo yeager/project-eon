@@ -369,5 +369,11 @@ msgstr "原始显示设置"
 msgid "Discovering files: "
 msgstr "正在发现文件："
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "已哈希文件："

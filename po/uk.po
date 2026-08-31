@@ -369,5 +369,11 @@ msgstr "НАЛАШТУВАННЯ ОРИГІНАЛЬНОГО ВІДОБРАЖЕН
 msgid "Discovering files: "
 msgstr "Пошук файлів: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Хешовані файли: "

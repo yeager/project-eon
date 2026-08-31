@@ -330,5 +330,11 @@ msgstr "ALKUPERÄISET NÄYTTÖASETUKSET"
 msgid "Discovering files: "
 msgstr "Etsitään tiedostoja: "
 
+msgid "MODERN PACK"
+msgstr "MODERN PACK"
+
+msgid "PACK RENDER TARGETS"
+msgstr "PACK RENDER TARGETS"
+
 msgid "Files hashed: "
 msgstr "Tiivistetyt tiedostot: "
