@@ -297,9 +297,17 @@ terminal or cache while retaining an auditable identity for the complete raw
 diagnostic stream. It does not drop or reinterpret the hash-bound event and
 result records.
 
-New captures write `capture_receipt_version=2`, binding the retained console
-prefix as well as the complete transcript. Verify a completed external capture
-without reading game media:
+Receipt v4 additionally enforces a 64 MiB total-console safety cap. When a
+recorder crosses it, the helper keeps draining only until it can terminate the
+child, writes an explicit `recorder_console_over_limit=true` receipt, and
+rejects the directory as inadmissible evidence. This retains the bounded
+diagnostic prefix for review without allowing a known exception loop to spend
+the whole physical-observation window on host I/O. A verifier accepts v2 and
+v3 historical receipts, while v4 requires `recorder_console_over_limit=false`.
+
+Receipt v2 first bound the retained console prefix as well as the complete
+transcript; current Millennium captures write `capture_receipt_version=4`.
+Verify a completed external capture without reading game media:
 
 ```sh
 python3 tools/verify_capture_receipt.py \

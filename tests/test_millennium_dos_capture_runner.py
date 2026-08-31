@@ -131,14 +131,33 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
         with temporary_directory() as directory:
             path = Path(directory) / "recorder-console.log"
             bytes_to_observe = b"x" * (TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES + 17)
-            status = TOOL.capture_bounded_console(io.BytesIO(bytes_to_observe), path)
+            over_limit = TOOL.threading.Event()
+            status = TOOL.capture_bounded_console(io.BytesIO(bytes_to_observe), path, over_limit)
             self.assertEqual(status.total_bytes, len(bytes_to_observe))
             self.assertEqual(status.retained_bytes, TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES)
             self.assertTrue(status.truncated)
             self.assertEqual(status.sha256, hashlib.sha256(bytes_to_observe).hexdigest())
             self.assertEqual(path.stat().st_size, TOOL.MAX_RECORDER_CONSOLE_LOG_BYTES)
+            self.assertFalse(status.over_limit)
             receipt = TOOL.recorder_console_status(status)
             self.assertIn("recorder_console_truncated=true", receipt)
+            self.assertIn("recorder_console_over_limit=false", receipt)
+
+    def test_console_total_safety_cap_signals_for_child_termination(self) -> None:
+        with temporary_directory() as directory:
+            path = Path(directory) / "recorder-console.log"
+            over_limit = TOOL.threading.Event()
+            original_limit = TOOL.MAX_RECORDER_CONSOLE_TOTAL_BYTES
+            try:
+                TOOL.MAX_RECORDER_CONSOLE_TOTAL_BYTES = 16
+                bytes_to_observe = b"x" * 17
+                status = TOOL.capture_bounded_console(io.BytesIO(bytes_to_observe), path, over_limit)
+                self.assertTrue(over_limit.is_set())
+                self.assertTrue(status.over_limit)
+                self.assertEqual(status.total_bytes, len(bytes_to_observe))
+                self.assertEqual(path.stat().st_size, len(bytes_to_observe))
+            finally:
+                TOOL.MAX_RECORDER_CONSOLE_TOTAL_BYTES = original_limit
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ class ReceiptVerifierTests(unittest.TestCase):
             TOOL.require_receipt_schema({"capture_receipt_version": "1"})
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "2"}), "2")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "3"}), "3")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "4"}), "4")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
@@ -79,6 +80,14 @@ class ReceiptVerifierTests(unittest.TestCase):
             fields["recorder_console_sha256"] = "z" * 64
             with self.assertRaisesRegex(ValueError, "mismatch"):
                 TOOL.verify_console(fields, root)
+
+    def test_v4_rejects_a_console_safety_overrun(self) -> None:
+        TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "4")
+        TOOL.verify_console_admission({}, "3")
+        with self.assertRaisesRegex(ValueError, "safety cap"):
+            TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "4")
+        with self.assertRaisesRegex(ValueError, "safety cap"):
+            TOOL.verify_console_admission({}, "4")
 
 
 if __name__ == "__main__":
