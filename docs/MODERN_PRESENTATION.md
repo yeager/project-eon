@@ -30,17 +30,18 @@ to SDL; native tests cover the 4:3 and 16:9 F10 preview fits. Pacing offers disp
 default), a precise 120-FPS presentation cap, or uncapped presentation. The
 cap delays only SDL presentation after a frame has been rendered; it never
 changes a recovered scheduler, original input poll, save byte, or game tick.
-Any individual output, ratio, pacing, Scale2x, filtering, scanline or frame
+Any individual output, ratio, pacing, Scale2x/Scale4x, filtering, scanline or frame
 change switches the panel to Custom. Original has no path to invoke these
 settings.
 
-The renderer library also provides a bounded transient **Scale4x** primitive
-for a future explicit Custom control. It is exactly two Scale2x passes over
+The shipped Custom selector provides bounded transient **Scale4x** as well as
+Scale2x and original-pixel output. Scale4x is exactly two Scale2x passes over
 already decoded RGBA pixels, subject to a four-times-smaller source pixel
-budget before its intermediate allocation. It has no file, cache, pack,
-media, or simulation API. This is implementation groundwork only: the shipped
-F10 selector continues to expose the documented Scale2x choice until the
-Scale4x UI value and all launcher catalogues are added together.
+budget before its intermediate allocation. A derived SDL texture is keyed by
+the admitted release hash, symbolic presentation source, source tick and
+reconstruction mode; changing any of those values destroys the old transient
+texture before upload. It has no file, disk cache, pack, media or simulation
+API, and Original never instantiates it.
 
 The F10 panel also contains a read-only **Developer diagnostics** page. It
 reports only launcher-owned facts: the selected hash identity in abbreviated

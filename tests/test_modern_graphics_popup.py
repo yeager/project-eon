@@ -184,17 +184,30 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertGreaterEqual(SOURCE.count(
             "if (modern) draw_modern_preset_overlay(renderer, preview_bounds,"), 2)
 
-    def test_deuteros_modern_reconstruction_is_cached_per_verified_vm_tick(self) -> None:
+    def test_modern_reconstruction_cache_is_keyed_by_release_source_tick_and_mode(self) -> None:
         # The host may present several times between 20 ms opening-VM ticks.
-        # Reusing the transient source/Scale2x texture avoids regenerating
-        # pixels from the same original frame without introducing a disk cache.
+        # Reusing a texture is safe only when the full renderer source key
+        # still matches; F10 must therefore invalidate Scale4x -> Clean even
+        # when the original frame/tick has not changed.
+        header = (ROOT / "src" / "data" / "modern_pixel_reconstruction.hpp").read_text(encoding="utf-8")
+        self.assertIn("struct ModernReconstructionCacheKey", header)
+        for field in ("release_sha256", "source_id", "source_tick", "reconstruction"):
+            with self.subTest(field=field):
+                self.assertIn(field, header)
+        self.assertNotIn("filesystem", header)
+        self.assertNotIn("SDL_", header)
         self.assertIn("deuteros_preview_source_tick", SOURCE)
-        self.assertIn("deuteros_modern_preview_attempted_tick", SOURCE)
-        self.assertIn("deuteros_modern_preview_source_tick", SOURCE)
+        self.assertIn("deuteros_modern_preview_attempted_key", SOURCE)
+        self.assertIn("deuteros_modern_preview_key", SOURCE)
+        self.assertIn("millennium_modern_preview_key", SOURCE)
+        self.assertIn('"millennium.dos.title"', SOURCE)
+        self.assertIn('"deuteros.amiga.opening"', SOURCE)
+        self.assertIn("*millennium_modern_preview_key != requested_key", SOURCE)
+        self.assertIn("*deuteros_modern_preview_key != *deuteros_requested_key", SOURCE)
         self.assertIn("deuteros_opening->ticks()", SOURCE)
         self.assertIn("deuteros_opening->rgba_frame()", SOURCE)
         self.assertIn("reconstruct_rgba_scale2x(*frame", SOURCE)
-        self.assertNotIn("deuteros_modern_preview_source_tick = source_tick;\n                }", SOURCE)
+        self.assertIn("SDL_DestroyTexture(modern_preview_texture)", SOURCE)
 
     def test_deuteros_external_opening_pack_is_modern_only_and_tick_bound(self) -> None:
         loader = SOURCE.index("const auto load_deuteros_external_modern_sequence")

@@ -299,7 +299,7 @@ struct ProfileCard {
 // Modern options are renderer state only. They are deliberately independent
 // from original input, media, simulation state and save bytes.
 enum class ModernGraphicsPreset { clean, crt, cinematic, high_contrast, custom };
-enum class PixelReconstruction { off, scale2x, scale4x };
+using PixelReconstruction = eon::ModernPixelReconstruction;
 // Presentation scheduling is deliberately separate from the recovered clock.
 // It controls when SDL presents already-rendered pixels; it never supplies a
 // tick, input, or elapsed-time value to an original game path.
@@ -3819,14 +3819,14 @@ int main(int argc, char** argv) {
     // They have no on-disk representation and are selected exclusively by
     // Modern at render time.
     SDL_Texture* modern_preview_texture = nullptr;
+    std::optional<eon::ModernReconstructionCacheKey> deuteros_modern_preview_attempted_key;
+    std::optional<eon::ModernReconstructionCacheKey> deuteros_modern_preview_key;
     // The opening VM advances at a verified 20 ms cadence. Retain its
     // decoded frame only until that cadence produces a new source frame, so
     // presentation refreshes never repeatedly colorize or reconstruct the
     // same original pixels. This remains renderer-only process memory.
     std::optional<std::vector<std::uint8_t>> deuteros_preview_rgba;
     std::optional<std::uint64_t> deuteros_preview_source_tick;
-    std::optional<std::uint64_t> deuteros_modern_preview_attempted_tick;
-    std::optional<std::uint64_t> deuteros_modern_preview_source_tick;
     // A complete external Modern sequence is an alternative presentation of
     // the finite held-input route only.  It neither provides VM state nor
     // substitutes a single original pixel in Original mode.
@@ -3939,6 +3939,7 @@ int main(int argc, char** argv) {
     };
     SDL_Texture* millennium_preview_texture = nullptr;
     SDL_Texture* millennium_modern_preview_texture = nullptr;
+    std::optional<eon::ModernReconstructionCacheKey> millennium_modern_preview_key;
     SDL_Texture* millennium_external_modern_texture = nullptr;
     std::optional<eon::ModernAssetPackPngSurface> millennium_external_modern_surface;
     bool millennium_external_modern_attempted = false;
@@ -3952,6 +3953,7 @@ int main(int argc, char** argv) {
         if (millennium_gx_canvas_texture) SDL_DestroyTexture(millennium_gx_canvas_texture);
         millennium_preview_texture = nullptr;
         millennium_modern_preview_texture = nullptr;
+        millennium_modern_preview_key.reset();
         millennium_external_modern_texture = nullptr;
         millennium_external_modern_surface.reset();
         millennium_external_modern_attempted = false;
@@ -3984,6 +3986,16 @@ int main(int argc, char** argv) {
         if (!millennium_assets || !millennium_preview_texture || reconstruction == PixelReconstruction::off) {
             return millennium_preview_texture;
         }
+        const auto release = resolve_active_release(eon::Game::millennium);
+        if (!release) return millennium_preview_texture;
+        const eon::ModernReconstructionCacheKey requested_key{
+            release->sha256, "millennium.dos.title", 0, reconstruction};
+        if (millennium_modern_preview_texture
+            && (!millennium_modern_preview_key || *millennium_modern_preview_key != requested_key)) {
+            SDL_DestroyTexture(millennium_modern_preview_texture);
+            millennium_modern_preview_texture = nullptr;
+            millennium_modern_preview_key.reset();
+        }
         if (!millennium_modern_preview_texture) {
             const auto& title = millennium_assets->title;
             if (title.rgba_frames.empty()) return millennium_preview_texture;
@@ -3999,6 +4011,7 @@ int main(int argc, char** argv) {
                 millennium_modern_preview_texture = nullptr;
                 return millennium_preview_texture;
             }
+            millennium_modern_preview_key = requested_key;
         }
         return millennium_modern_preview_texture;
     };
@@ -4206,8 +4219,8 @@ int main(int argc, char** argv) {
         deuteros_title_resource.reset();
         deuteros_preview_rgba.reset();
         deuteros_preview_source_tick.reset();
-        deuteros_modern_preview_attempted_tick.reset();
-        deuteros_modern_preview_source_tick.reset();
+        deuteros_modern_preview_attempted_key.reset();
+        deuteros_modern_preview_key.reset();
         if (preview_texture) SDL_DestroyTexture(preview_texture);
         if (modern_preview_texture) SDL_DestroyTexture(modern_preview_texture);
         preview_texture = nullptr;
@@ -4565,10 +4578,11 @@ int main(int argc, char** argv) {
             modern_graphics_settings.pixel_reconstruction = static_cast<PixelReconstruction>(next);
             if (millennium_modern_preview_texture) SDL_DestroyTexture(millennium_modern_preview_texture);
             millennium_modern_preview_texture = nullptr;
+            millennium_modern_preview_key.reset();
             if (modern_preview_texture) SDL_DestroyTexture(modern_preview_texture);
             modern_preview_texture = nullptr;
-            deuteros_modern_preview_source_tick.reset();
-            deuteros_modern_preview_attempted_tick.reset();
+            deuteros_modern_preview_key.reset();
+            deuteros_modern_preview_attempted_key.reset();
             mark_modern_graphics_custom(modern_graphics_settings); break;
         }
         case 5: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling;
@@ -5522,28 +5536,45 @@ int main(int argc, char** argv) {
                             + "; " + surface.provenance + "; T=1-82)");
                     }
                 }
-                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off && frame
-                    && (!deuteros_modern_preview_attempted_tick
-                        || *deuteros_modern_preview_attempted_tick != source_tick)) {
-                    const auto enhanced = modern_graphics_settings.pixel_reconstruction == PixelReconstruction::scale4x
-                        ? eon::reconstruct_rgba_scale4x(*frame, eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height)
-                        : eon::reconstruct_rgba_scale2x(*frame, eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height);
-                    if (!modern_preview_texture) {
-                        modern_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-                            SDL_TEXTUREACCESS_STREAMING, enhanced.width, enhanced.height);
+                std::optional<eon::ModernReconstructionCacheKey> deuteros_requested_key;
+                if (texture == preview_texture && modern
+                    && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off && frame) {
+                    if (const auto release = resolve_active_release(eon::Game::deuteros)) {
+                        deuteros_requested_key = {release->sha256, "deuteros.amiga.opening", source_tick,
+                            modern_graphics_settings.pixel_reconstruction};
+                        // A new source tick, release or F10 reconstruction mode
+                        // has different dimensions/pixels. Destroy the old SDL
+                        // texture before upload instead of treating existence as
+                        // cache validity.
+                        if (modern_preview_texture && (!deuteros_modern_preview_key
+                                || *deuteros_modern_preview_key != *deuteros_requested_key)) {
+                            SDL_DestroyTexture(modern_preview_texture);
+                            modern_preview_texture = nullptr;
+                            deuteros_modern_preview_key.reset();
+                        }
+                        if (!deuteros_modern_preview_attempted_key
+                            || *deuteros_modern_preview_attempted_key != *deuteros_requested_key) {
+                            const auto enhanced = modern_graphics_settings.pixel_reconstruction == PixelReconstruction::scale4x
+                                ? eon::reconstruct_rgba_scale4x(*frame, eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height)
+                                : eon::reconstruct_rgba_scale2x(*frame, eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height);
+                            if (!modern_preview_texture) {
+                                modern_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                    SDL_TEXTUREACCESS_STREAMING, enhanced.width, enhanced.height);
+                            }
+                            if (modern_preview_texture && SDL_UpdateTexture(modern_preview_texture, nullptr,
+                                    enhanced.rgba.data(), enhanced.width * 4)) {
+                                deuteros_modern_preview_key = *deuteros_requested_key;
+                            } else if (modern_preview_texture) {
+                                std::cerr << "Unable to update transient Modern Deuteros texture: "
+                                          << SDL_GetError() << '\n';
+                            }
+                            deuteros_modern_preview_attempted_key = *deuteros_requested_key;
+                        }
                     }
-                    if (modern_preview_texture && SDL_UpdateTexture(modern_preview_texture, nullptr,
-                            enhanced.rgba.data(), enhanced.width * 4)) {
-                        deuteros_modern_preview_source_tick = source_tick;
-                    } else if (modern_preview_texture) {
-                        std::cerr << "Unable to update transient Modern Deuteros texture: "
-                                  << SDL_GetError() << '\n';
-                    }
-                    deuteros_modern_preview_attempted_tick = source_tick;
                 }
-                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off && modern_preview_texture
-                    && deuteros_modern_preview_source_tick
-                    && *deuteros_modern_preview_source_tick == source_tick) {
+                if (texture == preview_texture && modern_preview_texture && deuteros_requested_key
+                    && deuteros_modern_preview_key
+                    && *deuteros_modern_preview_key == *deuteros_requested_key) {
                     texture = modern_preview_texture;
                 }
                 SDL_SetTextureScaleMode(texture,

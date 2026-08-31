@@ -452,8 +452,8 @@ gameplay resources directly from the hash-identified original archive.
 image and its original 256-entry VGA RGB6 DAC table plus 36-entry logical
 index translation. Original uses this user-supplied decoded-pixel title texture
 unchanged with nearest-neighbour scaling. Modern can instead opt into transient,
-deterministic edge-aware Scale2x reconstruction from those same decoded pixels
-(or retain the original-pixel texture), then choose nearest or linear output
+deterministic edge-aware Scale2x or Scale4x reconstruction from those same
+decoded pixels (or retain the original-pixel texture), then choose nearest or linear output
 sampling. Reconstruction is memory-only: it never writes, caches, replaces, or
 packages game media.
 When its recovered DOS console poll observes a key, the launch view records
