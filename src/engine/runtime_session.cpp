@@ -42,6 +42,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
         snapshot.boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
         snapshot.capabilities.decoded_presentation = true;
         snapshot.capabilities.audio_observations = true;
+        snapshot.capabilities.admitted_input = true;
         break;
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:

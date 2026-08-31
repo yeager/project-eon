@@ -91,6 +91,10 @@ public:
         return millennium_dos_title_.get();
     }
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
+    // Advances exactly one recovered Deuteros Amiga opening tick using the
+    // coordinator-owned held observation. All non-opening sessions return no
+    // result, so SDL cannot accidentally tick a different platform adapter.
+    [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
         return millennium_amiga_.get();
     }
@@ -112,6 +116,7 @@ private:
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
+    bool deuteros_amiga_opening_input_held_ = false;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari_;
     std::optional<RuntimeSessionSnapshot> session_snapshot_;
     ReleaseRuntimeAdmission admission_ = ReleaseRuntimeAdmission::unselected;

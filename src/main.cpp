@@ -4108,13 +4108,13 @@ int main(int argc, char** argv) {
     bool show_recovery_function_map = false;
     std::size_t recovery_function_map_page = 0;
     std::uint64_t deuteros_last_tick = SDL_GetTicks();
-    bool deuteros_input_pressed = false;
     const auto clear_deuteros_opening_input = [&] {
         // The recovered `$14` path receives only a held host signal. A
         // launcher-modal transition is not an original input poll, so it
         // must cancel any prior host hold rather than letting it leak behind
         // the F10 renderer settings dialog or into a fresh opening session.
-        deuteros_input_pressed = false;
+        static_cast<void>(runtime_coordinator.observe_input(
+            eon::RuntimeInputObservation::opening_input_held(false)));
     };
     std::optional<std::uint32_t> deuteros_title_resource;
     eon::DeuterosAtariBootstrapSession* deuteros_atari_session = runtime_coordinator.deuteros_atari();
@@ -4867,8 +4867,9 @@ int main(int argc, char** argv) {
                 // $14 consumes the input word last polled by the original loop.
                 // Feed the physical held state, leaving acceptance to the VM's
                 // recovered timing and input-gate logic.
-                if (event.type == SDL_EVENT_KEY_DOWN) deuteros_input_pressed = true;
-                if (event.type == SDL_EVENT_KEY_UP) deuteros_input_pressed = false;
+                static_cast<void>(runtime_coordinator.observe_input(
+                    eon::RuntimeInputObservation::opening_input_held(
+                        event.type == SDL_EVENT_KEY_DOWN)));
             }
             if ((event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                     || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP)
@@ -4877,7 +4878,9 @@ int main(int argc, char** argv) {
                 // The sole gamepad route into the recovered Amiga opening is
                 // the same physical held signal as Space/Enter. It does not
                 // manufacture a title or gameplay action.
-                deuteros_input_pressed = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+                static_cast<void>(runtime_coordinator.observe_input(
+                    eon::RuntimeInputObservation::opening_input_held(
+                        event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)));
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
@@ -4957,9 +4960,10 @@ int main(int argc, char** argv) {
                 // unrecovered Exec/graphics boundary, so do not turn later
                 // host catch-up iterations into no-op pseudo-emulation.
                 && !deuteros_opening->title_handed_off()) {
-                const auto events = deuteros_opening->tick(deuteros_input_pressed);
+                const auto events = runtime_coordinator.tick_deuteros_amiga_opening();
+                if (!events) break;
                 if (deuteros_paula) {
-                    for (const auto& sound : events.sounds) {
+                    for (const auto& sound : events->sounds) {
                         if (!deuteros_paula->submit(sound) && sound.sound != 0) {
                             std::cerr << "Deuteros event uses unsupported Paula descriptor "
                                 << sound.sound << " / mask 0x" << std::hex << sound.channels
@@ -4967,13 +4971,13 @@ int main(int argc, char** argv) {
                         }
                     }
                 }
-                if (!events.alternate_resources.empty()) {
+                if (!events->alternate_resources.empty()) {
                     // Opcode $0f exposes this original bundle-relative target.
                     // It is retained as evidence for the subsequent verified
                     // stage, not given an invented title/menu interpretation.
-                    deuteros_title_resource = events.alternate_resources.front().resource_relative_offset;
+                    deuteros_title_resource = events->alternate_resources.front().resource_relative_offset;
                 }
-                if (events.title_handoff) {
+                if (events->title_handoff) {
                     // The original opening returns to bootstrap here. Drop
                     // any host-side preview PCM rather than letting it play
                     // under the unexecuted title stage.
