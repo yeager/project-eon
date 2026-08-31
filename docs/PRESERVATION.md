@@ -144,6 +144,14 @@ handoff, the live runtime snapshot changes from **Deuteros Amiga Opening** to
 it retains only the already validated title-stage provenance and refuses later
 opening ticks or host input, rather than presenting a fabricated title screen
 or crossing the unresolved Exec ABI.
+
+Millennium DOS likewise publishes a terminal runtime snapshot when its two
+recovered startup observations reach an opaque original boundary. Selecting an
+admitted English sound driver becomes **Millennium DOS Sound Driver Boundary**;
+a nonzero `TITLES.EXE` console-poll result becomes **Millennium DOS Title
+Handoff Boundary**. Both snapshots reject further host input and expose no
+successor screen, audio, simulation, or save state until the original ABI and
+return chain are evidenced.
 single SDL-free identity comparison.
 
 ## Original and Modern mode contract

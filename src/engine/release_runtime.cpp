@@ -161,12 +161,20 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
     }
     if (observation.kind == RuntimeInputObservationKind::ascii_character) {
         if (!millennium_dos_sound_selection_) return RuntimeInputDisposition::rejected;
-        return millennium_dos_sound_selection_->accept_ascii_character(observation.ascii_character)
-            ? RuntimeInputDisposition::boundary_reached : RuntimeInputDisposition::ignored;
+        if (!millennium_dos_sound_selection_->accept_ascii_character(observation.ascii_character)) {
+            return RuntimeInputDisposition::ignored;
+        }
+        if (!active_) return RuntimeInputDisposition::rejected;
+        session_snapshot_ = make_runtime_session_snapshot(*active_,
+            RuntimeSessionKind::millennium_dos_sound_driver_boundary);
+        return RuntimeInputDisposition::boundary_reached;
     }
     if (!millennium_dos_title_) return RuntimeInputDisposition::rejected;
-    return millennium_dos_title_->poll_console(true)
-        ? RuntimeInputDisposition::boundary_reached : RuntimeInputDisposition::ignored;
+    if (!millennium_dos_title_->poll_console(true)) return RuntimeInputDisposition::ignored;
+    if (!active_) return RuntimeInputDisposition::rejected;
+    session_snapshot_ = make_runtime_session_snapshot(*active_,
+        RuntimeSessionKind::millennium_dos_title_handoff_boundary);
+    return RuntimeInputDisposition::boundary_reached;
 }
 
 std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_amiga_opening() {

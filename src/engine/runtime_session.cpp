@@ -5,6 +5,10 @@ namespace eon {
 std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
     switch (kind) {
     case RuntimeSessionKind::millennium_dos_title: return "MILLENNIUM DOS TITLE";
+    case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
+        return "MILLENNIUM DOS SOUND DRIVER BOUNDARY";
+    case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
+        return "MILLENNIUM DOS TITLE HANDOFF BOUNDARY";
     case RuntimeSessionKind::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
     case RuntimeSessionKind::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case RuntimeSessionKind::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
@@ -38,6 +42,13 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
         // This is not a generic controller map: the coordinator accepts only
         // the two exact observations described by RuntimeInputObservation.
         snapshot.capabilities.admitted_input = true;
+        break;
+    case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
+    case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
+        // Neither original transition has a recovered return/ABI contract.
+        // Preserve its terminal observation without forwarding another host
+        // input byte, rendering a successor screen, or changing game state.
+        snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
         break;
     case RuntimeSessionKind::deuteros_amiga_opening:
         snapshot.boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
