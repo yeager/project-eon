@@ -120,6 +120,12 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
+        if version == "3" and fields.get("results_raw") == "present":
+            counts = tool.parse_raw_results(directory / "results.raw")
+            shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
+            if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
+                    str(sum(counts.values())), shapes):
+                raise ValueError("results_raw grammar/count receipt mismatch")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.raw")
     else:
         tool = load_tool("run_deuteros_amiga_capture")

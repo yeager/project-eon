@@ -114,6 +114,14 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             self.assertEqual(TOOL.raw_observation_status(path, "events_raw"), "events_raw=absent\n")
             path.write_bytes(b"event\n")
             self.assertIn("events_raw_sha256=", TOOL.raw_observation_status(path, "events_raw"))
+            results = Path(directory) / "results.raw"
+            results.write_bytes(b"raw-result\t1 1 image=mill.com pc=0x020e source-int=0x21 source-ax=0x2591 ax=0x2591\n")
+            status = TOOL.raw_observation_status(results, "results_raw")
+            self.assertIn("results_raw_records=1\n", status)
+            self.assertIn("results_raw_shapes=mill.com:020e:1\n", status)
+            results.write_bytes(b"raw-result\t2 2 image=mill.com pc=0x020e source-int=0x21 source-ax=0x2591 ax=0x2591\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "counters"):
+                TOOL.raw_observation_status(results, "results_raw")
             path.write_bytes(b"x" * (TOOL.MAX_RAW_OBSERVATION_BYTES + 1))
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.raw_observation_status(path, "events_raw")

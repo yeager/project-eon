@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import os
 from pathlib import Path
+import re
 import stat
 import subprocess
 import sys
@@ -41,7 +42,21 @@ MAX_RECORDER_CONSOLE_LOG_BYTES = 1024 * 1024
 # Receipt v2 binds the retained console prefix as well as the complete stream.
 # A verifier must never treat a pre-v2 receipt as if that missing integrity
 # property had been observed.
-CAPTURE_RECEIPT_VERSION = "2"
+# The five reviewed result shapes are external recorder observations only.
+# They are a finite grammar boundary, not a DOS ABI or game-state model.
+MAX_RAW_RESULT_RECORDS = 256
+RAW_RESULT_LINE = re.compile(
+    r"raw-result\t([1-9][0-9]*) ([1-9][0-9]*) "
+    r"(?:image=(mill\.com|titles\.exe) pc=0x(020e|0213|0129) "
+    r"(?:source-int=0x(21|91) source-ax=0x([0-9a-f]{4}) ax=0x([0-9a-f]{4})|"
+    r"source-call=0x0511 ax=0x([0-9a-f]{4}))|"
+    r"fault=unhandled-interrupt int=0x06 cs=0x[0-9a-f]{4} ip=0x[0-9a-f]{4} "
+    r"ss=0x[0-9a-f]{4} sp=0x[0-9a-f]{4}(?: return_ip=0x[0-9a-f]{4} "
+    r"return_cs=0x[0-9a-f]{4} return_flags=0x[0-9a-f]{4} code=0x[0-9a-f]{8})? "
+    r"ax=0x[0-9a-f]{4} bx=0x[0-9a-f]{4} cx=0x[0-9a-f]{4} dx=0x[0-9a-f]{4})\n")
+# v3 adds syntax/count evidence while preserving v2 verification for captures
+# made before raw-result grammar was bound into the receipt.
+CAPTURE_RECEIPT_VERSION = "3"
 
 
 class CaptureError(RuntimeError):
@@ -245,8 +260,41 @@ def raw_observation_status(path: Path, name: str) -> str:
         raise CaptureError(f"{name} exceeds the bounded recorder contract")
     if info.st_size == 0:
         return f"{name}=empty\n"
+    if name == "results_raw":
+        return raw_result_status(path, name)
     digest, size = sha256_file(path)
     return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+
+
+def parse_raw_results(path: Path) -> dict[str, int]:
+    """Validate only the recorder's known diagnostics-only result grammar."""
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("results_raw is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("results_raw has a truncated final record")
+    counts: dict[str, int] = {}
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = RAW_RESULT_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("results_raw contains an invalid recorder record")
+        if int(match.group(1)) != expected or int(match.group(2)) != expected:
+            raise CaptureError("results_raw record counters are not contiguous")
+        label = "fault" if line.startswith("raw-result\t" + str(expected) + " " + str(expected) + " fault=") else (
+            f"{match.group(3)}:{match.group(4)}")
+        counts[label] = counts.get(label, 0) + 1
+        if expected > MAX_RAW_RESULT_RECORDS:
+            raise CaptureError("results_raw exceeds the recorder record cap")
+    return counts
+
+
+def raw_result_status(path: Path, name: str) -> str:
+    counts = parse_raw_results(path)
+    digest, size = sha256_file(path)
+    summary = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
+    return (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
+            f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
 
 
 def capture_bounded_console(stream, path: Path) -> RecorderConsoleStatus:
