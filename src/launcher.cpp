@@ -729,6 +729,15 @@ void LauncherInteractionController::reset_for_data(const Game initial_game) {
     focus.reset_after_game_change();
 }
 
+LauncherSourceIdentity LauncherInteractionController::source_identity() const {
+    return {session.route.game, session.route.platform, session.route.release_language,
+        session.route.release_sha256};
+}
+
+bool LauncherInteractionController::source_changed_since(const LauncherSourceIdentity& before) const {
+    return source_identity() != before;
+}
+
 std::optional<Platform> select_available_platform(
     const std::vector<ReleaseArchive>& releases, const Game game,
     const std::optional<Platform> current) {

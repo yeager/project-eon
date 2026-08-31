@@ -99,6 +99,17 @@ struct ResolvedLaunchRequest {
     ReleaseArchive release;
 };
 
+// The renderer never needs a path or original bytes to decide whether its
+// release-bound cache is stale. This value is the complete menu provenance
+// identity: presentation changes are deliberately excluded.
+struct LauncherSourceIdentity {
+    Game game = Game::millennium;
+    std::optional<Platform> platform;
+    std::optional<std::string> language;
+    std::optional<std::string> sha256;
+    [[nodiscard]] bool operator==(const LauncherSourceIdentity&) const = default;
+};
+
 // This is presentation-only navigation state. It contains no source paths or
 // original bytes, and its only transition into a runnable session is the
 // hash-bound resolve_launch() call below.
@@ -174,6 +185,8 @@ struct LauncherInteractionController {
     [[nodiscard]] LauncherInteractionEffect activate_card(
         const std::vector<ReleaseArchive>& releases, std::size_t index);
     void reset_for_data(Game initial_game);
+    [[nodiscard]] LauncherSourceIdentity source_identity() const;
+    [[nodiscard]] bool source_changed_since(const LauncherSourceIdentity& before) const;
 };
 
 struct ParseResult {
