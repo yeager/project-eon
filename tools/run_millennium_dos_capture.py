@@ -138,12 +138,14 @@ def is_system_tmp_path(path: Path) -> bool:
 
 
 def reject_unsafe_output(source: Path, output: Path) -> Path:
+    # Preserve the no-/tmp contract before Windows reclassifies a POSIX-style
+    # spelling as a current-drive relative path.
+    if is_system_tmp_path(output):
+        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     if not output.is_absolute():
         raise CaptureError("output path must be absolute")
     if output.exists() or output.is_symlink():
         raise CaptureError("output directory must not exist")
-    if is_system_tmp_path(output):
-        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     resolved = output.resolve(strict=False)
     if resolved == ROOT or ROOT in resolved.parents:
         raise CaptureError("output must stay outside the repository")
@@ -212,7 +214,7 @@ def recorder_config(game_root: Path, machine_profile: str = "svga_s3") -> str:
         "",
         "[autoexec]",
         "@echo off",
-        f'mount c "{game_root}"',
+        f'mount c "{game_root.as_posix()}"',
         "",
     ))
 

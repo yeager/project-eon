@@ -1,0 +1,13 @@
+# The launcher renders every shipped UI locale with these reviewed OFL fonts.
+# They are intentionally bundled so runtime rendering never depends on host
+# font packages or a host-specific fallback chain.
+project-eon: duplicate-font-file
+
+# This generated preservation artwork is deliberately installed under the
+# conventional desktop icon name; its source resolution is higher than the
+# nearest hicolor directory rather than a claim about game media.
+project-eon: icon-size-and-directory-name-mismatch
+
+# This is an initial, non-published package artifact. No Debian bug exists to
+# close before a maintainer requests an actual upload.
+project-eon: initial-upload-closes-no-bugs

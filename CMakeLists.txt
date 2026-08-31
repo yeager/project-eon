@@ -51,10 +51,18 @@ endif()
 # Fetch all three source snapshots by immutable object ID and SHA-256, then
 # stage the two explicitly pinned dependencies in SDL_ttf's expected source
 # tree. This avoids CMake's `GIT_SHALLOW` fallback to `--no-single-branch`,
-# which fetches the whole SDL_ttf history when resolving a raw commit. Every
-# target, including iPadOS and Windows, therefore builds the same shaping
-# stack without consulting host font libraries.
-set(SDLTTF_VENDORED ON CACHE BOOL "" FORCE)
+# which fetches the whole SDL_ttf history when resolving a raw commit. The
+# portable iPadOS/macOS/Windows routes use that pinned shaping stack, while
+# Linux packages use their declared distribution dependencies.
+# Linux packages link SDL_ttf against distribution FreeType/HarfBuzz rather
+# than embedding those libraries. Desktop builds on macOS/Windows retain the
+# pinned portable fallback because their packaging routes have no compatible
+# system dependency contract.
+if(UNIX AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(SDLTTF_VENDORED OFF CACHE BOOL "" FORCE)
+else()
+    set(SDLTTF_VENDORED ON CACHE BOOL "" FORCE)
+endif()
 set(SDLTTF_HARFBUZZ ON CACHE BOOL "" FORCE)
 set(SDLTTF_PLUTOSVG OFF CACHE BOOL "" FORCE)
 set(SDLTTF_SAMPLES OFF CACHE BOOL "" FORCE)
@@ -395,6 +403,9 @@ install(FILES packaging/debian/copyright
     RENAME copyright)
 install(FILES packaging/debian/changelog.Debian
     DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/project-eon")
+install(FILES packaging/debian/project-eon.lintian-overrides
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/lintian/overrides"
+    RENAME project-eon)
 if(UNIX AND NOT APPLE)
     install(FILES docs/project-eon.6
         DESTINATION "${CMAKE_INSTALL_DATADIR}/man/man6")
@@ -414,18 +425,51 @@ endif()
 ]])
 endif()
 
+if(UNIX AND NOT APPLE)
+    # CPack stages SDL runtime libraries built against the CI's /usr/local
+    # SDL3 prefix. Remove that build-host search path and strip only the
+    # staged executable/private libraries before packaging. The application
+    # retains its explicit package-relative RUNPATH; neither operation opens
+    # or changes user-supplied media.
+    install(CODE [[
+file(GLOB eon_private_runtime_files
+  "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib*/project-eon/libSDL3*.so*")
+foreach(eon_private_runtime_file IN LISTS eon_private_runtime_files)
+  if(NOT IS_SYMLINK "${eon_private_runtime_file}")
+    file(RPATH_REMOVE FILE "${eon_private_runtime_file}")
+    execute_process(
+      COMMAND strip --strip-unneeded "${eon_private_runtime_file}"
+      RESULT_VARIABLE eon_strip_result)
+    if(NOT eon_strip_result EQUAL 0)
+      message(FATAL_ERROR "Unable to strip packaged runtime: ${eon_private_runtime_file}")
+    endif()
+  endif()
+endforeach()
+file(GLOB eon_packaged_executables
+  "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/project-eon")
+foreach(eon_packaged_executable IN LISTS eon_packaged_executables)
+  execute_process(
+    COMMAND strip --strip-unneeded "${eon_packaged_executable}"
+    RESULT_VARIABLE eon_executable_strip_result)
+  if(NOT eon_executable_strip_result EQUAL 0)
+    message(FATAL_ERROR "Unable to strip packaged executable: ${eon_packaged_executable}")
+  endif()
+endforeach()
+]])
+endif()
+
 set(CPACK_PACKAGE_NAME "project-eon")
 set(CPACK_PACKAGE_VENDOR "Project Eon contributors")
 set(CPACK_PACKAGE_CONTACT "https://github.com/yeager/project-eon")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "SDL3 reimplementation project for Millennium 2.2 and Deuteros")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER
     "Daniel Nylander <1206564+yeager@users.noreply.github.com>")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/yeager/project-eon")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
-    "Preservation-first SDL3 reimplementation launcher for Millennium 2.2 and Deuteros.\n Project Eon reads user-supplied original media in place and never distributes game data.")
+    "Preservation-first SDL3 reimplementation launcher for Millennium 2.2 and Deuteros.\n Project Eon reads user-supplied original media in place.\n It never distributes game data.")
 set(CPACK_DEBIAN_PACKAGE_RELEASE "1")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 # DEB/RPM artifacts install below /usr, independent of the developer's local
