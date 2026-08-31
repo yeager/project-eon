@@ -151,6 +151,11 @@ rules. Keyboard and gamepad users can move through each card page with the
 D-pad or arrow keys and activate the highlighted card with Enter, Space, South/A, or
 Start; Escape returns to the preceding card page.
 
+If a selected profile cannot enter the final runtime boundary, the profile
+page reports the safe rejection class—identity, archive hash, or adapter—next
+to the cards. It does not expose paths, archive members, original bytes, or
+parser exception text. The same status remains available in F10 diagnostics.
+
 Use **Choose Original Data Folder** (or `O`) to select a media folder, or
 **Choose Original Archive** (or `A`) to select one original archive without
 restarting the launcher. The menu passes the selected path unchanged to the

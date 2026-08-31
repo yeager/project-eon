@@ -3626,6 +3626,12 @@ int main(int argc, char** argv) {
     auto& active_release_language = launcher_route.release_language;
     auto& active_release_sha256 = launcher_route.release_sha256;
     eon::ReleaseRuntimeCoordinator runtime_coordinator;
+    // This status is limited to the same three media-safe admission classes
+    // exposed by F10. It gives a rejected profile-card launch an immediate
+    // visible result without retaining a path, leaf name, or parser error in
+    // the start menu.
+    std::string launcher_runtime_admission = std::string(
+        eon::release_runtime_admission_label(runtime_coordinator.admission()));
     const auto active_launch = [&]() -> const std::optional<eon::ResolvedLaunchRequest>& {
         return runtime_coordinator.active();
     };
@@ -3636,11 +3642,15 @@ int main(int argc, char** argv) {
         launch_candidate.release_language = active_release_language;
         const auto resolved = eon::resolve_launch_request_identity(launch_candidate, releases);
         if (!resolved || !runtime_coordinator.acquire(*resolved)) {
+            launcher_runtime_admission = !resolved ? "REJECTED: IDENTITY"
+                : std::string(eon::release_runtime_admission_label(runtime_coordinator.admission()));
             std::cerr << "The selected game and platform need one exact verified original release. "
                          "Use --release-sha256 when several outer containers share a language; "
                          "no scan-order fallback was selected.\n";
             return 4;
         }
+        launcher_runtime_admission = std::string(
+            eon::release_runtime_admission_label(runtime_coordinator.admission()));
         active_release_sha256 = resolved->request.release_sha256;
         active_release_language = resolved->request.release_language;
     }
@@ -4118,6 +4128,8 @@ int main(int argc, char** argv) {
         // incomplete. The release card itself remains a selection only; a
         // later launch must reacquire and rehash it from scratch.
         runtime_coordinator.reset();
+        launcher_runtime_admission = std::string(
+            eon::release_runtime_admission_label(runtime_coordinator.admission()));
         stop_millennium_title();
         millennium_game_session.reset();
         millennium_state_page = 0;
@@ -4177,14 +4189,23 @@ int main(int argc, char** argv) {
     };
     const auto launch_menu_selection = [&] {
         const auto resolved = launcher_session.resolve_launch(request, releases);
-        if (!resolved) return;
+        if (!resolved) {
+            launcher_runtime_admission = "REJECTED: IDENTITY";
+            return;
+        }
         // The chosen release card is part of the Modern-pack identity.  A
         // previously valid candidate becomes rejected rather than silently
         // following a different language/container/platform selection.
         if (request.presentation == eon::Presentation::modern && selected_modern_pack_manifest) {
             admit_modern_pack_for_release(*selected_modern_pack_manifest, resolved->release);
         }
-        if (!runtime_coordinator.acquire(*resolved)) return;
+        if (!runtime_coordinator.acquire(*resolved)) {
+            launcher_runtime_admission = std::string(
+                eon::release_runtime_admission_label(runtime_coordinator.admission()));
+            return;
+        }
+        launcher_runtime_admission = std::string(
+            eon::release_runtime_admission_label(runtime_coordinator.admission()));
         millennium_assets = runtime_coordinator.millennium_dos();
         millennium_amiga_session = runtime_coordinator.millennium_amiga();
         millennium_atari_session = runtime_coordinator.millennium_atari();
@@ -4520,6 +4541,7 @@ int main(int argc, char** argv) {
                 request.presentation = launcher_session.presentation;
                 clear_modern_pack_admission();
                 reset_active_runtime();
+                launcher_runtime_admission = "NOT SELECTED";
                 show_scanner = true;
                 focus_menu_card(focused);
             } else {
@@ -4981,6 +5003,11 @@ int main(int argc, char** argv) {
                 }
                 if (focused_profile_card == 2 && custom_profile_ready) {
                     draw_text(renderer, 64, 530, tr("CUSTOM SETTINGS READY — ENTER / CLICK TO START MODERN"));
+                }
+                if (launcher_runtime_admission != "NOT SELECTED"
+                    && launcher_runtime_admission != "READY") {
+                    draw_text(renderer, 64, 530, std::string(tr("RUNTIME ADMISSION")) + ": "
+                        + tr(launcher_runtime_admission));
                 }
             }
             if (show_scanner) {
