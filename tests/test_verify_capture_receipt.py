@@ -24,6 +24,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "4"}), "4")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "6"}), "6")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "7"}), "7")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "8"}), "8")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
@@ -110,6 +111,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "5")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "6")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "7")
+        TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "8")
         TOOL.verify_console_admission({}, "3")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "4")
