@@ -7,7 +7,14 @@ namespace eon {
 
 MillenniumDosSoundSelectionSession::MillenniumDosSoundSelectionSession(
     MillenniumDosSoundSelectionEvidence evidence)
-    : evidence_(std::move(evidence)) {
+    : MillenniumDosSoundSelectionSession(std::move(evidence), std::nullopt, std::nullopt) {}
+
+MillenniumDosSoundSelectionSession::MillenniumDosSoundSelectionSession(
+    MillenniumDosSoundSelectionEvidence evidence,
+    std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver,
+    std::optional<MillenniumDosSoundDriverLeaf> covox_driver)
+    : evidence_(std::move(evidence)), sound_blaster_driver_(std::move(sound_blaster_driver)),
+      covox_driver_(std::move(covox_driver)) {
     // Do not allow this input mapping to drift independently of the parser's
     // content-locked source evidence.  In particular, the table's missing
     // SROL leaf is not a selectable fallback.
@@ -19,6 +26,15 @@ MillenniumDosSoundSelectionSession::MillenniumDosSoundSelectionSession(
         || evidence_.sound_blaster_filename != "ssbl.drv" || evidence_.covox_filename != "scvx.drv") {
         throw std::runtime_error("Unsupported Millennium DOS sound-selection session evidence");
     }
+    const auto require_driver = [](const std::optional<MillenniumDosSoundDriverLeaf>& driver,
+        const MillenniumDosSoundDriverKind kind, const std::string_view filename) {
+        if (driver && (driver->kind != kind || driver->original_filename != filename
+                || driver->sha256.size() != 64 || driver->byte_size == 0)) {
+            throw std::runtime_error("Mismatched Millennium DOS sound-driver admission");
+        }
+    };
+    require_driver(sound_blaster_driver_, MillenniumDosSoundDriverKind::sound_blaster, "ssbl.drv");
+    require_driver(covox_driver_, MillenniumDosSoundDriverKind::covox_sound_master, "scvx.drv");
 }
 
 bool MillenniumDosSoundSelectionSession::accept_ascii_character(const char ascii_character) {
@@ -49,6 +65,20 @@ std::uint8_t MillenniumDosSoundSelectionSession::selected_table_slot() const {
     case MillenniumDosSoundEffectChoice::covox_sound_master: return evidence_.covox_table_slot;
     }
     throw std::runtime_error("Unknown Millennium DOS sound-effect choice");
+}
+
+std::optional<MillenniumDosSoundDriverLeaf> MillenniumDosSoundSelectionSession::selected_driver() const {
+    if (!choice_) return std::nullopt;
+    switch (*choice_) {
+    case MillenniumDosSoundEffectChoice::ibm_speaker: return std::nullopt;
+    case MillenniumDosSoundEffectChoice::sound_blaster: return sound_blaster_driver_;
+    case MillenniumDosSoundEffectChoice::covox_sound_master: return covox_driver_;
+    }
+    return std::nullopt;
+}
+
+bool MillenniumDosSoundSelectionSession::selected_driver_is_admitted() const {
+    return selected_driver().has_value();
 }
 
 } // namespace eon

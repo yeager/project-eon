@@ -165,6 +165,10 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
     constexpr auto mcga_sha256 =
         "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
+    constexpr auto sound_blaster_sha256 =
+        "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72";
+    constexpr auto covox_sha256 =
+        "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4";
     try {
         if (release.language == "es") {
             constexpr auto spanish_image_sha256 =
@@ -193,6 +197,8 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
                 .title_flow = std::nullopt,
                 .sound_selection = std::nullopt,
                 .sound_selection_prompt = std::nullopt,
+                .sound_blaster_driver = std::nullopt,
+                .covox_driver = std::nullopt,
                 .spanish_title_boundary = parse_millennium_dos_spanish_title_boundary(titles_bytes),
                 .game_flow = std::nullopt,
                 .ega_video_driver = std::nullopt,
@@ -215,7 +221,10 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         const auto initial_save = extract_verified_release_asset(release, initial_save_sha256);
         const auto ega640 = extract_verified_release_asset(release, ega640_sha256);
         const auto mcga = extract_verified_release_asset(release, mcga_sha256);
-        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga) {
+        const auto sound_blaster = extract_verified_release_asset(release, sound_blaster_sha256);
+        const auto covox = extract_verified_release_asset(release, covox_sha256);
+        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga
+            || !sound_blaster || !covox) {
             return std::nullopt;
         }
         const auto gx_canvas = parse_millennium_dos_gameplay_screen(*gx_bytes);
@@ -231,6 +240,8 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
             .title_flow = parse_millennium_dos_title_flow(*titles, *launcher),
             .sound_selection = sound_selection,
             .sound_selection_prompt = sound_selection_prompt,
+            .sound_blaster_driver = admit_millennium_dos_sound_driver_leaf(*sound_blaster),
+            .covox_driver = admit_millennium_dos_sound_driver_leaf(*covox),
             .spanish_title_boundary = std::nullopt,
             .game_flow = parse_millennium_dos_game_flow(*game),
             .ega_video_driver = parse_millennium_dos_video_driver(*ega640,

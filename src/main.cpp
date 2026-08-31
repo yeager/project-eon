@@ -4204,7 +4204,8 @@ int main(int argc, char** argv) {
         if (millennium_assets && millennium_assets->sound_selection
             && millennium_assets->sound_selection_prompt) {
             millennium_sound_selection_session = std::make_unique<eon::MillenniumDosSoundSelectionSession>(
-                *millennium_assets->sound_selection);
+                *millennium_assets->sound_selection, millennium_assets->sound_blaster_driver,
+                millennium_assets->covox_driver);
         } else if (millennium_assets && millennium_assets->title_flow) {
             millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
                 *millennium_assets->title_flow);
@@ -5109,7 +5110,9 @@ int main(int argc, char** argv) {
                 if (!millennium_sound_selection_session->awaiting_choice()) {
                     draw_original_text(renderer, 64, 430,
                         millennium_sound_selection_session->selected_original_filename());
-                    draw_text(renderer, 64, 458,
+                    draw_text(renderer, 64, 454, millennium_sound_selection_session->selected_driver_is_admitted()
+                        ? tr("VERIFIED ORIGINAL DATA") : tr("STARTUP BOUNDARY"));
+                    draw_text(renderer, 64, 478,
                         tr("The simulation is incomplete; no synthetic substitute will run."));
                 }
             } else if (selected == eon::Game::millennium && millennium_preview_texture && millennium_assets) {
