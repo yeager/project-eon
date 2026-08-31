@@ -1541,6 +1541,14 @@ int main() {
         focus.set(eon::LauncherPage::profiles, 3, 2);
         focus.reset_after_game_change();
         assert(focus.platform == 0 && focus.release == 0 && focus.profile == 0);
+        // A scan may remove cards after focus was set. Stepping must first
+        // bound that stale presentation index to the current page.
+        focus.set(eon::LauncherPage::platforms, 3, 2);
+        focus.move(eon::LauncherPage::platforms, 2, 1);
+        assert(focus.platform == 0);
+        focus.set(eon::LauncherPage::platforms, 3, 2);
+        focus.move(eon::LauncherPage::platforms, 2, -1);
+        assert(focus.platform == 0);
         focus.move(eon::LauncherPage::profiles, 0, 1);
         assert(focus.profile == 0);
 

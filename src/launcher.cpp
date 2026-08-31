@@ -100,7 +100,10 @@ void LauncherCardFocus::set(const LauncherPage page, const std::size_t count,
 void LauncherCardFocus::move(const LauncherPage page, const std::size_t count,
     const int direction) {
     if (count == 0 || direction == 0) return;
-    const auto index = current(page);
+    // A scanner update can shrink a page between input events. Bound the
+    // prior presentation index before wrapping so movement is defined by the
+    // cards that are currently rendered, never by a stale, removed card.
+    const auto index = std::min(current(page), count - 1U);
     set(page, count, direction < 0 ? (index + count - 1U) % count : (index + 1U) % count);
 }
 
