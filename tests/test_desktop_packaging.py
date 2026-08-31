@@ -78,6 +78,11 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS", cmake)
         self.assertIn("CPACK_DEBIAN_PACKAGE_MAINTAINER", cmake)
         self.assertIn("CPACK_DEBIAN_FILE_NAME DEB-DEFAULT", cmake)
+        self.assertIn('set(CPACK_DEBIAN_PACKAGE_SECTION "utils")', cmake)
+        self.assertIn("SDLTTF_VENDORED OFF", cmake)
+        self.assertIn("file(RPATH_REMOVE", cmake)
+        self.assertIn("--strip-unneeded", cmake)
+        self.assertIn("project-eon.lintian-overrides", cmake)
         self.assertIn("CPACK_RPM_PACKAGE_URL", cmake)
         self.assertIn("CPACK_RPM_FILE_NAME RPM-DEFAULT", cmake)
 

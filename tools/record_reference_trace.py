@@ -392,6 +392,15 @@ def validate_metadata(fields: dict[str, str], release: dict[str, object]) -> Non
 
 
 def reject_output_path(inputs: tuple[Path, ...], output: Path) -> None:
+    # Preserve this lexical safety contract before Windows can classify a
+    # POSIX-looking /tmp path as current-drive relative.
+    normalized_output = output.as_posix().replace("\\", "/")
+    output_parts = output.parts
+    is_system_tmp = (normalized_output == "/tmp" or normalized_output.startswith("/tmp/")
+                     or bool(output.anchor and len(output_parts) > 1
+                             and output_parts[1].casefold() == "tmp"))
+    if is_system_tmp:
+        raise EvidenceError("output must not use /tmp; use a Project Eon cache path")
     if not output.is_absolute():
         raise EvidenceError("output path must be absolute")
     if output.exists() or output.is_symlink():
@@ -404,13 +413,6 @@ def reject_output_path(inputs: tuple[Path, ...], output: Path) -> None:
     # `/tmp/...` path to the current drive. Preserve the operator's lexical
     # route before resolution so this contract has identical force on every
     # supported host.
-    normalized_output = output.as_posix().replace("\\", "/")
-    output_parts = output.parts
-    is_system_tmp = (normalized_output == "/tmp" or normalized_output.startswith("/tmp/")
-                     or bool(output.anchor and len(output_parts) > 1
-                             and output_parts[1].casefold() == "tmp"))
-    if is_system_tmp:
-        raise EvidenceError("output must not use /tmp; use a Project Eon cache path")
     resolved = output.resolve(strict=False)
     # Inputs are regular files, so a distinct non-existent directory cannot
     # overlap their bytes.  Deliberately permit a sibling capture directory:

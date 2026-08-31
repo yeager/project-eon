@@ -156,12 +156,14 @@ def is_system_tmp_path(path: Path) -> bool:
 
 
 def reject_unsafe_output(*sources: Path, output: Path) -> Path:
+    # Reject this contractual spelling before Windows can classify its
+    # POSIX-looking form as relative to the current drive.
+    if is_system_tmp_path(output):
+        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     if not output.is_absolute():
         raise CaptureError("output path must be absolute")
     if output.exists() or output.is_symlink():
         raise CaptureError("output directory must not exist")
-    if is_system_tmp_path(output):
-        raise CaptureError("output must not use /tmp; use a Project Eon cache path")
     resolved = output.resolve(strict=False)
     if resolved == ROOT or ROOT in resolved.parents:
         raise CaptureError("output must stay outside the repository")
@@ -188,9 +190,15 @@ def mount_options(mountpoint: Path) -> set[str]:
 
 def mountpoint_is_active(mountpoint: Path) -> bool:
     """Return whether this exact path, not an ancestor, is still mounted."""
-    completed = subprocess.run(
-        ["findmnt", "-n", "--mountpoint", str(mountpoint), "-o", "TARGET"],
-        check=False, capture_output=True, text=True)
+    try:
+        completed = subprocess.run(
+            ["findmnt", "-n", "--mountpoint", str(mountpoint), "-o", "TARGET"],
+            check=False, capture_output=True, text=True)
+    except FileNotFoundError:
+        # This Linux-specific FUSE cleanup probe has no Windows equivalent.
+        # A physical Amiga capture cannot run there, while test preflight must
+        # remain a safe negative result rather than a host-tool crash.
+        return False
     return completed.returncode == 0 and completed.stdout.strip() == str(mountpoint)
 
 
