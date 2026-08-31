@@ -3037,6 +3037,30 @@ int main() {
     eon::verify_release_archive(*english_dos);
     const auto verified_dos_assets = eon::inventory_verified_release(*english_dos);
     assert(!verified_dos_assets.empty());
+    // This exercises the SDL-free factory against the genuine recognised
+    // English archive whenever a developer supplied corpus is configured.
+    // The factory may decode only its hash-verified leaves and must retain
+    // both title pixels and the bounded title/startup evidence together.
+    const auto english_dos_runtime = eon::load_millennium_dos_runtime(*english_dos);
+    assert(english_dos_runtime && english_dos_runtime->language == "en");
+    assert(english_dos_runtime->title.width == 640 && english_dos_runtime->title.height == 400);
+    assert(english_dos_runtime->title.rgba_frames.size() == 1);
+    assert(english_dos_runtime->gx_canvas && english_dos_runtime->title_flow
+        && english_dos_runtime->sound_selection && english_dos_runtime->sound_selection_prompt
+        && english_dos_runtime->game_flow && english_dos_runtime->ega_video_driver
+        && english_dos_runtime->mcga_video_driver && english_dos_runtime->initial_save);
+    const auto spanish_dos = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
+        return release.game == eon::Game::millennium
+            && release.platform == eon::Platform::dos && release.language == "es";
+    });
+    assert(spanish_dos != releases.end());
+    const auto spanish_dos_runtime = eon::load_millennium_dos_runtime(*spanish_dos);
+    assert(spanish_dos_runtime && spanish_dos_runtime->language == "es");
+    assert(spanish_dos_runtime->title.width == 640 && spanish_dos_runtime->title.height == 400);
+    assert(spanish_dos_runtime->title.rgba_frames.size() == 1);
+    assert(spanish_dos_runtime->spanish_title_boundary && !spanish_dos_runtime->gx_canvas
+        && !spanish_dos_runtime->title_flow && !spanish_dos_runtime->game_flow
+        && !spanish_dos_runtime->initial_save);
     auto forged_release_metadata = *english_dos;
     forged_release_metadata.language = "es";
     bool rejected_forged_release_metadata = false;
