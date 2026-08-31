@@ -45,6 +45,44 @@ class RecoveryMapTests(unittest.TestCase):
                               "source_offset", "runtime_address", "uncertainty", "runtime_status"):
                     self.assertIn(f'"{entry[field]}"', source)
 
+    def test_compiled_function_map_exactly_matches_json(self):
+        function_map = json.loads((ROOT / "docs" / "function-map.json").read_text(encoding="utf-8"))
+        source = (ROOT / "src" / "data" / "function_map.cpp").read_text(encoding="utf-8")
+        rows = re.findall(
+            r'\{"([^"]+)", "([0-9a-f]{64})",\s+'
+            r'"([^"]+)", Game::(deuteros|millennium), Platform::(amiga|atari_st|dos), "([a-z]+)", "([a-z0-9]+)",\s+'
+            r'"([0-9a-f]{64})",\s+"([^"]+)", "([^"]+)", "([a-z-]+)",\s+'
+            r'"([^"]+)",\s+"([^"]+)", "([^"]+)"(?:,\s+"([^"]+)")?\}',
+            source,
+        )
+        compiled = [
+            {
+                "id": entry_id,
+                "release_sha256": release_sha256,
+                "parser_profile_id": parser_profile_id,
+                "game": game,
+                "platform": platform,
+                "language": language,
+                "cpu": cpu,
+                "source_asset_sha256": source_asset_sha256,
+                "source_offset": source_offset,
+                "runtime_address": runtime_address,
+                "evidence_level": evidence_level,
+                "uncertainty": uncertainty,
+                "runtime_status": runtime_status,
+                "documentation_anchor": documentation_anchor,
+                "address_space": address_space or "runtime",
+            }
+            for (entry_id, release_sha256, parser_profile_id, game, platform, language, cpu,
+                 source_asset_sha256, source_offset, runtime_address, evidence_level, uncertainty,
+                 runtime_status, documentation_anchor, address_space) in rows
+        ]
+        expected = [
+            {**entry, "address_space": entry.get("address_space", "runtime")}
+            for entry in function_map["entries"]
+        ]
+        self.assertEqual(compiled, expected)
+
     def test_map_is_hash_bound_to_existing_profiles(self):
         release_manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
         recovery_map = json.loads((ROOT / "docs" / "recovery-map.json").read_text(encoding="utf-8"))

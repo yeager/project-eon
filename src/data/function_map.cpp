@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 
 namespace eon {
 namespace {
@@ -93,18 +94,39 @@ constexpr std::array<FunctionMapEntry, 13> entries{{
      "diagnostics only", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff"},
 }};
 
+bool is_lower_hex(const std::string_view value) {
+    return !value.empty() && std::all_of(value.begin(), value.end(), [](const unsigned char character) {
+        return (character >= '0' && character <= '9') || (character >= 'a' && character <= 'f');
+    });
+}
+
 } // namespace
 
 std::span<const FunctionMapEntry> function_map() { return entries; }
 
-std::span<const FunctionMapEntry> function_map_for_release(const std::string_view release_sha256) {
-    const auto first = std::find_if(entries.begin(), entries.end(), [release_sha256](const auto& entry) {
-        return entry.release_sha256 == release_sha256;
-    });
-    const auto last = std::find_if(first, entries.end(), [release_sha256](const auto& entry) {
-        return entry.release_sha256 != release_sha256;
-    });
-    return {first, last};
+std::vector<FunctionMapEntry> function_map_for_release(const std::string_view release_sha256) {
+    std::vector<FunctionMapEntry> result;
+    result.reserve(entries.size());
+    for (const auto& entry : entries) {
+        if (entry.release_sha256 == release_sha256) result.push_back(entry);
+    }
+    return result;
+}
+
+bool function_map_entry_is_well_formed(const FunctionMapEntry& entry) {
+    if (entry.id.empty() || entry.parser_profile_id.empty() || entry.release_sha256.size() != 64U
+        || !is_lower_hex(entry.release_sha256) || entry.source_asset_sha256.size() != 64U
+        || !is_lower_hex(entry.source_asset_sha256) || entry.source_offset.empty()
+        || entry.uncertainty.empty() || entry.runtime_status.empty()
+        || !entry.documentation_anchor.starts_with("PRESERVATION.md#")
+        || entry.evidence_level != "verified-static") return false;
+    if (entry.cpu != "i8086" && entry.cpu != "m68000") return false;
+    if (entry.address_space == "runtime") {
+        return entry.runtime_address.size() > 1U && entry.runtime_address.front() == '$';
+    }
+    return entry.address_space == "image-relative-unrelocated"
+        && entry.runtime_address.size() > 3U && entry.runtime_address.starts_with("+0x")
+        && is_lower_hex(entry.runtime_address.substr(3));
 }
 
 bool release_has_function_map_entry(const std::string_view release_sha256,

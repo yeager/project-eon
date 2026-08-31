@@ -262,10 +262,15 @@ def main() -> int:
             required_function_fields = {
                 "id", "profile", "cpu", "source_asset_sha256", "source_offset",
                 "runtime_address", "evidence_level", "uncertainty", "runtime_status",
-                "documentation_anchor",
+                "documentation_anchor", "address_space",
             }
             if (not required_function_fields <= function.keys()
-                    or not function["documentation_anchor"].startswith("PRESERVATION.md#")):
+                    or not function["documentation_anchor"].startswith("PRESERVATION.md#")
+                    or function["address_space"] not in {"runtime", "image-relative-unrelocated"}
+                    or (function["address_space"] == "runtime"
+                        and not function["runtime_address"].startswith("$"))
+                    or (function["address_space"] == "image-relative-unrelocated"
+                        and not function["runtime_address"].startswith("+0x"))):
                 raise SystemExit(f"--inspect-json function lost preservation fields: {function}")
     if any(token in inspect_json.stdout for token in (str(data_directory), "Hämtningar", "Downloads")):
         raise SystemExit("--inspect-json exposed a local original-media path")

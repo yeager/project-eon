@@ -56,6 +56,10 @@ RuntimeDiagnosticsReport runtime_diagnostics_for_release(const ReleaseArchive& r
     for (const auto& function : function_map_for_release(release.sha256)) {
         require_release_identity(release, function.game, function.platform, function.language,
             function.release_sha256, "function", function.id);
+        if (!function_map_entry_is_well_formed(function)) {
+            throw std::runtime_error("Runtime diagnostics function has malformed declarative provenance: "
+                + std::string(function.id));
+        }
         if (!release_has_function_map_entry(release.sha256, function.id)) {
             throw std::runtime_error("Runtime diagnostics function lost parser-profile binding: "
                 + std::string(function.id));

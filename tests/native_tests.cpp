@@ -2315,6 +2315,42 @@ int main() {
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
     assert(amiga_map.size() == 3);
     for (const auto& entry : amiga_map) assert(entry.game == eon::Game::deuteros);
+    // Function-map rows are kept in preservation-document order. In
+    // particular, Deuteros Amiga's title handoff comes after an Atari row;
+    // diagnostics must filter the complete declaration rather than assume
+    // same-release rows are contiguous.
+    for (const auto& manifest_release : eon::release_manifest()) {
+        const auto functions = eon::function_map_for_release(manifest_release.sha256);
+        const auto declared_count = std::count_if(eon::function_map().begin(), eon::function_map().end(),
+            [&manifest_release](const auto& entry) {
+                return entry.release_sha256 == manifest_release.sha256;
+            });
+        assert(functions.size() == static_cast<std::size_t>(declared_count));
+        for (const auto& entry : functions) {
+            assert(entry.release_sha256 == manifest_release.sha256);
+        }
+    }
+    const auto deuteros_amiga_functions = eon::function_map_for_release(
+        "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
+    assert(deuteros_amiga_functions.size() == 2);
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-title-exec-boundary";
+    }));
+    for (const auto& entry : eon::function_map()) {
+        assert(eon::function_map_entry_is_well_formed(entry));
+    }
+    auto malformed_function = eon::function_map().front();
+    malformed_function.source_asset_sha256 = "not-a-sha256";
+    assert(!eon::function_map_entry_is_well_formed(malformed_function));
+    malformed_function = eon::function_map().front();
+    malformed_function.cpu = "unknown-cpu";
+    assert(!eon::function_map_entry_is_well_formed(malformed_function));
+    malformed_function = eon::function_map().front();
+    malformed_function.address_space = "runtime";
+    malformed_function.runtime_address = "+0x0000";
+    assert(!eon::function_map_entry_is_well_formed(malformed_function));
+    malformed_function.address_space = "image-relative-unrelocated";
+    assert(eon::function_map_entry_is_well_formed(malformed_function));
     // CLI JSON and the F10 panel consume this one SDL-free composition. It
     // has to retain only rows that match the selected immutable release,
     // while reporting no trace admission merely because media was scanned.

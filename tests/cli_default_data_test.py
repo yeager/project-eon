@@ -15,9 +15,15 @@ def main() -> int:
     temporary_root = Path(os.environ.get("EON_TEST_TMPDIR", ""))
     if not temporary_root.is_dir():
         raise SystemExit("EON_TEST_TMPDIR must be an existing test-only directory")
+    executable = Path(sys.argv[1]).resolve()
     home = temporary_root / "missing-default-data-home"
     if home.exists():
         raise SystemExit("test home must not already exist")
+    # Windows deliberately uses a sibling data directory, not HOME. Keep this
+    # test aligned with the installed artifact contract on every CI host.
+    expected = executable.parent / "data" if os.name == "nt" else home / ".projecteon"
+    if expected.exists():
+        raise SystemExit("test default data path must not already exist")
     result = subprocess.run(
         (sys.argv[1], "--inspect"),
         env=os.environ | {"HOME": str(home), "XDG_CONFIG_HOME": str(temporary_root / "config")},
@@ -25,7 +31,6 @@ def main() -> int:
         text=True,
         check=False,
     )
-    expected = home / ".projecteon"
     if result.returncode != 2 or not f'Data path does not exist: "{expected}"' in result.stderr:
         raise SystemExit("missing default data path was not rejected as a read-only lookup")
     if home.exists() or expected.exists():
