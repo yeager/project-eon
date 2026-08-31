@@ -7,6 +7,8 @@
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
+#include "engine/millennium_dos_sound_selection_session.hpp"
+#include "engine/millennium_dos_title_session.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -82,6 +84,13 @@ public:
     [[nodiscard]] const MillenniumDosRuntimeAssets* millennium_dos() const {
         return millennium_dos_ ? &*millennium_dos_ : nullptr;
     }
+    [[nodiscard]] MillenniumDosSoundSelectionSession* millennium_dos_sound_selection() const {
+        return millennium_dos_sound_selection_.get();
+    }
+    [[nodiscard]] MillenniumDosTitleSession* millennium_dos_title() const {
+        return millennium_dos_title_.get();
+    }
+    [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
     [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
         return millennium_amiga_.get();
     }
@@ -98,6 +107,8 @@ public:
 private:
     std::optional<ResolvedLaunchRequest> active_;
     std::optional<MillenniumDosRuntimeAssets> millennium_dos_;
+    std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection_;
+    std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

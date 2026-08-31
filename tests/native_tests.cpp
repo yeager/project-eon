@@ -3241,10 +3241,25 @@ int main() {
             == eon::RuntimeSessionBoundary::recovered_presentation_boundary
         && dos_session_snapshot.capabilities.decoded_presentation
         && !dos_session_snapshot.capabilities.audio_observations
-        && !dos_session_snapshot.capabilities.admitted_input);
+        && dos_session_snapshot.capabilities.admitted_input);
     assert(eon::runtime_session_kind_label(dos_session_snapshot.kind) == "MILLENNIUM DOS TITLE");
     assert(eon::runtime_session_boundary_label(dos_session_snapshot.boundary)
         == "RECOVERED PRESENTATION BOUNDARY");
+    // The coordinator admits only the literal source-level observations for
+    // the English sound chooser. It rejects an availability result while that
+    // chooser is active, rejects an unknown ASCII byte, then stops at the
+    // documented driver boundary for the exact `1` selection.
+    assert(admitted_dos_runtime.millennium_dos_sound_selection());
+    assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::available_character())
+        == eon::RuntimeInputDisposition::rejected);
+    assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('x'))
+        == eon::RuntimeInputDisposition::ignored);
+    assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
+        == eon::RuntimeInputDisposition::boundary_reached);
+    assert(admitted_dos_runtime.millennium_dos_sound_selection()->selected_original_filename()
+        == "ssbl.drv");
+    assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
+        == eon::RuntimeInputDisposition::ignored);
     assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari()
         && !admitted_dos_runtime.deuteros_amiga() && !admitted_dos_runtime.deuteros_atari());
     admitted_dos_runtime.reset();
@@ -3267,8 +3282,7 @@ int main() {
         const auto& session_snapshot = *all_release_runtime.session_snapshot();
         assert(session_snapshot.game == release.game && session_snapshot.platform == release.platform
             && session_snapshot.language == release.language
-            && session_snapshot.release_sha256 == release.sha256
-            && !session_snapshot.capabilities.admitted_input);
+            && session_snapshot.release_sha256 == release.sha256);
         const auto adapter_count = static_cast<int>(all_release_runtime.millennium_dos() != nullptr)
             + static_cast<int>(all_release_runtime.millennium_amiga() != nullptr)
             + static_cast<int>(all_release_runtime.millennium_atari() != nullptr)
@@ -3278,26 +3292,35 @@ int main() {
         if (release.game == eon::Game::millennium && release.platform == eon::Platform::dos) {
             assert(all_release_runtime.millennium_dos());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_title
-                && session_snapshot.capabilities.decoded_presentation);
+                && session_snapshot.capabilities.decoded_presentation
+                && session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::amiga) {
             assert(all_release_runtime.millennium_amiga());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_amiga_bootstrap
-                && !session_snapshot.capabilities.decoded_presentation);
+                && !session_snapshot.capabilities.decoded_presentation
+                && !session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st) {
             assert(all_release_runtime.millennium_atari());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
-                && !session_snapshot.capabilities.decoded_presentation);
+                && !session_snapshot.capabilities.decoded_presentation
+                && !session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(all_release_runtime.deuteros_amiga());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
                 && session_snapshot.capabilities.decoded_presentation
-                && session_snapshot.capabilities.audio_observations);
+                && session_snapshot.capabilities.audio_observations
+                && !session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(all_release_runtime.deuteros_atari());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
-                && !session_snapshot.capabilities.decoded_presentation);
+                && !session_snapshot.capabilities.decoded_presentation
+                && !session_snapshot.capabilities.admitted_input);
         } else {
             assert(false && "unrecognised release reached runtime admission");
+        }
+        if (release.game != eon::Game::millennium || release.platform != eon::Platform::dos) {
+            assert(all_release_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
+                == eon::RuntimeInputDisposition::rejected);
         }
     }
     all_release_runtime.reset();

@@ -29,6 +29,25 @@ enum class RuntimeSessionBoundary {
     bootstrap_boundary,
 };
 
+// Physical-key remapping is intentionally absent. These observations model
+// only two independently evidenced DOS values and are rejected for every
+// other active adapter: an ASCII byte for MILL.COM's literal sound chooser,
+// or the nonzero availability result of TITLES.EXE's DOS console poll.
+enum class RuntimeInputObservationKind { ascii_character, character_available };
+
+struct RuntimeInputObservation {
+    RuntimeInputObservationKind kind = RuntimeInputObservationKind::ascii_character;
+    char ascii_character = '\0';
+    [[nodiscard]] static RuntimeInputObservation ascii(const char value) {
+        return {RuntimeInputObservationKind::ascii_character, value};
+    }
+    [[nodiscard]] static RuntimeInputObservation available_character() {
+        return {RuntimeInputObservationKind::character_available, '\0'};
+    }
+};
+
+enum class RuntimeInputDisposition { rejected, ignored, boundary_reached };
+
 [[nodiscard]] std::string_view runtime_session_kind_label(RuntimeSessionKind kind);
 [[nodiscard]] std::string_view runtime_session_boundary_label(RuntimeSessionBoundary boundary);
 

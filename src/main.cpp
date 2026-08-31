@@ -4118,8 +4118,8 @@ int main(int argc, char** argv) {
     };
     std::optional<std::uint32_t> deuteros_title_resource;
     eon::DeuterosAtariBootstrapSession* deuteros_atari_session = runtime_coordinator.deuteros_atari();
-    std::unique_ptr<eon::MillenniumDosSoundSelectionSession> millennium_sound_selection_session;
-    std::unique_ptr<eon::MillenniumDosTitleSession> millennium_title_session;
+    eon::MillenniumDosSoundSelectionSession* millennium_sound_selection_session = nullptr;
+    eon::MillenniumDosTitleSession* millennium_title_session = nullptr;
     // SDL text input is the host analogue of DOS' character-availability
     // poll. Keep it active only while TITLES.EXE's recovered title boundary
     // is live; raw key presses alone do not prove a nonzero DOS AL result.
@@ -4201,8 +4201,8 @@ int main(int argc, char** argv) {
         // DOS availability result nor modifies original title/game data.
         if (millennium_title_text_input_active) SDL_StopTextInput(window);
         millennium_title_text_input_active = false;
-        millennium_sound_selection_session.reset();
-        millennium_title_session.reset();
+        millennium_sound_selection_session = nullptr;
+        millennium_title_session = nullptr;
     };
     const auto reset_deuteros_runtime = [&] {
         // A replacement scanner has no authority to retain decoded frames,
@@ -4254,25 +4254,12 @@ int main(int argc, char** argv) {
         millennium_amiga_session = runtime_coordinator.millennium_amiga();
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
-        // MILL.COM's sound prompt occurs before the title child request. For
-        // the exact English launcher, enter that recovered first menu before
-        // the later title boundary.  Once a value is selected, execution
-        // stops at its unobserved driver initialisation; it must not fall
-        // through to the title image as if DOS/driver return were captured.
-        if (millennium_assets && millennium_assets->sound_selection
-            && millennium_assets->sound_selection_prompt) {
-            millennium_sound_selection_session = std::make_unique<eon::MillenniumDosSoundSelectionSession>(
-                *millennium_assets->sound_selection, millennium_assets->sound_blaster_driver,
-                millennium_assets->covox_driver);
-        } else if (millennium_assets && millennium_assets->title_flow) {
-            millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
-                *millennium_assets->title_flow);
-            millennium_state_page = 0;
-        } else if (millennium_assets && millennium_assets->spanish_title_boundary) {
-            millennium_title_session = std::make_unique<eon::MillenniumDosTitleSession>(
-                *millennium_assets->spanish_title_boundary);
-            millennium_state_page = 0;
-        }
+        // The coordinator constructed these exact, parser-validated input
+        // boundaries during rehash admission. SDL receives only a borrow; it
+        // cannot synthesize a title/input state or retain it after reset.
+        millennium_sound_selection_session = runtime_coordinator.millennium_dos_sound_selection();
+        millennium_title_session = runtime_coordinator.millennium_dos_title();
+        if (millennium_title_session) millennium_state_page = 0;
         if ((millennium_sound_selection_session || millennium_title_session)
             && !millennium_title_text_input_active) {
             if (!SDL_StartTextInput(window)) {
@@ -4853,7 +4840,8 @@ int main(int argc, char** argv) {
                     // The source-level menu accepts literal ASCII data bytes,
                     // not an SDL scancode or an inferred device choice. Its
                     // one selection ends at the driver ABI boundary.
-                    if (millennium_sound_selection_session->accept_ascii_character(event.text.text[0])
+                    if (runtime_coordinator.observe_input(eon::RuntimeInputObservation::ascii(event.text.text[0]))
+                            == eon::RuntimeInputDisposition::boundary_reached
                         && millennium_title_text_input_active) {
                         SDL_StopTextInput(window);
                         millennium_title_text_input_active = false;
@@ -4865,7 +4853,8 @@ int main(int argc, char** argv) {
                 // supplies only that availability signal; UTF-8 contents are
                 // deliberately never decoded as a DOS character or command.
                 if (!millennium_title_session->handed_off()) {
-                    if (millennium_title_session->poll_console(true)
+                    if (runtime_coordinator.observe_input(eon::RuntimeInputObservation::available_character())
+                            == eon::RuntimeInputDisposition::boundary_reached
                         && millennium_title_text_input_active) {
                         SDL_StopTextInput(window);
                         millennium_title_text_input_active = false;

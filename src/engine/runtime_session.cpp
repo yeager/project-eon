@@ -34,6 +34,9 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
     case RuntimeSessionKind::millennium_dos_title:
         snapshot.boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
         snapshot.capabilities.decoded_presentation = true;
+        // This is not a generic controller map: the coordinator accepts only
+        // the two exact observations described by RuntimeInputObservation.
+        snapshot.capabilities.admitted_input = true;
         break;
     case RuntimeSessionKind::deuteros_amiga_opening:
         snapshot.boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
