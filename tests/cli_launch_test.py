@@ -417,6 +417,34 @@ def main() -> int:
         for relative, digest in before.items()
         if digest.startswith("file:") and relative.suffix.lower() == ".zip"
     }
+    atari_archive = archive_by_sha256.get(
+        "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01"
+    )
+    if atari_archive is None:
+        raise SystemExit("The real-media fixture lacks the verified Equinox Millennium Atari archive")
+    # The config listing is a read-only, file-relative disassembly candidate.
+    # It must reproduce the committed external-report identity without
+    # selecting either competing Fread load address as a runtime base.
+    with tempfile.TemporaryDirectory(dir=temporary_root) as analysis_root:
+        report = Path(analysis_root) / "mill22a-linear.md"
+        analysis = subprocess.run(
+            (sys.executable, str(Path(__file__).resolve().parents[1] / "tools" / "analyze_atari_st_config.py"),
+             "--archive", str(atari_archive),
+             "--nested-member", "Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].zip",
+             "--disk-member", "Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].st",
+             "--disk-sha256", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7",
+             "--file-sha256", "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6",
+             "--output", str(report)),
+            env=environment, check=False, capture_output=True, text=True,
+        )
+        if analysis.returncode != 0 or not report.is_file():
+            raise SystemExit(f"MILL22A.INF candidate disassembly failed:\n{analysis.stderr}")
+        report_bytes = report.read_bytes()
+        if (hashlib.sha256(report_bytes).hexdigest()
+                != "0ffc140d1bcde59f2a715a60da04d3493c8c278a1a823023c5e585658cbe415b"
+                or report_bytes.count(b"\n") != 2493
+                or b"file-image-relative, unrelocated" not in report_bytes):
+            raise SystemExit("MILL22A.INF report did not retain its file-relative preservation identity")
     dos_archive = archive_by_sha256.get(
         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123"
     )
