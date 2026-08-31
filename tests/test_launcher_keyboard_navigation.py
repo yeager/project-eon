@@ -9,6 +9,7 @@ SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 ROUTE_HEADER = (ROOT / "src" / "launcher.hpp").read_text(encoding="utf-8")
 ROUTE_SOURCE = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")
 RUNTIME_SOURCE = (ROOT / "src" / "engine" / "release_runtime.cpp").read_text(encoding="utf-8")
+RUNTIME_HEADER = (ROOT / "src" / "engine" / "release_runtime.hpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
         self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", ROUTE_HEADER)
@@ -62,7 +63,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
 
     def test_ambiguous_or_missing_platform_cards_cannot_start_a_game(self) -> None:
         self.assertIn("release_is_selected()", ROUTE_SOURCE)
-        self.assertIn("resolve_launch_request_identity(candidate, releases)", ROUTE_SOURCE)
+        self.assertIn("resolve_launch_request_identity(*candidate, releases)", ROUTE_SOURCE)
+        self.assertIn("admit_runtime_launch", RUNTIME_SOURCE)
         self.assertIn("no scan-order fallback was selected", SOURCE)
 
     def test_release_cards_carry_exact_outer_identity(self) -> None:
@@ -95,9 +97,15 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("runtime_coordinator.deuteros_amiga()", SOURCE)
         self.assertIn("runtime_coordinator.millennium_dos()", SOURCE)
 
+    def test_cli_and_card_routes_share_the_final_runtime_admission_gate(self) -> None:
+        self.assertIn("struct RuntimeLaunchAdmission", RUNTIME_HEADER)
+        self.assertIn("admit_runtime_launch", RUNTIME_SOURCE)
+        self.assertIn("const auto admission = eon::admit_runtime_launch", SOURCE)
+        self.assertIn("launcher_session.launch_request(request)", SOURCE)
+
     def test_profile_launch_rejections_are_visible_without_media_details(self) -> None:
         self.assertIn("std::string launcher_runtime_admission", SOURCE)
-        self.assertIn('launcher_runtime_admission = "REJECTED: IDENTITY"', SOURCE)
+        self.assertIn("launcher_runtime_admission = std::string(", SOURCE)
         self.assertIn("release_runtime_admission_label(runtime_coordinator.admission())", SOURCE)
         self.assertIn('tr("RUNTIME ADMISSION")', SOURCE)
         self.assertNotIn("launcher_runtime_admission = resolved->release.path", SOURCE)

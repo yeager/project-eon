@@ -67,6 +67,13 @@ The profile-card page mirrors a failed final admission using that same limited
 vocabulary. This gives the user actionable startup feedback before opening F10
 while preserving the same no-path/no-member/no-exception disclosure boundary.
 
+CLI and card-menu candidates both cross `admit_runtime_launch`: it resolves
+the candidate through the scanner's exact identities, rehashes the selected
+outer archive through `ReleaseRuntimeCoordinator`, and constructs one typed
+adapter. A missing/stale candidate resets the coordinator; no prior runtime
+can survive a failed later route. Renderer pack preflight reads that one
+already admitted identity rather than resolving menu fields independently.
+
 The launcher carries the same provenance boundary before admission. Its
 source identity is exactly game, platform, original-release language, and
 outer SHA-256; Original/Modern/Custom presentation selection is not a source

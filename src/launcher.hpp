@@ -128,6 +128,10 @@ struct LauncherRouteState {
     void enter_platforms();
     void back(const std::vector<ReleaseArchive>& releases);
     [[nodiscard]] bool release_is_selected() const;
+    // Build the selected card route as a candidate only. The engine performs
+    // the final scanner-identity resolution and runtime admission; this
+    // SDL-free step has no source access and cannot launch by itself.
+    [[nodiscard]] std::optional<LaunchRequest> launch_request(const LaunchRequest& base) const;
     [[nodiscard]] std::optional<ResolvedLaunchRequest> resolve_launch(
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const;
 };
@@ -155,6 +159,7 @@ struct LauncherSessionState {
     void back(const std::vector<ReleaseArchive>& releases);
     void reset_for_data(Game initial_game);
     [[nodiscard]] bool can_launch() const;
+    [[nodiscard]] std::optional<LaunchRequest> launch_request(const LaunchRequest& base) const;
     [[nodiscard]] std::optional<ResolvedLaunchRequest> resolve_launch(
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) const;
 };
