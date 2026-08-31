@@ -51,8 +51,6 @@ msgid "SCANNING ORIGINAL DATA..."
 msgstr "オリジナルデータを検査中..."
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / クリック: 開始"
-msgid "PLATFORM:"
-msgstr "プラットフォーム:"
 msgid "AUTO"
 msgstr "自動"
 msgid "LAUNCH REQUEST ACCEPTED"
@@ -293,6 +291,9 @@ msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
 msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+
+msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
+msgstr "ハッシュ検証済みの静的証拠のみ — 呼び出しの戻り値または実行時状態はありません。"
 msgid "RENDER PACING"
 msgstr "描画ペース"
 

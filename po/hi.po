@@ -51,8 +51,6 @@ msgid "SCANNING ORIGINAL DATA..."
 msgstr "मूल डेटा जाँचा जा रहा है..."
 msgid "ENTER / CLICK: START"
 msgstr "ENTER / क्लिक: शुरू करें"
-msgid "PLATFORM:"
-msgstr "प्लेटफ़ॉर्म:"
 msgid "AUTO"
 msgstr "स्वचालित"
 msgid "LAUNCH REQUEST ACCEPTED"
@@ -293,6 +291,9 @@ msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
 msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+
+msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
+msgstr "केवल हैश-सत्यापित स्थिर साक्ष्य — कोई कॉल रिटर्न या रनटाइम स्थिति नहीं।"
 msgid "RENDER PACING"
 msgstr "रेंडर गति"
 
