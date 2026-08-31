@@ -4652,6 +4652,16 @@ preview audio at that edge. The title stage's Exec, graphics-library and custom
 hardware requirements remain unexecuted, so this is not a fabricated title
 screen or a claim that title-stage timing has begun.
 
+`DeuterosAmigaOpeningRunner` is the SDL-free host scheduler for this already
+admitted opening only. It advances the release-bound coordinator at a fixed
+20 ms cadence, permits at most four catch-up ticks before resynchronising the
+host clock, and publishes the original VM events unchanged to the SDL
+renderer/audio layer. Native tests exercise an under-period advance, one tick,
+four-tick catch-up, resynchronisation, and the terminal handoff. The runner
+does not own a path, archive bytes, save, SDL device, frame interpolation, or
+game rule. Once the `$0f` event is returned it stops permanently; later host
+time cannot manufacture opening ticks, PCM, or title execution.
+
 The terminal handoff also executes only the title entry's proven profile-one
 prefix in memory. Bootstrap `$12b0e` (ADF `+0x2f0e`, 14 bytes SHA-256
 `858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd`)
