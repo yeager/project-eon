@@ -4064,10 +4064,12 @@ int main(int argc, char** argv) {
         discard_deuteros_external_modern_sequence();
         deuteros_last_tick = SDL_GetTicks();
     };
-    const auto reset_runtime_for_data = [&] {
-        // Changing the source is a hard preservation boundary.  Nothing
-        // derived from the former exact archive may remain addressable while
-        // the next bounded scan is still incomplete.
+    const auto reset_active_runtime = [&] {
+        // Leaving a launch or changing its source is a hard preservation
+        // boundary. Nothing derived from the former exact archive may remain
+        // addressable while the launcher is visible or a new bounded scan is
+        // incomplete. The release card itself remains a selection only; a
+        // later launch must reacquire and rehash it from scratch.
         runtime_coordinator.reset();
         stop_millennium_title();
         millennium_game_session.reset();
@@ -4461,7 +4463,7 @@ int main(int argc, char** argv) {
                 launcher_interaction.reset_for_data(cards[static_cast<std::size_t>(focused)].game);
                 request.presentation = launcher_session.presentation;
                 clear_modern_pack_admission();
-                reset_runtime_for_data();
+                reset_active_runtime();
                 show_scanner = true;
                 focus_menu_card(focused);
             } else {
@@ -4612,7 +4614,7 @@ int main(int argc, char** argv) {
             }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
                 if (screen == Screen::launching && !request.game) {
-                    stop_millennium_title();
+                    reset_active_runtime();
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
@@ -4627,7 +4629,7 @@ int main(int argc, char** argv) {
             if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                 && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
                 if (screen == Screen::launching && !request.game) {
-                    stop_millennium_title();
+                    reset_active_runtime();
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
