@@ -3180,6 +3180,12 @@ int main() {
         && english_dos_runtime->sound_selection && english_dos_runtime->sound_selection_prompt
         && english_dos_runtime->game_flow && english_dos_runtime->ega_video_driver
         && english_dos_runtime->mcga_video_driver && english_dos_runtime->initial_save);
+    // The executable selection table and each independently supplied driver
+    // leaf are both exact-hash admissions. The runtime keeps descriptors, not
+    // archive bytes or a host audio implementation.
+    assert(english_dos_runtime->sound_blaster_driver && english_dos_runtime->covox_driver);
+    assert(english_dos_runtime->sound_blaster_driver->original_filename == "ssbl.drv");
+    assert(english_dos_runtime->covox_driver->original_filename == "scvx.drv");
     const auto spanish_dos = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium
             && release.platform == eon::Platform::dos && release.language == "es";
@@ -3598,6 +3604,33 @@ int main() {
     assert(covox_leaf.original_filename == "scvx.drv" && covox_leaf.byte_size == 4053);
     assert(covox_leaf.sha256
         == "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4");
+    eon::MillenniumDosSoundSelectionSession admitted_ibm_sound_session(
+        sound_selection, sound_blaster_leaf, covox_leaf);
+    assert(admitted_ibm_sound_session.accept_ascii_character('0'));
+    assert(!admitted_ibm_sound_session.selected_driver_is_admitted());
+    assert(!admitted_ibm_sound_session.selected_driver());
+    eon::MillenniumDosSoundSelectionSession admitted_sound_blaster_session(
+        sound_selection, sound_blaster_leaf, covox_leaf);
+    assert(admitted_sound_blaster_session.accept_ascii_character('1'));
+    assert(admitted_sound_blaster_session.selected_driver_is_admitted());
+    assert(admitted_sound_blaster_session.selected_driver()
+        && admitted_sound_blaster_session.selected_driver()->sha256 == sound_blaster_leaf.sha256);
+    eon::MillenniumDosSoundSelectionSession admitted_covox_sound_session(
+        sound_selection, sound_blaster_leaf, covox_leaf);
+    assert(admitted_covox_sound_session.accept_ascii_character('2'));
+    assert(admitted_covox_sound_session.selected_driver_is_admitted());
+    assert(admitted_covox_sound_session.selected_driver()
+        && admitted_covox_sound_session.selected_driver()->sha256 == covox_leaf.sha256);
+    auto mismatched_sound_leaf = sound_blaster_leaf;
+    mismatched_sound_leaf.original_filename = "scvx.drv";
+    bool rejected_mismatched_sound_leaf = false;
+    try {
+        static_cast<void>(eon::MillenniumDosSoundSelectionSession(
+            sound_selection, mismatched_sound_leaf, covox_leaf));
+    } catch (const std::runtime_error&) {
+        rejected_mismatched_sound_leaf = true;
+    }
+    assert(rejected_mismatched_sound_leaf);
     bool rejected_sound_leaf = false;
     try {
         static_cast<void>(eon::admit_millennium_dos_sound_driver_leaf(*mill_bytes));

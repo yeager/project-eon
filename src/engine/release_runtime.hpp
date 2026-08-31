@@ -50,6 +50,11 @@ struct MillenniumDosRuntimeAssets {
     std::optional<MillenniumDosTitleFlow> title_flow;
     std::optional<MillenniumDosSoundSelectionEvidence> sound_selection;
     std::optional<std::string> sound_selection_prompt;
+    // These are identity-only admissions for the two supplied selectable
+    // driver leaves. The driver bytes are discarded after validation: no
+    // driver is executed, emulated, cached, or written by the runtime.
+    std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver;
+    std::optional<MillenniumDosSoundDriverLeaf> covox_driver;
     std::optional<MillenniumDosSpanishTitleBoundary> spanish_title_boundary;
     std::optional<MillenniumDosGameFlow> game_flow;
     std::optional<MillenniumDosVideoDriverProfile> ega_video_driver;
