@@ -19,6 +19,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_REPORT_BYTES = 256 * 1024 * 1024
+MAX_REPORT_DIRECTORY_ENTRIES = 64
 
 
 class ReportError(ValueError):
@@ -80,6 +81,28 @@ def require_external_report(path: Path) -> Path:
     return resolved
 
 
+def require_external_report_directory(path: Path) -> Path:
+    """Admit one explicit, bounded directory of retained report files.
+
+    This is intentionally not a recursive discovery route. A maintainer must
+    point at the directory that contains their already-generated linear
+    reports; the verifier then accepts only regular non-symlink files outside
+    both the repository and /tmp. No game media is opened by this route.
+    """
+    if not path.is_absolute() or path.as_posix() == "/tmp" or path.as_posix().startswith("/tmp/"):
+        raise ReportError("report directory must be absolute and outside /tmp")
+    try:
+        info = path.lstat()
+    except OSError as error:
+        raise ReportError(f"unable to stat report directory {path}: {error}") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+        raise ReportError(f"report directory {path} must be a directory and not a symlink")
+    resolved = path.resolve(strict=True)
+    if resolved == ROOT or ROOT in resolved.parents:
+        raise ReportError("report directory must stay outside the repository")
+    return resolved
+
+
 def report_identity(path: Path) -> tuple[str, int]:
     digest = hashlib.sha256()
     line_count = 0
@@ -88,6 +111,42 @@ def report_identity(path: Path) -> tuple[str, int]:
             digest.update(block)
             line_count += block.count(b"\n")
     return digest.hexdigest(), line_count
+
+
+def discover_reports_in_directory(expected: dict[str, tuple[str, int]], directory: Path) -> dict[str, Path]:
+    """Match all expected span identities from one explicit report directory.
+
+    Several static spans intentionally share one aggregate report. Matching on
+    the committed hash-plus-line identity means report filenames cannot become
+    a source of provenance or a fallback selection rule.
+    """
+    root = require_external_report_directory(directory)
+    try:
+        entries = sorted(root.iterdir(), key=lambda path: path.name)
+    except OSError as error:
+        raise ReportError(f"unable to enumerate report directory {root}: {error}") from error
+    if len(entries) > MAX_REPORT_DIRECTORY_ENTRIES:
+        raise ReportError("report directory exceeds the bounded entry limit")
+    expected_identities = set(expected.values())
+    available: dict[tuple[str, int], Path] = {}
+    for entry in entries:
+        try:
+            report = require_external_report(entry)
+        except ReportError:
+            # The explicit directory can contain notes or subdirectories, but
+            # none can become a report candidate. A matching report must be a
+            # direct regular non-symlink file and will be rechecked below.
+            continue
+        identity = report_identity(report)
+        if identity in expected_identities and identity not in available:
+            available[identity] = report
+    reports: dict[str, Path] = {}
+    for identifier, identity in expected.items():
+        report = available.get(identity)
+        if report is None:
+            raise ReportError(f"report directory has no matching report for {identifier}")
+        reports[identifier] = report
+    return reports
 
 
 def verify_reports(expected: dict[str, tuple[str, int]], reports: dict[str, Path]) -> int:
@@ -116,10 +175,17 @@ def main(argv: list[str] | None = None) -> int:
                         help="Committed disassembly inventory (default: docs/disassembly-inventory.json)")
     parser.add_argument("--report", action="append", default=[], metavar="SPAN_ID=ABSOLUTE_PATH",
                         help="One external report for each static span; repeat for every inventory span")
+    parser.add_argument("--report-directory", type=Path,
+                        help="One absolute external directory containing retained reports; match by hash/line identity")
     args = parser.parse_args(argv)
     try:
         expected = load_expected_spans(args.inventory)
-        unique_reports = verify_reports(expected, parse_report_arguments(args.report))
+        if args.report_directory is not None and args.report:
+            raise ReportError("--report-directory cannot be combined with --report")
+        reports = (discover_reports_in_directory(expected, args.report_directory)
+                   if args.report_directory is not None
+                   else parse_report_arguments(args.report))
+        unique_reports = verify_reports(expected, reports)
     except ReportError as error:
         print(f"DISASSEMBLY REPORTS REJECTED  {error}", file=sys.stderr)
         return 2

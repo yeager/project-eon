@@ -46,6 +46,31 @@ class VerifyDisassemblyReportsTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.ReportError, "hash/line"):
                 TOOL.verify_reports(expected, {"one": report, "two": report})
 
+    def test_report_directory_matches_reused_reports_by_identity_not_name(self) -> None:
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            reports = root / "retained"
+            reports.mkdir()
+            first = b"first\n"
+            second = b"second\n"
+            (reports / "opaque-a.md").write_bytes(first)
+            (reports / "opaque-b.md").write_bytes(second)
+            expected = TOOL.load_expected_spans(self.write_inventory(root, [
+                ("first-a", first), ("first-b", first), ("second", second),
+            ]))
+            selected = TOOL.discover_reports_in_directory(expected, reports)
+            self.assertEqual(selected["first-a"], selected["first-b"])
+            self.assertEqual(TOOL.verify_reports(expected, selected), 2)
+
+    def test_report_directory_requires_external_direct_regular_reports(self) -> None:
+        with self.assertRaisesRegex(TOOL.ReportError, "outside /tmp"):
+            TOOL.require_external_report_directory(Path("/tmp/reports"))
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            expected = TOOL.load_expected_spans(self.write_inventory(root, [("one", b"one\n")]))
+            with self.assertRaisesRegex(TOOL.ReportError, "no matching report"):
+                TOOL.discover_reports_in_directory(expected, root)
+
     def test_repository_and_tmp_paths_are_not_report_inputs(self) -> None:
         with self.assertRaisesRegex(TOOL.ReportError, "outside /tmp"):
             TOOL.require_external_report(Path("/tmp/report.md"))
