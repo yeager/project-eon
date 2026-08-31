@@ -4446,21 +4446,24 @@ int main() {
         }
         assert(rejected);
     }
-    assert(!game_session.observe_action(0));
+    const auto observe_game_action = [&game_session](const std::uint8_t action) {
+        return game_session.observe_action({0x0f05, action});
+    };
+    assert(!observe_game_action(0));
     assert(!game_session.last_function_key_index());
-    assert(game_session.observe_action(0x3b) == std::optional<std::size_t>{0});
+    assert(observe_game_action(0x3b) == std::optional<std::size_t>{0});
     assert(game_session.last_first_function_key_trace());
     assert(game_session.last_first_function_key_trace()->selected_record_address == 0x12cc);
-    assert(game_session.observe_action(0x3c) == std::optional<std::size_t>{1});
+    assert(observe_game_action(0x3c) == std::optional<std::size_t>{1});
     assert(game_session.last_second_function_key_trace());
     assert(game_session.last_second_function_key_trace()->first_record_address == 0x1384);
     assert(game_session.last_second_function_key_trace()->record_stride == 0x00c0);
     assert(!game_session.last_first_function_key_trace());
-    assert(game_session.observe_action(0x3d) == std::optional<std::size_t>{2});
+    assert(observe_game_action(0x3d) == std::optional<std::size_t>{2});
     assert(game_session.last_third_function_key_trace());
     assert(game_session.last_third_function_key_trace()->callback_address == 0x712a);
     assert(!game_session.last_second_function_key_trace());
-    assert(game_session.observe_action(0x3e) == std::optional<std::size_t>{3});
+    assert(observe_game_action(0x3e) == std::optional<std::size_t>{3});
     assert(game_session.last_fourth_function_key_trace());
     assert(game_session.last_fourth_function_key_trace()->common_routine_address == 0xba5e);
     assert(game_session.last_fourth_function_key_trace()->second_runtime_byte_value == 9);
@@ -4472,11 +4475,11 @@ int main() {
     assert(!game_session.reconstructed_runtime_byte(0xda1e));
     assert(!game_session.reconstructed_runtime_byte(0x75a9));
     assert(!game_session.last_third_function_key_trace());
-    assert(game_session.observe_action(0x3f) == std::optional<std::size_t>{4});
+    assert(observe_game_action(0x3f) == std::optional<std::size_t>{4});
     assert(game_session.last_fifth_function_key_trace());
     assert(game_session.last_fifth_function_key_trace()->third_call_address == 0x4bf7);
     assert(!game_session.last_fourth_function_key_trace());
-    assert(game_session.observe_action(0x40) == std::optional<std::size_t>{5});
+    assert(observe_game_action(0x40) == std::optional<std::size_t>{5});
     assert(game_session.last_sixth_function_key_trace());
     assert(game_session.last_sixth_function_key_trace()->callback_word_value == 0x3207);
     // All F6 stores follow two native calls and the observed restoration path
@@ -4486,7 +4489,7 @@ int main() {
     assert(!game_session.reconstructed_runtime_byte(0x75a8));
     assert(!game_session.reconstructed_runtime_byte(0x75ae));
     assert(!game_session.last_fifth_function_key_trace());
-    assert(game_session.observe_action(0x41) == std::optional<std::size_t>{6});
+    assert(observe_game_action(0x41) == std::optional<std::size_t>{6});
     assert(game_session.last_seventh_function_key_trace());
     assert(game_session.last_seventh_function_key_trace()->handler_address == 0x7521);
     assert(game_session.last_seventh_function_key_trace()->second_command_call_address == 0x0666);
@@ -4676,7 +4679,7 @@ int main() {
         }
         assert(rejected);
     }
-    assert(game_session.observe_action(0x42) == std::optional<std::size_t>{7});
+    assert(observe_game_action(0x42) == std::optional<std::size_t>{7});
     assert(game_session.last_eighth_function_key_trace());
     assert(game_session.last_eighth_function_key_trace()->handler_address == 0x7306);
     assert(game_session.last_eighth_function_key_trace()->repeated_call_address == 0x09fa);
@@ -4689,7 +4692,7 @@ int main() {
     assert(game_session.last_runtime_byte_effect()->value == 0);
     assert(game_session.reconstructed_runtime_byte(0xda30) == std::optional<std::uint8_t>{0});
     assert(!game_session.reconstructed_runtime_byte(0xda31));
-    assert(game_session.observe_action(0x42) == std::optional<std::size_t>{7});
+    assert(observe_game_action(0x42) == std::optional<std::size_t>{7});
     assert(game_session.last_runtime_byte_effect());
     assert(game_session.last_runtime_byte_effect()->previous == std::optional<std::uint8_t>{0});
     assert(game_session.last_runtime_byte_effect()->value == 0);
@@ -4735,21 +4738,30 @@ int main() {
     assert(game_flow.tenth_function_key.wait_call_address == 0x09fa);
     assert(game_flow.tenth_function_key.repeat_shift_register == 3);
     assert(game_flow.tenth_function_key.final_call_address == 0x4111);
-    assert(game_session.observe_action(0x43) == std::optional<std::size_t>{8});
+    assert(observe_game_action(0x43) == std::optional<std::size_t>{8});
     assert(game_session.last_ninth_function_key_trace());
     assert(game_session.last_ninth_function_key_trace()->handler_address == 0x7339);
     assert(game_session.last_ninth_function_key_trace()->limit_value == 9);
     assert(!game_session.last_eighth_function_key_trace());
     assert(!game_session.last_runtime_byte_effect());
     assert(game_session.reconstructed_runtime_byte(0xda30) == std::optional<std::uint8_t>{0});
-    assert(game_session.observe_action(0x44) == std::optional<std::size_t>{9});
+    assert(observe_game_action(0x44) == std::optional<std::size_t>{9});
     assert(game_session.last_tenth_function_key_trace());
     assert(game_session.last_tenth_function_key_trace()->handler_address == 0x7384);
     assert(game_session.last_tenth_function_key_trace()->limit_value == 2);
     assert(!game_session.last_first_function_key_trace());
     assert(!game_session.last_ninth_function_key_trace());
-    assert(!game_session.observe_action(0x45));
-    assert(!game_session.observe_action(0x0b));
+    assert(!observe_game_action(0x45));
+    assert(!observe_game_action(0x0b));
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(game_session.observe_action({0x0f06, 0x3b}));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(game_session.last_special_action() == std::optional<std::uint8_t>{0x0b});
     const auto static_data = eon::extract_asset_by_sha256(english_dos->path,
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d");

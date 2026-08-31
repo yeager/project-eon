@@ -3631,7 +3631,8 @@ action-dispatch range.
 English `2200AD.EXE` specifically for offline/runtime-trace observation of the
 two special actions. It does not make this path reachable from SDL: the title
 return, action poll and native prerequisites are still unrecovered. Every
-observation is address-bound (`$07f9` for raw `$0b`, `$da3a` for raw `$0c`),
+action observation is bound to the recovered action poll `$0f05`, and every
+special-byte observation is address-bound (`$07f9` for raw `$0b`, `$da3a` for raw `$0c`),
 so a byte recorded from one native cell cannot be reused as the other action's
 prerequisite. Given an explicitly observed native byte, raw `$0b` is revalidated against the exact
 dispatcher and `$11a4` handler before recording the one unconditional prefix

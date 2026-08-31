@@ -27,6 +27,14 @@ struct MillenniumDosRuntimeByteObservation {
     std::uint8_t value = 0;
 };
 
+// The original action loop obtains AL through a call at one recovered site.
+// Retain that site with every candidate action so a trace from another poll or
+// helper cannot silently acquire gameplay-dispatch meaning.
+struct MillenniumDosActionObservation {
+    std::uint16_t poll_address = 0;
+    std::uint8_t action = 0;
+};
+
 // Host-side observation of the original loop's *already polled* AL byte.  It
 // deliberately does not invoke native handlers or mutate the original save.
 class MillenniumDosGameSession {
@@ -40,7 +48,7 @@ public:
 
     // Returns a table index only for the exact inclusive action-byte range
     // that the original code normalizes by subtracting function_key_first_action.
-    [[nodiscard]] std::optional<std::size_t> observe_action(std::uint8_t action);
+    [[nodiscard]] std::optional<std::size_t> observe_action(MillenniumDosActionObservation observation);
     [[nodiscard]] std::optional<std::size_t> last_function_key_index() const {
         return last_function_key_index_;
     }

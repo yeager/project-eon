@@ -86,8 +86,13 @@ MillenniumDosSecondSpecialActionPrefix MillenniumDosGameSession::observe_second_
     return trace;
 }
 
-std::optional<std::size_t> MillenniumDosGameSession::observe_action(const std::uint8_t action) {
+std::optional<std::size_t> MillenniumDosGameSession::observe_action(
+    const MillenniumDosActionObservation observation) {
+    if (observation.poll_address != flow_.action_poll_address) {
+        throw std::runtime_error("Millennium DOS action observation is detached from the verified poll site");
+    }
     clear_last_observation();
+    const auto action = observation.action;
     if (action == flow_.special_action_0 || action == flow_.special_action_1) {
         last_special_action_ = action;
         return std::nullopt;
