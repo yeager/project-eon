@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5"}
 
 
 def load_tool(name: str):
@@ -115,6 +115,15 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path) -> N
         raise ValueError("raw_pc grammar/count receipt mismatch")
 
 
+def verify_deuteros_host_input_summary(fields: dict[str, str], directory: Path) -> None:
+    if fields.get("host_input_receipt") != "present":
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    count = tool.parse_host_input_receipt(directory / "host-input-receipt.txt")
+    if fields.get("host_input_receipt_records") != str(count):
+        raise ValueError("host-input receipt grammar/count mismatch")
+
+
 def verify(kind: str, directory: Path) -> None:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
@@ -140,8 +149,10 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"3", "4"}:
+        if version in {"3", "4", "5"}:
             verify_deuteros_raw_pc_summary(fields, directory)
+        if version == "5":
+            verify_deuteros_host_input_summary(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")

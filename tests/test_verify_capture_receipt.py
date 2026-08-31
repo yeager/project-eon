@@ -65,6 +65,17 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "grammar/count"):
                 TOOL.verify_deuteros_raw_pc_summary(fields, root)
 
+    def test_v5_deuteros_host_input_summary_is_recomputed_from_strict_records(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            receipt = root / "host-input-receipt.txt"
+            receipt.write_text("host-input 1 frame=2 line=3 action=4 state=1\n", encoding="ascii")
+            fields = {"host_input_receipt": "present", "host_input_receipt_records": "1"}
+            TOOL.verify_deuteros_host_input_summary(fields, root)
+            fields["host_input_receipt_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_host_input_summary(fields, root)
+
     def test_console_requires_a_bounded_retained_file(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)

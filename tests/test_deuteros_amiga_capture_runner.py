@@ -105,11 +105,18 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             self.assertEqual(TOOL.input_receipt_status(receipt), "host_input_receipt=absent\n")
             receipt.write_bytes(b"")
             self.assertEqual(TOOL.input_receipt_status(receipt), "host_input_receipt=empty\n")
-            observed = b"host-input 1 frame=2 line=3 action=key state=down\n"
+            observed = b"host-input 1 frame=2 line=3 action=4 state=1\n"
             receipt.write_bytes(observed)
             status = TOOL.input_receipt_status(receipt)
             self.assertIn("host_input_receipt=present\n", status)
             self.assertIn(f"host_input_receipt_bytes={len(observed)}\n", status)
+            self.assertIn("host_input_receipt_records=1\n", status)
+            receipt.write_bytes(b"host-input 2 frame=2 line=3 action=4 state=1\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "ordinals"):
+                TOOL.input_receipt_status(receipt)
+            receipt.write_bytes(b"host-input 1 frame=2 line=3 action=key state=down\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
+                TOOL.input_receipt_status(receipt)
             receipt.unlink()
             receipt.symlink_to("missing")
             with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):

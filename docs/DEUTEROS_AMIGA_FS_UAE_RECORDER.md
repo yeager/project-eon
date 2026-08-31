@@ -133,16 +133,19 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-Current captures write `capture_receipt_version=4`. They bind both the complete
+Current captures write `capture_receipt_version=5`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
 summary, and enforce a 64 MiB total-console safety cap. A cap crossing writes
 `recorder_console_over_limit=true`, stops the recorder, preserves the bounded
 prefix for review, and rejects the directory as inadmissible evidence. Receipt
-v2 and v3 remain verifiable as earlier evidence, but they do not contain the
-newer fields. Verify a completed external capture without opening its game
-media with:
+v5 also validates a present FS-UAE host-delivery receipt as at most 256
+contiguous ASCII records in the reviewed `host-input` grammar and records its
+count. The action and state integers remain opaque: this binds delivery-file
+integrity, not a game input meaning or acceptance result. Receipt v2–v4 remain
+verifiable as earlier evidence, but they do not contain the newer fields.
+Verify a completed external capture without opening its game media with:
 
 ```sh
 python3 tools/verify_capture_receipt.py \
@@ -184,6 +187,18 @@ outer release and Kickstart archive retained SHA-256
 128/128 across `0x0001fe84` and `0x0001fe96`, and no host-input receipt was
 created. This verifies v4's bounded evidence route only; it does not add a
 title, control, Exec/graphics, bitplane, palette, frame, audio, or gameplay
+fact.
+
+The v5 route was then exercised against the same unchanged source release and
+Kickstart archive. `verify_capture_receipt.py` accepted its external receipt:
+the bounded raw-PC file remained the same 256-record bootstrap observation,
+the console remained empty, and `recorder_console_over_limit=false`. This run
+also contained a 709-byte, 15-record host-delivery receipt (SHA-256
+`88368f6cd6c696af79f11835028b38139e9404d46aa50f76e1451d8b69fd1cbc`), whose
+strict ordinal and signed-integer grammar was independently revalidated by
+v5. The records are intentionally opaque frontend-to-core deliveries. They
+are not attributed to a particular physical control and do not establish an
+original poll, input acceptance, title transition, display, audio, or gameplay
 fact.
 
 The v4 route was also repeated after the checked-unmount contract was added.

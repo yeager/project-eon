@@ -42,6 +42,7 @@ MAX_DURATION_SECONDS = 600
 # The reviewed delivery observer writes a bounded physical-input receipt.
 # Never hash an arbitrary-size file merely because a recorder path was set.
 MAX_INPUT_RECEIPT_BYTES = 64 * 1024
+MAX_INPUT_RECEIPT_RECORDS = 256
 # Raw recorder output and console diagnostics are external evidence, not
 # unbounded host storage.  A broken emulator must not be able to exhaust the
 # operator's terminal, disk, or cache while a capture is being reviewed.
@@ -66,10 +67,16 @@ RAW_PC_LINE = re.compile(
     r"raw-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
     r"opcode=0x([0-9a-f]{4}) d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) "
     r"a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4})\n")
-# Receipt v4 retains v3's strict raw-PC grammar/count receipt and adds an
-# explicit console-overrun admission boundary. Older evidence remains
-# verifiable without pretending it had the newer field.
-CAPTURE_RECEIPT_VERSION = "4"
+# The reviewed FS-UAE host-delivery observer prints raw signed integer action
+# fields. They remain opaque delivery observations; this grammar proves only
+# that an external receipt has not been hand-edited into an arbitrary file.
+HOST_INPUT_LINE = re.compile(
+    r"host-input ([1-9][0-9]*) frame=(-?[0-9]+) line=(-?[0-9]+) "
+    r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
+# Receipt v5 retains v4's console-overrun boundary and v3 raw-PC summary while
+# binding the reviewed host-delivery receipt grammar/count. Older evidence
+# remains verifiable without pretending it has the newer field.
+CAPTURE_RECEIPT_VERSION = "5"
 
 
 class CaptureError(RuntimeError):
@@ -227,10 +234,33 @@ def input_receipt_status(path: Path) -> str:
         raise CaptureError("host-input receipt exceeds the bounded recorder contract")
     if info.st_size == 0:
         return "host_input_receipt=empty\n"
+    record_count = parse_host_input_receipt(path)
     digest, size = sha256_file(path)
     return ("host_input_receipt=present\n"
             f"host_input_receipt_sha256={digest}\n"
-            f"host_input_receipt_bytes={size}\n")
+            f"host_input_receipt_bytes={size}\n"
+            f"host_input_receipt_records={record_count}\n")
+
+
+def parse_host_input_receipt(path: Path) -> int:
+    """Validate only the recorder's finite host-to-core delivery grammar."""
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("host-input receipt is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("host-input receipt has a truncated final record")
+    count = 0
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = HOST_INPUT_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("host-input receipt contains an invalid recorder record")
+        if int(match.group(1)) != expected:
+            raise CaptureError("host-input receipt record ordinals are not contiguous")
+        count = expected
+        if count > MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("host-input receipt exceeds the recorder record cap")
+    return count
 
 
 def raw_observation_status(path: Path, name: str) -> str:
