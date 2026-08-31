@@ -1473,6 +1473,24 @@ int main() {
         assert(!chinese_catalog.empty());
         const auto british_catalog = eon::Translator::from_language("en_GB.UTF-8");
         assert(!british_catalog.empty());
+        // Every launcher locale is runtime data, not merely an installed PO
+        // filename. Exercise the same normalizer and lookup route used by
+        // `--language`; a missing catalog must not be hidden by English's
+        // intentional no-catalog fallback.
+        constexpr std::array<std::string_view, 20> shipped_catalogs{{
+            "ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja",
+            "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN",
+        }};
+        for (const auto catalog_name : shipped_catalogs) {
+            const auto catalog = eon::Translator::from_language(
+                std::string(catalog_name) + ".UTF-8");
+            assert(!catalog.empty());
+            assert(!catalog.translate("ENTER / CLICK: START").empty());
+        }
+        const auto english_catalog = eon::Translator::from_language("en_US.UTF-8");
+        assert(english_catalog.empty());
+        assert(english_catalog.translate("ENTER / CLICK: START") == "ENTER / CLICK: START");
+        assert(eon::Translator::from_language("zz").empty());
     }
     {
         // A minimal stored ZIP anchors parser integrity checks without using
