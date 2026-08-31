@@ -275,6 +275,7 @@ struct PreviewAnimation {
 // Modern options are renderer state only. They are deliberately independent
 // from original input, media, simulation state and save bytes.
 enum class ModernGraphicsPreset { clean, crt, cinematic, high_contrast, custom };
+enum class PixelReconstruction { off, scale2x, scale4x };
 // Presentation scheduling is deliberately separate from the recovered clock.
 // It controls when SDL presents already-rendered pixels; it never supplies a
 // tick, input, or elapsed-time value to an original game path.
@@ -285,7 +286,7 @@ struct ModernGraphicsSettings {
     // Reconstruct an edge-aware 2x renderer texture from a decoded original
     // surface. The source vector is retained unchanged and the result exists
     // only in process memory; Original never takes this path.
-    bool pixel_reconstruction = true;
+    PixelReconstruction pixel_reconstruction = PixelReconstruction::scale2x;
     bool scanlines = false;
     bool frame = true;
     // Presets only select combinations of the renderer controls below.  They
@@ -341,25 +342,25 @@ void apply_modern_graphics_preset(ModernGraphicsSettings& settings,
     settings.preset = preset;
     switch (preset) {
     case ModernGraphicsPreset::clean:
-        settings.pixel_reconstruction = true;
+        settings.pixel_reconstruction = PixelReconstruction::scale2x;
         settings.smooth_scaling = true;
         settings.scanlines = false;
         settings.frame = true;
         break;
     case ModernGraphicsPreset::crt:
-        settings.pixel_reconstruction = false;
+        settings.pixel_reconstruction = PixelReconstruction::off;
         settings.smooth_scaling = false;
         settings.scanlines = true;
         settings.frame = true;
         break;
     case ModernGraphicsPreset::cinematic:
-        settings.pixel_reconstruction = true;
+        settings.pixel_reconstruction = PixelReconstruction::scale2x;
         settings.smooth_scaling = true;
         settings.scanlines = false;
         settings.frame = false;
         break;
     case ModernGraphicsPreset::high_contrast:
-        settings.pixel_reconstruction = true;
+        settings.pixel_reconstruction = PixelReconstruction::scale2x;
         settings.smooth_scaling = false;
         settings.scanlines = false;
         settings.frame = true;
@@ -857,7 +858,9 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
         tr(display_aspect_names.at(settings.aspect_ratio_index)),
         tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing))),
-        tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)"),
+        tr(settings.pixel_reconstruction == PixelReconstruction::scale2x ? "SCALE2X (MEMORY ONLY)"
+            : settings.pixel_reconstruction == PixelReconstruction::scale4x ? "SCALE4X (MEMORY ONLY)"
+            : "OFF (ORIGINAL PIXELS)"),
         tr(settings.smooth_scaling ? "ON" : "OFF"),
         tr(settings.scanlines ? "ON" : "OFF"),
         tr(settings.frame ? "ON" : "OFF"),
@@ -918,7 +921,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"RENDERER SETTINGS", std::to_string(resolution.width) + "x" + std::to_string(resolution.height)
             + " / " + tr(display_aspect_names.at(settings.aspect_ratio_index))
             + " / " + tr("PIXEL RECONSTRUCTION") + "="
-            + tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)" : "OFF (ORIGINAL PIXELS)")
+            + tr(settings.pixel_reconstruction == PixelReconstruction::scale2x ? "SCALE2X (MEMORY ONLY)"
+                : settings.pixel_reconstruction == PixelReconstruction::scale4x ? "SCALE4X (MEMORY ONLY)"
+                : "OFF (ORIGINAL PIXELS)")
             + " / " + tr("SMOOTH SCALING") + "=" + tr(settings.smooth_scaling ? "ON" : "OFF")
             + " / " + tr("SCANLINES") + "=" + tr(settings.scanlines ? "ON" : "OFF")
             + " / " + tr("MODERN FRAME") + "=" + tr(settings.frame ? "ON" : "OFF")},
@@ -3983,16 +3988,17 @@ int main(int argc, char** argv) {
             }
         }
     };
-    const auto millennium_texture_for = [&](const bool reconstruct) {
+    const auto millennium_texture_for = [&](const PixelReconstruction reconstruction) {
         if (millennium_external_modern_texture) return millennium_external_modern_texture;
-        if (!millennium_assets || !millennium_preview_texture || !reconstruct) {
+        if (!millennium_assets || !millennium_preview_texture || reconstruction == PixelReconstruction::off) {
             return millennium_preview_texture;
         }
         if (!millennium_modern_preview_texture) {
             const auto& title = millennium_assets->title;
             if (title.rgba_frames.empty()) return millennium_preview_texture;
-            const auto enhanced = eon::reconstruct_rgba_scale2x(
-                title.rgba_frames.front(), title.width, title.height);
+            const auto enhanced = reconstruction == PixelReconstruction::scale4x
+                ? eon::reconstruct_rgba_scale4x(title.rgba_frames.front(), title.width, title.height)
+                : eon::reconstruct_rgba_scale2x(title.rgba_frames.front(), title.width, title.height);
             millennium_modern_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                 SDL_TEXTUREACCESS_STATIC, enhanced.width, enhanced.height);
             if (!millennium_modern_preview_texture || !SDL_UpdateTexture(
@@ -4320,7 +4326,7 @@ int main(int argc, char** argv) {
         apply_modern_graphics_preset(modern_graphics_settings,
             static_cast<ModernGraphicsPreset>(saved.modern_preset_index));
         modern_graphics_settings.render_pacing = static_cast<RenderPacing>(saved.render_pacing_index);
-        modern_graphics_settings.pixel_reconstruction = saved.pixel_reconstruction;
+        modern_graphics_settings.pixel_reconstruction = static_cast<PixelReconstruction>(saved.pixel_reconstruction_index);
         modern_graphics_settings.smooth_scaling = saved.smooth_scaling;
         modern_graphics_settings.scanlines = saved.scanlines;
         modern_graphics_settings.frame = saved.frame;
@@ -4425,8 +4431,17 @@ int main(int argc, char** argv) {
             mark_modern_graphics_custom(modern_graphics_settings);
             break;
         case 3: cycle_render_pacing(direction); mark_modern_graphics_custom(modern_graphics_settings); break;
-        case 4: modern_graphics_settings.pixel_reconstruction = !modern_graphics_settings.pixel_reconstruction;
+        case 4: {
+            const auto next = (static_cast<int>(modern_graphics_settings.pixel_reconstruction) + 3 + direction) % 3;
+            modern_graphics_settings.pixel_reconstruction = static_cast<PixelReconstruction>(next);
+            if (millennium_modern_preview_texture) SDL_DestroyTexture(millennium_modern_preview_texture);
+            millennium_modern_preview_texture = nullptr;
+            if (modern_preview_texture) SDL_DestroyTexture(modern_preview_texture);
+            modern_preview_texture = nullptr;
+            deuteros_modern_preview_source_tick.reset();
+            deuteros_modern_preview_attempted_tick.reset();
             mark_modern_graphics_custom(modern_graphics_settings); break;
+        }
         case 5: modern_graphics_settings.smooth_scaling = !modern_graphics_settings.smooth_scaling;
             mark_modern_graphics_custom(modern_graphics_settings); break;
         case 6: modern_graphics_settings.scanlines = !modern_graphics_settings.scanlines;
@@ -4453,7 +4468,7 @@ int main(int argc, char** argv) {
                 modern_graphics_settings.aspect_ratio_index,
                 static_cast<std::size_t>(modern_graphics_settings.preset),
                 static_cast<std::size_t>(modern_graphics_settings.render_pacing),
-                modern_graphics_settings.pixel_reconstruction,
+                static_cast<std::size_t>(modern_graphics_settings.pixel_reconstruction),
                 modern_graphics_settings.smooth_scaling,
                 modern_graphics_settings.scanlines,
                 modern_graphics_settings.frame,
@@ -5072,7 +5087,7 @@ int main(int argc, char** argv) {
                 // a GX canvas must never replace the original title frame.
                 constexpr bool millennium_game_execution_observed = false;
                 SDL_Texture* texture = millennium_texture_for(
-                    modern && modern_graphics_settings.pixel_reconstruction);
+                    modern ? modern_graphics_settings.pixel_reconstruction : PixelReconstruction::off);
                 if (modern && millennium_external_modern_texture && millennium_external_modern_surface) {
                     draw_text(renderer, 64, 202, tr("MODERN TITLE PACK: ")
                         + millennium_external_modern_surface->pack_id + " ("
@@ -5416,11 +5431,12 @@ int main(int argc, char** argv) {
                             + "; " + surface.provenance + "; T=1-82)");
                     }
                 }
-                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction && frame
+                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off && frame
                     && (!deuteros_modern_preview_attempted_tick
                         || *deuteros_modern_preview_attempted_tick != source_tick)) {
-                    const auto enhanced = eon::reconstruct_rgba_scale2x(*frame,
-                        eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height);
+                    const auto enhanced = modern_graphics_settings.pixel_reconstruction == PixelReconstruction::scale4x
+                        ? eon::reconstruct_rgba_scale4x(*frame, eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height)
+                        : eon::reconstruct_rgba_scale2x(*frame, eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height);
                     if (!modern_preview_texture) {
                         modern_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                             SDL_TEXTUREACCESS_STREAMING, enhanced.width, enhanced.height);
@@ -5434,7 +5450,7 @@ int main(int argc, char** argv) {
                     }
                     deuteros_modern_preview_attempted_tick = source_tick;
                 }
-                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction && modern_preview_texture
+                if (texture == preview_texture && modern && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off && modern_preview_texture
                     && deuteros_modern_preview_source_tick
                     && *deuteros_modern_preview_source_tick == source_tick) {
                     texture = modern_preview_texture;

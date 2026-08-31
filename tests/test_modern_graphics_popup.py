@@ -100,7 +100,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("tr(modern_graphics_preset_names.at", popup)
         self.assertIn("tr(display_aspect_names.at(settings.aspect_ratio_index))", popup)
         self.assertIn("tr(render_pacing_names.at", popup)
-        self.assertIn('tr(settings.pixel_reconstruction ? "SCALE2X (MEMORY ONLY)"', popup)
+        self.assertIn('PixelReconstruction::scale4x ? "SCALE4X (MEMORY ONLY)"', popup)
         self.assertIn('tr(settings.smooth_scaling ? "ON" : "OFF")', popup)
         self.assertIn('tr(settings.scanlines ? "ON" : "OFF")', popup)
         self.assertIn('tr(settings.frame ? "ON" : "OFF")', popup)

@@ -70,7 +70,7 @@ std::optional<PresentationPreferences> load_presentation_preferences(const std::
         else if (key == "aspect") { const auto parsed = parse_index(value, 2); if (!parsed || aspect) return std::nullopt; preferences.aspect_ratio_index = *parsed; aspect = true; }
         else if (key == "preset") { const auto parsed = parse_index(value, 4); if (!parsed || preset) return std::nullopt; preferences.modern_preset_index = *parsed; preset = true; }
         else if (key == "pacing") { const auto parsed = parse_index(value, 2); if (!parsed || pacing) return std::nullopt; preferences.render_pacing_index = *parsed; pacing = true; }
-        else if (key == "reconstruction") { const auto parsed = parse_bool(value); if (!parsed || reconstruction) return std::nullopt; preferences.pixel_reconstruction = *parsed; reconstruction = true; }
+        else if (key == "reconstruction") { const auto parsed = parse_index(value, 2); if (!parsed || reconstruction) return std::nullopt; preferences.pixel_reconstruction_index = *parsed; reconstruction = true; }
         else if (key == "scaling") { const auto parsed = parse_bool(value); if (!parsed || scaling) return std::nullopt; preferences.smooth_scaling = *parsed; scaling = true; }
         else if (key == "scanlines") { const auto parsed = parse_bool(value); if (!parsed || scanlines) return std::nullopt; preferences.scanlines = *parsed; scanlines = true; }
         else if (key == "frame") { const auto parsed = parse_bool(value); if (!parsed || frame) return std::nullopt; preferences.frame = *parsed; frame = true; }
@@ -94,7 +94,7 @@ bool save_presentation_preferences(const std::filesystem::path& path,
            << "aspect=" << preferences.aspect_ratio_index << '\n'
            << "preset=" << preferences.modern_preset_index << '\n'
            << "pacing=" << preferences.render_pacing_index << '\n'
-           << "reconstruction=" << (preferences.pixel_reconstruction ? 1 : 0) << '\n'
+           << "reconstruction=" << preferences.pixel_reconstruction_index << '\n'
            << "scaling=" << (preferences.smooth_scaling ? 1 : 0) << '\n'
            << "scanlines=" << (preferences.scanlines ? 1 : 0) << '\n'
            << "frame=" << (preferences.frame ? 1 : 0) << '\n';
