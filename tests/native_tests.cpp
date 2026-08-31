@@ -1484,6 +1484,31 @@ int main() {
         menu_candidate.platform.reset();
         assert(!eon::resolve_launch_request_identity(menu_candidate, duplicate_english_releases));
 
+        // The whole card route is SDL-independent: input devices only choose
+        // cards, while platform/release admission and back-navigation have
+        // one deterministic state model.
+        eon::LauncherRouteState route;
+        route.focus_game(duplicate_english_releases, eon::Game::millennium);
+        assert(route.game == eon::Game::millennium && route.platform == eon::Platform::amiga);
+        route.enter_platforms();
+        assert(route.page == eon::LauncherPage::platforms);
+        assert(route.choose_platform(duplicate_english_releases, eon::Platform::amiga));
+        assert(route.page == eon::LauncherPage::releases && !route.release_is_selected());
+        assert(!route.choose_release(duplicate_english_releases,
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"));
+        assert(route.choose_release(duplicate_english_releases,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+        assert(route.page == eon::LauncherPage::profiles && route.release_is_selected());
+        const auto route_launch = route.resolve_launch(menu_candidate, duplicate_english_releases);
+        assert(route_launch && route_launch->release.sha256
+            == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+        route.back(duplicate_english_releases);
+        assert(route.page == eon::LauncherPage::releases);
+        route.back(duplicate_english_releases);
+        assert(route.page == eon::LauncherPage::platforms);
+        route.back(duplicate_english_releases);
+        assert(route.page == eon::LauncherPage::games);
+
         assert(eon::normalize_language("sv_SE.UTF-8") == "sv_SE");
         assert(eon::normalize_language("pt-BR") == "pt_BR");
         assert(eon::normalize_language("C") == "c");

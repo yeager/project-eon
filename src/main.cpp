@@ -225,12 +225,7 @@ int inspect_millennium_dos_save(const std::filesystem::path& path) {
 }
 
 enum class Screen { menu, launching };
-// The launcher deliberately separates the three choices into pages.  A game
-// card cannot accidentally start whichever platform happened to be selected.
-// English is the default original edition only when it identifies exactly one
-// verified outer release. Any ambiguous identity still exposes release cards
-// before Original, Modern, or a tuned launch.
-enum class LauncherPage { games, platforms, releases, profiles };
+using LauncherPage = eon::LauncherPage;
 
 const eon::Translator* active_translator = nullptr;
 std::unique_ptr<eon::UnicodeTextRenderer> active_text_renderer;
@@ -3574,9 +3569,14 @@ int main(int argc, char** argv) {
     }
     // A CLI platform request is fixed.  The start menu can otherwise choose
     // among the hash-verified platform releases it has actually discovered.
-    std::optional<eon::Platform> active_platform = request.platform;
-    std::optional<std::string> active_release_language = request.release_language;
-    std::optional<std::string> active_release_sha256 = request.release_sha256;
+    eon::LauncherRouteState launcher_route;
+    launcher_route.game = request.game.value_or(eon::Game::millennium);
+    launcher_route.platform = request.platform;
+    launcher_route.release_language = request.release_language;
+    launcher_route.release_sha256 = request.release_sha256;
+    auto& active_platform = launcher_route.platform;
+    auto& active_release_language = launcher_route.release_language;
+    auto& active_release_sha256 = launcher_route.release_sha256;
     std::optional<eon::ResolvedLaunchRequest> active_launch;
     if (request.game && active_platform) {
         auto launch_candidate = request;
@@ -3875,7 +3875,7 @@ int main(int argc, char** argv) {
     };
 
     Screen screen = request.game ? Screen::launching : Screen::menu;
-    LauncherPage launcher_page = LauncherPage::games;
+    auto& launcher_page = launcher_route.page;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     int focused = 0;
     int focused_platform_card = 0;
@@ -3961,15 +3961,12 @@ int main(int argc, char** argv) {
     const auto focus_menu_card = [&](const int next_focus) {
         focused = next_focus;
         if (request.platform) return;
-        const auto next_platform = eon::select_available_platform(
-            releases, cards[static_cast<std::size_t>(focused)].game, active_platform);
-        if (next_platform != active_platform) {
-            active_platform = next_platform;
-            active_release_language.reset();
-            active_release_sha256.reset();
+        const auto previous_platform = active_platform;
+        launcher_route.focus_game(releases, cards[static_cast<std::size_t>(focused)].game);
+        if (active_platform != previous_platform) {
             discard_millennium_assets();
         }
-        if (!next_platform) focused_platform_card = 0;
+        if (!active_platform) focused_platform_card = 0;
         // This is also needed when the active platform happens not to change:
         // the game card can have been focused while scanning was incomplete.
         focus_active_platform_card();
@@ -4037,20 +4034,12 @@ int main(int argc, char** argv) {
         deuteros_title_resource.reset();
     };
     const auto launch_menu_selection = [&] {
-        const auto game = cards[static_cast<std::size_t>(focused)].game;
-        if (!active_platform || !active_release_sha256) return;
-        auto launch_candidate = request;
-        launch_candidate.game = game;
-        launch_candidate.platform = active_platform;
-        launch_candidate.release_sha256 = active_release_sha256;
-        launch_candidate.release_language = active_release_language;
-        launch_candidate.presentation_explicit = true;
-        const auto resolved = eon::resolve_launch_request_identity(launch_candidate, releases);
+        const auto resolved = launcher_route.resolve_launch(request, releases);
         if (!resolved) return;
         active_launch = resolved;
         active_release_sha256 = resolved->request.release_sha256;
         active_release_language = resolved->request.release_language;
-        selected = game;
+        selected = launcher_route.game;
         screen = Screen::launching;
         if (selected == eon::Game::millennium) start_millennium_title();
         if (selected == eon::Game::deuteros) start_deuteros();
@@ -4061,39 +4050,20 @@ int main(int argc, char** argv) {
         if (platform_cards.empty()) return false;
         focused_platform_card = std::clamp(index, 0, static_cast<int>(platform_cards.size() - 1U));
         const auto platform = platform_cards[static_cast<std::size_t>(focused_platform_card)].platform;
-        const auto game = cards[static_cast<std::size_t>(focused)].game;
-        const auto status = eon::platform_card_status(releases, game, platform);
-        if (!eon::platform_card_selectable(status)) return false;
-        if (!active_platform || *active_platform != platform) {
-            active_platform = platform;
-            active_release_language.reset();
-            active_release_sha256.reset();
-            discard_millennium_assets();
-        }
-        active_release_sha256 = eon::select_available_release_sha256(
-            releases, game, platform, active_release_sha256);
-        if (const auto release = eon::resolve_release_identity(releases, game, platform,
-                active_release_sha256, std::nullopt)) {
-            active_release_language = release->language;
-        } else {
-            active_release_language.reset();
-        }
+        const auto previous_platform = active_platform;
+        if (!launcher_route.choose_platform(releases, platform)) return false;
+        if (active_platform != previous_platform) discard_millennium_assets();
         focused_release_card = 0;
-        return eon::release_available(releases, game, platform);
+        return true;
     };
     const auto choose_release_language_card = [&](const int index) {
         const auto language_cards = release_language_cards();
         if (index < 0 || static_cast<std::size_t>(index) >= language_cards.size()) return false;
         focused_release_card = index;
-        active_release_language = language_cards[static_cast<std::size_t>(index)].language;
-        active_release_sha256 = language_cards[static_cast<std::size_t>(index)].sha256;
+        if (!launcher_route.choose_release(releases,
+                language_cards[static_cast<std::size_t>(index)].sha256)) return false;
         discard_millennium_assets();
         return true;
-    };
-    const auto advance_after_platform_selection = [&] {
-        // English is selected automatically only when it identifies exactly
-        // one verified outer release. All other cases remain explicit.
-        launcher_page = active_release_sha256 ? LauncherPage::profiles : LauncherPage::releases;
     };
     const auto choose_profile_card = [&](const ProfileChoice choice) {
         if (choice == ProfileChoice::custom) {
@@ -4132,23 +4102,22 @@ int main(int argc, char** argv) {
             for (std::size_t index = 0; index < cards.size(); ++index) {
                 if (inside(cards[index].bounds, x, y)) {
                     focus_menu_card(static_cast<int>(index));
-                    launcher_page = LauncherPage::platforms;
+                    launcher_route.enter_platforms();
                 }
             }
         } else if (launcher_page == LauncherPage::platforms) {
             const auto platform_cards = platform_cards_for_game(
                 cards[static_cast<std::size_t>(focused)].game);
             for (std::size_t index = 0; index < platform_cards.size(); ++index) {
-                if (inside(platform_cards[index].bounds, x, y)
-                    && choose_platform_card(static_cast<int>(index))) advance_after_platform_selection();
+                if (inside(platform_cards[index].bounds, x, y)) {
+                    choose_platform_card(static_cast<int>(index));
+                }
             }
         } else if (launcher_page == LauncherPage::releases) {
             const auto language_cards = release_language_cards();
             for (std::size_t index = 0; index < language_cards.size(); ++index) {
                 if (inside(language_cards[index].bounds, x, y)
-                    && choose_release_language_card(static_cast<int>(index))) {
-                    launcher_page = LauncherPage::profiles;
-                }
+                    && choose_release_language_card(static_cast<int>(index))) {}
             }
         } else {
             for (std::size_t index = 0; index < profile_cards.size(); ++index) {
@@ -4469,10 +4438,7 @@ int main(int argc, char** argv) {
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
-                    launcher_page = launcher_page == LauncherPage::profiles
-                        ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
-                        : launcher_page == LauncherPage::releases ? LauncherPage::platforms
-                        : LauncherPage::games;
+                    launcher_route.back(releases);
                 }
                 else running = false;
                 // Escape is a single navigation action. Do not let this same
@@ -4487,10 +4453,7 @@ int main(int argc, char** argv) {
                     screen = Screen::menu;
                 }
                 else if (screen == Screen::menu && launcher_page != LauncherPage::games) {
-                    launcher_page = launcher_page == LauncherPage::profiles
-                        ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
-                        : launcher_page == LauncherPage::releases ? LauncherPage::platforms
-                        : LauncherPage::games;
+                    launcher_route.back(releases);
                 } else running = false;
                 // Keep Back equivalent to Escape and consume it before the
                 // game/menu controls can reinterpret the input.
@@ -4556,14 +4519,11 @@ int main(int argc, char** argv) {
                 const bool previous = event.key.key == SDLK_LEFT || event.key.key == SDLK_UP;
                 const bool next = event.key.key == SDLK_RIGHT || event.key.key == SDLK_DOWN;
                 if (event.key.key == SDLK_ESCAPE && launcher_page != LauncherPage::games) {
-                    launcher_page = launcher_page == LauncherPage::profiles
-                        ? (release_language_cards().size() > 1 ? LauncherPage::releases : LauncherPage::platforms)
-                        : launcher_page == LauncherPage::releases ? LauncherPage::platforms
-                        : LauncherPage::games;
+                    launcher_route.back(releases);
                 } else if (launcher_page == LauncherPage::games) {
                     if (previous || next) focus_menu_card(next ? 1 - focused : 1 - focused);
                     else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        launcher_page = LauncherPage::platforms;
+                        launcher_route.enter_platforms();
                     }
                 } else if (launcher_page == LauncherPage::platforms) {
                     const auto platform_cards = platform_cards_for_game(
@@ -4578,7 +4538,7 @@ int main(int argc, char** argv) {
                     } else if (event.key.key == SDLK_HOME) focused_platform_card = 0;
                     else if (event.key.key == SDLK_END) focused_platform_card = count - 1;
                     else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        if (choose_platform_card(focused_platform_card)) advance_after_platform_selection();
+                        choose_platform_card(focused_platform_card);
                     }
                 } else if (launcher_page == LauncherPage::releases) {
                     const auto language_cards = release_language_cards();
@@ -4591,9 +4551,7 @@ int main(int argc, char** argv) {
                     else if (event.key.key == SDLK_END) {
                         focused_release_card = static_cast<int>(language_cards.size() - 1U);
                     } else if (event.key.key == SDLK_RETURN || event.key.key == SDLK_SPACE) {
-                        if (choose_release_language_card(focused_release_card)) {
-                            launcher_page = LauncherPage::profiles;
-                        }
+                        if (choose_release_language_card(focused_release_card)) {}
                     }
                 } else {
                     if (previous || next) {
@@ -4634,11 +4592,11 @@ int main(int argc, char** argv) {
                     }
                     else { focused_profile_card = (focused_profile_card + 1) % 3; custom_profile_ready = false; }
                 } else if (button == SDL_GAMEPAD_BUTTON_SOUTH || button == SDL_GAMEPAD_BUTTON_START) {
-                    if (launcher_page == LauncherPage::games) launcher_page = LauncherPage::platforms;
+                    if (launcher_page == LauncherPage::games) launcher_route.enter_platforms();
                     else if (launcher_page == LauncherPage::platforms) {
-                        if (choose_platform_card(focused_platform_card)) advance_after_platform_selection();
+                        choose_platform_card(focused_platform_card);
                     } else if (launcher_page == LauncherPage::releases) {
-                        if (choose_release_language_card(focused_release_card)) launcher_page = LauncherPage::profiles;
+                        if (choose_release_language_card(focused_release_card)) {}
                     } else if (focused_profile_card == 2 && custom_profile_ready) launch_menu_selection();
                     else choose_profile_card(profile_cards[static_cast<std::size_t>(focused_profile_card)].choice);
                 }
