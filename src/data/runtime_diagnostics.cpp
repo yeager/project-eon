@@ -34,7 +34,7 @@ RuntimeDiagnosticsReport runtime_diagnostics_for_release(const ReleaseArchive& r
     report.platform = release.platform;
     report.language = release.language;
     report.release_sha256 = release.sha256;
-    report.coverage = platform_coverage(release.game, release.platform);
+    report.coverage = platform_coverage(release);
 
     if (const auto startup = startup_boundary_for_release(release.sha256)) {
         report.startup_boundary = RuntimeDiagnosticStartupBoundary{

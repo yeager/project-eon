@@ -12,6 +12,9 @@ namespace eon {
 enum class PlatformCoverage { recovered_startup, recovered_opening, bootstrap_only };
 
 [[nodiscard]] PlatformCoverage platform_coverage(Game game, Platform platform);
+// Use this after an exact manifest identity is selected. A sibling language
+// or outer archive can stop at an earlier recovery boundary.
+[[nodiscard]] PlatformCoverage platform_coverage(const ReleaseArchive& release);
 [[nodiscard]] std::string_view name(PlatformCoverage coverage);
 
 } // namespace eon

@@ -5191,7 +5191,10 @@ int main(int argc, char** argv) {
                         std::string(tr("VERIFIED ORIGINAL DATA")) + " / "
                             + truncated_identity_hash(card.sha256));
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 184,
-                        tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
+                        active_platform
+                        ? tr(eon::name(eon::platform_coverage(eon::ReleaseArchive{
+                            launcher_route.game, *active_platform, card.language, card.sha256, {}})))
+                        : tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
                 }
             } else {
                 draw_text(renderer, 64, 82, tr("SELECT A PRESENTATION PROFILE"));
