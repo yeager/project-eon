@@ -105,7 +105,23 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("if (show_modern_runtime_diagnostics)", modal_block)
         self.assertIn("event.key.key == SDLK_ESCAPE", modal_block)
         self.assertIn("SDL_GAMEPAD_BUTTON_BACK", modal_block)
-        self.assertIn("event.type == SDL_EVENT_FINGER_DOWN", modal_block)
+        self.assertIn("modal_pointer_position(event)", modal_block)
+
+    def test_modal_pointer_route_supports_mouse_and_touch_without_game_input_leakage(self) -> None:
+        """Custom's card click must remain usable after its F10 modal opens."""
+        start = SOURCE.index("const auto modal_pointer_position")
+        end = SOURCE.index("std::optional<std::uint64_t> last_capped_present_ns", start)
+        modal_pointer = SOURCE[start:end]
+        self.assertIn("SDL_EVENT_MOUSE_BUTTON_DOWN", modal_pointer)
+        self.assertIn("event.button.which != SDL_TOUCH_MOUSEID", modal_pointer)
+        self.assertIn("SDL_EVENT_FINGER_DOWN", modal_pointer)
+        self.assertIn("SDL_RenderCoordinatesFromWindow", modal_pointer)
+        self.assertIn("handle_modal_pointer_down", modal_pointer)
+        self.assertIn("visible_graphics_option_count()", modal_pointer)
+        self.assertIn("show_recovery_function_map = true", modal_pointer)
+        self.assertIn("recovery_function_map_page_count", modal_pointer)
+        self.assertIn("close_modern_graphics_settings()", modal_pointer)
+        self.assertIn("no\n        // route to runtime input, original media, or session state", modal_pointer)
 
     def test_every_visible_popup_label_is_explicitly_catalogued_before_rendering(self) -> None:
         """The F10 dialog is launcher chrome, not original in-game prose."""
@@ -294,9 +310,9 @@ class ModernGraphicsPopupTests(unittest.TestCase):
 
     def test_popup_makes_custom_settings_usable_with_touch_without_game_input(self) -> None:
         """A Custom card opened by touch must be dismissible on an iPad."""
-        modal = SOURCE.index("if (show_modern_graphics_settings) {")
-        touch = SOURCE.index("event.type == SDL_EVENT_FINGER_DOWN", modal)
-        handler = SOURCE[touch:SOURCE.index("                continue;", touch)]
+        pointer = SOURCE.index("const auto modal_pointer_position")
+        handler = SOURCE[pointer:SOURCE.index("std::optional<std::uint64_t> last_capped_present_ns", pointer)]
+        self.assertIn("SDL_EVENT_FINGER_DOWN", handler)
         self.assertIn("SDL_RenderCoordinatesFromWindow", handler)
         self.assertIn("modern_graphics_popup_bounds", handler)
         self.assertIn("close_modern_graphics_settings();", handler)
