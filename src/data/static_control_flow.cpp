@@ -18,6 +18,7 @@ namespace {
 constexpr std::size_t max_input_bytes = 32U * 1024U * 1024U;
 constexpr std::size_t max_json_depth = 32U;
 constexpr std::size_t max_json_nodes = 1'000'000U;
+constexpr std::size_t max_declared_ranges = 250'000U;
 constexpr std::string_view classification = "static-candidate-unclassified";
 
 struct JsonValue;
@@ -381,6 +382,12 @@ void parse_document(const JsonObject& document, StaticControlFlowSummary& summar
 
     std::vector<DeclaredRange> declared;
     declared.reserve(ranges.size());
+    const auto& release_identity = document.contains("carrier_archive_sha256")
+        ? string(required(document, "carrier_archive_sha256"), "carrier_archive_sha256")
+        : string(required(document, "archive_sha256"), "archive_sha256");
+    const auto document_index = summary.documents.size();
+    if (document_index == std::numeric_limits<std::size_t>::max()) reject("too many sidecar documents");
+    summary.documents.push_back({release_identity, std::string(cpu), std::string(address_space)});
     for (const auto& value : ranges) {
         const auto& range = object(value, "range");
         require_keys(range, {"source_offset", "length", address_key, "sha256", "edges"});
@@ -394,6 +401,9 @@ void parse_document(const JsonObject& document, StaticControlFlowSummary& summar
             if (address < prior.address + prior.length && prior.address < address + length) reject("declared ranges overlap");
         }
         declared.push_back({address, length});
+        if (summary.declared_ranges.size() == max_declared_ranges) reject("too many declared ranges");
+        summary.declared_ranges.push_back({document_index,
+            std::string(string(required(range, "sha256"), "sha256")), address, length});
         add_bytes(summary, length);
     }
     for (const auto& value : ranges) {
@@ -408,9 +418,6 @@ void parse_document(const JsonObject& document, StaticControlFlowSummary& summar
     ++summary.document_count;
     ++summary.cpu_counts[cpu];
     ++summary.archive_document_counts[string(required(document, "archive_sha256"), "archive_sha256")];
-    const auto& release_identity = document.contains("carrier_archive_sha256")
-        ? string(required(document, "carrier_archive_sha256"), "carrier_archive_sha256")
-        : string(required(document, "archive_sha256"), "archive_sha256");
     ++summary.release_document_counts[release_identity];
 }
 

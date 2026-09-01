@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import shutil
 import subprocess
+import textwrap
 import unittest
 
 from eon_test_paths import temporary_directory
@@ -83,6 +85,12 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("libSDL3.so.*", verifier)
         self.assertIn("libSDL3.so.0", verifier)
         self.assertIn('find "$appdir/usr/lib" -type l', verifier)
+        self.assertIn("LD_TRACE_LOADED_OBJECTS=1", verifier)
+        self.assertIn('"$appdir/usr/bin/project-eon"', verifier)
+        self.assertNotIn('LD_TRACE_LOADED_OBJECTS=1 "$appdir/AppRun"', verifier)
+        self.assertIn("does not resolve $library from its installed private runtime", verifier)
+        self.assertIn("dynamic-library closure leaks into /usr/local", verifier)
+        self.assertIn("unresolved dynamic-library dependency", verifier)
         self.assertIn('exec "$appdir/usr/bin/project-eon" "$@"', runner)
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("Fetch pinned AppImage build tools", workflow)
@@ -91,6 +99,124 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("sha256sum --check --strict", workflow)
         self.assertIn("Verify AppImage contents contain no game media", workflow)
         self.assertIn("package/appimage/*.AppImage", workflow)
+
+    @unittest.skipIf(os.name == "nt", "the AppImage verifier requires ELF loader tracing")
+    def test_appimage_verifier_proves_the_extracted_private_runtime_closure(self) -> None:
+        """Exercise the loader-closure path without an AppImage build tool.
+
+        The fixture is deliberately an ELF program with the three required
+        private SONAMEs and a package-relative RPATH.  A small script mimics
+        AppImage extraction, allowing the production verifier to inspect the
+        same extracted layout it receives in CI while keeping all generated
+        bytes under Eon's external test cache.
+        """
+        compiler = shutil.which("cc")
+        if compiler is None:
+            self.skipTest("C compiler is unavailable")
+
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            source_appdir = root / "source-appdir"
+            binary_dir = source_appdir / "usr" / "bin"
+            library_dir = source_appdir / "usr" / "lib"
+            binary_dir.mkdir(parents=True)
+            library_dir.mkdir()
+
+            libraries = (
+                ("SDL3", "eon_sdl3"),
+                ("SDL3_image", "eon_sdl3_image"),
+                ("SDL3_ttf", "eon_sdl3_ttf"),
+            )
+            for library, symbol in libraries:
+                source = root / f"{library}.c"
+                source.write_text(f"void {symbol}(void) {{}}\n", encoding="utf-8")
+                runtime_library = library_dir / f"lib{library}.so.0.0"
+                subprocess.run(
+                    [
+                        compiler,
+                        "-shared",
+                        "-fPIC",
+                        f"-Wl,-soname,lib{library}.so.0",
+                        "-o",
+                        str(runtime_library),
+                        str(source),
+                    ],
+                    check=True,
+                )
+                (library_dir / f"lib{library}.so.0").symlink_to(runtime_library.name)
+
+            executable_source = root / "project-eon.c"
+            executable_source.write_text(
+                textwrap.dedent(
+                    """\
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <string.h>
+                    void eon_sdl3(void);
+                    void eon_sdl3_image(void);
+                    void eon_sdl3_ttf(void);
+                    int main(int argc, char **argv) {
+                      eon_sdl3(); eon_sdl3_image(); eon_sdl3_ttf();
+                      if (argc > 1 && strcmp(argv[1], "--help") == 0) {
+                        puts("Usage:"); return 0;
+                      }
+                      if (argc > 1 && strcmp(argv[1], "--inspect") == 0) {
+                        printf("Data path does not exist: \\\"%s/.projecteon\\\"\\n", getenv("HOME"));
+                        return 2;
+                      }
+                      return 0;
+                    }
+                    """
+                ),
+                encoding="utf-8",
+            )
+            subprocess.run(
+                [
+                    compiler,
+                    "-o",
+                    str(binary_dir / "project-eon"),
+                    str(executable_source),
+                    "-Wl,-rpath,$ORIGIN/../lib",
+                    str(library_dir / "libSDL3.so.0"),
+                    str(library_dir / "libSDL3_image.so.0"),
+                    str(library_dir / "libSDL3_ttf.so.0"),
+                ],
+                check=True,
+            )
+            apprun = source_appdir / "AppRun"
+            apprun.write_text(
+                "#!/usr/bin/env sh\nexec \"$(dirname -- \"$0\")/usr/bin/project-eon\" \"$@\"\n",
+                encoding="utf-8",
+            )
+            apprun.chmod(0o755)
+            for relative in (
+                "project-eon.desktop",
+                "project-eon.png",
+                "usr/share/project-eon/assets/cards/millennium.png",
+                "usr/share/project-eon/assets/branding/project-eon-logo-v1.png",
+                "usr/share/project-eon/assets/fonts/NotoSans-Regular.ttf",
+                "usr/share/project-eon/po/sv.po",
+            ):
+                target = source_appdir / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.touch()
+
+            image = root / "Project-Eon.AppImage"
+            image.write_text(
+                "#!/usr/bin/env bash\nset -eu\n"
+                "test \"${1:-}\" = --appimage-extract\n"
+                f"cp -a -- {source_appdir!s} squashfs-root\n",
+                encoding="utf-8",
+            )
+            image.chmod(0o755)
+            environment = os.environ | {"EON_PACKAGE_TEST_TMPDIR": str(root / "scratch")}
+            result = subprocess.run(
+                ["bash", str(APPIMAGE_VERIFIER), str(image)],
+                text=True,
+                capture_output=True,
+                env=environment,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_linux_packaging_job_runs_the_artifact_verifier(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")

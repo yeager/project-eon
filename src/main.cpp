@@ -249,6 +249,7 @@ void SDLCALL receive_original_data_source_dialog_selection(void* userdata,
 
 struct StaticControlFlowInspection {
     eon::StaticControlFlowSummary summary;
+    eon::FunctionMapSidecarCoverage function_map_coverage;
     std::vector<std::pair<const eon::ReleaseArchive*, std::size_t>> release_bindings;
 };
 
@@ -256,13 +257,14 @@ struct StaticControlFlowInspection {
     eon::StaticControlFlowSummary summary, const std::vector<eon::ReleaseArchive>& releases) {
     std::map<std::string, const eon::ReleaseArchive*, std::less<>> release_by_hash;
     for (const auto& release : releases) release_by_hash.emplace(release.sha256, &release);
-    StaticControlFlowInspection inspection{std::move(summary), {}};
+    StaticControlFlowInspection inspection{std::move(summary), {}, {}};
     for (const auto& [archive_sha256, document_count] : inspection.summary.release_document_counts) {
         if (!release_by_hash.contains(archive_sha256)) {
             throw std::runtime_error("Static control-flow sidecar contains a document not bound to a reverified inspected release");
         }
         inspection.release_bindings.emplace_back(release_by_hash.at(archive_sha256), document_count);
     }
+    inspection.function_map_coverage = eon::function_map_sidecar_coverage(inspection.summary);
     return inspection;
 }
 
@@ -861,6 +863,12 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
             << ",\"ranges\":" << summary.range_count
             << ",\"candidates\":" << summary.edge_count
             << ",\"declared_bytes\":" << summary.declared_byte_count
+            << ",\"function_map_entries_for_bound_releases\":"
+            << static_control_flow->function_map_coverage.function_entry_count
+            << ",\"function_map_direct_range_bindings\":"
+            << static_control_flow->function_map_coverage.direct_range_binding_count
+            << ",\"function_map_not_declared_by_sidecar\":"
+            << static_control_flow->function_map_coverage.not_declared_by_sidecar_count
             << ",\"release_bindings\":[";
         for (std::size_t index = 0; index < static_control_flow->release_bindings.size(); ++index) {
             if (index != 0) std::cout << ',';

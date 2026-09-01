@@ -1002,6 +1002,8 @@ int main() {
     assert(static_flow_summary.edge_kind_counts.at("interrupt") == 1);
     assert(static_flow_summary.edge_kind_counts.at("trap") == 1);
     assert(static_flow_summary.target_scope_counts.at("within-declared-range") == 1);
+    assert(static_flow_summary.documents.size() == 2);
+    assert(static_flow_summary.declared_ranges.size() == 3);
     auto runtime_default_sidecar = static_flow_sidecar;
     const auto runtime_address_space = runtime_default_sidecar.find("\"address_space\":\"runtime\",");
     assert(runtime_address_space != std::string::npos);
@@ -2537,6 +2539,24 @@ int main() {
     for (const auto& entry : eon::function_map()) {
         assert(eon::function_map_entry_is_well_formed(entry));
     }
+    // A direct range binding is source provenance only. It must use the exact
+    // release, CPU, address space, leaf hash and coordinate, without claiming
+    // anything about code classification or runtime execution.
+    const auto& coverage_entry = eon::function_map().front();
+    eon::StaticControlFlowSummary coverage_sidecar;
+    coverage_sidecar.documents.push_back({std::string(coverage_entry.release_sha256),
+        std::string(coverage_entry.cpu), std::string(coverage_entry.address_space)});
+    coverage_sidecar.declared_ranges.push_back({0, std::string(coverage_entry.source_asset_sha256),
+        0, 0x1000});
+    const auto coverage = eon::function_map_sidecar_coverage(coverage_sidecar);
+    const auto same_release_entries = eon::function_map_for_release(coverage_entry.release_sha256);
+    assert(coverage.function_entry_count == same_release_entries.size());
+    assert(coverage.direct_range_binding_count == 1);
+    assert(coverage.not_declared_by_sidecar_count + coverage.direct_range_binding_count
+        == coverage.function_entry_count);
+    coverage_sidecar.documents.front().address_space = "runtime";
+    const auto mismatched_space = eon::function_map_sidecar_coverage(coverage_sidecar);
+    assert(mismatched_space.direct_range_binding_count == 0);
     auto malformed_function = eon::function_map().front();
     malformed_function.source_asset_sha256 = "not-a-sha256";
     assert(!eon::function_map_entry_is_well_formed(malformed_function));

@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
+#include <cstdint>
 
 namespace eon {
 namespace {
@@ -142,6 +144,14 @@ bool is_lower_hex(const std::string_view value) {
     });
 }
 
+bool parse_declared_address(const FunctionMapEntry& entry, std::uint64_t& address) {
+    const std::string_view prefix = entry.address_space == "runtime" ? "$" : "+0x";
+    if (!entry.runtime_address.starts_with(prefix)) return false;
+    const auto digits = entry.runtime_address.substr(prefix.size());
+    const auto result = std::from_chars(digits.data(), digits.data() + digits.size(), address, 16);
+    return result.ec == std::errc{} && result.ptr == digits.data() + digits.size();
+}
+
 } // namespace
 
 std::span<const FunctionMapEntry> function_map() { return entries; }
@@ -178,6 +188,34 @@ bool release_has_function_map_entry(const std::string_view release_sha256,
     });
     return entry != entries.end()
         && release_has_parser_profile(release_sha256, entry->parser_profile_id);
+}
+
+FunctionMapSidecarCoverage function_map_sidecar_coverage(const StaticControlFlowSummary& sidecar) {
+    FunctionMapSidecarCoverage result;
+    for (const auto& entry : entries) {
+        std::uint64_t address = 0;
+        if (!function_map_entry_is_well_formed(entry) || !parse_declared_address(entry, address)) continue;
+        bool sidecar_names_release = false;
+        bool bound = false;
+        for (std::size_t index = 0; index < sidecar.documents.size(); ++index) {
+            const auto& document = sidecar.documents[index];
+            if (document.release_sha256 != entry.release_sha256) continue;
+            sidecar_names_release = true;
+            if (document.cpu != entry.cpu || document.address_space != entry.address_space) continue;
+            for (const auto& range : sidecar.declared_ranges) {
+                if (range.document_index != index || range.sha256 != entry.source_asset_sha256
+                    || address < range.address || address - range.address >= range.length) continue;
+                bound = true;
+                break;
+            }
+            if (bound) break;
+        }
+        if (!sidecar_names_release) continue;
+        ++result.function_entry_count;
+        if (bound) ++result.direct_range_binding_count;
+        else ++result.not_declared_by_sidecar_count;
+    }
+    return result;
 }
 
 } // namespace eon

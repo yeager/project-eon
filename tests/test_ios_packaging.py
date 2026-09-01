@@ -163,6 +163,34 @@ class IosPackagingTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unexpected dynamic framework", result.stderr)
 
+    def test_archive_verifier_rejects_unknown_payload_file(self):
+        """A suffix denylist alone cannot prove an IPA is media-free."""
+        with temporary_directory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            ipa = root / "project-eon.ipa"
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            with zipfile.ZipFile(ipa, "a") as archive:
+                archive.writestr(
+                    "Payload/ProjectEon.app/Resources/review-bypass.bin",
+                    b"unreviewed bytes are not an IPA resource",
+                )
+            result = subprocess.run(["python3", str(VERIFY), str(ipa)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unexpected payload file", result.stderr)
+
+    def test_archive_verifier_rejects_unknown_payload_directory(self):
+        with temporary_directory() as temporary:
+            root = pathlib.Path(temporary)
+            app = self.create_complete_app(root)
+            ipa = root / "project-eon.ipa"
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            with zipfile.ZipFile(ipa, "a") as archive:
+                archive.writestr("Payload/ProjectEon.app/Resources/unreviewed/", b"")
+            result = subprocess.run(["python3", str(VERIFY), str(ipa)], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unexpected directory", result.stderr)
+
     def test_archive_verifier_rejects_non_arm64_executable(self):
         with temporary_directory() as temporary:
             root = pathlib.Path(temporary)
