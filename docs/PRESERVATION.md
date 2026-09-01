@@ -2172,6 +2172,14 @@ requires its `DEU\0` custom-media header. The opening presently reads only
 the caller-proved Disk 1 ranges, but it cannot silently omit, replace, or
 reinterpret Disk 2 while later game paths are still unrecovered.
 
+`inspect_deuteros_amiga_data_disk_header` independently binds the genuine
+Disk 2's 1,760-sector geometry, valid boot checksum, root block 880, and its
+opaque first `0xc8` bytes (SHA-256
+`3494ee5dc34793d7f09fdf2d8141be2ce5a0f07c78d6be5ccc12397bca7d9c06`). It
+records the eleven literal `DEUTEROSDATA` markers in that prefix but does not
+treat them as a directory, decode a data file, or attach semantics to the
+remaining custom-media sectors.
+
 The first auxiliary pointer is a palette bank. The interpreter's command 4
 multiplies its operand by 32 and copies 16 words from this bank to each active
 display list. The words are standard 12-bit Amiga RGB4. Bundle 0, palette 1 is

@@ -20,6 +20,7 @@
 #include "data/atari_st_stx.hpp"
 #include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_data_disk.hpp"
 #include "data/deuteros_amiga_audio.hpp"
 #include "data/deuteros_amiga_channel_vm.hpp"
 #include "data/deuteros_amiga_frame.hpp"
@@ -1269,12 +1270,13 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     if (!data_image) throw std::runtime_error("Verified Deuteros Amiga data ADF is unavailable");
     const eon::AmigaAdf disk(*image);
     const eon::AmigaAdf data_disk(*data_image);
-    if (data_disk.kind() != eon::AmigaDiskKind::deuteros_data) {
-        throw std::runtime_error("Verified Deuteros Amiga data ADF has an unsupported format");
-    }
+    const auto data_header = eon::inspect_deuteros_amiga_data_disk_header(data_disk);
     const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
-    std::cout << "          Paired data ADF: DEU custom-media header verified; SHA-256 "
-        << clean_data_adf << '\n';
+    std::cout << "          Paired data ADF: DEU\\0 custom-media header verified; "
+        << data_header.sector_count << " sectors, prefix 0x"
+        << std::hex << data_header.header_prefix_length << std::dec << " SHA-256 "
+        << data_header.header_prefix_sha256 << ", DEUTEROSDATA markers "
+        << data_header.data_marker_count << "; leaf SHA-256 " << clean_data_adf << '\n';
     std::cout << "          ADF boot checksum valid; main stage disk 0x" << std::hex
         << plan.main_stage.disk_offset << " -> memory 0x" << plan.main_stage.destination
         << ", entry 0x" << plan.main_stage.entry_address << std::dec << '\n';
