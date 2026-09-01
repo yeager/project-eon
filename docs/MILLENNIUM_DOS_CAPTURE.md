@@ -802,6 +802,10 @@ contains neither the static `MOV AX,2593h / INT 21h` Set Interrupt Vector
 signature nor an `INT 93h` opcode. This negative byte-level result does not
 identify the intended installation mechanism; it only rejects a direct
 in-driver standard-DOS-vector installation claim for this exact file.
+The same bounded signature scan found neither encoding in `EGA640.BIN`,
+`SCVX.DRV`, `SIBM.DRV`, or `SSBL.DRV`. This rules out only direct standard-DOS
+vector setup in those exact byte streams; an indirect installer, loader-side
+write, or unreached path remains an explicit preservation boundary.
 
 ## Audited local route
 
