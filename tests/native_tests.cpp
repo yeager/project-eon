@@ -1777,6 +1777,16 @@ int main() {
             eon::Game::millennium, eon::Platform::dos, std::string{"es"}) == "es");
         assert(eon::select_available_release_language(multilingual_menu_releases,
             eon::Game::millennium, eon::Platform::amiga, std::nullopt) == "en");
+        // The immutable original language is an explicit selection filter,
+        // not a UI-locale preference. With one verified release in each
+        // language, the Spanish CLI route must not first select English and
+        // then reject it merely because the request was Spanish.
+        const auto selected_spanish = eon::resolve_release_identity(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::dos, std::nullopt, "es");
+        assert(selected_spanish && selected_spanish->language == "es");
+        const auto selected_english = eon::resolve_release_identity(multilingual_menu_releases,
+            eon::Game::millennium, eon::Platform::dos, std::nullopt, "en");
+        assert(selected_english && selected_english->language == "en");
         const std::vector<eon::ReleaseArchive> duplicate_english_releases{
             {eon::Game::millennium, eon::Platform::amiga, "en",
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", {}},
