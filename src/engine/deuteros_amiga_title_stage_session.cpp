@@ -116,4 +116,12 @@ std::array<RgbColor, 20> DeuterosAmigaTitleStageSession::graphics_setup_palette_
     return colors;
 }
 
+std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+DeuterosAmigaTitleStageSession::execute_local_prefix() {
+    if (local_prefix_executed_) return std::nullopt;
+    local_prefix_executed_ = true;
+    return LocalPrefixAdvance{entry_prefix_state_.writes, exec_prelude_.stack_pointer_value,
+        exec_prelude_.stop_before_exec_base_read_address};
+}
+
 } // namespace eon

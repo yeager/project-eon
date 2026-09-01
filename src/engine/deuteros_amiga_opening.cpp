@@ -79,6 +79,7 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
         // coincidentally equal resource operand from another bundle path as a
         // title stage.
         title_stage_session_.emplace(disk_, load_plan_, title_handoff_route_.bootstrap_profile_value);
+        static_cast<void>(title_stage_session_->execute_local_prefix());
         events.title_handoff = true;
     }
     ++ticks_;

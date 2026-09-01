@@ -8224,7 +8224,7 @@ int main() {
     assert(load_plan.title_stage.length == 0x6ca00);
     assert(load_plan.title_stage.destination == 0x13000);
     assert(load_plan.title_stage.entry_address == 0x40426);
-    const eon::DeuterosAmigaTitleStageSession title_stage_session(system_disk, load_plan, 1);
+    eon::DeuterosAmigaTitleStageSession title_stage_session(system_disk, load_plan, 1);
     assert(title_stage_session.stage().disk_offset == 0x6e000);
     assert(title_stage_session.stage().length == 0x6ca00);
     assert(title_stage_session.stage().destination == 0x13000);
@@ -8247,6 +8247,14 @@ int main() {
     assert(title_stage_session.display_clear().iteration_count == 0x1f40);
     assert(title_stage_session.entry_prefix().incoming_profile == 1);
     assert(title_stage_session.entry_prefix().stop_before_exec_address == 0x40450);
+    assert(!title_stage_session.local_prefix_executed());
+    const auto local_prefix_advance = title_stage_session.execute_local_prefix();
+    assert(local_prefix_advance);
+    assert(local_prefix_advance->writes == title_stage_session.entry_prefix_state().writes);
+    assert(local_prefix_advance->stack_pointer_value == 0x40b62);
+    assert(local_prefix_advance->exec_boundary_address == 0x40456);
+    assert(title_stage_session.local_prefix_executed());
+    assert(!title_stage_session.execute_local_prefix());
     {
         bool rejected = false;
         try {
@@ -10367,6 +10375,7 @@ int main() {
         assert(rejected);
     }
     assert(live_input_opening.title_handed_off());
+    assert(live_input_opening.title_stage_session()->local_prefix_executed());
     assert(live_input_opening.ticks() == 82);
     assert(live_input_opening.vblank_counter() == 82 * 4);
     const auto frame_at_title_handoff = live_input_opening.rgba_frame();

@@ -2180,6 +2180,13 @@ records the eleven literal `DEUTEROSDATA` markers in that prefix but does not
 treat them as a directory, decode a data file, or attach semantics to the
 remaining custom-media sectors.
 
+After the verified opening handoff, `DeuterosAmigaTitleStageSession` now
+executes the complete local profile-one prefix exactly once: its two sparse
+title-RAM stores followed by `A7 = $40b62`. It records that result in a
+one-way local-prefix advance and stops before the original `MOVEA.L $4.W,A6`
+Exec-base read at `$40456`; no Amiga address space, Exec base, vector call,
+or title display is fabricated.
+
 The first auxiliary pointer is a palette bank. The interpreter's command 4
 multiplies its operand by 32 and copies 16 words from this bank to each active
 display list. The words are standard 12-bit Amiga RGB4. Bundle 0, palette 1 is
