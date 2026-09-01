@@ -18,6 +18,7 @@
 #include "data/amiga_ofs.hpp"
 #include "data/creative_voice.hpp"
 #include "data/deuteros_amiga_bundle.hpp"
+#include "data/deuteros_amiga_data_disk.hpp"
 #include "data/deuteros_amiga_audio.hpp"
 #include "data/deuteros_amiga_alternate_renderer.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
@@ -8104,6 +8105,15 @@ int main() {
     assert(data_disk.boot_checksum_valid());
     assert(system_disk.root_block() == 880);
     assert(data_disk.root_block() == 880);
+    const auto data_header = eon::inspect_deuteros_amiga_data_disk_header(data_disk);
+    assert(data_header.identifier == std::string("DEU\0", 4));
+    assert(data_header.root_block == 880);
+    assert(data_header.boot_checksum_valid);
+    assert(data_header.sector_count == 1760);
+    assert(data_header.header_prefix_length == 0xc8);
+    assert(data_header.header_prefix_sha256
+        == "3494ee5dc34793d7f09fdf2d8141be2ce5a0f07c78d6be5ccc12397bca7d9c06");
+    assert(data_header.data_marker_count == 11);
     const auto system_root = system_disk.sector(40, 0, 0);
     const auto data_root = data_disk.sector(40, 0, 0);
     assert(system_root[0] == 0x4e && system_root[1] == 0xf9); // JMP $00040426
