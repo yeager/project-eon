@@ -3476,56 +3476,9 @@ int main(int argc, char** argv) {
                 std::cout << "          source media " << trace.source_media_sha256 << '\n'
                     << "          source stage " << trace.source_stage_sha256 << '\n';
             }
-            std::cout << "          adapter " << trace.adapter << " (";
-            if (trace.adapter == "deuteros-atari-st-boot-v1") {
-                std::cout << trace.adapter_trap_count << " TRAP, " << trace.adapter_callback_count
-                    << " callback, " << trace.adapter_frame_count << " frame, "
-                    << trace.adapter_state_count << " state, " << trace.adapter_table_count
-                    << " table, " << trace.adapter_raw_reader_count
-                    << " raw-reader observations; diagnostics only)\n";
-            } else if (trace.adapter == "millennium-amiga-en-defjam-bootstrap-v1") {
-                std::cout << trace.adapter_cpu_count << " CPU handoff observations; diagnostics only)\n";
-            } else if (trace.adapter == "deuteros-amiga-en-title-stage-v1") {
-                std::cout << trace.adapter_exec_count << " Exec, " << trace.adapter_open_library_count
-                    << " OpenLibrary, " << trace.adapter_graphics_count << " graphics, "
-                    << trace.adapter_custom_register_count << " custom-register, "
-                    << trace.adapter_callback_count << " callback observations; diagnostics only)\n";
-            } else if (trace.adapter == "deuteros-amiga-en-title-bridge-v3") {
-                std::cout << trace.adapter_exec_return_count << " Exec return, "
-                    << trace.adapter_open_library_return_count << " OpenLibrary return, "
-                    << trace.adapter_graphics_call_count << "/" << trace.adapter_graphics_return_count
-                    << " graphics call/return, " << trace.adapter_custom_register_call_count << "/"
-                    << trace.adapter_custom_register_return_count << " custom-register call/return, "
-                    << trace.adapter_queue_snapshot_count << " queue snapshot, "
-                    << trace.adapter_callback_entry_count << " callback entry, "
-                    << trace.adapter_dispatch_snapshot_count
-                    << " dispatch snapshot observations; diagnostics only)\n";
-            } else if (trace.adapter == "millennium-dos-en-title-init-v2") {
-                std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
-                    << " file, " << trace.adapter_private_return_count
-                    << " private-return observations; diagnostics only)\n";
-            } else if (trace.adapter == "millennium-dos-en-gx-startup-v2") {
-                std::cout << trace.adapter_private_return_count << " private-return, "
-                    << trace.adapter_mode_read_count << " mode-read, "
-                    << trace.adapter_overlay_return_count << " adapter-return, "
-                    << trace.adapter_local_return_count << " local-return observations; "
-                    << "call-free transient overlay admitted through second private-INT boundary)\n";
-            } else if (trace.adapter == "deuteros-amiga-en-title-display-v4"
-                || trace.adapter == "deuteros-amiga-en-title-display-artifacts-v5") {
-                std::cout << trace.adapter_display_layout_count << " display-layout, "
-                    << trace.adapter_bitplane_layout_count << " bitplane-layout, "
-                    << trace.adapter_palette_checkpoint_count << " palette, "
-                    << trace.adapter_input_checkpoint_count << " input, "
-                    << trace.adapter_frame_checkpoint_count << " frame, "
-                    << trace.adapter_audio_checkpoint_count
-                    << " audio checkpoints; "
-                    << (trace.artifacts.empty()
-                        ? "diagnostics only, no title replay)\n"
-                        : "artifacts verified; diagnostics only, no title replay)\n");
-            } else {
-                std::cout << trace.adapter_interrupt_count << " interrupt, " << trace.adapter_file_count
-                    << " file, " << trace.adapter_exec_count << " EXEC observations; diagnostics only)\n";
-            }
+            const auto summary = eon::reference_trace_diagnostic_summary(trace);
+            std::cout << "          adapter " << trace.adapter << " (" << summary.observations
+                << "; " << summary.disposition << ")\n";
             for (const auto& boundary : trace.recovery_boundaries) {
                 std::cout << "          RECOVERY MAP " << boundary.id << " at "
                     << boundary.source_address << " (" << boundary.documentation_anchor << ")\n";

@@ -13,8 +13,23 @@ namespace eon {
 // preservation map, never a guest-code dispatch table.
 enum class ReferenceTraceRuntimePolicy { diagnostics_only, transient_call_free_gx_startup };
 
+// An aggregate renderer-neutral trace report shape. It does not select an
+// event parser, execute source bytes, or admit runtime behavior.
+enum class ReferenceTraceDiagnosticReport {
+    generic,
+    millennium_dos_gx_startup,
+    millennium_dos_title_init,
+    deuteros_atari_boot,
+    millennium_amiga_bootstrap,
+    deuteros_amiga_title_stage,
+    deuteros_amiga_title_bridge,
+    deuteros_amiga_title_display,
+};
+
 [[nodiscard]] std::string_view reference_trace_runtime_policy_label(
     ReferenceTraceRuntimePolicy policy);
+[[nodiscard]] ReferenceTraceDiagnosticReport reference_trace_diagnostic_report(
+    std::string_view wire_id);
 
 struct ReferenceTraceAdapterDescriptor {
     std::string_view wire_id;

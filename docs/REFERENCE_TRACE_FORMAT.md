@@ -110,7 +110,7 @@ cannot silently lose a current source boundary.
 The compiled `ReferenceTraceAdapterDescriptor` registry is the single source
 of truth for every versioned adapter's wire identifier, format, source
 identity, optional media/stage identity, recovery-map rows, and runtime
-policy. The manifest-field grammars and event parsers remain deliberately
+policy plus aggregate diagnostic report shape. The manifest-field grammars and event parsers remain deliberately
 adapter-specific: the registry does not dispatch guest code, interpret an
 event, or generalize one adapter's contract to another. All policies are
 `diagnostics-only` except the separately documented, transient call-free GX
