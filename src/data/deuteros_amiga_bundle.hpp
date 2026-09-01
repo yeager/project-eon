@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -53,6 +54,27 @@ struct DeuterosAmigaBitmap {
     std::vector<std::uint8_t> color_indices;
 };
 
+// One fully bounded bitmap record in an original bundle. The hashes are
+// diagnostics only: decoded pixels are discarded immediately after hashing.
+struct DeuterosAmigaBitmapRecord {
+    std::size_t index = 0;
+    std::uint32_t source_relative_offset = 0;
+    std::uint32_t source_size = 0;
+    std::string source_sha256;
+    std::uint16_t width = 0;
+    std::uint16_t height = 0;
+    std::string decoded_pixels_sha256;
+};
+
+// Complete preservation inventory for the proved bitmap records in one
+// bundle. It reads the original ADF in memory only and retains no pixels.
+struct DeuterosAmigaBitmapCatalog {
+    std::string bundle_sha256;
+    std::size_t record_count = 0;
+    std::uint64_t decoded_pixel_count = 0;
+    std::vector<DeuterosAmigaBitmapRecord> records;
+};
+
 // Parse the in-memory pointer catalogue used by the original 68000 program.
 // Offsets remain relative to the bundle, just as they are stored on disk.
 [[nodiscard]] DeuterosAmigaBundle parse_deuteros_amiga_bundle(
@@ -81,5 +103,9 @@ struct DeuterosAmigaBitmap {
 [[nodiscard]] DeuterosAmigaBitmap decode_deuteros_amiga_bitmap(
     const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
     const DeuterosAmigaIndexedBlob& blob, std::size_t record_index);
+
+[[nodiscard]] DeuterosAmigaBitmapCatalog inspect_deuteros_amiga_bitmap_catalog(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
+    const DeuterosAmigaIndexedBlob& blob);
 
 } // namespace eon
