@@ -777,6 +777,16 @@ does not identify the intended INT 93h handler, its ABI, installation path,
 or any title/game result. Project Eon does not install, emulate, bypass, or
 infer that handler.
 
+Static inspection identifies two potential original installation sites, but
+does not order them relative to the captured interrupt. `TITLES.EXE+0x115c`
+and `2200AD.EXE+0x416e` both contain `LDS DX,[0x011c]`, `MOV AX,0x2593`,
+`INT 21h`: DOS Set Interrupt Vector for `INT 93h`, using an unproven `DS:DX`
+pointer. The V18 path reaches `TITLES.EXE+0x0034` first. Consequently neither
+site proves that the vector had been installed in the captured process, nor
+identifies a handler or supplies an ABI. The next read-only observer must bind
+the actual IVT entry at that exact original `INT 93h` call before any runtime
+work can cross this boundary.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
