@@ -252,10 +252,9 @@ The current external raw-observer design, including its exact FS-UAE source
 revision and non-admission boundary, is in
 [`DEUTEROS_AMIGA_FS_UAE_RECORDER.md`](DEUTEROS_AMIGA_FS_UAE_RECORDER.md).
 
-The next reviewed recorder is receipt v9, pinned in the capture runner as a
-61,505,560-byte aarch64 binary with SHA-256
-`93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f`. It adds
-only a read-only atomic ordinal/frame snapshot to each raw-PC observation.
+Receipt v9, pinned in the former capture runner as a 61,505,560-byte aarch64
+binary with SHA-256 `93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f`,
+adds only a read-only atomic ordinal/frame snapshot to each raw-PC observation.
 Only a successful, non-playback, non-state-management host-delivery receipt
 can advance that snapshot; zero means no such delivery preceded the sample.
 On 2026-08-31, the first v9 15-second no-input preflight was independently
@@ -297,3 +296,15 @@ neither a broken game route nor game-input semantics. The known v5 delivery
 receipt demonstrates that the reviewed observer can record frontend delivery;
 the remaining requirement is an operator interaction that reaches the visible
 FS-UAE window, followed by the same independent validation.
+
+## Pending v10 title-display observer
+
+The next reviewed external recorder is receipt v10: a 61,449,016-byte aarch64
+binary with SHA-256 `0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec`.
+It retains the v9 raw-PC and host-delivery contracts, but adds a separate
+disabled-by-default receipt that arms only when the existing CPU probe reaches
+`$0001eda6`. It then records only bounded CPU/Copper writes to reviewed
+display registers. No v10 operator capture has yet been admitted. This
+replaces further bootstrap-only PC sampling as the next display-provenance
+step; it is not a v4 trace, a frame, bitplane contents, palette conversion,
+audio, guest input acceptance, or gameplay evidence.

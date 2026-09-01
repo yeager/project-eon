@@ -221,6 +221,43 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.raw_observation_status(raw, "raw_pc")
 
+    def test_title_display_receipt_is_title_armed_bounded_and_hash_bound(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            display = root / "title-display.txt"
+            input_receipt = root / "host-input-receipt.txt"
+            input_receipt.write_text(
+                "host-input 1 frame=2 line=3 action=4 state=1\n", encoding="ascii")
+            display.write_text(
+                "display-arm 1 cycles=10 site=0x0001eda6 input_ordinal=0 input_frame=0\n"
+                "display-write 2 cycles=11 vpos=1 hpos=2 origin=cpu register=0x0080 value=0x1234 input_ordinal=0 input_frame=0\n"
+                "display-write 3 cycles=12 vpos=2 hpos=3 origin=copper register=0x0180 value=0xabcd input_ordinal=1 input_frame=2\n",
+                encoding="ascii")
+            status = TOOL.title_display_receipt_status(display, input_receipt)
+            self.assertIn("title_display=present\n", status)
+            self.assertIn("title_display_format=v10\n", status)
+            self.assertIn("title_display_records=3\n", status)
+            self.assertIn("title_display_register_counts=0x0080:1,0x0180:1\n", status)
+            self.assertIn("title_display_input_chronology=linked\n", status)
+            display.write_text(
+                "display-arm 1 cycles=10 site=0x0001eda6 input_ordinal=0 input_frame=0\n"
+                "display-write 2 cycles=11 vpos=1 hpos=2 origin=cpu register=0x0081 value=0x1234 input_ordinal=0 input_frame=0\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed display register"):
+                TOOL.title_display_receipt_status(display, input_receipt)
+            display.write_text(
+                "display-arm 1 cycles=10 site=0x0001eda6 input_ordinal=0 input_frame=0\n"
+                "display-write 3 cycles=11 vpos=1 hpos=2 origin=cpu register=0x0080 value=0x1234 input_ordinal=0 input_frame=0\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "ordinals"):
+                TOOL.title_display_receipt_status(display, input_receipt)
+            display.write_text(
+                "display-arm 1 cycles=10 site=0x0001eda6 input_ordinal=0 input_frame=0\n"
+                "display-write 2 cycles=11 vpos=1 hpos=2 origin=cpu register=0x0080 value=0x1234 input_ordinal=1 input_frame=3\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
+                TOOL.title_display_receipt_status(display, input_receipt)
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         with temporary_directory() as directory:
             path = Path(directory) / "recorder-console.log"

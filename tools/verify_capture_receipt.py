@@ -117,8 +117,8 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
     if fields.get("raw_pc") != "present":
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    raw_format = "v9" if version == "9" else "v7" if version in {"7", "8"} else "legacy"
-    if version in {"7", "8", "9"} and fields.get("raw_pc_format") != raw_format:
+    raw_format = "v9" if version in {"9", "10"} else "v7" if version in {"7", "8"} else "legacy"
+    if version in {"7", "8", "9", "10"} and fields.get("raw_pc_format") != raw_format:
         raise ValueError("raw_pc format does not match the reviewed recorder contract")
     counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt", raw_format)
     expected_records = str(sum(counts.values()))
@@ -159,6 +159,35 @@ def verify_deuteros_raw_pc_input_chronology(fields: dict[str, str], directory: P
     expected_fields = dict(line.split("=", 1) for line in expected_status.splitlines())
     if any(fields.get(key) != value for key, value in expected_fields.items()):
         raise ValueError("raw_pc input chronology receipt mismatch")
+
+
+def verify_deuteros_title_display(fields: dict[str, str], directory: Path) -> None:
+    """Recompute v10's bounded display-write receipt without asserting a frame."""
+    if fields.get("title_display") != "present":
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    if fields.get("title_display_format") != "v10":
+        raise ValueError("title-display format does not match the reviewed recorder contract")
+    arm_cycles, counts, links, writes = tool.parse_title_display_receipt(
+        directory / "title-display.txt")
+    try:
+        expected_chronology = tool._validate_title_display_input_links(
+            links, directory / "host-input-receipt.txt")
+    except tool.CaptureError as error:
+        raise ValueError(f"title-display input chronology is invalid: {error}") from error
+    expected = {
+        "title_display_records": str(writes + 1),
+        "title_display_arm_cycles": str(arm_cycles),
+        "title_display_writes": str(writes),
+        "title_display_register_counts": ",".join(
+            f"0x{register:04x}:{counts[register]}" for register in sorted(counts)),
+        "title_display_input_links": str(sum(ordinal != 0 for ordinal, _ in links)),
+        "title_display_last_input_ordinal": str(links[-1][0]),
+        "title_display_input_chronology": expected_chronology,
+        "title_display_input_chronology_records": str(sum(ordinal != 0 for ordinal, _ in links)),
+    }
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("title-display grammar/count receipt mismatch")
 
 
 def verify_deuteros_host_input_summary(fields: dict[str, str], directory: Path) -> None:
@@ -345,17 +374,21 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"3", "4", "5", "6", "7", "8", "9"}:
+        if version == "10":
+            verify_file(fields, directory, "title_display", "title-display.txt")
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10"}:
             verify_deuteros_raw_pc_summary(fields, directory, version)
-        if version in {"5", "6", "7", "8", "9"}:
+        if version in {"5", "6", "7", "8", "9", "10"}:
             verify_deuteros_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9"}:
+        if version in {"6", "7", "8", "9", "10"}:
             verify_deuteros_timing_profile(fields, directory)
         if version == "8" and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory)
-        if version == "9" and fields.get("raw_pc") == "present":
+        if version in {"9", "10"} and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory, "v9")
             verify_deuteros_raw_pc_input_chronology(fields, directory)
+        if version == "10":
+            verify_deuteros_title_display(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")
