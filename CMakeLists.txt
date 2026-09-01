@@ -170,6 +170,7 @@ add_executable(project-eon
     src/data/recovery_map.cpp
     src/data/runtime_diagnostics.cpp
     src/data/release_manifest.cpp
+    src/data/static_control_flow.cpp
     src/data/startup_boundary.cpp
     src/data/sha256.cpp
     src/data/zip_archive.cpp
