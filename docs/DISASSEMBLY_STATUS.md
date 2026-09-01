@@ -211,7 +211,7 @@ proves reachability, code/data classification, an ABI result, or gameplay.
 
 | Target | Exact source span and runtime address | Source archive SHA-256 | Generated report SHA-256 | Lines |
 | --- | --- | --- | --- | ---: |
-| Millennium DOS English | `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE`; flat 8086 candidate origins `$0100` | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `3664163eb193c7df0d4040e674a2af1499b11579224ffea091086450b3545e42` | 52,236 |
+| Millennium DOS English | `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE`; flat 8086 candidate origins `$0100` | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `90d3633bf887f23563d444b43fcc9c94155d34a62203ddf29d485032730d0ce5` | 52,240 |
 | Millennium DOS Spanish | FAT12 `IBM.COM`, `TITLES.EXE`, and `2200AD.EXE`; flat 8086 candidate origins `$0100` | `b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4` | `9d9834ecf9acc62877e4d757d1c0ba1b87d9045fa7f918238f7d8d00171bfd61` | 29,513 |
 | Millennium Amiga English Defjam | system ADF `+0x16400`, length `0x2c000` → `$68000` | `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
 | Millennium Amiga English Defjam direct container | byte-identical shared-resident ADF range `+0x16400`, length `0x2c000` → `$68000` | `ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
@@ -229,12 +229,15 @@ never be read as a runtime address map. Millennium Amiga's opaque transformed
 raw stage remains intentionally outside this table until a loader result
 establishes its runtime image and entry relationship.
 
-On 2026-08-31, `tools/verify_disassembly_reports.py` accepted the complete
-current set: 14 static spans represented by seven external reports. The check
-used explicit external paths, so it neither copied reports into this checkout
-nor required them to share one directory. This verifies report identity only;
-it does not change any entry, reachability, code/data, ABI, or gameplay
-boundary recorded above.
+On 2026-09-01, `tools/verify_disassembly_reports.py` accepted the complete
+current set: 14 static spans represented by seven regenerated external
+reports. The current Millennium DOS English report has a new identity because
+the report generator now records each hash-bound member's entry boundary; it
+does not alter the source bytes, recovery claims, or coverage classification.
+The check used one explicit external directory, so it neither copied reports
+into this checkout nor required them to share a repository path. This verifies
+report identity only; it does not change any entry, reachability, code/data,
+ABI, or gameplay boundary recorded above.
 
 ## Variant separation
 
