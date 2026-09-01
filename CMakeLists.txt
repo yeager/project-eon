@@ -159,6 +159,7 @@ add_executable(project-eon
     src/data/millennium_dos_title_flow.cpp
     src/data/millennium_dos_title_exit.cpp
     src/data/millennium_dos_title_transition.cpp
+    src/data/millennium_dos_title_presentation.cpp
     src/data/millennium_dos_video_driver.cpp
     src/data/millennium_dos_sound_driver.cpp
     src/data/millennium_dos_reference_trace.cpp

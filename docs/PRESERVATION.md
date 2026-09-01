@@ -2176,6 +2176,14 @@ records plus four raw tail bytes (`0001ce8e`) which the 14-byte stride cannot
 reach. They are retained verbatim rather than treated as padding or a guessed
 twenty-second sound record.
 
+The complete 298-byte table at ADF `0x2d9b4..0x2dace` is SHA-256
+`04491b3f24bc635cfc7be4cfdad4536dc83fa8c3056848092aecb662594b68a4`.
+The native source view carries that table hash and, for each record, its
+bundle-relative descriptor offset, descriptor hash and DMA-byte hash. This
+lets a renderer or audio sink cite the precise original descriptor it observes
+without retaining a path, extracting media, or assigning timing to the
+control words.
+
 Every record contains a bundle-relative DMA address (longword), DMA length in
 words, Paula period, volume, and two raw control/parameter words. The
 hardware routine at `$22bea` copies the first ten bytes directly to
@@ -4519,6 +4527,21 @@ entry 9. The hardware values are 6-bit, `$00..$3f`; Project Eon expands them
 for SDL with `(v << 2) | (v >> 4)`, an explicit host-presentation adaptation,
 not an invented original conversion. The resulting 320×200 RGBA title hashes
 to `500a1451ab435a9c8ffaf1dbfaacee52cca0e32b375c883a45dd8f879a952888`.
+
+`MillenniumDosTitlePresentationAssets` makes the full recovered data boundary
+available to an SDL renderer in one hash-locked object. It admits only the
+English `TITLE.LIB` SHA-256 above and the independently byte-validated
+`TITLES.EXE`/`MILL.COM` profile: P00 is retained with its original record
+extent (`+$000006`, 10,555 bytes), decoded indexed pixels, RGB6 DAC tables,
+logical-to-DAC translation, and in-memory RGBA expansion. The same object
+contains the complete contiguous P01–P25 bank, its 37 decoded 368-pixel
+records, their original order, offsets, per-record identities, and the
+mode-two logical-to-DAC byte ranges already established by the static title
+code. This is a renderer-ready asset index, not a reconstructed title movie:
+it neither composites a patch onto P00, invents a destination buffer or
+palette mode, assigns a delay, nor maps a host key to title input. No media is
+written, unpacked, copied, or included in the executable; all derived buffers
+exist only while the caller holds the in-memory read of the original archive.
 
 ## Automation integrity
 

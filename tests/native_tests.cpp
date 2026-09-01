@@ -44,6 +44,7 @@
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/millennium_dos_title_exit.hpp"
 #include "data/millennium_dos_title_transition.hpp"
+#include "data/millennium_dos_title_presentation.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
@@ -3859,6 +3860,18 @@ int main() {
         "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
     assert(titles_bytes && mill_bytes);
     const auto title_flow = eon::parse_millennium_dos_title_flow(*titles_bytes, *mill_bytes);
+    const auto title_presentation = eon::parse_millennium_dos_title_presentation_assets(
+        title_lib, title_flow);
+    assert(title_presentation.title_library_sha256 == title_lib.source_sha256());
+    assert(title_presentation.base_resource_name == "P00");
+    assert(title_presentation.base_resource_offset == 0x000006);
+    assert(title_presentation.base_resource_size == 10'555);
+    assert(title_presentation.base_resource_sha256
+        == "14ca6d3c86eba5e9e2afaed21fca9fc6dd1da9e357e305859a495b6dfd69919d");
+    assert(title_presentation.base_rgba == title_rgba);
+    assert(title_presentation.transition.patches.size() == 37);
+    assert(title_presentation.transition.patches.front().resource_name == "P01");
+    assert(title_presentation.transition.patches.back().resource_name == "P25");
     auto altered_titles = *titles_bytes;
     altered_titles.back() ^= 0x01;
     bool rejected_altered_titles = false;
@@ -3892,6 +3905,14 @@ int main() {
         rejected_altered_title_library = true;
     }
     assert(rejected_altered_title_library);
+    bool rejected_altered_title_presentation = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_title_presentation_assets(
+            altered_title_library, title_flow));
+    } catch (const std::runtime_error&) {
+        rejected_altered_title_presentation = true;
+    }
+    assert(rejected_altered_title_presentation);
     assert(title_flow.title_entry_address == 0x1b80);
     assert(title_flow.title_selection_callee_entry_address == 0x1725);
     assert(title_flow.title_selection_callee_branch_address == 0x172f);
@@ -9724,13 +9745,22 @@ int main() {
     const auto first_palette = eon::decode_deuteros_amiga_palette(system_disk, first_bundle, 1);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(system_disk, first_bundle);
     assert(sound_bank.sounds.size() == 21);
+    assert(sound_bank.table_relative_offset == 0x121b4);
+    assert(sound_bank.table_length == 0x12a);
+    assert(sound_bank.table_sha256
+        == "04491b3f24bc635cfc7be4cfdad4536dc83fa8c3056848092aecb662594b68a4");
     assert((sound_bank.trailing_bytes == std::vector<std::uint8_t>{0x00, 0x01, 0xce, 0x8e}));
+    assert(sound_bank.sounds[1].descriptor_relative_offset == 0x0e);
+    assert(sound_bank.sounds[1].descriptor_sha256
+        == "61b726d283ffc7966dcf70a203a6eab6ed9ba62ce1991c70d09f5ee813e42e20");
     assert(sound_bank.sounds[1].sample_relative_offset == 0x2a8b);
     assert(sound_bank.sounds[1].length_words == 0x40bc);
     assert(sound_bank.sounds[1].period == 0x1c0 && sound_bank.sounds[2].period == 0x1c2);
     assert(sound_bank.sounds[1].volume == 0x3f);
     assert(sound_bank.sounds[1].pcm == sound_bank.sounds[2].pcm);
     assert(eon::to_hex(eon::sha256(sound_bank.sounds[1].pcm))
+        == "f23fcd05f543be31726271b08ebfe7d907acfe31d1780aaf286fd2db701ae5d5");
+    assert(sound_bank.sounds[1].pcm_sha256
         == "f23fcd05f543be31726271b08ebfe7d907acfe31d1780aaf286fd2db701ae5d5");
     // $0b writes the selected original descriptor to AUDx. The first two
     // genuine opening events target AUD0 then AUD1, whose physical stereo

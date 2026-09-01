@@ -295,6 +295,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--member", action="append", default=[], help="Exact DOS member; repeat as needed")
     parser.add_argument("--fat12-member", help="Exact FAT12 image member inside --fat12-archive")
     parser.add_argument("--nested-member", help="Exact nested ZIP member for --amiga-archive")
+    parser.add_argument("--nested-sha256",
+                        help="Expected lower-case SHA-256 of --nested-member in Atari PRG mode")
     parser.add_argument("--adf-member", "--disk-member", dest="disk_member",
                         help="Exact disk member inside --nested-member")
     parser.add_argument("--program", help="Exact FAT12 root PRG member for --atari-prg-archive")
@@ -308,14 +310,15 @@ def main(argv: list[str] | None = None) -> int:
         output = _require_external_output(args.output)
         documents: list[dict] = []
         if args.dos_archive is not None:
-            if not args.member or args.range or args.nested_member or args.disk_member or args.fat12_member or args.source_sha256:
+            if (not args.member or args.range or args.nested_member or args.nested_sha256
+                    or args.disk_member or args.fat12_member or args.source_sha256):
                 raise ControlFlowError("DOS mode requires --member entries only; ranges are inferred from exact members")
             for member in args.member:
                 media = _read_zip_member(args.dos_archive, member, args.archive_sha256)
                 documents.append(build_sidecar("i8086", args.archive_sha256, member, media,
                                                [(0, len(media), 0x100, _sha256(media))]))
         elif args.fat12_archive is not None:
-            if (not args.fat12_member or not args.member or args.range or args.nested_member
+            if (not args.fat12_member or not args.member or args.range or args.nested_member or args.nested_sha256
                     or args.disk_member or not args.source_sha256):
                 raise ControlFlowError("FAT12 mode requires --fat12-member, --source-sha256 and exact --member entries")
             _require_sha256(args.source_sha256, "FAT12 image SHA-256")
@@ -328,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
                                                [(0, len(media), 0x100, _sha256(media))],
                                                source_kind="fat12-root-member"))
         elif args.m68k_archive is not None:
-            if (not args.nested_member or not args.disk_member or not args.range or args.member
+            if (not args.nested_member or args.nested_sha256 or not args.disk_member or not args.range or args.member
                     or args.fat12_member or not args.source_sha256):
                 raise ControlFlowError("M68000 mode requires --nested-member, --disk-member, --source-sha256 and one or more --range values")
             _require_sha256(args.source_sha256, "disk SHA-256")
@@ -342,7 +345,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.embedded_m68k_carrier is not None:
             if (not args.carrier_sha256 or not args.embedded_archive or not args.embedded_sha256
                     or not args.disk_member or not args.source_sha256 or not args.range or args.member
-                    or args.nested_member or args.fat12_member):
+                    or args.nested_member or args.nested_sha256 or args.fat12_member):
                 raise ControlFlowError("embedded M68000 mode requires carrier/release/disk hashes and ranges")
             _require_sha256(args.carrier_sha256, "carrier SHA-256")
             _require_sha256(args.embedded_sha256, "embedded archive SHA-256")
@@ -360,14 +363,15 @@ def main(argv: list[str] | None = None) -> int:
                                            container_sha256=_sha256(media),
                                            carrier_archive_sha256=args.carrier_sha256))
         elif args.atari_prg_archive is not None:
-            if (not args.nested_member or not args.disk_member or not args.program or not args.program_sha256
+            if (not args.nested_member or not args.nested_sha256 or not args.disk_member or not args.program or not args.program_sha256
                     or not args.source_sha256 or len(args.range) != 1 or args.member or args.fat12_member):
-                raise ControlFlowError("Atari PRG mode requires exact nested/disk/program hashes and one range")
+                raise ControlFlowError("Atari PRG mode requires exact nested archive/disk/program hashes and one range")
             _require_sha256(args.source_sha256, "disk SHA-256")
             _require_sha256(args.program_sha256, "program SHA-256")
-            _verify_archive_sha256(args.atari_prg_archive, args.archive_sha256)
-            disk, program = read_exact_program(args.atari_prg_archive, args.nested_member,
-                                               args.disk_member, args.program)
+            _require_sha256(args.nested_sha256, "nested archive SHA-256")
+            disk, program, _ = read_exact_program(args.atari_prg_archive, args.archive_sha256,
+                                                   args.nested_member, args.nested_sha256,
+                                                   args.disk_member, args.program)
             if _sha256(disk) != args.source_sha256 or _sha256(program) != args.program_sha256:
                 raise ControlFlowError("Atari ST disk or PRG SHA-256 mismatch")
             if len(program) < PRG_HEADER_BYTES or read_be16(program, 0) != 0x601a:
@@ -388,7 +392,7 @@ def main(argv: list[str] | None = None) -> int:
             if (not args.carrier_sha256 or not args.embedded_archive or not args.embedded_sha256
                     or not args.disk_member or not args.program or not args.program_sha256
                     or not args.source_sha256 or len(args.range) != 1 or args.member
-                    or args.nested_member or args.fat12_member):
+                    or args.nested_member or args.nested_sha256 or args.fat12_member):
                 raise ControlFlowError("embedded Atari PRG mode requires carrier/release/disk/program hashes and one range")
             _require_sha256(args.carrier_sha256, "carrier SHA-256")
             _require_sha256(args.embedded_sha256, "embedded archive SHA-256")
