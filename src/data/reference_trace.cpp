@@ -6,6 +6,7 @@
 #include "data/deuteros_amiga_title_display_reference_trace.hpp"
 #include "data/deuteros_amiga_title_bridge_reference_trace.hpp"
 #include "data/millennium_amiga_reference_trace.hpp"
+#include "data/reference_trace_registry.hpp"
 #include "data/millennium_dos_reference_trace.hpp"
 #include "data/recovery_map.hpp"
 #include "data/sha256.hpp"
@@ -839,6 +840,23 @@ ReferenceTraceValidation validate_reference_trace(
                             amiga_diagnostics, error);
     if (!events_valid) {
         return {{}, error};
+    }
+    // Keep the accepted versioned trace grammar tied to the compiled
+    // declarative registry as well as its parser-specific checks above. This
+    // prevents a future validator branch from silently broadening an adapter
+    // to a different release, language, format, or runtime policy.
+    if (!v1) {
+        const auto* descriptor = reference_trace_adapter_descriptor(fields.at("adapter"));
+        if (!descriptor || descriptor->format != fields.at("format")
+            || descriptor->game != *game || descriptor->platform != *platform
+            || descriptor->language != fields.at("language")
+            || descriptor->release_sha256 != source->sha256
+            || (!descriptor->source_media_sha256.empty()
+                && descriptor->source_media_sha256 != fields.at("source_media_sha256"))
+            || (!descriptor->source_stage_sha256.empty()
+                && descriptor->source_stage_sha256 != fields.at("source_stage_sha256"))) {
+            return {{}, "Reference trace disagrees with the declared adapter registry"};
+        }
     }
     std::vector<ReferenceTraceArtifact> artifacts;
     if (deuteros_amiga_title_display_v5
