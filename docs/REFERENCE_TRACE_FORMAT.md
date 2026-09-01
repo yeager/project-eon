@@ -385,12 +385,15 @@ ordered `local-return` records for call sites `$d376`, `$d379`, `$d37c`,
 `$da05`. The two observed byte values are recorded as provenance only.
 
 The schema rejects omitted, reordered, duplicated, extra, upper-case, or
-other-site records. After the manifest, source archive, and event file have
-all been rehashed, `--reference-trace` may use this one complete grammar to
-construct the existing **call-free, transient** GX overlay admission state.
-That state is discarded with the command and stops at the second private-INT
-boundary. It is not execution, a general injected session value, an overlay
-load, DOS/private-interrupt emulation, a title handoff, or a game launch.
+other-site records. After generic validation, the release-runtime GX gate
+rehashes the event file again, reopens and rehashes the exact outer archive,
+and extracts only the two pinned executable leaves before it may construct the
+existing **call-free, transient** GX overlay admission state. The gate retains
+no trace, event, archive, or leaf bytes; it neither acquires a coordinator
+release nor publishes a runtime session. That state is discarded with the
+command and stops at the second private-INT boundary. It is not execution, a
+general injected session value, an overlay load, DOS/private-interrupt
+emulation, a title handoff, or a game launch.
 
 ### Deuteros Amiga title-bridge v3 capture profile
 

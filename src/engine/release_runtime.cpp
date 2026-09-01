@@ -2,10 +2,15 @@
 #include "engine/release_runtime_capability.hpp"
 
 #include "platform/game_data.hpp"
+#include "data/reference_trace.hpp"
+#include "data/sha256.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_dos_lib.hpp"
+
+#include <filesystem>
+#include <fstream>
 
 namespace eon {
 
@@ -130,6 +135,57 @@ void ReleaseRuntimeCoordinator::reset() {
     session_snapshot_.reset();
     active_.reset();
     admission_ = ReleaseRuntimeAdmission::unselected;
+}
+
+MillenniumDosGxStartupTraceAdmission
+ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace(
+    const ReferenceTrace& trace) const {
+    MillenniumDosGxStartupTraceAdmission rejected;
+    constexpr std::string_view adapter = "millennium-dos-en-gx-startup-v2";
+    constexpr std::string_view release_sha256 =
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
+    constexpr std::string_view game_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::string_view gx_overlay_sha256 =
+        "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
+    if (trace.adapter != adapter || trace.source_release.game != Game::millennium
+        || trace.source_release.platform != Platform::dos || trace.source_release.language != "en"
+        || trace.source_release.sha256 != release_sha256) {
+        rejected.error = "Reference trace does not name the exact Millennium DOS GX boundary";
+        return rejected;
+    }
+    std::error_code filesystem_error;
+    const auto event_size = std::filesystem::file_size(trace.events_path, filesystem_error);
+    if (filesystem_error || event_size != trace.event_size
+        || event_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+        rejected.error = "Reference trace events changed after validation";
+        return rejected;
+    }
+    try {
+        std::ifstream stream(trace.events_path, std::ios::binary);
+        std::string events(static_cast<std::size_t>(event_size), '\0');
+        stream.read(events.data(), static_cast<std::streamsize>(events.size()));
+        if (!stream || static_cast<std::size_t>(stream.gcount()) != events.size()) {
+            rejected.error = "Reference trace events changed after validation";
+            return rejected;
+        }
+        const std::vector<std::uint8_t> event_bytes(events.begin(), events.end());
+        if (to_hex(sha256(event_bytes)) != trace.event_sha256) {
+            rejected.error = "Reference trace events changed after validation";
+            return rejected;
+        }
+        const auto media = VerifiedReleaseMedia::open(trace.source_release);
+        const auto game = media.extract(game_sha256);
+        const auto overlay = media.extract(gx_overlay_sha256);
+        if (!game || !overlay) {
+            rejected.error = "Verified GX startup leaves are unavailable";
+            return rejected;
+        }
+        return admit_millennium_dos_gx_startup_trace(*game, *overlay, events);
+    } catch (...) {
+        rejected.error = "Unable to admit the Millennium DOS GX startup boundary";
+        return rejected;
+    }
 }
 
 RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
