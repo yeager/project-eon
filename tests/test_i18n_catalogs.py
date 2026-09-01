@@ -179,7 +179,7 @@ class CatalogTests(unittest.TestCase):
             "MODERN PACK",
             "PACK RENDER TARGETS",
         }
-        for language in {"de", "es", "fr", "it", "nl", "no", "pl", "pt_BR", "sv"}:
+        for language in {"de", "es", "fi", "fr", "it", "nl", "no", "pl", "pt_BR", "sv"}:
             with self.subTest(language=language):
                 catalog = po_messages(PO / f"{language}.po")
                 self.assertTrue(all(catalog.get(label) not in {None, "", label}
