@@ -3747,6 +3747,9 @@ int main() {
                 && !title_snapshot.capabilities.admitted_input);
             assert(eon::runtime_session_kind_label(title_snapshot.kind)
                 == "DEUTEROS AMIGA TITLE STAGE");
+            assert(all_release_runtime.deuteros_amiga());
+            const auto& admitted_title_stage = all_release_runtime.deuteros_amiga()->title_stage_session();
+            assert(admitted_title_stage && admitted_title_stage->local_prefix_executed());
             assert(all_release_runtime.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
