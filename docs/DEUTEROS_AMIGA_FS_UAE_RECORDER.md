@@ -97,6 +97,23 @@ press/release must still be retained as a separate input timeline and linked
 to matching title-poll and frame observations; recorder-side injection,
 playback, debugger commands and guest-memory edits remain inadmissible.
 
+## Visible-window focus protocol
+
+The capture runner starts FS-UAE windowed and reserves a ten-second manual
+focus-settle period before its configured capture duration. During that period,
+the physical operator must click the visible FS-UAE window themselves, then
+press and release ordinary mapped keys in that window. Terminal keystrokes,
+`xdotool`, autotype, debugger commands, playback, and guest-memory injection
+are forbidden.
+
+While FS-UAE is running, the runner reports `HOST INPUT DELIVERY OBSERVED`
+only after the recorder has begun its protected host-input receipt. This is a
+live usability signal, not evidence admission: the completed receipt is still
+bounded, grammar-checked, chronology-checked, and hash-bound after the process
+stops. A run without that signal is explicitly a no-delivery observation; it
+must not be treated as a game-input or title-display capture. The optional
+`--focus-settle-seconds 0..120` setting is bound into `run-status.txt`.
+
 ## Media and execution safeguards
 
 Use only the recognised English Deuteros archive and its clean disk-1/disk-2

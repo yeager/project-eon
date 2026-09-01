@@ -39,6 +39,7 @@ DISK2_IMAGE = "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 2 of 2
 KICKSTART_IMAGE = "Kickstart v1.3 r34.005 (1987-12)(Commodore)(A500-A1000-A2000-CDTV)[!].rom"
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
+MAX_FOCUS_SETTLE_SECONDS = 120
 # A finite timing profile makes a reachability diagnostic reproducible without
 # confusing it with time-faithful capture evidence. Warp never establishes
 # original timing, gameplay, or title-screen behaviour.
@@ -484,6 +485,22 @@ def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path,
     ))
 
 
+def input_delivery_file_observed(path: Path) -> bool:
+    """Return whether the recorder has begun an input-delivery receipt.
+
+    This is deliberately only a live operator aid. The file remains subject to
+    complete bounded grammar and hash validation after FS-UAE has stopped;
+    parsing it while the recorder is appending could race a partial line.
+    """
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
+        raise CaptureError("live host-input receipt is not a regular non-symlink file")
+    return info.st_size > 0
+
+
 def run_capture(args: argparse.Namespace) -> Path:
     release = require_absolute_regular_file(Path(args.source_release), "source release")
     kickstart = require_absolute_regular_file(Path(args.kickstart_archive), "Kickstart archive")
@@ -491,6 +508,8 @@ def run_capture(args: argparse.Namespace) -> Path:
     output = reject_unsafe_output(release, kickstart, output=Path(args.output))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
+    if not 0 <= args.focus_settle_seconds <= MAX_FOCUS_SETTLE_SECONDS:
+        raise CaptureError(f"focus-settle duration must be between 0 and {MAX_FOCUS_SETTLE_SECONDS} seconds")
     environment = dict(os.environ)
     require_visible_operator_input(environment)
     release_before = validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE)
@@ -527,7 +546,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             "PROJECT_EON_FS_UAE_INPUT_RECORD": str(output / "host-input-receipt.txt"),
         })
         print("CAPTURE PREPARED  read-only original media; physical operator input required")
-        print(f"Press keys only in the visible FS-UAE window within {args.duration_seconds} seconds.")
+        print("Focus the visible FS-UAE window by clicking it yourself; do not use terminal or automation input.")
+        print("Then press and release ordinary mapped keys only in that window (for example Return, Space, or arrows).")
+        print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
         print("No debugger, playback, injected host event, or guest-memory edit is permitted.")
         started = time.time()
         process = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
@@ -547,12 +568,21 @@ def run_capture(args: argparse.Namespace) -> Path:
         console_thread = threading.Thread(target=drain_console,
                                           name="project-eon-fs-uae-console", daemon=True)
         console_thread.start()
-        deadline = time.monotonic() + args.duration_seconds
+        settle_deadline = time.monotonic() + args.focus_settle_seconds
+        deadline: float | None = None
+        live_input_observed = False
         while True:
             exit_status = process.poll()
             if exit_status is not None:
                 break
-            remaining = deadline - time.monotonic()
+            now = time.monotonic()
+            if deadline is None and now >= settle_deadline:
+                deadline = now + args.duration_seconds
+                print(f"CAPTURE WINDOW ACTIVE  {args.duration_seconds} seconds; physical input remains required.")
+            if not live_input_observed and input_delivery_file_observed(output / "host-input-receipt.txt"):
+                live_input_observed = True
+                print("HOST INPUT DELIVERY OBSERVED  receipt will be fully validated after capture.")
+            remaining = (settle_deadline - now if deadline is None else deadline - now)
             if console_over_limit.is_set():
                 process.kill()
                 process.wait()
@@ -585,6 +615,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
                         f"timing_profile={args.timing_profile}\n"
+                        f"focus_settle_seconds={args.focus_settle_seconds}\n"
+                        f"host_input_observed_during_capture={'true' if live_input_observed else 'false'}\n"
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
                         + identity_status("source_release", release_after)
                         + identity_status("kickstart_archive", kickstart_after)
@@ -609,6 +641,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--recorder", required=True, help="Absolute reviewed FS-UAE recorder binary path")
     parser.add_argument("--output", required=True, help="New absolute cache directory for external capture evidence")
     parser.add_argument("--duration-seconds", type=int, default=120, help="Visible operator window duration (15-600; default: 120)")
+    parser.add_argument("--focus-settle-seconds", type=int, default=10,
+                        help="Manual visible-window focus time before capture (0-120; default: 10)")
     parser.add_argument("--timing-profile", choices=tuple(sorted(TIMING_PROFILES)), default="realtime",
                         help="Recorder timing profile (default: realtime; warp is diagnostic only)")
     return parser.parse_args(argv)
