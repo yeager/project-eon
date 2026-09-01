@@ -120,8 +120,13 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('set(CPACK_DEBIAN_PACKAGE_SECTION "utils")', cmake)
         self.assertIn("SDLTTF_VENDORED OFF", cmake)
         self.assertIn("if(SDLTTF_VENDORED)", cmake)
-        self.assertIn("file(RPATH_REMOVE", cmake)
-        self.assertIn("--strip-unneeded", cmake)
+        runtime_script = (ROOT / "cmake" / "package_linux_runtime.cmake.in").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("package_linux_runtime.cmake.in", cmake)
+        self.assertIn("@EON_INSTALL_LIBDIR@/project-eon", runtime_script)
+        self.assertIn("patchelf --set-rpath \"$ORIGIN\"", runtime_script)
+        self.assertIn("--strip-unneeded", runtime_script)
         self.assertIn("project-eon.lintian-overrides", cmake)
         self.assertIn("CPACK_RPM_PACKAGE_URL", cmake)
         self.assertIn("CPACK_RPM_FILE_NAME RPM-DEFAULT", cmake)

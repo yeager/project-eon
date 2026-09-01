@@ -484,35 +484,21 @@ endif()
 
 if(UNIX AND NOT APPLE)
     # CPack stages SDL runtime libraries built against the CI's /usr/local
-    # SDL3 prefix. Remove that build-host search path and strip only the
-    # staged executable/private libraries before packaging. The application
-    # retains its explicit package-relative RUNPATH; neither operation opens
-    # or changes user-supplied media.
-    install(CODE [[
-file(GLOB eon_private_runtime_files
-  "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib*/project-eon/libSDL3*.so*")
-foreach(eon_private_runtime_file IN LISTS eon_private_runtime_files)
-  if(NOT IS_SYMLINK "${eon_private_runtime_file}")
-    file(RPATH_REMOVE FILE "${eon_private_runtime_file}")
-    execute_process(
-      COMMAND strip --strip-unneeded "${eon_private_runtime_file}"
-      RESULT_VARIABLE eon_strip_result)
-    if(NOT eon_strip_result EQUAL 0)
-      message(FATAL_ERROR "Unable to strip packaged runtime: ${eon_private_runtime_file}")
-    endif()
-  endif()
-endforeach()
-file(GLOB eon_packaged_executables
-  "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/project-eon")
-foreach(eon_packaged_executable IN LISTS eon_packaged_executables)
-  execute_process(
-    COMMAND strip --strip-unneeded "${eon_packaged_executable}"
-    RESULT_VARIABLE eon_executable_strip_result)
-  if(NOT eon_executable_strip_result EQUAL 0)
-    message(FATAL_ERROR "Unable to strip packaged executable: ${eon_packaged_executable}")
-  endif()
-endforeach()
-]])
+    # SDL3 prefix. Rewrite that build-host search path to the package-private
+    # directory and strip only staged executable/private libraries before
+    # packaging. The application retains its explicit package-relative
+    # RUNPATH; neither operation opens or changes user-supplied media.
+    #
+    # CMAKE_INSTALL_LIBDIR can be multiarch (for example
+    # lib/x86_64-linux-gnu), so resolve it while configuring rather than with
+    # a lib* glob that misses the staged runtime payload.
+    set(EON_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}")
+    set(EON_INSTALL_BINDIR "${CMAKE_INSTALL_BINDIR}")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_linux_runtime.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/package_linux_runtime.cmake"
+        @ONLY)
+    install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/package_linux_runtime.cmake")
 endif()
 
 set(CPACK_PACKAGE_NAME "project-eon")
@@ -526,7 +512,7 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER
     "Daniel Nylander <1206564+yeager@users.noreply.github.com>")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/yeager/project-eon")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
-    "Preservation-first SDL3 reimplementation launcher for Millennium 2.2 and Deuteros.\n Project Eon reads user-supplied original media in place.\n It never distributes game data.")
+    "Preservation-first SDL3 launcher for Millennium 2.2 and Deuteros.\n It reads user-supplied original media in place.\n It never distributes game data.")
 set(CPACK_DEBIAN_PACKAGE_RELEASE "1")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 # DEB/RPM artifacts install below /usr, independent of the developer's local
