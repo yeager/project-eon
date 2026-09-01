@@ -281,3 +281,17 @@ were capped at three existing bootstrap sites: 128 at `0x000210d4` with
 input links and no input chronology. This is longer no-input reachability
 evidence only; it does not turn a physical-key attempt into proof of guest
 acceptance, title execution, display, audio, ABI results, or gameplay.
+
+Later that day, the same read-only v9 route was exercised after the runner
+gained its manual visible-window focus-settle protocol. The independently
+verified 120-second capture binds `focus_settle_seconds=10` and
+`host_input_observed_during_capture=false` in its external receipt. Its source
+release, Kickstart archive, recorder and raw-PC result remain the recognised
+identities above; the raw result is byte-identical to the preceding 384-record
+observation (`d8732ec5aab06123147688b19b8bc750b0ee6ca1f9a03cdc68a5787271a1e5b9`).
+The absence of both a live delivery indication and a final host-input receipt
+shows that this session did not dequeue a physical frontend event. It proves
+neither a broken game route nor game-input semantics. The known v5 delivery
+receipt demonstrates that the reviewed observer can record frontend delivery;
+the remaining requirement is an operator interaction that reaches the visible
+FS-UAE window, followed by the same independent validation.
