@@ -4407,6 +4407,13 @@ non-monotonic resources, invalid padding/flags, and any range outside the
 directory boundary. The English DOS gameplay-canvas reader additionally
 requires the full `GX.LIB` leaf hash before it reads IMG00/IMG01, so matching
 resource names or image prefixes alone cannot substitute a different bank.
+The catalogue reader now visits all 180 resources only after that full-leaf
+check. It retains each original name, range, leaf hash and—where the bounded
+codec-2 decoder accepts it—dimensions, compressed-span length and decoded
+pixel hash. A decoder rejection is recorded as an explicit per-resource format
+boundary; it does not select an alternate codec, fabricate pixels, or infer a
+screen role. The resulting inventory is diagnostics-only and discards decoded
+pixel buffers after hashing them.
 The single-entry English `LAST.LIB` is likewise hash-locked before its `last`
 bitmap and palette are decoded. Its directory shape and bitmap profile are
 additional bounded-format checks, never a substitute for original leaf identity.
