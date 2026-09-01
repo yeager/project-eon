@@ -2166,6 +2166,12 @@ Eon therefore records neither as a resource-table entry, never probes it as
 media, and requires a caller-connected selection trace before extending this
 two-entry contract.
 
+The live Amiga session also binds the separate clean Disk 2 image
+`99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a` and
+requires its `DEU\0` custom-media header. The opening presently reads only
+the caller-proved Disk 1 ranges, but it cannot silently omit, replace, or
+reinterpret Disk 2 while later game paths are still unrecovered.
+
 The first auxiliary pointer is a palette bank. The interpreter's command 4
 multiplies its operand by 32 and copies 16 words from this bank to each active
 display list. The words are standard 12-bit Amiga RGB4. Bundle 0, palette 1 is

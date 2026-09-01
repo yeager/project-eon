@@ -1261,10 +1261,20 @@ std::optional<std::filesystem::path> find_font_directory() {
 void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     constexpr auto clean_system_adf =
         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
+    constexpr auto clean_data_adf =
+        "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a";
     const auto image = eon::extract_verified_release_asset(release, clean_system_adf);
     if (!image) return;
+    const auto data_image = eon::extract_verified_release_asset(release, clean_data_adf);
+    if (!data_image) throw std::runtime_error("Verified Deuteros Amiga data ADF is unavailable");
     const eon::AmigaAdf disk(*image);
+    const eon::AmigaAdf data_disk(*data_image);
+    if (data_disk.kind() != eon::AmigaDiskKind::deuteros_data) {
+        throw std::runtime_error("Verified Deuteros Amiga data ADF has an unsupported format");
+    }
     const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
+    std::cout << "          Paired data ADF: DEU custom-media header verified; SHA-256 "
+        << clean_data_adf << '\n';
     std::cout << "          ADF boot checksum valid; main stage disk 0x" << std::hex
         << plan.main_stage.disk_offset << " -> memory 0x" << plan.main_stage.destination
         << ", entry 0x" << plan.main_stage.entry_address << std::dec << '\n';

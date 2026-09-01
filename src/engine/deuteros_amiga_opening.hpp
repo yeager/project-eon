@@ -20,7 +20,11 @@ namespace eon {
 // exposes an explicit handoff event rather than manufacturing a game screen.
 class DeuterosAmigaOpening {
 public:
-    explicit DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf);
+    // Both original disks are required for a runtime session. The recovered
+    // opening reads only disk 1's caller-proved ranges, but disk 2 remains
+    // identity-bound instead of being silently omitted or substituted.
+    DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf,
+        std::vector<std::uint8_t> data_adf);
 
     [[nodiscard]] DeuterosAmigaVmEvents tick(bool input_pressed = false);
     [[nodiscard]] std::optional<std::vector<std::uint8_t>> rgba_frame() const;
@@ -49,6 +53,7 @@ public:
 
 private:
     AmigaAdf disk_;
+    AmigaAdf data_disk_;
     DeuterosAmigaLoadPlan load_plan_;
     DeuterosAmigaTitleHandoffRoute title_handoff_route_;
     DeuterosAmigaMainResourceTransfer transferred_bundle_;

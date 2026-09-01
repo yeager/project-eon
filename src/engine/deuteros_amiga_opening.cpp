@@ -18,6 +18,16 @@ std::vector<std::uint8_t> require_clean_deuteros_amiga_system_adf(
     return system_adf;
 }
 
+std::vector<std::uint8_t> require_clean_deuteros_amiga_data_adf(
+    std::vector<std::uint8_t> data_adf) {
+    constexpr std::string_view clean_data_adf_sha256 =
+        "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a";
+    if (to_hex(sha256(data_adf)) != clean_data_adf_sha256) {
+        throw std::runtime_error("Unsupported Deuteros Amiga data ADF");
+    }
+    return data_adf;
+}
+
 DeuterosAmigaMainResourceTransfer require_opening_transfer(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan) {
     const auto transfer = read_deuteros_amiga_main_resource(disk, plan, 0);
@@ -29,8 +39,10 @@ DeuterosAmigaMainResourceTransfer require_opening_transfer(const AmigaAdf& disk,
 
 } // namespace
 
-DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
+DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf,
+    std::vector<std::uint8_t> data_adf)
     : disk_(require_clean_deuteros_amiga_system_adf(std::move(system_adf))),
+      data_disk_(require_clean_deuteros_amiga_data_adf(std::move(data_adf))),
       load_plan_(parse_deuteros_amiga_load_plan(disk_)),
       title_handoff_route_(parse_deuteros_amiga_title_handoff_route(disk_, load_plan_)),
       transferred_bundle_(require_opening_transfer(disk_, load_plan_)),
@@ -38,7 +50,11 @@ DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf)
       sound_bank_(parse_deuteros_amiga_sound_bank(disk_, bundle_)),
       blob_(parse_deuteros_amiga_indexed_blob(disk_, bundle_)),
       vm_(disk_, bundle_),
-      random_(transferred_bundle_, load_plan_.main_stage_entry) {}
+      random_(transferred_bundle_, load_plan_.main_stage_entry) {
+    if (data_disk_.kind() != AmigaDiskKind::deuteros_data) {
+        throw std::runtime_error("Unsupported Deuteros Amiga data-disk format");
+    }
+}
 
 DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // The exact $0f,$0b38 handoff returns to the bootstrap loader, which
