@@ -147,8 +147,11 @@ python3 tools/verify_static_control_flow.py \
   --sidecar millennium-dos-spanish-titles-exe-linear=/absolute/millennium-dos-es.json \
   --sidecar millennium-dos-spanish-2200ad-exe-linear=/absolute/millennium-dos-es.json \
   --sidecar millennium-amiga-defjam-shared-resident-linear=/absolute/millennium-amiga-defjam.json \
+  --sidecar millennium-amiga-defjam-direct-shared-resident-linear=/absolute/millennium-amiga-defjam-direct.json \
   --sidecar deuteros-amiga-clean-loaded-spans=/absolute/deuteros-amiga-clean.json \
-  --sidecar deuteros-atari-replicants-first-stage-linear=/absolute/deuteros-atari-replicants.json
+  --sidecar deuteros-atari-replicants-first-stage-linear=/absolute/deuteros-atari-replicants.json \
+  --sidecar millennium-atari-equinox-milenium-tos-image-relative-linear=/absolute/millennium-atari-equinox.json \
+  --sidecar millennium-atari-equinox-direct-milenium-tos-image-relative-linear=/absolute/millennium-atari-equinox-direct.json
 ```
 
 `tools/verify_function_map_coverage.py` is a separate, optional cross-check
