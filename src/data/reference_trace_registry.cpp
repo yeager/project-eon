@@ -30,6 +30,32 @@ std::string_view reference_trace_runtime_policy_label(const ReferenceTraceRuntim
     return "diagnostics-only";
 }
 
+ReferenceTraceDiagnosticReport reference_trace_diagnostic_report(const std::string_view wire_id) {
+    if (wire_id == "millennium-dos-en-gx-startup-v2") {
+        return ReferenceTraceDiagnosticReport::millennium_dos_gx_startup;
+    }
+    if (wire_id == "millennium-dos-en-title-init-v2") {
+        return ReferenceTraceDiagnosticReport::millennium_dos_title_init;
+    }
+    if (wire_id == "deuteros-atari-st-boot-v1") {
+        return ReferenceTraceDiagnosticReport::deuteros_atari_boot;
+    }
+    if (wire_id == "millennium-amiga-en-defjam-bootstrap-v1") {
+        return ReferenceTraceDiagnosticReport::millennium_amiga_bootstrap;
+    }
+    if (wire_id == "deuteros-amiga-en-title-stage-v1") {
+        return ReferenceTraceDiagnosticReport::deuteros_amiga_title_stage;
+    }
+    if (wire_id == "deuteros-amiga-en-title-bridge-v3") {
+        return ReferenceTraceDiagnosticReport::deuteros_amiga_title_bridge;
+    }
+    if (wire_id == "deuteros-amiga-en-title-display-v4"
+        || wire_id == "deuteros-amiga-en-title-display-artifacts-v5") {
+        return ReferenceTraceDiagnosticReport::deuteros_amiga_title_display;
+    }
+    return ReferenceTraceDiagnosticReport::generic;
+}
+
 std::span<const ReferenceTraceAdapterDescriptor> reference_trace_adapter_registry() { return registry; }
 
 const ReferenceTraceAdapterDescriptor* reference_trace_adapter_descriptor(const std::string_view wire_id) {

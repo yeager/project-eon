@@ -892,4 +892,67 @@ ReferenceTraceValidation validate_reference_trace(
         std::move(artifacts)}, {}};
 }
 
+ReferenceTraceDiagnosticSummary reference_trace_diagnostic_summary(const ReferenceTrace& trace) {
+    const auto report = reference_trace_diagnostic_report(trace.adapter);
+    switch (report) {
+    case ReferenceTraceDiagnosticReport::deuteros_atari_boot:
+        return {std::to_string(trace.adapter_trap_count) + " TRAP, "
+                    + std::to_string(trace.adapter_callback_count) + " callback, "
+                    + std::to_string(trace.adapter_frame_count) + " frame, "
+                    + std::to_string(trace.adapter_state_count) + " state, "
+                    + std::to_string(trace.adapter_table_count) + " table, "
+                    + std::to_string(trace.adapter_raw_reader_count) + " raw-reader observations",
+            "diagnostics only"};
+    case ReferenceTraceDiagnosticReport::millennium_amiga_bootstrap:
+        return {std::to_string(trace.adapter_cpu_count) + " CPU handoff observations",
+            "diagnostics only"};
+    case ReferenceTraceDiagnosticReport::deuteros_amiga_title_stage:
+        return {std::to_string(trace.adapter_exec_count) + " Exec, "
+                    + std::to_string(trace.adapter_open_library_count) + " OpenLibrary, "
+                    + std::to_string(trace.adapter_graphics_count) + " graphics, "
+                    + std::to_string(trace.adapter_custom_register_count) + " custom-register, "
+                    + std::to_string(trace.adapter_callback_count) + " callback observations",
+            "diagnostics only"};
+    case ReferenceTraceDiagnosticReport::deuteros_amiga_title_bridge:
+        return {std::to_string(trace.adapter_exec_return_count) + " Exec return, "
+                    + std::to_string(trace.adapter_open_library_return_count) + " OpenLibrary return, "
+                    + std::to_string(trace.adapter_graphics_call_count) + "/"
+                    + std::to_string(trace.adapter_graphics_return_count) + " graphics call/return, "
+                    + std::to_string(trace.adapter_custom_register_call_count) + "/"
+                    + std::to_string(trace.adapter_custom_register_return_count)
+                    + " custom-register call/return, "
+                    + std::to_string(trace.adapter_queue_snapshot_count) + " queue snapshot, "
+                    + std::to_string(trace.adapter_callback_entry_count) + " callback entry, "
+                    + std::to_string(trace.adapter_dispatch_snapshot_count)
+                    + " dispatch snapshot observations",
+            "diagnostics only"};
+    case ReferenceTraceDiagnosticReport::millennium_dos_title_init:
+        return {std::to_string(trace.adapter_interrupt_count) + " interrupt, "
+                    + std::to_string(trace.adapter_file_count) + " file, "
+                    + std::to_string(trace.adapter_private_return_count) + " private-return observations",
+            "diagnostics only"};
+    case ReferenceTraceDiagnosticReport::millennium_dos_gx_startup:
+        return {std::to_string(trace.adapter_private_return_count) + " private-return, "
+                    + std::to_string(trace.adapter_mode_read_count) + " mode-read, "
+                    + std::to_string(trace.adapter_overlay_return_count) + " adapter-return, "
+                    + std::to_string(trace.adapter_local_return_count) + " local-return observations",
+            "call-free transient overlay admitted through second private-INT boundary"};
+    case ReferenceTraceDiagnosticReport::deuteros_amiga_title_display:
+        return {std::to_string(trace.adapter_display_layout_count) + " display-layout, "
+                    + std::to_string(trace.adapter_bitplane_layout_count) + " bitplane-layout, "
+                    + std::to_string(trace.adapter_palette_checkpoint_count) + " palette, "
+                    + std::to_string(trace.adapter_input_checkpoint_count) + " input, "
+                    + std::to_string(trace.adapter_frame_checkpoint_count) + " frame, "
+                    + std::to_string(trace.adapter_audio_checkpoint_count) + " audio checkpoints",
+            trace.artifacts.empty() ? "diagnostics only, no title replay"
+                                    : "artifacts verified; diagnostics only, no title replay"};
+    case ReferenceTraceDiagnosticReport::generic:
+        return {std::to_string(trace.adapter_interrupt_count) + " interrupt, "
+                    + std::to_string(trace.adapter_file_count) + " file, "
+                    + std::to_string(trace.adapter_exec_count) + " EXEC observations",
+            "diagnostics only"};
+    }
+    return {{}, "diagnostics only"};
+}
+
 } // namespace eon

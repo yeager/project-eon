@@ -148,6 +148,7 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertIn("Reference trace disagrees with the declared adapter registry", validator)
         self.assertIn("descriptor->recovery_entry_ids", validator)
         self.assertIn("reference_trace_runtime_policy_label", registry)
+        self.assertIn("reference_trace_diagnostic_report", registry)
         self.assertIn("single source\nof truth", FORMAT.read_text(encoding="utf-8"))
         for adapter, identity in self.adapters.items():
             with self.subTest(adapter=adapter):
@@ -178,6 +179,16 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertIn("descriptor->recovery_entry_ids", validator)
         self.assertIn("trace_recovery_boundaries(descriptor", validator)
 
+    def test_cli_trace_reporting_uses_registry_backed_diagnostic_summaries(self):
+        main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+        report_start = main.index("const auto summary = eon::reference_trace_diagnostic_summary(trace)")
+        report = main[report_start:main.index("for (const auto& boundary", report_start)]
+        self.assertIn("reference_trace_diagnostic_summary(trace)", report)
+        self.assertNotIn("trace.adapter ==", report)
+        registry = TRACE_REGISTRY.read_text(encoding="utf-8")
+        self.assertIn("ReferenceTraceDiagnosticReport::millennium_dos_gx_startup", registry)
+        self.assertIn("ReferenceTraceDiagnosticReport::deuteros_amiga_title_display", registry)
+
     def test_title_display_v5_requires_real_hash_bound_artifacts_without_runtime_replay(self):
         code = TRACE_VALIDATOR.read_text(encoding="utf-8")
         documented = FORMAT.read_text(encoding="utf-8")
@@ -190,7 +201,7 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertIn("frame-rgba8888.bin", code)
         self.assertIn("audio-s16le.bin", code)
         self.assertIn("pcm_size != channels * sample_frames * 2U", code)
-        self.assertIn("artifacts verified; diagnostics only", (ROOT / "src" / "main.cpp").read_text(encoding="utf-8"))
+        self.assertIn("artifacts verified; diagnostics only", code)
         self.assertIn("No artifact byte is decoded, rendered, replayed", documented)
 
     def test_documented_dos_schema_includes_the_2200ad_private_wrapper_site(self):

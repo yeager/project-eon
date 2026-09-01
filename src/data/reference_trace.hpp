@@ -116,6 +116,16 @@ struct ReferenceTraceValidation {
     std::string error;
 };
 
+// Aggregate provenance wording for the CLI. It exposes only already
+// validated counters and never exposes event payloads or runtime state.
+struct ReferenceTraceDiagnosticSummary {
+    std::string observations;
+    std::string disposition;
+};
+
+[[nodiscard]] ReferenceTraceDiagnosticSummary reference_trace_diagnostic_summary(
+    const ReferenceTrace& trace);
+
 // Read and validate one user-supplied v1 or narrowly declared v2 manifest. The manifest names its
 // sibling events file by basename only, pins it by size/SHA-256, and pins its
 // source release to one of the scanner's recognised ReleaseArchive objects.
