@@ -6,6 +6,7 @@
 #include "data/deuteros_amiga_title_stage.hpp"
 
 #include <span>
+#include <optional>
 #include <string>
 
 namespace eon {
@@ -57,6 +58,17 @@ public:
     [[nodiscard]] std::array<RgbColor, 20> graphics_setup_palette_evidence() const;
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
 
+    // Executes the complete caller-proven local prefix once: its two sparse
+    // writes followed by the A7 literal. It deliberately stops before the
+    // first Exec-base read and never creates host memory for those addresses.
+    struct LocalPrefixAdvance {
+        std::array<DeuterosAmigaTitleEntryWrite, 2> writes{};
+        std::uint32_t stack_pointer_value = 0;
+        std::uint32_t exec_boundary_address = 0;
+    };
+    [[nodiscard]] std::optional<LocalPrefixAdvance> execute_local_prefix();
+    [[nodiscard]] bool local_prefix_executed() const noexcept { return local_prefix_executed_; }
+
 private:
     const AmigaAdf* disk_ = nullptr;
     AmigaLoadStage stage_;
@@ -67,6 +79,7 @@ private:
     DeuterosAmigaTitleGraphicsSetupProfile graphics_setup_;
     DeuterosAmigaTitleDisplayClearProfile display_clear_;
     std::string original_sha256_;
+    bool local_prefix_executed_ = false;
 };
 
 } // namespace eon

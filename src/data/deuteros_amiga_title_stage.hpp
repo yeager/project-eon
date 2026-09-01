@@ -264,6 +264,8 @@ struct DeuterosAmigaTitleEntryWrite {
     std::uint32_t address = 0;
     std::uint8_t width_bytes = 0;
     std::uint16_t value = 0;
+
+    constexpr bool operator==(const DeuterosAmigaTitleEntryWrite&) const = default;
 };
 
 struct DeuterosAmigaTitleEntryPrefixState {
