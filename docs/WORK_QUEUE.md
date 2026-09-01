@@ -36,6 +36,13 @@ do not establish guest input, title execution, display, audio, ABI results,
 or gameplay, and the next operator-led capture remains the required P0
 evidence.
 
+On 2026-09-01, a second independently receipt-verified Deuteros Amiga v9
+realtime run lasted 120 seconds. Its 384 raw-PC records (SHA-256
+`d8732ec5aab06123147688b19b8bc750b0ee6ca1f9a03cdc68a5787271a1e5b9`)
+remain capped at three known bootstrap sites and retain zero host-delivery
+links. It is additional no-input reachability evidence only, not a guest
+input, title, display, audio, ABI, or gameplay claim.
+
 ## Operating rule
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

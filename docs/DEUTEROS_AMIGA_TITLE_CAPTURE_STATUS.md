@@ -268,3 +268,16 @@ were capped at the existing bootstrap sites: 128 at `0x0001fe84` with
 receipt/verifier route and its zero-link chronology only. It does not prove a
 guest poll, input acceptance, title execution, display, audio, ABI, or
 gameplay; an operator-led physical-input run remains separately required.
+
+On 2026-09-01, a second 120-second realtime v9 run was independently accepted
+by `verify_capture_receipt.py`. It again used the recognised outer release,
+Kickstart archive, reviewed recorder and generated configuration, and timed
+out normally with an empty recorder console. Its 384 raw-PC records (62,868
+bytes, SHA-256
+`d8732ec5aab06123147688b19b8bc750b0ee6ca1f9a03cdc68a5787271a1e5b9`)
+were capped at three existing bootstrap sites: 128 at `0x000210d4` with
+`51c8/51c8`, 128 at `0x0001fe84` with `7202/7202`, and 128 at
+`0x0001fe96` with `7208/7208`. The receipt has no host-input delivery, zero
+input links and no input chronology. This is longer no-input reachability
+evidence only; it does not turn a physical-key attempt into proof of guest
+acceptance, title execution, display, audio, ABI results, or gameplay.
