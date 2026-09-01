@@ -536,6 +536,10 @@ msgid "ENGLISH"
 msgstr ""
 
 #: src/main.cpp
+msgid "LANGUAGE"
+msgstr ""
+
+#: src/main.cpp
 msgid "SPANISH"
 msgstr ""
 

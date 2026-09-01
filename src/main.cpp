@@ -4480,7 +4480,10 @@ int main(int argc, char** argv) {
         // needed by the iPad build; both still pass through the same
         // hash-verified platform/release admission checks as keyboard focus.
         if (inside(launcher_language_bounds, x, y)) {
-            cycle_launcher_language(1);
+            cycle_launcher_language(x < launcher_language_bounds.x
+                    + launcher_language_bounds.w / 2.0F
+                ? -1
+                : 1);
         } else if (launcher_page != LauncherPage::games && inside(launcher_back_bounds, x, y)) {
             back_launcher_cards();
         } else if (launcher_page == LauncherPage::releases
@@ -5012,7 +5015,11 @@ int main(int argc, char** argv) {
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
                 const auto button = event.gbutton.button;
-                if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT || button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
+                if (button == SDL_GAMEPAD_BUTTON_LEFT_SHOULDER) {
+                    cycle_launcher_language(-1);
+                } else if (button == SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) {
+                    cycle_launcher_language(1);
+                } else if (button == SDL_GAMEPAD_BUTTON_DPAD_LEFT || button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
                     move_launcher_cards(-1);
                 } else if (button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT || button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
                     move_launcher_cards(1);
@@ -5132,7 +5139,9 @@ int main(int argc, char** argv) {
             SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);
             SDL_RenderRect(renderer, &launcher_language_bounds);
             draw_text(renderer, launcher_language_bounds.x + 10.0F,
-                launcher_language_bounds.y + 9.0F, "L: " + eon::canonical_launcher_language(request.language));
+                launcher_language_bounds.y + 9.0F,
+                "< " + tr("LANGUAGE") + ": "
+                    + eon::canonical_launcher_language(request.language) + " >");
             SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
             SDL_RenderFillRect(renderer, &data_directory_picker_bounds);
             SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);

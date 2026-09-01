@@ -153,9 +153,10 @@ route. A device-independent launcher state machine owns those transitions, so
 keyboard, gamepad, mouse, and touch cannot follow different release-admission
 rules. Keyboard and gamepad users can move through each card page with the
 D-pad or arrow keys and activate the highlighted card with Enter, Space, South/A, or
-Start; Escape returns to the preceding card page. Press `L` or click/tap the
-visible `L: <code>` button to cycle the launcher UI language; it changes only
-Project Eon's interface, never the original release language. Mouse and touch users can
+Start; Escape returns to the preceding card page. Press `L`, click/tap the left or right
+half of the visible language button, or use gamepad Left/Right Shoulder to select the
+previous or next launcher UI language; it changes only Project Eon's interface, never
+the original release language. Mouse and touch users can
 use the visible `<<` control to go back and the release-page controls to page
 through identities.
 
@@ -179,7 +180,8 @@ and rejection diagnostics as the CLI inspection report. It never displays
 unrecognised names, paths, archive members, or original bytes.
 
 Recognised SDL gamepads provide the same launcher controls: D-pad Left/Right
-selects a card on the current page, and South/A or Start activates it. During
+selects a card on the current page, Left/Right Shoulder changes the launcher UI
+language, and South/A or Start activates it. During
 the recovered Deuteros Amiga opening, hold South/A for
 the same verified physical input signal as Space/Enter; it is not mapped to any
 invented title or gameplay action.
