@@ -388,22 +388,22 @@ msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
-msgstr "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
+msgstr "ENTER: КАРТА ФУНКЦИЙ   F10 / ESC: НАЗАД К НАСТРОЙКАМ"
 
 msgid "RECOVERY FUNCTION MAP"
-msgstr "RECOVERY FUNCTION MAP"
+msgstr "КАРТА ФУНКЦИЙ ВОССТАНОВЛЕНИЯ"
 
 msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
-msgstr "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
+msgstr "ВВЕРХ/ВНИЗ: СТРАНИЦА   F10 / ESC: НАЗАД К ДИАГНОСТИКЕ"
 
 msgid "PAGE"
 msgstr "PAGE"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
-msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
+msgstr "ДЛЯ ЭТОГО ВЫПУСКА НЕТ ЗАПИСЕЙ ФУНКЦИЙ, СВЯЗАННЫХ С ХЕШЕМ."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
-msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgstr "ТОЛЬКО ДЕКЛАРАТИВНАЯ ДИАГНОСТИКА; ИСХОДНЫЙ КОД НЕ ВЫПОЛНЯЕТСЯ."
 
 msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
 msgstr "ТОЛЬКО СТАТИЧЕСКИЕ ДАННЫЕ, ПРОВЕРЕННЫЕ ХЕШЕМ — БЕЗ ВОЗВРАТА ВЫЗОВА И СОСТОЯНИЯ ВЫПОЛНЕНИЯ."
@@ -426,10 +426,10 @@ msgid "Discovering files: "
 msgstr "Поиск файлов: "
 
 msgid "MODERN PACK"
-msgstr "MODERN PACK"
+msgstr "СОВРЕМЕННЫЙ ПАКЕТ"
 
 msgid "PACK RENDER TARGETS"
-msgstr "PACK RENDER TARGETS"
+msgstr "ЦЕЛИ РЕНДЕРИНГА ПАКЕТА"
 
 msgid "Files hashed: "
 msgstr "Файлы с хешем: "

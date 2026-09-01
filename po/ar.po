@@ -349,22 +349,22 @@ msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
-msgstr "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
+msgstr "ENTER: عرض خريطة الدوال   F10 / ESC: العودة إلى الإعدادات"
 
 msgid "RECOVERY FUNCTION MAP"
-msgstr "RECOVERY FUNCTION MAP"
+msgstr "خريطة دوال الاسترداد"
 
 msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
-msgstr "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
+msgstr "أعلى/أسفل: صفحة   F10 / ESC: العودة إلى التشخيصات"
 
 msgid "PAGE"
 msgstr "PAGE"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
-msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
+msgstr "لا توجد إدخالات دوال مرتبطة بالتجزئة لهذا الإصدار."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
-msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgstr "تشخيصات تعريفية فقط؛ لا ينفذ هذا الرمز الأصلي."
 
 msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
 msgstr "أدلة ثابتة موثقة بالتجزئة فقط؛ لا نتيجة استدعاء ولا حالة تشغيل."
@@ -387,10 +387,10 @@ msgid "Discovering files: "
 msgstr "اكتشاف الملفات: "
 
 msgid "MODERN PACK"
-msgstr "MODERN PACK"
+msgstr "حزمة حديثة"
 
 msgid "PACK RENDER TARGETS"
-msgstr "PACK RENDER TARGETS"
+msgstr "أهداف عرض الحزمة"
 
 msgid "Files hashed: "
 msgstr "الملفات المُجزأة: "

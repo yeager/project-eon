@@ -388,22 +388,22 @@ msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
-msgstr "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
+msgstr "ENTER: ПЕРЕГЛЯНУТИ МАПУ ФУНКЦІЙ   F10 / ESC: НАЗАД ДО НАЛАШТУВАНЬ"
 
 msgid "RECOVERY FUNCTION MAP"
-msgstr "RECOVERY FUNCTION MAP"
+msgstr "МАПА ФУНКЦІЙ ВІДНОВЛЕННЯ"
 
 msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
-msgstr "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
+msgstr "ВГОРУ/ВНИЗ: СТОРІНКА   F10 / ESC: НАЗАД ДО ДІАГНОСТИКИ"
 
 msgid "PAGE"
 msgstr "PAGE"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
-msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
+msgstr "ДЛЯ ЦЬОГО ВИПУСКУ НЕМАЄ ЗАПИСІВ ФУНКЦІЙ, ПРИВ'ЯЗАНИХ ДО ХЕШУ."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
-msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgstr "ЛИШЕ ДЕКЛАРАТИВНА ДІАГНОСТИКА; ОРИГІНАЛЬНИЙ КОД НЕ ВИКОНУЄТЬСЯ."
 
 msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
 msgstr "ЛИШЕ СТАТИЧНІ ДОКАЗИ, ПЕРЕВІРЕНІ ХЕШЕМ — БЕЗ ПОВЕРНЕННЯ ВИКЛИКУ АБО СТАНУ ВИКОНАННЯ."
@@ -426,10 +426,10 @@ msgid "Discovering files: "
 msgstr "Пошук файлів: "
 
 msgid "MODERN PACK"
-msgstr "MODERN PACK"
+msgstr "СУЧАСНИЙ ПАКЕТ"
 
 msgid "PACK RENDER TARGETS"
-msgstr "PACK RENDER TARGETS"
+msgstr "ЦІЛІ РЕНДЕРИНГУ ПАКЕТА"
 
 msgid "Files hashed: "
 msgstr "Хешовані файли: "
