@@ -5574,6 +5574,35 @@ int main(int argc, char** argv) {
                     tr("INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED."));
                 draw_text(renderer, 64, 268,
                     tr("NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM."));
+                if (deuteros_atari_session) {
+                    // This panel consumes only byte-validated facts retained by
+                    // the admitted session.  In particular, it neither selects
+                    // a protected boot state nor crosses the XBIOS/raw-read
+                    // boundary to fabricate an interactive presentation.
+                    const auto& boot = deuteros_atari_session->boot();
+                    const auto& copy = deuteros_atari_session->first_stage_copy_execution();
+                    const auto& entry = deuteros_atari_session->entry_execution();
+                    std::ostringstream stages;
+                    stages << tr("BOOT STAGES") << ": SHA-256 "
+                           << deuteros_atari_session->first_stage_sha256().substr(0, 16)
+                           << " / " << deuteros_atari_session->second_stage_sha256().substr(0, 16)
+                           << "; +0x" << std::hex << boot.first_stage_offset << "/0x"
+                           << boot.first_stage_length;
+                    draw_text(renderer, 64, 292, stages.str());
+                    std::ostringstream relocation;
+                    relocation << tr("BOOT COPY") << ": 0x" << std::hex
+                               << copy.source_address << " -> 0x" << copy.destination_address
+                               << " -> 0x" << copy.relocated_entry_address;
+                    draw_text(renderer, 64, 308, relocation.str());
+                    std::ostringstream dispatcher;
+                    dispatcher << tr("ENTRY PREFIX") << ": +0x" << std::hex << entry.join_offset
+                               << " -> 0x" << entry.dispatcher_entry
+                               << "; " << tr("STOP BEFORE") << " +0x"
+                               << entry.stop_before_dispatcher_source_offset;
+                    draw_text(renderer, 64, 324, dispatcher.str());
+                    draw_text(renderer, 64, 340,
+                        tr("STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."));
+                }
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
                 const auto source_tick = deuteros_opening->ticks();

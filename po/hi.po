@@ -394,3 +394,18 @@ msgstr "PACK RENDER TARGETS"
 
 msgid "Files hashed: "
 msgstr "हैश की गई फ़ाइलें: "
+
+msgid "BOOT STAGES"
+msgstr "बूट चरण"
+
+msgid "BOOT COPY"
+msgstr "बूट प्रतिलिपि"
+
+msgid "ENTRY PREFIX"
+msgstr "प्रवेश उपसर्ग"
+
+msgid "STOP BEFORE"
+msgstr "पहले रोकें"
+
+msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
+msgstr "केवल स्थिर बूट साक्ष्य — कोई XBIOS, रॉ रीड, स्थिति चयन, शीर्षक या गेमप्ले नहीं।"

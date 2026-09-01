@@ -66,6 +66,21 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("absent from this verified outer release", SOURCE)
         self.assertIn("no physical-media fallback or substitution", SOURCE)
 
+    def test_deuteros_atari_bootstrap_panel_uses_only_admitted_static_evidence(self) -> None:
+        """The Atari launch panel must stop at the verified boot boundary."""
+        panel_start = SOURCE.index('tr("VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY")')
+        panel_end = SOURCE.index('} else if (selected == eon::Game::deuteros && preview_texture', panel_start)
+        panel = SOURCE[panel_start:panel_end]
+        self.assertIn("if (deuteros_atari_session)", panel)
+        self.assertIn("deuteros_atari_session->boot()", panel)
+        self.assertIn("first_stage_copy_execution()", panel)
+        self.assertIn("entry_execution()", panel)
+        self.assertIn("first_stage_sha256()", panel)
+        self.assertIn("second_stage_sha256()", panel)
+        self.assertIn('tr("STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY.")', panel)
+        self.assertNotIn("state_selection_layout()", panel)
+        self.assertNotIn("raw_reader_call_layout()", panel)
+
     def test_ambiguous_or_missing_platform_cards_cannot_start_a_game(self) -> None:
         self.assertIn("release_is_selected()", ROUTE_SOURCE)
         self.assertIn("resolve_launch_request_identity(*candidate, releases)", ROUTE_SOURCE)
