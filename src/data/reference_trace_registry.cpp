@@ -19,6 +19,37 @@ constexpr std::array<ReferenceTraceAdapterDescriptor, 10> registry{{
     {"deuteros-amiga-en-title-display-artifacts-v5", "project-eon-reference-trace-v5", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03", ReferenceTraceRuntimePolicy::diagnostics_only, {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
 }};
 
+constexpr bool lowercase_sha256(const std::string_view value) {
+    if (value.size() != 64) return false;
+    for (const char character : value) {
+        if (!((character >= '0' && character <= '9')
+                || (character >= 'a' && character <= 'f'))) return false;
+    }
+    return true;
+}
+
+constexpr bool registry_is_valid() {
+    for (const auto& descriptor : registry) {
+        if (descriptor.wire_id.empty() || descriptor.format.empty() || descriptor.language.empty()
+            || !lowercase_sha256(descriptor.release_sha256)
+            || (!descriptor.source_media_sha256.empty()
+                && !lowercase_sha256(descriptor.source_media_sha256))
+            || (!descriptor.source_stage_sha256.empty()
+                && !lowercase_sha256(descriptor.source_stage_sha256))
+            || descriptor.recovery_entry_count > descriptor.recovery_entry_ids.size()) {
+            return false;
+        }
+        for (std::size_t index = 0; index < descriptor.recovery_entry_count; ++index) {
+            if (descriptor.recovery_entry_ids[index].empty()) return false;
+        }
+    }
+    return true;
+}
+
+// The registry is source-of-truth preservation data. Reject a malformed
+// literal at compile time so it cannot turn into a runtime capture failure.
+static_assert(registry_is_valid());
+
 } // namespace
 
 std::string_view reference_trace_runtime_policy_label(const ReferenceTraceRuntimePolicy policy) {
