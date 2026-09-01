@@ -274,6 +274,25 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
                 TOOL.normal_core_history_boundary_status(
                     history, results, "v14-normal-core-history", "known-unhandled-interrupt")
 
+    def test_v19_int93_receipt_reads_only_a_bounded_regular_event_stream(self) -> None:
+        """The vector boundary cannot turn an external sidecar into unbounded I/O."""
+        with temporary_directory() as directory:
+            root = Path(directory)
+            events = root / "events.raw"
+            results = root / "results.raw"
+            results.write_bytes(TOOL.KNOWN_V11_EARLY_STOP_RAW)
+            events.write_bytes(TOOL.KNOWN_V19_INT93_EVENT)
+            self.assertIn("int93_vector=observed-zero-ivt-target\n", TOOL.int93_vector_status(
+                events, results, "v19-int93-vector", "known-unhandled-interrupt"))
+            events.unlink()
+            events.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.int93_vector_status(events, results, "v19-int93-vector", "known-unhandled-interrupt")
+            events.unlink()
+            events.write_bytes(b"x" * (TOOL.MAX_RAW_OBSERVATION_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.int93_vector_status(events, results, "v19-int93-vector", "known-unhandled-interrupt")
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""
         with temporary_directory() as directory:

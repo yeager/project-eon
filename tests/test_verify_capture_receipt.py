@@ -195,6 +195,9 @@ class ReceiptVerifierTests(unittest.TestCase):
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "11")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "12")
         TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, "13")
+        for version in ("14", "15", "16", "17", "18", "19"):
+            with self.subTest(version=version):
+                TOOL.verify_console_admission({"recorder_console_over_limit": "false"}, version)
         TOOL.verify_console_admission({}, "3")
         with self.assertRaisesRegex(ValueError, "safety cap"):
             TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "4")
