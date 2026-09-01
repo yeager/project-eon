@@ -4695,6 +4695,79 @@ int main(int argc, char** argv) {
         return request.presentation == eon::Presentation::modern
             ? modern_graphics_option_count : original_display_option_count;
     };
+    const auto modal_pointer_position = [&](const SDL_Event& event) -> std::optional<SDL_FPoint> {
+        // A touchscreen can synthesize a mouse click. Admit exactly one of
+        // those representations so one physical tap cannot change a renderer
+        // setting twice. Both forms use renderer coordinates and are consumed
+        // by the F10 modal before they can reach recovered input handling.
+        float window_x = 0.0F;
+        float window_y = 0.0F;
+        if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.which != SDL_TOUCH_MOUSEID) {
+            window_x = event.button.x;
+            window_y = event.button.y;
+        } else if (event.type == SDL_EVENT_FINGER_DOWN) {
+            int window_width = 0;
+            int window_height = 0;
+            SDL_GetWindowSize(window, &window_width, &window_height);
+            window_x = event.tfinger.x * static_cast<float>(window_width);
+            window_y = event.tfinger.y * static_cast<float>(window_height);
+        } else {
+            return std::nullopt;
+        }
+        SDL_FPoint position{};
+        if (!SDL_RenderCoordinatesFromWindow(renderer, window_x, window_y, &position.x, &position.y)) {
+            return std::nullopt;
+        }
+        return position;
+    };
+    const auto recovery_function_map_page_count = [&] {
+        constexpr std::size_t rows_per_page = 3;
+        const auto function_count = current_modern_runtime_diagnostics().recovery_functions.size();
+        return std::max<std::size_t>(1, (function_count + rows_per_page - 1U) / rows_per_page);
+    };
+    const auto handle_modal_pointer_down = [&](const float x, const float y) {
+        // F10's pages are launcher-only. This handler deliberately has no
+        // route to runtime input, original media, or session state.
+        if (!inside(modern_graphics_popup_bounds, x, y)) {
+            if (show_modern_runtime_diagnostics) {
+                if (show_recovery_function_map) show_recovery_function_map = false;
+                else show_modern_runtime_diagnostics = false;
+            } else {
+                close_modern_graphics_settings();
+            }
+            return;
+        }
+        if (show_modern_runtime_diagnostics) {
+            if (!show_recovery_function_map) {
+                // The visible ENTER prompt occupies this header band; pointer
+                // activation is equivalent to Enter, not an alternate source
+                // of diagnostic data.
+                if (y >= 192.0F && y <= 224.0F) {
+                    show_recovery_function_map = true;
+                    recovery_function_map_page = 0;
+                }
+                return;
+            }
+            // The function-map header has no mutable data. Its left/right
+            // halves page the same read-only rows as Up/Down; any body tap
+            // returns to the diagnostics page like Escape/F10.
+            if (y >= 192.0F && y <= 252.0F) {
+                const auto page_count = recovery_function_map_page_count();
+                recovery_function_map_page = x < 640.0F
+                    ? (recovery_function_map_page + page_count - 1U) % page_count
+                    : (recovery_function_map_page + 1U) % page_count;
+            } else {
+                show_recovery_function_map = false;
+            }
+            return;
+        }
+        const auto first_row_top = modern_graphics_option_first_baseline - 22.0F;
+        const auto row = static_cast<int>((y - first_row_top) / modern_graphics_option_stride);
+        if (row >= 0 && row < visible_graphics_option_count()) {
+            modern_graphics_settings.focused_option = row;
+            change_modern_graphics_option(1);
+        }
+    };
     std::optional<std::uint64_t> last_capped_present_ns;
     bool running = true;
     while (running) {
@@ -4810,10 +4883,7 @@ int main(int argc, char** argv) {
                     } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
                         && show_recovery_function_map
                         && (event.key.key == SDLK_UP || event.key.key == SDLK_DOWN)) {
-                        constexpr std::size_t rows_per_page = 3;
-                        const auto function_count = current_modern_runtime_diagnostics().recovery_functions.size();
-                        const auto page_count = std::max<std::size_t>(1,
-                            (function_count + rows_per_page - 1U) / rows_per_page);
+                        const auto page_count = recovery_function_map_page_count();
                         recovery_function_map_page = event.key.key == SDLK_UP
                             ? (recovery_function_map_page + page_count - 1U) % page_count
                             : (recovery_function_map_page + 1U) % page_count;
@@ -4821,9 +4891,8 @@ int main(int argc, char** argv) {
                         && event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK) {
                         if (show_recovery_function_map) show_recovery_function_map = false;
                         else show_modern_runtime_diagnostics = false;
-                    } else if (event.type == SDL_EVENT_FINGER_DOWN) {
-                        if (show_recovery_function_map) show_recovery_function_map = false;
-                        else show_modern_runtime_diagnostics = false;
+                    } else if (const auto pointer = modal_pointer_position(event)) {
+                        handle_modal_pointer_down(pointer->x, pointer->y);
                     }
                 } else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
                     if (event.key.key == SDLK_ESCAPE) {
@@ -4853,30 +4922,8 @@ int main(int argc, char** argv) {
                         change_modern_graphics_option(
                             event.gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT ? -1 : 1);
                     }
-                } else if (event.type == SDL_EVENT_FINGER_DOWN) {
-                    // Touch is needed to complete the Custom route on iPad.
-                    // Resolve it in renderer space, just as card input does,
-                    // and consume the event before it can become a recovered
-                    // opening signal.  A row cycles its renderer-only value;
-                    // tapping outside closes the launcher-owned modal.
-                    int window_width = 0;
-                    int window_height = 0;
-                    SDL_GetWindowSize(window, &window_width, &window_height);
-                    float x = 0, y = 0;
-                    SDL_RenderCoordinatesFromWindow(renderer,
-                        event.tfinger.x * static_cast<float>(window_width),
-                        event.tfinger.y * static_cast<float>(window_height), &x, &y);
-                    if (!inside(modern_graphics_popup_bounds, x, y)) {
-                        close_modern_graphics_settings();
-                    } else {
-                        const auto first_row_top = modern_graphics_option_first_baseline - 22.0F;
-                        const auto row = static_cast<int>((y - first_row_top)
-                            / modern_graphics_option_stride);
-                        if (row >= 0 && row < visible_graphics_option_count()) {
-                            modern_graphics_settings.focused_option = row;
-                            change_modern_graphics_option(1);
-                        }
-                    }
+                } else if (const auto pointer = modal_pointer_position(event)) {
+                    handle_modal_pointer_down(pointer->x, pointer->y);
                 }
                 continue;
             }

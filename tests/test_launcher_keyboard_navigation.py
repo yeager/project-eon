@@ -440,13 +440,18 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # cards as a pointer click, without accepting SDL's compatibility
         # touch-mouse event a second time.
         handler = SOURCE.index("const auto handle_menu_pointer_down")
-        mouse = SOURCE.index("event.type == SDL_EVENT_MOUSE_BUTTON_DOWN", handler)
+        modal_pointer = SOURCE.index("const auto modal_pointer_position", handler)
+        mouse = SOURCE.index("event.type == SDL_EVENT_MOUSE_BUTTON_DOWN", modal_pointer)
         finger = SOURCE.index("event.type == SDL_EVENT_FINGER_DOWN", mouse)
+        modal_handler = SOURCE[modal_pointer:SOURCE.index("std::optional<std::uint64_t> last_capped_present_ns", modal_pointer)]
         self.assertIn("SDL_TOUCH_MOUSEID", SOURCE[mouse:finger])
-        self.assertIn("handle_menu_pointer_down(x, y);", SOURCE[mouse:finger])
         self.assertIn("SDL_GetWindowSize(window", SOURCE[finger:finger + 700])
         self.assertIn("SDL_RenderCoordinatesFromWindow", SOURCE[finger:finger + 700])
-        self.assertIn("handle_menu_pointer_down(x, y);", SOURCE[finger:finger + 700])
+        self.assertIn("handle_modal_pointer_down", modal_handler)
+        # The menu's own route stays separate and is reached after the F10
+        # modal consumes pointer events.
+        menu_mouse = SOURCE.index("if (screen == Screen::menu && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN", finger)
+        self.assertIn("handle_menu_pointer_down(x, y);", SOURCE[menu_mouse:menu_mouse + 1100])
 
     def test_save_inspection_reports_recovered_original_columns(self) -> None:
         # --inspect-save must be useful to preservation work: expose the
