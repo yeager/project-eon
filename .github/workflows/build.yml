@@ -12,12 +12,12 @@ on:
 permissions:
   contents: read
 
-# Main receives frequent small, self-contained preservation updates.  Superseded
-# platform matrices add no signal and can otherwise keep the current revision
-# waiting behind obsolete runs.
+# Main receives frequent, self-contained preservation updates.  Keep an active
+# platform matrix running so every pushed revision is actually checked; GitHub
+# queues the newest follow-up run instead of cancelling useful evidence.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 # Every source-built CI dependency is fetched by immutable Git object ID.
 # Each object ID resolves to the respective upstream release tag: SDL
