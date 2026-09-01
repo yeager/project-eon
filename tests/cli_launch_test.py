@@ -308,6 +308,31 @@ def main() -> int:
             f"{launch_check_json.stdout}\n{launch_check_json.stderr}"
         )
 
+    # An explicit original-language selection narrows the release universe
+    # before choosing a default outer hash.  Spanish is unique in this real
+    # data set even though English remains the no-language default, so it
+    # must start without an unnecessary hash flag and without selecting its
+    # English sibling first.
+    spanish_language_launch = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--release-language", "es", "--launch-check-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        spanish_language_payload = json.loads(spanish_language_launch.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(
+            f"Spanish language-scoped launch check did not emit JSON: {error}"
+        ) from error
+    if (spanish_language_launch.returncode != 0
+            or spanish_language_payload.get("release", {}).get("language") != "es"
+            or spanish_language_payload.get("release", {}).get("sha256")
+                != "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4"):
+        raise SystemExit(
+            "an explicit Spanish original-language selection did not resolve its unique release:\n"
+            f"{spanish_language_launch.stdout}\n{spanish_language_launch.stderr}"
+        )
+
     # A platform card is not itself a release identity.  Exercise every
     # recognised archive through the directory scanner with both immutable
     # fields explicit.  This matters most for Millennium DOS: English and
