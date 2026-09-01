@@ -467,6 +467,14 @@ def normal_core_anomaly_status(path: Path, results_path: Path, recorder_protocol
 def int93_vector_status(events_path: Path, results_path: Path, recorder_protocol: str,
                         termination_reason: str) -> str:
     if recorder_protocol != "v19-int93-vector": return ""
+    try:
+        info = events_path.lstat()
+    except FileNotFoundError as error:
+        raise CaptureError("v19 event stream is absent") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("v19 event stream is not a regular non-symlink file")
+    if info.st_size > MAX_RAW_OBSERVATION_BYTES:
+        raise CaptureError("v19 event stream exceeds the bounded recorder contract")
     raw = events_path.read_bytes()
     if termination_reason == "known-unhandled-interrupt" and \
             (not known_v11_early_stop_receipt(results_path) or not raw.endswith(KNOWN_V19_INT93_EVENT)):
@@ -485,7 +493,7 @@ def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     labels: list[str] = []
     for expected, line in enumerate(text.splitlines(keepends=True), start=1):
         title_poll = (TITLE_INPUT_POLL_LINE.fullmatch(line)
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"} and " title-input-poll " in line
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"} and " title-input-poll " in line
                       else None)
         match = title_poll or (V12_PREDECESSOR_FAULT_LINE.fullmatch(line)
             if recorder_protocol == "v12-predecessor" and " fault=" in line
@@ -520,7 +528,7 @@ def title_input_poll_ordinals(path: Path, recorder_protocol: str = "v11") -> lis
     exact original INT 21h/AH=06h call. It is not an input-delivery receipt,
     and its absence cannot be replaced by a synthesized poll or frame.
     """
-    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
+    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
         return []
     try:
         text = path.read_text(encoding="ascii")
@@ -550,7 +558,7 @@ def title_input_checkpoint_status(results_path: Path, input_receipt_path: Path,
     title action. The receipt calls it a correlation only, and rejects an
     impossible recorder ordinal beyond the independently recorded host keys.
     """
-    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
+    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
         return ""
     polls = title_input_poll_ordinals(results_path, recorder_protocol)
     try:
