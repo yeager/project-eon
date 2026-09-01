@@ -739,6 +739,15 @@ next admissible investigation is a separately reviewed, read-only origin
 observer for the control transfer into that context; bypassing the callback or
 synthesizing a return remains forbidden.
 
+For an early `known-unhandled-interrupt` stop, the capture verifier now admits
+this sidecar only if all sixteen tuples match that twice-observed sequence and
+the separate raw fault is the established `f000:ca64` default-callback receipt.
+It records the non-semantic boundary label
+`observed-zero-context-to-default-callback`. This binds the diagnostic to its
+actual evidence rather than treating arbitrary grammar-valid tuples as the
+same boundary. It remains capture-tool metadata only and is not a runtime,
+reference-trace, loader, mapping, or gameplay assertion.
+
 Read-only static inspection adds one negative mapping result. Under the
 already established flat COM-style `IP - 0x100` file-offset convention,
 `0e70:18e4` and `0e70:1900` correspond to `TITLES.EXE` offsets `0x17e4` and

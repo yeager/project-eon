@@ -244,6 +244,12 @@ def verify_millennium_normal_core_history(fields: dict[str, str], directory: Pat
     if fields.get("termination_reason") == "known-unhandled-interrupt" and \
             fields.get("normal_core_history") != "present":
         raise ValueError("v14 early stop requires a normal-core history record")
+    expected_boundary = tool.normal_core_history_boundary_status(
+        directory / "normal-core-history.raw", directory / "results.raw",
+        "v14-normal-core-history", fields.get("termination_reason", ""))
+    expected_boundary_fields = dict(line.split("=", 1) for line in expected_boundary.splitlines())
+    if any(fields.get(key) != value for key, value in expected_boundary_fields.items()):
+        raise ValueError("normal-core history boundary receipt mismatch")
 
 
 def verify(kind: str, directory: Path) -> None:

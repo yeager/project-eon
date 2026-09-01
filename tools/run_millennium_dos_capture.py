@@ -97,6 +97,9 @@ TITLE_INPUT_POLL_LINE = re.compile(
 NORMAL_CORE_HISTORY_LINE = re.compile(
     r"normal-core-history-v1 count=([1-9]|1[0-6]) entries="
     r"([0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}(?:,[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}){0,15})\n")
+KNOWN_V14_NORMAL_CORE_HISTORY = tuple(
+    [f"0e70:{ip:04x}:00000000" for ip in range(0x18e4, 0x1901, 2)]
+    + ["f000:ca60:fe380300"])
 # The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
 # grammar authenticates the bounded external receipt shape only; it does not
 # claim DOS accepted a key or assign its original-game meaning.
@@ -364,14 +367,12 @@ def raw_observation_status(path: Path, name: str, recorder_protocol: str = "v11"
     return f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
 
 
-def normal_core_history_status(path: Path, recorder_protocol: str) -> str:
-    """Bind v14's one bounded normal-core sidecar without decoding game state."""
-    if recorder_protocol != "v14-normal-core-history":
-        return ""
+def normal_core_history_entries(path: Path) -> tuple[str, ...]:
+    """Return one canonical recorder-owned history record as opaque tuples."""
     try:
         info = path.lstat()
     except FileNotFoundError:
-        return "normal_core_history=absent\n"
+        raise CaptureError("normal-core history is absent")
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
         raise CaptureError("normal-core history is not a regular non-symlink file")
     if not 0 < info.st_size <= MAX_NORMAL_CORE_HISTORY_BYTES:
@@ -389,11 +390,40 @@ def normal_core_history_status(path: Path, recorder_protocol: str) -> str:
     entries = match.group(2).split(",")
     if len(entries) != int(match.group(1)):
         raise CaptureError("normal-core history count does not match entries")
+    return tuple(entries)
+
+
+def normal_core_history_status(path: Path, recorder_protocol: str) -> str:
+    """Bind v14's one bounded normal-core sidecar without decoding game state."""
+    if recorder_protocol != "v14-normal-core-history":
+        return ""
+    try:
+        entries = normal_core_history_entries(path)
+    except CaptureError as error:
+        if str(error) == "normal-core history is absent":
+            return "normal_core_history=absent\n"
+        raise
     digest, size = sha256_file(path)
     return ("normal_core_history=present\n"
             f"normal_core_history_sha256={digest}\n"
             f"normal_core_history_bytes={size}\n"
             f"normal_core_history_entries={len(entries)}\n")
+
+
+def normal_core_history_boundary_status(history_path: Path, results_path: Path,
+                                        recorder_protocol: str,
+                                        termination_reason: str) -> str:
+    """Admit V14's observed fault boundary without assigning it game meaning."""
+    if recorder_protocol != "v14-normal-core-history" or termination_reason != "known-unhandled-interrupt":
+        return ""
+    if not known_v11_early_stop_receipt(results_path):
+        raise CaptureError("v14 history requires the exact known callback fault receipt")
+    entries = normal_core_history_entries(history_path)
+    if entries != KNOWN_V14_NORMAL_CORE_HISTORY:
+        raise CaptureError("v14 history does not match the observed zero-context callback boundary")
+    return ("normal_core_history_boundary=observed-zero-context-to-default-callback\n"
+            f"normal_core_history_first={entries[0]}\n"
+            f"normal_core_history_last={entries[-1]}\n")
 
 
 def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
@@ -760,6 +790,9 @@ def run_capture(args: argparse.Namespace) -> Path:
                               + raw_observation_status(output / "results.raw", "results_raw", args.recorder_protocol))
         history_status = normal_core_history_status(output / "normal-core-history.raw",
                                                     args.recorder_protocol)
+        history_boundary_status = normal_core_history_boundary_status(
+            output / "normal-core-history.raw", output / "results.raw", args.recorder_protocol,
+            termination_reason)
         title_checkpoint_status = title_input_checkpoint_status(output / "results.raw",
             output / "host-input-receipt.raw", args.recorder_protocol)
         write_exclusive(output / "run-status.txt",
@@ -773,7 +806,8 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("source_release", (after_hash, after_size))
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
-                        + receipt_status + observation_status + history_status + title_checkpoint_status
+                        + receipt_status + observation_status + history_status + history_boundary_status
+                        + title_checkpoint_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
