@@ -51,6 +51,7 @@
 #include "data/millennium_dos_reference_trace.hpp"
 #include "data/millennium_amiga_reference_trace.hpp"
 #include "data/reference_trace.hpp"
+#include "data/reference_trace_registry.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
 #include "presentation/modern_presentation_pipeline.hpp"
 #include "data/modern_asset_pack.hpp"
@@ -4976,6 +4977,27 @@ int main() {
     // Admission consumes a complete strict trace into a fresh, call-free
     // session. The strings are grammar fixtures only, not captured media;
     // genuine use additionally requires validate_reference_trace provenance.
+    {
+        // Every declarative trace descriptor is itself an admission boundary.
+        // A truncated media identity must be rejected by this invariant before
+        // it can make a real capture impossible to validate.
+        const auto is_sha256 = [](const std::string_view value) {
+            return value.size() == 64 && std::all_of(value.begin(), value.end(), [](const char character) {
+                return (character >= '0' && character <= '9')
+                    || (character >= 'a' && character <= 'f');
+            });
+        };
+        for (const auto& descriptor : eon::reference_trace_adapter_registry()) {
+            assert(is_sha256(descriptor.release_sha256));
+            if (!descriptor.source_media_sha256.empty()) assert(is_sha256(descriptor.source_media_sha256));
+            if (!descriptor.source_stage_sha256.empty()) assert(is_sha256(descriptor.source_stage_sha256));
+        }
+        const auto* title_display_v5 = eon::reference_trace_adapter_descriptor(
+            "deuteros-amiga-en-title-display-artifacts-v5");
+        assert(title_display_v5);
+        assert(title_display_v5->source_media_sha256
+            == "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+    }
     {
         constexpr std::string_view valid_gx_trace =
             "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n"
