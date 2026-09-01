@@ -858,6 +858,17 @@ The V21 recorder is externally hash-bound to SHA-256
 about one observed transaction, not a private DOS ABI, title action, frame,
 audio result, state transition, or parity claim.
 
+On 2026-09-01, the first V21 read-only capture was independently accepted by
+`verify_capture_receipt.py`. It binds the recognised English archive, the V21
+binary above, and a generated `svga_s3` configuration. The bounded route ended
+at the existing known-unhandled-interrupt stop in 0.61 seconds (`exit_status=126`)
+with the exact existing eight-record result receipt SHA-256
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`, no host
+input receipt, and `int93_installation=absent`. Thus neither reviewed installer
+site was reached before this route's established boundary. It does not prove
+that no installer exists elsewhere, nor change any existing handler, title,
+input, display, audio, or gameplay boundary.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the

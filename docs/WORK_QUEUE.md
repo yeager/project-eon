@@ -48,10 +48,13 @@ the current P0 boundary to the unproven transfer into the `0e70` context. Two
 later V20 transfer-observer receipts independently retain the same one-step
 normal-core adjacency, `0000:0001 ca00f00e` to `0e70:fffe 00000000` (sidecar
 SHA-256 `b4434953ad218801db9b3966d9d2be226b0261c7d4a87316c58feb8599472236`).
-The V21 installer observer is now prepared to retain one verified original
-`INT 21h/AH=25h` vector-$93 transaction at either known installation site, if
-an operator capture reaches it. Absence is explicit rather than synthesized;
-no V21 capture has yet demonstrated an installation, handler, or dispatch.
+The first independently verified V21 capture reached the existing eight-record
+`INT 6` boundary in 0.61 seconds and retained `int93_installation=absent`.
+Thus neither reviewed original installer site executes on that route before the
+known stop. The observer remains prepared to retain one verified original
+`INT 21h/AH=25h` vector-$93 transaction at either site if a later capture
+reaches it. Absence is explicit rather than synthesized and demonstrates no
+installation, handler, or dispatch.
 It does not authorize a callback bypass, guest-memory repair, inferred mapping,
 or a gameplay claim: the exact original vector installation/dispatch path and
 a navigable trace remain the rank-1 missing evidence.
