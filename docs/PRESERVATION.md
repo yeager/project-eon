@@ -2145,9 +2145,9 @@ boot block
       JMP 0x21734
 ```
 
-The main loader at `$21932` indexes five disk offsets at `$21708`:
-`0x1b800`, `0x4ba00`, `0x37000`, `0x59600`, and `0x6e000`. The first two are
-verified bundles:
+The main loader at `$21932` computes an unchecked `D0 × 4` address from
+`$21708`. Caller-connected recovered paths prove only selectors zero and one,
+which name these verified bundles:
 
 | Disk offset | Length | Objects | Mode |
 | ---: | ---: | ---: | ---: |
@@ -2158,6 +2158,13 @@ Each 60-byte header has a big-endian length, object count, seven relative
 channel pointers, six relative auxiliary pointers, and a mode word. The native
 importer rejects an out-of-range bundle or non-null pointer. See the
 [annotated disassembly](generated/deuteros-amiga-boot.md).
+
+The three following longwords (`0x37000`, `0x59600`, and `0x6e000`) are raw
+main-stage bytes adjacent to the two proven entries. Their locations begin
+with values that cannot bound a source range within the supplied system ADF.
+Eon therefore records neither as a resource-table entry, never probes it as
+media, and requires a caller-connected selection trace before extending this
+two-entry contract.
 
 The first auxiliary pointer is a palette bank. The interpreter's command 4
 multiplies its operand by 32 and copies 16 words from this bank to each active
@@ -2949,6 +2956,11 @@ the exact source table index, source ADF offset, probe/payload destinations,
 length word, and original bytes (including that length word). It rejects a
 length outside the physical ADF and returns no payload for the original zero
 retry condition. It never writes, extracts, or unpacks game data.
+
+`inspect_deuteros_amiga_main_resource_catalog` reports the two
+caller-proved, complete source spans with SHA-256 while retaining no source
+bytes. It rejects index two or above, because `$21932` alone proves no maximum
+selector and adjacent raw longwords are not a preservation-safe catalogue.
 
 The first direct consumer of that transferred memory is now bounded too.
 Routine `$2016a` saves A4, loads it with the exact transfer destination

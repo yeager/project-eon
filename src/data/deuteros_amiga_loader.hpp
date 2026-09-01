@@ -149,7 +149,10 @@ struct DeuterosAmigaLoadPlan {
     AmigaLoadStage bootstrap_loader;
     AmigaLoadStage main_stage;
     DeuterosAmigaMainStageEntry main_stage_entry;
-    std::array<std::uint32_t, 5> resource_disk_offsets{};
+    // The two resource selectors reached by caller-connected recovered
+    // paths. The $21932 instruction itself has no local bound check, so
+    // adjacent longwords are deliberately not promoted to table entries.
+    std::array<std::uint32_t, 2> resource_disk_offsets{};
     // The title's accepted-input path writes profile one to $12ffc before it
     // returns to this bootstrap. Retain the real load constants so callers
     // can hand off without guessing an unpacked game executable.
@@ -297,6 +300,25 @@ struct DeuterosAmigaMainResourceTransfer {
     std::vector<std::uint8_t> payload;
 };
 
+// One entry in the caller-proved main-resource table. This is an
+// inspection record, not a host-side replacement for the loader transfer:
+// its hash is calculated over a bounded ADF view and no resource bytes are
+// retained or materialized.
+struct DeuterosAmigaMainResourceCatalogEntry {
+    std::uint16_t resource_index = 0;
+    std::uint32_t source_disk_offset = 0;
+    std::uint32_t source_length = 0;
+    bool source_range_available = false;
+    bool original_retry_boundary = false;
+    std::string source_sha256;
+    std::string preservation_boundary;
+};
+
+struct DeuterosAmigaMainResourceCatalog {
+    std::array<DeuterosAmigaMainResourceCatalogEntry, 2> entries{};
+    std::uint64_t total_source_bytes = 0;
+};
+
 // One strictly read-only execution of the word lookup in $2016a against a
 // completed $21932 transfer. `table_offset` is a byte offset from the exact
 // payload destination ($32a24), not a host-side record number. The original
@@ -359,6 +381,13 @@ parse_deuteros_amiga_channel_request_adjacent_entry(
 [[nodiscard]] std::optional<DeuterosAmigaMainResourceTransfer>
 read_deuteros_amiga_main_resource(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index);
+
+// Inspect every caller-proved entry at the original $21708 base. Each leading
+// length word and complete source range is bounds-checked directly against
+// the supplied ADF. A zero length remains an explicit original retry boundary.
+[[nodiscard]] DeuterosAmigaMainResourceCatalog
+inspect_deuteros_amiga_main_resource_catalog(const AmigaAdf& disk,
+    const DeuterosAmigaLoadPlan& plan);
 
 // Reproduce $2016a's bounded arithmetic using only a transfer already read
 // from original media. It validates ownership, the leading length word, and

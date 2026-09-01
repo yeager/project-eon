@@ -9584,8 +9584,27 @@ int main() {
         }
         assert(rejected);
     }
-    assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 5>{
-        0x1b800, 0x4ba00, 0x37000, 0x59600, 0x6e000}));
+    assert((load_plan.resource_disk_offsets == std::array<std::uint32_t, 2>{
+        0x1b800, 0x4ba00}));
+    const auto main_resource_catalog = eon::inspect_deuteros_amiga_main_resource_catalog(
+        system_disk, load_plan);
+    assert(main_resource_catalog.entries.size() == 2);
+    assert(main_resource_catalog.entries[0].source_disk_offset == 0x1b800);
+    assert(main_resource_catalog.entries[0].source_length == 0x2f3f4);
+    assert(main_resource_catalog.entries[0].source_sha256
+        == "96c562cc08f32024a82f39c2c6c40b5407b7df4d2c674b1392fcfd594bdee1c0");
+    assert(main_resource_catalog.entries[1].source_disk_offset == 0x4ba00);
+    assert(main_resource_catalog.entries[1].source_length == 0x215f0);
+    assert(main_resource_catalog.entries[1].source_sha256
+        == "a8d3b2666a9dd0b66a06a521206443bb57dfce7f462fa134ada0fa03e669092e");
+    assert(main_resource_catalog.total_source_bytes == 0x509e4);
+    bool unproven_resource_rejected = false;
+    try {
+        static_cast<void>(eon::read_deuteros_amiga_main_resource(system_disk, load_plan, 2));
+    } catch (const std::runtime_error&) {
+        unproven_resource_rejected = true;
+    }
+    assert(unproven_resource_rejected);
 
     // The main loader's probe and body pass start at the same physical ADF
     // offset. These are in-memory copies of the genuine first two complete
