@@ -1884,6 +1884,15 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << " decoder-admitted, " << gx_catalog.bitmap_decoder_boundary_count << " explicit format boundaries, "
         << gx_catalog.decoded_pixel_count
         << " decoded indexed pixels (catalogue only; no screen semantics inferred)\n";
+    if (gx_catalog.bitmap_decoder_boundary_count != 0) {
+        std::cout << "          GX.LIB decoder boundaries:";
+        for (const auto& resource : gx_catalog.resources) {
+            if (!resource.bitmap_decoder_admitted) {
+                std::cout << ' ' << resource.name << " (" << resource.decoder_boundary << ')';
+            }
+        }
+        std::cout << " (no alternate codec or clipped output is used)\n";
+    }
     constexpr auto last_lib_sha256 =
         "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510";
     const auto last_bytes = eon::extract_verified_release_asset(release, last_lib_sha256);

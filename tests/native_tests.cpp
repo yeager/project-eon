@@ -6120,6 +6120,10 @@ int main() {
     assert(gx_catalog.resources.front().bitmap_decoder_admitted);
     assert(gx_catalog.resources[1].name == "IMG01");
     assert(gx_catalog.resources[1].bitmap_decoder_admitted);
+    assert(gx_catalog.resources[25].name == "IMG19");
+    assert(!gx_catalog.resources[25].bitmap_decoder_admitted);
+    assert(gx_catalog.resources[25].decoder_boundary == "Millennium DOS bitmap run overruns output");
+    assert(gx_catalog.resources[25].decoded_pixels_sha256.empty());
     assert(gx_catalog.resources[1].width == 320 && gx_catalog.resources[1].height == 167);
     assert(gx_catalog.resources.back().name == "IMGB3");
     assert(gameplay_canvas.canvas_logical_to_dac.size() == 68);

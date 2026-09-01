@@ -4412,8 +4412,10 @@ check. It retains each original name, range, leaf hash and—where the bounded
 codec-2 decoder accepts it—dimensions, compressed-span length and decoded
 pixel hash. A decoder rejection is recorded as an explicit per-resource format
 boundary; it does not select an alternate codec, fabricate pixels, or infer a
-screen role. The resulting inventory is diagnostics-only and discards decoded
-pixel buffers after hashing them.
+screen role. In the verified English leaf the sole current boundary is `IMG19`
+(resource 25): its codec-2 run would overrun the strict output extent by one
+pixel. The resulting inventory is diagnostics-only and discards decoded pixel
+buffers after hashing them.
 The single-entry English `LAST.LIB` is likewise hash-locked before its `last`
 bitmap and palette are decoded. Its directory shape and bitmap profile are
 additional bounded-format checks, never a substitute for original leaf identity.
