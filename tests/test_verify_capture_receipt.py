@@ -147,6 +147,24 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "chronology receipt"):
                 TOOL.verify_deuteros_raw_pc_input_chronology(fields, root)
 
+    def test_v10_deuteros_title_display_summary_is_recomputed(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=2 line=3 action=4 state=1\n", encoding="ascii")
+            display = root / "title-display.txt"
+            display.write_text(
+                "display-arm 1 cycles=10 site=0x0001eda6 input_ordinal=0 input_frame=0\n"
+                "display-write 2 cycles=11 vpos=1 hpos=2 origin=cpu register=0x0080 value=0x1234 input_ordinal=1 input_frame=2\n",
+                encoding="ascii")
+            capture = TOOL.load_tool("run_deuteros_amiga_capture")
+            fields = dict(line.split("=", 1) for line in
+                capture.title_display_receipt_status(display, root / "host-input-receipt.txt").splitlines())
+            TOOL.verify_deuteros_title_display(fields, root)
+            fields["title_display_writes"] = "2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_title_display(fields, root)
+
     def test_v5_deuteros_host_input_summary_is_recomputed_from_strict_records(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)

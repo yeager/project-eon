@@ -15,7 +15,7 @@ configuration and supplied media remain outside this repository.
 | Local package used for configuration preflight | Ubuntu `fs-uae 3.2.35-2` |
 | CPU route | A500-compatible cycle-exact 68000 loop, `src/newcpu.cpp:m68k_run_1_ce` |
 | Recorder activation | Exclusive new output named by `PROJECT_EON_FS_UAE_RAW_RECORD` |
-| Reviewed local v9 binary | aarch64 Linux, 61,505,560 bytes, SHA-256 `93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f` |
+| Reviewed local v10 binary | aarch64 Linux, 61,449,016 bytes, SHA-256 `0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec` |
 
 The FS-UAE configuration file must be passed as the positional command-line
 argument. `--config=…` is not a FS-UAE configuration-file option and is known
@@ -70,6 +70,26 @@ before the existing `amiga_send_input_event` call. It is an atomic packed
 observer value so a CPU record cannot combine a newer ordinal with an older
 frame. It does not copy action/state into the CPU record, claim an original
 poll, or imply acceptance by the guest.
+
+## Title-armed display-write receipt
+
+Recorder v10 optionally writes `PROJECT_EON_FS_UAE_DISPLAY_RECORD`. It
+arms only at the reviewed title site `$1eda6`, then records at most 2,048 CPU
+or Copper writes to a finite allow-list: COP1LC, DIW, DDF, bitplane-pointer,
+BPLCON0, BPL1MOD/BPL2MOD and COLOR registers (at most 64 writes/register).
+The protected host file is capped at 512 KiB, enough for the full bounded
+fixed-format receipt:
+
+```text
+display-arm 1 cycles=<emulated-cycle> site=0x0001eda6 input_ordinal=<0..256> input_frame=<frame>
+display-write <ordinal> cycles=<emulated-cycle> vpos=<u16> hpos=<u16> origin=<cpu|copper> register=0x<word> value=0x<word> input_ordinal=<0..256> input_frame=<frame>
+```
+
+The sequence, cycles and input ordinals are monotonic; a nonzero input pair
+must match the finite delivery receipt. The runner/verifier hash-bind the arm,
+write/register and input-link summary. A present receipt does not prove that a
+title frame was displayed or establish bitplane contents; an absent file is a
+valid v10 result and says only that this observer did not trigger.
 
 ## Physical-input delivery receipt
 
@@ -159,7 +179,9 @@ It rejects repository/media/`/tmp` output paths and headless SDL. Its only
 recorder outputs are raw PC and host-input-delivery receipts outside the
 repository. `run-status.txt` binds the post-run outer-release, Kickstart,
 reviewed-recorder and generated-configuration identities; it reports the
-optional raw-PC file by hash/size (with an 8 MiB ceiling), and explicitly says
+optional raw-PC file by hash/size (with an 8 MiB ceiling), and the optional
+title-armed display receipt by hash/size and bounded grammar summary (with a
+512 KiB ceiling), and explicitly says
 whether a receipt was created, hashing it only when nonempty and capping it at
 64 KiB. It also records a SHA-256 and byte count for the complete FS-UAE
 console while retaining at most the first 1 MiB in `recorder-console.log`.
@@ -171,7 +193,7 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-Current captures write `capture_receipt_version=9`. They bind both the complete
+New captures write `capture_receipt_version=10`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
@@ -194,7 +216,9 @@ CPU snapshot against the finite host-delivery receipt. It rejects a missing,
 mismatched, nonmonotonic, or hand-edited ordinal/frame link. State save/restore
 and playback are excluded from both the receipt and snapshot. The resulting
 link proves only that an observed host-to-core delivery preceded an observed
-probe sample. Receipt v2–v4 remain
+probe sample. Receipt v10 retains v9 raw-PC chronology and validates an
+optional title-armed display-write receipt without claiming a displayed frame.
+Receipt v2–v4 remain
 verifiable as earlier evidence, but they do not contain the newer fields.
 Verify a completed external capture without opening its game media with:
 

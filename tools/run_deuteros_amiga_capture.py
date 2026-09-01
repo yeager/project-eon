@@ -28,7 +28,7 @@ EXPECTED_RELEASE_SIZE = 4_066_771
 EXPECTED_KICKSTART_SHA256 = "c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04"
 # This is the supplied ZIP size, not the 262,144-byte ROM payload size.
 EXPECTED_KICKSTART_SIZE = 143_269
-EXPECTED_RECORDER_SHA256 = "93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f"
+EXPECTED_RECORDER_SHA256 = "0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec"
 EXPECTED_DISK1_SHA256 = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
 EXPECTED_DISK2_SHA256 = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a"
 EXPECTED_DISK1_ARCHIVE_SHA256 = "7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533"
@@ -56,6 +56,9 @@ MAX_INPUT_RECEIPT_RECORDS = 256
 # unbounded host storage.  A broken emulator must not be able to exhaust the
 # operator's terminal, disk, or cache while a capture is being reviewed.
 MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
+# 2,048 fixed-format writes can exceed 128 KiB; this remains a strict cap
+# above the reviewed finite grammar without rejecting a complete observation.
+MAX_TITLE_DISPLAY_RECEIPT_BYTES = 512 * 1024
 MAX_RECORDER_CONSOLE_LOG_BYTES = 1024 * 1024
 # Retaining only a prefix protects disk, but a pathological recorder can still
 # consume host CPU and pipe bandwidth indefinitely while the runner hashes it.
@@ -72,6 +75,8 @@ RAW_PC_SITES = (
 )
 MAX_RAW_RECORDS = 4096
 MAX_RAW_RECORDS_PER_SITE = 128
+MAX_TITLE_DISPLAY_WRITES = 2048
+MAX_TITLE_DISPLAY_WRITES_PER_REGISTER = 64
 RAW_PC_LEGACY_LINE = re.compile(
     r"raw-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
     r"opcode=0x([0-9a-f]{4}) d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) "
@@ -90,6 +95,21 @@ RAW_PC_V9_LINE = re.compile(
     r"ir_opcode=0x([0-9a-f]{4}) memory_opcode=0x([0-9a-f]{4}) "
     r"d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4}) "
     r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+# v10 has one explicit arm at the recovered title site, followed by bounded
+# writes to a deliberately small custom-chip display register allow-list.  It
+# records neither bitplane contents nor a claim that a title frame was shown.
+TITLE_DISPLAY_ARM_LINE = re.compile(
+    r"display-arm 1 cycles=([0-9]+) site=0x0001eda6 "
+    r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+TITLE_DISPLAY_WRITE_LINE = re.compile(
+    r"display-write ([1-9][0-9]*) cycles=([0-9]+) vpos=([0-9]+) hpos=([0-9]+) "
+    r"origin=(cpu|copper) register=0x([0-9a-f]{4}) value=0x([0-9a-f]{4}) "
+    r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+TITLE_DISPLAY_REGISTERS = frozenset((
+    0x0080, 0x0082, 0x008E, 0x0090, 0x0092, 0x0094,
+    *range(0x00E0, 0x00F0, 2), 0x0100, 0x0108, 0x010A,
+    *range(0x0180, 0x01C0, 2),
+))
 # The reviewed FS-UAE host-delivery observer prints raw signed integer action
 # fields. They remain opaque delivery observations; this grammar proves only
 # that an external receipt has not been hand-edited into an arbitrary file.
@@ -98,7 +118,7 @@ HOST_INPUT_LINE = re.compile(
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
 # Receipt v6 additionally binds the finite recorder timing profile. Older
 # evidence remains verifiable without pretending it has the newer field.
-CAPTURE_RECEIPT_VERSION = "9"
+CAPTURE_RECEIPT_VERSION = "10"
 
 
 class CaptureError(RuntimeError):
@@ -415,6 +435,102 @@ def raw_pc_input_chronology_status(raw_path: Path, input_path: Path) -> str:
             f"raw_pc_input_chronology_records={sum(ordinal != 0 for ordinal, _ in links)}\n")
 
 
+def _validate_title_display_input_links(links: list[tuple[int, int]], input_path: Path) -> str:
+    """Bind opaque display records to prior recorder delivery, never guest input."""
+    if not any(ordinal for ordinal, _ in links):
+        return "none"
+    by_ordinal = dict(parse_host_input_records(input_path))
+    for ordinal, frame in links:
+        if ordinal and by_ordinal.get(ordinal) != frame:
+            raise CaptureError("title-display input chronology does not match the host-input receipt")
+    return "linked"
+
+
+def parse_title_display_receipt(path: Path) -> tuple[int, dict[int, int], list[tuple[int, int]], int]:
+    """Validate v10's title-armed custom-chip write receipt without display inference."""
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("title-display receipt is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("title-display receipt has a truncated final record")
+    lines = text.splitlines(keepends=True)
+    if not lines:
+        raise CaptureError("title-display receipt has no arm record")
+    arm = TITLE_DISPLAY_ARM_LINE.fullmatch(lines[0])
+    if not arm:
+        raise CaptureError("title-display receipt must begin with the reviewed title arm")
+    arm_cycles = int(arm.group(1))
+    links = [(int(arm.group(2)), int(arm.group(3)))]
+    if links[0][0] > MAX_INPUT_RECEIPT_RECORDS:
+        raise CaptureError("title-display receipt exceeds the input-recorder ordinal cap")
+    if links[0][0] == 0 and links[0][1] != 0:
+        raise CaptureError("title-display no-input snapshot must use frame zero")
+    counts: dict[int, int] = {}
+    previous_cycles = arm_cycles
+    for expected_ordinal, line in enumerate(lines[1:], start=2):
+        match = TITLE_DISPLAY_WRITE_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("title-display receipt contains an invalid recorder record")
+        ordinal, cycles, vpos, hpos, register = (int(match.group(1)), int(match.group(2)),
+                                                   int(match.group(3)), int(match.group(4)),
+                                                   int(match.group(6), 16))
+        input_link = (int(match.group(8)), int(match.group(9)))
+        if ordinal != expected_ordinal:
+            raise CaptureError("title-display receipt record ordinals are not contiguous")
+        if cycles < previous_cycles:
+            raise CaptureError("title-display receipt cycles are not monotonic")
+        if vpos > 0xffff or hpos > 0xffff:
+            raise CaptureError("title-display receipt position exceeds the reviewed unsigned-16 range")
+        if register not in TITLE_DISPLAY_REGISTERS:
+            raise CaptureError("title-display receipt writes an unreviewed display register")
+        if input_link[0] > MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("title-display receipt exceeds the input-recorder ordinal cap")
+        if input_link[0] == 0 and input_link[1] != 0:
+            raise CaptureError("title-display no-input snapshot must use frame zero")
+        if input_link[0] < links[-1][0]:
+            raise CaptureError("title-display input ordinals are not monotonic")
+        counts[register] = counts.get(register, 0) + 1
+        if counts[register] > MAX_TITLE_DISPLAY_WRITES_PER_REGISTER:
+            raise CaptureError("title-display receipt exceeds the per-register recorder cap")
+        previous_cycles = cycles
+        links.append(input_link)
+        if expected_ordinal > MAX_TITLE_DISPLAY_WRITES + 1:
+            raise CaptureError("title-display receipt exceeds the recorder record cap")
+    return arm_cycles, counts, links, len(lines) - 1
+
+
+def title_display_receipt_status(path: Path, input_path: Path) -> str:
+    """Hash-bind v10 display observations while admitting no display conclusion."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "title_display=absent\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("title-display receipt is not a regular non-symlink file")
+    if info.st_size > MAX_TITLE_DISPLAY_RECEIPT_BYTES:
+        raise CaptureError("title-display receipt exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "title_display=empty\n"
+    arm_cycles, counts, links, writes = parse_title_display_receipt(path)
+    chronology = _validate_title_display_input_links(links, input_path)
+    digest, size = sha256_file(path)
+    register_counts = ",".join(
+        f"0x{register:04x}:{counts[register]}" for register in sorted(counts))
+    return ("title_display=present\n"
+            f"title_display_sha256={digest}\n"
+            f"title_display_bytes={size}\n"
+            "title_display_format=v10\n"
+            f"title_display_records={writes + 1}\n"
+            f"title_display_arm_cycles={arm_cycles}\n"
+            f"title_display_writes={writes}\n"
+            f"title_display_register_counts={register_counts}\n"
+            f"title_display_input_links={sum(ordinal != 0 for ordinal, _ in links)}\n"
+            f"title_display_last_input_ordinal={links[-1][0]}\n"
+            f"title_display_input_chronology={chronology}\n"
+            f"title_display_input_chronology_records={sum(ordinal != 0 for ordinal, _ in links)}\n")
+
+
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
     """Drain a console into fixed storage and signal if its total safety cap trips.
 
@@ -556,6 +672,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         environment.update({
             "PROJECT_EON_FS_UAE_RAW_RECORD": str(output / "raw-pc.txt"),
             "PROJECT_EON_FS_UAE_INPUT_RECORD": str(output / "host-input-receipt.txt"),
+            "PROJECT_EON_FS_UAE_DISPLAY_RECORD": str(output / "title-display.txt"),
         })
         print("CAPTURE PREPARED  read-only original media; physical operator input required")
         print("Focus the visible FS-UAE window by clicking it yourself; do not use terminal or automation input.")
@@ -624,6 +741,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         observation_status = raw_observation_status(raw_path, "raw_pc", "v9")
         chronology_status = (raw_pc_input_chronology_status(raw_path, input_path)
                              if "raw_pc=present\n" in observation_status else "")
+        display_status = title_display_receipt_status(output / "title-display.txt", input_path)
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
                         f"timing_profile={args.timing_profile}\n"
@@ -636,7 +754,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("disk2_archive", disk2_archive_identity)
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
-                        + receipt_status + observation_status + chronology_status
+                        + receipt_status + observation_status + chronology_status + display_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
