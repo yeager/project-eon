@@ -94,7 +94,8 @@ DeuterosAtariFirstStageProfile parse_deuteros_atari_first_stage(
     }
     // 68000 word branch displacement is relative to the extension word's
     // address. The boot stage jumps directly to $09c4.
-    const auto entry_offset = static_cast<std::size_t>(2U + be16(bytes, 2));
+    const auto entry_offset = relative_target(2U, static_cast<std::int16_t>(be16(bytes, 2)),
+        bytes.size(), "Deuteros Atari ST first-stage entry leaves stage");
     if (entry_offset != 0x9c4U || entry_offset >= bytes.size()) {
         throw std::runtime_error("Unexpected Deuteros Atari ST first-stage entry");
     }
