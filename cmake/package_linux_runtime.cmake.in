@@ -1,6 +1,15 @@
 # This script runs only while CPack installs into its private staging tree.
 # @EON_INSTALL_LIBDIR@ and @EON_INSTALL_BINDIR@ are configure-time layout
 # values; CMAKE_INSTALL_PREFIX and DESTDIR remain install-time values.
+find_program(eon_patchelf_executable NAMES patchelf)
+if(NOT eon_patchelf_executable)
+  message(FATAL_ERROR "Linux packaging requires patchelf to set the package-private runtime RUNPATH")
+endif()
+find_program(eon_strip_executable NAMES strip)
+if(NOT eon_strip_executable)
+  message(FATAL_ERROR "Linux packaging requires strip to remove staged debug sections")
+endif()
+
 file(GLOB eon_private_runtime_files
   "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/@EON_INSTALL_LIBDIR@/project-eon/libSDL3*.so*")
 foreach(eon_private_runtime_file IN LISTS eon_private_runtime_files)
@@ -8,13 +17,13 @@ foreach(eon_private_runtime_file IN LISTS eon_private_runtime_files)
     # The SDL_image/SDL_ttf CI artifacts contain /usr/local/lib. Their
     # dependencies are in this same private directory after installation.
     execute_process(
-      COMMAND patchelf --set-rpath "$ORIGIN" "${eon_private_runtime_file}"
+      COMMAND "${eon_patchelf_executable}" --set-rpath "$ORIGIN" "${eon_private_runtime_file}"
       RESULT_VARIABLE eon_rpath_result)
     if(NOT eon_rpath_result EQUAL 0)
       message(FATAL_ERROR "Unable to rewrite packaged runtime RUNPATH: ${eon_private_runtime_file}")
     endif()
     execute_process(
-      COMMAND strip --strip-unneeded "${eon_private_runtime_file}"
+      COMMAND "${eon_strip_executable}" --strip-unneeded "${eon_private_runtime_file}"
       RESULT_VARIABLE eon_strip_result)
     if(NOT eon_strip_result EQUAL 0)
       message(FATAL_ERROR "Unable to strip packaged runtime: ${eon_private_runtime_file}")
@@ -26,7 +35,7 @@ file(GLOB eon_packaged_executables
   "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/@EON_INSTALL_BINDIR@/project-eon")
 foreach(eon_packaged_executable IN LISTS eon_packaged_executables)
   execute_process(
-    COMMAND strip --strip-unneeded "${eon_packaged_executable}"
+    COMMAND "${eon_strip_executable}" --strip-unneeded "${eon_packaged_executable}"
     RESULT_VARIABLE eon_executable_strip_result)
   if(NOT eon_executable_strip_result EQUAL 0)
     message(FATAL_ERROR "Unable to strip packaged executable: ${eon_packaged_executable}")
