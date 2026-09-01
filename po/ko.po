@@ -388,22 +388,22 @@ msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
-msgstr "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
+msgstr "ENTER: 함수 맵 보기   F10 / ESC: 설정으로 돌아가기"
 
 msgid "RECOVERY FUNCTION MAP"
-msgstr "RECOVERY FUNCTION MAP"
+msgstr "복구 함수 맵"
 
 msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
-msgstr "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
+msgstr "위/아래: 페이지   F10 / ESC: 진단으로 돌아가기"
 
 msgid "PAGE"
 msgstr "PAGE"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
-msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
+msgstr "이 릴리스에 해시로 연결된 함수 항목이 없습니다."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
-msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgstr "선언형 진단 전용이며, 원본 코드를 실행하지 않습니다."
 
 msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
 msgstr "해시 검증된 정적 증거만 — 호출 반환 또는 런타임 상태 없음."
@@ -426,10 +426,10 @@ msgid "Discovering files: "
 msgstr "파일 검색 중: "
 
 msgid "MODERN PACK"
-msgstr "MODERN PACK"
+msgstr "모던 팩"
 
 msgid "PACK RENDER TARGETS"
-msgstr "PACK RENDER TARGETS"
+msgstr "팩 렌더링 대상"
 
 msgid "Files hashed: "
 msgstr "해시된 파일: "

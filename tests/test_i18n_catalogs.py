@@ -179,7 +179,9 @@ class CatalogTests(unittest.TestCase):
             "MODERN PACK",
             "PACK RENDER TARGETS",
         }
-        for language in {"de", "es", "fi", "fr", "it", "nl", "no", "pl", "pt_BR", "sv"}:
+        # English is the deliberate source-language default. Every other
+        # shipped launcher catalogue must cover this whole Eon-only page.
+        for language in CATALOGS - {"en_GB"}:
             with self.subTest(language=language):
                 catalog = po_messages(PO / f"{language}.po")
                 self.assertTrue(all(catalog.get(label) not in {None, "", label}

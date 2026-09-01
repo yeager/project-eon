@@ -349,22 +349,22 @@ msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
-msgstr "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
+msgstr "ENTER: ΠΡΟΒΟΛΗ ΧΑΡΤΗ ΣΥΝΑΡΤΗΣΕΩΝ   F10 / ESC: ΠΙΣΩ ΣΤΙΣ ΡΥΘΜΙΣΕΙΣ"
 
 msgid "RECOVERY FUNCTION MAP"
-msgstr "RECOVERY FUNCTION MAP"
+msgstr "ΧΑΡΤΗΣ ΣΥΝΑΡΤΗΣΕΩΝ ΑΝΑΚΤΗΣΗΣ"
 
 msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
-msgstr "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
+msgstr "ΠΑΝΩ/ΚΑΤΩ: ΣΕΛΙΔΑ   F10 / ESC: ΠΙΣΩ ΣΤΑ ΔΙΑΓΝΩΣΤΙΚΑ"
 
 msgid "PAGE"
 msgstr "PAGE"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
-msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
+msgstr "ΔΕΝ ΥΠΑΡΧΟΥΝ ΕΓΓΡΑΦΕΣ ΣΥΝΑΡΤΗΣΕΩΝ ΔΕΜΕΝΕΣ ΜΕ ΚΑΤΑΚΕΡΜΑΤΙΣΜΟ ΓΙΑ ΑΥΤΗΝ ΤΗΝ ΕΚΔΟΣΗ."
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
-msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgstr "ΜΟΝΟ ΔΗΛΩΤΙΚΑ ΔΙΑΓΝΩΣΤΙΚΑ· ΔΕΝ ΕΚΤΕΛΕΙΤΑΙ ΠΡΩΤΟΤΥΠΟΣ ΚΩΔΙΚΑΣ."
 
 msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
 msgstr "ΜΟΝΟ ΣΤΑΤΙΚΑ ΣΤΟΙΧΕΙΑ ΕΠΑΛΗΘΕΥΜΕΝΑ ΜΕ ΚΑΤΑΚΕΡΜΑΤΙΣΜΟ — ΧΩΡΙΣ ΕΠΙΣΤΡΟΦΗ ΚΛΗΣΗΣ Ή ΚΑΤΑΣΤΑΣΗ ΕΚΤΕΛΕΣΗΣ."
@@ -387,10 +387,10 @@ msgid "Discovering files: "
 msgstr "Εντοπισμός αρχείων: "
 
 msgid "MODERN PACK"
-msgstr "MODERN PACK"
+msgstr "ΣΥΓΧΡΟΝΟ ΠΑΚΕΤΟ"
 
 msgid "PACK RENDER TARGETS"
-msgstr "PACK RENDER TARGETS"
+msgstr "ΣΤΟΧΟΙ ΑΠΟΔΟΣΗΣ ΠΑΚΕΤΟΥ"
 
 msgid "Files hashed: "
 msgstr "Αρχεία με κατακερματισμό: "

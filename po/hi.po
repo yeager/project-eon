@@ -349,22 +349,22 @@ msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
-msgstr "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
+msgstr "ENTER: फ़ंक्शन मानचित्र देखें   F10 / ESC: सेटिंग्स पर वापस"
 
 msgid "RECOVERY FUNCTION MAP"
-msgstr "RECOVERY FUNCTION MAP"
+msgstr "पुनर्प्राप्ति फ़ंक्शन मानचित्र"
 
 msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
-msgstr "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
+msgstr "ऊपर/नीचे: पृष्ठ   F10 / ESC: निदान पर वापस"
 
 msgid "PAGE"
 msgstr "PAGE"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
-msgstr "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
+msgstr "इस रिलीज़ के लिए हैश-बद्ध फ़ंक्शन प्रविष्टियाँ नहीं हैं।"
 
 msgid "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
-msgstr "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."
+msgstr "केवल घोषणात्मक निदान; यह मूल कोड निष्पादित नहीं करता।"
 
 msgid "HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."
 msgstr "केवल हैश-सत्यापित स्थिर साक्ष्य — कोई कॉल रिटर्न या रनटाइम स्थिति नहीं।"
@@ -387,10 +387,10 @@ msgid "Discovering files: "
 msgstr "फ़ाइलें खोजी जा रही हैं: "
 
 msgid "MODERN PACK"
-msgstr "MODERN PACK"
+msgstr "आधुनिक पैक"
 
 msgid "PACK RENDER TARGETS"
-msgstr "PACK RENDER TARGETS"
+msgstr "पैक रेंडर लक्ष्य"
 
 msgid "Files hashed: "
 msgstr "हैश की गई फ़ाइलें: "
