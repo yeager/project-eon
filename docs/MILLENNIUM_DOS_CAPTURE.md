@@ -787,6 +787,16 @@ identifies a handler or supplies an ABI. The next read-only observer must bind
 the actual IVT entry at that exact original `INT 93h` call before any runtime
 work can cross this boundary.
 
+### Receipt-v19 actual INT 93h vector (diagnostics only)
+
+The V19 recorder reads the same four IVT bytes DOSBox-X will dispatch at the
+already proven `TITLES.EXE+0x0034` software interrupt. A receipt is admitted
+only when the event reports `vector_ip=0x0000 vector_cs=0x0000` and the
+separate V11 raw fault receipt is exact. This confirms the current execution
+environment has no installed INT 93h target at that call. It neither supplies
+the missing target nor assigns an ABI, title action, display result, or game
+state to the interrupt.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the

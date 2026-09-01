@@ -46,6 +46,7 @@ RECORDER_PROTOCOLS = {
     "v16-anomaly-entry": ("16", "ab5b1f42a486a7f768f33978c7504cc59fd86a4eb29f80a9041205d383ec91fa"),
     "v17-anomaly-entry": ("17", "d03e11ea48710e00d97c127f9b3d3ba5bc6f4227fafb7764e2b5950e50704ae6"),
     "v18-ivt-entry": ("18", "74420b4f8a0e2009f08b278ead1f9b36804404808b27895f327f204836d65e11"),
+    "v19-int93-vector": ("19", "487cbc3292b6b279ff0cfe444dbded64ae86c5cb174af5161ddbd052d53022f0"),
 }
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
@@ -114,6 +115,7 @@ KNOWN_V18_IVT_PRIOR = (
     "0a8d:0532:03c159c3", "0a8d:0534:59c31e06", "0a8d:0535:c31e061e", "0a8d:076b:8bd0b403",
     "0a8d:076d:b403e8bd", "0a8d:076f:e8bdf95b", "0a8d:012f:1e565755", "0a8d:0130:56575506",
     "0a8d:0131:575506cd", "0a8d:0132:5506cd93", "0a8d:0133:06cd9307", "0a8d:0134:cd93075d")
+KNOWN_V19_INT93_EVENT = b"event\t6 6 int93-vector image=titles.exe pc=0x0134 int=0x93 vector_ip=0x0000 vector_cs=0x0000\n"
 # The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
 # grammar authenticates the bounded external receipt shape only; it does not
 # claim DOS accepted a key or assign its original-game meaning.
@@ -462,6 +464,16 @@ def normal_core_anomaly_status(path: Path, results_path: Path, recorder_protocol
             f"normal_core_anomaly_target={match.group(1)}\n")
 
 
+def int93_vector_status(events_path: Path, results_path: Path, recorder_protocol: str,
+                        termination_reason: str) -> str:
+    if recorder_protocol != "v19-int93-vector": return ""
+    raw = events_path.read_bytes()
+    if termination_reason == "known-unhandled-interrupt" and \
+            (not known_v11_early_stop_receipt(results_path) or not raw.endswith(KNOWN_V19_INT93_EVENT)):
+        raise CaptureError("v19 event stream does not match the observed INT 93h zero-vector boundary")
+    return "int93_vector=observed-zero-ivt-target\n"
+
+
 def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     """Parse finite recorder diagnostics into non-semantic shape labels."""
     try:
@@ -616,7 +628,7 @@ def raw_result_status(path: Path, name: str, recorder_protocol: str = "v11") -> 
     summary = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
     status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
               f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
         polls = title_input_poll_ordinals(path, recorder_protocol)
         status += (f"{name}_title_input_polls={len(polls)}\n"
                    f"{name}_last_host_key_ordinal={polls[-1] if polls else 0}\n")
@@ -658,7 +670,7 @@ def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11
             return tuple(raw_result_labels(path, recorder_protocol)) == KNOWN_V10_EARLY_STOP_SEQUENCE
         except CaptureError:
             return False
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
         # The legacy callback-loop receipt remains a bounded diagnostic stop
         # when no title poll was reached. Any poll-bearing run stays alive for
         # the operator's configured duration so it cannot be mistaken for a
@@ -752,9 +764,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             "PROJECT_EON_DOSBOX_X_RESULT": str(output / "results.raw"),
             "PROJECT_EON_DOSBOX_X_INPUT_RECORD": str(output / "host-input-receipt.raw"),
         })
-        if args.recorder_protocol in {"v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
+        if args.recorder_protocol in {"v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
             environment["PROJECT_EON_DOSBOX_X_HISTORY_RECORD"] = str(output / "normal-core-history.raw")
-        if args.recorder_protocol in {"v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
+        if args.recorder_protocol in {"v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
             environment["PROJECT_EON_DOSBOX_X_ANOMALY_RECORD"] = str(output / "normal-core-anomaly.raw")
         print("CAPTURE PREPARED  read-only original archive; physical operator input required")
         print("Focus the visible DOSBox-X window by clicking it yourself; do not use terminal or automation input.")
@@ -833,6 +845,8 @@ def run_capture(args: argparse.Namespace) -> Path:
             termination_reason)
         anomaly_status = normal_core_anomaly_status(output / "normal-core-anomaly.raw",
             output / "results.raw", args.recorder_protocol, termination_reason)
+        int93_status = int93_vector_status(output / "events.raw", output / "results.raw",
+                                            args.recorder_protocol, termination_reason)
         title_checkpoint_status = title_input_checkpoint_status(output / "results.raw",
             output / "host-input-receipt.raw", args.recorder_protocol)
         write_exclusive(output / "run-status.txt",
@@ -847,7 +861,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
                         + receipt_status + observation_status + history_status + history_boundary_status
-                        + anomaly_status + title_checkpoint_status
+                        + anomaly_status + int93_status + title_checkpoint_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
