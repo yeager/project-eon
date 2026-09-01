@@ -454,9 +454,26 @@ std::optional<ReleaseArchive> resolve_release_identity(
     const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform,
     const std::optional<std::string>& requested_sha256,
     const std::optional<std::string>& requested_language) {
-    const auto identities = available_release_identities(releases, game, platform);
-    const auto selected_sha256 = requested_sha256
-        ? requested_sha256 : select_available_release_sha256(releases, game, platform, std::nullopt);
+    auto identities = available_release_identities(releases, game, platform);
+    // An explicit original-release language narrows the exact identity
+    // search before choosing a default hash.  The previous global default
+    // could select the unique English release and then reject it against an
+    // explicitly requested, also-unique Spanish release.  That was neither a
+    // safe ambiguity nor an intentional fallback: both identities had
+    // already been hash-verified.  Keep multiple containers for the requested
+    // language ambiguous, but admit its one exact identity without requiring
+    // a redundant SHA-256 flag.
+    if (requested_language) {
+        identities.erase(std::remove_if(identities.begin(), identities.end(),
+            [&](const auto& release) { return release.language != *requested_language; }),
+            identities.end());
+    }
+    if (identities.empty()) return std::nullopt;
+    const auto selected_sha256 = requested_sha256 ? requested_sha256
+        : requested_language
+            ? (identities.size() == 1 ? std::optional<std::string>{identities.front().sha256}
+                                      : std::nullopt)
+            : select_available_release_sha256(releases, game, platform, std::nullopt);
     if (!selected_sha256) return std::nullopt;
     const auto match = std::find_if(identities.begin(), identities.end(), [&](const auto& release) {
         return release.sha256 == *selected_sha256;
