@@ -9946,7 +9946,7 @@ int main() {
     assert(first_bitmap_catalog.records[1].height == 17);
     assert(first_bitmap_catalog.records[1].decoded_pixels_sha256
         == "fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3");
-    eon::DeuterosAmigaOpening live_opening(*amiga_disk1);
+    eon::DeuterosAmigaOpening live_opening(*amiga_disk1, *amiga_disk2);
     {
         auto altered_system_adf = *amiga_disk1;
         // The tail is outside the opening's first decoded bundles. The live
@@ -9955,7 +9955,19 @@ int main() {
         altered_system_adf.back() ^= 0x01;
         bool rejected = false;
         try {
-            static_cast<void>(eon::DeuterosAmigaOpening(std::move(altered_system_adf)));
+            static_cast<void>(eon::DeuterosAmigaOpening(
+                std::move(altered_system_adf), *amiga_disk2));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_data_adf = *amiga_disk2;
+        altered_data_adf.back() ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::DeuterosAmigaOpening(*amiga_disk1, std::move(altered_data_adf)));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
@@ -10131,7 +10143,7 @@ int main() {
     // The SDL session uses the same input contract, rather than a separately
     // scripted preview path. Holding the recovered input signal reaches the
     // same verified handoff tick and raw resource pointer.
-    eon::DeuterosAmigaOpening live_input_opening(*amiga_disk1);
+    eon::DeuterosAmigaOpening live_input_opening(*amiga_disk1, *amiga_disk2);
     assert(live_input_opening.title_handoff_route().resource_relative_offset == 0x0b38);
     assert(live_input_opening.title_handoff_route().bootstrap_profile_value == 1);
     std::optional<std::uint32_t> live_input_alternate;

@@ -271,9 +271,13 @@ std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const Verified
     const auto& release = media.release();
     if (release.game != Game::deuteros || release.platform != Platform::amiga || release.language != "en") return {};
     constexpr auto clean_system_adf = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
+    constexpr auto clean_data_adf = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a";
     try {
-        const auto image = media.extract(clean_system_adf);
-        return image ? std::make_unique<DeuterosAmigaOpening>(std::move(*image)) : nullptr;
+        const auto system_image = media.extract(clean_system_adf);
+        const auto data_image = media.extract(clean_data_adf);
+        return system_image && data_image
+            ? std::make_unique<DeuterosAmigaOpening>(std::move(*system_image), std::move(*data_image))
+            : nullptr;
     } catch (...) { return {}; }
 }
 
