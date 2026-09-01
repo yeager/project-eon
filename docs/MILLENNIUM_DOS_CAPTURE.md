@@ -834,6 +834,30 @@ turn the zero bytes into a reconstructed handler or cross this boundary at
 runtime. The missing evidence remains the original installation/dispatch path
 and a genuine navigable trace through it.
 
+### Receipt-v21 INT 93h installer transaction (diagnostics only)
+
+V21 adds an optional, one-record observer for an original DOS `Set Interrupt
+Vector` transaction for vector `$93`. It is armed only at either of two
+hash-reviewed instruction boundaries: `TITLES.EXE+0x115c` / PC `$1163`, with
+preimage `c5 16 1c 01 b8 93 25 cd 21`, or `2200AD.EXE+0x416e` / PC `$4175`,
+with preimage `c5 16 1a 01 b8 93 25 cd 21`. The external recorder additionally
+requires `AX=$2593` before it writes its exclusive/no-follow sidecar.
+
+The small ASCII sidecar reports only image, PC, `DS:DX`, the four-byte target
+preimage, and the post-DOS IVT `$93` `CS:IP`. The repository receipt parser
+admits exactly one lower-case canonical record, only those two image/PC pairs,
+and only when the IVT result equals the observed `DS:DX` pointer. An absent
+sidecar is explicitly admitted as `int93_installation=absent`: no current
+capture has established that either installation site executes before the
+known zero-vector title interrupt. It is not permission to synthesize an
+installer, a vector, a handler, or a gameplay path.
+
+The V21 recorder is externally hash-bound to SHA-256
+`18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1`
+(86,312,600 bytes). Any future present receipt remains a bounded diagnostic
+about one observed transaction, not a private DOS ABI, title action, frame,
+audio result, state transition, or parity claim.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
