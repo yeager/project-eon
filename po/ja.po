@@ -394,3 +394,18 @@ msgstr "PACK RENDER TARGETS"
 
 msgid "Files hashed: "
 msgstr "ハッシュ済みファイル: "
+
+msgid "BOOT STAGES"
+msgstr "ブート段階"
+
+msgid "BOOT COPY"
+msgstr "ブートコピー"
+
+msgid "ENTRY PREFIX"
+msgstr "エントリープレフィックス"
+
+msgid "STOP BEFORE"
+msgstr "次の前で停止"
+
+msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
+msgstr "静的なブート証拠のみ — XBIOS、RAW 読み取り、状態選択、タイトル、ゲームプレイは行いません。"

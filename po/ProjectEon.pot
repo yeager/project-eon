@@ -582,3 +582,18 @@ msgstr ""
 #: src/main.cpp
 msgid "Files hashed: "
 msgstr ""
+
+msgid "BOOT STAGES"
+msgstr ""
+
+msgid "BOOT COPY"
+msgstr ""
+
+msgid "ENTRY PREFIX"
+msgstr ""
+
+msgid "STOP BEFORE"
+msgstr ""
+
+msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
+msgstr ""
