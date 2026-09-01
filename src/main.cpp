@@ -4462,7 +4462,7 @@ int main(int argc, char** argv) {
     };
     const auto cycle_launcher_language = [&](const int direction) {
         const auto& languages = eon::supported_launcher_languages();
-        const auto current = eon::normalize_language(request.language);
+        const auto current = eon::canonical_launcher_language(request.language);
         const auto found = std::find(languages.begin(), languages.end(), current);
         const auto index = found == languages.end() ? std::size_t{0}
             : static_cast<std::size_t>(std::distance(languages.begin(), found));
@@ -5132,7 +5132,7 @@ int main(int argc, char** argv) {
             SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);
             SDL_RenderRect(renderer, &launcher_language_bounds);
             draw_text(renderer, launcher_language_bounds.x + 10.0F,
-                launcher_language_bounds.y + 9.0F, "L: " + eon::normalize_language(request.language));
+                launcher_language_bounds.y + 9.0F, "L: " + eon::canonical_launcher_language(request.language));
             SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
             SDL_RenderFillRect(renderer, &data_directory_picker_bounds);
             SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);

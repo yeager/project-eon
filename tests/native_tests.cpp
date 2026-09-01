@@ -2017,6 +2017,11 @@ int main() {
             && launcher_languages.back() == "zh_CN");
         assert(std::find(launcher_languages.begin(), launcher_languages.end(), "sv")
             != launcher_languages.end());
+        assert(eon::canonical_launcher_language("pt") == "pt_BR");
+        assert(eon::canonical_launcher_language("zh") == "zh_CN");
+        assert(eon::canonical_launcher_language("sv_SE.UTF-8") == "sv");
+        assert(eon::canonical_launcher_language("en_GB") == "en_GB");
+        assert(eon::canonical_launcher_language("not a locale") == "en");
     // The Unicode launcher renderer must never consult a system font when no
     // reviewed bundled asset is present. This is a no-renderer/no-font native
     // contract and therefore requires no host font in CI.

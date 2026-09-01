@@ -1,5 +1,6 @@
 #include "i18n.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <sstream>
@@ -65,6 +66,19 @@ const std::vector<std::string_view>& supported_launcher_languages() {
     return languages;
 }
 
+std::string canonical_launcher_language(const std::string_view language) {
+    const auto normalized = normalize_language(language);
+    const auto& supported = supported_launcher_languages();
+    if (std::find(supported.begin(), supported.end(), normalized) != supported.end()) return normalized;
+    const auto separator = normalized.find('_');
+    const auto base = normalized.substr(0, separator);
+    if (base == "pt") return "pt_BR";
+    if (base == "zh") return "zh_CN";
+    if (separator != std::string::npos
+        && std::find(supported.begin(), supported.end(), base) != supported.end()) return base;
+    return "en";
+}
+
 Translator Translator::from_po_file(const std::filesystem::path& path) {
     Translator translator;
     std::ifstream file(path, std::ios::binary);
@@ -119,8 +133,8 @@ Translator Translator::from_po_file(const std::filesystem::path& path) {
 
 Translator Translator::from_language(
     const std::string_view language, const std::filesystem::path& executable_path) {
-    const auto normalized = normalize_language(language);
-    if (normalized.empty() || normalized == "en") return {};
+    const auto canonical = canonical_launcher_language(language);
+    if (canonical == "en") return {};
 
     std::vector<std::filesystem::path> roots;
 #ifdef EON_LOCALE_DIR
@@ -136,12 +150,7 @@ Translator Translator::from_language(
     // The catalog set intentionally contains region-specific Portuguese and
     // Chinese translations. The launcher accepts generic POSIX/BCP-47 input
     // too, so resolve those language families to their supplied catalog.
-    std::vector<std::string> catalog_names{normalized};
-    const auto separator = normalized.find('_');
-    const auto base = normalized.substr(0, separator);
-    if (base == "pt") catalog_names.push_back("pt_BR");
-    else if (base == "zh") catalog_names.push_back("zh_CN");
-    else if (separator != std::string::npos) catalog_names.push_back(base);
+    std::vector<std::string> catalog_names{canonical};
     for (const auto& root : roots) {
         for (const auto& catalog_name : catalog_names) {
             auto translator = from_po_file(root / (catalog_name + ".po"));
