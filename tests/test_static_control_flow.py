@@ -68,6 +68,16 @@ class StaticControlFlowTests(unittest.TestCase):
         self.assertIn("target_image_relative_address", edge)
         self.assertNotIn("runtime_address", edge)
 
+    def test_sidecar_retains_separate_carrier_provenance(self):
+        source = b"\x90"
+        document = build_sidecar("i8086", "1" * 64, "embedded!MILL.COM", source,
+                                 [(0, 1, 0x100, hashlib.sha256(source).hexdigest())],
+                                 source_kind="embedded-release-nested-disk-range",
+                                 container_sha256="2" * 64, carrier_archive_sha256="3" * 64)
+        self.assertEqual(document["archive_sha256"], "1" * 64)
+        self.assertEqual(document["container_sha256"], "2" * 64)
+        self.assertEqual(document["carrier_archive_sha256"], "3" * 64)
+
     def test_destination_refuses_repository_tmp_and_existing_paths(self):
         with self.assertRaisesRegex(ControlFlowError, "outside /tmp"):
             _require_external_output(Path("/tmp/project-eon-static-flow.json"))

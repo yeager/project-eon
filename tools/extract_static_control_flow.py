@@ -87,6 +87,26 @@ def _read_nested_zip_member(archive_path: Path, nested_member: str, member: str,
         raise ControlFlowError(f"unable to read exact nested archive member: {error}") from error
 
 
+def _read_embedded_archive_member(carrier_path: Path, carrier_sha256: str,
+                                  embedded_member: str, embedded_sha256: str,
+                                  member: str) -> bytes:
+    """Read an exact release archive embedded in a carrier without writing it."""
+    carrier = carrier_path.read_bytes()
+    observed_carrier = _sha256(carrier)
+    if observed_carrier != carrier_sha256:
+        raise ControlFlowError(f"carrier SHA-256 mismatch: expected {carrier_sha256}, got {observed_carrier}")
+    try:
+        with ZipFile(BytesIO(carrier)) as outer:
+            embedded = outer.read(embedded_member)
+        observed_embedded = _sha256(embedded)
+        if observed_embedded != embedded_sha256:
+            raise ControlFlowError(f"embedded archive SHA-256 mismatch: expected {embedded_sha256}, got {observed_embedded}")
+        with ZipFile(BytesIO(embedded)) as inner:
+            return inner.read(member)
+    except (KeyError, OSError, ValueError) as error:
+        raise ControlFlowError(f"unable to read exact embedded archive member: {error}") from error
+
+
 def _verify_archive_sha256(archive_path: Path, expected_archive_sha256: str) -> None:
     observed = _sha256(archive_path.read_bytes())
     if observed != expected_archive_sha256:
@@ -213,7 +233,8 @@ def parse_range(value: str) -> tuple[int, int, int, str]:
 
 def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: bytes,
                   ranges: list[tuple[int, int, int, str]], *, source_kind: str = "archive-member",
-                  address_space: str = "runtime", container_sha256: str | None = None) -> dict:
+                  address_space: str = "runtime", container_sha256: str | None = None,
+                  carrier_archive_sha256: str | None = None) -> dict:
     if address_space not in {"runtime", "image-relative-unrelocated"}:
         raise ControlFlowError("unsupported control-flow address space")
     address_key = "runtime_address" if address_space == "runtime" else "image_relative_address"
@@ -247,7 +268,9 @@ def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: byte
             "archive_sha256": archive_sha256, "source": source_label, "source_kind": source_kind,
             "source_sha256": _sha256(source), "classification": CLASSIFICATION,
             "address_space": address_space, "ranges": records,
-            **({"container_sha256": container_sha256} if container_sha256 is not None else {})}
+            **({"container_sha256": container_sha256} if container_sha256 is not None else {}),
+            **({"carrier_archive_sha256": carrier_archive_sha256}
+               if carrier_archive_sha256 is not None else {})}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -258,10 +281,15 @@ def main(argv: list[str] | None = None) -> int:
                         help="Original ZIP containing one exact FAT12 --fat12-member image")
     source.add_argument("--amiga-archive", "--m68k-archive", dest="m68k_archive", type=Path,
                         help="Original outer ZIP containing one exact nested M68000 disk image")
+    source.add_argument("--embedded-m68k-carrier", type=Path,
+                        help="Carrier ZIP holding one exact embedded release ZIP and M68000 disk")
     source.add_argument("--atari-prg-archive", type=Path,
                         help="Original outer ZIP containing exact nested FAT12 Atari ST PRG media")
     parser.add_argument("--archive-sha256", required=True, help="Expected lower-case SHA-256 of the outer ZIP")
     parser.add_argument("--source-sha256", help="Expected lower-case SHA-256 of the exact disk/image source")
+    parser.add_argument("--carrier-sha256", help="Expected lower-case SHA-256 of --embedded-m68k-carrier")
+    parser.add_argument("--embedded-archive", help="Exact release ZIP member inside --embedded-m68k-carrier")
+    parser.add_argument("--embedded-sha256", help="Expected lower-case SHA-256 of --embedded-archive")
     parser.add_argument("--member", action="append", default=[], help="Exact DOS member; repeat as needed")
     parser.add_argument("--fat12-member", help="Exact FAT12 image member inside --fat12-archive")
     parser.add_argument("--nested-member", help="Exact nested ZIP member for --amiga-archive")
@@ -309,6 +337,26 @@ def main(argv: list[str] | None = None) -> int:
             documents.append(build_sidecar("m68000", args.archive_sha256,
                                            f"{args.nested_member}!{args.disk_member}", media, args.range,
                                            source_kind="nested-disk-range"))
+        elif args.embedded_m68k_carrier is not None:
+            if (not args.carrier_sha256 or not args.embedded_archive or not args.embedded_sha256
+                    or not args.disk_member or not args.source_sha256 or not args.range or args.member
+                    or args.nested_member or args.fat12_member):
+                raise ControlFlowError("embedded M68000 mode requires carrier/release/disk hashes and ranges")
+            _require_sha256(args.carrier_sha256, "carrier SHA-256")
+            _require_sha256(args.embedded_sha256, "embedded archive SHA-256")
+            _require_sha256(args.source_sha256, "disk SHA-256")
+            if args.archive_sha256 != args.embedded_sha256:
+                raise ControlFlowError("--archive-sha256 must name the embedded release in embedded M68000 mode")
+            media = _read_embedded_archive_member(args.embedded_m68k_carrier, args.carrier_sha256,
+                                                  args.embedded_archive, args.embedded_sha256,
+                                                  args.disk_member)
+            if _sha256(media) != args.source_sha256:
+                raise ControlFlowError("embedded disk SHA-256 mismatch")
+            documents.append(build_sidecar("m68000", args.embedded_sha256,
+                                           f"{args.embedded_archive}!{args.disk_member}", media, args.range,
+                                           source_kind="embedded-release-nested-disk-range",
+                                           container_sha256=_sha256(media),
+                                           carrier_archive_sha256=args.carrier_sha256))
         else:
             if (not args.nested_member or not args.disk_member or not args.program or not args.program_sha256
                     or not args.source_sha256 or len(args.range) != 1 or args.member or args.fat12_member):

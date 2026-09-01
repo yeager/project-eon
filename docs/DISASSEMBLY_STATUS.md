@@ -78,6 +78,11 @@ outer archive, nested FAT12 disk, exact root PRG, PRG header, and TEXT+DATA
 range. Its sidecar uses `image-relative-unrelocated` fields, never a runtime
 address: GEMDOS relocation and the load base remain preservation boundaries.
 
+An embedded-release route verifies the carrier archive and named inner release
+archive separately before it opens the exact disk member in memory. Its output
+records both identities, so a byte-identical disk cannot silently stand in for
+another recognised release container.
+
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
 English, Millennium DOS Spanish FAT12, Millennium Amiga Defjam, Deuteros
 Amiga English, and Deuteros Atari Replicants release archives. Their
