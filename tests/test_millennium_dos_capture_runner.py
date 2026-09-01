@@ -158,6 +158,13 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(TOOL.CaptureError, "must not"):
             TOOL.capture_intent_status("diagnostic-no-input", present, True)
 
+    def test_no_input_instructions_forbid_keys_instead_of_requesting_them(self) -> None:
+        diagnostic = "\n".join(TOOL.capture_operator_instructions("diagnostic-no-input"))
+        physical = "\n".join(TOOL.capture_operator_instructions("physical-input"))
+        self.assertIn("Do not click it or press any key", diagnostic)
+        self.assertNotIn("press and release", diagnostic)
+        self.assertIn("press and release", physical)
+
     def test_raw_observation_status_is_hash_bound_and_bounded(self) -> None:
         with temporary_directory() as directory:
             path = Path(directory) / "events.raw"

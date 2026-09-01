@@ -389,6 +389,23 @@ def capture_intent_status(intent: str, receipt_status: str, observed_during_capt
             f"capture_intent_input_requirement={requirement}\n")
 
 
+def capture_operator_instructions(intent: str) -> tuple[str, str, str]:
+    """Return the visible, intent-specific instructions for a capture run."""
+    if intent == "physical-input":
+        return (
+            "CAPTURE PREPARED  read-only original archive; physical operator input required",
+            "Focus the visible DOSBox-X window by clicking it yourself; do not use terminal or automation input. Then press and release ordinary keys only in that window (for example Return, Space, or arrows).",
+            "No AUTOTYPE, debugger input, or guest-memory injection is permitted.",
+        )
+    if intent == "diagnostic-no-input":
+        return (
+            "CAPTURE PREPARED  read-only original archive; diagnostic no-input capture",
+            "The DOSBox-X window remains visible for observation only. Do not click it or press any key in it.",
+            "No host input, AUTOTYPE, debugger input, or guest-memory injection is permitted.",
+        )
+    raise CaptureError("capture intent is not in the reviewed finite set")
+
+
 def input_delivery_file_observed(path: Path) -> bool:
     """Report a recorder-created receipt without parsing a live append stream.
 
@@ -925,11 +942,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             environment["PROJECT_EON_DOSBOX_X_TITLE_TRANSFER_RECORD"] = str(output / "title-entry-transfer.raw")
         if args.recorder_protocol == "v21-int93-installation":
             environment["PROJECT_EON_DOSBOX_X_INT93_INSTALL_RECORD"] = str(output / "int93-installation.raw")
-        print("CAPTURE PREPARED  read-only original archive; physical operator input required")
-        print("Focus the visible DOSBox-X window by clicking it yourself; do not use terminal or automation input.")
-        print("Then press and release ordinary keys only in that window (for example Return, Space, or arrows).")
+        for instruction in capture_operator_instructions(args.capture_intent):
+            print(instruction)
         print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
-        print("No AUTOTYPE, debugger input, or guest-memory injection is permitted.")
         started = time.time()
         process = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
@@ -959,7 +974,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             now = time.monotonic()
             if deadline is None and now >= settle_deadline:
                 deadline = now + args.duration_seconds
-                print(f"CAPTURE WINDOW ACTIVE  {args.duration_seconds} seconds; physical input remains required.")
+                requirement = ("physical input remains required" if args.capture_intent == "physical-input"
+                               else "no host input is permitted")
+                print(f"CAPTURE WINDOW ACTIVE  {args.duration_seconds} seconds; {requirement}.")
             if not live_input_observed and input_delivery_file_observed(output / "host-input-receipt.raw"):
                 live_input_observed = True
                 print("HOST INPUT OBSERVED  receipt will be fully validated after capture.")

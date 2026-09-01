@@ -315,6 +315,23 @@ def capture_intent_status(intent: str, receipt_status: str, observed_during_capt
             f"capture_intent_input_requirement={requirement}\n")
 
 
+def capture_operator_instructions(intent: str) -> tuple[str, str, str]:
+    """Return visible instructions that cannot contradict the capture intent."""
+    if intent == "physical-input":
+        return (
+            "CAPTURE PREPARED  read-only original media; physical operator input required",
+            "Focus the visible FS-UAE window by clicking it yourself; do not use terminal or automation input. Then press and release ordinary mapped keys only in that window (for example Return, Space, or arrows).",
+            "No debugger, playback, injected host event, or guest-memory edit is permitted.",
+        )
+    if intent == "diagnostic-no-input":
+        return (
+            "CAPTURE PREPARED  read-only original media; diagnostic no-input capture",
+            "The FS-UAE window remains visible for observation only. Do not click it or press any key in it.",
+            "No host input, debugger, playback, injected host event, or guest-memory edit is permitted.",
+        )
+    raise CaptureError("capture intent is not in the reviewed finite set")
+
+
 def parse_host_input_records(path: Path) -> list[tuple[int, int]]:
     """Validate finite host-to-core delivery records and retain ordinal/frame."""
     try:
@@ -697,11 +714,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             "PROJECT_EON_FS_UAE_INPUT_RECORD": str(output / "host-input-receipt.txt"),
             "PROJECT_EON_FS_UAE_DISPLAY_RECORD": str(output / "title-display.txt"),
         })
-        print("CAPTURE PREPARED  read-only original media; physical operator input required")
-        print("Focus the visible FS-UAE window by clicking it yourself; do not use terminal or automation input.")
-        print("Then press and release ordinary mapped keys only in that window (for example Return, Space, or arrows).")
+        for instruction in capture_operator_instructions(args.capture_intent):
+            print(instruction)
         print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
-        print("No debugger, playback, injected host event, or guest-memory edit is permitted.")
         started = time.time()
         process = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
@@ -730,7 +745,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             now = time.monotonic()
             if deadline is None and now >= settle_deadline:
                 deadline = now + args.duration_seconds
-                print(f"CAPTURE WINDOW ACTIVE  {args.duration_seconds} seconds; physical input remains required.")
+                requirement = ("physical input remains required" if args.capture_intent == "physical-input"
+                               else "no host input is permitted")
+                print(f"CAPTURE WINDOW ACTIVE  {args.duration_seconds} seconds; {requirement}.")
             if not live_input_observed and input_delivery_file_observed(output / "host-input-receipt.txt"):
                 live_input_observed = True
                 print("HOST INPUT DELIVERY OBSERVED  receipt will be fully validated after capture.")
