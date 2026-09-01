@@ -475,6 +475,12 @@ msgstr ""
 msgid "TRACE ADMISSION"
 msgstr ""
 
+msgid "STATIC CONTROL FLOW"
+msgstr ""
+
+msgid "UNAVAILABLE (CLI INSPECTION ONLY)"
+msgstr ""
+
 msgid "MODERN PACK"
 msgstr ""
 

@@ -448,3 +448,9 @@ msgstr "ОСТАНОВКА ПЕРЕД"
 
 msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
 msgstr "ТОЛЬКО СТАТИЧЕСКИЕ ДАННЫЕ ЗАГРУЗКИ — БЕЗ XBIOS, СЫРОГО ЧТЕНИЯ, ВЫБОРА СОСТОЯНИЯ, ТИТУЛА ИЛИ ИГРОВОГО ПРОЦЕССА."
+
+msgid "STATIC CONTROL FLOW"
+msgstr "СТАТИЧЕСКИЙ ПОТОК УПРАВЛЕНИЯ"
+
+msgid "UNAVAILABLE (CLI INSPECTION ONLY)"
+msgstr "НЕДОСТУПНО (ТОЛЬКО ПРОВЕРКА CLI)"

@@ -61,6 +61,13 @@ inspired by declarative recompilation maps, not a hook table or guest-code
 browser. The renderer never executes an entry, opens a trace, or exposes an
 original byte through this view.
 
+When a metadata-only static control-flow aggregate has already been admitted,
+the same page can show its document, range, and candidate counts. It never
+reads a sidecar or exposes its name, path, decoded instructions, addresses, or
+original media bytes. Current interactive launches deliberately load no
+sidecar, so the row is explicitly unavailable; the bounded, hash-bound
+sidecar route remains `--inspect-json` only.
+
 Separately installed Modern asset packs retain their existing explicit
 release-hash admission requirements; they are not discovered automatically and
 are never selected in Original mode. See [MODERN_ASSET_PACK_FORMAT.md](MODERN_ASSET_PACK_FORMAT.md).

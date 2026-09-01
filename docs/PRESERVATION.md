@@ -99,6 +99,15 @@ emulator, replay, renderer, input path, audio path, or save operation.
 `project-eon.launch-check/v1`; it includes the exact release SHA-256 but never
 a local path, member name, original bytes, or parser exception.
 
+For a corpus containing more than one release for a game/platform, automation
+must pass both `--release-language` and `--release-sha256`.  They are one
+four-field identity with game and platform, not independent display filters:
+a language/hash mismatch is rejected before SDL initialization and produces no
+launch-check JSON.  The genuine-media launch test exercises this contract for
+each recognised archive, including the co-installed Millennium DOS English
+and Spanish releases; a default English selection is never evidence that an
+explicit Spanish container was admitted.
+
 The launcher carries the same provenance boundary before admission. Its
 source identity is exactly game, platform, original-release language, and
 outer SHA-256; Original/Modern/Custom presentation selection is not a source

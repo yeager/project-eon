@@ -308,6 +308,100 @@ def main() -> int:
             f"{launch_check_json.stdout}\n{launch_check_json.stderr}"
         )
 
+    # A platform card is not itself a release identity.  Exercise every
+    # recognised archive through the directory scanner with both immutable
+    # fields explicit.  This matters most for Millennium DOS: English and
+    # Spanish are simultaneously present, and a launch request must not use
+    # the English default, scan order, or a sibling language after the user
+    # selected an exact outer-container hash.  The expected session facts are
+    # deliberately narrow admission metadata, never an assertion about game
+    # behavior, input semantics beyond the declared boundary, or frame parity.
+    exact_release_contracts = (
+        ("millennium", "dos", "en",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "Millennium 2.2", "DOS", "RECOVERED STARTUP", "MILLENNIUM DOS TITLE",
+            "RECOVERED PRESENTATION BOUNDARY",
+            {"decoded_presentation": True, "audio_observations": False, "admitted_input": True}),
+        ("millennium", "dos", "es",
+            "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4",
+            "Millennium 2.2", "DOS", "BOOTSTRAP ONLY", "MILLENNIUM DOS TITLE",
+            "RECOVERED PRESENTATION BOUNDARY",
+            {"decoded_presentation": True, "audio_observations": False, "admitted_input": True}),
+        ("millennium", "amiga", "en",
+            "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
+            "Millennium 2.2", "Amiga", "BOOTSTRAP ONLY", "MILLENNIUM AMIGA BOOTSTRAP",
+            "BOOTSTRAP BOUNDARY",
+            {"decoded_presentation": False, "audio_observations": False, "admitted_input": False}),
+        ("millennium", "atari-st", "en",
+            "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+            "Millennium 2.2", "Atari ST", "BOOTSTRAP ONLY", "MILLENNIUM ATARI ST BOOTSTRAP",
+            "BOOTSTRAP BOUNDARY",
+            {"decoded_presentation": False, "audio_observations": False, "admitted_input": False}),
+        ("deuteros", "amiga", "en",
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            "Deuteros", "Amiga", "RECOVERED OPENING", "DEUTEROS AMIGA OPENING",
+            "RECOVERED PRESENTATION BOUNDARY",
+            {"decoded_presentation": True, "audio_observations": True, "admitted_input": True}),
+        ("deuteros", "atari-st", "en",
+            "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+            "Deuteros", "Atari ST", "BOOTSTRAP ONLY", "DEUTEROS ATARI ST BOOTSTRAP",
+            "BOOTSTRAP BOUNDARY",
+            {"decoded_presentation": False, "audio_observations": False, "admitted_input": False}),
+    )
+    for (game, platform, language, sha256, display_game, display_platform,
+            coverage, session_kind, session_boundary, capabilities) in exact_release_contracts:
+        exact_launch = subprocess.run(
+            (str(executable), "--data", str(data_directory), "--game", game,
+                "--platform", platform, "--release-language", language,
+                "--release-sha256", sha256, "--presentation", "original",
+                "--launch-check-json"),
+            env=environment, check=False, capture_output=True, text=True,
+        )
+        try:
+            exact_payload = json.loads(exact_launch.stdout)
+        except json.JSONDecodeError as error:
+            raise SystemExit(
+                f"{game}/{platform}/{language} exact launch check did not emit JSON: {error}"
+            ) from error
+        expected_payload = {
+            "schema": "project-eon.launch-check/v1",
+            "release": {
+                "game": display_game, "platform": display_platform,
+                "language": language, "sha256": sha256,
+            },
+            "coverage": coverage,
+            "runtime_admission": "READY",
+            "runtime_session": {
+                "kind": session_kind,
+                "boundary": session_boundary,
+                "capabilities": capabilities,
+            },
+        }
+        if exact_launch.returncode != 0 or exact_payload != expected_payload:
+            raise SystemExit(
+                f"{game}/{platform}/{language} did not preserve its exact launch identity:\n"
+                f"{exact_launch.stdout}\n{exact_launch.stderr}"
+            )
+
+    # A hash-language mismatch must fail before an SDL loop, rather than
+    # normalize one field from a different recognised DOS release.  No output
+    # JSON means callers cannot mistake a rejected candidate for a launch of
+    # the requested original container.
+    crossed_identity = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--release-language", "es", "--release-sha256",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "--launch-check-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (crossed_identity.returncode != 4 or crossed_identity.stdout
+            or "one exact verified original release" not in crossed_identity.stderr
+            or "SDL_Init" in crossed_identity.stderr):
+        raise SystemExit(
+            "a crossed Millennium DOS language/hash launch identity was not rejected before SDL:\n"
+            f"{crossed_identity.stdout}\n{crossed_identity.stderr}"
+        )
+
     # External emulator mounting must never turn Eon's own bounded archive
     # inventory into a write path.  Exercise the explicit leaf-manifest mode
     # against real media; the final content snapshot below is the direct

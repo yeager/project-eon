@@ -409,3 +409,9 @@ msgstr "पहले रोकें"
 
 msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
 msgstr "केवल स्थिर बूट साक्ष्य — कोई XBIOS, रॉ रीड, स्थिति चयन, शीर्षक या गेमप्ले नहीं।"
+
+msgid "STATIC CONTROL FLOW"
+msgstr "स्थिर नियंत्रण प्रवाह"
+
+msgid "UNAVAILABLE (CLI INSPECTION ONLY)"
+msgstr "अनुपलब्ध (केवल CLI निरीक्षण)"
