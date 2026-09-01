@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}
 
 
 def load_tool(name: str):
@@ -97,7 +97,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
 
 
@@ -117,8 +117,8 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
     if fields.get("raw_pc") != "present":
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    raw_format = "v9" if version in {"9", "10"} else "v7" if version in {"7", "8"} else "legacy"
-    if version in {"7", "8", "9", "10"} and fields.get("raw_pc_format") != raw_format:
+    raw_format = "v9" if version in {"9", "10", "11"} else "v7" if version in {"7", "8"} else "legacy"
+    if version in {"7", "8", "9", "10", "11"} and fields.get("raw_pc_format") != raw_format:
         raise ValueError("raw_pc format does not match the reviewed recorder contract")
     counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt", raw_format)
     expected_records = str(sum(counts.values()))
@@ -219,6 +219,25 @@ def verify_millennium_host_input_summary(fields: dict[str, str], directory: Path
         raise ValueError("host-input receipt grammar/count mismatch")
 
 
+def verify_capture_intent(fields: dict[str, str], tool) -> None:
+    """Check the v11/v22 declared session type against the retained receipt.
+
+    This remains a host-recorder contract only: successful verification cannot
+    establish original-game input semantics.
+    """
+    intent = fields.get("capture_intent")
+    if intent not in tool.CAPTURE_INTENTS:
+        raise ValueError("capture intent is not in the reviewed finite set")
+    status = fields.get("host_input_receipt")
+    observed = fields.get("host_input_observed_during_capture")
+    if intent == "physical-input":
+        if status != "present" or observed != "true" or fields.get("capture_intent_input_requirement") != "required":
+            raise ValueError("physical-input capture intent does not match the host-input receipt")
+    elif status not in {"absent", "empty"} or observed != "false" \
+            or fields.get("capture_intent_input_requirement") != "forbidden":
+        raise ValueError("diagnostic-no-input capture intent does not match the host-input receipt")
+
+
 def verify_millennium_title_input_checkpoint(fields: dict[str, str], directory: Path) -> None:
     """Recompute v13 chronology without promoting it into guest input proof."""
     tool = load_tool("run_millennium_dos_capture")
@@ -258,7 +277,7 @@ def verify_millennium_termination(fields: dict[str, str], directory: Path, versi
         if version == "12" and not tool.known_unhandled_interrupt_observed(
                 directory / "results.raw", "v12-predecessor"):
             raise ValueError("Millennium early stop requires the bounded v12 predecessor diagnostic shape")
-        if version in {"13", "14", "15", "16", "17", "18", "19", "20", "21"} and not tool.known_unhandled_interrupt_observed(
+        if version in {"13", "14", "15", "16", "17", "18", "19", "20", "21", "22"} and not tool.known_unhandled_interrupt_observed(
                 directory / "results.raw", fields["recorder_protocol"]):
             raise ValueError("Millennium early stop requires the exact v13 no-poll diagnostic receipt")
 
@@ -344,40 +363,42 @@ def verify(kind: str, directory: Path) -> None:
             raise ValueError("v20 receipt must retain its title-entry transfer recorder protocol")
         if version == "21" and recorder_protocol != "v21-int93-installation":
             raise ValueError("v21 receipt must retain its INT 93h installation recorder protocol")
-        if version not in {"12", "13", "14", "15", "16", "17", "18", "19", "20", "21"} and recorder_protocol != "v11":
+        if version not in {"12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"} and recorder_protocol != "v11":
             raise ValueError("pre-v12 receipt must retain the v11 recorder protocol")
         require_identity(fields, "recorder", (tool.RECORDER_PROTOCOLS[recorder_protocol][1], int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"} and fields.get("results_raw") == "present":
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw", recorder_protocol)
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
                     str(sum(counts.values())), shapes):
                 raise ValueError("results_raw grammar/count receipt mismatch")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.raw")
-        if version in {"5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"}:
+        if version in {"5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}:
             verify_millennium_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"}:
+        if version in {"6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}:
             verify_millennium_machine_profile(fields, directory)
-        if version in {"10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"}:
+        if version in {"10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}:
             verify_millennium_termination(fields, directory, version)
-        if version in {"13", "14", "15", "16", "17", "18", "19", "20", "21"}:
+        if version in {"13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}:
             if fields.get("results_raw") != "present":
                 raise ValueError("v13 title-input checkpoint requires a raw result log")
             verify_millennium_title_input_checkpoint(fields, directory)
-        if version == "14":
+        if version == "14" or (version == "22" and recorder_protocol == "v14-normal-core-history"):
             verify_millennium_normal_core_history(fields, directory)
-        if version == "18":
+        if version == "18" or (version == "22" and recorder_protocol == "v18-ivt-entry"):
             verify_millennium_normal_core_anomaly(fields, directory)
-        if version == "19":
+        if version == "19" or (version == "22" and recorder_protocol == "v19-int93-vector"):
             verify_millennium_int93_vector(fields, directory)
-        if version == "20":
+        if version == "20" or (version == "22" and recorder_protocol == "v20-title-entry-transfer"):
             verify_file(fields, directory, "title_entry_transfer", "title-entry-transfer.raw")
             verify_millennium_title_entry_transfer(fields, directory)
-        if version == "21":
+        if version == "21" or (version == "22" and recorder_protocol == "v21-int93-installation"):
             verify_file(fields, directory, "int93_installation", "int93-installation.raw")
             verify_millennium_int93_installation(fields, directory)
+        if version == "22":
+            verify_capture_intent(fields, tool)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
@@ -389,21 +410,23 @@ def verify(kind: str, directory: Path) -> None:
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version == "10":
+        if version in {"10", "11"}:
             verify_file(fields, directory, "title_display", "title-display.txt")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10"}:
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11"}:
             verify_deuteros_raw_pc_summary(fields, directory, version)
-        if version in {"5", "6", "7", "8", "9", "10"}:
+        if version in {"5", "6", "7", "8", "9", "10", "11"}:
             verify_deuteros_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9", "10"}:
+        if version in {"6", "7", "8", "9", "10", "11"}:
             verify_deuteros_timing_profile(fields, directory)
         if version == "8" and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory)
-        if version in {"9", "10"} and fields.get("raw_pc") == "present":
+        if version in {"9", "10", "11"} and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory, "v9")
             verify_deuteros_raw_pc_input_chronology(fields, directory)
-        if version == "10":
+        if version in {"10", "11"}:
             verify_deuteros_title_display(fields, directory)
+        if version == "11":
+            verify_capture_intent(fields, tool)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")

@@ -339,7 +339,9 @@ the whole physical-observation window on host I/O. A verifier accepts v2 and
 v3 historical receipts, while v4 requires `recorder_console_over_limit=false`.
 
 Receipt v2 first bound the retained console prefix as well as the complete
-transcript; current Millennium captures write `capture_receipt_version=10`.
+transcript; new Millennium captures write `capture_receipt_version=22`.
+Schema v22 requires an explicit physical-input or diagnostic-no-input
+declaration and verifies it against the recorder-owned host-input receipt.
 V5 additionally validates a present recorder-owned host-key receipt as at
 most 256 contiguous ASCII records in the reviewed SDL grammar and records its
 count. Scancodes, symbols and modifiers remain opaque host observations until
@@ -609,8 +611,8 @@ evidence for a driver result, title, input, frame, audio, or gameplay state.
 
 ### Receipt-v11 exact callback-loop receipt (diagnostics only)
 
-The current helper retains the v10 historical verifier and emits receipt v11
-for new runs. It permits the early host stop only when the complete 786-byte
+The current helper retains the v10/v11 historical verifier and emits receipt
+v22 for new runs. It permits the early host stop only when the complete 786-byte
 raw result stream is byte-identical to the two independently retained
 observations (SHA-256
 `8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`). This
@@ -956,6 +958,7 @@ python3 tools/run_millennium_dos_capture.py \
   --source-release /absolute/path/to/Millennium-Return-to-Earth_DOS_EN.zip \
   --recorder /absolute/path/to/reviewed/dosbox-x \
   --machine-profile svga_s3 \
+  --capture-intent physical-input \
   --output /home/you/.cache/project-eon-tools/millennium-dos-capture-<UTC>
 ```
 
@@ -965,7 +968,12 @@ sets exclusive external paths for event, raw-result, and host-input-receipt
 files. It refuses `/tmp`, repository/media output paths, headless SDL, and a
 missing visible X11/Wayland display. The operator must press keys in the
 visible emulator window; the helper has no AUTOTYPE, mapper, debugger, or
-guest-memory input path. `run-status.txt` records whether the recorder
+guest-memory input path. Every new run must explicitly declare either
+`--capture-intent physical-input` or `--capture-intent diagnostic-no-input`.
+The former is rejected unless the reviewed recorder retains a non-empty
+host-input receipt during the run; the latter is rejected if it retains host
+input. This classifies capture procedure only, not whether the original game
+accepted a key. `run-status.txt` records whether the recorder
 actually created a host-input receipt, and hashes it only when present; an
 absent or empty receipt remains explicit no-input evidence rather than a
 generated empty timeline. The receipt is also capped at 64 KiB before it is

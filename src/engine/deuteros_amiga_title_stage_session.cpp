@@ -29,6 +29,12 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     entry_prefix_state_ = materialize_deuteros_amiga_title_entry_prefix_state(
         disk, plan, incoming_profile);
     exec_prelude_ = execute_deuteros_amiga_title_exec_prelude(disk, plan, incoming_profile);
+    // Validate the two immediately following caller-connected local helpers
+    // as part of admitting this live title-stage boundary.  They describe
+    // original bytes and operands only: neither helper is executed and no
+    // display memory is allocated from their externally supplied pointer.
+    graphics_setup_ = parse_deuteros_amiga_title_graphics_setup_profile(disk, plan);
+    display_clear_ = parse_deuteros_amiga_title_display_clear_profile(disk, plan);
     if (entry_prefix_state_.incoming_profile != entry_prefix_.incoming_profile
         || entry_prefix_state_.stop_before_exec_address != entry_prefix_.stop_before_exec_address
         || entry_prefix_state_.writes[0].address != entry_prefix_.mode_word_address
@@ -44,6 +50,15 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
         || exec_prelude_.stack_pointer_value != 0x40b62
         || exec_prelude_.stop_before_exec_base_read_address != 0x40456) {
         throw std::runtime_error("Deuteros title Exec prelude detached from original entry evidence");
+    }
+    if (graphics_setup_.palette_source_address != profile_.transition_source_palette_address
+        || graphics_setup_.palette_words.size() != 20
+        || graphics_setup_.palette_destination_address != 0x12ecc
+        || display_clear_.destination_pointer_address
+            != graphics_setup_.external_display_base_destinations[0]
+        || display_clear_.iteration_count != 0x1f40
+        || display_clear_.write_width_bytes != 4) {
+        throw std::runtime_error("Deuteros title graphics setup detached from original stage evidence");
     }
 }
 
@@ -78,7 +93,7 @@ std::array<RgbColor, 16> DeuterosAmigaTitleStageSession::transition_palette_evid
 std::array<RgbColor, 20> DeuterosAmigaTitleStageSession::graphics_setup_palette_evidence() const {
     constexpr std::size_t word_count = 20;
     constexpr std::size_t byte_count = word_count * 2U;
-    const auto address = profile_.transition_source_palette_address;
+    const auto address = graphics_setup_.palette_source_address;
     if (address < stage_.destination || address - stage_.destination > stage_.length
         || byte_count > stage_.length - (address - stage_.destination)) {
         throw std::runtime_error("Deuteros title graphics-setup palette lies outside original stage");
@@ -94,6 +109,9 @@ std::array<RgbColor, 20> DeuterosAmigaTitleStageSession::graphics_setup_palette_
         colors[index] = {static_cast<std::uint8_t>(((rgb4 >> 8U) & 0xfU) * 17U),
             static_cast<std::uint8_t>(((rgb4 >> 4U) & 0xfU) * 17U),
             static_cast<std::uint8_t>((rgb4 & 0xfU) * 17U)};
+        if (rgb4 != graphics_setup_.palette_words[index]) {
+            throw std::runtime_error("Deuteros title palette evidence detached from graphics setup");
+        }
     }
     return colors;
 }

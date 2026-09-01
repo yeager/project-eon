@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <vector>
 
 namespace eon {
 
@@ -33,6 +34,16 @@ struct MillenniumDosRuntimeByteObservation {
 struct MillenniumDosActionObservation {
     std::uint16_t poll_address = 0;
     std::uint8_t action = 0;
+};
+
+// The F8 route crosses three separately observed native-state boundaries.
+// Keep each input explicitly tied to its original address: SDL input, an
+// initial save, or a prior host reconstruction must not stand in for any of
+// these bytes.
+struct MillenniumDosEighthFunctionKeyPreflightObservation {
+    MillenniumDosActionObservation action;
+    MillenniumDosRuntimeByteObservation enabled_byte;
+    MillenniumDosRuntimeByteObservation counter_byte;
 };
 
 // Host-side observation of the original loop's *already polled* AL byte.  It
@@ -103,6 +114,33 @@ public:
     // `mov byte ptr [$da30], 0`. This reports that narrow in-memory effect.
     [[nodiscard]] std::optional<MillenniumDosRuntimeByteEffect>
     last_runtime_byte_effect() const { return last_runtime_byte_effect_; }
+    // Reconstructs only F8's call-free preflight from an already observed
+    // action byte and two native runtime bytes. It stops at a native helper,
+    // local return, or the external XLAT boundary; it never polls input or
+    // supplies any of those observations itself. Requires original bytes.
+    [[nodiscard]] MillenniumDosEighthFunctionKeyPreflight
+    observe_eighth_function_key_preflight(MillenniumDosEighthFunctionKeyPreflightObservation observation);
+    // Advances the preceding F8 observation across its explicitly observed
+    // XLAT result. The native translation table lies outside the COM image,
+    // so this value must come from a trace and cannot be inferred from host
+    // state. Stops before the next native runtime gate.
+    [[nodiscard]] MillenniumDosEighthFunctionKeyTableJumpPrefix
+    observe_eighth_function_key_table_jump(std::uint8_t translated_al);
+    // Records the one local F8 gate after a table-jump observation. It stops
+    // at the first helper boundary and does not assign record semantics.
+    [[nodiscard]] MillenniumDosEighthFunctionKeySelectedRecordGate
+    observe_eighth_function_key_selected_record_gate(MillenniumDosRuntimeByteObservation observation);
+    [[nodiscard]] std::optional<MillenniumDosEighthFunctionKeyPreflight>
+    last_eighth_function_key_preflight() const { return last_eighth_function_key_preflight_; }
+    [[nodiscard]] std::optional<MillenniumDosEighthFunctionKeyTableJumpPrefix>
+    last_eighth_function_key_table_jump() const { return last_eighth_function_key_table_jump_; }
+    [[nodiscard]] std::optional<MillenniumDosEighthFunctionKeySelectedRecordGate>
+    last_eighth_function_key_selected_record_gate() const { return last_eighth_function_key_selected_record_gate_; }
+    // Ordered local writes proven after the observed F8 poll. This is empty
+    // until the corresponding branch has been evidenced; it is not a save
+    // editor or a model of the game's complete state.
+    [[nodiscard]] const std::vector<MillenniumDosRuntimeByteEffect>&
+    last_eighth_function_key_runtime_effects() const { return last_eighth_function_key_runtime_effects_; }
     // Only addresses reached by a reconstructed unconditional write can be
     // queried. Unknown means that no value was supplied by original code yet.
     [[nodiscard]] std::optional<std::uint8_t> reconstructed_runtime_byte(
@@ -130,8 +168,16 @@ private:
     std::optional<MillenniumDosNinthFunctionKeyTrace> last_ninth_function_key_trace_;
     std::optional<MillenniumDosTenthFunctionKeyTrace> last_tenth_function_key_trace_;
     std::optional<MillenniumDosRuntimeByteEffect> last_runtime_byte_effect_;
+    std::optional<MillenniumDosEighthFunctionKeyPreflight> last_eighth_function_key_preflight_;
+    std::optional<MillenniumDosEighthFunctionKeyTableJumpPrefix> last_eighth_function_key_table_jump_;
+    std::optional<MillenniumDosEighthFunctionKeySelectedRecordGate>
+        last_eighth_function_key_selected_record_gate_;
+    std::vector<MillenniumDosRuntimeByteEffect> last_eighth_function_key_runtime_effects_;
     std::optional<std::uint8_t> reconstructed_da30_;
     std::optional<std::uint8_t> reconstructed_07f9_;
+    std::optional<std::uint8_t> reconstructed_da0a_;
+    std::optional<std::uint8_t> reconstructed_da09_;
+    std::optional<std::uint8_t> reconstructed_da06_;
 };
 
 } // namespace eon

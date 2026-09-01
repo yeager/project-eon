@@ -162,10 +162,17 @@ python3 tools/run_deuteros_amiga_capture.py \
   --kickstart-archive '/absolute/path/to/Kickstart v1.3 r34.005 (1987-12)(Commodore)(A500-A1000-A2000-CDTV)[!].zip' \
   --recorder /absolute/path/to/reviewed/fs-uae \
   --timing-profile realtime \
+  --capture-intent physical-input \
   --output /home/you/.cache/project-eon-tools/deuteros-amiga-capture-<UTC>
 ```
 
-`realtime` is the default and the only timing-faithful capture profile. The
+`realtime` is the default and the only timing-faithful capture profile. New
+runs must also state `--capture-intent physical-input` or
+`--capture-intent diagnostic-no-input`. A physical-input run is rejected
+unless the recorder retains a non-empty observed host-input receipt; a
+no-input diagnostic is rejected if it retains host input. This is an
+operator-procedure boundary only, never proof that Deuteros accepted input.
+The
 finite `warp` profile is allowed solely for separately labelled diagnostic
 reachability work; it is receipt-bound but cannot establish original timing,
 gameplay, or title-screen behaviour.
@@ -193,13 +200,15 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-New captures write `capture_receipt_version=10`. They bind both the complete
+New captures write `capture_receipt_version=11`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
 summary, and enforce a 64 MiB total-console safety cap. A cap crossing writes
 `recorder_console_over_limit=true`, stops the recorder, preserves the bounded
 prefix for review, and rejects the directory as inadmissible evidence. Receipt
+v11 also binds the required declared capture intent to the recorder-owned
+host-input receipt; it makes no claim about original-game input semantics.
 v6 also binds the finite `realtime` or diagnostic-only `warp` timing profile
 to the generated configuration, and validates a present FS-UAE host-delivery
 receipt as at most 256

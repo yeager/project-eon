@@ -2445,6 +2445,13 @@ the one local A7 setup value as a compact provenance row beside the raw palette
 strip. It obtains all three values from the session's hash-validated sparse
 records; the row is machine notation rather than a title screen, title text,
 or a guest-memory allocation.
+The same admission also verifies the immediately following hash-locked local
+graphics-setup and display-clear profiles.  This binds the twenty-word RGB4
+source at `$1ed24` (destination operand `$12ecc`) and the `$1f40` four-byte
+clear-loop descriptor to the live, read-only title-stage session.  The session
+does not execute either helper, resolve the externally supplied `$12ff4` base,
+or clear host memory; it rejects a stage whose entry prefix is intact but whose
+later setup bytes no longer match the verified clean stage.
 `DeuterosAmigaTitleHandoffRoute` additionally binds that live event to the
 six original command bytes at ADF `+$1c28a` (`00 0f 00 00 0b 38`, SHA-256
 `9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41`) and
@@ -4033,8 +4040,9 @@ private runtime overlay changes `$da30` to zero. The overlay begins with
 `$da30` **unknown**, rather than deriving an initial value from `2200SAVE.I`;
 a second F8 therefore records `0 -> 0`. It is not a mutable view of the
 original COM image or a save serializer, and is never exported. The later
-preflight/call path remains deliberately unimplemented because `$da39`,
-`$da0a`, and `BL` have no proven initial state or complete helper semantics.
+preflight/call path has no inferred initial state: `$da39`, `$da0a`, and `BL`
+must remain explicit external observations and native helper semantics remain
+unimplemented.
 The preceding `$731a..$7338` preflight is independently hash-locked (31 bytes
 at file `+0x721a`, SHA-256
 `71c2c4189e66104aea08d4f7040e9d6bc873eb6717607eed30cf61ce27f5ac2e`).
@@ -4084,6 +4092,17 @@ also modeled as a bounded local trace: `CALL $09fa`, `SHR BL,1`, `JC $7312`,
 `$09fa` helper, records each shift, repeats only when the shifted-out bit is
 one, and rejects an unterminated sequence. It does not call `$09fa`, invent a
 preflight result, or write original runtime/save media.
+
+`MillenniumDosGameSession` can retain one ordered, evidence-only F8 prefix
+when a capture has already supplied the action at poll `$0f05`, bytes
+`$da39`/`$da0a`, and—only after the external XLAT boundary—the translated
+`AL` plus `$6e2f` gate byte. It records the proven local writes in order:
+the handler's `$da30 := 0`, the conditional `$da0a` decrement, then
+`$da09 := 0` and `$da06 := AL`. Each stage rejects detached or out-of-order
+observations and stops at `$7b47`, local return, XLAT, or `$7924`; no current
+launcher route constructs this session, maps an SDL key to F8, or uses these
+facts to enter `2200AD.EXE`. This is a capture-consumption boundary for a
+future fully admitted game trace, not a game-input implementation.
 
 The tenth table record (raw F10 / `$44`) is `36 3c 09 1b 39 09 84 73`, with
 handler entry `$7384`. It returns when native runtime word `$a19e` is nonzero.

@@ -37,6 +37,16 @@ public:
     [[nodiscard]] const DeuterosAmigaTitleExecPrelude& exec_prelude() const noexcept {
         return exec_prelude_;
     }
+    // These caller-connected routines immediately follow the pre-Exec
+    // startup sequence in the hash-locked title stage.  They remain
+    // provenance profiles: the external display base and every Exec or
+    // graphics-library result are intentionally absent.
+    [[nodiscard]] const DeuterosAmigaTitleGraphicsSetupProfile& graphics_setup() const noexcept {
+        return graphics_setup_;
+    }
+    [[nodiscard]] const DeuterosAmigaTitleDisplayClearProfile& display_clear() const noexcept {
+        return display_clear_;
+    }
     [[nodiscard]] std::span<const std::uint8_t> original_bytes() const;
     // The first sixteen RGB4 words at the hash-validated title transition's
     // source address, exposed only as original palette evidence. This is not
@@ -54,6 +64,8 @@ private:
     DeuterosAmigaTitleEntryPrefix entry_prefix_;
     DeuterosAmigaTitleEntryPrefixState entry_prefix_state_;
     DeuterosAmigaTitleExecPrelude exec_prelude_;
+    DeuterosAmigaTitleGraphicsSetupProfile graphics_setup_;
+    DeuterosAmigaTitleDisplayClearProfile display_clear_;
     std::string original_sha256_;
 };
 

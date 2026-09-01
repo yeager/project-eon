@@ -48,6 +48,7 @@ MAX_FOCUS_SETTLE_SECONDS = 120
 # confusing it with time-faithful capture evidence. Warp never establishes
 # original timing, gameplay, or title-screen behaviour.
 TIMING_PROFILES = {"realtime": "0", "warp": "1"}
+CAPTURE_INTENTS = {"diagnostic-no-input", "physical-input"}
 # The reviewed delivery observer writes a bounded physical-input receipt.
 # Never hash an arbitrary-size file merely because a recorder path was set.
 MAX_INPUT_RECEIPT_BYTES = 64 * 1024
@@ -118,7 +119,7 @@ HOST_INPUT_LINE = re.compile(
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
 # Receipt v6 additionally binds the finite recorder timing profile. Older
 # evidence remains verifiable without pretending it has the newer field.
-CAPTURE_RECEIPT_VERSION = "10"
+CAPTURE_RECEIPT_VERSION = "11"
 
 
 class CaptureError(RuntimeError):
@@ -290,6 +291,28 @@ def input_receipt_status(path: Path) -> str:
             f"host_input_receipt_sha256={digest}\n"
             f"host_input_receipt_bytes={size}\n"
             f"host_input_receipt_records={record_count}\n")
+
+
+def capture_intent_status(intent: str, receipt_status: str, observed_during_capture: bool) -> str:
+    """Fail closed when the stated physical-input/no-input session disagrees.
+
+    The receipt only proves FS-UAE's host-to-core delivery observation.  It
+    does not infer that Deuteros polled, accepted, or interpreted that input.
+    """
+    if intent not in CAPTURE_INTENTS:
+        raise CaptureError("capture intent is not in the reviewed finite set")
+    fields = dict(line.split("=", 1) for line in receipt_status.splitlines())
+    state = fields.get("host_input_receipt")
+    if intent == "physical-input":
+        if state != "present" or not observed_during_capture:
+            raise CaptureError("physical-input capture requires an observed non-empty host-input receipt")
+        requirement = "required"
+    else:
+        if state not in {"absent", "empty"} or observed_during_capture:
+            raise CaptureError("diagnostic-no-input capture must not retain host input")
+        requirement = "forbidden"
+    return (f"capture_intent={intent}\n"
+            f"capture_intent_input_requirement={requirement}\n")
 
 
 def parse_host_input_records(path: Path) -> list[tuple[int, int]]:
@@ -736,6 +759,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         if kickstart_before != kickstart_after:
             raise CaptureError("Kickstart archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.txt")
+        intent_status = capture_intent_status(args.capture_intent, receipt_status,
+                                              live_input_observed)
         raw_path = output / "raw-pc.txt"
         input_path = output / "host-input-receipt.txt"
         observation_status = raw_observation_status(raw_path, "raw_pc", "v9")
@@ -754,7 +779,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("disk2_archive", disk2_archive_identity)
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
-                        + receipt_status + observation_status + chronology_status + display_status
+                        + intent_status + receipt_status + observation_status + chronology_status + display_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
@@ -775,6 +800,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--duration-seconds", type=int, default=120, help="Visible operator window duration (15-600; default: 120)")
     parser.add_argument("--focus-settle-seconds", type=int, default=10,
                         help="Manual visible-window focus time before capture (0-120; default: 10)")
+    parser.add_argument("--capture-intent", choices=tuple(sorted(CAPTURE_INTENTS)), required=True,
+                        help="Required operator declaration: physical-input or diagnostic-no-input")
     parser.add_argument("--timing-profile", choices=tuple(sorted(TIMING_PROFILES)), default="realtime",
                         help="Recorder timing profile (default: realtime; warp is diagnostic only)")
     return parser.parse_args(argv)
