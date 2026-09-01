@@ -986,6 +986,14 @@ int main() {
     assert(static_flow_summary.range_count == 3);
     assert(static_flow_summary.edge_count == 4);
     assert(static_flow_summary.declared_byte_count == 8);
+    assert(static_flow_summary.archive_document_counts.at(
+        "0000000000000000000000000000000000000000000000000000000000000000") == 1);
+    assert(static_flow_summary.archive_document_counts.at(
+        "4444444444444444444444444444444444444444444444444444444444444444") == 1);
+    assert(static_flow_summary.release_document_counts.at(
+        "0000000000000000000000000000000000000000000000000000000000000000") == 1);
+    assert(static_flow_summary.release_document_counts.at(
+        "4444444444444444444444444444444444444444444444444444444444444444") == 1);
     assert(static_flow_summary.cpu_counts.at("i8086") == 1);
     assert(static_flow_summary.cpu_counts.at("m68000") == 1);
     assert(static_flow_summary.edge_kind_counts.at("call") == 1);
@@ -993,6 +1001,12 @@ int main() {
     assert(static_flow_summary.edge_kind_counts.at("interrupt") == 1);
     assert(static_flow_summary.edge_kind_counts.at("trap") == 1);
     assert(static_flow_summary.target_scope_counts.at("within-declared-range") == 1);
+    auto runtime_default_sidecar = static_flow_sidecar;
+    const auto runtime_address_space = runtime_default_sidecar.find("\"address_space\":\"runtime\",");
+    assert(runtime_address_space != std::string::npos);
+    runtime_default_sidecar.erase(runtime_address_space,
+        std::string("\"address_space\":\"runtime\",").size());
+    assert(eon::parse_static_control_flow_sidecar(runtime_default_sidecar).document_count == 2);
     for (const std::string malformed : {
              std::string("{}"),
              std::string(static_flow_sidecar).replace(
@@ -1519,11 +1533,28 @@ int main() {
         char* inspect_args[] = {program, inspect_option};
         const auto inspect = eon::parse_command_line(2, inspect_args);
         assert(inspect.request && inspect.request->inspect_data);
+        char static_control_flow_option[] = "--static-control-flow-sidecar";
+        char external_static_control_flow[] = "/var/cache/project-eon/flow.json";
         char inspect_json_option[] = "--inspect-json";
+        char* static_control_flow_args[] = {program, inspect_json_option,
+            static_control_flow_option, external_static_control_flow};
+        const auto static_control_flow = eon::parse_command_line(4, static_control_flow_args);
+        assert(static_control_flow.request && static_control_flow.request->static_control_flow_sidecar
+            && *static_control_flow.request->static_control_flow_sidecar == external_static_control_flow);
+        char relative_static_control_flow[] = "flow.json";
+        char* relative_static_control_flow_args[] = {program, inspect_json_option,
+            static_control_flow_option, relative_static_control_flow};
+        assert(!eon::parse_command_line(4, relative_static_control_flow_args).request);
         char* inspect_json_args[] = {program, inspect_json_option};
         const auto inspect_json = eon::parse_command_line(2, inspect_json_args);
         assert(inspect_json.request && inspect_json.request->inspect_data
             && inspect_json.request->inspect_json);
+        char* static_control_flow_text_args[] = {program, inspect_option,
+            static_control_flow_option, external_static_control_flow};
+        assert(!eon::parse_command_line(4, static_control_flow_text_args).request);
+        char* static_control_flow_without_inspect_args[] = {program,
+            static_control_flow_option, external_static_control_flow};
+        assert(!eon::parse_command_line(3, static_control_flow_without_inspect_args).request);
         char inventory_option[] = "--inventory";
         char* inspect_json_inventory_args[] = {program, inspect_json_option, inventory_option};
         assert(!eon::parse_command_line(3, inspect_json_inventory_args).request);

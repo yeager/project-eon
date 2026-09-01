@@ -98,6 +98,23 @@ runtime dispatch target. In particular, its only accepted classification is
 `static-candidate-unclassified`; loading a sidecar does not establish code
 classification, reachability, ABI, timing, input, or gameplay behaviour.
 
+For a local diagnostics read, pass the retained file explicitly to the JSON
+inspection route:
+
+```sh
+project-eon --data /path/to/original-media --inspect-json \
+  --static-control-flow-sidecar /absolute/external/sidecar.json
+```
+
+The path must resolve to an existing regular non-symlink file outside both the
+checkout and `/tmp`; it is capped at 32 MiB and is rechecked after the read.
+Textual `--inspect` and all runtime/menu routes reject the option. Project Eon
+first rehashes the selected original releases, then accepts every sidecar
+document only if its `archive_sha256` (or `carrier_archive_sha256` for an
+embedded release) binds one of those release identities.
+Its JSON emits only the static-candidate-unclassified aggregate and release
+identity binding, retaining no sidecar or original-media bytes.
+
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
 English, Millennium DOS Spanish FAT12, Millennium Amiga Defjam, Deuteros
 Amiga English, and Deuteros Atari Replicants release archives. Their

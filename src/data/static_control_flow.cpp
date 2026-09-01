@@ -341,8 +341,8 @@ void parse_edge(const JsonObject& edge, const std::string_view address_key,
 
 void parse_document(const JsonObject& document, StaticControlFlowSummary& summary) {
     require_keys(document, {"schema", "cpu", "archive_sha256", "source", "source_kind", "source_sha256",
-                            "classification", "address_space", "ranges"},
-                 {"container_sha256", "carrier_archive_sha256"});
+                            "classification", "ranges"},
+                 {"address_space", "container_sha256", "carrier_archive_sha256"});
     if (string(required(document, "schema"), "document schema") != "project-eon.static-control-flow/v1") reject("unsupported document schema");
     const auto& cpu = string(required(document, "cpu"), "cpu");
     if (cpu != "i8086" && cpu != "m68000") reject("unsupported CPU");
@@ -369,7 +369,11 @@ void parse_document(const JsonObject& document, StaticControlFlowSummary& summar
         reject("source-kind provenance fields are inconsistent");
     }
     if (string(required(document, "classification"), "document classification") != classification) reject("document classification is not static-candidate-unclassified");
-    const auto& address_space = string(required(document, "address_space"), "address_space");
+    // Earlier extractor v1 documents omitted the redundant runtime spelling.
+    // Retain that real-media grammar as a strict default, while an explicit
+    // non-runtime address space must still name the one reviewed alternative.
+    const auto address_space = document.contains("address_space")
+        ? string(required(document, "address_space"), "address_space") : "runtime";
     if (address_space != "runtime" && address_space != "image-relative-unrelocated") reject("unsupported address space");
     const auto address_key = address_space == "runtime" ? "runtime_address" : "image_relative_address";
     const auto& ranges = array(required(document, "ranges"), "ranges");
@@ -403,6 +407,11 @@ void parse_document(const JsonObject& document, StaticControlFlowSummary& summar
     }
     ++summary.document_count;
     ++summary.cpu_counts[cpu];
+    ++summary.archive_document_counts[string(required(document, "archive_sha256"), "archive_sha256")];
+    const auto& release_identity = document.contains("carrier_archive_sha256")
+        ? string(required(document, "carrier_archive_sha256"), "carrier_archive_sha256")
+        : string(required(document, "archive_sha256"), "archive_sha256");
+    ++summary.release_document_counts[release_identity];
 }
 
 } // namespace

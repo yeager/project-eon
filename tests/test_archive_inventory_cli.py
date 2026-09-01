@@ -52,6 +52,17 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertNotIn("release.path", body)
         self.assertNotIn("scan_snapshot.path", body)
 
+    def test_static_control_flow_sidecar_is_json_only_and_hash_bound(self) -> None:
+        self.assertIn('argument == "--static-control-flow-sidecar"', LAUNCHER)
+        self.assertIn("must be an absolute external path", LAUNCHER)
+        self.assertIn("requires --inspect-json", LAUNCHER)
+        self.assertIn("static_control_flow_sidecar", MAIN)
+        self.assertIn(r'\"static_control_flow\"', MAIN)
+        self.assertIn(r'\"release_bindings\"', MAIN)
+        self.assertIn("Static control-flow sidecar must remain outside the repository and /tmp", MAIN)
+        self.assertIn("document not bound to a reverified inspected release", MAIN)
+        self.assertNotIn("report_static_control_flow_sidecar", MAIN)
+
     def test_trace_json_is_diagnostics_only_and_omits_local_paths(self) -> None:
         self.assertIn('argument == "--reference-trace-json"', LAUNCHER)
         self.assertIn("--reference-trace-json requires --reference-trace", LAUNCHER)
