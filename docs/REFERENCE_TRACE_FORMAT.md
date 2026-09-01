@@ -107,6 +107,15 @@ manifest has no `adapter` record.  The documentation table is regression
 checked against the accepted adapter identifiers and release manifest so it
 cannot silently lose a current source boundary.
 
+The compiled `ReferenceTraceAdapterDescriptor` registry is the single source
+of truth for every versioned adapter's wire identifier, format, source
+identity, optional media/stage identity, recovery-map rows, and runtime
+policy. The manifest-field grammars and event parsers remain deliberately
+adapter-specific: the registry does not dispatch guest code, interpret an
+event, or generalize one adapter's contract to another. All policies are
+`diagnostics-only` except the separately documented, transient call-free GX
+policy. CLI JSON reports this policy as aggregate provenance metadata.
+
 ### Declarative diagnostic boundary map
 
 After a v2 event stream has passed both its own grammar and the complete

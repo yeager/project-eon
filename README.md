@@ -282,9 +282,11 @@ session. It cannot be combined with asset inventory or Modern-pack inspection.
 For a separately assembled, validated reference trace, add
 `--reference-trace-json` to the normal explicit `--reference-trace` command.
 It emits `project-eon.reference-trace/v1`: release and capture hashes,
-adapter/checkpoint counts, recovery boundaries, and artifact identities only.
-It never emits local trace paths, artifact paths, original bytes, or replay
-state, and it remains diagnostics-only.
+adapter/checkpoint counts, recovery boundaries, artifact identities, and the
+compiled runtime-policy label only. It never emits local trace paths, artifact
+paths, original bytes, or replay state. All current policies are
+`diagnostics-only` except the separately documented, transient call-free
+Millennium DOS GX boundary.
 
 After a Modern F10/Custom panel is closed, its renderer preferences are stored
 separately from game media: Linux uses

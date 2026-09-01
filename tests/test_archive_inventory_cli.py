@@ -60,6 +60,8 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn(r'\"project-eon.reference-trace/v1\"', body)
         self.assertIn(r'\"recovery_boundaries\"', body)
         self.assertIn(r'\"artifacts\"', body)
+        self.assertIn(r'\"runtime_policy\"', body)
+        self.assertIn("reference_trace_runtime_policy_label", body)
         self.assertNotIn("trace.manifest_path", body)
         self.assertNotIn("trace.events_path", body)
         self.assertNotIn("artifact.path", body)

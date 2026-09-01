@@ -138,11 +138,17 @@ class ReferenceTraceFormatTests(unittest.TestCase):
 
     def test_versioned_adapter_registry_has_one_explicit_transient_policy(self):
         registry = TRACE_REGISTRY.read_text(encoding="utf-8")
-        self.assertEqual(registry.count("ReferenceTraceRuntimePolicy::transient_call_free_gx_startup"), 1)
-        self.assertEqual(registry.count("ReferenceTraceRuntimePolicy::diagnostics_only"), 9)
+        registry_rows = [line for line in registry.splitlines() if line.lstrip().startswith('{"')]
+        self.assertEqual(sum("ReferenceTraceRuntimePolicy::transient_call_free_gx_startup" in row
+                             for row in registry_rows), 1)
+        self.assertEqual(sum("ReferenceTraceRuntimePolicy::diagnostics_only" in row
+                             for row in registry_rows), 9)
         validator = TRACE_VALIDATOR.read_text(encoding="utf-8")
         self.assertIn("reference_trace_adapter_descriptor(fields.at(\"adapter\"))", validator)
         self.assertIn("Reference trace disagrees with the declared adapter registry", validator)
+        self.assertIn("descriptor->recovery_entry_ids", validator)
+        self.assertIn("reference_trace_runtime_policy_label", registry)
+        self.assertIn("single source\nof truth", FORMAT.read_text(encoding="utf-8"))
         for adapter, identity in self.adapters.items():
             with self.subTest(adapter=adapter):
                 self.assertIn(f'{{"{adapter}"', registry)
@@ -152,20 +158,25 @@ class ReferenceTraceFormatTests(unittest.TestCase):
                     self.assertIn(identity["stage"], registry)
 
     def test_declarative_adapter_boundary_maps_are_documented_and_compiled(self):
-        code = TRACE_VALIDATOR.read_text(encoding="utf-8")
+        registry = TRACE_REGISTRY.read_text(encoding="utf-8")
         documented = FORMAT.read_text(encoding="utf-8")
         section_start = documented.index("### Declarative diagnostic boundary map")
         section_end = documented.index("For the two physical-media adapters", section_start)
         documented_map = documented[section_start:section_end]
         for adapter, boundaries in self.recovery_boundaries.items():
             with self.subTest(adapter=adapter):
-                self.assertIn(f'AdapterRecoveryMap{{"{adapter}"', code)
+                row_start = registry.index(f'{{"{adapter}"')
+                row_end = registry.index("},", row_start) + 2
+                registry_row = registry[row_start:row_end]
                 row = next((line for line in documented_map.splitlines()
                             if line.startswith(f"| `{adapter}` |")), "")
                 self.assertTrue(row, f"missing declarative boundary-map row for {adapter}")
                 for boundary in boundaries:
-                    self.assertIn(f'"{boundary}"', code)
+                    self.assertIn(f'"{boundary}"', registry_row)
                     self.assertIn(f"`{boundary}`", row)
+        validator = TRACE_VALIDATOR.read_text(encoding="utf-8")
+        self.assertIn("descriptor->recovery_entry_ids", validator)
+        self.assertIn("trace_recovery_boundaries(descriptor", validator)
 
     def test_title_display_v5_requires_real_hash_bound_artifacts_without_runtime_replay(self):
         code = TRACE_VALIDATOR.read_text(encoding="utf-8")
