@@ -4702,8 +4702,10 @@ Project Eon and its own runtime resources, and does not pre-create
 The Linux AppImage is built from the same CMake install tree, with a reviewed
 AppImage runtime and builder verified by SHA-256 before use. It is extracted
 only into an external cache directory for CI validation; the verifier checks
-the launcher, private SDL runtime, cards, branding, fonts, localization
-catalogues, absent default `~/.projecteon` path, and rejected media extensions.
+the launcher, the complete dynamic-loader graph (private SDL3, SDL_image and
+SDL_ttf must resolve from the AppDir with no unresolved or `/usr/local`
+build-host fallback), cards, branding, fonts, localization catalogues, absent
+default `~/.projecteon` path, and rejected media extensions.
 The artifact therefore neither embeds nor initializes original game data.
 Before Inno runs, CI also applies an explicit allowlist to the complete staging
 tree. This is stricter than rejecting game-media extensions: an unexpected
@@ -4712,7 +4714,13 @@ than becoming an unreviewed installer payload.
 The unsigned iPadOS IPA is equally media-free: its Files-enabled default is
 `Documents/ProjectEon`, an app Documents location reached without copying or
 unpacking a selected archive. The runtime does not create that directory; it
-only reads user-supplied media in place after the user provides it.
+only reads user-supplied media in place after the user provides it. Before an
+IPA is uploaded, the archive verifier applies a closed payload allowlist: the
+only regular members allowed in `ProjectEon.app` are the arm64 executable,
+Info.plist, reviewed launcher cards and branding, reviewed font/licence files,
+and the 20 PO catalogues. This is stronger than a disk-image suffix denylist:
+an unknown file or directory cannot be smuggled into the sideload artifact as
+unreviewed data.
 
 At the exact opening event `$0f,$00000b38` (observed at scheduler tick 82 for
 the recovered held input route), the live Amiga session now terminates its

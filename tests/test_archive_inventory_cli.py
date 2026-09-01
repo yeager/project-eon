@@ -59,6 +59,8 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn("static_control_flow_sidecar", MAIN)
         self.assertIn(r'\"static_control_flow\"', MAIN)
         self.assertIn(r'\"release_bindings\"', MAIN)
+        self.assertIn(r'\"function_map_direct_range_bindings\"', MAIN)
+        self.assertIn("function_map_sidecar_coverage", MAIN)
         self.assertIn("Static control-flow sidecar must remain outside the repository and /tmp", MAIN)
         self.assertIn("document not bound to a reverified inspected release", MAIN)
         self.assertNotIn("report_static_control_flow_sidecar", MAIN)

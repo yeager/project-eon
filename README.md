@@ -549,6 +549,9 @@ and x86_64 AppImage Linux packages; separate macOS arm64 and x86_64 app
 bundles; a Windows Inno Setup installer; and an arm64 iPadOS `.ipa`. The
 AppImage builder uses a runtime supplied by a SHA-256-locked AppImage tool;
 an upstream change fails the build until a reviewed hash update is committed.
+CI extracts the completed AppImage and verifies its complete dynamic-loader
+graph: private SDL3, SDL_image, and SDL_ttf must resolve from the AppDir, with
+no unresolved dependency or `/usr/local` build-host fallback.
 The iPadOS artifact is unsigned
 for sideload signing with the user's own certificate and provisioning profile.
 Its packaging step independently validates the final IPA archive before upload:

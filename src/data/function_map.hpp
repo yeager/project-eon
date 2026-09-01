@@ -1,5 +1,6 @@
 #pragma once
 
+#include "data/static_control_flow.hpp"
 #include "platform/game_data.hpp"
 
 #include <span>
@@ -31,6 +32,17 @@ struct FunctionMapEntry {
     std::string_view address_space = "runtime";
 };
 
+// A strict source-provenance cross-check between the compiled function map
+// and an already admitted external static-control-flow sidecar. A binding
+// means only that the exact release, CPU, address space, leaf hash and byte
+// coordinate occur in a declared range. It does not establish that the bytes
+// are code, reachable, callable, loaded, or executed.
+struct FunctionMapSidecarCoverage {
+    std::size_t function_entry_count = 0;
+    std::size_t direct_range_binding_count = 0;
+    std::size_t not_declared_by_sidecar_count = 0;
+};
+
 [[nodiscard]] std::span<const FunctionMapEntry> function_map();
 // Function-map declarations are documentation-order records, not an index.
 // Return an explicit filtered snapshot so adding a function for an existing
@@ -46,5 +58,7 @@ struct FunctionMapEntry {
 [[nodiscard]] bool function_map_entry_is_well_formed(const FunctionMapEntry& entry);
 [[nodiscard]] bool release_has_function_map_entry(
     std::string_view release_sha256, std::string_view entry_id);
+[[nodiscard]] FunctionMapSidecarCoverage function_map_sidecar_coverage(
+    const StaticControlFlowSummary& sidecar);
 
 } // namespace eon

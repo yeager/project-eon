@@ -92,10 +92,11 @@ The SDL-free `data/static_control_flow` reader admits this sidecar only as a
 bounded metadata document. It accepts the exact set/document v1 schemas,
 structurally complete source-provenance fields, lower-case identities, non-overlapping
 declared ranges, and edges that fit their range and report the extractor's
-correct target scope. Its summary contains only document/range/candidate
-counts, declared byte total, CPU/kind counts, and direct-target scope counts.
-It reads no game-media path or bytes and exposes no original address as a
-runtime dispatch target. In particular, its only accepted classification is
+correct target scope. Its diagnostic output contains only document/range/
+candidate counts, declared byte total, CPU/kind counts, direct-target scope
+counts, and the structural function-map cross-check described below. It reads
+no game-media path or bytes and exposes no original address as a runtime
+dispatch target. In particular, its only accepted classification is
 `static-candidate-unclassified`; loading a sidecar does not establish code
 classification, reachability, ABI, timing, input, or gameplay behaviour.
 
@@ -115,6 +116,16 @@ document only if its `archive_sha256` (or `carrier_archive_sha256` for an
 embedded release) binds one of those release identities.
 Its JSON emits only the static-candidate-unclassified aggregate and release
 identity binding, retaining no sidecar or original-media bytes.
+
+When a sidecar is admitted this way, the JSON also emits a compact
+function-map cross-check for the releases named by that sidecar:
+`function_map_direct_range_bindings` and
+`function_map_not_declared_by_sidecar`. A direct binding requires the exact
+effective release identity, CPU, address space, leaf SHA-256, and a
+function-map coordinate inside a sidecar's declared range. It retains no
+instruction, edge, sidecar path, or media byte. This is a provenance check
+only: neither result classifies bytes as code nor establishes reachability,
+load state, ABI, timing, input semantics, or execution.
 
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
 English, Millennium DOS Spanish FAT12, Millennium Amiga Defjam, Deuteros

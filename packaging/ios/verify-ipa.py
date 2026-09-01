@@ -92,6 +92,26 @@ def required_paths() -> set[str]:
     return required
 
 
+def allowed_directories() -> set[str]:
+    """Return the complete directory closure of the reviewed IPA payload.
+
+    Blocking familiar disk-image suffixes is useful defence in depth, but it
+    cannot prove that an arbitrary additional payload is not original media.
+    Project Eon's unsigned iPad artifact has a deliberately finite resource
+    contract, so make that contract executable: only its executable, plist,
+    cards, branding, fonts, and translated UI catalogues may be regular
+    members.  Directory entries are allowed only when they are parents of one
+    of those reviewed files.
+    """
+    directories = {"Payload/", ROOT}
+    for member in required_paths():
+        parent = PurePosixPath(member).parent
+        while str(parent) not in (".", ""):
+            directories.add(str(parent) + "/")
+            parent = parent.parent
+    return directories
+
+
 def validate_plist(raw: bytes) -> None:
     try:
         plist = plistlib.loads(raw)
@@ -179,10 +199,17 @@ def verify(ipa: str) -> None:
             infos = archive.infolist()
             if not infos:
                 fail("IPA is empty")
+            allowed_files = required_paths()
+            allowed_dirs = allowed_directories()
             names: set[str] = set()
             members: dict[str, zipfile.ZipInfo] = {}
             for info in infos:
                 validate_member(info)
+                if info.is_dir():
+                    if info.filename not in allowed_dirs:
+                        fail("IPA contains an unexpected directory: " + info.filename)
+                elif info.filename not in allowed_files:
+                    fail("IPA contains an unexpected payload file: " + info.filename)
                 if info.filename in names:
                     fail(f"IPA contains duplicate member: {info.filename}")
                 names.add(info.filename)
