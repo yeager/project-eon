@@ -229,12 +229,17 @@ class ReceiptVerifierTests(unittest.TestCase):
         with temporary_directory() as directory:
             root = Path(directory)
             history = root / "normal-core-history.raw"
-            history.write_text(
-                "normal-core-history-v1 count=1 entries=f000:ca60:fe380300\n", encoding="ascii")
             capture = TOOL.load_tool("run_millennium_dos_capture")
+            history.write_text("normal-core-history-v1 count=16 entries="
+                + ",".join(capture.KNOWN_V14_NORMAL_CORE_HISTORY) + "\n", encoding="ascii")
+            (root / "results.raw").write_bytes(capture.KNOWN_V11_EARLY_STOP_RAW)
             fields = dict(line.split("=", 1) for line in
                 capture.normal_core_history_status(history, "v14-normal-core-history").splitlines())
             fields["termination_reason"] = "known-unhandled-interrupt"
+            fields.update(dict(line.split("=", 1) for line in
+                capture.normal_core_history_boundary_status(
+                    history, root / "results.raw", "v14-normal-core-history",
+                    "known-unhandled-interrupt").splitlines()))
             TOOL.verify_millennium_normal_core_history(fields, root)
             fields["normal_core_history"] = "absent"
             with self.assertRaisesRegex(ValueError, "normal-core history receipt mismatch"):

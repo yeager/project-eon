@@ -255,6 +255,25 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "canonical LF"):
                 TOOL.normal_core_history_status(history, "v14-normal-core-history")
 
+    def test_v14_early_stop_requires_the_exact_observed_history_boundary(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            history = root / "normal-core-history.raw"
+            results = root / "results.raw"
+            history.write_text("normal-core-history-v1 count=16 entries="
+                + ",".join(TOOL.KNOWN_V14_NORMAL_CORE_HISTORY) + "\n", encoding="ascii")
+            results.write_bytes(TOOL.KNOWN_V11_EARLY_STOP_RAW)
+            status = TOOL.normal_core_history_boundary_status(
+                history, results, "v14-normal-core-history", "known-unhandled-interrupt")
+            self.assertIn("normal_core_history_boundary=observed-zero-context-to-default-callback\n", status)
+            self.assertIn("normal_core_history_first=0e70:18e4:00000000\n", status)
+            history.write_text("normal-core-history-v1 count=16 entries="
+                + ",".join((*TOOL.KNOWN_V14_NORMAL_CORE_HISTORY[:-1], "f000:ca60:fe380301")) + "\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
+                TOOL.normal_core_history_boundary_status(
+                    history, results, "v14-normal-core-history", "known-unhandled-interrupt")
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""
         with temporary_directory() as directory:
