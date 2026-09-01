@@ -73,6 +73,11 @@ or gameplay claim. Indirect transfers and M68000 PC-relative transfers whose
 decoder binding does not retain a reliable displacement are omitted rather
 than guessed.
 
+For Atari ST PRGs, the dedicated `--atari-prg-archive` mode first verifies the
+outer archive, nested FAT12 disk, exact root PRG, PRG header, and TEXT+DATA
+range. Its sidecar uses `image-relative-unrelocated` fields, never a runtime
+address: GEMDOS relocation and the load base remain preservation boundaries.
+
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
 English, Millennium DOS Spanish FAT12, Millennium Amiga Defjam, Deuteros
 Amiga English, and Deuteros Atari Replicants release archives. Their
