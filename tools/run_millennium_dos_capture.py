@@ -30,30 +30,34 @@ EXPECTED_RECORDER_SHA256 = "7b959f7aee3d2db0513db4f14e3075f306e798e25adaeeebd96a
 RECORDER_PROTOCOLS = {
     # v11 is the existing exact callback-loop receipt. Its shape remains the
     # default so a new diagnostic cannot silently change prior evidence.
-    "v11": ("11", EXPECTED_RECORDER_SHA256),
+    "v11": ("22", EXPECTED_RECORDER_SHA256),
     # This separately built recorder retains the immediately preceding normal
     # core tuple at its own callback boundary. It is observational only.
-    "v12-predecessor": ("12", "20a5ec331ca71e541d2f6d42c1ab49eca0fec5dabf298b6faf51fa45c63c24ed"),
+    "v12-predecessor": ("22", "20a5ec331ca71e541d2f6d42c1ab49eca0fec5dabf298b6faf51fa45c63c24ed"),
     # v13 correlates only observer ordinals: a visible SDL key event and the
     # original title's next documented INT 21h/AH=06h poll. It neither reads
     # the DOS result nor captures/derives a title frame, audio, or action.
-    "v13-title-poll": ("13", "07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b"),
+    "v13-title-poll": ("22", "07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b"),
     # v14 retains a fixed normal-core instruction ring only when the known
     # DOSBox-X INT 6 callback boundary is reached. It is a separate recorder
     # file, leaving the v13 result grammar and prior evidence unchanged.
-    "v14-normal-core-history": ("14", "748c1c934a78a28baef083fc352b552644f9665bc27fc032db0fdd7463ee5c63"),
-    "v15-anomaly-entry": ("15", "0f74d8350ef61249d9ede9b11baa60133f407eaa863c60b66d18e86671bbc65e"),
-    "v16-anomaly-entry": ("16", "ab5b1f42a486a7f768f33978c7504cc59fd86a4eb29f80a9041205d383ec91fa"),
-    "v17-anomaly-entry": ("17", "d03e11ea48710e00d97c127f9b3d3ba5bc6f4227fafb7764e2b5950e50704ae6"),
-    "v18-ivt-entry": ("18", "74420b4f8a0e2009f08b278ead1f9b36804404808b27895f327f204836d65e11"),
-    "v19-int93-vector": ("19", "487cbc3292b6b279ff0cfe444dbded64ae86c5cb174af5161ddbd052d53022f0"),
-    "v20-title-entry-transfer": ("20", "a07aa94abd5e7a38c52b81e2080a4161dc33a5bd15a63be9b6316219e65b2ef5"),
+    "v14-normal-core-history": ("22", "748c1c934a78a28baef083fc352b552644f9665bc27fc032db0fdd7463ee5c63"),
+    "v15-anomaly-entry": ("22", "0f74d8350ef61249d9ede9b11baa60133f407eaa863c60b66d18e86671bbc65e"),
+    "v16-anomaly-entry": ("22", "ab5b1f42a486a7f768f33978c7504cc59fd86a4eb29f80a9041205d383ec91fa"),
+    "v17-anomaly-entry": ("22", "d03e11ea48710e00d97c127f9b3d3ba5bc6f4227fafb7764e2b5950e50704ae6"),
+    "v18-ivt-entry": ("22", "74420b4f8a0e2009f08b278ead1f9b36804404808b27895f327f204836d65e11"),
+    "v19-int93-vector": ("22", "487cbc3292b6b279ff0cfe444dbded64ae86c5cb174af5161ddbd052d53022f0"),
+    "v20-title-entry-transfer": ("22", "a07aa94abd5e7a38c52b81e2080a4161dc33a5bd15a63be9b6316219e65b2ef5"),
     # V21 observes one original DOS Set Interrupt Vector transaction after
     # checking its instruction preimage.  It remains diagnostics-only.
-    "v21-int93-installation": ("21", "18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1"),
+    "v21-int93-installation": ("22", "18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1"),
 }
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
+# A new capture must state whether it is an intentionally no-input diagnostic
+# or an operator-led physical-input session.  The runner later binds that
+# declaration to the recorder-created receipt; it never writes input itself.
+CAPTURE_INTENTS = {"diagnostic-no-input", "physical-input"}
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
 MAX_FOCUS_SETTLE_SECONDS = 120
@@ -359,6 +363,30 @@ def input_receipt_status(path: Path) -> str:
             f"host_input_receipt_sha256={digest}\n"
             f"host_input_receipt_bytes={size}\n"
             f"host_input_receipt_records={record_count}\n")
+
+
+def capture_intent_status(intent: str, receipt_status: str, observed_during_capture: bool) -> str:
+    """Bind a declared operator session type to external recorder evidence.
+
+    This is deliberately a classification of the capture procedure, not a
+    claim that the original game accepted or acted on a key.  A physical-input
+    session needs a non-empty recorder receipt; a diagnostic session must not
+    accidentally be admitted with physical host input in it.
+    """
+    if intent not in CAPTURE_INTENTS:
+        raise CaptureError("capture intent is not in the reviewed finite set")
+    fields = dict(line.split("=", 1) for line in receipt_status.splitlines())
+    state = fields.get("host_input_receipt")
+    if intent == "physical-input":
+        if state != "present" or not observed_during_capture:
+            raise CaptureError("physical-input capture requires an observed non-empty host-input receipt")
+        requirement = "required"
+    else:
+        if state not in {"absent", "empty"} or observed_during_capture:
+            raise CaptureError("diagnostic-no-input capture must not retain host input")
+        requirement = "forbidden"
+    return (f"capture_intent={intent}\n"
+            f"capture_intent_input_requirement={requirement}\n")
 
 
 def input_delivery_file_observed(path: Path) -> bool:
@@ -965,6 +993,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         if (source_hash, source_size) != (after_hash, after_size):
             raise CaptureError("source archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.raw")
+        intent_status = capture_intent_status(args.capture_intent, receipt_status,
+                                              live_input_observed)
         observation_status = (raw_observation_status(output / "events.raw", "events_raw", args.recorder_protocol)
                               + raw_observation_status(output / "results.raw", "results_raw", args.recorder_protocol))
         history_status = normal_core_history_status(output / "normal-core-history.raw",
@@ -993,7 +1023,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("source_release", (after_hash, after_size))
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
-                        + receipt_status + observation_status + history_status + history_boundary_status
+                        + intent_status + receipt_status + observation_status + history_status + history_boundary_status
                         + anomaly_status + int93_status + title_transfer_status + installation_status
                         + title_checkpoint_status
                         + recorder_console_status(console_result[0]))
@@ -1028,6 +1058,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="Visible operator window duration (15-600; default: 120)")
     parser.add_argument("--focus-settle-seconds", type=int, default=10,
                         help="Manual visible-window focus time before capture (0-120; default: 10)")
+    parser.add_argument("--capture-intent", choices=tuple(sorted(CAPTURE_INTENTS)), required=True,
+                        help="Required operator declaration: physical-input or diagnostic-no-input")
     parser.add_argument("--machine-profile", choices=tuple(sorted(MACHINE_PROFILES)), default="svga_s3",
                         help="Explicit DOSBox-X video-machine profile (default: svga_s3)")
     parser.add_argument("--recorder-protocol", choices=tuple(sorted(RECORDER_PROTOCOLS)), default="v11",

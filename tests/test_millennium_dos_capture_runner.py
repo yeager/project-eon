@@ -7,6 +7,7 @@ import importlib.util
 import io
 from pathlib import Path
 import unittest
+from unittest import mock
 
 from eon_test_paths import temporary_directory
 
@@ -135,8 +136,27 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
     def test_physical_capture_arguments_default_to_a_focus_settle_window(self) -> None:
         arguments = TOOL.parse_arguments((
             "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
+            "--capture-intent", "physical-input",
         ))
         self.assertEqual(arguments.focus_settle_seconds, 10)
+        self.assertEqual(arguments.capture_intent, "physical-input")
+        with self.assertRaises(SystemExit), mock.patch("sys.stderr", new_callable=io.StringIO):
+            TOOL.parse_arguments((
+                "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
+            ))
+
+    def test_capture_intent_fails_closed_against_the_recorder_input_receipt(self) -> None:
+        present = ("host_input_receipt=present\n"
+                   "host_input_receipt_sha256=" + "a" * 64 + "\n"
+                   "host_input_receipt_bytes=1\nhost_input_receipt_records=1\n")
+        self.assertEqual(TOOL.capture_intent_status("physical-input", present, True),
+                         "capture_intent=physical-input\ncapture_intent_input_requirement=required\n")
+        self.assertEqual(TOOL.capture_intent_status("diagnostic-no-input", "host_input_receipt=absent\n", False),
+                         "capture_intent=diagnostic-no-input\ncapture_intent_input_requirement=forbidden\n")
+        with self.assertRaisesRegex(TOOL.CaptureError, "requires"):
+            TOOL.capture_intent_status("physical-input", "host_input_receipt=absent\n", False)
+        with self.assertRaisesRegex(TOOL.CaptureError, "must not"):
+            TOOL.capture_intent_status("diagnostic-no-input", present, True)
 
     def test_raw_observation_status_is_hash_bound_and_bounded(self) -> None:
         with temporary_directory() as directory:

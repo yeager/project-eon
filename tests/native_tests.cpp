@@ -5545,6 +5545,56 @@ int main() {
         }
         assert(rejected);
     }
+    // An actual F8 poll can be followed only by explicitly observed native
+    // bytes.  This exercises the whole call-free prefix through the external
+    // XLAT boundary and the subsequent local gate without naming a game
+    // action or executing any helper.
+    eon::MillenniumDosGameSession observed_f8_session(game_flow, *game_executable);
+    const auto observed_f8_preflight = observed_f8_session.observe_eighth_function_key_preflight({
+        .action = {0x0f05, 0x42}, .enabled_byte = {0xda39, 0}, .counter_byte = {0xda0a, 3}});
+    assert(observed_f8_preflight.outcome
+        == eon::MillenniumDosEighthFunctionKeyPreflightOutcome::table_jump_boundary);
+    assert(observed_f8_session.last_runtime_byte_effect());
+    assert(observed_f8_session.last_runtime_byte_effect()->address == 0xda30);
+    // Runtime effects have no equality operator; inspect the one exact DEC.
+    assert(observed_f8_session.last_eighth_function_key_runtime_effects().size() == 1);
+    assert(observed_f8_session.last_eighth_function_key_runtime_effects().front().address == 0xda0a);
+    assert(observed_f8_session.last_eighth_function_key_runtime_effects().front().previous
+        == std::optional<std::uint8_t>{3});
+    assert(observed_f8_session.reconstructed_runtime_byte(0xda0a)
+        == std::optional<std::uint8_t>{2});
+    const auto observed_f8_table = observed_f8_session.observe_eighth_function_key_table_jump(2);
+    assert(observed_f8_table.selected_pointer == 0x7815);
+    assert(observed_f8_session.last_eighth_function_key_runtime_effects().size() == 3);
+    assert(observed_f8_session.reconstructed_runtime_byte(0xda09)
+        == std::optional<std::uint8_t>{0});
+    assert(observed_f8_session.reconstructed_runtime_byte(0xda06)
+        == std::optional<std::uint8_t>{2});
+    const auto observed_f8_gate = observed_f8_session.observe_eighth_function_key_selected_record_gate({0x6e2f, 0});
+    assert(observed_f8_gate.outcome
+        == eon::MillenniumDosEighthFunctionKeySelectedRecordOutcome::first_helper_boundary);
+    assert(observed_f8_gate.first_helper_address == std::optional<std::uint16_t>{0x7924});
+    {
+        eon::MillenniumDosGameSession detached_f8_session(game_flow, *game_executable);
+        bool rejected = false;
+        try {
+            static_cast<void>(detached_f8_session.observe_eighth_function_key_table_jump(2));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        eon::MillenniumDosGameSession altered_f8_session(game_flow, *game_executable);
+        bool rejected = false;
+        try {
+            static_cast<void>(altered_f8_session.observe_eighth_function_key_preflight({
+                .action = {0x0f05, 0x42}, .enabled_byte = {0xda39, 0}, .counter_byte = {0xda0b, 3}}));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto observe_game_action = [&game_session](const std::uint8_t action) {
         return game_session.observe_action({0x0f05, action});
     };
@@ -8090,12 +8140,32 @@ int main() {
     assert((title_graphics_setup_palette[0] == eon::RgbColor{0, 0, 0}));
     assert((title_graphics_setup_palette[1] == eon::RgbColor{153, 170, 119}));
     assert((title_graphics_setup_palette[19] == eon::RgbColor{204, 204, 0}));
+    assert(title_stage_session.graphics_setup().palette_source_address == 0x1ed24);
+    assert(title_stage_session.graphics_setup().palette_destination_address == 0x12ecc);
+    assert(title_stage_session.graphics_setup().palette_words[19] == 0x0cc0);
+    assert(title_stage_session.display_clear().entry_address == 0x1f182);
+    assert(title_stage_session.display_clear().destination_pointer_address == 0x1f168);
+    assert(title_stage_session.display_clear().iteration_count == 0x1f40);
     assert(title_stage_session.entry_prefix().incoming_profile == 1);
     assert(title_stage_session.entry_prefix().stop_before_exec_address == 0x40450);
     {
         bool rejected = false;
         try {
             static_cast<void>(eon::DeuterosAmigaTitleStageSession(system_disk, load_plan, 2));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        // The live handoff must not admit an otherwise intact entry prefix
+        // when the next original graphics-setup helper has changed.
+        auto altered_graphics_setup_disk = *amiga_disk1;
+        altered_graphics_setup_disk[0x6e000 + (0x1eda6 - 0x13000)] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_graphics_setup_disk));
+            static_cast<void>(eon::DeuterosAmigaTitleStageSession(altered_disk, load_plan, 1));
         } catch (const std::runtime_error&) {
             rejected = true;
         }

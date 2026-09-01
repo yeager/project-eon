@@ -45,6 +45,18 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "13"}), "13")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "20"}), "20")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "21"}), "21")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "22"}), "22")
+
+    def test_capture_intent_rejects_a_receipt_that_disagrees_with_its_declared_session(self) -> None:
+        millennium = TOOL.load_tool("run_millennium_dos_capture")
+        fields = {
+            "capture_intent": "physical-input", "capture_intent_input_requirement": "required",
+            "host_input_receipt": "present", "host_input_observed_during_capture": "true",
+        }
+        TOOL.verify_capture_intent(fields, millennium)
+        fields["host_input_observed_during_capture"] = "false"
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            TOOL.verify_capture_intent(fields, millennium)
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:

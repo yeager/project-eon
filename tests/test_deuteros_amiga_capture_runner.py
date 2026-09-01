@@ -159,8 +159,28 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         arguments = TOOL.parse_arguments((
             "--source-release", "/release.zip", "--kickstart-archive", "/kickstart.zip",
             "--recorder", "/recorder", "--output", "/capture", "--focus-settle-seconds", "0",
+            "--capture-intent", "diagnostic-no-input",
         ))
         self.assertEqual(arguments.focus_settle_seconds, 0)
+        self.assertEqual(arguments.capture_intent, "diagnostic-no-input")
+        with self.assertRaises(SystemExit), mock.patch("sys.stderr", new_callable=io.StringIO):
+            TOOL.parse_arguments((
+                "--source-release", "/release.zip", "--kickstart-archive", "/kickstart.zip",
+                "--recorder", "/recorder", "--output", "/capture",
+            ))
+
+    def test_capture_intent_fails_closed_against_the_recorder_input_receipt(self) -> None:
+        present = ("host_input_receipt=present\n"
+                   "host_input_receipt_sha256=" + "a" * 64 + "\n"
+                   "host_input_receipt_bytes=1\nhost_input_receipt_records=1\n")
+        self.assertEqual(TOOL.capture_intent_status("physical-input", present, True),
+                         "capture_intent=physical-input\ncapture_intent_input_requirement=required\n")
+        self.assertEqual(TOOL.capture_intent_status("diagnostic-no-input", "host_input_receipt=empty\n", False),
+                         "capture_intent=diagnostic-no-input\ncapture_intent_input_requirement=forbidden\n")
+        with self.assertRaisesRegex(TOOL.CaptureError, "requires"):
+            TOOL.capture_intent_status("physical-input", "host_input_receipt=empty\n", False)
+        with self.assertRaisesRegex(TOOL.CaptureError, "must not"):
+            TOOL.capture_intent_status("diagnostic-no-input", present, True)
 
     def test_raw_recorder_observation_is_hash_bound_and_bounded(self) -> None:
         with temporary_directory() as directory:
