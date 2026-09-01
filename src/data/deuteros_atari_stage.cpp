@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -33,6 +34,21 @@ void require_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
             bytes.begin() + static_cast<std::ptrdiff_t>(offset))) {
         throw std::runtime_error(what);
     }
+}
+
+std::size_t relative_target(const std::size_t base, const std::int64_t displacement,
+    const std::size_t extent, const char* what) {
+    if (base > extent) throw std::runtime_error(what);
+    if (displacement >= 0) {
+        const auto forward = static_cast<std::uint64_t>(displacement);
+        if (forward > extent - base) throw std::runtime_error(what);
+        return base + static_cast<std::size_t>(forward);
+    }
+    // Avoid negating INT64_MIN even though current 68000 displacements are
+    // 8/16-bit: this helper remains safe if a wider decoded field is added.
+    const auto backward = static_cast<std::uint64_t>(-(displacement + 1)) + 1U;
+    if (backward > base) throw std::runtime_error(what);
+    return base - static_cast<std::size_t>(backward);
 }
 
 DeuterosAtariRawRangeLoadPlan build_raw_range_load_plan(
@@ -635,10 +651,12 @@ DeuterosAtariPostCallbackCalleeProfiles parse_deuteros_atari_post_callback_calle
         throw std::runtime_error("Unexpected Deuteros Atari ST post-callback callee hash");
     }
     // 68000 BSR/BRA word displacements are relative to their extension word.
-    const auto first_branch_target = first_offset + 46U
-        + static_cast<std::int16_t>(be16(first_window, 46));
-    const auto second_bsr_target = second_offset + 20U
-        + static_cast<std::int16_t>(be16(second_window, 20));
+    const auto first_branch_target = relative_target(first_offset + 46U,
+        static_cast<std::int16_t>(be16(first_window, 46)), bytes.size(),
+        "Deuteros Atari ST first post-callback branch leaves stage");
+    const auto second_bsr_target = relative_target(second_offset + 20U,
+        static_cast<std::int16_t>(be16(second_window, 20)), bytes.size(),
+        "Deuteros Atari ST second post-callback branch leaves stage");
     // The BSR reaches the local range wrapper at +$30; that wrapper in turn
     // calls the known XBIOS-facing routine at +$60. Do not collapse the two
     // boundaries or presume either one returns.
@@ -713,8 +731,9 @@ DeuterosAtariSecondCalleeContinuation parse_deuteros_atari_second_callee_continu
     }
     // DBF uses the extension-word address as its displacement base, so its
     // -4 target is the preceding MOVE.L (A0)+,(A1)+ at +$1156.
-    const auto copy_loop_target = continuation_offset + 34U
-        + static_cast<std::int16_t>(be16(window, 34));
+    const auto copy_loop_target = relative_target(continuation_offset + 34U,
+        static_cast<std::int16_t>(be16(window, 34)), bytes.size(),
+        "Deuteros Atari ST copy loop leaves stage");
     if (copy_loop_target != 0x1156U) {
         throw std::runtime_error("Unexpected Deuteros Atari ST second-callee copy loop");
     }
@@ -763,18 +782,18 @@ DeuterosAtariRawReaderWrapperProfile parse_deuteros_atari_raw_reader_wrapper(
     }
     // Word branches use their extension-word address; byte branches use the
     // address immediately after their opcode/displacement pair.
-    const auto raw_reader_target = wrapper_offset + 12U
-        + static_cast<std::int16_t>(be16(window, 12));
-    const auto nonzero_target = wrapper_offset + 26U
-        + static_cast<std::int8_t>(window[25]);
-    const auto first_terminal_target = wrapper_offset + 34U
-        + static_cast<std::int8_t>(window[33]);
-    const auto second_terminal_target = wrapper_offset + 36U
-        + static_cast<std::int8_t>(window[35]);
-    const auto loop_target = wrapper_offset + 46U
-        + static_cast<std::int8_t>(window[45]);
-    const auto return_helper_target = wrapper_offset + 48U
-        + static_cast<std::int8_t>(window[47]);
+    const auto raw_reader_target = relative_target(wrapper_offset + 12U,
+        static_cast<std::int16_t>(be16(window, 12)), bytes.size(), "Deuteros Atari ST raw-reader branch leaves stage");
+    const auto nonzero_target = relative_target(wrapper_offset + 26U,
+        static_cast<std::int8_t>(window[25]), bytes.size(), "Deuteros Atari ST nonzero branch leaves stage");
+    const auto first_terminal_target = relative_target(wrapper_offset + 34U,
+        static_cast<std::int8_t>(window[33]), bytes.size(), "Deuteros Atari ST terminal branch leaves stage");
+    const auto second_terminal_target = relative_target(wrapper_offset + 36U,
+        static_cast<std::int8_t>(window[35]), bytes.size(), "Deuteros Atari ST terminal branch leaves stage");
+    const auto loop_target = relative_target(wrapper_offset + 46U,
+        static_cast<std::int8_t>(window[45]), bytes.size(), "Deuteros Atari ST loop branch leaves stage");
+    const auto return_helper_target = relative_target(wrapper_offset + 48U,
+        static_cast<std::int8_t>(window[47]), bytes.size(), "Deuteros Atari ST return branch leaves stage");
     if (raw_reader_target != raw_reader_offset || nonzero_target != return_helper_offset
         || first_terminal_target != wrapper_offset + 46U
         || second_terminal_target != wrapper_offset + 46U
