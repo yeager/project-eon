@@ -20,10 +20,20 @@ from analyze_atari_st_prg import fat12_member
 
 def require_external_output(path: Path) -> None:
     """Reject report destinations that could commit or use system scratch."""
-    resolved = path.resolve(strict=False)
-    repository = Path(__file__).resolve().parents[1]
-    if resolved == Path("/tmp") or Path("/tmp") in resolved.parents:
+    # Preserve the contractual ``/tmp`` spelling before macOS resolves it as
+    # ``/private/tmp``.  On Windows, a POSIX-looking ``/tmp`` route is also
+    # drive-rooted only after parsing, so retain the lexical check there too.
+    normalized = path.as_posix().replace("\\", "/")
+    parts = path.parts
+    if (normalized == "/tmp" or normalized.startswith("/tmp/")
+            or bool(path.anchor and len(parts) > 1
+                    and parts[1].casefold() == "tmp")):
         raise SystemExit("output must be outside /tmp")
+    resolved = path.resolve(strict=False)
+    tmp_root = Path("/tmp").resolve(strict=False)
+    if resolved == tmp_root or tmp_root in resolved.parents:
+        raise SystemExit("output must be outside /tmp")
+    repository = Path(__file__).resolve().parents[1]
     if resolved == repository or repository in resolved.parents:
         raise SystemExit("output must be outside the repository")
     if path.exists():

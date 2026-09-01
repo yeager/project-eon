@@ -16,6 +16,7 @@ class DisassemblyInventoryTests(unittest.TestCase):
         tool = (ROOT / "tools" / "analyze_atari_st_config.py").read_text(encoding="utf-8")
         status = (ROOT / "docs" / "DISASSEMBLY_STATUS.md").read_text(encoding="utf-8")
         self.assertIn("MILL22A.INF", tool)
+        self.assertIn("Preserve the contractual ``/tmp`` spelling", tool)
         self.assertIn("output must not already exist", tool)
         self.assertIn("output must be outside /tmp", tool)
         self.assertIn("output must be outside the repository", tool)
