@@ -225,6 +225,21 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checkpoint receipt mismatch"):
                 TOOL.verify_millennium_title_input_checkpoint(fields, root)
 
+    def test_v14_requires_a_valid_normal_core_history_for_early_stop(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            history = root / "normal-core-history.raw"
+            history.write_text(
+                "normal-core-history-v1 count=1 entries=f000:ca60:fe380300\n", encoding="ascii")
+            capture = TOOL.load_tool("run_millennium_dos_capture")
+            fields = dict(line.split("=", 1) for line in
+                capture.normal_core_history_status(history, "v14-normal-core-history").splitlines())
+            fields["termination_reason"] = "known-unhandled-interrupt"
+            TOOL.verify_millennium_normal_core_history(fields, root)
+            fields["normal_core_history"] = "absent"
+            with self.assertRaisesRegex(ValueError, "normal-core history receipt mismatch"):
+                TOOL.verify_millennium_normal_core_history(fields, root)
+
     def test_v6_millennium_machine_profile_matches_generated_configuration(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)

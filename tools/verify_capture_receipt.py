@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"}
 
 
 def load_tool(name: str):
@@ -97,7 +97,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
 
 
@@ -193,13 +193,14 @@ def verify_millennium_host_input_summary(fields: dict[str, str], directory: Path
 def verify_millennium_title_input_checkpoint(fields: dict[str, str], directory: Path) -> None:
     """Recompute v13 chronology without promoting it into guest input proof."""
     tool = load_tool("run_millennium_dos_capture")
+    protocol = fields.get("recorder_protocol", "v13-title-poll")
     expected = tool.title_input_checkpoint_status(directory / "results.raw",
-        directory / "host-input-receipt.raw", "v13-title-poll")
+        directory / "host-input-receipt.raw", protocol)
     expected_fields = dict(line.split("=", 1) for line in expected.splitlines())
     for key, value in expected_fields.items():
         if fields.get(key) != value:
             raise ValueError("title-input checkpoint receipt mismatch")
-    polls = tool.title_input_poll_ordinals(directory / "results.raw", "v13-title-poll")
+    polls = tool.title_input_poll_ordinals(directory / "results.raw", protocol)
     if (fields.get("results_raw_title_input_polls"),
             fields.get("results_raw_last_host_key_ordinal")) != (
                 str(len(polls)), str(polls[-1] if polls else 0)):
@@ -228,9 +229,21 @@ def verify_millennium_termination(fields: dict[str, str], directory: Path, versi
         if version == "12" and not tool.known_unhandled_interrupt_observed(
                 directory / "results.raw", "v12-predecessor"):
             raise ValueError("Millennium early stop requires the bounded v12 predecessor diagnostic shape")
-        if version == "13" and not tool.known_unhandled_interrupt_observed(
-                directory / "results.raw", "v13-title-poll"):
+        if version in {"13", "14"} and not tool.known_unhandled_interrupt_observed(
+                directory / "results.raw", fields["recorder_protocol"]):
             raise ValueError("Millennium early stop requires the exact v13 no-poll diagnostic receipt")
+
+
+def verify_millennium_normal_core_history(fields: dict[str, str], directory: Path) -> None:
+    tool = load_tool("run_millennium_dos_capture")
+    expected = tool.normal_core_history_status(directory / "normal-core-history.raw",
+                                               "v14-normal-core-history")
+    expected_fields = dict(line.split("=", 1) for line in expected.splitlines())
+    if any(fields.get(key) != value for key, value in expected_fields.items()):
+        raise ValueError("normal-core history receipt mismatch")
+    if fields.get("termination_reason") == "known-unhandled-interrupt" and \
+            fields.get("normal_core_history") != "present":
+        raise ValueError("v14 early stop requires a normal-core history record")
 
 
 def verify(kind: str, directory: Path) -> None:
@@ -248,28 +261,32 @@ def verify(kind: str, directory: Path) -> None:
             raise ValueError("v12 receipt must retain its predecessor recorder protocol")
         if version == "13" and recorder_protocol != "v13-title-poll":
             raise ValueError("v13 receipt must retain its title-poll recorder protocol")
-        if version not in {"12", "13"} and recorder_protocol != "v11":
+        if version == "14" and recorder_protocol != "v14-normal-core-history":
+            raise ValueError("v14 receipt must retain its normal-core history recorder protocol")
+        if version not in {"12", "13", "14"} and recorder_protocol != "v11":
             raise ValueError("pre-v12 receipt must retain the v11 recorder protocol")
         require_identity(fields, "recorder", (tool.RECORDER_PROTOCOLS[recorder_protocol][1], int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"} and fields.get("results_raw") == "present":
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw", recorder_protocol)
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
                     str(sum(counts.values())), shapes):
                 raise ValueError("results_raw grammar/count receipt mismatch")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.raw")
-        if version in {"5", "6", "7", "8", "9", "10", "11", "12", "13"}:
+        if version in {"5", "6", "7", "8", "9", "10", "11", "12", "13", "14"}:
             verify_millennium_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9", "10", "11", "12", "13"}:
+        if version in {"6", "7", "8", "9", "10", "11", "12", "13", "14"}:
             verify_millennium_machine_profile(fields, directory)
-        if version in {"10", "11", "12", "13"}:
+        if version in {"10", "11", "12", "13", "14"}:
             verify_millennium_termination(fields, directory, version)
-        if version == "13":
+        if version in {"13", "14"}:
             if fields.get("results_raw") != "present":
                 raise ValueError("v13 title-input checkpoint requires a raw result log")
             verify_millennium_title_input_checkpoint(fields, directory)
+        if version == "14":
+            verify_millennium_normal_core_history(fields, directory)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))

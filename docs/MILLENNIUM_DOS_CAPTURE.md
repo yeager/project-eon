@@ -710,6 +710,39 @@ instruction, a private DOS ABI, a title result, executable handoff, display,
 input, audio, simulation, or gameplay state; it is not added to a reference
 trace or consumed by Project Eon runtime code.
 
+### Receipt-v14 normal-core history (diagnostics only)
+
+The separate `v14-normal-core-history` recorder is an external DOSBox-X build
+of 86,233,096 bytes, SHA-256
+`748c1c934a78a28baef083fc352b552644f9665bc27fc032db0fdd7463ee5c63`, from
+the reviewed upstream revision
+`234797680781567e18c374c9e62da24de5423db0`. It keeps a fixed 16-entry ring
+of normal-core prefetch tuples (`CS:IP` plus four raw bytes) in recorder memory
+only. The sidecar is created with exclusive, no-follow host-file semantics
+only when the already documented default callback reaches `INT 6` at
+`f000:ca64`; it neither writes guest state nor changes input, vectors,
+scheduling, timing, or the established v13 `results.raw` grammar.
+
+Two fresh read-only `svga_s3` runs on 2026-09-01 passed the receipt verifier.
+Their `results.raw` remains the existing eight-record v13-compatible stream
+(786 bytes, SHA-256
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`). Both
+independently produced the identical 344-byte normal-core sidecar, SHA-256
+`248969bc16cfd773f64140ff3e314f6cd465ad7514de0868d24803b399bf4dbb`:
+
+```text
+0e70:18e4 .. 0e70:1900 = 00 00 00 00 (15 two-byte normal-core steps)
+f000:ca60 = fe 38 03 00
+```
+
+This proves only the recorder's immediate execution history: execution reaches
+the default callback after a sequence of zero bytes in the observed
+`0e70:18e4`–`0e70:1900` context. It does not prove why that segment:offset was
+selected, whether it represents original code, or any game behaviour. The
+next admissible investigation is a separately reviewed, read-only origin
+observer for the control transfer into that context; bypassing the callback or
+synthesizing a return remains forbidden.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
