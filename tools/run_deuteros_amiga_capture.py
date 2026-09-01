@@ -31,6 +31,10 @@ EXPECTED_KICKSTART_SIZE = 143_269
 EXPECTED_RECORDER_SHA256 = "93636a80a9e1124ee6545fe45c0664a1ce07f9450063112c2da5b7a69a0afc8f"
 EXPECTED_DISK1_SHA256 = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
 EXPECTED_DISK2_SHA256 = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a"
+EXPECTED_DISK1_ARCHIVE_SHA256 = "7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533"
+EXPECTED_DISK1_ARCHIVE_SIZE = 449_666
+EXPECTED_DISK2_ARCHIVE_SHA256 = "b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a"
+EXPECTED_DISK2_ARCHIVE_SIZE = 490_962
 EXPECTED_ROM_SHA256 = "ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53"
 DISK1_ARCHIVE = "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).zip"
 DISK2_ARCHIVE = "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 2 of 2).zip"
@@ -523,9 +527,17 @@ def run_capture(args: argparse.Namespace) -> Path:
     try:
         mount_read_only(release, mounts[0])
         mounted.append(mounts[0])
-        mount_read_only(mounts[0] / DISK1_ARCHIVE, mounts[1])
+        disk1_archive = mounts[0] / DISK1_ARCHIVE
+        disk2_archive = mounts[0] / DISK2_ARCHIVE
+        disk1_archive_identity = validate_identity(
+            disk1_archive, "Deuteros disk 1 nested archive", EXPECTED_DISK1_ARCHIVE_SHA256,
+            EXPECTED_DISK1_ARCHIVE_SIZE)
+        disk2_archive_identity = validate_identity(
+            disk2_archive, "Deuteros disk 2 nested archive", EXPECTED_DISK2_ARCHIVE_SHA256,
+            EXPECTED_DISK2_ARCHIVE_SIZE)
+        mount_read_only(disk1_archive, mounts[1])
         mounted.append(mounts[1])
-        mount_read_only(mounts[0] / DISK2_ARCHIVE, mounts[2])
+        mount_read_only(disk2_archive, mounts[2])
         mounted.append(mounts[2])
         mount_read_only(kickstart, mounts[3])
         mounted.append(mounts[3])
@@ -620,6 +632,8 @@ def run_capture(args: argparse.Namespace) -> Path:
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
                         + identity_status("source_release", release_after)
                         + identity_status("kickstart_archive", kickstart_after)
+                        + identity_status("disk1_archive", disk1_archive_identity)
+                        + identity_status("disk2_archive", disk2_archive_identity)
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
                         + receipt_status + observation_status + chronology_status
