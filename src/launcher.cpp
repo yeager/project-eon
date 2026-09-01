@@ -165,7 +165,8 @@ std::string usage() {
         "               [--inventory]\n"
         "               [--modern-packs <explicit-pack-root>]\n\n"
         "  project-eon [--data|--data-dir <directory-or-archive>] --inspect-json\n"
-        "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n\n"
+        "               [--game millennium|deuteros] [--platform dos|amiga|atari-st]\n"
+        "               [--static-control-flow-sidecar <absolute-external-sidecar>]\n\n"
         "  project-eon --inspect-save <2200SAVE.I|verified Millennium DOS archive>\n\n"
 #if defined(__APPLE__) && TARGET_OS_IPHONE
         "Without --data/--data-dir, iPadOS reads user-supplied media from Documents/ProjectEon.\n"
@@ -231,6 +232,12 @@ ParseResult parse_command_line(int argc, char** argv) {
             request.inspect_save = std::filesystem::path(value);
         } else if (argument == "--modern-packs") {
             request.modern_pack_root = std::filesystem::path(value);
+        } else if (argument == "--static-control-flow-sidecar") {
+            const std::filesystem::path path(value);
+            if (!path.is_absolute()) {
+                return {{}, "--static-control-flow-sidecar must be an absolute external path", false};
+            }
+            request.static_control_flow_sidecar = path;
         } else if (argument == "--modern-pack") {
             request.modern_pack_manifest = std::filesystem::path(value);
         } else if (argument == "--platform") {
@@ -273,6 +280,7 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.inspect_save && (!request.data_directory_is_default || request.game || request.verify_game || request.inspect_data
         || request.reference_trace || request.reference_trace_json || request.modern_pack_root || request.modern_pack_manifest
+        || request.static_control_flow_sidecar
         || request.platform || request.release_language || request.release_sha256
         || request.presentation_explicit || request.launch_check || request.launch_check_json)) {
         return {{}, "--inspect-save is standalone; it never selects game data, a release, or runtime", false};
@@ -288,6 +296,9 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.inspect_json && (request.inventory_assets || request.modern_pack_root)) {
         return {{}, "--inspect-json reports release-level diagnostics only; do not combine it with --inventory or --modern-packs", false};
+    }
+    if (request.static_control_flow_sidecar && !request.inspect_json) {
+        return {{}, "--static-control-flow-sidecar requires --inspect-json; it is diagnostics-only and never a textual inspection or runtime input", false};
     }
     if (request.modern_pack_root && !request.inspect_data) {
         return {{}, "--modern-packs requires --inspect; it is diagnostics-only and never selects a renderer pack", false};

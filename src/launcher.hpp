@@ -78,6 +78,10 @@ struct LaunchRequest {
     // Explicit diagnostics-only root for separately installed Modern packs.
     // There is deliberately no default lookup.
     std::optional<std::filesystem::path> modern_pack_root;
+    // Explicit external, metadata-only control-flow evidence. This is accepted
+    // only by the --inspect-json route; it cannot become a runtime input or
+    // textual --inspect report.
+    std::optional<std::filesystem::path> static_control_flow_sidecar;
     // Explicit Modern renderer selection, revalidated against the selected
     // original release before the external bytes are used.
     std::optional<std::filesystem::path> modern_pack_manifest;

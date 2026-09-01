@@ -50,6 +50,7 @@
 #include "data/recovery_map.hpp"
 #include "data/runtime_diagnostics.hpp"
 #include "data/startup_boundary.hpp"
+#include "data/static_control_flow.hpp"
 #include "data/zip_archive.hpp"
 #include "platform/game_data.hpp"
 #include "platform/platform_coverage.hpp"
@@ -66,6 +67,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -180,6 +182,87 @@ void SDLCALL receive_original_data_source_dialog_selection(void* userdata,
         throw std::runtime_error("Truncated save inspection input");
     }
     return bytes;
+}
+
+[[nodiscard]] bool path_is_within(const std::filesystem::path& child,
+    const std::filesystem::path& parent) {
+    const auto relative = child.lexically_relative(parent);
+    if (relative.empty()) return child == parent;
+    for (const auto& component : relative) {
+        if (component == "..") return false;
+    }
+    return !relative.is_absolute();
+}
+
+// The sidecar is deliberately not a game-data source. This bounded reader
+// accepts an explicitly named, external evidence file after resolving its
+// physical target, and returns only parser aggregate metadata. In particular,
+// its bytes do not enter a release scanner, runtime session, or renderer.
+[[nodiscard]] eon::StaticControlFlowSummary read_static_control_flow_sidecar(
+    const std::filesystem::path& supplied_path) {
+    if (!supplied_path.is_absolute()) {
+        throw std::runtime_error("Static control-flow sidecar must be an absolute path");
+    }
+    std::error_code error;
+    const auto supplied_status = std::filesystem::symlink_status(supplied_path, error);
+    if (error || std::filesystem::is_symlink(supplied_status)
+        || !std::filesystem::is_regular_file(supplied_status)) {
+        throw std::runtime_error("Static control-flow sidecar must be an existing non-symlink regular file");
+    }
+    const auto resolved_path = std::filesystem::canonical(supplied_path, error);
+    if (error || !resolved_path.is_absolute()) {
+        throw std::runtime_error("Unable to resolve static control-flow sidecar path");
+    }
+    const auto source_root = std::filesystem::canonical(EON_SOURCE_DIR, error);
+    if (error) throw std::runtime_error("Unable to resolve Project Eon source root");
+    if (path_is_within(resolved_path, source_root)) {
+        throw std::runtime_error("Static control-flow sidecar must remain outside the repository and /tmp");
+    }
+#if !defined(_WIN32)
+    const auto temporary_root = std::filesystem::canonical("/tmp", error);
+    if (error) throw std::runtime_error("Unable to resolve temporary-directory boundary");
+    if (path_is_within(resolved_path, temporary_root)) {
+        throw std::runtime_error("Static control-flow sidecar must remain outside the repository and /tmp");
+    }
+#endif
+    const auto size = std::filesystem::file_size(resolved_path, error);
+    constexpr std::uintmax_t maximum_bytes = 32U * 1024U * 1024U;
+    if (error || size == 0U || size > maximum_bytes) {
+        throw std::runtime_error("Static control-flow sidecar exceeds bounded parser limit");
+    }
+    std::ifstream stream(resolved_path, std::ios::binary);
+    if (!stream) throw std::runtime_error("Unable to open static control-flow sidecar");
+    std::string json(static_cast<std::size_t>(size), '\0');
+    stream.read(json.data(), static_cast<std::streamsize>(json.size()));
+    if (stream.gcount() != static_cast<std::streamsize>(json.size())) {
+        throw std::runtime_error("Static control-flow sidecar changed during bounded read");
+    }
+    const auto final_status = std::filesystem::symlink_status(resolved_path, error);
+    if (error || std::filesystem::is_symlink(final_status)
+        || !std::filesystem::is_regular_file(final_status)
+        || std::filesystem::file_size(resolved_path, error) != size || error) {
+        throw std::runtime_error("Static control-flow sidecar changed during bounded read");
+    }
+    return eon::parse_static_control_flow_sidecar(json);
+}
+
+struct StaticControlFlowInspection {
+    eon::StaticControlFlowSummary summary;
+    std::vector<std::pair<const eon::ReleaseArchive*, std::size_t>> release_bindings;
+};
+
+[[nodiscard]] StaticControlFlowInspection bind_static_control_flow_sidecar(
+    eon::StaticControlFlowSummary summary, const std::vector<eon::ReleaseArchive>& releases) {
+    std::map<std::string, const eon::ReleaseArchive*, std::less<>> release_by_hash;
+    for (const auto& release : releases) release_by_hash.emplace(release.sha256, &release);
+    StaticControlFlowInspection inspection{std::move(summary), {}};
+    for (const auto& [archive_sha256, document_count] : inspection.summary.release_document_counts) {
+        if (!release_by_hash.contains(archive_sha256)) {
+            throw std::runtime_error("Static control-flow sidecar contains a document not bound to a reverified inspected release");
+        }
+        inspection.release_bindings.emplace_back(release_by_hash.at(archive_sha256), document_count);
+    }
+    return inspection;
 }
 
 int report_millennium_dos_save_inspection(
@@ -684,7 +767,8 @@ void write_json_string(std::ostream& output, const std::string_view value) {
 // directory. Consumers can therefore preserve/review identity and boundaries
 // without turning a report into a media catalogue.
 void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
-    const eon::ReleaseScanSnapshot& scan_snapshot) {
+    const eon::ReleaseScanSnapshot& scan_snapshot,
+    const std::optional<StaticControlFlowInspection>& static_control_flow = std::nullopt) {
     const auto& scan = scan_snapshot.report;
     std::cout << "{\"schema\":\"project-eon.inspect/v1\",\"releases\":[";
     for (std::size_t index = 0; index < releases.size(); ++index) {
@@ -744,7 +828,28 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         }
         std::cout << "]}";
     }
-    std::cout << "],\"scan\":{\"source_kind\":";
+    std::cout << "]";
+    if (static_control_flow) {
+        const auto& summary = static_control_flow->summary;
+        std::cout << ",\"static_control_flow\":{\"classification\":";
+        write_json_string(std::cout, "static-candidate-unclassified");
+        std::cout << ",\"documents\":" << summary.document_count
+            << ",\"ranges\":" << summary.range_count
+            << ",\"candidates\":" << summary.edge_count
+            << ",\"declared_bytes\":" << summary.declared_byte_count
+            << ",\"release_bindings\":[";
+        for (std::size_t index = 0; index < static_control_flow->release_bindings.size(); ++index) {
+            if (index != 0) std::cout << ',';
+            const auto& [release, document_count] = static_control_flow->release_bindings[index];
+            std::cout << "{\"game\":"; write_json_string(std::cout, eon::name(release->game));
+            std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(release->platform));
+            std::cout << ",\"language\":"; write_json_string(std::cout, release->language);
+            std::cout << ",\"sha256\":"; write_json_string(std::cout, release->sha256);
+            std::cout << ",\"documents\":" << document_count << '}';
+        }
+        std::cout << "]}";
+    }
+    std::cout << ",\"scan\":{\"source_kind\":";
     write_json_string(std::cout, eon::name(scan_snapshot.source_kind));
     std::cout << ",\"discovering\":" << (scan_snapshot.discovering ? "true" : "false")
         << ",\"complete\":" << (scan_snapshot.complete ? "true" : "false")
@@ -3550,7 +3655,18 @@ int main(int argc, char** argv) {
                 std::cerr << "No recognised original release matches the requested inspection filters.\n";
                 return 5;
             }
-            report_inspection_json(inspected_releases, scanner->snapshot());
+            std::optional<StaticControlFlowInspection> static_control_flow;
+            if (request.static_control_flow_sidecar) {
+                try {
+                    static_control_flow.emplace(bind_static_control_flow_sidecar(
+                        read_static_control_flow_sidecar(*request.static_control_flow_sidecar),
+                        inspected_releases));
+                } catch (const std::exception& error) {
+                    std::cerr << "Static control-flow sidecar rejected: " << error.what() << '\n';
+                    return 6;
+                }
+            }
+            report_inspection_json(inspected_releases, scanner->snapshot(), static_control_flow);
             return 0;
         }
         if (request.modern_pack_root) {

@@ -16,6 +16,12 @@ struct StaticControlFlowSummary {
     std::size_t range_count = 0;
     std::size_t edge_count = 0;
     std::uint64_t declared_byte_count = 0;
+    // Hash identities are provenance metadata, not original media bytes. They
+    // let diagnostics bind every parsed document to a rehashed release.
+    std::map<std::string, std::size_t, std::less<>> archive_document_counts;
+    // Embedded-release documents identify their scanner release through their
+    // carrier archive; direct documents use archive_sha256 itself.
+    std::map<std::string, std::size_t, std::less<>> release_document_counts;
     std::map<std::string, std::size_t, std::less<>> cpu_counts;
     std::map<std::string, std::size_t, std::less<>> edge_kind_counts;
     std::map<std::string, std::size_t, std::less<>> target_scope_counts;
