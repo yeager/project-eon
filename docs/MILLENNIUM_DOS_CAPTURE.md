@@ -797,6 +797,12 @@ environment has no installed INT 93h target at that call. It neither supplies
 the missing target nor assigns an ABI, title action, display result, or game
 state to the interrupt.
 
+The hash-bound `MCGA.BIN` driver (`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`)
+contains neither the static `MOV AX,2593h / INT 21h` Set Interrupt Vector
+signature nor an `INT 93h` opcode. This negative byte-level result does not
+identify the intended installation mechanism; it only rejects a direct
+in-driver standard-DOS-vector installation claim for this exact file.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
