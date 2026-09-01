@@ -9916,6 +9916,17 @@ int main() {
         first_special_bitmap.color_indices.end(), [](auto color) { return color != 0; }) == 2'712);
     assert(eon::to_hex(eon::sha256(first_special_bitmap.color_indices))
         == "a7abcb6a308f7016e28611862a14de3adfa12881efcce458e5888b07e2d0c1cb");
+    const auto first_bitmap_catalog = eon::inspect_deuteros_amiga_bitmap_catalog(
+        system_disk, first_bundle, first_indexed_blob);
+    assert(first_bitmap_catalog.record_count == 142);
+    assert(first_bitmap_catalog.records.size() == 142);
+    assert(first_bitmap_catalog.records[1].source_relative_offset == 0x12ef2);
+    assert(first_bitmap_catalog.records[1].source_size
+        == first_indexed_blob.record_offsets[2] - first_indexed_blob.record_offsets[1]);
+    assert(first_bitmap_catalog.records[1].width == 48);
+    assert(first_bitmap_catalog.records[1].height == 17);
+    assert(first_bitmap_catalog.records[1].decoded_pixels_sha256
+        == "fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3");
     eon::DeuterosAmigaOpening live_opening(*amiga_disk1);
     {
         auto altered_system_adf = *amiga_disk1;
@@ -10447,6 +10458,12 @@ int main() {
     assert(second_indexed_blob.record_offsets.front() == 0);
     assert(second_indexed_blob.record_offsets[1] == 0xf2e);
     assert(second_indexed_blob.record_offsets.back() == 0xb956);
+    const auto second_bitmap_catalog = eon::inspect_deuteros_amiga_bitmap_catalog(
+        system_disk, second_bundle, second_indexed_blob);
+    assert(second_bitmap_catalog.record_count == 74);
+    assert(second_bitmap_catalog.records.size() == 74);
+    assert(second_bitmap_catalog.records.front().source_relative_offset == 0x15c92);
+    assert(second_bitmap_catalog.records.front().source_size == 0xf2e);
     for (std::size_t index = 0; index + 1 < second_indexed_blob.record_offsets.size(); ++index) {
         const auto bitmap = eon::decode_deuteros_amiga_bitmap(
             system_disk, second_bundle, second_indexed_blob, index);

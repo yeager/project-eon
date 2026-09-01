@@ -1324,10 +1324,16 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     for (std::size_t index = 0; index < 2; ++index) {
         const auto bundle = eon::parse_deuteros_amiga_bundle(
             disk, plan.resource_disk_offsets[index]);
+        const auto bitmap_blob = eon::parse_deuteros_amiga_indexed_blob(disk, bundle);
+        const auto bitmap_catalog = eon::inspect_deuteros_amiga_bitmap_catalog(
+            disk, bundle, bitmap_blob);
         std::cout << "          Resource bundle " << index << ": disk 0x" << std::hex
             << bundle.disk_offset << ", 0x" << bundle.length << std::dec
             << " bytes, " << bundle.object_count << " objects, mode "
             << bundle.mode_flag << '\n';
+        std::cout << "            Bitmap catalogue: " << bitmap_catalog.record_count
+            << " hash-verified decoded records, " << bitmap_catalog.decoded_pixel_count
+            << " indexed pixels; bundle SHA-256 " << bitmap_catalog.bundle_sha256 << '\n';
     }
     for (std::uint16_t index = 0; index < 2; ++index) {
         const auto transfer = eon::read_deuteros_amiga_main_resource(disk, plan, index);

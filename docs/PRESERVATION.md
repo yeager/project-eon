@@ -2283,6 +2283,13 @@ normal records with 70 bit-15 records; `$20eb2` proves those use the same RLE
 classes but store each complete plane sequentially. Both paths now decode
 natively, covering all 216 records in the two verified bundles.
 
+`inspect_deuteros_amiga_bitmap_catalog` is the bounded preservation inventory
+for that complete set. It records each source-relative record boundary, raw
+record SHA-256, dimensions, and decoded-index SHA-256 while immediately
+discarding decoded pixels. `--inspect` reports each bundle's record and pixel
+totals, so diagnostics can identify the exact original-backed graphic evidence
+without exporting, caching, or relabelling the commercial assets.
+
 As a stable decoded-output anchor, bundle 0 record 1 is 48×17 pixels, has 311
 nonzero pixels, and its 816 palette indices have SHA-256
 `fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3`.

@@ -1,6 +1,9 @@
 #include "data/deuteros_amiga_bundle.hpp"
 
+#include "data/sha256.hpp"
+
 #include <algorithm>
+#include <limits>
 #include <span>
 #include <stdexcept>
 
@@ -262,6 +265,42 @@ DeuterosAmigaBitmap decode_deuteros_amiga_bitmap(
             result.color_indices[pixel] |= static_cast<std::uint8_t>(
                 ((word >> (15U - bit)) & 1U) << plane);
         }
+    }
+    return result;
+}
+
+DeuterosAmigaBitmapCatalog inspect_deuteros_amiga_bitmap_catalog(
+    const AmigaAdf& disk, const DeuterosAmigaBundle& bundle,
+    const DeuterosAmigaIndexedBlob& blob) {
+    if (blob.record_offsets.size() < 2) {
+        throw std::runtime_error("Deuteros bitmap catalogue has no records");
+    }
+
+    DeuterosAmigaBitmapCatalog result;
+    result.bundle_sha256 = to_hex(sha256(disk.bytes(bundle.disk_offset, bundle.length)));
+    result.record_count = blob.record_offsets.size() - 1;
+    result.records.reserve(result.record_count);
+    for (std::size_t index = 0; index < result.record_count; ++index) {
+        const auto start = blob.record_offsets[index];
+        const auto end = blob.record_offsets[index + 1];
+        if (end <= start || end > blob.data_size) {
+            throw std::runtime_error("Invalid Deuteros bitmap catalogue record range");
+        }
+        const auto source_relative_offset = static_cast<std::uint64_t>(blob.data_relative_offset) + start;
+        const auto source_size = end - start;
+        if (source_relative_offset > bundle.length || source_size > bundle.length - source_relative_offset) {
+            throw std::runtime_error("Deuteros bitmap catalogue record outside bundle");
+        }
+        const auto bitmap = decode_deuteros_amiga_bitmap(disk, bundle, blob, index);
+        const auto pixel_count = static_cast<std::uint64_t>(bitmap.color_indices.size());
+        if (pixel_count > std::numeric_limits<std::uint64_t>::max() - result.decoded_pixel_count) {
+            throw std::runtime_error("Deuteros bitmap catalogue pixel count overflow");
+        }
+        result.decoded_pixel_count += pixel_count;
+        const auto source = disk.bytes(bundle.disk_offset + static_cast<std::size_t>(source_relative_offset), source_size);
+        result.records.push_back({index, static_cast<std::uint32_t>(source_relative_offset), source_size,
+            to_hex(sha256(source)), bitmap.width, bitmap.height,
+            to_hex(sha256(bitmap.color_indices))});
     }
     return result;
 }
