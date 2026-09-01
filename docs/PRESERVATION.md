@@ -4413,9 +4413,15 @@ codec-2 decoder accepts it—dimensions, compressed-span length and decoded
 pixel hash. A decoder rejection is recorded as an explicit per-resource format
 boundary; it does not select an alternate codec, fabricate pixels, or infer a
 screen role. In the verified English leaf the sole current boundary is `IMG19`
-(resource 25): its codec-2 run would overrun the strict output extent by one
-pixel. The resulting inventory is diagnostics-only and discards decoded pixel
-buffers after hashing them.
+(resource 25, library `+$1b8dd`, 1,398 bytes, SHA-256
+`e86a92133716dc7a54cc4d113a72af25d307c0e338bf77491205d19493403838`): its
+codec-2 run would overrun the strict output extent by one pixel. Static
+disassembly of the original reader `$1390..$14dc` confirms that the `$e` run
+path adds two to `CX`, subtracts `CX` from remaining `DX`, then executes
+`REP STOSB` without an underflow guard. Thus this record reaches an original
+destination-buffer-overflow boundary rather than proving a safe clipped image
+or an alternate format. The resulting inventory is diagnostics-only and
+discards decoded pixel buffers after hashing them.
 The single-entry English `LAST.LIB` is likewise hash-locked before its `last`
 bitmap and palette are decoded. Its directory shape and bitmap profile are
 additional bounded-format checks, never a substitute for original leaf identity.
