@@ -215,6 +215,23 @@ delivery. A frame, palette, audio, result-register, or `EXEC` checkpoint still
 requires a separately reviewed observer and two physical write-protected
 captures before any trace grammar or runtime adapter may use it.
 
+## Visible-window focus and diagnostic-boundary policy
+
+The physical capture runner starts DOSBox-X windowed and reserves ten seconds
+for the operator to click and focus that visible window before its timed
+capture interval. The operator must press/release ordinary keys in that window
+only. Terminal input, `xdotool`, AUTOTYPE, debugger input, playback, and
+guest-memory injection remain forbidden.
+
+The known diagnostics-only `INT 6` boundary continues to end a run
+immediately. The current v13 route reaches it before a practical focus period,
+so a focus improvement cannot make it title-input evidence. It must be traced
+as an emulator/callback boundary rather than bypassed or deferred. During a
+future run that reaches a meaningful input window, `HOST INPUT OBSERVED` is a
+live signal that the protected receipt file has begun. The completed receipt is
+still validated only after process exit. The selected focus duration and live
+receipt flag are recorded in `run-status.txt`.
+
 ## Review and admission
 
 Before a patched build is used, review that the diff changes only the four

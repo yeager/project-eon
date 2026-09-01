@@ -43,6 +43,7 @@ GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
+MAX_FOCUS_SETTLE_SECONDS = 120
 # The reviewed recorder caps host input at 256 short text records.  Keep a
 # generous, fixed ceiling here so a damaged or substituted recorder cannot
 # turn a receipt status check into unbounded host-side I/O.
@@ -298,6 +299,22 @@ def input_receipt_status(path: Path) -> str:
             f"host_input_receipt_sha256={digest}\n"
             f"host_input_receipt_bytes={size}\n"
             f"host_input_receipt_records={record_count}\n")
+
+
+def input_delivery_file_observed(path: Path) -> bool:
+    """Report a recorder-created receipt without parsing a live append stream.
+
+    This is only an operator-facing liveness signal.  The complete receipt is
+    still grammar-checked and hash-bound after DOSBox-X exits, so a partial
+    write can never become capture evidence.
+    """
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return False
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("live host-input receipt is not a regular non-symlink file")
+    return info.st_size > 0
 
 
 def parse_host_input_receipt(path: Path) -> int:
@@ -602,6 +619,8 @@ def run_capture(args: argparse.Namespace) -> Path:
     output = reject_unsafe_output(source, Path(args.output))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
+    if not 0 <= args.focus_settle_seconds <= MAX_FOCUS_SETTLE_SECONDS:
+        raise CaptureError(f"focus-settle duration must be between 0 and {MAX_FOCUS_SETTLE_SECONDS} seconds")
     environment = dict(os.environ)
     require_visible_operator_input(environment)
     source_hash, source_size = validate_source_release(source)
@@ -628,7 +647,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             "PROJECT_EON_DOSBOX_X_INPUT_RECORD": str(output / "host-input-receipt.raw"),
         })
         print("CAPTURE PREPARED  read-only original archive; physical operator input required")
-        print(f"Press keys only in the visible DOSBox-X window within {args.duration_seconds} seconds.")
+        print("Focus the visible DOSBox-X window by clicking it yourself; do not use terminal or automation input.")
+        print("Then press and release ordinary keys only in that window (for example Return, Space, or arrows).")
+        print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
         print("No AUTOTYPE, debugger input, or guest-memory injection is permitted.")
         started = time.time()
         process = subprocess.Popen(command, env=environment, stdout=subprocess.PIPE,
@@ -648,13 +669,21 @@ def run_capture(args: argparse.Namespace) -> Path:
 
         console_thread = threading.Thread(target=drain_console, name="project-eon-dos-console", daemon=True)
         console_thread.start()
-        deadline = time.monotonic() + args.duration_seconds
+        settle_deadline = time.monotonic() + args.focus_settle_seconds
+        deadline: float | None = None
         termination_reason = "emulator-exit"
+        live_input_observed = False
         while True:
             exit_status = process.poll()
             if exit_status is not None:
                 break
-            remaining = deadline - time.monotonic()
+            now = time.monotonic()
+            if deadline is None and now >= settle_deadline:
+                deadline = now + args.duration_seconds
+                print(f"CAPTURE WINDOW ACTIVE  {args.duration_seconds} seconds; physical input remains required.")
+            if not live_input_observed and input_delivery_file_observed(output / "host-input-receipt.raw"):
+                live_input_observed = True
+                print("HOST INPUT OBSERVED  receipt will be fully validated after capture.")
             if console_over_limit.is_set():
                 process.kill()
                 process.wait()
@@ -667,6 +696,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                 exit_status = 126
                 termination_reason = "known-unhandled-interrupt"
                 break
+            remaining = (settle_deadline - now if deadline is None else deadline - now)
             if remaining <= 0:
                 process.kill()
                 process.wait()
@@ -691,6 +721,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={receipt_version}\n"
                         f"recorder_protocol={args.recorder_protocol}\n"
+                        f"focus_settle_seconds={args.focus_settle_seconds}\n"
+                        f"host_input_observed_during_capture={'true' if live_input_observed else 'false'}\n"
                         f"exit_status={exit_status}\ntermination_reason={termination_reason}\n"
                         f"start_unix={started:.6f}\nend_unix={ended:.6f}\n"
                         f"machine_profile={args.machine_profile}\n"
@@ -728,6 +760,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="New absolute cache directory for external capture evidence")
     parser.add_argument("--duration-seconds", type=int, default=120,
                         help="Visible operator window duration (15-600; default: 120)")
+    parser.add_argument("--focus-settle-seconds", type=int, default=10,
+                        help="Manual visible-window focus time before capture (0-120; default: 10)")
     parser.add_argument("--machine-profile", choices=tuple(sorted(MACHINE_PROFILES)), default="svga_s3",
                         help="Explicit DOSBox-X video-machine profile (default: svga_s3)")
     parser.add_argument("--recorder-protocol", choices=tuple(sorted(RECORDER_PROTOCOLS)), default="v11",

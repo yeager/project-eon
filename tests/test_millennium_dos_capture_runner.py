@@ -121,6 +121,23 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.input_receipt_status(receipt)
 
+    def test_live_input_observer_does_not_parse_a_receipt_while_the_recorder_writes(self) -> None:
+        with temporary_directory() as directory:
+            receipt = Path(directory) / "host-input-receipt.raw"
+            self.assertFalse(TOOL.input_delivery_file_observed(receipt))
+            receipt.write_bytes(b"host-key 1 ticks=2")
+            self.assertTrue(TOOL.input_delivery_file_observed(receipt))
+            receipt.unlink()
+            receipt.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.input_delivery_file_observed(receipt)
+
+    def test_physical_capture_arguments_default_to_a_focus_settle_window(self) -> None:
+        arguments = TOOL.parse_arguments((
+            "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
+        ))
+        self.assertEqual(arguments.focus_settle_seconds, 10)
+
     def test_raw_observation_status_is_hash_bound_and_bounded(self) -> None:
         with temporary_directory() as directory:
             path = Path(directory) / "events.raw"
