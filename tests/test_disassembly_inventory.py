@@ -49,6 +49,13 @@ class DisassemblyInventoryTests(unittest.TestCase):
         releases = {row["sha256"] for row in manifest["releases"]}
         profiles = {row["id"]: row for row in manifest["parser_profiles"]}
         self.assertEqual({row["release_sha256"] for row in inventory["releases"]}, releases)
+        span_ids = {span["id"] for row in inventory["releases"] for span in row.get("static_spans", [])}
+        for sidecar in inventory.get("control_flow_sidecars", []):
+            self.assertRegex(sidecar["sha256"], r"^[0-9a-f]{64}$")
+            self.assertGreater(sidecar["lines"], 0)
+            self.assertEqual(sidecar["classification"], "static-candidate-unclassified")
+            self.assertTrue(sidecar["span_ids"])
+            self.assertTrue(set(sidecar["span_ids"]).issubset(span_ids))
         for row in inventory["releases"]:
             self.assertIn(row["cpu"], {"i8086", "m68000"})
             self.assertTrue(row["unresolved"])
