@@ -83,6 +83,10 @@ archive separately before it opens the exact disk member in memory. Its output
 records both identities, so a byte-identical disk cannot silently stand in for
 another recognised release container.
 
+The same carrier-aware route covers the direct Equinox Atari PRG release; its
+control-flow addresses remain image-relative rather than claiming a GEMDOS
+load base.
+
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
 English, Millennium DOS Spanish FAT12, Millennium Amiga Defjam, Deuteros
 Amiga English, and Deuteros Atari Replicants release archives. Their

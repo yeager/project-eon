@@ -7,6 +7,7 @@
     {"span_ids":["millennium-amiga-defjam-shared-resident-linear"],"sha256":"e67f739d9a62164ee826434aac52a3a13eb8dc3f7c8f6c193ce44e28516290ca","lines":55248,"classification":"static-candidate-unclassified"},
     {"span_ids":["millennium-amiga-defjam-direct-shared-resident-linear"],"sha256":"b6edbafdee8054904b6cc28a648c1e7a352bf4f730bfc08aed06eb21e9fa6a72","lines":55251,"classification":"static-candidate-unclassified"},
     {"span_ids":["millennium-atari-equinox-milenium-tos-image-relative-linear"],"sha256":"546bf35a5b6a5aef997ac274d19d40956179a17da1167052929e2516e833488a","lines":4798,"classification":"static-candidate-unclassified"},
+    {"span_ids":["millennium-atari-equinox-direct-milenium-tos-image-relative-linear"],"sha256":"e6963ffa18216723d85646c61bcf62b83a5dd4b5d12b7330f1f9844d986d147f","lines":4799,"classification":"static-candidate-unclassified"},
     {"span_ids":["deuteros-amiga-clean-loaded-spans"],"sha256":"def1eb72d2e9a9d26baf8318d3e866aa2e9090c1728c5b90a13aafa58b85f729","lines":84352,"classification":"static-candidate-unclassified"},
     {"span_ids":["deuteros-atari-replicants-first-stage-linear"],"sha256":"c06590355db5b28f2fd6105ca536b39ef2ea1118b96492229283e5be1fd4cc49","lines":331,"classification":"static-candidate-unclassified"}
   ],

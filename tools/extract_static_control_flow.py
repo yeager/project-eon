@@ -23,7 +23,7 @@ from zipfile import ZipFile
 # imported by tests, so resolve its sibling helper from the tool directory.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from analyze_dos import read_fat12_members
-from analyze_atari_st_prg import PRG_HEADER_BYTES, read_be16, read_be32, read_exact_program
+from analyze_atari_st_prg import PRG_HEADER_BYTES, fat12_member, read_be16, read_be32, read_exact_program
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -283,6 +283,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Original outer ZIP containing one exact nested M68000 disk image")
     source.add_argument("--embedded-m68k-carrier", type=Path,
                         help="Carrier ZIP holding one exact embedded release ZIP and M68000 disk")
+    source.add_argument("--embedded-atari-prg-carrier", type=Path,
+                        help="Carrier ZIP holding one exact embedded Atari ST release ZIP and FAT12 PRG")
     source.add_argument("--atari-prg-archive", type=Path,
                         help="Original outer ZIP containing exact nested FAT12 Atari ST PRG media")
     parser.add_argument("--archive-sha256", required=True, help="Expected lower-case SHA-256 of the outer ZIP")
@@ -357,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
                                            source_kind="embedded-release-nested-disk-range",
                                            container_sha256=_sha256(media),
                                            carrier_archive_sha256=args.carrier_sha256))
-        else:
+        elif args.atari_prg_archive is not None:
             if (not args.nested_member or not args.disk_member or not args.program or not args.program_sha256
                     or not args.source_sha256 or len(args.range) != 1 or args.member or args.fat12_member):
                 raise ControlFlowError("Atari PRG mode requires exact nested/disk/program hashes and one range")
@@ -382,6 +384,44 @@ def main(argv: list[str] | None = None) -> int:
                                            args.range, source_kind="nested-fat12-root-prg-text-data",
                                            address_space="image-relative-unrelocated",
                                            container_sha256=_sha256(disk)))
+        else:
+            if (not args.carrier_sha256 or not args.embedded_archive or not args.embedded_sha256
+                    or not args.disk_member or not args.program or not args.program_sha256
+                    or not args.source_sha256 or len(args.range) != 1 or args.member
+                    or args.nested_member or args.fat12_member):
+                raise ControlFlowError("embedded Atari PRG mode requires carrier/release/disk/program hashes and one range")
+            _require_sha256(args.carrier_sha256, "carrier SHA-256")
+            _require_sha256(args.embedded_sha256, "embedded archive SHA-256")
+            _require_sha256(args.source_sha256, "disk SHA-256")
+            _require_sha256(args.program_sha256, "program SHA-256")
+            if args.archive_sha256 != args.embedded_sha256:
+                raise ControlFlowError("--archive-sha256 must name the embedded release in embedded Atari PRG mode")
+            disk = _read_embedded_archive_member(args.embedded_atari_prg_carrier, args.carrier_sha256,
+                                                 args.embedded_archive, args.embedded_sha256,
+                                                 args.disk_member)
+            if _sha256(disk) != args.source_sha256:
+                raise ControlFlowError("embedded Atari ST disk SHA-256 mismatch")
+            try:
+                program = fat12_member(disk, args.program)
+            except ValueError as error:
+                raise ControlFlowError(f"unable to read exact embedded Atari ST PRG: {error}") from error
+            if _sha256(program) != args.program_sha256:
+                raise ControlFlowError("embedded Atari ST PRG SHA-256 mismatch")
+            if len(program) < PRG_HEADER_BYTES or read_be16(program, 0) != 0x601a:
+                raise ControlFlowError("unsupported embedded Atari ST PRG header")
+            loadable = read_be32(program, 2) + read_be32(program, 6)
+            symbols = read_be32(program, 14)
+            if PRG_HEADER_BYTES + loadable + symbols > len(program):
+                raise ControlFlowError("embedded Atari ST PRG loadable range is outside the exact program")
+            offset, length, _, _ = args.range[0]
+            if offset < PRG_HEADER_BYTES or offset > PRG_HEADER_BYTES + loadable - length:
+                raise ControlFlowError("embedded Atari ST control-flow range must stay within PRG TEXT+DATA")
+            documents.append(build_sidecar("m68000", args.embedded_sha256,
+                                           f"{args.embedded_archive}!{args.disk_member}:{args.program}", program,
+                                           args.range, source_kind="embedded-release-nested-fat12-prg-text-data",
+                                           address_space="image-relative-unrelocated",
+                                           container_sha256=_sha256(disk),
+                                           carrier_archive_sha256=args.carrier_sha256))
         payload = {"schema": "project-eon.static-control-flow-set/v1", "classification": CLASSIFICATION,
                    "documents": documents}
         output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
