@@ -232,6 +232,26 @@ live signal that the protected receipt file has begun. The completed receipt is
 still validated only after process exit. The selected focus duration and live
 receipt flag are recorded in `run-status.txt`.
 
+## Confirmed external `INT 6` callback boundary
+
+The repeated v12 external fault receipt records predecessor bytes
+`fe 38 03 00` at `f000:ca60`, immediately before the recorder observes the
+unhandled `INT 6` callback at `f000:ca64`. This is now mapped to the reviewed
+DOSBox-X source revision `234797680781567e18c374c9e62da24de5423db0`, not to
+original Millennium media. Its `src/cpu/callback.cpp` has SHA-256
+`153a1d9ce9d75ecadad2039fee962ed49710688e72ff00cee476bdd3b02a19a7`.
+
+At that revision, callback initialization allocates the stop, idle, then
+default callbacks in that order, making default callback index `3`; it writes
+the four-byte callback opcode `FE 38 <index-le16>` for each. The non-PC-98 BIOS
+initialization in `src/ints/bios.cpp` places that default callback in every
+vector from `0x00` through `0x5f`, including `INT 6`. Thus the repeated raw
+predecessor identifies the emulator's default interrupt stub precisely. It
+does not identify why execution reached vector `6`, assign the fault to the
+original game, prove a processor mode, or establish the meaning of the
+unmapped return context `0e70:1900`. Resolving that preceding load/callback
+route still requires a separately reviewed, read-only observer.
+
 ## Review and admission
 
 Before a patched build is used, review that the diff changes only the four
