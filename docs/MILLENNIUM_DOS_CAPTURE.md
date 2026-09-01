@@ -764,6 +764,19 @@ return origin. No literal near/far branch encoding to either candidate was
 found in the executable members; that syntactic absence is likewise not a
 control-flow proof.
 
+### Receipt-v18 INT 93h IVT boundary (diagnostics only)
+
+Two independently prepared read-only V18 captures retain the same anomaly
+sidecar, SHA-256 `addd15d01aac89d9f1246fcbe444882a665986f5a03303ebcb9680aa602991f8`.
+The fixed 16-tuple predecessor record ends at `0a8d:0134` with bytes
+`cd93075d`; the exact English `TITLES.EXE` member maps that instruction to
+`TITLES.EXE+0x0034`, where `CD 93` is an original `INT 93h`. The next recorded
+normal-core tuple is `0000:0000`. This is evidence that the current recorder
+route reaches a zero IVT target after that original software interrupt. It
+does not identify the intended INT 93h handler, its ABI, installation path,
+or any title/game result. Project Eon does not install, emulate, bypass, or
+infer that handler.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the

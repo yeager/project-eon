@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"}
 
 
 def load_tool(name: str):
@@ -252,6 +252,15 @@ def verify_millennium_normal_core_history(fields: dict[str, str], directory: Pat
         raise ValueError("normal-core history boundary receipt mismatch")
 
 
+def verify_millennium_normal_core_anomaly(fields: dict[str, str], directory: Path) -> None:
+    tool = load_tool("run_millennium_dos_capture")
+    expected = tool.normal_core_anomaly_status(directory / "normal-core-anomaly.raw",
+        directory / "results.raw", "v18-ivt-entry", fields.get("termination_reason", ""))
+    expected_fields = dict(line.split("=", 1) for line in expected.splitlines())
+    if any(fields.get(key) != value for key, value in expected_fields.items()):
+        raise ValueError("normal-core anomaly receipt mismatch")
+
+
 def verify(kind: str, directory: Path) -> None:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
@@ -269,12 +278,14 @@ def verify(kind: str, directory: Path) -> None:
             raise ValueError("v13 receipt must retain its title-poll recorder protocol")
         if version == "14" and recorder_protocol != "v14-normal-core-history":
             raise ValueError("v14 receipt must retain its normal-core history recorder protocol")
-        if version not in {"12", "13", "14"} and recorder_protocol != "v11":
+        if version == "18" and recorder_protocol != "v18-ivt-entry":
+            raise ValueError("v18 receipt must retain its IVT-entry recorder protocol")
+        if version not in {"12", "13", "14", "15", "16", "17", "18"} and recorder_protocol != "v11":
             raise ValueError("pre-v12 receipt must retain the v11 recorder protocol")
         require_identity(fields, "recorder", (tool.RECORDER_PROTOCOLS[recorder_protocol][1], int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"} and fields.get("results_raw") == "present":
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw", recorder_protocol)
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
@@ -293,6 +304,8 @@ def verify(kind: str, directory: Path) -> None:
             verify_millennium_title_input_checkpoint(fields, directory)
         if version == "14":
             verify_millennium_normal_core_history(fields, directory)
+        if version == "18":
+            verify_millennium_normal_core_anomaly(fields, directory)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))

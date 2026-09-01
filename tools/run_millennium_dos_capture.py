@@ -42,6 +42,10 @@ RECORDER_PROTOCOLS = {
     # DOSBox-X INT 6 callback boundary is reached. It is a separate recorder
     # file, leaving the v13 result grammar and prior evidence unchanged.
     "v14-normal-core-history": ("14", "748c1c934a78a28baef083fc352b552644f9665bc27fc032db0fdd7463ee5c63"),
+    "v15-anomaly-entry": ("15", "0f74d8350ef61249d9ede9b11baa60133f407eaa863c60b66d18e86671bbc65e"),
+    "v16-anomaly-entry": ("16", "ab5b1f42a486a7f768f33978c7504cc59fd86a4eb29f80a9041205d383ec91fa"),
+    "v17-anomaly-entry": ("17", "d03e11ea48710e00d97c127f9b3d3ba5bc6f4227fafb7764e2b5950e50704ae6"),
+    "v18-ivt-entry": ("18", "74420b4f8a0e2009f08b278ead1f9b36804404808b27895f327f204836d65e11"),
 }
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
@@ -71,6 +75,7 @@ MAX_RECORDER_CONSOLE_TOTAL_BYTES = 64 * 1024 * 1024
 # They are a finite grammar boundary, not a DOS ABI or game-state model.
 MAX_RAW_RESULT_RECORDS = 256
 MAX_NORMAL_CORE_HISTORY_BYTES = 1024
+MAX_NORMAL_CORE_ANOMALY_BYTES = 1024
 RAW_RESULT_LINE = re.compile(
     r"raw-result\t([1-9][0-9]*) ([1-9][0-9]*) "
     r"(?:image=(mill\.com|titles\.exe) pc=0x(020e|0213|0129) "
@@ -100,6 +105,15 @@ NORMAL_CORE_HISTORY_LINE = re.compile(
 KNOWN_V14_NORMAL_CORE_HISTORY = tuple(
     [f"0e70:{ip:04x}:00000000" for ip in range(0x18e4, 0x1901, 2)]
     + ["f000:ca60:fe380300"])
+NORMAL_CORE_ANOMALY_LINE = re.compile(
+    r"normal-core-anomaly-v1 target=([0-9a-f]{4}:[0-9a-f]{4}) ss=([0-9a-f]{4}) "
+    r"sp=([0-9a-f]{4}) prior_count=([1-9]|1[0-6]) entries="
+    r"([0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}(?:,[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}){0,15})\n")
+KNOWN_V18_IVT_PRIOR = (
+    "0a8d:051f:80fa0174", "0a8d:0522:740bb950", "0a8d:052f:f7e15903", "0a8d:0531:5903c159",
+    "0a8d:0532:03c159c3", "0a8d:0534:59c31e06", "0a8d:0535:c31e061e", "0a8d:076b:8bd0b403",
+    "0a8d:076d:b403e8bd", "0a8d:076f:e8bdf95b", "0a8d:012f:1e565755", "0a8d:0130:56575506",
+    "0a8d:0131:575506cd", "0a8d:0132:5506cd93", "0a8d:0133:06cd9307", "0a8d:0134:cd93075d")
 # The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
 # grammar authenticates the bounded external receipt shape only; it does not
 # claim DOS accepted a key or assign its original-game meaning.
@@ -426,6 +440,28 @@ def normal_core_history_boundary_status(history_path: Path, results_path: Path,
             f"normal_core_history_last={entries[-1]}\n")
 
 
+def normal_core_anomaly_status(path: Path, results_path: Path, recorder_protocol: str,
+                               termination_reason: str) -> str:
+    if recorder_protocol != "v18-ivt-entry": return ""
+    try: raw = path.read_bytes()
+    except FileNotFoundError: return "normal_core_anomaly=absent\n"
+    if not 0 < len(raw) <= MAX_NORMAL_CORE_ANOMALY_BYTES or not raw.endswith(b"\n") or b"\r" in raw:
+        raise CaptureError("normal-core anomaly is not a bounded canonical recorder record")
+    try: match = NORMAL_CORE_ANOMALY_LINE.fullmatch(raw.decode("ascii"))
+    except UnicodeDecodeError as error: raise CaptureError("normal-core anomaly is not ASCII recorder output") from error
+    if not match or len(match.group(5).split(",")) != int(match.group(4)):
+        raise CaptureError("normal-core anomaly contains an invalid recorder record")
+    entries = tuple(match.group(5).split(","))
+    if termination_reason == "known-unhandled-interrupt":
+        if not known_v11_early_stop_receipt(results_path) or match.group(1) != "0000:0000" \
+                or match.group(2) != "0a8d" or match.group(3) != "d9e2" or entries != KNOWN_V18_IVT_PRIOR:
+            raise CaptureError("v18 anomaly does not match the observed INT 93h IVT boundary")
+    digest, size = sha256_file(path)
+    return ("normal_core_anomaly=present\n"
+            f"normal_core_anomaly_sha256={digest}\nnormal_core_anomaly_bytes={size}\n"
+            f"normal_core_anomaly_target={match.group(1)}\n")
+
+
 def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     """Parse finite recorder diagnostics into non-semantic shape labels."""
     try:
@@ -437,7 +473,7 @@ def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     labels: list[str] = []
     for expected, line in enumerate(text.splitlines(keepends=True), start=1):
         title_poll = (TITLE_INPUT_POLL_LINE.fullmatch(line)
-                      if recorder_protocol in {"v13-title-poll", "v14-normal-core-history"} and " title-input-poll " in line
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"} and " title-input-poll " in line
                       else None)
         match = title_poll or (V12_PREDECESSOR_FAULT_LINE.fullmatch(line)
             if recorder_protocol == "v12-predecessor" and " fault=" in line
@@ -472,7 +508,7 @@ def title_input_poll_ordinals(path: Path, recorder_protocol: str = "v11") -> lis
     exact original INT 21h/AH=06h call. It is not an input-delivery receipt,
     and its absence cannot be replaced by a synthesized poll or frame.
     """
-    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history"}:
+    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
         return []
     try:
         text = path.read_text(encoding="ascii")
@@ -502,7 +538,7 @@ def title_input_checkpoint_status(results_path: Path, input_receipt_path: Path,
     title action. The receipt calls it a correlation only, and rejects an
     impossible recorder ordinal beyond the independently recorded host keys.
     """
-    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history"}:
+    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
         return ""
     polls = title_input_poll_ordinals(results_path, recorder_protocol)
     try:
@@ -580,7 +616,7 @@ def raw_result_status(path: Path, name: str, recorder_protocol: str = "v11") -> 
     summary = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
     status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
               f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history"}:
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
         polls = title_input_poll_ordinals(path, recorder_protocol)
         status += (f"{name}_title_input_polls={len(polls)}\n"
                    f"{name}_last_host_key_ordinal={polls[-1] if polls else 0}\n")
@@ -622,7 +658,7 @@ def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11
             return tuple(raw_result_labels(path, recorder_protocol)) == KNOWN_V10_EARLY_STOP_SEQUENCE
         except CaptureError:
             return False
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history"}:
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
         # The legacy callback-loop receipt remains a bounded diagnostic stop
         # when no title poll was reached. Any poll-bearing run stays alive for
         # the operator's configured duration so it cannot be mistaken for a
@@ -716,8 +752,10 @@ def run_capture(args: argparse.Namespace) -> Path:
             "PROJECT_EON_DOSBOX_X_RESULT": str(output / "results.raw"),
             "PROJECT_EON_DOSBOX_X_INPUT_RECORD": str(output / "host-input-receipt.raw"),
         })
-        if args.recorder_protocol == "v14-normal-core-history":
+        if args.recorder_protocol in {"v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
             environment["PROJECT_EON_DOSBOX_X_HISTORY_RECORD"] = str(output / "normal-core-history.raw")
+        if args.recorder_protocol in {"v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry"}:
+            environment["PROJECT_EON_DOSBOX_X_ANOMALY_RECORD"] = str(output / "normal-core-anomaly.raw")
         print("CAPTURE PREPARED  read-only original archive; physical operator input required")
         print("Focus the visible DOSBox-X window by clicking it yourself; do not use terminal or automation input.")
         print("Then press and release ordinary keys only in that window (for example Return, Space, or arrows).")
@@ -793,6 +831,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         history_boundary_status = normal_core_history_boundary_status(
             output / "normal-core-history.raw", output / "results.raw", args.recorder_protocol,
             termination_reason)
+        anomaly_status = normal_core_anomaly_status(output / "normal-core-anomaly.raw",
+            output / "results.raw", args.recorder_protocol, termination_reason)
         title_checkpoint_status = title_input_checkpoint_status(output / "results.raw",
             output / "host-input-receipt.raw", args.recorder_protocol)
         write_exclusive(output / "run-status.txt",
@@ -807,7 +847,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
                         + receipt_status + observation_status + history_status + history_boundary_status
-                        + title_checkpoint_status
+                        + anomaly_status + title_checkpoint_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
