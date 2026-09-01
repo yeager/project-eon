@@ -19,6 +19,11 @@ import stat
 import sys
 from zipfile import ZipFile
 
+# This tool is executed directly from arbitrary working directories as well as
+# imported by tests, so resolve its sibling helper from the tool directory.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from analyze_dos import read_fat12_members
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CLASSIFICATION = "static-candidate-unclassified"
@@ -200,7 +205,7 @@ def parse_range(value: str) -> tuple[int, int, int, str]:
 
 
 def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: bytes,
-                  ranges: list[tuple[int, int, int, str]]) -> dict:
+                  ranges: list[tuple[int, int, int, str],], *, source_kind: str = "archive-member") -> dict:
     records: list[dict] = []
     extractor = x86_direct_edges if cpu == "i8086" else m68k_direct_edges
     for offset, length, address, expected_digest in ranges:
@@ -222,7 +227,7 @@ def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: byte
                 edge["target_scope"] = ("within-declared-range" if any(start <= target < end
                                          for start, end in declared) else "outside-declared-range")
     return {"schema": "project-eon.static-control-flow/v1", "cpu": cpu,
-            "archive_sha256": archive_sha256, "source": source_label,
+            "archive_sha256": archive_sha256, "source": source_label, "source_kind": source_kind,
             "source_sha256": _sha256(source), "classification": CLASSIFICATION,
             "ranges": records}
 
@@ -231,11 +236,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--dos-archive", type=Path, help="Original DOS ZIP containing exact --member entries")
-    source.add_argument("--amiga-archive", type=Path, help="Original outer ZIP containing an exact nested ADF")
+    source.add_argument("--fat12-archive", type=Path,
+                        help="Original ZIP containing one exact FAT12 --fat12-member image")
+    source.add_argument("--amiga-archive", "--m68k-archive", dest="m68k_archive", type=Path,
+                        help="Original outer ZIP containing one exact nested M68000 disk image")
     parser.add_argument("--archive-sha256", required=True, help="Expected lower-case SHA-256 of the outer ZIP")
+    parser.add_argument("--source-sha256", help="Expected lower-case SHA-256 of the exact disk/image source")
     parser.add_argument("--member", action="append", default=[], help="Exact DOS member; repeat as needed")
+    parser.add_argument("--fat12-member", help="Exact FAT12 image member inside --fat12-archive")
     parser.add_argument("--nested-member", help="Exact nested ZIP member for --amiga-archive")
-    parser.add_argument("--adf-member", help="Exact ADF member inside --nested-member")
+    parser.add_argument("--adf-member", "--disk-member", dest="disk_member",
+                        help="Exact disk member inside --nested-member")
     parser.add_argument("--range", action="append", type=parse_range, default=[],
                         help="OFFSET:LENGTH:RUNTIME_ADDRESS:SHA256; required for Amiga")
     parser.add_argument("--output", type=Path, required=True)
@@ -245,19 +256,37 @@ def main(argv: list[str] | None = None) -> int:
         output = _require_external_output(args.output)
         documents: list[dict] = []
         if args.dos_archive is not None:
-            if not args.member or args.range or args.nested_member or args.adf_member:
+            if not args.member or args.range or args.nested_member or args.disk_member or args.fat12_member or args.source_sha256:
                 raise ControlFlowError("DOS mode requires --member entries only; ranges are inferred from exact members")
             for member in args.member:
                 media = _read_zip_member(args.dos_archive, member, args.archive_sha256)
                 documents.append(build_sidecar("i8086", args.archive_sha256, member, media,
                                                [(0, len(media), 0x100, _sha256(media))]))
+        elif args.fat12_archive is not None:
+            if (not args.fat12_member or not args.member or args.range or args.nested_member
+                    or args.disk_member or not args.source_sha256):
+                raise ControlFlowError("FAT12 mode requires --fat12-member, --source-sha256 and exact --member entries")
+            _require_sha256(args.source_sha256, "FAT12 image SHA-256")
+            image = _read_zip_member(args.fat12_archive, args.fat12_member, args.archive_sha256)
+            if _sha256(image) != args.source_sha256:
+                raise ControlFlowError("FAT12 image SHA-256 mismatch")
+            for member, media in read_fat12_members(image, args.member):
+                documents.append(build_sidecar("i8086", args.archive_sha256,
+                                               f"{args.fat12_member}:{member}", media,
+                                               [(0, len(media), 0x100, _sha256(media))],
+                                               source_kind="fat12-root-member"))
         else:
-            if not args.nested_member or not args.adf_member or not args.range or args.member:
-                raise ControlFlowError("Amiga mode requires --nested-member, --adf-member and one or more --range values")
-            media = _read_nested_zip_member(args.amiga_archive, args.nested_member, args.adf_member,
+            if (not args.nested_member or not args.disk_member or not args.range or args.member
+                    or args.fat12_member or not args.source_sha256):
+                raise ControlFlowError("M68000 mode requires --nested-member, --disk-member, --source-sha256 and one or more --range values")
+            _require_sha256(args.source_sha256, "disk SHA-256")
+            media = _read_nested_zip_member(args.m68k_archive, args.nested_member, args.disk_member,
                                             args.archive_sha256)
+            if _sha256(media) != args.source_sha256:
+                raise ControlFlowError("disk SHA-256 mismatch")
             documents.append(build_sidecar("m68000", args.archive_sha256,
-                                           f"{args.nested_member}!{args.adf_member}", media, args.range))
+                                           f"{args.nested_member}!{args.disk_member}", media, args.range,
+                                           source_kind="nested-disk-range"))
         payload = {"schema": "project-eon.static-control-flow-set/v1", "classification": CLASSIFICATION,
                    "documents": documents}
         output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
