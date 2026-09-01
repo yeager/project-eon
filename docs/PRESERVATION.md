@@ -4549,6 +4549,15 @@ inputs with `tools/analyze_dos.py` and `tools/analyze_m68k.py`. Capstone output
 is evidence navigation; structures must still be connected to callers, ranges,
 and tests.
 
+`tools/extract_static_control_flow.py` is the companion for compact external
+control-flow sidecars. It admits only exact archive members and hash-locked
+ranges, emits direct decoder candidates as `static-candidate-unclassified`,
+and does not retain game bytes or a full listing in Git. Candidate edges are
+not reachability, ABI, input, timing, or gameplay evidence. The committed
+sidecar identities in `disassembly-inventory.json` can be checked with
+`tools/verify_static_control_flow.py` while keeping the actual sidecars under
+the maintainer's external cache.
+
 ## Adding evidence
 
 1. Record SHA-256, byte length, language, platform, and known dump provenance;

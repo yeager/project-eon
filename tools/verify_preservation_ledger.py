@@ -167,7 +167,23 @@ def verify(root: Path) -> dict[str, int]:
                         f"static span {span_id} has an unbounded or overlapping segment")
                 previous_end = offset + length
 
-    return {"releases": len(releases), "profiles": len(profiles), "spans": span_count}
+    control_flow_ids: set[str] = set()
+    for sidecar in disassembly.get("control_flow_sidecars", []):
+        require(isinstance(sidecar, dict) and isinstance(sidecar.get("span_ids"), list)
+                and sidecar["span_ids"], "control-flow sidecar has no span references")
+        require(isinstance(sidecar.get("sha256"), str) and SHA256.fullmatch(sidecar["sha256"]),
+                "control-flow sidecar has invalid hash")
+        require(isinstance(sidecar.get("lines"), int) and sidecar["lines"] > 0,
+                "control-flow sidecar has invalid line count")
+        require(sidecar.get("classification") == "static-candidate-unclassified",
+                "control-flow sidecar upgrades static classification")
+        for span_id in sidecar["span_ids"]:
+            require(isinstance(span_id, str) and span_id in span_ids and span_id not in control_flow_ids,
+                    "control-flow sidecar has an invalid or duplicate span reference")
+            control_flow_ids.add(span_id)
+
+    return {"releases": len(releases), "profiles": len(profiles), "spans": span_count,
+            "control_flow_sidecars": len(disassembly.get("control_flow_sidecars", []))}
 
 
 def main() -> int:
@@ -181,7 +197,8 @@ def main() -> int:
         print(f"PRESERVATION LEDGER REJECTED  {error}")
         return 2
     print("PRESERVATION LEDGER VERIFIED  "
-          f"{result['releases']} releases, {result['profiles']} profiles, {result['spans']} static spans")
+          f"{result['releases']} releases, {result['profiles']} profiles, {result['spans']} static spans, "
+          f"{result['control_flow_sidecars']} control-flow sidecars")
     return 0
 
 

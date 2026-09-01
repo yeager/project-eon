@@ -60,6 +60,33 @@ copies report or game-media contents. A successful identity check proves only
 that the retained report is the recorded linear listing; it does not establish
 reachability, code/data classification, ABI results, or gameplay semantics.
 
+## External static control-flow sidecars
+
+`tools/extract_static_control_flow.py` generates a separate, hash-bound JSON
+sidecar from explicitly named original archive members. It records only
+decoder-recognised direct CALL/JMP/conditional-branch/interrupt/return
+candidates with source offsets and declared runtime addresses. The output must
+be a new file outside both the checkout and `/tmp`; it contains neither a full
+listing nor original bytes. Each edge remains
+`static-candidate-unclassified`: it is not a reachability, ABI, input, timing,
+or gameplay claim. Indirect transfers and M68000 PC-relative transfers whose
+decoder binding does not retain a reliable displacement are omitted rather
+than guessed.
+
+On 2026-09-01, external sidecars were generated from the exact Millennium DOS
+English and Deuteros Amiga English release archives. Their identities are in
+`disassembly-inventory.json`: Millennium's `MILL.COM`, `TITLES.EXE`, and
+`2200AD.EXE` sidecar has 35,954 LF lines; Deuteros's clean
+bootstrap/main/title sidecar has 84,351. Verify retained local sidecars:
+
+```sh
+python3 tools/verify_static_control_flow.py \
+  --sidecar millennium-dos-mill-com-linear=/absolute/millennium-dos-en.json \
+  --sidecar millennium-dos-titles-exe-linear=/absolute/millennium-dos-en.json \
+  --sidecar millennium-dos-2200ad-exe-linear=/absolute/millennium-dos-en.json \
+  --sidecar deuteros-amiga-clean-loaded-spans=/absolute/deuteros-amiga-clean.json
+```
+
 ## Input identities
 
 | Game | Platform | Container SHA-256 | Principal code/media identity |
