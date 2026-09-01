@@ -1,5 +1,6 @@
 #include "engine/deuteros_amiga_opening.hpp"
 
+#include "data/deuteros_amiga_data_disk.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -51,9 +52,7 @@ DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf,
       blob_(parse_deuteros_amiga_indexed_blob(disk_, bundle_)),
       vm_(disk_, bundle_),
       random_(transferred_bundle_, load_plan_.main_stage_entry) {
-    if (data_disk_.kind() != AmigaDiskKind::deuteros_data) {
-        throw std::runtime_error("Unsupported Deuteros Amiga data-disk format");
-    }
+    static_cast<void>(inspect_deuteros_amiga_data_disk_header(data_disk_));
 }
 
 DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
