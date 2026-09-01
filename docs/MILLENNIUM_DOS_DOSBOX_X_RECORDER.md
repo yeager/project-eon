@@ -263,6 +263,16 @@ that the 15 tuples immediately before `f000:ca60` are zero-byte fetches at
 `0e70:18e4` through `0e70:1900`. That is bounded execution-history evidence,
 not a mapping, provenance, ABI, title, or game-state claim.
 
+The v20 transfer observer is armed only by the existing original
+`TITLES.EXE:$0134` `INT $93` observation after its IVT target has been read.
+It retains exactly one predecessor/current normal-core pair when execution
+later first enters `CS=$0e70`. Its sidecar has fixed lowercase-hex fields for
+the declared context, a valid predecessor `CS:IP` and four-byte preimage, and
+the first `0e70` `CS:IP` and four-byte preimage. It uses an exclusive,
+no-follow, mode-`0600` host output path and is disarmed before sidecar I/O.
+The observer is neither a DOS load hook nor a claim that the adjacency is a
+guest `RETF`, callback, handler, or valid code path.
+
 ## Review and admission
 
 Before a patched build is used, review that the diff changes only the four

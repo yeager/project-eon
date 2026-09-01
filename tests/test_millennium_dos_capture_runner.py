@@ -293,6 +293,28 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.int93_vector_status(events, results, "v19-int93-vector", "known-unhandled-interrupt")
 
+    def test_v20_title_entry_transfer_is_one_bounded_raw_adjacency(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            transfer = root / "title-entry-transfer.raw"
+            results = root / "results.raw"
+            results.write_bytes(TOOL.KNOWN_V11_EARLY_STOP_RAW)
+            transfer.write_bytes(TOOL.KNOWN_V20_TITLE_ENTRY_TRANSFER)
+            status = TOOL.title_entry_transfer_status(
+                transfer, results, "v20-title-entry-transfer", "known-unhandled-interrupt")
+            self.assertIn("title_entry_transfer_declared_entry_cs=0x0e70\n", status)
+            self.assertIn("title_entry_transfer_predecessor_code=0xca00f00e\n", status)
+            transfer.write_text(transfer.read_text(encoding="ascii").replace(
+                "predecessor_valid=1", "predecessor_valid=0"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
+                TOOL.title_entry_transfer_status(
+                    transfer, results, "v20-title-entry-transfer", "known-unhandled-interrupt")
+            transfer.unlink()
+            transfer.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.title_entry_transfer_status(
+                    transfer, results, "v20-title-entry-transfer", "known-unhandled-interrupt")
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""
         with temporary_directory() as directory:

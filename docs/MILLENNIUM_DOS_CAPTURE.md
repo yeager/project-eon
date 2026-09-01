@@ -807,6 +807,33 @@ The same bounded signature scan found neither encoding in `EGA640.BIN`,
 vector setup in those exact byte streams; an indirect installer, loader-side
 write, or unreached path remains an explicit preservation boundary.
 
+### Receipt-v20 post-INT 93h normal-core transfer (diagnostics only)
+
+The V20 recorder is armed only after its existing observation of the original
+`TITLES.EXE+0x0034` `INT 93h` and its zero IVT target. It retains one bounded,
+exclusive/no-follow host sidecar at the first later normal-core entry to the
+already observed `0e70` context. It does not write guest memory, modify
+registers, install a vector, invoke a debugger, inject input, or change the
+emulator scheduler.
+
+Two independently prepared, receipt-verified no-input captures produced the
+same 212-byte sidecar, SHA-256
+`b4434953ad218801db9b3966d9d2be226b0261c7d4a87316c58feb8599472236`, with
+the V20 recorder SHA-256
+`a07aa94abd5e7a38c52b81e2080a4161dc33a5bd15a63be9b6316219e65b2ef5`:
+
+```text
+0000:0001 ca 00 f0 0e  ->  0e70:fffe 00 00 00 00
+```
+
+This is one normal-core adjacency in the current DOSBox-X execution route.
+It does not prove a direct original transfer, a `RETF`, the source or intended
+contents of either context, an `INT 93h` handler, a DOS ABI, title action,
+frame, audio result, or gameplay state. In particular, Project Eon must not
+turn the zero bytes into a reconstructed handler or cross this boundary at
+runtime. The missing evidence remains the original installation/dispatch path
+and a genuine navigable trace through it.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
