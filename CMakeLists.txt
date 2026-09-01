@@ -277,14 +277,17 @@ if(WIN32)
     target_sources(project-eon PRIVATE packaging/windows/project-eon.rc)
 endif()
 
-# GCC 15's PRE pass can crash while optimizing the deliberately large
-# provenance-report and evidence-aggregation translation units at -O3. Keep
-# the workaround narrowly scoped to the affected sources; all data parsers and
-# the rest of the runtime retain the configured optimisation level. This is a
-# compiler reliability guard, not a change to recovered game behaviour.
+# GCC 15 can crash internally while compiling a small set of deliberately
+# large provenance/report and parser translation units as PIE. Keep the
+# workaround narrowly scoped to the observed sources; the executable remains
+# PIE-hardened and the rest of the runtime retains the configured optimisation
+# level. This is a compiler reliability guard, not a change to recovered game
+# behaviour.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set_source_files_properties(
         src/main.cpp
+        src/launcher.cpp
+        src/data/millennium_dos_game_flow.cpp
         src/engine/deuteros_atari_bootstrap_session.cpp
         PROPERTIES COMPILE_OPTIONS "-O1")
     # The monolithic preservation corpus test hits a distinct GCC 15 RTL
