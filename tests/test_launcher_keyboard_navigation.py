@@ -121,6 +121,9 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("cycle_launcher_language", SOURCE)
         self.assertIn("event.key.key == SDLK_L", SOURCE)
         self.assertIn("launcher_language_bounds", SOURCE)
+        self.assertIn('tr("LANGUAGE")', SOURCE)
+        self.assertIn("SDL_GAMEPAD_BUTTON_LEFT_SHOULDER", SOURCE)
+        self.assertIn("SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER", SOURCE)
         self.assertIn("translator = eon::Translator::from_language(request.language", SOURCE)
         locale = SOURCE[SOURCE.index("const auto cycle_launcher_language"):
                         SOURCE.index("const auto handle_menu_pointer_down")]
