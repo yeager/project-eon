@@ -6121,6 +6121,8 @@ int main() {
     assert(gx_catalog.resources[1].name == "IMG01");
     assert(gx_catalog.resources[1].bitmap_decoder_admitted);
     assert(gx_catalog.resources[25].name == "IMG19");
+    assert(gx_catalog.resources[25].source_sha256
+        == "e86a92133716dc7a54cc4d113a72af25d307c0e338bf77491205d19493403838");
     assert(!gx_catalog.resources[25].bitmap_decoder_admitted);
     assert(gx_catalog.resources[25].decoder_boundary == "Millennium DOS bitmap run overruns output");
     assert(gx_catalog.resources[25].decoded_pixels_sha256.empty());
