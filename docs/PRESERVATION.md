@@ -4542,6 +4542,9 @@ it neither composites a patch onto P00, invents a destination buffer or
 palette mode, assigns a delay, nor maps a host key to title input. No media is
 written, unpacked, copied, or included in the executable; all derived buffers
 exist only while the caller holds the in-memory read of the original archive.
+The English DOS runtime admission uses that same complete object before it
+publishes P00 to SDL, so an independent P00-only decoder cannot admit a title
+whose linked transition bank or title-flow profile has failed validation.
 
 ## Automation integrity
 

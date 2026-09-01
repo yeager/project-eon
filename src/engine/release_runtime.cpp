@@ -9,6 +9,7 @@
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_dos_lib.hpp"
+#include "data/millennium_dos_title_presentation.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -398,11 +399,6 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         const auto bytes = media.extract(title_lib_sha256);
         if (!bytes) return std::nullopt;
         const MillenniumDosLib title_lib(*bytes);
-        const auto* p00 = title_lib.find("P00");
-        if (!p00) return std::nullopt;
-        const auto resource = title_lib.read(*p00);
-        const auto bitmap = decode_millennium_dos_bitmap(resource);
-        const auto palette = decode_millennium_dos_palette(resource, bitmap);
         const auto gx_bytes = media.extract(gx_lib_sha256);
         const auto titles = media.extract(titles_sha256);
         const auto launcher = media.extract(launcher_sha256);
@@ -416,17 +412,27 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
             || !sound_blaster || !covox) {
             return std::nullopt;
         }
+        // The live presentation admission deliberately uses the same
+        // complete, hash-locked P00/P01..P25 model that inspection reports.
+        // This keeps SDL from accepting an independently decoded P00 after a
+        // later title-patch/profile boundary has ceased to match original
+        // media. It still exposes only P00 as the static title frame: patch
+        // composition, cadence, title input, and the DOS hand-off remain
+        // unproven.
+        const auto title_flow = parse_millennium_dos_title_flow(*titles, *launcher);
+        const auto title_presentation = parse_millennium_dos_title_presentation_assets(
+            title_lib, title_flow);
         const auto gx_canvas = parse_millennium_dos_gameplay_screen(*gx_bytes);
         const auto sound_selection = parse_millennium_dos_sound_selection(*launcher);
         const auto sound_selection_prompt = extract_millennium_dos_sound_selection_prompt(
             *launcher, sound_selection);
         return MillenniumDosRuntimeAssets{
-            .title = {bitmap.width, bitmap.height,
-                {colorize_millennium_dos_bitmap(bitmap, palette)}},
+            .title = {title_presentation.base_bitmap.width, title_presentation.base_bitmap.height,
+                {title_presentation.base_rgba}},
             .language = "en",
             .gx_canvas = MillenniumDosPreviewAnimation{
                 gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
-            .title_flow = parse_millennium_dos_title_flow(*titles, *launcher),
+            .title_flow = title_flow,
             .sound_selection = sound_selection,
             .sound_selection_prompt = sound_selection_prompt,
             .sound_blaster_driver = admit_millennium_dos_sound_driver_leaf(*sound_blaster),
