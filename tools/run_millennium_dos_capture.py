@@ -47,6 +47,7 @@ RECORDER_PROTOCOLS = {
     "v17-anomaly-entry": ("17", "d03e11ea48710e00d97c127f9b3d3ba5bc6f4227fafb7764e2b5950e50704ae6"),
     "v18-ivt-entry": ("18", "74420b4f8a0e2009f08b278ead1f9b36804404808b27895f327f204836d65e11"),
     "v19-int93-vector": ("19", "487cbc3292b6b279ff0cfe444dbded64ae86c5cb174af5161ddbd052d53022f0"),
+    "v20-title-entry-transfer": ("20", "a07aa94abd5e7a38c52b81e2080a4161dc33a5bd15a63be9b6316219e65b2ef5"),
 }
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
@@ -77,6 +78,7 @@ MAX_RECORDER_CONSOLE_TOTAL_BYTES = 64 * 1024 * 1024
 MAX_RAW_RESULT_RECORDS = 256
 MAX_NORMAL_CORE_HISTORY_BYTES = 1024
 MAX_NORMAL_CORE_ANOMALY_BYTES = 1024
+MAX_TITLE_ENTRY_TRANSFER_BYTES = 512
 RAW_RESULT_LINE = re.compile(
     r"raw-result\t([1-9][0-9]*) ([1-9][0-9]*) "
     r"(?:image=(mill\.com|titles\.exe) pc=0x(020e|0213|0129) "
@@ -116,6 +118,16 @@ KNOWN_V18_IVT_PRIOR = (
     "0a8d:076d:b403e8bd", "0a8d:076f:e8bdf95b", "0a8d:012f:1e565755", "0a8d:0130:56575506",
     "0a8d:0131:575506cd", "0a8d:0132:5506cd93", "0a8d:0133:06cd9307", "0a8d:0134:cd93075d")
 KNOWN_V19_INT93_EVENT = b"event\t6 6 int93-vector image=titles.exe pc=0x0134 int=0x93 vector_ip=0x0000 vector_cs=0x0000\n"
+TITLE_ENTRY_TRANSFER_LINE = re.compile(
+    r"title-entry-transfer-v1 image=titles\.exe declared_entry_cs=0x([0-9a-f]{4}) "
+    r"predecessor_valid=([01]) predecessor_cs=0x([0-9a-f]{4}) predecessor_ip=0x([0-9a-f]{4}) "
+    r"predecessor_code=0x([0-9a-f]{8}) entry_cs=0x([0-9a-f]{4}) entry_ip=0x([0-9a-f]{4}) "
+    r"entry_code=0x([0-9a-f]{8})\n")
+KNOWN_V20_TITLE_ENTRY_TRANSFER = (
+    b"title-entry-transfer-v1 image=titles.exe declared_entry_cs=0x0e70 "
+    b"predecessor_valid=1 predecessor_cs=0x0000 predecessor_ip=0x0001 "
+    b"predecessor_code=0xca00f00e entry_cs=0x0e70 entry_ip=0xfffe "
+    b"entry_code=0x00000000\n")
 # The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
 # grammar authenticates the bounded external receipt shape only; it does not
 # claim DOS accepted a key or assign its original-game meaning.
@@ -482,6 +494,43 @@ def int93_vector_status(events_path: Path, results_path: Path, recorder_protocol
     return "int93_vector=observed-zero-ivt-target\n"
 
 
+def title_entry_transfer_status(path: Path, results_path: Path, recorder_protocol: str,
+                                termination_reason: str) -> str:
+    """Bind one raw normal-core title-entry adjacency without assigning an ABI."""
+    if recorder_protocol != "v20-title-entry-transfer": return ""
+    try:
+        info = path.lstat()
+    except FileNotFoundError as error:
+        raise CaptureError("v20 title-entry transfer is absent") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("v20 title-entry transfer is not a regular non-symlink file")
+    if not 0 < info.st_size <= MAX_TITLE_ENTRY_TRANSFER_BYTES:
+        raise CaptureError("v20 title-entry transfer exceeds the bounded recorder contract")
+    raw = path.read_bytes()
+    if not raw.endswith(b"\n") or b"\r" in raw:
+        raise CaptureError("v20 title-entry transfer is not a canonical LF recorder record")
+    try:
+        match = TITLE_ENTRY_TRANSFER_LINE.fullmatch(raw.decode("ascii"))
+    except UnicodeDecodeError as error:
+        raise CaptureError("v20 title-entry transfer is not ASCII recorder output") from error
+    if not match or match.group(2) != "1" or match.group(1) != match.group(6):
+        raise CaptureError("v20 title-entry transfer contains an invalid recorder record")
+    if termination_reason == "known-unhandled-interrupt" and \
+            (not known_v11_early_stop_receipt(results_path) or raw != KNOWN_V20_TITLE_ENTRY_TRANSFER):
+        raise CaptureError("v20 title-entry transfer does not match the observed zero-context boundary")
+    digest, size = sha256_file(path)
+    return ("title_entry_transfer=present\n"
+            f"title_entry_transfer_sha256={digest}\n"
+            f"title_entry_transfer_bytes={size}\n"
+            f"title_entry_transfer_declared_entry_cs=0x{match.group(1)}\n"
+            f"title_entry_transfer_predecessor_cs=0x{match.group(3)}\n"
+            f"title_entry_transfer_predecessor_ip=0x{match.group(4)}\n"
+            f"title_entry_transfer_predecessor_code=0x{match.group(5)}\n"
+            f"title_entry_transfer_entry_cs=0x{match.group(6)}\n"
+            f"title_entry_transfer_entry_ip=0x{match.group(7)}\n"
+            f"title_entry_transfer_entry_code=0x{match.group(8)}\n")
+
+
 def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     """Parse finite recorder diagnostics into non-semantic shape labels."""
     try:
@@ -493,7 +542,7 @@ def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     labels: list[str] = []
     for expected, line in enumerate(text.splitlines(keepends=True), start=1):
         title_poll = (TITLE_INPUT_POLL_LINE.fullmatch(line)
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"} and " title-input-poll " in line
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector", "v20-title-entry-transfer"} and " title-input-poll " in line
                       else None)
         match = title_poll or (V12_PREDECESSOR_FAULT_LINE.fullmatch(line)
             if recorder_protocol == "v12-predecessor" and " fault=" in line
@@ -528,7 +577,7 @@ def title_input_poll_ordinals(path: Path, recorder_protocol: str = "v11") -> lis
     exact original INT 21h/AH=06h call. It is not an input-delivery receipt,
     and its absence cannot be replaced by a synthesized poll or frame.
     """
-    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
+    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector", "v20-title-entry-transfer"}:
         return []
     try:
         text = path.read_text(encoding="ascii")
@@ -558,7 +607,7 @@ def title_input_checkpoint_status(results_path: Path, input_receipt_path: Path,
     title action. The receipt calls it a correlation only, and rejects an
     impossible recorder ordinal beyond the independently recorded host keys.
     """
-    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
+    if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector", "v20-title-entry-transfer"}:
         return ""
     polls = title_input_poll_ordinals(results_path, recorder_protocol)
     try:
@@ -636,7 +685,7 @@ def raw_result_status(path: Path, name: str, recorder_protocol: str = "v11") -> 
     summary = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
     status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
               f"{name}_records={sum(counts.values())}\n{name}_shapes={summary}\n")
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector", "v20-title-entry-transfer"}:
         polls = title_input_poll_ordinals(path, recorder_protocol)
         status += (f"{name}_title_input_polls={len(polls)}\n"
                    f"{name}_last_host_key_ordinal={polls[-1] if polls else 0}\n")
@@ -678,7 +727,7 @@ def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11
             return tuple(raw_result_labels(path, recorder_protocol)) == KNOWN_V10_EARLY_STOP_SEQUENCE
         except CaptureError:
             return False
-    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
+    if recorder_protocol in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector", "v20-title-entry-transfer"}:
         # The legacy callback-loop receipt remains a bounded diagnostic stop
         # when no title poll was reached. Any poll-bearing run stays alive for
         # the operator's configured duration so it cannot be mistaken for a
@@ -776,6 +825,8 @@ def run_capture(args: argparse.Namespace) -> Path:
             environment["PROJECT_EON_DOSBOX_X_HISTORY_RECORD"] = str(output / "normal-core-history.raw")
         if args.recorder_protocol in {"v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector"}:
             environment["PROJECT_EON_DOSBOX_X_ANOMALY_RECORD"] = str(output / "normal-core-anomaly.raw")
+        if args.recorder_protocol == "v20-title-entry-transfer":
+            environment["PROJECT_EON_DOSBOX_X_TITLE_TRANSFER_RECORD"] = str(output / "title-entry-transfer.raw")
         print("CAPTURE PREPARED  read-only original archive; physical operator input required")
         print("Focus the visible DOSBox-X window by clicking it yourself; do not use terminal or automation input.")
         print("Then press and release ordinary keys only in that window (for example Return, Space, or arrows).")
@@ -855,6 +906,8 @@ def run_capture(args: argparse.Namespace) -> Path:
             output / "results.raw", args.recorder_protocol, termination_reason)
         int93_status = int93_vector_status(output / "events.raw", output / "results.raw",
                                             args.recorder_protocol, termination_reason)
+        title_transfer_status = title_entry_transfer_status(output / "title-entry-transfer.raw",
+            output / "results.raw", args.recorder_protocol, termination_reason)
         title_checkpoint_status = title_input_checkpoint_status(output / "results.raw",
             output / "host-input-receipt.raw", args.recorder_protocol)
         write_exclusive(output / "run-status.txt",
@@ -869,7 +922,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
                         + receipt_status + observation_status + history_status + history_boundary_status
-                        + anomaly_status + int93_status + title_checkpoint_status
+                        + anomaly_status + int93_status + title_transfer_status + title_checkpoint_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(

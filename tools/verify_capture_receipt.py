@@ -10,7 +10,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"}
 
 
 def load_tool(name: str):
@@ -97,7 +97,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
 
 
@@ -229,7 +229,7 @@ def verify_millennium_termination(fields: dict[str, str], directory: Path, versi
         if version == "12" and not tool.known_unhandled_interrupt_observed(
                 directory / "results.raw", "v12-predecessor"):
             raise ValueError("Millennium early stop requires the bounded v12 predecessor diagnostic shape")
-        if version in {"13", "14", "15", "16", "17", "18", "19"} and not tool.known_unhandled_interrupt_observed(
+        if version in {"13", "14", "15", "16", "17", "18", "19", "20"} and not tool.known_unhandled_interrupt_observed(
                 directory / "results.raw", fields["recorder_protocol"]):
             raise ValueError("Millennium early stop requires the exact v13 no-poll diagnostic receipt")
 
@@ -270,6 +270,16 @@ def verify_millennium_int93_vector(fields: dict[str, str], directory: Path) -> N
         raise ValueError("INT 93h vector receipt mismatch")
 
 
+def verify_millennium_title_entry_transfer(fields: dict[str, str], directory: Path) -> None:
+    tool = load_tool("run_millennium_dos_capture")
+    expected = tool.title_entry_transfer_status(
+        directory / "title-entry-transfer.raw", directory / "results.raw",
+        "v20-title-entry-transfer", fields.get("termination_reason", ""))
+    expected_fields = dict(line.split("=", 1) for line in expected.splitlines())
+    if any(fields.get(key) != value for key, value in expected_fields.items()):
+        raise ValueError("title-entry transfer receipt mismatch")
+
+
 def verify(kind: str, directory: Path) -> None:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
@@ -291,25 +301,27 @@ def verify(kind: str, directory: Path) -> None:
             raise ValueError("v18 receipt must retain its IVT-entry recorder protocol")
         if version == "19" and recorder_protocol != "v19-int93-vector":
             raise ValueError("v19 receipt must retain its INT 93h recorder protocol")
-        if version not in {"12", "13", "14", "15", "16", "17", "18", "19"} and recorder_protocol != "v11":
+        if version == "20" and recorder_protocol != "v20-title-entry-transfer":
+            raise ValueError("v20 receipt must retain its title-entry transfer recorder protocol")
+        if version not in {"12", "13", "14", "15", "16", "17", "18", "19", "20"} and recorder_protocol != "v11":
             raise ValueError("pre-v12 receipt must retain the v11 recorder protocol")
         require_identity(fields, "recorder", (tool.RECORDER_PROTOCOLS[recorder_protocol][1], int(fields["recorder_bytes"])))
         verify_file(fields, directory, "events_raw", "events.raw")
         verify_file(fields, directory, "results_raw", "results.raw")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"} and fields.get("results_raw") == "present":
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw", recorder_protocol)
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
                     str(sum(counts.values())), shapes):
                 raise ValueError("results_raw grammar/count receipt mismatch")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.raw")
-        if version in {"5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"}:
+        if version in {"5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"}:
             verify_millennium_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"}:
+        if version in {"6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"}:
             verify_millennium_machine_profile(fields, directory)
-        if version in {"10", "11", "12", "13", "14", "15", "16", "17", "18", "19"}:
+        if version in {"10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"}:
             verify_millennium_termination(fields, directory, version)
-        if version in {"13", "14", "15", "16", "17", "18", "19"}:
+        if version in {"13", "14", "15", "16", "17", "18", "19", "20"}:
             if fields.get("results_raw") != "present":
                 raise ValueError("v13 title-input checkpoint requires a raw result log")
             verify_millennium_title_input_checkpoint(fields, directory)
@@ -319,6 +331,9 @@ def verify(kind: str, directory: Path) -> None:
             verify_millennium_normal_core_anomaly(fields, directory)
         if version == "19":
             verify_millennium_int93_vector(fields, directory)
+        if version == "20":
+            verify_file(fields, directory, "title_entry_transfer", "title-entry-transfer.raw")
+            verify_millennium_title_entry_transfer(fields, directory)
     else:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))

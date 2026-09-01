@@ -44,10 +44,13 @@ sidecar (SHA-256
 `248969bc16cfd773f64140ff3e314f6cd465ad7514de0868d24803b399bf4dbb`). It
 records zero-byte fetches at `0e70:18e4` through `0e70:1900`, followed by the
 already known DOSBox-X default-callback opcode at `f000:ca60`. This isolates
-the current P0 boundary to the unproven transfer into the `0e70` context. It
-does not authorize a callback bypass, guest-memory repair, inferred mapping,
-or a gameplay claim; the next high-priority task is a separately reviewed,
-read-only transfer-origin observer.
+the current P0 boundary to the unproven transfer into the `0e70` context. Two
+later V20 transfer-observer receipts independently retain the same one-step
+normal-core adjacency, `0000:0001 ca00f00e` to `0e70:fffe 00000000` (sidecar
+SHA-256 `b4434953ad218801db9b3966d9d2be226b0261c7d4a87316c58feb8599472236`).
+It does not authorize a callback bypass, guest-memory repair, inferred mapping,
+or a gameplay claim: the exact original vector installation/dispatch path and
+a navigable trace remain the rank-1 missing evidence.
 
 On 2026-09-01, a second independently receipt-verified Deuteros Amiga v9
 realtime run lasted 120 seconds. Its 384 raw-PC records (SHA-256
