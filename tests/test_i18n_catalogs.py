@@ -168,6 +168,23 @@ class CatalogTests(unittest.TestCase):
                 catalog = po_messages(PO / f"{language}.po")
                 self.assertTrue(all(catalog.get(label) for label in labels))
 
+    def test_function_map_page_has_no_english_fallback_in_completed_catalogs(self) -> None:
+        """The whole F10 function-map page is Project Eon UI, not game text."""
+        labels = {
+            "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS",
+            "RECOVERY FUNCTION MAP",
+            "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS",
+            "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE.",
+            "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.",
+            "MODERN PACK",
+            "PACK RENDER TARGETS",
+        }
+        for language in {"de", "es", "fr", "it", "nl", "no", "pl", "pt_BR", "sv"}:
+            with self.subTest(language=language):
+                catalog = po_messages(PO / f"{language}.po")
+                self.assertTrue(all(catalog.get(label) not in {None, "", label}
+                                    for label in labels))
+
     def test_unselected_diagnostics_identity_is_translated_before_rendering(self) -> None:
         self.assertIn('diagnostics.release_identity = tr("NOT SELECTED");', LAUNCHER_SOURCE)
         source_catalog = po_messages(PO / "ProjectEon.pot")

@@ -426,10 +426,10 @@ msgid "Discovering files: "
 msgstr "Söker filer: "
 
 msgid "MODERN PACK"
-msgstr "MODERN PACK"
+msgstr "MODERNT PAKET"
 
 msgid "PACK RENDER TARGETS"
-msgstr "PACK RENDER TARGETS"
+msgstr "PAKETETS RENDERMÅL"
 
 msgid "Files hashed: "
 msgstr "Hashade filer: "
