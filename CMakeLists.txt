@@ -318,6 +318,14 @@ if(BUILD_TESTING)
         target_compile_options(eon-native-tests PRIVATE /UNDEBUG)
     else()
         target_compile_options(eon-native-tests PRIVATE -UNDEBUG)
+        # GCC 15 on aarch64 can ICE during RTL expansion for the deliberately
+        # large native preservation test translation unit when PIE codegen is
+        # enabled. The installed runtime remains PIE-hardened; this applies
+        # only to the local, non-distributed test executable.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            target_compile_options(eon-native-tests PRIVATE -fno-pie)
+            target_link_options(eon-native-tests PRIVATE -no-pie)
+        endif()
     endif()
     # Native fixtures never use the system temporary directory. This protects
     # constrained preservation workstations and keeps test artefacts outside
