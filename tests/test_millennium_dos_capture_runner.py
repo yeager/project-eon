@@ -237,6 +237,21 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             results.write_bytes(payload.replace(b"predecessor_recognised_image=0", b"predecessor_recognised_image=2"))
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results, "v12-predecessor"))
 
+    def test_v14_normal_core_history_is_one_bounded_ordered_sidecar(self) -> None:
+        with temporary_directory() as directory:
+            history = Path(directory) / "normal-core-history.raw"
+            history.write_text(
+                "normal-core-history-v1 count=2 entries=0e70:18fe:00000000,f000:ca60:fe380300\n",
+                encoding="ascii")
+            status = TOOL.normal_core_history_status(history, "v14-normal-core-history")
+            self.assertIn("normal_core_history=present\n", status)
+            self.assertIn("normal_core_history_entries=2\n", status)
+            history.write_text(
+                "normal-core-history-v1 count=1 entries=0e70:18fe:00000000,f000:ca60:fe380300\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "count does not match"):
+                TOOL.normal_core_history_status(history, "v14-normal-core-history")
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""
         with temporary_directory() as directory:

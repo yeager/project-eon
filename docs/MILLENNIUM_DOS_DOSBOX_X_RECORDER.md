@@ -252,6 +252,17 @@ original game, prove a processor mode, or establish the meaning of the
 unmapped return context `0e70:1900`. Resolving that preceding load/callback
 route still requires a separately reviewed, read-only observer.
 
+The v14 normal-core-history recorder narrows that last statement without
+changing it. Its externally hash-bound binary is SHA-256
+`748c1c934a78a28baef083fc352b552644f9665bc27fc032db0fdd7463ee5c63`
+(86,233,096 bytes), built from the same upstream revision. It records a fixed
+16-tuple memory-only ring at the existing normal-core observer and serializes
+one exclusive/no-follow host sidecar only at the exact `f000:ca64`
+default-callback boundary. Two genuine, independently verified captures agree
+that the 15 tuples immediately before `f000:ca60` are zero-byte fetches at
+`0e70:18e4` through `0e70:1900`. That is bounded execution-history evidence,
+not a mapping, provenance, ABI, title, or game-state claim.
+
 ## Review and admission
 
 Before a patched build is used, review that the diff changes only the four

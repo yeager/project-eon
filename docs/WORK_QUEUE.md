@@ -36,6 +36,19 @@ do not establish guest input, title execution, display, audio, ABI results,
 or gameplay, and the next operator-led capture remains the required P0
 evidence.
 
+### 2026-09-01 Millennium execution-history update
+
+Two independently verified `v14-normal-core-history` captures of the same
+write-protected English DOS archive retain an identical 16-entry normal-core
+sidecar (SHA-256
+`248969bc16cfd773f64140ff3e314f6cd465ad7514de0868d24803b399bf4dbb`). It
+records zero-byte fetches at `0e70:18e4` through `0e70:1900`, followed by the
+already known DOSBox-X default-callback opcode at `f000:ca60`. This isolates
+the current P0 boundary to the unproven transfer into the `0e70` context. It
+does not authorize a callback bypass, guest-memory repair, inferred mapping,
+or a gameplay claim; the next high-priority task is a separately reviewed,
+read-only transfer-origin observer.
+
 On 2026-09-01, a second independently receipt-verified Deuteros Amiga v9
 realtime run lasted 120 seconds. Its 384 raw-PC records (SHA-256
 `d8732ec5aab06123147688b19b8bc750b0ee6ca1f9a03cdc68a5787271a1e5b9`)
