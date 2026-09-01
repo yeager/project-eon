@@ -136,6 +136,24 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.input_receipt_status(receipt)
 
+    def test_live_input_delivery_observer_never_parses_a_file_being_appended(self) -> None:
+        with temporary_directory() as directory:
+            receipt = Path(directory) / "host-input-receipt.txt"
+            self.assertFalse(TOOL.input_delivery_file_observed(receipt))
+            receipt.write_bytes(b"host-input 1 frame=2")
+            self.assertTrue(TOOL.input_delivery_file_observed(receipt))
+            receipt.unlink()
+            receipt.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.input_delivery_file_observed(receipt)
+
+    def test_focus_settle_duration_is_exposed_by_argument_parsing(self) -> None:
+        arguments = TOOL.parse_arguments((
+            "--source-release", "/release.zip", "--kickstart-archive", "/kickstart.zip",
+            "--recorder", "/recorder", "--output", "/capture", "--focus-settle-seconds", "0",
+        ))
+        self.assertEqual(arguments.focus_settle_seconds, 0)
+
     def test_raw_recorder_observation_is_hash_bound_and_bounded(self) -> None:
         with temporary_directory() as directory:
             raw = Path(directory) / "raw-pc.txt"
