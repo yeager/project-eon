@@ -13,10 +13,60 @@ import argparse
 import hashlib
 from io import BytesIO
 from pathlib import Path
-from zipfile import ZipFile
+from zipfile import BadZipFile, ZipFile
 
 
 PRG_HEADER_BYTES = 28
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class AnalysisError(ValueError):
+    """An input/provenance boundary rejected by the preservation tool."""
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def require_sha256(value: str, label: str) -> str:
+    if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+        raise AnalysisError(f"{label} must be a lowercase SHA-256")
+    return value
+
+
+def require_regular_input(path: Path, label: str) -> Path:
+    try:
+        status = path.lstat()
+    except OSError as error:
+        raise AnalysisError(f"unable to stat {label}: {error}") from error
+    if path.is_symlink() or not path.is_file():
+        raise AnalysisError(f"{label} must be an existing regular non-symlink file")
+    return path
+
+
+def require_external_output(path: Path) -> Path:
+    """Reject paths that could turn a preservation report into repository data."""
+    if not path.is_absolute():
+        raise AnalysisError("output path must be absolute")
+    if path.exists() or path.is_symlink():
+        raise AnalysisError("output path must not already exist or be a symlink")
+    try:
+        parent = path.parent.resolve(strict=True)
+    except OSError as error:
+        raise AnalysisError(f"output parent cannot be resolved: {error}") from error
+    if not parent.is_dir():
+        raise AnalysisError("output parent must be an existing directory")
+    resolved = parent / path.name
+    if resolved == ROOT or ROOT in resolved.parents:
+        raise AnalysisError("output path must be outside the repository")
+    tmp = Path("/tmp")
+    if resolved == tmp or tmp in resolved.parents:
+        raise AnalysisError("output path must be outside /tmp")
+    return resolved
 
 
 def read_le16(data: bytes, offset: int) -> int:
@@ -103,16 +153,33 @@ def fat12_member(image: bytes, wanted: str) -> bytes:
     return bytes(result)
 
 
-def read_exact_program(archive: Path, nested_member: str, disk_member: str,
-                       program_member: str) -> tuple[bytes, bytes]:
+def read_exact_program(archive: Path, archive_sha256: str, nested_member: str | None,
+                       nested_sha256: str | None, disk_member: str,
+                       program_member: str) -> tuple[bytes, bytes, str | None]:
+    """Read a hash-locked direct or carrier-contained disk without extracting it.
+
+    A direct release is one ZIP whose named member is the original ST image.
+    A carrier release is a ZIP containing one exact nested ZIP; both ZIP byte
+    streams are independently authenticated before the named image is read.
+    """
+    require_regular_input(archive, "archive")
+    if sha256_file(archive) != require_sha256(archive_sha256, "archive SHA-256"):
+        raise AnalysisError("outer archive SHA-256 mismatch")
+    if (nested_member is None) != (nested_sha256 is None):
+        raise AnalysisError("nested member and nested SHA-256 must be supplied together")
     try:
         with ZipFile(archive) as outer:
+            if nested_member is None:
+                disk = outer.read(disk_member)
+                return disk, fat12_member(disk, program_member), None
             nested = outer.read(nested_member)
+        if hashlib.sha256(nested).hexdigest() != require_sha256(nested_sha256, "nested archive SHA-256"):
+            raise AnalysisError("nested archive SHA-256 mismatch")
         with ZipFile(BytesIO(nested)) as inner:
             disk = inner.read(disk_member)
-    except (KeyError, OSError, ValueError) as error:
-        raise ValueError(f"unable to read exact nested Atari ST disk: {error}") from error
-    return disk, fat12_member(disk, program_member)
+    except (BadZipFile, KeyError, OSError, ValueError) as error:
+        raise AnalysisError(f"unable to read exact Atari ST disk container: {error}") from error
+    return disk, fat12_member(disk, program_member), nested_sha256
 
 
 def linear_listing(data: bytes) -> list[str]:
@@ -134,21 +201,35 @@ def linear_listing(data: bytes) -> list[str]:
     return lines
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
-    parser.add_argument("--nested-member", required=True)
+    parser.add_argument("--archive-sha256", required=True,
+                        help="SHA-256 of the exact selected outer ZIP")
+    parser.add_argument("--nested-member",
+                        help="Exact nested ZIP member; omit for a direct ZIP container")
+    parser.add_argument("--nested-sha256",
+                        help="SHA-256 of --nested-member; required with that option")
     parser.add_argument("--disk-member", required=True)
     parser.add_argument("--program", default="MILENIUM.TOS")
     parser.add_argument("--disk-sha256", required=True)
     parser.add_argument("--program-sha256", required=True)
     parser.add_argument("--output", type=Path)
-    args = parser.parse_args()
-    disk, program = read_exact_program(args.archive, args.nested_member, args.disk_member, args.program)
+    args = parser.parse_args(argv)
+    try:
+        archive_sha256 = require_sha256(args.archive_sha256, "archive SHA-256")
+        if (args.nested_member is None) != (args.nested_sha256 is None):
+            raise AnalysisError("--nested-member and --nested-sha256 must be supplied together")
+        disk, program, nested_sha256 = read_exact_program(
+            args.archive, archive_sha256, args.nested_member, args.nested_sha256,
+            args.disk_member, args.program)
+    except AnalysisError as error:
+        parser.error(str(error))
     disk_hash = hashlib.sha256(disk).hexdigest()
     program_hash = hashlib.sha256(program).hexdigest()
-    if disk_hash != args.disk_sha256 or program_hash != args.program_sha256:
-        raise SystemExit("exact Atari ST disk or PRG SHA-256 mismatch")
+    if disk_hash != require_sha256(args.disk_sha256, "disk SHA-256") or program_hash != require_sha256(
+            args.program_sha256, "program SHA-256"):
+        parser.error("exact Atari ST disk or PRG SHA-256 mismatch")
     if len(program) < PRG_HEADER_BYTES or read_be16(program, 0) != 0x601a:
         raise SystemExit("unsupported Atari ST PRG header")
     text_bytes, data_bytes = read_be32(program, 2), read_be32(program, 6)
@@ -158,7 +239,9 @@ def main() -> None:
         raise SystemExit("Atari ST PRG segments lie outside its exact file")
     report = [
         "# Hash-locked Millennium Atari ST PRG linear candidate disassembly", "",
-        f"- Source: `{args.archive.name}!{args.nested_member}!{args.disk_member}:{args.program}`",
+        f"- Source: `{args.archive.name}!"
+        + (f"{args.nested_member}!" if args.nested_member else "")
+        + f"{args.disk_member}:{args.program}`",
         f"- Disk SHA-256: `{disk_hash}`",
         f"- PRG SHA-256: `{program_hash}`",
         f"- PRG header: TEXT `0x{text_bytes:x}`, DATA `0x{data_bytes:x}`, BSS `0x{bss_bytes:x}`, symbols `0x{symbol_bytes:x}`",
@@ -169,10 +252,14 @@ def main() -> None:
     ]
     rendered = "\n".join(report)
     if args.output:
-        args.output.write_text(rendered, encoding="utf-8")
+        try:
+            require_external_output(args.output).write_text(rendered, encoding="utf-8")
+        except (AnalysisError, OSError) as error:
+            parser.error(str(error))
     else:
         print(rendered)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

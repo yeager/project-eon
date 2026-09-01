@@ -1,5 +1,7 @@
 #include "data/deuteros_amiga_audio.hpp"
 
+#include "data/sha256.hpp"
+
 #include <span>
 #include <stdexcept>
 
@@ -38,8 +40,9 @@ DeuterosAmigaSoundBank parse_deuteros_amiga_sound_bank(
     // The physical tail cannot be another entry because $22ab8 strides by
     // exactly 14 bytes. Preserve it verbatim: bundle 0 has four non-zero
     // bytes here.
-    DeuterosAmigaSoundBank result{table, {}, std::vector<std::uint8_t>(
-        encoded.begin() + table_size, encoded.end())};
+    DeuterosAmigaSoundBank result{table, static_cast<std::uint32_t>(encoded.size()),
+        to_hex(sha256(encoded)), {}, std::vector<std::uint8_t>(
+            encoded.begin() + table_size, encoded.end())};
     result.sounds.reserve(table_size / entry_size);
     for (std::size_t offset = 0; offset < table_size; offset += entry_size) {
         const auto sample_relative_offset = big32(encoded, offset);
@@ -59,8 +62,10 @@ DeuterosAmigaSoundBank parse_deuteros_amiga_sound_bank(
             throw std::runtime_error("Deuteros Paula sample outside bundle");
         }
         const auto sample = disk.bytes(bundle.disk_offset + sample_relative_offset, byte_length);
-        result.sounds.push_back({sample_relative_offset, length_words, period, volume, control_word,
-            parameter_word, std::vector<std::uint8_t>(sample.begin(), sample.end())});
+        result.sounds.push_back({static_cast<std::uint32_t>(offset), sample_relative_offset,
+            length_words, period, volume, control_word, parameter_word,
+            to_hex(sha256(encoded.subspan(offset, entry_size))), to_hex(sha256(sample)),
+            std::vector<std::uint8_t>(sample.begin(), sample.end())});
     }
     return result;
 }

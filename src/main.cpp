@@ -38,6 +38,7 @@
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/millennium_dos_title_exit.hpp"
 #include "data/millennium_dos_title_transition.hpp"
+#include "data/millennium_dos_title_presentation.hpp"
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
 #include "data/millennium_save_comparison.hpp"
@@ -1439,7 +1440,10 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         disk, plan.resource_disk_offsets[0]);
     const auto sound_bank = eon::parse_deuteros_amiga_sound_bank(disk, opening_bundle);
     std::cout << "          Opening Paula table: " << sound_bank.sounds.size()
-        << " original DMA records\n";
+        << " original DMA records, ADF 0x" << std::hex
+        << opening_bundle.disk_offset + sound_bank.table_relative_offset << "+0x"
+        << sound_bank.table_length << "; SHA-256 " << sound_bank.table_sha256
+        << std::dec << " (descriptor/DMA provenance only)\n";
     const auto& handoff = plan.title_handoff_profile;
     const auto title_stage = eon::parse_deuteros_amiga_title_stage(disk, plan);
     std::cout << "          Title input profile: disk 0x" << std::hex << handoff.disk_offset
@@ -1858,16 +1862,6 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto title_bytes = eon::extract_verified_release_asset(release, title_lib_sha256);
     if (!title_bytes) return;
     const eon::MillenniumDosLib title_lib(*title_bytes);
-    const auto* p00 = title_lib.find("P00");
-    if (!p00) throw std::runtime_error("Verified Millennium TITLE.LIB has no P00 entry");
-    const auto resource = title_lib.read(*p00);
-    const auto bitmap = eon::decode_millennium_dos_bitmap(resource);
-    const auto palette = eon::decode_millennium_dos_palette(resource, bitmap);
-    std::cout << "          TITLE.LIB P00: " << bitmap.width << 'x' << bitmap.height
-        << ", codec " << static_cast<unsigned>(bitmap.codec)
-        << ", indices 0.." << static_cast<unsigned>(bitmap.max_palette_index)
-        << ", RGB6 DAC entries 256, logical translation "
-        << palette.logical_to_dac.size() << "\n";
     constexpr auto gx_lib_sha256 =
         "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
     const auto gx_bytes = eon::extract_verified_release_asset(release, gx_lib_sha256);
@@ -1901,7 +1895,15 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto sound_blaster_leaf = eon::admit_millennium_dos_sound_driver_leaf(*sound_blaster);
     const auto covox_leaf = eon::admit_millennium_dos_sound_driver_leaf(*covox);
     const auto title_exit = eon::parse_millennium_dos_title_exit_closure(*titles);
-    const auto transition = eon::parse_millennium_dos_title_transition(title_lib, flow);
+    const auto presentation = eon::parse_millennium_dos_title_presentation_assets(title_lib, flow);
+    const auto& transition = presentation.transition;
+    std::cout << "          TITLE.LIB P00: " << presentation.base_bitmap.width << 'x'
+        << presentation.base_bitmap.height << ", codec "
+        << static_cast<unsigned>(presentation.base_bitmap.codec) << ", indices 0.."
+        << static_cast<unsigned>(presentation.base_bitmap.max_palette_index)
+        << ", RGB6 DAC entries 256, logical translation "
+        << presentation.base_palette.logical_to_dac.size() << ", renderer-ready RGBA "
+        << presentation.base_rgba.size() << " bytes (original P00 only)\n";
     std::cout << "          TITLES.EXE: resource " << flow.title_resource_index
         << ", " << flow.intro_transition_steps << " transition steps, key poll INT 0x"
         << std::hex << static_cast<unsigned>(flow.input_interrupt) << "; selection JLE 0x"

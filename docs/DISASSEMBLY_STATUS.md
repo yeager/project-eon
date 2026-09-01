@@ -74,9 +74,10 @@ decoder binding does not retain a reliable displacement are omitted rather
 than guessed.
 
 For Atari ST PRGs, the dedicated `--atari-prg-archive` mode first verifies the
-outer archive, nested FAT12 disk, exact root PRG, PRG header, and TEXT+DATA
-range. Its sidecar uses `image-relative-unrelocated` fields, never a runtime
-address: GEMDOS relocation and the load base remain preservation boundaries.
+outer archive, the exact nested release archive, nested FAT12 disk, exact root
+PRG, PRG header, and TEXT+DATA range. Its sidecar uses
+`image-relative-unrelocated` fields, never a runtime address: GEMDOS relocation
+and the load base remain preservation boundaries.
 
 An embedded-release route verifies the carrier archive and named inner release
 archive separately before it opens the exact disk member in memory. Its output
@@ -308,20 +309,31 @@ Undecodable bytes remain explicit `.byte` records, so a decoder stop cannot
 silently reduce byte coverage.
 
 For a FAT12 Atari ST PRG whose GEMDOS load base remains unknown,
-`tools/analyze_atari_st_prg.py` reads an exact nested disk member and its named
-root-file entry in memory. It requires both disk and PRG hashes, then emits a
-full TEXT+DATA report with **image-relative** offsets. It does not apply PRG
-relocations or convert those offsets to runtime addresses:
+`tools/analyze_atari_st_prg.py` reads either a direct release ZIP or an exact
+nested disk member and its named root-file entry in memory. It first
+authenticates the complete selected outer ZIP and, for carrier media, the
+complete nested ZIP before it reads the named disk. It then requires both disk
+and PRG hashes and emits a full TEXT+DATA report with **image-relative**
+offsets. It does not apply PRG relocations or convert those offsets to runtime
+addresses. The report destination must be a new absolute regular path outside
+both the checkout and `/tmp`:
 
 ```sh
 python3 tools/analyze_atari_st_prg.py \
   --archive /path/to/Millennium-Return-to-Earth_Atari-ST_EN.zip \
+  --archive-sha256 ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01 \
   --nested-member 'Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].zip' \
+  --nested-sha256 0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69 \
   --disk-member 'Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].st' \
   --disk-sha256 3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7 \
   --program-sha256 4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686 \
   --output /home/user/.cache/project-eon-tools/millennium-atari-prg.md
 ```
+
+For a directly supplied Equinox release ZIP, omit both `--nested-member` and
+`--nested-sha256`; `--archive-sha256` then binds that direct ZIP itself. A
+direct and a carrier-contained release remain different source identities even
+when their named `.st` and PRG hashes match.
 
 For an Atari ST raw stage (or any other range with an independently proven
 disk-to-RAM mapping), `tools/disassemble_m68k_range.py` requires the exact
