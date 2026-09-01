@@ -650,6 +650,9 @@ def main() -> int:
                     or trace_json.get("schema") != "project-eon.reference-trace/v1"
                     or trace_json.get("release", {}).get("sha256") != source_sha256
                     or trace_json.get("adapter") != adapter
+                    or trace_json.get("runtime_policy") != (
+                        "transient-call-free-gx-startup"
+                        if adapter == "millennium-dos-en-gx-startup-v2" else "diagnostics-only")
                     or trace_json.get("events", {}).get("sha256") != hashlib.sha256(events.encode("ascii")).hexdigest()
                     or not trace_json.get("recovery_boundaries")
                     or str(manifest) in trace_json_report.stdout

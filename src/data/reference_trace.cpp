@@ -30,58 +30,18 @@ constexpr std::uintmax_t maximum_manifest_size = 16U * 1024U * 1024U;
 constexpr std::uintmax_t maximum_events_size = 256U * 1024U * 1024U;
 constexpr std::size_t maximum_line_size = 4096;
 
-// Keep capture admission diagnostics declarative.  The event parsers below
-// remain deliberately adapter-specific, but this small map makes the
-// relationship from a validated capture to hash-bound recovery evidence
-// inspectable without turning the map into a hook or execution mechanism.
-struct AdapterRecoveryMap {
-    std::string_view adapter;
-    std::array<std::string_view, 3> entry_ids;
-    std::size_t entry_count;
-};
-
-constexpr std::array adapter_recovery_maps{
-    AdapterRecoveryMap{"millennium-dos-en-startup-v1",
-        {"millennium-dos-launcher", "millennium-dos-title-flow", "millennium-dos-game-flow"}, 3},
-    AdapterRecoveryMap{"millennium-dos-en-gx-startup-v2",
-        {"millennium-dos-game-flow", "millennium-dos-gx-overlay", ""}, 2},
-    AdapterRecoveryMap{"millennium-dos-en-title-init-v2",
-        {"millennium-dos-launcher", "millennium-dos-title-flow", ""}, 2},
-    AdapterRecoveryMap{"deuteros-atari-st-boot-v1",
-        {"deuteros-atari-protected-boot", "deuteros-atari-first-stage", ""}, 2},
-    AdapterRecoveryMap{"millennium-amiga-en-defjam-bootstrap-v1",
-        {"millennium-amiga-defjam-bootstrap", "millennium-amiga-shared-resident", ""}, 2},
-    AdapterRecoveryMap{"deuteros-amiga-en-title-stage-v1",
-        {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
-    AdapterRecoveryMap{"deuteros-amiga-en-main-copy-loop-v3",
-        {"deuteros-amiga-main-stage", "", ""}, 1},
-    AdapterRecoveryMap{"deuteros-amiga-en-title-bridge-v3",
-        {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
-    AdapterRecoveryMap{"deuteros-amiga-en-title-display-v4",
-        {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
-    AdapterRecoveryMap{"deuteros-amiga-en-title-display-artifacts-v5",
-        {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
-};
-
-const AdapterRecoveryMap* adapter_recovery_map(const std::string_view adapter) {
-    const auto found = std::find_if(adapter_recovery_maps.begin(), adapter_recovery_maps.end(),
-        [adapter](const auto& candidate) { return candidate.adapter == adapter; });
-    return found == adapter_recovery_maps.end() ? nullptr : &*found;
-}
-
-bool trace_recovery_boundaries(const std::string_view adapter,
+bool trace_recovery_boundaries(const ReferenceTraceAdapterDescriptor* descriptor,
                                const std::string_view release_sha256,
                                std::vector<ReferenceTraceBoundary>& boundaries,
                                std::string& error) {
     boundaries.clear();
-    if (adapter.empty()) return true;
-    const auto* mapping = adapter_recovery_map(adapter);
-    if (mapping == nullptr) {
+    if (descriptor == nullptr) return true;
+    if (descriptor->recovery_entry_count > descriptor->recovery_entry_ids.size()) {
         error = "Reference trace adapter has no declarative recovery-map binding";
         return false;
     }
-    for (std::size_t index = 0; index < mapping->entry_count; ++index) {
-        const auto entry_id = mapping->entry_ids[index];
+    for (std::size_t index = 0; index < descriptor->recovery_entry_count; ++index) {
+        const auto entry_id = descriptor->recovery_entry_ids[index];
         const auto found = std::find_if(recovery_map().begin(), recovery_map().end(),
             [release_sha256, entry_id](const auto& entry) {
                 return entry.release_sha256 == release_sha256 && entry.id == entry_id;
@@ -845,8 +805,9 @@ ReferenceTraceValidation validate_reference_trace(
     // declarative registry as well as its parser-specific checks above. This
     // prevents a future validator branch from silently broadening an adapter
     // to a different release, language, format, or runtime policy.
+    const ReferenceTraceAdapterDescriptor* descriptor = nullptr;
     if (!v1) {
-        const auto* descriptor = reference_trace_adapter_descriptor(fields.at("adapter"));
+        descriptor = reference_trace_adapter_descriptor(fields.at("adapter"));
         if (!descriptor || descriptor->format != fields.at("format")
             || descriptor->game != *game || descriptor->platform != *platform
             || descriptor->language != fields.at("language")
@@ -865,8 +826,7 @@ ReferenceTraceValidation validate_reference_trace(
         return {{}, error};
     }
     std::vector<ReferenceTraceBoundary> recovery_boundaries;
-    if (!trace_recovery_boundaries(v1 ? std::string_view{} : std::string_view(fields.at("adapter")),
-            source->sha256, recovery_boundaries, error)) {
+    if (!trace_recovery_boundaries(descriptor, source->sha256, recovery_boundaries, error)) {
         return {{}, error};
     }
     if (millennium_dos_v2) event_count = diagnostics.event_count;

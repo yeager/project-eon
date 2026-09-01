@@ -45,6 +45,7 @@
 #include "data/modern_pixel_reconstruction.hpp"
 #include "data/sha256.hpp"
 #include "data/reference_trace.hpp"
+#include "data/reference_trace_registry.hpp"
 #include "data/function_map.hpp"
 #include "data/recovery_map.hpp"
 #include "data/runtime_diagnostics.hpp"
@@ -787,6 +788,11 @@ void report_reference_trace_json(const eon::ReferenceTrace& trace) {
     std::cout << ",\"command_tail_sha256\":"; write_json_string(std::cout, trace.command_tail_sha256);
     std::cout << ",\"input_timeline_sha256\":"; write_json_string(std::cout, trace.input_timeline_sha256);
     std::cout << "},\"adapter\":"; write_json_string(std::cout, trace.adapter);
+    std::cout << ",\"runtime_policy\":";
+    const auto* descriptor = eon::reference_trace_adapter_descriptor(trace.adapter);
+    write_json_string(std::cout, descriptor
+        ? eon::reference_trace_runtime_policy_label(descriptor->runtime_policy)
+        : "diagnostics-only");
     std::cout << ",\"events\":{\"sha256\":"; write_json_string(std::cout, trace.event_sha256);
     std::cout << ",\"count\":" << trace.event_count << "},\"source\":{\"media_sha256\":";
     write_json_string(std::cout, trace.source_media_sha256);
@@ -3427,12 +3433,18 @@ int main(int argc, char** argv) {
                 << error.what() << '\n';
             return 6;
         }
-        // A GX capture has one deliberately narrow exception to the normal
-        // provenance-only report. The release-runtime gate reopens and
-        // rehashes the exact source and events before it constructs the
-        // recovered call-free overlay state; it never launches a session.
+        // The registry is the only policy authority. Its sole non-diagnostic
+        // policy remains the narrow GX exception: the release-runtime gate
+        // reopens and rehashes source/events before a call-free overlay is
+        // constructed, and never launches or publishes a session.
         std::optional<eon::MillenniumDosGxStartupTraceAdmission> gx_admission;
-        if (trace.adapter == "millennium-dos-en-gx-startup-v2") {
+        const auto* trace_descriptor = eon::reference_trace_adapter_descriptor(trace.adapter);
+        if (!trace.adapter.empty() && trace_descriptor == nullptr) {
+            std::cerr << "Reference trace rejected: adapter is absent from the policy registry\n";
+            return 6;
+        }
+        if (trace_descriptor && trace_descriptor->runtime_policy
+                == eon::ReferenceTraceRuntimePolicy::transient_call_free_gx_startup) {
             const eon::ReleaseRuntimeCoordinator trace_gate;
             gx_admission.emplace(trace_gate.admit_millennium_dos_gx_startup_reference_trace(trace));
             if (!gx_admission->session) {
