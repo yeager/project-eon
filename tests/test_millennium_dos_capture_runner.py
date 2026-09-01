@@ -251,6 +251,9 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
                 encoding="ascii")
             with self.assertRaisesRegex(TOOL.CaptureError, "count does not match"):
                 TOOL.normal_core_history_status(history, "v14-normal-core-history")
+            history.write_bytes(b"normal-core-history-v1 count=1 entries=f000:ca60:fe380300\r\n")
+            with self.assertRaisesRegex(TOOL.CaptureError, "canonical LF"):
+                TOOL.normal_core_history_status(history, "v14-normal-core-history")
 
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""

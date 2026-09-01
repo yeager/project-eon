@@ -377,9 +377,12 @@ def normal_core_history_status(path: Path, recorder_protocol: str) -> str:
     if not 0 < info.st_size <= MAX_NORMAL_CORE_HISTORY_BYTES:
         raise CaptureError("normal-core history exceeds the bounded recorder contract")
     try:
-        text = path.read_text(encoding="ascii")
+        raw = path.read_bytes()
+        text = raw.decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("normal-core history is not ASCII recorder output") from error
+    if not raw.endswith(b"\n") or b"\r" in raw:
+        raise CaptureError("normal-core history is not a canonical LF recorder record")
     match = NORMAL_CORE_HISTORY_LINE.fullmatch(text)
     if not match:
         raise CaptureError("normal-core history contains an invalid recorder record")
