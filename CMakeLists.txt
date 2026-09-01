@@ -165,6 +165,7 @@ add_executable(project-eon
     src/data/millennium_amiga_reference_trace.cpp
     src/data/millennium_amiga_loader.cpp
     src/data/reference_trace.cpp
+    src/data/reference_trace_registry.cpp
     src/data/function_map.cpp
     src/data/recovery_map.cpp
     src/data/runtime_diagnostics.cpp

@@ -3,6 +3,7 @@
 
 #include "platform/game_data.hpp"
 #include "data/reference_trace.hpp"
+#include "data/reference_trace_registry.hpp"
 #include "data/sha256.hpp"
 #include "data/fat12.hpp"
 #include "data/millennium_dos_bitmap.hpp"
@@ -141,16 +142,17 @@ MillenniumDosGxStartupTraceAdmission
 ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace(
     const ReferenceTrace& trace) const {
     MillenniumDosGxStartupTraceAdmission rejected;
-    constexpr std::string_view adapter = "millennium-dos-en-gx-startup-v2";
-    constexpr std::string_view release_sha256 =
-        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
     constexpr std::string_view game_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::string_view gx_overlay_sha256 =
         "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
-    if (trace.adapter != adapter || trace.source_release.game != Game::millennium
-        || trace.source_release.platform != Platform::dos || trace.source_release.language != "en"
-        || trace.source_release.sha256 != release_sha256) {
+    const auto* descriptor = reference_trace_adapter_descriptor(trace.adapter);
+    if (!descriptor
+        || descriptor->runtime_policy != ReferenceTraceRuntimePolicy::transient_call_free_gx_startup
+        || trace.source_release.game != descriptor->game
+        || trace.source_release.platform != descriptor->platform
+        || trace.source_release.language != descriptor->language
+        || trace.source_release.sha256 != descriptor->release_sha256) {
         rejected.error = "Reference trace does not name the exact Millennium DOS GX boundary";
         return rejected;
     }

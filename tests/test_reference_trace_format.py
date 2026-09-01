@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FORMAT = ROOT / "docs" / "REFERENCE_TRACE_FORMAT.md"
 TRACE_VALIDATOR = ROOT / "src" / "data" / "reference_trace.cpp"
 RUNTIME_GATE = ROOT / "src" / "engine" / "release_runtime.cpp"
+TRACE_REGISTRY = ROOT / "src" / "data" / "reference_trace_registry.cpp"
 
 
 class ReferenceTraceFormatTests(unittest.TestCase):
@@ -127,12 +128,28 @@ class ReferenceTraceFormatTests(unittest.TestCase):
     def test_gx_runtime_exception_remains_a_transient_hash_checked_gate(self):
         gate = RUNTIME_GATE.read_text(encoding="utf-8")
         self.assertIn("admit_millennium_dos_gx_startup_reference_trace", gate)
-        self.assertIn('trace.adapter != adapter', gate)
+        self.assertIn("reference_trace_adapter_descriptor(trace.adapter)", gate)
+        self.assertIn("ReferenceTraceRuntimePolicy::transient_call_free_gx_startup", gate)
         self.assertIn("VerifiedReleaseMedia::open(trace.source_release)", gate)
         self.assertIn("Reference trace events changed after validation", gate)
         self.assertIn("admit_millennium_dos_gx_startup_trace(*game, *overlay, events)", gate)
         self.assertNotIn("active_ =", gate[gate.index(
             "ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace"):])
+
+    def test_versioned_adapter_registry_has_one_explicit_transient_policy(self):
+        registry = TRACE_REGISTRY.read_text(encoding="utf-8")
+        self.assertEqual(registry.count("ReferenceTraceRuntimePolicy::transient_call_free_gx_startup"), 1)
+        self.assertEqual(registry.count("ReferenceTraceRuntimePolicy::diagnostics_only"), 9)
+        validator = TRACE_VALIDATOR.read_text(encoding="utf-8")
+        self.assertIn("reference_trace_adapter_descriptor(fields.at(\"adapter\"))", validator)
+        self.assertIn("Reference trace disagrees with the declared adapter registry", validator)
+        for adapter, identity in self.adapters.items():
+            with self.subTest(adapter=adapter):
+                self.assertIn(f'{{"{adapter}"', registry)
+                self.assertIn(identity["release"], registry)
+                if "media" in identity:
+                    self.assertIn(identity["media"], registry)
+                    self.assertIn(identity["stage"], registry)
 
     def test_declarative_adapter_boundary_maps_are_documented_and_compiled(self):
         code = TRACE_VALIDATOR.read_text(encoding="utf-8")
