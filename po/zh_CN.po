@@ -448,3 +448,9 @@ msgstr "在此前停止"
 
 msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
 msgstr "仅显示静态引导证据——不执行 XBIOS、原始读取、状态选择、标题或游戏。"
+
+msgid "STATIC CONTROL FLOW"
+msgstr "静态控制流"
+
+msgid "UNAVAILABLE (CLI INSPECTION ONLY)"
+msgstr "不可用（仅限 CLI 检查）"

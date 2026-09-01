@@ -63,6 +63,15 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn("document not bound to a reverified inspected release", MAIN)
         self.assertNotIn("report_static_control_flow_sidecar", MAIN)
 
+    def test_f10_static_control_flow_readout_never_opens_a_sidecar(self) -> None:
+        start = MAIN.index("void draw_modern_runtime_diagnostics_popup")
+        body = MAIN[start:MAIN.index("void draw_recovery_function_map_popup", start)]
+        self.assertIn('\"STATIC CONTROL FLOW\"', body)
+        self.assertIn("static_control_flow_diagnostics_summary", body)
+        self.assertIn('\"UNAVAILABLE (CLI INSPECTION ONLY)\"', MAIN)
+        self.assertNotIn("read_static_control_flow_sidecar", body)
+        self.assertNotIn("bind_static_control_flow_sidecar", body)
+
     def test_trace_json_is_diagnostics_only_and_omits_local_paths(self) -> None:
         self.assertIn('argument == "--reference-trace-json"', LAUNCHER)
         self.assertIn("--reference-trace-json requires --reference-trace", LAUNCHER)

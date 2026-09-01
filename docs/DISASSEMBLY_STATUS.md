@@ -139,6 +139,26 @@ python3 tools/verify_static_control_flow.py \
   --sidecar deuteros-atari-replicants-first-stage-linear=/absolute/deuteros-atari-replicants.json
 ```
 
+`tools/verify_function_map_coverage.py` is a separate, optional cross-check
+between retained sidecars and `function-map.json`. It reports a **direct range
+binding** only when a map row and a sidecar range share the exact effective
+release SHA-256, CPU, address space, range SHA-256, and an address inside that
+declared range. A row reported as not declared by the supplied sidecars is not
+a negative code or reachability result: it can be a separately hash-verified
+subroutine, or simply outside the selected bounded evidence. It does not read
+game media, list instructions, or supply runtime dispatch data.
+
+```sh
+python3 tools/verify_function_map_coverage.py \
+  --sidecar /absolute/millennium-dos-en.json \
+  --sidecar /absolute/millennium-amiga-defjam.json \
+  --json
+```
+
+Pass `--require-complete` only when the supplied, independently verified
+sidecars are intended to cover every function-map row. It rejects incomplete
+input rather than inferring coverage.
+
 ## Input identities
 
 | Game | Platform | Container SHA-256 | Principal code/media identity |

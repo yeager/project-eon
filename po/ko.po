@@ -448,3 +448,9 @@ msgstr "이전에서 중지"
 
 msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
 msgstr "정적 부팅 증거만 제공 — XBIOS, 원시 읽기, 상태 선택, 제목 또는 게임플레이는 수행하지 않습니다."
+
+msgid "STATIC CONTROL FLOW"
+msgstr "정적 제어 흐름"
+
+msgid "UNAVAILABLE (CLI INSPECTION ONLY)"
+msgstr "사용 불가 (CLI 검사만 가능)"

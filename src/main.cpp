@@ -502,6 +502,14 @@ void cycle_modern_graphics_preset(ModernGraphicsSettings& settings, const int di
 // separate CLI validator has checked its complete external manifest; the UI
 // does not open, retain, replay, or infer a trace behind an active game.
 struct ModernRuntimeDiagnostics {
+    // The SDL/F10 layer receives this aggregate only from an already admitted
+    // launcher-owned diagnostics snapshot. It must never open a sidecar (or
+    // retain its path), and absence is distinct from a zero-candidate result.
+    struct StaticControlFlow {
+        std::size_t document_count = 0;
+        std::size_t range_count = 0;
+        std::size_t candidate_count = 0;
+    };
     // This is a named, declarative function-map view over the same
     // hash-checked recovery boundaries that the CLI reports.  It is copied
     // from the compiled map solely for presentation: none of these labels or
@@ -533,11 +541,26 @@ struct ModernRuntimeDiagnostics {
     std::size_t recovery_boundary_count = 0;
     std::vector<RecoveryFunction> recovery_functions;
     std::string trace_admission = "NOT LOADED";
+    std::optional<StaticControlFlow> static_control_flow;
     // This comes only from the launcher preflight object. It does not expose
     // a local path, decode an external asset, or imply the renderer loaded it.
     std::string modern_pack = "NOT SELECTED";
     std::string modern_pack_targets = "—";
 };
+
+[[nodiscard]] std::string static_control_flow_diagnostics_summary(
+    const std::optional<ModernRuntimeDiagnostics::StaticControlFlow>& static_control_flow,
+    const eon::Translator& translator) {
+    if (!static_control_flow) {
+        return std::string(translator.translate("UNAVAILABLE (CLI INSPECTION ONLY)"));
+    }
+    // These counts came from metadata already admitted by the launcher. They
+    // are never decoded instructions, addresses, sidecar names, paths, or
+    // original-media bytes.
+    return "DOCUMENTS=" + std::to_string(static_control_flow->document_count)
+        + " / RANGES=" + std::to_string(static_control_flow->range_count)
+        + " / CANDIDATES=" + std::to_string(static_control_flow->candidate_count);
+}
 
 [[nodiscard]] std::string modern_pack_renderer_targets_summary(
     const eon::ModernAssetPackRendererTargets& targets) {
@@ -1095,7 +1118,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
     draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::pair<const char*, std::string>, 14> rows{{
+    const std::array<std::pair<const char*, std::string>, 15> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
         {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
         {"SESSION ADAPTER", diagnostics.session_adapter},
@@ -1105,6 +1128,8 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"STARTUP BOUNDARY", diagnostics.startup_boundary},
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
+        {"STATIC CONTROL FLOW", static_control_flow_diagnostics_summary(
+            diagnostics.static_control_flow, translator)},
         {"MODERN PACK", diagnostics.modern_pack},
         {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -1120,7 +1145,7 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"FRAME PACING", tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing)))},
     }};
     for (std::size_t index = 0; index < rows.size(); ++index) {
-        const float y = 226.0F + static_cast<float>(index) * 30.0F;
+        const float y = 226.0F + static_cast<float>(index) * 27.0F;
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
         draw_text(renderer, 390, y, tr(rows[index].first));
         SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);

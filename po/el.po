@@ -409,3 +409,9 @@ msgstr "ΔΙΑΚΟΠΗ ΠΡΙΝ"
 
 msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
 msgstr "ΜΟΝΟ ΣΤΑΤΙΚΑ ΣΤΟΙΧΕΙΑ ΕΚΚΙΝΗΣΗΣ — ΧΩΡΙΣ XBIOS, ΑΚΑΤΕΡΓΑΣΤΗ ΑΝΑΓΝΩΣΗ, ΕΠΙΛΟΓΗ ΚΑΤΑΣΤΑΣΗΣ, ΤΙΤΛΟ Ή ΠΑΙΧΝΙΔΙ."
+
+msgid "STATIC CONTROL FLOW"
+msgstr "ΣΤΑΤΙΚΗ ΡΟΗ ΕΛΕΓΧΟΥ"
+
+msgid "UNAVAILABLE (CLI INSPECTION ONLY)"
+msgstr "ΜΗ ΔΙΑΘΕΣΙΜΟ (ΜΟΝΟ ΕΛΕΓΧΟΣ CLI)"
