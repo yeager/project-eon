@@ -4149,6 +4149,15 @@ instruction, DOS service, private interrupt, or opaque local callee, and it
 stops at the second `$0129` private-INT boundary without drawing a frame or
 starting a title/game session.
 
+The generic trace validator and the GX runtime gate are deliberately separate
+checks. The gate rehashes the event file after validation, reopens the pinned
+outer archive through `VerifiedReleaseMedia`, and extracts only the two
+hash-addressed executable leaves required by the call-free suffix. It retains
+neither those bytes nor the capture path, does not acquire or replace the
+coordinator's active release, and cannot publish a runtime session, input
+route, frame, audio route, title handoff, or game state. A changed event file,
+archive, adapter, or release identity fails closed at this second boundary.
+
 ### Millennium DOS GX dispatcher slot 13 boundary
 
 The already hash-identified `2200GX.EXE` dispatcher table maps raw selector

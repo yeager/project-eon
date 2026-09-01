@@ -8,6 +8,7 @@
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
+#include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
@@ -22,6 +23,8 @@
 #include <vector>
 
 namespace eon {
+
+struct ReferenceTrace;
 
 enum class ReleaseRuntimeAdmission {
     unselected, active, identity_rejected, archive_rejected, adapter_rejected,
@@ -107,6 +110,11 @@ public:
     [[nodiscard]] DeuterosAtariBootstrapSession* deuteros_atari() const {
         return deuteros_atari_.get();
     }
+    // This is a transient, trace-gated exception for the proven GX suffix.
+    // It does not acquire or publish a game runtime and retains neither trace
+    // nor media bytes. Every other trace remains diagnostics-only.
+    [[nodiscard]] MillenniumDosGxStartupTraceAdmission
+    admit_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace) const;
 
 private:
     std::optional<ResolvedLaunchRequest> active_;

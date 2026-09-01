@@ -49,6 +49,7 @@
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "data/millennium_dos_reference_trace.hpp"
 #include "data/millennium_amiga_reference_trace.hpp"
+#include "data/reference_trace.hpp"
 #include "data/modern_pixel_reconstruction.hpp"
 #include "presentation/modern_presentation_pipeline.hpp"
 #include "data/modern_asset_pack.hpp"
@@ -4844,6 +4845,47 @@ int main() {
             *game_executable, *gx_overlay,
             "event\t1 10 private-return image=2200ad.exe pc=0x0129 int=0x91 ax=0x0000\n");
         assert(!incomplete_admission.session && !incomplete_admission.error.empty());
+
+        // The release-runtime gate owns the second rehash and leaf admission
+        // for a trace. These are grammar fixtures paired with the supplied,
+        // genuine archive—not replacement media or an emulation request.
+        const auto trace_events_path = std::filesystem::path(std::getenv("EON_TEST_TMPDIR"))
+            / "gx-runtime-gate-events.eontrace";
+        {
+            std::ofstream output(trace_events_path, std::ios::binary | std::ios::trunc);
+            output << valid_gx_trace;
+        }
+        eon::ReferenceTrace runtime_trace;
+        runtime_trace.source_release = *english_dos;
+        runtime_trace.events_path = trace_events_path;
+        runtime_trace.adapter = "millennium-dos-en-gx-startup-v2";
+        runtime_trace.event_count = 10;
+        runtime_trace.event_size = valid_gx_trace.size();
+        runtime_trace.event_sha256 = eon::to_hex(eon::sha256(
+            std::vector<std::uint8_t>(valid_gx_trace.begin(), valid_gx_trace.end())));
+        eon::ReleaseRuntimeCoordinator trace_gate;
+        const auto runtime_trace_admission =
+            trace_gate.admit_millennium_dos_gx_startup_reference_trace(runtime_trace);
+        assert(runtime_trace_admission.session && runtime_trace_admission.error.empty());
+        assert(runtime_trace_admission.session->state()
+            == eon::MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary);
+        assert(runtime_trace_admission.session->overlay_byte(0x65) == 0x8f);
+        // The trace gate remains a non-launching operation: no active release,
+        // adapter, session snapshot, input route, or opening tick can appear.
+        assert(!trace_gate.active() && !trace_gate.session_snapshot() && !trace_gate.millennium_dos());
+        assert(trace_gate.observe_input(eon::RuntimeInputObservation::available_character())
+            == eon::RuntimeInputDisposition::rejected);
+        assert(!trace_gate.tick_deuteros_amiga_opening());
+        {
+            std::ofstream output(trace_events_path, std::ios::binary | std::ios::trunc);
+            output << valid_gx_trace << "# changed after validation\n";
+        }
+        const auto changed_trace_admission =
+            trace_gate.admit_millennium_dos_gx_startup_reference_trace(runtime_trace);
+        assert(!changed_trace_admission.session
+            && changed_trace_admission.error == "Reference trace events changed after validation");
+        assert(!trace_gate.active() && !trace_gate.session_snapshot() && !trace_gate.millennium_dos());
+        std::filesystem::remove(trace_events_path);
     }
     {
         auto altered_gx_overlay = *gx_overlay;

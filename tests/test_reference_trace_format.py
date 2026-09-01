@@ -7,6 +7,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 FORMAT = ROOT / "docs" / "REFERENCE_TRACE_FORMAT.md"
 TRACE_VALIDATOR = ROOT / "src" / "data" / "reference_trace.cpp"
+RUNTIME_GATE = ROOT / "src" / "engine" / "release_runtime.cpp"
 
 
 class ReferenceTraceFormatTests(unittest.TestCase):
@@ -122,6 +123,16 @@ class ReferenceTraceFormatTests(unittest.TestCase):
                 if "media" in identity:
                     self.assertIn(identity["media"], documented)
                     self.assertIn(identity["stage"], documented)
+
+    def test_gx_runtime_exception_remains_a_transient_hash_checked_gate(self):
+        gate = RUNTIME_GATE.read_text(encoding="utf-8")
+        self.assertIn("admit_millennium_dos_gx_startup_reference_trace", gate)
+        self.assertIn('trace.adapter != adapter', gate)
+        self.assertIn("VerifiedReleaseMedia::open(trace.source_release)", gate)
+        self.assertIn("Reference trace events changed after validation", gate)
+        self.assertIn("admit_millennium_dos_gx_startup_trace(*game, *overlay, events)", gate)
+        self.assertNotIn("active_ =", gate[gate.index(
+            "ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace"):])
 
     def test_declarative_adapter_boundary_maps_are_documented_and_compiled(self):
         code = TRACE_VALIDATOR.read_text(encoding="utf-8")

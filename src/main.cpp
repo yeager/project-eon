@@ -10,7 +10,6 @@
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/menu_runtime_launch.hpp"
 #include "engine/deuteros_amiga_opening_runner.hpp"
-#include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -3429,41 +3428,15 @@ int main(int argc, char** argv) {
             return 6;
         }
         // A GX capture has one deliberately narrow exception to the normal
-        // provenance-only report: after the complete external pair and the
-        // immutable source archive were revalidated, it may construct the
-        // already recovered call-free overlay state. It remains inside this
-        // CLI validation path and cannot launch a title or game session.
+        // provenance-only report. The release-runtime gate reopens and
+        // rehashes the exact source and events before it constructs the
+        // recovered call-free overlay state; it never launches a session.
         std::optional<eon::MillenniumDosGxStartupTraceAdmission> gx_admission;
         if (trace.adapter == "millennium-dos-en-gx-startup-v2") {
-            try {
-                std::ifstream stream(trace.events_path, std::ios::binary);
-                const std::string events((std::istreambuf_iterator<char>(stream)),
-                    std::istreambuf_iterator<char>());
-                const std::vector<std::uint8_t> event_bytes(events.begin(), events.end());
-                if (!stream || event_bytes.size() != trace.event_size
-                        || eon::to_hex(eon::sha256(event_bytes)) != trace.event_sha256) {
-                    std::cerr << "Reference trace rejected: events changed after validation\n";
-                    return 6;
-                }
-                constexpr auto game_sha256 =
-                    "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
-                constexpr auto gx_overlay_sha256 =
-                    "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
-                const auto game = eon::extract_verified_release_asset(trace.source_release, game_sha256);
-                const auto overlay = eon::extract_verified_release_asset(trace.source_release, gx_overlay_sha256);
-                if (!game || !overlay) {
-                    std::cerr << "Reference trace rejected: verified GX startup leaves are unavailable\n";
-                    return 6;
-                }
-                gx_admission.emplace(eon::admit_millennium_dos_gx_startup_trace(
-                    *game, *overlay, events));
-                if (!gx_admission->session) {
-                    std::cerr << "Reference trace rejected: " << gx_admission->error << '\n';
-                    return 6;
-                }
-            } catch (const std::exception& error) {
-                std::cerr << "Reference trace rejected: unable to admit GX startup boundary: "
-                    << error.what() << '\n';
+            const eon::ReleaseRuntimeCoordinator trace_gate;
+            gx_admission.emplace(trace_gate.admit_millennium_dos_gx_startup_reference_trace(trace));
+            if (!gx_admission->session) {
+                std::cerr << "Reference trace rejected: " << gx_admission->error << '\n';
                 return 6;
             }
         }
