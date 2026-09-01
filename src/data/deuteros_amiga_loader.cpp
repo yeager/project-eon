@@ -2,6 +2,7 @@
 #include "data/sha256.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <span>
 #include <string>
 #include <stdexcept>
@@ -435,16 +436,18 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         channel_request_value, channel_request_loop_test_address,
         channel_request_loop_branch_address, channel_request_continuation_address};
 
-    // The resource loader at $21932 indexes five longwords at $21708. Both
-    // addresses reside in the verified main stage, so translate the table
-    // back to its ADF position instead of duplicating its contents.
+    // $21932 itself computes an unchecked D0*4 address from $21708. Only
+    // selectors zero and one are caller-connected in recovered paths, and
+    // their two longwords identify valid ADF resources. Do not classify the
+    // following raw main-stage bytes as a five-entry table without evidence
+    // that a caller can select them.
     if (resource_table_address < main_stage.destination
-        || resource_table_address - main_stage.destination + 20 > main_stage.length) {
+        || resource_table_address - main_stage.destination + 8 > main_stage.length) {
         throw std::runtime_error("Deuteros resource table outside main stage");
     }
     const auto resource_table = disk.bytes(main_stage.disk_offset
-        + resource_table_address - main_stage.destination, 20);
-    std::array<std::uint32_t, 5> resource_offsets{};
+        + resource_table_address - main_stage.destination, 8);
+    std::array<std::uint32_t, 2> resource_offsets{};
     for (std::size_t index = 0; index < resource_offsets.size(); ++index) {
         resource_offsets[index] = big32(resource_table, index * 4);
         static_cast<void>(disk.bytes(resource_offsets[index], 1));
@@ -681,6 +684,39 @@ read_deuteros_amiga_main_resource(const AmigaAdf& disk,
         payload_length,
         std::vector<std::uint8_t>(source.begin(), source.end()),
     };
+}
+
+DeuterosAmigaMainResourceCatalog inspect_deuteros_amiga_main_resource_catalog(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    DeuterosAmigaMainResourceCatalog result;
+    for (std::size_t index = 0; index < plan.resource_disk_offsets.size(); ++index) {
+        const auto source_disk_offset = plan.resource_disk_offsets[index];
+        const auto probe = disk.bytes(source_disk_offset, 4);
+        const auto source_length = big32(probe, 0);
+        auto& entry = result.entries[index];
+        entry.resource_index = static_cast<std::uint16_t>(index);
+        entry.source_disk_offset = source_disk_offset;
+        entry.source_length = source_length;
+        if (source_length == 0) {
+            entry.original_retry_boundary = true;
+            entry.preservation_boundary = "original loader retry boundary";
+            continue;
+        }
+        std::span<const std::uint8_t> source;
+        try {
+            source = disk.bytes(source_disk_offset, source_length);
+        } catch (const std::out_of_range&) {
+            entry.preservation_boundary = "source range outside supplied ADF";
+            continue;
+        }
+        entry.source_range_available = true;
+        entry.source_sha256 = to_hex(sha256(source));
+        if (source_length > std::numeric_limits<std::uint64_t>::max() - result.total_source_bytes) {
+            throw std::runtime_error("Deuteros main-resource catalogue length overflow");
+        }
+        result.total_source_bytes += source_length;
+    }
+    return result;
 }
 
 DeuterosAmigaResourceConsumerSample

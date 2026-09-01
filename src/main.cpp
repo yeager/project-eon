@@ -1321,6 +1321,20 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << main_entry.second_exit_service_address << ", match 0x"
         << main_entry.second_exit_service_match_value << " -> 0x"
         << main_entry.second_exit_matched_return_address << ")" << std::dec << '\n';
+    const auto main_resource_catalog = eon::inspect_deuteros_amiga_main_resource_catalog(disk, plan);
+    std::cout << "          Main-resource catalogue: " << main_resource_catalog.entries.size()
+        << " caller-proved table entries, " << main_resource_catalog.total_source_bytes
+        << " bounded source bytes (read-only)\n";
+    for (const auto& resource : main_resource_catalog.entries) {
+        std::cout << "            [" << resource.resource_index << "] ADF 0x" << std::hex
+            << resource.source_disk_offset << ", 0x" << resource.source_length << std::dec
+            << " bytes";
+        if (resource.source_range_available) {
+            std::cout << "; SHA-256 " << resource.source_sha256 << '\n';
+        } else {
+            std::cout << " (" << resource.preservation_boundary << ")\n";
+        }
+    }
     for (std::size_t index = 0; index < 2; ++index) {
         const auto bundle = eon::parse_deuteros_amiga_bundle(
             disk, plan.resource_disk_offsets[index]);
