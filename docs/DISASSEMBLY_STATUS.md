@@ -74,16 +74,21 @@ decoder binding does not retain a reliable displacement are omitted rather
 than guessed.
 
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
-English and Deuteros Amiga English release archives. Their identities are in
-`disassembly-inventory.json`: Millennium's `MILL.COM`, `TITLES.EXE`, and
-`2200AD.EXE` sidecar has 35,954 LF lines; Deuteros's clean
-bootstrap/main/title sidecar has 84,351. Verify retained local sidecars:
+English, Millennium DOS Spanish FAT12, and Deuteros Amiga English release
+archives. Their identities are in `disassembly-inventory.json`: Millennium's
+English `MILL.COM`, `TITLES.EXE`, and `2200AD.EXE` sidecar has 35,957 LF
+lines; the Spanish `IBM.COM`, `TITLES.EXE`, and `2200AD.EXE` FAT12 sidecar has
+36,096; Deuteros's clean bootstrap/main/title sidecar has 84,352. Verify
+retained local sidecars:
 
 ```sh
 python3 tools/verify_static_control_flow.py \
   --sidecar millennium-dos-mill-com-linear=/absolute/millennium-dos-en.json \
   --sidecar millennium-dos-titles-exe-linear=/absolute/millennium-dos-en.json \
   --sidecar millennium-dos-2200ad-exe-linear=/absolute/millennium-dos-en.json \
+  --sidecar millennium-dos-spanish-ibm-com-linear=/absolute/millennium-dos-es.json \
+  --sidecar millennium-dos-spanish-titles-exe-linear=/absolute/millennium-dos-es.json \
+  --sidecar millennium-dos-spanish-2200ad-exe-linear=/absolute/millennium-dos-es.json \
   --sidecar deuteros-amiga-clean-loaded-spans=/absolute/deuteros-amiga-clean.json
 ```
 

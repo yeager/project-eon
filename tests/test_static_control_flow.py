@@ -80,6 +80,7 @@ class StaticControlFlowTests(unittest.TestCase):
                                    "--output", str(output)]), 0)
             parsed = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(parsed["documents"][0]["source_sha256"], hashlib.sha256(payload).hexdigest())
+            self.assertEqual(parsed["documents"][0]["source_kind"], "archive-member")
             self.assertEqual(main(["--dos-archive", str(archive), "--archive-sha256", "0" * 64,
                                    "--member", "MILL.COM", "--output", str(root / "wrong.json")]), 2)
             self.assertEqual(main(["--dos-archive", str(archive), "--archive-sha256",
