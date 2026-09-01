@@ -849,10 +849,10 @@ DeuterosAtariRawReaderCallLayout parse_deuteros_atari_raw_reader_call_layout(
     }
     // Both byte branches remain simple layout facts.  The first skips the
     // two shifts/increment; the second skips the alternate-side adjustment.
-    const auto count_branch_target = routine_offset + 10U
-        + static_cast<std::int8_t>(window[9]);
-    const auto side_branch_target = routine_offset + 28U
-        + static_cast<std::int8_t>(window[27]);
+    const auto count_branch_target = relative_target(routine_offset + 10U,
+        static_cast<std::int8_t>(window[9]), bytes.size(), "Deuteros Atari ST count branch leaves stage");
+    const auto side_branch_target = relative_target(routine_offset + 28U,
+        static_cast<std::int8_t>(window[27]), bytes.size(), "Deuteros Atari ST side branch leaves stage");
     if (count_branch_target != routine_offset + 18U
         || side_branch_target != routine_offset + 34U) {
         throw std::runtime_error("Unexpected Deuteros Atari ST raw-reader call branches");
@@ -913,7 +913,9 @@ DeuterosAtariDirectVectorCalleeProfiles parse_deuteros_atari_direct_vector_calle
     constexpr std::array<std::uint8_t, 2> alias_bytes{{0x60, 0xc8}};
     require_bytes(bytes, alias_offset, alias_bytes,
         "Unexpected Deuteros Atari ST direct-vector alias branch");
-    const auto alias_target = alias_offset + 2U + static_cast<std::int8_t>(bytes[alias_offset + 1U]);
+    const auto alias_target = relative_target(alias_offset + 2U,
+        static_cast<std::int8_t>(bytes[alias_offset + 1U]), bytes.size(),
+        "Deuteros Atari ST alias branch leaves stage");
     if (alias_target != offsets[0]) {
         throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector alias target");
     }
@@ -960,8 +962,9 @@ DeuterosAtariDirectVectorTransferLoopProfile parse_deuteros_atari_direct_vector_
     }
     // On this 68000 DBF encoding the signed displacement is relative to the
     // extension word, so -4 returns to the preceding byte transfer.
-    const auto target = loop_offset + dbf_relative_offset + 2U
-        + static_cast<std::int16_t>(be16(window, dbf_relative_offset + 2U));
+    const auto target = relative_target(loop_offset + dbf_relative_offset + 2U,
+        static_cast<std::int16_t>(be16(window, dbf_relative_offset + 2U)), bytes.size(),
+        "Deuteros Atari ST transfer loop leaves stage");
     if (target != loop_offset + 18U) {
         throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer backedge");
     }
@@ -1010,10 +1013,12 @@ DeuterosAtariDirectVectorTransferTailProfile parse_deuteros_atari_direct_vector_
     if (digest != tail_sha256) {
         throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer tail hash");
     }
-    const auto bsr_target = tail_offset + bsr_relative_offset + 2U
-        + static_cast<std::int16_t>(be16(window, bsr_relative_offset + 2U));
-    const auto bra_target = tail_offset + bra_relative_offset + 2U
-        + static_cast<std::int16_t>(be16(window, bra_relative_offset + 2U));
+    const auto bsr_target = relative_target(tail_offset + bsr_relative_offset + 2U,
+        static_cast<std::int16_t>(be16(window, bsr_relative_offset + 2U)), bytes.size(),
+        "Deuteros Atari ST transfer call leaves stage");
+    const auto bra_target = relative_target(tail_offset + bra_relative_offset + 2U,
+        static_cast<std::int16_t>(be16(window, bra_relative_offset + 2U)), bytes.size(),
+        "Deuteros Atari ST transfer branch leaves stage");
     if (bsr_target != wrapper.wrapper_offset || bra_target != state5_return.branch_target_offset) {
         throw std::runtime_error("Unexpected Deuteros Atari ST direct-vector transfer tail branches");
     }
@@ -1104,8 +1109,9 @@ DeuterosAtariStateSelectionContinuation parse_deuteros_atari_state_selection_con
     if (digest != continuation_sha256) {
         throw std::runtime_error("Unexpected Deuteros Atari ST state-selection continuation hash");
     }
-    const auto wrapper_target = wrapper_bsr_offset + 2U
-        + static_cast<std::int16_t>(be16(bytes, wrapper_bsr_offset + 2U));
+    const auto wrapper_target = relative_target(wrapper_bsr_offset + 2U,
+        static_cast<std::int16_t>(be16(bytes, wrapper_bsr_offset + 2U)), bytes.size(),
+        "Deuteros Atari ST state wrapper branch leaves stage");
     if (wrapper_target != wrapper_offset) {
         throw std::runtime_error("Unexpected Deuteros Atari ST state-selection wrapper branch");
     }
