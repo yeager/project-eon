@@ -87,6 +87,17 @@ The same carrier-aware route covers the direct Equinox Atari PRG release; its
 control-flow addresses remain image-relative rather than claiming a GEMDOS
 load base.
 
+The SDL-free `data/static_control_flow` reader admits this sidecar only as a
+bounded metadata document. It accepts the exact set/document v1 schemas,
+structurally complete source-provenance fields, lower-case identities, non-overlapping
+declared ranges, and edges that fit their range and report the extractor's
+correct target scope. Its summary contains only document/range/candidate
+counts, declared byte total, CPU/kind counts, and direct-target scope counts.
+It reads no game-media path or bytes and exposes no original address as a
+runtime dispatch target. In particular, its only accepted classification is
+`static-candidate-unclassified`; loading a sidecar does not establish code
+classification, reachability, ABI, timing, input, or gameplay behaviour.
+
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
 English, Millennium DOS Spanish FAT12, Millennium Amiga Defjam, Deuteros
 Amiga English, and Deuteros Atari Replicants release archives. Their

@@ -65,6 +65,7 @@
 #include "data/runtime_diagnostics.hpp"
 #include "data/release_manifest.hpp"
 #include "data/startup_boundary.hpp"
+#include "data/static_control_flow.hpp"
 
 #include <algorithm>
 #include <array>
@@ -938,6 +939,80 @@ void assert_modern_asset_pack_admission() {
 } // namespace
 
 int main() {
+    // Static-control-flow sidecars are external preservation evidence, not a
+    // media parser or a dispatch table.  The native reader therefore accepts
+    // only the exact v1 envelope and preserves the unclassified boundary.
+    const std::string static_flow_sidecar = R"json({
+      "classification":"static-candidate-unclassified",
+      "documents":[
+        {
+          "address_space":"runtime",
+          "archive_sha256":"0000000000000000000000000000000000000000000000000000000000000000",
+          "classification":"static-candidate-unclassified",
+          "cpu":"i8086",
+          "ranges":[
+            {"edges":[
+              {"classification":"static-candidate-unclassified","instruction_size":3,"kind":"call","runtime_address":256,"source_offset":0,"target_runtime_address":261,"target_scope":"within-declared-range"},
+              {"classification":"static-candidate-unclassified","instruction_size":1,"kind":"return","runtime_address":259,"source_offset":3,"target":"return-address-unproven"}
+            ],"length":4,"runtime_address":256,"sha256":"1111111111111111111111111111111111111111111111111111111111111111","source_offset":0},
+            {"edges":[
+              {"classification":"static-candidate-unclassified","instruction_size":2,"interrupt_vector":33,"kind":"interrupt","runtime_address":261,"source_offset":4}
+            ],"length":2,"runtime_address":260,"sha256":"2222222222222222222222222222222222222222222222222222222222222222","source_offset":4}
+          ],
+          "schema":"project-eon.static-control-flow/v1",
+          "source":"FIXTURE.EXE",
+          "source_kind":"archive-member",
+          "source_sha256":"3333333333333333333333333333333333333333333333333333333333333333"
+        },
+        {
+          "address_space":"image-relative-unrelocated",
+          "archive_sha256":"4444444444444444444444444444444444444444444444444444444444444444",
+          "classification":"static-candidate-unclassified",
+          "container_sha256":"7777777777777777777777777777777777777777777777777777777777777777",
+          "cpu":"m68000",
+          "ranges":[{"edges":[
+            {"classification":"static-candidate-unclassified","instruction_size":2,"kind":"trap","source_offset":8,"image_relative_address":8,"trap_vector":1}
+          ],"length":2,"image_relative_address":8,"sha256":"5555555555555555555555555555555555555555555555555555555555555555","source_offset":8}],
+          "schema":"project-eon.static-control-flow/v1",
+          "source":"FIXTURE.PRG",
+          "source_kind":"nested-fat12-root-prg-text-data",
+          "source_sha256":"6666666666666666666666666666666666666666666666666666666666666666"
+        }
+      ],
+      "schema":"project-eon.static-control-flow-set/v1"
+    })json";
+    const auto static_flow_summary = eon::parse_static_control_flow_sidecar(static_flow_sidecar);
+    assert(static_flow_summary.document_count == 2);
+    assert(static_flow_summary.range_count == 3);
+    assert(static_flow_summary.edge_count == 4);
+    assert(static_flow_summary.declared_byte_count == 8);
+    assert(static_flow_summary.cpu_counts.at("i8086") == 1);
+    assert(static_flow_summary.cpu_counts.at("m68000") == 1);
+    assert(static_flow_summary.edge_kind_counts.at("call") == 1);
+    assert(static_flow_summary.edge_kind_counts.at("return") == 1);
+    assert(static_flow_summary.edge_kind_counts.at("interrupt") == 1);
+    assert(static_flow_summary.edge_kind_counts.at("trap") == 1);
+    assert(static_flow_summary.target_scope_counts.at("within-declared-range") == 1);
+    for (const std::string malformed : {
+             std::string("{}"),
+             std::string(static_flow_sidecar).replace(
+                 static_flow_sidecar.find("static-candidate-unclassified"),
+                 std::string("static-candidate-unclassified").size(), "reachable"),
+             std::string(static_flow_sidecar).replace(
+                 static_flow_sidecar.find("\"target_scope\":\"within-declared-range\""),
+                 std::string("\"target_scope\":\"within-declared-range\"").size(),
+                 "\"target_scope\":\"outside-declared-range\""),
+             std::string(static_flow_sidecar).replace(
+                 static_flow_sidecar.find("\"source_kind\":\"archive-member\""), 0,
+                 "\"unexpected\":true,\"source_kind\":\"archive-member\"")}) {
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_static_control_flow_sidecar(malformed));
+        } catch (const std::invalid_argument&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     const auto four_by_three = eon::fit_display_aspect_viewport(64.0F, 250.0F,
         576.0F, 400.0F, 4.0F / 3.0F);
     assert(std::fabs(four_by_three.x - 85.333336F) < 0.001F);
