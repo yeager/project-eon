@@ -739,6 +739,22 @@ next admissible investigation is a separately reviewed, read-only origin
 observer for the control transfer into that context; bypassing the callback or
 synthesizing a return remains forbidden.
 
+Read-only static inspection adds one negative mapping result. Under the
+already established flat COM-style `IP - 0x100` file-offset convention,
+`0e70:18e4` and `0e70:1900` correspond to `TITLES.EXE` offsets `0x17e4` and
+`0x1800`. The hash-bound `TITLES.EXE` member (7,022 bytes, SHA-256
+`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`) has
+nonzero bytes at both offsets, so the V14 zero sequence is
+not compatible with that specific map. The hash-bound `2200AD.EXE` member
+(`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`) has
+one zero-filled range at file offsets
+`0x124b`–`0x26c3`, which includes both candidate offsets. This is only
+compatibility, not attribution: archive inspection does not prove that
+`2200AD.EXE` was resident at `CS=0e70`, nor establish a loader, segment, or
+return origin. No literal near/far branch encoding to either candidate was
+found in the executable members; that syntactic absence is likewise not a
+control-flow proof.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the
