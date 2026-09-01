@@ -55,6 +55,14 @@ known stop. The observer remains prepared to retain one verified original
 `INT 21h/AH=25h` vector-$93 transaction at either site if a later capture
 reaches it. Absence is explicit rather than synthesized and demonstrates no
 installation, handler, or dispatch.
+On 2026-09-01, the tightened V22 `diagnostic-no-input` runner independently
+reproduced that same stop: its eight raw results retain SHA-256
+`8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`, with
+`host_input_receipt=absent`, `host_input_observed_during_capture=false`, and
+`int93_installation=absent`. The V22 receipt is a procedure check as well: it
+proves the runner rejected host input for the declared no-input diagnostic. It
+does not prove guest polling, key acceptance, a private ABI result, rendering,
+audio, title execution, or gameplay.
 It does not authorize a callback bypass, guest-memory repair, inferred mapping,
 or a gameplay claim: the exact original vector installation/dispatch path and
 a navigable trace remain the rank-1 missing evidence.
