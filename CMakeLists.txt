@@ -151,6 +151,7 @@ add_executable(project-eon
     src/data/millennium_dos_game_data.cpp
     src/data/millennium_dos_game_flow.cpp
     src/data/millennium_dos_gameplay_screen.cpp
+    src/data/millennium_dos_gx_catalog.cpp
     src/data/millennium_dos_last_screen.cpp
     src/data/millennium_save_comparison.cpp
     src/data/modern_asset_pack.cpp

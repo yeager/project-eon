@@ -32,6 +32,7 @@
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
+#include "data/millennium_dos_gx_catalog.hpp"
 #include "data/millennium_dos_last_screen.hpp"
 #include "data/millennium_amiga_loader.hpp"
 #include "data/millennium_dos_lib.hpp"
@@ -1875,8 +1876,14 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
     const auto gx_bytes = eon::extract_verified_release_asset(release, gx_lib_sha256);
     if (!gx_bytes) throw std::runtime_error("Verified Millennium GX.LIB missing");
     const auto gx_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
+    const auto gx_catalog = eon::inspect_millennium_dos_gx_bitmap_catalog(*gx_bytes);
     std::cout << "          GX.LIB IMG00 -> IMG01: " << gx_canvas.canvas.width << 'x'
         << gx_canvas.canvas.height << " original indexed canvas\n";
+    std::cout << "          GX.LIB bitmap catalogue: " << gx_catalog.resource_count
+        << " hash-verified original records; " << gx_catalog.bitmap_decoder_admitted_count
+        << " decoder-admitted, " << gx_catalog.bitmap_decoder_boundary_count << " explicit format boundaries, "
+        << gx_catalog.decoded_pixel_count
+        << " decoded indexed pixels (catalogue only; no screen semantics inferred)\n";
     constexpr auto last_lib_sha256 =
         "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510";
     const auto last_bytes = eon::extract_verified_release_asset(release, last_lib_sha256);

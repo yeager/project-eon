@@ -37,6 +37,7 @@
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
+#include "data/millennium_dos_gx_catalog.hpp"
 #include "data/millennium_dos_last_screen.hpp"
 #include "data/millennium_save_comparison.hpp"
 #include "data/millennium_amiga_loader.hpp"
@@ -6089,6 +6090,7 @@ int main() {
     assert(gx_lib.entries().front().offset == 6);
     assert(gx_lib.entries().front().size == 3'461);
     const auto gameplay_canvas = eon::parse_millennium_dos_gameplay_screen(*gx_bytes);
+    const auto gx_catalog = eon::inspect_millennium_dos_gx_bitmap_catalog(*gx_bytes);
     auto altered_gx_library = *gx_bytes;
     // The final directory byte is outside IMG00/IMG01; the complete-library
     // gate rejects it before any unrelated resource can be treated as source
@@ -6101,7 +6103,25 @@ int main() {
         rejected_altered_gx_library = true;
     }
     assert(rejected_altered_gx_library);
+    bool rejected_altered_gx_catalog = false;
+    try {
+        static_cast<void>(eon::inspect_millennium_dos_gx_bitmap_catalog(altered_gx_library));
+    } catch (const std::runtime_error&) {
+        rejected_altered_gx_catalog = true;
+    }
+    assert(rejected_altered_gx_catalog);
     assert(gameplay_canvas.canvas.width == 320 && gameplay_canvas.canvas.height == 167);
+    assert(gx_catalog.source_sha256 == "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f");
+    assert(gx_catalog.resource_count == 180 && gx_catalog.resources.size() == 180);
+    assert(gx_catalog.bitmap_decoder_admitted_count + gx_catalog.bitmap_decoder_boundary_count
+        == gx_catalog.resource_count);
+    assert(gx_catalog.decoded_pixel_count > 500'000);
+    assert(gx_catalog.resources.front().name == "IMG00");
+    assert(gx_catalog.resources.front().bitmap_decoder_admitted);
+    assert(gx_catalog.resources[1].name == "IMG01");
+    assert(gx_catalog.resources[1].bitmap_decoder_admitted);
+    assert(gx_catalog.resources[1].width == 320 && gx_catalog.resources[1].height == 167);
+    assert(gx_catalog.resources.back().name == "IMGB3");
     assert(gameplay_canvas.canvas_logical_to_dac.size() == 68);
     assert(eon::to_hex(eon::sha256(gameplay_canvas.canvas.pixels))
         == "1ea177a0fe10a1cae9201e6d31bc91f78a943af5fae8ab36a4c882ea32b6f5a8");
