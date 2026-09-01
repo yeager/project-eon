@@ -55,6 +55,19 @@ class StaticControlFlowTests(unittest.TestCase):
             build_sidecar("i8086", "0" * 64, "fixture", source,
                           [(0, len(source), 0x100, hashlib.sha256(source).hexdigest())]), sort_keys=True))
 
+    def test_image_relative_sidecar_does_not_claim_a_runtime_base(self):
+        source = bytes.fromhex("6002")
+        document = build_sidecar("m68000", "0" * 64, "fixture.prg", source,
+                                 [(0, len(source), 0, hashlib.sha256(source).hexdigest())],
+                                 address_space="image-relative-unrelocated")
+        record = document["ranges"][0]
+        edge = record["edges"][0]
+        self.assertEqual(document["address_space"], "image-relative-unrelocated")
+        self.assertIn("image_relative_address", record)
+        self.assertNotIn("runtime_address", record)
+        self.assertIn("target_image_relative_address", edge)
+        self.assertNotIn("runtime_address", edge)
+
     def test_destination_refuses_repository_tmp_and_existing_paths(self):
         with self.assertRaisesRegex(ControlFlowError, "outside /tmp"):
             _require_external_output(Path("/tmp/project-eon-static-flow.json"))

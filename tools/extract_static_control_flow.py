@@ -23,6 +23,7 @@ from zipfile import ZipFile
 # imported by tests, so resolve its sibling helper from the tool directory.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from analyze_dos import read_fat12_members
+from analyze_atari_st_prg import PRG_HEADER_BYTES, read_be16, read_be32, read_exact_program
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +85,12 @@ def _read_nested_zip_member(archive_path: Path, nested_member: str, member: str,
             return inner.read(member)
     except (KeyError, OSError, ValueError) as error:
         raise ControlFlowError(f"unable to read exact nested archive member: {error}") from error
+
+
+def _verify_archive_sha256(archive_path: Path, expected_archive_sha256: str) -> None:
+    observed = _sha256(archive_path.read_bytes())
+    if observed != expected_archive_sha256:
+        raise ControlFlowError(f"archive SHA-256 mismatch: expected {expected_archive_sha256}, got {observed}")
 
 
 def _decode_one(decoder, data: bytes, offset: int, address: int):
@@ -205,7 +212,12 @@ def parse_range(value: str) -> tuple[int, int, int, str]:
 
 
 def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: bytes,
-                  ranges: list[tuple[int, int, int, str],], *, source_kind: str = "archive-member") -> dict:
+                  ranges: list[tuple[int, int, int, str]], *, source_kind: str = "archive-member",
+                  address_space: str = "runtime", container_sha256: str | None = None) -> dict:
+    if address_space not in {"runtime", "image-relative-unrelocated"}:
+        raise ControlFlowError("unsupported control-flow address space")
+    address_key = "runtime_address" if address_space == "runtime" else "image_relative_address"
+    target_key = "target_runtime_address" if address_space == "runtime" else "target_image_relative_address"
     records: list[dict] = []
     extractor = x86_direct_edges if cpu == "i8086" else m68k_direct_edges
     for offset, length, address, expected_digest in ranges:
@@ -215,21 +227,27 @@ def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: byte
         observed_digest = _sha256(span)
         if observed_digest != expected_digest:
             raise ControlFlowError(f"range SHA-256 mismatch at +0x{offset:x}: expected {expected_digest}, got {observed_digest}")
-        records.append({"source_offset": offset, "length": length, "runtime_address": address,
-                        "sha256": observed_digest, "edges": extractor(
-                            span, source_offset=offset, runtime_address=address)})
-    declared = [(record["runtime_address"], record["runtime_address"] + record["length"])
+        edges = extractor(span, source_offset=offset, runtime_address=address)
+        if address_space != "runtime":
+            for edge in edges:
+                edge[address_key] = edge.pop("runtime_address")
+                if "target_runtime_address" in edge:
+                    edge[target_key] = edge.pop("target_runtime_address")
+        records.append({"source_offset": offset, "length": length, address_key: address,
+                        "sha256": observed_digest, "edges": edges})
+    declared = [(record[address_key], record[address_key] + record["length"])
                 for record in records]
     for record in records:
         for edge in record["edges"]:
-            target = edge.get("target_runtime_address")
+            target = edge.get(target_key)
             if target is not None:
                 edge["target_scope"] = ("within-declared-range" if any(start <= target < end
                                          for start, end in declared) else "outside-declared-range")
     return {"schema": "project-eon.static-control-flow/v1", "cpu": cpu,
             "archive_sha256": archive_sha256, "source": source_label, "source_kind": source_kind,
             "source_sha256": _sha256(source), "classification": CLASSIFICATION,
-            "ranges": records}
+            "address_space": address_space, "ranges": records,
+            **({"container_sha256": container_sha256} if container_sha256 is not None else {})}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -240,6 +258,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Original ZIP containing one exact FAT12 --fat12-member image")
     source.add_argument("--amiga-archive", "--m68k-archive", dest="m68k_archive", type=Path,
                         help="Original outer ZIP containing one exact nested M68000 disk image")
+    source.add_argument("--atari-prg-archive", type=Path,
+                        help="Original outer ZIP containing exact nested FAT12 Atari ST PRG media")
     parser.add_argument("--archive-sha256", required=True, help="Expected lower-case SHA-256 of the outer ZIP")
     parser.add_argument("--source-sha256", help="Expected lower-case SHA-256 of the exact disk/image source")
     parser.add_argument("--member", action="append", default=[], help="Exact DOS member; repeat as needed")
@@ -247,6 +267,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--nested-member", help="Exact nested ZIP member for --amiga-archive")
     parser.add_argument("--adf-member", "--disk-member", dest="disk_member",
                         help="Exact disk member inside --nested-member")
+    parser.add_argument("--program", help="Exact FAT12 root PRG member for --atari-prg-archive")
+    parser.add_argument("--program-sha256", help="Expected lower-case SHA-256 of --program")
     parser.add_argument("--range", action="append", type=parse_range, default=[],
                         help="OFFSET:LENGTH:RUNTIME_ADDRESS:SHA256; required for Amiga")
     parser.add_argument("--output", type=Path, required=True)
@@ -275,7 +297,7 @@ def main(argv: list[str] | None = None) -> int:
                                                f"{args.fat12_member}:{member}", media,
                                                [(0, len(media), 0x100, _sha256(media))],
                                                source_kind="fat12-root-member"))
-        else:
+        elif args.m68k_archive is not None:
             if (not args.nested_member or not args.disk_member or not args.range or args.member
                     or args.fat12_member or not args.source_sha256):
                 raise ControlFlowError("M68000 mode requires --nested-member, --disk-member, --source-sha256 and one or more --range values")
@@ -287,6 +309,31 @@ def main(argv: list[str] | None = None) -> int:
             documents.append(build_sidecar("m68000", args.archive_sha256,
                                            f"{args.nested_member}!{args.disk_member}", media, args.range,
                                            source_kind="nested-disk-range"))
+        else:
+            if (not args.nested_member or not args.disk_member or not args.program or not args.program_sha256
+                    or not args.source_sha256 or len(args.range) != 1 or args.member or args.fat12_member):
+                raise ControlFlowError("Atari PRG mode requires exact nested/disk/program hashes and one range")
+            _require_sha256(args.source_sha256, "disk SHA-256")
+            _require_sha256(args.program_sha256, "program SHA-256")
+            _verify_archive_sha256(args.atari_prg_archive, args.archive_sha256)
+            disk, program = read_exact_program(args.atari_prg_archive, args.nested_member,
+                                               args.disk_member, args.program)
+            if _sha256(disk) != args.source_sha256 or _sha256(program) != args.program_sha256:
+                raise ControlFlowError("Atari ST disk or PRG SHA-256 mismatch")
+            if len(program) < PRG_HEADER_BYTES or read_be16(program, 0) != 0x601a:
+                raise ControlFlowError("unsupported Atari ST PRG header")
+            loadable = read_be32(program, 2) + read_be32(program, 6)
+            symbols = read_be32(program, 14)
+            if PRG_HEADER_BYTES + loadable + symbols > len(program):
+                raise ControlFlowError("Atari ST PRG loadable range is outside the exact program")
+            offset, length, _, _ = args.range[0]
+            if offset < PRG_HEADER_BYTES or offset > PRG_HEADER_BYTES + loadable - length:
+                raise ControlFlowError("Atari ST control-flow range must stay within PRG TEXT+DATA")
+            documents.append(build_sidecar("m68000", args.archive_sha256,
+                                           f"{args.nested_member}!{args.disk_member}:{args.program}", program,
+                                           args.range, source_kind="nested-fat12-root-prg-text-data",
+                                           address_space="image-relative-unrelocated",
+                                           container_sha256=_sha256(disk)))
         payload = {"schema": "project-eon.static-control-flow-set/v1", "classification": CLASSIFICATION,
                    "documents": documents}
         output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

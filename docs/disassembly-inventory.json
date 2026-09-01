@@ -5,6 +5,7 @@
     {"span_ids":["millennium-dos-mill-com-linear","millennium-dos-titles-exe-linear","millennium-dos-2200ad-exe-linear","millennium-dos-2200gx-exe-linear"],"sha256":"2071f49e1af01d1a81adf43a0b18b2e7023b84ded741523376d8bb8af4fde231","lines":43060,"classification":"static-candidate-unclassified"},
     {"span_ids":["millennium-dos-spanish-ibm-com-linear","millennium-dos-spanish-titles-exe-linear","millennium-dos-spanish-2200ad-exe-linear"],"sha256":"7a4c5d96892ad559afd2d85e0248e0e473efd3569e9027166d8055862e1d467f","lines":36096,"classification":"static-candidate-unclassified"},
     {"span_ids":["millennium-amiga-defjam-shared-resident-linear"],"sha256":"e67f739d9a62164ee826434aac52a3a13eb8dc3f7c8f6c193ce44e28516290ca","lines":55248,"classification":"static-candidate-unclassified"},
+    {"span_ids":["millennium-atari-equinox-milenium-tos-image-relative-linear"],"sha256":"546bf35a5b6a5aef997ac274d19d40956179a17da1167052929e2516e833488a","lines":4798,"classification":"static-candidate-unclassified"},
     {"span_ids":["deuteros-amiga-clean-loaded-spans"],"sha256":"def1eb72d2e9a9d26baf8318d3e866aa2e9090c1728c5b90a13aafa58b85f729","lines":84352,"classification":"static-candidate-unclassified"},
     {"span_ids":["deuteros-atari-replicants-first-stage-linear"],"sha256":"c06590355db5b28f2fd6105ca536b39ef2ea1118b96492229283e5be1fd4cc49","lines":331,"classification":"static-candidate-unclassified"}
   ],
