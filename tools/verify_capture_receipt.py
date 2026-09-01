@@ -338,6 +338,10 @@ def verify(kind: str, directory: Path) -> None:
         tool = load_tool("run_deuteros_amiga_capture")
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
         require_identity(fields, "kickstart_archive", (tool.EXPECTED_KICKSTART_SHA256, tool.EXPECTED_KICKSTART_SIZE))
+        require_identity(fields, "disk1_archive", (tool.EXPECTED_DISK1_ARCHIVE_SHA256,
+                                                     tool.EXPECTED_DISK1_ARCHIVE_SIZE))
+        require_identity(fields, "disk2_archive", (tool.EXPECTED_DISK2_ARCHIVE_SHA256,
+                                                     tool.EXPECTED_DISK2_ARCHIVE_SIZE))
         require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")

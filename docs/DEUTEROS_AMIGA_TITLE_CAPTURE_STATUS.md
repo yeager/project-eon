@@ -10,6 +10,8 @@ audio stream, a save state, or a generated image in the repository.
 | Item | Value |
 | --- | --- |
 | Outer release SHA-256 | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` |
+| Nested disk-1 ZIP SHA-256 | `7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533` (`449666` bytes) |
+| Nested disk-2 ZIP SHA-256 | `b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a` (`490962` bytes) |
 | System ADF SHA-256 | `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38` |
 | Data ADF SHA-256 | `99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a` |
 | Kickstart 1.3 SHA-256 | `ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53` |

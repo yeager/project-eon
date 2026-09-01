@@ -26,6 +26,14 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         self.assertEqual(TOOL.EXPECTED_KICKSTART_SIZE, 143_269)
         self.assertNotEqual(TOOL.EXPECTED_KICKSTART_SIZE, 262_144)
 
+    def test_nested_disk_archives_are_pinned_before_their_adfs_are_mounted(self) -> None:
+        self.assertEqual(TOOL.EXPECTED_DISK1_ARCHIVE_SIZE, 449_666)
+        self.assertEqual(TOOL.EXPECTED_DISK2_ARCHIVE_SIZE, 490_962)
+        self.assertNotEqual(TOOL.EXPECTED_DISK1_ARCHIVE_SHA256,
+                            TOOL.EXPECTED_DISK1_SHA256)
+        self.assertNotEqual(TOOL.EXPECTED_DISK2_ARCHIVE_SHA256,
+                            TOOL.EXPECTED_DISK2_SHA256)
+
     def test_rejects_headless_or_missing_visible_display(self) -> None:
         with self.assertRaisesRegex(TOOL.CaptureError, "headless SDL"):
             TOOL.require_visible_operator_input({"SDL_VIDEODRIVER": "dummy", "DISPLAY": ":1"})
@@ -245,7 +253,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                 TOOL.MAX_RECORDER_CONSOLE_TOTAL_BYTES = original_limit
 
     def test_identity_status_retains_a_reviewable_capture_preimage(self) -> None:
-        for name in ("source_release", "kickstart_archive", "recorder", "configuration"):
+        for name in ("source_release", "kickstart_archive", "disk1_archive", "disk2_archive",
+                     "recorder", "configuration"):
             status = TOOL.identity_status(name, ("a" * 64, 123))
             self.assertEqual(status, f"{name}_sha256=" + "a" * 64
                              + f"\n{name}_bytes=123\n")

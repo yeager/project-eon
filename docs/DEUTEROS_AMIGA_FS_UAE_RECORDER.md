@@ -119,7 +119,10 @@ must not be treated as a game-input or title-display capture. The optional
 Use only the recognised English Deuteros archive and its clean disk-1/disk-2
 hashes listed in [the capture status](DEUTEROS_AMIGA_TITLE_CAPTURE_STATUS.md).
 Expose the outer archive, each selected nested disk ZIP and Kickstart archive
-through distinct `archivemount -o ro` views. Rehash the outer archive before
+through distinct `archivemount -o ro` views. The runner hashes and size-checks
+each nested disk ZIP before it mounts the contained ADF, then records the two
+nested identities in `run-status.txt`; the receipt verifier compares them to
+the reviewed constants without reopening user media. Rehash the outer archive before
 and after the run and verify every FUSE mount reports
 `ro,nosuid,nodev,default_permissions`. Configure both drives with
 `floppy_write_protect = 1`; do not rely on FS-UAE's overlay mechanism as a
