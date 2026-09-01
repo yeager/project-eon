@@ -44,6 +44,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "12"}), "12")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "13"}), "13")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "20"}), "20")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "21"}), "21")
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
         with temporary_directory() as directory:
@@ -72,6 +73,22 @@ class ReceiptVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "unsafe"):
                 TOOL.verify_file({"raw_pc": "present", "raw_pc_sha256": "0" * 64,
                                   "raw_pc_bytes": "0"}, root, "raw_pc", "raw-pc.txt")
+
+    def test_v21_int93_installation_summary_rejects_mismatched_target(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            runner = TOOL.load_tool("run_millennium_dos_capture")
+            sidecar = root / "int93-installation.raw"
+            sidecar.write_text(
+                "int93-installation-v1 image=2200ad.exe pc=0x4175 vector=0x93 "
+                "ds=0x4567 dx=0x89ab target_preimage=0xdeadbeef "
+                "vector_ip=0x89ab vector_cs=0x4567\n", encoding="ascii")
+            fields = dict(line.split("=", 1) for line in runner.int93_installation_status(
+                sidecar, "v21-int93-installation").splitlines())
+            TOOL.verify_millennium_int93_installation(fields, root)
+            fields["int93_installation_target_preimage"] = "0x00000000"
+            with self.assertRaisesRegex(ValueError, "installation receipt mismatch"):
+                TOOL.verify_millennium_int93_installation(fields, root)
 
     def test_v3_deuteros_raw_summary_is_recomputed_from_strict_records(self) -> None:
         with temporary_directory() as directory:

@@ -315,6 +315,33 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
                 TOOL.title_entry_transfer_status(
                     transfer, results, "v20-title-entry-transfer", "known-unhandled-interrupt")
 
+    def test_v21_int93_installation_is_optional_but_binds_one_reviewed_transaction(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            installation = root / "int93-installation.raw"
+            self.assertEqual(TOOL.int93_installation_status(
+                installation, "v21-int93-installation"), "int93_installation=absent\n")
+            installation.write_text(
+                "int93-installation-v1 image=titles.exe pc=0x1163 vector=0x93 "
+                "ds=0x1234 dx=0x5678 target_preimage=0x01020304 "
+                "vector_ip=0x5678 vector_cs=0x1234\n", encoding="ascii")
+            status = TOOL.int93_installation_status(installation, "v21-int93-installation")
+            self.assertIn("int93_installation=present\n", status)
+            self.assertIn("int93_installation_opcode_preimage=0xc5161c01b89325cd21\n", status)
+            self.assertIn("int93_installation_vector_cs=0x1234\n", status)
+            installation.write_text(installation.read_text(encoding="ascii").replace(
+                "vector_ip=0x5678", "vector_ip=0x5679"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "DS:DX target"):
+                TOOL.int93_installation_status(installation, "v21-int93-installation")
+            installation.write_text(installation.read_text(encoding="ascii").replace(
+                "image=titles.exe pc=0x1163", "image=titles.exe pc=0x115c"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "reviewed installer candidate"):
+                TOOL.int93_installation_status(installation, "v21-int93-installation")
+            installation.unlink()
+            installation.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.int93_installation_status(installation, "v21-int93-installation")
+
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         """A recorder exception loop must not make cache or terminal output unbounded."""
         with temporary_directory() as directory:

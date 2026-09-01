@@ -273,6 +273,18 @@ no-follow, mode-`0600` host output path and is disarmed before sidecar I/O.
 The observer is neither a DOS load hook nor a claim that the adjacency is a
 guest `RETF`, callback, handler, or valid code path.
 
+The v21 installer observer is separate and optional. It checks the full
+original opcode preimage and `AX=$2593` at either `TITLES.EXE:$1163` or
+`2200AD.EXE:$4175`, then observes the `DS:DX` target and resulting IVT `$93`
+entry after the original DOS call. It writes at most one exclusive/no-follow,
+mode-`0600` `int93-installation.raw` record through
+`PROJECT_EON_DOSBOX_X_INT93_INSTALL_RECORD`. It does not install or modify an
+IVT entry, guest memory, registers, input, scheduling, callbacks, or files.
+Its V21 binary is SHA-256
+`18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1`
+(86,312,600 bytes). A missing sidecar means neither reviewed site was observed;
+it is not a negative proof of installation elsewhere.
+
 ## Review and admission
 
 Before a patched build is used, review that the diff changes only the four
