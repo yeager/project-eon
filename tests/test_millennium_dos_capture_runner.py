@@ -142,6 +142,14 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
         ))
         self.assertEqual(arguments.focus_settle_seconds, 10)
         self.assertEqual(arguments.capture_intent, "physical-input")
+        experimental = TOOL.parse_arguments((
+            "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
+            "--capture-intent", "diagnostic-no-input", "--recorder-protocol", "v21-int93-installation",
+            "--experimental-observer",
+        ))
+        self.assertTrue(experimental.experimental_observer)
+        self.assertEqual(TOOL.experimental_observer_raw_status(),
+                         "events_raw=not-collected\nresults_raw=not-collected\n")
         with self.assertRaises(SystemExit), mock.patch("sys.stderr", new_callable=io.StringIO):
             TOOL.parse_arguments((
                 "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
