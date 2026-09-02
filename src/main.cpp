@@ -4695,13 +4695,19 @@ int main(int argc, char** argv) {
         diagnostics.release_identity = tr("NOT SELECTED");
         diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
             runtime_coordinator.admission()));
+        // This is a compact, renderer-only diagnostic code. It makes the
+        // selected preservation contract visible even before a session is
+        // admitted, while the separately reported capabilities remain facts
+        // about the recovered session rather than a claim about the mode.
+        diagnostics.session_capabilities = std::string("MODE=")
+            + (request.presentation == eon::Presentation::original ? "ORIGINAL" : "MODERN");
         if (const auto& session = runtime_coordinator.session_snapshot()) {
             diagnostics.session_adapter = std::string(eon::runtime_session_kind_label(session->kind));
             diagnostics.session_boundary = std::string(
                 eon::runtime_session_boundary_label(session->boundary));
             // Capability values are compact diagnostic codes, like recovery
             // map addresses. Only their launcher row label is translated.
-            diagnostics.session_capabilities = "PRESENTATION="
+            diagnostics.session_capabilities += " / DECODED_PRESENTATION="
                 + std::string(session->capabilities.decoded_presentation ? "Y" : "N")
                 + " / AUDIO=" + (session->capabilities.audio_observations ? "Y" : "N")
                 + " / INPUT=" + (session->capabilities.admitted_input ? "Y" : "N");
