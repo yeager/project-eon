@@ -970,19 +970,28 @@ missing visible X11/Wayland display. The operator must press keys in the
 visible emulator window; the helper has no AUTOTYPE, mapper, debugger, or
 guest-memory input path. Every new run must explicitly declare either
 `--capture-intent physical-input` or `--capture-intent diagnostic-no-input`.
-The former is rejected unless the reviewed recorder retains a non-empty
-host-input receipt during the run; the latter is rejected if it retains host
-input. This classifies capture procedure only, not whether the original game
-accepted a key. `run-status.txt` records whether the recorder
-actually created a host-input receipt, and hashes it only when present; an
-absent or empty receipt remains explicit no-input evidence rather than a
-generated empty timeline. The receipt is also capped at 64 KiB before it is
-hashed. It also binds the post-run source archive, reviewed recorder and exact
+The bounded known-callback early stop is available only to the latter. A
+physical-input run remains open for its full configured capture window even
+if that diagnostic receipt appears, unless DOSBox-X itself exits, the console
+safety cap is reached, or the window times out. The former is rejected unless
+the reviewed recorder retains a non-empty host-input receipt during the run;
+the latter is rejected if it retains host input. This classifies capture
+procedure only, not whether the original game accepted a key.
+`run-status.txt` records whether the recorder actually created a host-input
+receipt, and hashes it only when present; an absent or empty receipt remains
+explicit no-input evidence rather than a generated empty timeline. The receipt
+is also capped at 64 KiB before it is hashed. It also binds the post-run source
+archive, reviewed recorder and exact
 generated configuration by SHA-256/byte count, reports raw event/result files
 under their 8 MiB bounds, and retains only the first 1 MiB of a recorder
 console while hashing/counting its complete transcript. Its output is raw
 external evidence only and still requires assembly, independent validation,
 and review before any new adapter or runtime route can exist.
+
+The output directory is a new evidence boundary and must not already exist.
+If preflight reports `output directory must not exist`, choose a fresh,
+descriptive suffix below `/home/yeager/.cache/project-eon-tools/`; do not
+reuse, clear, or overwrite a prior capture directory.
 
 The v6 receipt binds one finite machine profile: `svga_s3` (the default) or
 `ega`. The selected profile is written as `machine_profile` and independently

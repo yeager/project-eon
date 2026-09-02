@@ -251,6 +251,17 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             results.write_bytes(b"not a recorder record\n")
             self.assertFalse(TOOL.known_unhandled_interrupt_observed(results))
 
+    def test_physical_input_never_uses_the_diagnostic_early_stop(self) -> None:
+        with temporary_directory() as directory:
+            results = Path(directory) / "results.raw"
+            results.write_bytes(TOOL.KNOWN_V11_EARLY_STOP_RAW)
+            self.assertTrue(TOOL.should_stop_for_known_unhandled_interrupt(
+                "diagnostic-no-input", results))
+            self.assertFalse(TOOL.should_stop_for_known_unhandled_interrupt(
+                "physical-input", results))
+            with self.assertRaisesRegex(TOOL.CaptureError, "finite set"):
+                TOOL.should_stop_for_known_unhandled_interrupt("unreviewed", results)
+
     def test_v12_predecessor_stop_requires_the_complete_bounded_shape(self) -> None:
         with temporary_directory() as directory:
             results = Path(directory) / "results.raw"

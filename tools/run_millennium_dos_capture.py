@@ -849,6 +849,23 @@ def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11
     return False
 
 
+def should_stop_for_known_unhandled_interrupt(capture_intent: str, path: Path,
+                                              recorder_protocol: str = "v11") -> bool:
+    """Keep a physical-input window alive even after a known diagnostic receipt.
+
+    The callback-loop receipt is useful for bounded no-input diagnostics, but
+    it is not evidence that a visible operator had a meaningful opportunity
+    to deliver input.  A physical-input run must retain its configured window
+    unless the emulator itself exits, the console cap is reached, or time
+    expires.  This host-side policy neither changes DOSBox-X nor injects any
+    guest event.
+    """
+    if capture_intent not in CAPTURE_INTENTS:
+        raise CaptureError("capture intent is not in the reviewed finite set")
+    return capture_intent == "diagnostic-no-input" and known_unhandled_interrupt_observed(
+        path, recorder_protocol)
+
+
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
     """Drain an emulator console while retaining only a bounded evidence prefix.
 
@@ -986,7 +1003,8 @@ def run_capture(args: argparse.Namespace) -> Path:
                 exit_status = 125
                 termination_reason = "console-safety-cap"
                 break
-            if known_unhandled_interrupt_observed(output / "results.raw", args.recorder_protocol):
+            if should_stop_for_known_unhandled_interrupt(
+                    args.capture_intent, output / "results.raw", args.recorder_protocol):
                 process.kill()
                 process.wait()
                 exit_status = 126
