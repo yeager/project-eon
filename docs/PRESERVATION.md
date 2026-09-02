@@ -1937,9 +1937,14 @@ image. The respective SHA-256 values were
 `aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee` and
 `220fc9b35fd99908db9f9075fb3d850bf196d25741405ac6fa062facbbbd1583`.
 Hatari selected STE mode, loaded TOS at `$e00000`, and confirmed that TOS
-patches were disabled. It did not reach its bounded 300-VBL exit before the
-host safety timeout, so it establishes neither a guest frame nor boot/game
-parity. The logs remain external diagnostic evidence; recorder admission is
+patches were disabled. An initial non-benchmark run did not reach its bounded
+300-VBL exit before the host safety timeout. A later explicit-STE, write-
+protected, no-input benchmark run did complete 300 VBLs and reported
+`XBIOS 0x08 Floprd(..., 0, 1, 70, 0, 9)` at PC `$18c4`, independently matching
+the static track-70/side-0/sector-1/nine-sector request shape. Neither run
+establishes a guest frame, XBIOS ABI result, boot/game parity, or a recovered
+runtime transition: ordinary Hatari trace output is not an admitted recorder
+receipt. The logs remain external diagnostic evidence; recorder admission is
 still governed by the separately pinned recorder policy.
 
 The vector's immediate static continuation is now bounded too. Track-2
