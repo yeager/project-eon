@@ -410,6 +410,30 @@ def main() -> int:
                 f"{exact_launch.stdout}\n{exact_launch.stderr}"
             )
 
+        # Modern is a renderer/input/accessibility envelope over this exact
+        # Original admission. Repeat every supplied platform identity, not
+        # just the primary Millennium DOS route, and permit only the explicit
+        # presentation field to differ before an SDL loop exists.
+        modern_exact_launch = subprocess.run(
+            (str(executable), "--data", str(data_directory), "--game", game,
+                "--platform", platform, "--release-language", language,
+                "--release-sha256", sha256, "--presentation", "modern",
+                "--launch-check-json"),
+            env=environment, check=False, capture_output=True, text=True,
+        )
+        try:
+            modern_exact_payload = json.loads(modern_exact_launch.stdout)
+        except json.JSONDecodeError as error:
+            raise SystemExit(
+                f"{game}/{platform}/{language} Modern launch check did not emit JSON: {error}"
+            ) from error
+        modern_expected_payload = {**expected_payload, "presentation": "modern"}
+        if modern_exact_launch.returncode != 0 or modern_exact_payload != modern_expected_payload:
+            raise SystemExit(
+                f"{game}/{platform}/{language} Modern launch changed its admitted session:\n"
+                f"{modern_exact_launch.stdout}\n{modern_exact_launch.stderr}"
+            )
+
     # Original and Modern must pass through the same release/session admission
     # gate. Modern is an explicitly labelled renderer choice, never a sibling
     # release, an implicit pack selection, or a changed game-state contract.
