@@ -415,3 +415,39 @@ msgstr "ΣΤΑΤΙΚΗ ΡΟΗ ΕΛΕΓΧΟΥ"
 
 msgid "UNAVAILABLE (CLI INSPECTION ONLY)"
 msgstr "ΜΗ ΔΙΑΘΕΣΙΜΟ (ΜΟΝΟ ΕΛΕΓΧΟΣ CLI)"
+
+msgid "LIFECYCLE STATE"
+msgstr "ΚΑΤΑΣΤΑΣΗ ΚΥΚΛΟΥ ΖΩΗΣ"
+
+msgid "MILLENNIUM DOS TITLE"
+msgstr "ΤΙΤΛΟΣ MILLENNIUM DOS"
+
+msgid "MILLENNIUM DOS SOUND DRIVER BOUNDARY"
+msgstr "ΟΡΙΟ ΠΡΟΓΡΑΜΜΑΤΟΣ ΟΔΗΓΗΣΗΣ ΗΧΟΥ MILLENNIUM DOS"
+
+msgid "MILLENNIUM DOS TITLE HANDOFF BOUNDARY"
+msgstr "ΟΡΙΟ ΠΑΡΑΔΟΣΗΣ ΤΙΤΛΟΥ MILLENNIUM DOS"
+
+msgid "MILLENNIUM AMIGA BOOTSTRAP"
+msgstr "ΕΚΚΙΝΗΣΗ MILLENNIUM AMIGA"
+
+msgid "MILLENNIUM ATARI ST BOOTSTRAP"
+msgstr "ΕΚΚΙΝΗΣΗ MILLENNIUM ATARI ST"
+
+msgid "DEUTEROS AMIGA OPENING"
+msgstr "ΕΙΣΑΓΩΓΗ DEUTEROS AMIGA"
+
+msgid "DEUTEROS AMIGA TITLE STAGE"
+msgstr "ΣΤΑΔΙΟ ΤΙΤΛΟΥ DEUTEROS AMIGA"
+
+msgid "DEUTEROS ATARI ST BOOTSTRAP"
+msgstr "ΕΚΚΙΝΗΣΗ DEUTEROS ATARI ST"
+
+msgid "UNKNOWN"
+msgstr "ΑΓΝΩΣΤΟ"
+
+msgid "RECOVERED PRESENTATION BOUNDARY"
+msgstr "ΟΡΙΟ ΑΝΑΚΤΗΜΕΝΗΣ ΠΑΡΟΥΣΙΑΣΗΣ"
+
+msgid "BOOTSTRAP BOUNDARY"
+msgstr "ΟΡΙΟ ΕΚΚΙΝΗΣΗΣ"
