@@ -9,6 +9,7 @@
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
 #include "engine/menu_runtime_launch.hpp"
+#include "engine/native_session_controller.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
@@ -943,6 +944,47 @@ void assert_modern_asset_pack_admission() {
 } // namespace
 
 int main() {
+    // Native lifecycle is a finite state machine independent of SDL windows,
+    // card focus and F10 presentation settings. Every coordinator snapshot
+    // must have exactly one visible lifecycle state, while an empty/rejected
+    // coordinator never becomes a generic active game.
+    assert(eon::native_session_state_for({}, eon::ReleaseRuntimeAdmission::unselected)
+        == eon::NativeSessionState::menu);
+    assert(eon::native_session_state_for({}, eon::ReleaseRuntimeAdmission::archive_rejected)
+        == eon::NativeSessionState::admission_rejected);
+    eon::RuntimeSessionSnapshot state_fixture;
+    const std::array state_cases{
+        std::pair{eon::RuntimeSessionKind::millennium_dos_title,
+            eon::NativeSessionState::millennium_dos_title},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_sound_driver_boundary,
+            eon::NativeSessionState::millennium_dos_sound_driver_boundary},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_title_handoff_boundary,
+            eon::NativeSessionState::millennium_dos_title_handoff_boundary},
+        std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
+            eon::NativeSessionState::millennium_amiga_bootstrap},
+        std::pair{eon::RuntimeSessionKind::millennium_atari_bootstrap,
+            eon::NativeSessionState::millennium_atari_bootstrap},
+        std::pair{eon::RuntimeSessionKind::deuteros_amiga_opening,
+            eon::NativeSessionState::deuteros_amiga_opening},
+        std::pair{eon::RuntimeSessionKind::deuteros_amiga_title_stage,
+            eon::NativeSessionState::deuteros_amiga_title_stage_boundary},
+        std::pair{eon::RuntimeSessionKind::deuteros_atari_bootstrap,
+            eon::NativeSessionState::deuteros_atari_bootstrap},
+    };
+    for (const auto& [kind, expected] : state_cases) {
+        state_fixture.kind = kind;
+        assert(eon::native_session_state_for(state_fixture, eon::ReleaseRuntimeAdmission::active)
+            == expected);
+    }
+    assert(eon::native_session_state_label(eon::NativeSessionState::returning_to_menu)
+        == "RETURNING TO MENU");
+    eon::NativeSessionController state_controller;
+    assert(state_controller.state() == eon::NativeSessionState::menu && !state_controller.is_live());
+    state_controller.begin_return_to_menu();
+    assert(state_controller.state() == eon::NativeSessionState::returning_to_menu);
+    state_controller.finish_return_to_menu();
+    assert(state_controller.is_menu() && !state_controller.is_live());
+
     // Static-control-flow sidecars are external preservation evidence, not a
     // media parser or a dispatch table.  The native reader therefore accepts
     // only the exact v1 envelope and preserves the unclassified boundary.
@@ -3642,6 +3684,24 @@ int main() {
     assert(eon::runtime_session_kind_label(dos_session_snapshot.kind) == "MILLENNIUM DOS TITLE");
     assert(eon::runtime_session_boundary_label(dos_session_snapshot.boundary)
         == "RECOVERED PRESENTATION BOUNDARY");
+    // The lifecycle controller shares the exact direct-launch gate, but
+    // turns its admitted snapshot and input boundary into explicit native
+    // states. It cannot retain a boundary or adapter after menu revocation.
+    eon::LaunchRequest controlled_dos_request;
+    controlled_dos_request.game = eon::Game::millennium;
+    controlled_dos_request.platform = eon::Platform::dos;
+    controlled_dos_request.release_language = "en";
+    controlled_dos_request.release_sha256 = english_dos->sha256;
+    eon::NativeSessionController controlled_dos_runtime;
+    assert(controlled_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
+    assert(controlled_dos_runtime.state() == eon::NativeSessionState::millennium_dos_title);
+    assert(controlled_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
+        == eon::RuntimeInputDisposition::boundary_reached);
+    assert(controlled_dos_runtime.state()
+        == eon::NativeSessionState::millennium_dos_sound_driver_boundary);
+    controlled_dos_runtime.reset();
+    assert(controlled_dos_runtime.state() == eon::NativeSessionState::menu
+        && !controlled_dos_runtime.active());
     // The coordinator admits only the literal source-level observations for
     // the English sound chooser. It rejects an availability result while that
     // chooser is active, rejects an unknown ASCII byte, then stops at the
