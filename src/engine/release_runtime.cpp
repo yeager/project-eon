@@ -254,6 +254,13 @@ ReleaseRuntimeCoordinator::deuteros_amiga_opening_checkpoint() const {
     return deuteros_amiga_->checkpoint();
 }
 
+std::optional<DeuterosAtariBootstrapCheckpoint>
+ReleaseRuntimeCoordinator::deuteros_atari_bootstrap_checkpoint() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_atari_bootstrap
+        || !deuteros_atari_) return std::nullopt;
+    return deuteros_atari_->checkpoint();
+}
+
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {
     if (!candidate) {

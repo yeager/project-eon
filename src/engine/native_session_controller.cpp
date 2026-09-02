@@ -87,6 +87,12 @@ NativeSessionController::deuteros_amiga_opening_checkpoint() const {
     return runtime_.coordinator().deuteros_amiga_opening_checkpoint();
 }
 
+std::optional<DeuterosAtariBootstrapCheckpoint>
+NativeSessionController::deuteros_atari_bootstrap_checkpoint() const {
+    if (state_ != NativeSessionState::deuteros_atari_bootstrap) return std::nullopt;
+    return runtime_.coordinator().deuteros_atari_bootstrap_checkpoint();
+}
+
 void NativeSessionController::begin_return_to_menu() {
     state_ = NativeSessionState::returning_to_menu;
 }

@@ -3884,6 +3884,9 @@ int main() {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
+            const auto checkpoint = all_release_runtime.deuteros_atari_bootstrap_checkpoint();
+            assert(checkpoint && checkpoint->relocated_dispatcher_address == 0x1ec4
+                && checkpoint->state1_xbios_selector == 0x26);
         } else {
             assert(false && "unrecognised release reached runtime admission");
         }
@@ -7645,6 +7648,16 @@ int main() {
         == "dad3594c53375bd8285ef33e2d685bd38a5b38d930f2ea1305d117d63667f168");
     assert(deuteros_atari_session.second_stage_sha256()
         == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
+    const auto atari_checkpoint = deuteros_atari_session.checkpoint();
+    assert(atari_checkpoint.first_stage_sha256 == deuteros_atari_session.first_stage_sha256());
+    assert(atari_checkpoint.second_stage_sha256 == deuteros_atari_session.second_stage_sha256());
+    assert(atari_checkpoint.first_stage_entry_offset == 0x9c4);
+    assert(atari_checkpoint.relocated_dispatcher_address == 0x1ec4);
+    assert(atari_checkpoint.state1_xbios_selector == 0x26);
+    assert(atari_checkpoint.state0_raw_request_count == 4);
+    assert(atari_checkpoint.state1_raw_request_count == 84);
+    assert(atari_checkpoint.state5_first_source_offset == 0x55800);
+    assert(atari_checkpoint.state5_second_source_offset == 0x60c00);
     assert(deuteros_atari_session.first_stage().next_destination == 0x70000);
     assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
     assert(deuteros_atari_session.first_stage_copy_execution().source_address == 0x70000);

@@ -102,6 +102,10 @@ public:
     // recovered opening session.
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
     deuteros_amiga_opening_checkpoint() const;
+    // Query only: this reports static, hash-gated Atari bootstrap facts. It
+    // neither selects a runtime state nor invokes an Atari service.
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
+    deuteros_atari_bootstrap_checkpoint() const;
     [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
         return millennium_amiga_.get();
     }

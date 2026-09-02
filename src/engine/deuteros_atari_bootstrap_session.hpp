@@ -2,11 +2,28 @@
 
 #include "data/deuteros_atari_boot.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace eon {
+
+// A media-safe summary of the exact static bootstrap evidence admitted for
+// the Replicants Disk 1 profile. This is not an emulator snapshot: it retains
+// no RAM, registers, source paths, disk bytes, or selected dispatcher vector.
+struct DeuterosAtariBootstrapCheckpoint {
+    std::string first_stage_sha256;
+    std::string second_stage_sha256;
+    std::size_t first_stage_entry_offset = 0;
+    std::size_t relocated_dispatcher_address = 0;
+    std::uint16_t state1_xbios_selector = 0;
+    std::size_t state0_raw_request_count = 0;
+    std::size_t state1_raw_request_count = 0;
+    std::size_t state5_first_source_offset = 0;
+    std::size_t state5_second_source_offset = 0;
+};
 
 // Materializes only the two raw stages explicitly requested by the supplied
 // Replicants Disk 1 boot code. It validates their original bytes and stops
@@ -78,6 +95,7 @@ public:
     }
     [[nodiscard]] const std::string& first_stage_sha256() const { return first_stage_sha256_; }
     [[nodiscard]] const std::string& second_stage_sha256() const { return second_stage_sha256_; }
+    [[nodiscard]] DeuterosAtariBootstrapCheckpoint checkpoint() const;
 
 private:
     DeuterosAtariBootProfile boot_;
