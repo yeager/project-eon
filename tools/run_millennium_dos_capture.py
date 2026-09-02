@@ -258,7 +258,10 @@ def validate_recorder(path: Path, expected_sha256: str | None = None) -> tuple[s
         expected_sha256 = EXPECTED_RECORDER_SHA256
     digest, size = sha256_file(path)
     if digest != expected_sha256:
-        raise CaptureError("recorder hash does not match the reviewed DOSBox-X build")
+        raise CaptureError(
+            "recorder hash does not match the reviewed DOSBox-X build "
+            f"(expected SHA-256 {expected_sha256}, got {digest}); select the reviewed "
+            "external recorder for the requested --recorder-protocol")
     return digest, size
 
 

@@ -84,7 +84,9 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
                 self.assertEqual(TOOL.validate_recorder(recorder),
                                  (TOOL.EXPECTED_RECORDER_SHA256, recorder.stat().st_size))
                 TOOL.EXPECTED_RECORDER_SHA256 = "0" * 64
-                with self.assertRaisesRegex(TOOL.CaptureError, "reviewed DOSBox-X"):
+                with self.assertRaisesRegex(TOOL.CaptureError, "expected SHA-256 " + "0" * 64):
+                    TOOL.validate_recorder(recorder)
+                with self.assertRaisesRegex(TOOL.CaptureError, hashlib.sha256(recorder.read_bytes()).hexdigest()):
                     TOOL.validate_recorder(recorder)
             finally:
                 TOOL.EXPECTED_RECORDER_SHA256 = original_hash
