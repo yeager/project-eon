@@ -9,6 +9,7 @@
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/menu_runtime_launch.hpp"
+#include "engine/native_session_controller.hpp"
 #include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
@@ -3839,7 +3840,7 @@ int main(int argc, char** argv) {
     auto& active_platform = launcher_route.platform;
     auto& active_release_language = launcher_route.release_language;
     auto& active_release_sha256 = launcher_route.release_sha256;
-    eon::LauncherRuntimeController runtime;
+    eon::NativeSessionController runtime;
     auto& runtime_coordinator = runtime.coordinator();
     // This status is limited to the same three media-safe admission classes
     // exposed by F10. It gives a rejected profile-card launch an immediate
@@ -4338,7 +4339,7 @@ int main(int argc, char** argv) {
         // launcher-modal transition is not an original input poll, so it
         // must cancel any prior host hold rather than letting it leak behind
         // the F10 renderer settings dialog or into a fresh opening session.
-        static_cast<void>(runtime_coordinator.observe_input(
+        static_cast<void>(runtime.observe_input(
             eon::RuntimeInputObservation::opening_input_held(false)));
     };
     std::optional<std::uint32_t> deuteros_title_resource;
@@ -5187,7 +5188,7 @@ int main(int argc, char** argv) {
                     // The source-level menu accepts literal ASCII data bytes,
                     // not an SDL scancode or an inferred device choice. Its
                     // one selection ends at the driver ABI boundary.
-                    if (runtime_coordinator.observe_input(eon::RuntimeInputObservation::ascii(event.text.text[0]))
+                    if (runtime.observe_input(eon::RuntimeInputObservation::ascii(event.text.text[0]))
                             == eon::RuntimeInputDisposition::boundary_reached
                         && millennium_title_text_input_active) {
                         SDL_StopTextInput(window);
@@ -5200,7 +5201,7 @@ int main(int argc, char** argv) {
                 // supplies only that availability signal; UTF-8 contents are
                 // deliberately never decoded as a DOS character or command.
                 if (!millennium_title_session->handed_off()) {
-                    if (runtime_coordinator.observe_input(eon::RuntimeInputObservation::available_character())
+                    if (runtime.observe_input(eon::RuntimeInputObservation::available_character())
                             == eon::RuntimeInputDisposition::boundary_reached
                         && millennium_title_text_input_active) {
                         SDL_StopTextInput(window);
@@ -5214,7 +5215,7 @@ int main(int argc, char** argv) {
                 // $14 consumes the input word last polled by the original loop.
                 // Feed the physical held state, leaving acceptance to the VM's
                 // recovered timing and input-gate logic.
-                static_cast<void>(runtime_coordinator.observe_input(
+                static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(
                         event.type == SDL_EVENT_KEY_DOWN)));
             }
@@ -5225,7 +5226,7 @@ int main(int argc, char** argv) {
                 // The sole gamepad route into the recovered Amiga opening is
                 // the same physical held signal as Space/Enter. It does not
                 // manufacture a title or gameplay action.
-                static_cast<void>(runtime_coordinator.observe_input(
+                static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(
                         event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)));
             }
@@ -5313,6 +5314,10 @@ int main(int argc, char** argv) {
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && deuteros_opening && deuteros_opening_runner) {
             const auto advance = deuteros_opening_runner->advance(SDL_GetTicks());
+            // The runner owns only scheduler arithmetic. Its coordinator tick
+            // may have crossed the recovered title boundary, so publish that
+            // transition before SDL processes its presentation/audio events.
+            runtime.synchronize();
             for (const auto& events : advance.events) {
                 if (deuteros_paula) {
                     for (const auto& sound : events.sounds) {

@@ -386,6 +386,17 @@ The F10 developer diagnostics page reads this same snapshot; its adapter and
 boundary values are provenance codes, while the visible row labels remain
 translated launcher chrome.
 
+`NativeSessionController` is the SDL-free lifecycle state machine around that
+coordinator. Its complete vocabulary is `MENU`, `ADMISSION REJECTED`, each
+published Millennium/Deuteros session kind, the explicit DOS and Deuteros
+title-stage boundaries, and `RETURNING TO MENU`. Launch, admitted input,
+Deuteros opening ticks, rejection, and revocation synchronize through this
+one vocabulary. SDL may render a menu, F10 modal, texture, audio queue or
+diagnostic panel, but none of those can advance native session state. Before
+an SDL caller clears coordinator-owned state it enters `RETURNING TO MENU`,
+then finishes the reset at `MENU`; stale source-derived resources therefore
+cannot be presented as a new or active original release.
+
 For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
 rehashed game/platform card state. `READY` has exactly one verified original
 language, or has English among its verified languages and therefore uses the

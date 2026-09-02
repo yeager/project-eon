@@ -112,6 +112,7 @@ add_executable(project-eon
     src/engine/deuteros_amiga_opening.cpp
     src/engine/deuteros_amiga_opening_runner.cpp
     src/engine/menu_runtime_launch.cpp
+    src/engine/native_session_controller.cpp
     src/engine/release_runtime.cpp
     src/engine/release_runtime_capability.cpp
     src/engine/runtime_session.cpp
