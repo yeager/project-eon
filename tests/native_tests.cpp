@@ -3887,6 +3887,20 @@ int main() {
             const auto checkpoint = all_release_runtime.deuteros_atari_bootstrap_checkpoint();
             assert(checkpoint && checkpoint->relocated_dispatcher_address == 0x1ec4
                 && checkpoint->state1_xbios_selector == 0x26);
+            eon::LaunchRequest atari_request;
+            atari_request.game = release.game;
+            atari_request.platform = release.platform;
+            atari_request.release_language = release.language;
+            atari_request.release_sha256 = release.sha256;
+            eon::NativeSessionController atari_controller;
+            assert(atari_controller.launch_direct(atari_request, releases).accepted());
+            assert(atari_controller.state() == eon::NativeSessionState::deuteros_atari_bootstrap);
+            const auto controller_checkpoint = atari_controller.deuteros_atari_bootstrap_checkpoint();
+            assert(controller_checkpoint
+                && controller_checkpoint->first_stage_sha256 == checkpoint->first_stage_sha256
+                && controller_checkpoint->second_stage_sha256 == checkpoint->second_stage_sha256);
+            atari_controller.reset();
+            assert(atari_controller.is_menu() && !atari_controller.deuteros_atari_bootstrap_checkpoint());
         } else {
             assert(false && "unrecognised release reached runtime admission");
         }
