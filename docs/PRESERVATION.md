@@ -96,7 +96,8 @@ requires an explicit game/platform, emits only game/platform/language and the
 safe admission result, and exits before SDL initialization. It is not an
 emulator, replay, renderer, input path, audio path, or save operation.
 `--launch-check-json` writes this same minimal result as
-`project-eon.launch-check/v1`; it includes the exact release SHA-256 but never
+`project-eon.launch-check/v1`; it includes the exact release SHA-256 and
+explicit presentation choice but never
 a local path, member name, original bytes, or parser exception.
 
 For a corpus containing more than one release for a game/platform, automation

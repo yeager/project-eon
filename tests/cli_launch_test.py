@@ -291,6 +291,7 @@ def main() -> int:
                     "game": "Millennium 2.2", "platform": "DOS", "language": "en",
                     "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
                 },
+                "presentation": "original",
                 "coverage": "RECOVERED STARTUP",
                 "runtime_admission": "READY",
                 "runtime_session": {
@@ -394,6 +395,7 @@ def main() -> int:
                 "game": display_game, "platform": display_platform,
                 "language": language, "sha256": sha256,
             },
+            "presentation": "original",
             "coverage": coverage,
             "runtime_admission": "READY",
             "runtime_session": {
@@ -407,6 +409,28 @@ def main() -> int:
                 f"{game}/{platform}/{language} did not preserve its exact launch identity:\n"
                 f"{exact_launch.stdout}\n{exact_launch.stderr}"
             )
+
+    # Original and Modern must pass through the same release/session admission
+    # gate. Modern is an explicitly labelled renderer choice, never a sibling
+    # release, an implicit pack selection, or a changed game-state contract.
+    modern_launch_check = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--presentation", "modern", "--launch-check-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        modern_launch_payload = json.loads(modern_launch_check.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"Modern launch check did not emit JSON: {error}") from error
+    if (modern_launch_check.returncode != 0
+            or modern_launch_payload.get("presentation") != "modern"
+            or modern_launch_payload.get("release") != launch_check_payload["release"]
+            or modern_launch_payload.get("runtime_session")
+                != launch_check_payload["runtime_session"]):
+        raise SystemExit(
+            "Modern launch check did not retain the Original release/session identity:\n"
+            f"{modern_launch_check.stdout}\n{modern_launch_check.stderr}"
+        )
 
     # A hash-language mismatch must fail before an SDL loop, rather than
     # normalize one field from a different recognised DOS release.  No output
