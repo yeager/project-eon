@@ -39,7 +39,7 @@ msgid "PROJECT EON"
 msgstr "プロジェクト・イオン"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "モダンタイトルパック: "
 
 msgid "MODERN ASSET PACK"
 msgstr "モダンアセットパック"
@@ -358,7 +358,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "上下: ページ   F10 / ESC: 診断に戻る"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "ページ"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "このリリースにはハッシュに結び付いた関数エントリはありません。"

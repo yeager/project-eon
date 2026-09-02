@@ -28,7 +28,7 @@ msgid "PROJECT EON"
 msgstr "PROJECT EON"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "ΠΑΚΕΤΟ ΣΥΓΧΡΟΝΟΥ ΤΙΤΛΟΥ: "
 
 msgid "MODERN ASSET PACK"
 msgstr "ΠΑΚΕΤΟ ΣΥΓΧΡΟΝΩΝ ΠΟΡΩΝ"
@@ -358,7 +358,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "ΠΑΝΩ/ΚΑΤΩ: ΣΕΛΙΔΑ   F10 / ESC: ΠΙΣΩ ΣΤΑ ΔΙΑΓΝΩΣΤΙΚΑ"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "ΣΕΛΙΔΑ"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "ΔΕΝ ΥΠΑΡΧΟΥΝ ΕΓΓΡΑΦΕΣ ΣΥΝΑΡΤΗΣΕΩΝ ΔΕΜΕΝΕΣ ΜΕ ΚΑΤΑΚΕΡΜΑΤΙΣΜΟ ΓΙΑ ΑΥΤΗΝ ΤΗΝ ΕΚΔΟΣΗ."

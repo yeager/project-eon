@@ -39,7 +39,7 @@ msgid "PROJECT EON"
 msgstr "ПРОЄКТ ЕОН"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "СУЧАСНИЙ ПАКЕТ ЗАГОЛОВКА: "
 
 msgid "MODERN ASSET PACK"
 msgstr "ПАКУНОК СУЧАСНИХ РЕСУРСІВ"
@@ -397,7 +397,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "ВГОРУ/ВНИЗ: СТОРІНКА   F10 / ESC: НАЗАД ДО ДІАГНОСТИКИ"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "СТОРІНКА"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "ДЛЯ ЦЬОГО ВИПУСКУ НЕМАЄ ЗАПИСІВ ФУНКЦІЙ, ПРИВ'ЯЗАНИХ ДО ХЕШУ."

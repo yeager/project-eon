@@ -39,7 +39,7 @@ msgid "PROJECT EON"
 msgstr "PROJECT EON"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "MODERN BAŞLIK PAKETİ: "
 
 msgid "MODERN ASSET PACK"
 msgstr "MODERN VARLIK PAKETİ"
@@ -397,7 +397,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "YUKARI/AŞAĞI: SAYFA   F10 / ESC: TANIYA DÖN"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "SAYFA"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "BU SÜRÜM İÇİN KARMA İLE BAĞLANMIŞ İŞLEV GİRDİSİ YOK."
