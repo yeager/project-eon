@@ -197,7 +197,9 @@ class CatalogTests(unittest.TestCase):
             "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
             "SCALE4X (MEMORY ONLY)", "NOT LOADED", "OPEN",
         }
-        for language in {"ar", "el", "hi", "ja", "ko", "ru", "tr", "uk", "zh_CN"}:
+        # English is the source-language default; every other shipped
+        # catalogue must translate this complete Eon-owned diagnostics page.
+        for language in CATALOGS - {"en_GB"}:
             with self.subTest(language=language):
                 catalog = po_messages(PO / f"{language}.po")
                 self.assertTrue(all(catalog.get(label) not in {None, "", label}
