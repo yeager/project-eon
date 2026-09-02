@@ -4537,7 +4537,7 @@ int main(int argc, char** argv) {
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
-        deuteros_opening_runner.emplace(runtime_coordinator, SDL_GetTicks());
+        deuteros_opening_runner.emplace(runtime, SDL_GetTicks());
         deuteros_title_resource.reset();
     };
     const auto launch_menu_selection = [&] {
@@ -5305,7 +5305,7 @@ int main(int argc, char** argv) {
             create_deuteros_opening_texture();
             start_deuteros_audio();
             load_deuteros_external_modern_sequence();
-            deuteros_opening_runner.emplace(runtime_coordinator, SDL_GetTicks());
+            deuteros_opening_runner.emplace(runtime, SDL_GetTicks());
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && active_platform == eon::Platform::atari_st && !deuteros_atari_session) {
@@ -5314,10 +5314,9 @@ int main(int argc, char** argv) {
         if (screen == Screen::launching && selected == eon::Game::deuteros
             && deuteros_opening && deuteros_opening_runner) {
             const auto advance = deuteros_opening_runner->advance(SDL_GetTicks());
-            // The runner owns only scheduler arithmetic. Its coordinator tick
-            // may have crossed the recovered title boundary, so publish that
-            // transition before SDL processes its presentation/audio events.
-            runtime.synchronize();
+            // The runner owns only scheduler arithmetic and delegates every
+            // tick through the native lifecycle controller. A title-boundary
+            // transition is therefore published before SDL sees its events.
             for (const auto& events : advance.events) {
                 if (deuteros_paula) {
                     for (const auto& sound : events.sounds) {

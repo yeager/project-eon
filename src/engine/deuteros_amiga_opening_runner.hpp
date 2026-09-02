@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/release_runtime.hpp"
+#include "engine/native_session_controller.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -22,13 +22,13 @@ public:
     static constexpr std::uint64_t scheduler_period_ms = 20;
     static constexpr std::size_t maximum_catch_up_ticks = 4;
 
-    DeuterosAmigaOpeningRunner(ReleaseRuntimeCoordinator& coordinator, std::uint64_t initial_tick);
+    DeuterosAmigaOpeningRunner(NativeSessionController& controller, std::uint64_t initial_tick);
     [[nodiscard]] DeuterosAmigaOpeningAdvance advance(std::uint64_t now);
     [[nodiscard]] std::uint64_t scheduled_tick() const { return scheduled_tick_; }
     [[nodiscard]] bool stopped() const { return stopped_; }
 
 private:
-    ReleaseRuntimeCoordinator& coordinator_;
+    NativeSessionController& controller_;
     std::uint64_t scheduled_tick_;
     bool stopped_ = false;
 };
