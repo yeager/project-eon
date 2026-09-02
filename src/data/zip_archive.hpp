@@ -65,6 +65,10 @@ struct ArchiveAsset {
 };
 
 [[nodiscard]] std::string name(AssetKind kind);
+// Classification is metadata-only and shared by archive and verified direct
+// media inventories; it never changes or interprets source bytes.
+[[nodiscard]] AssetKind classify_asset(std::string_view path,
+                                       std::span<const std::uint8_t> bytes);
 
 [[nodiscard]] std::vector<ArchiveAsset> inventory_zip(
     const std::filesystem::path& path,

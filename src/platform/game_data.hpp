@@ -3,6 +3,7 @@
 #include "data/zip_archive.hpp"
 
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,6 +13,7 @@ namespace eon {
 
 enum class Game { millennium, deuteros };
 enum class Platform { dos, amiga, atari_st };
+enum class ReleaseMediaLayout { zip_archive, verified_directory };
 
 struct ReleaseArchive {
     Game game;
@@ -19,6 +21,11 @@ struct ReleaseArchive {
     std::string language;
     std::string sha256;
     std::filesystem::path path;
+    // `sha256` is always the logical release/profile identity. For a verified
+    // directory its independently measured complete-set identity lives in
+    // the direct-media manifest, rather than pretending the directory is an
+    // archive with this digest.
+    ReleaseMediaLayout layout = ReleaseMediaLayout::zip_archive;
 };
 
 // One exact, manifest-recognised release archive held only for the duration
@@ -34,9 +41,18 @@ public:
 private:
     VerifiedReleaseMedia(ReleaseArchive release, ZipArchive archive)
         : release_(std::move(release)), archive_(std::move(archive)) {}
+    VerifiedReleaseMedia(ReleaseArchive release, std::vector<ArchiveAsset> assets,
+                         std::map<std::string, std::vector<std::uint8_t>> direct_assets)
+        : release_(std::move(release)), direct_inventory_(std::move(assets)),
+          direct_assets_(std::move(direct_assets)) {}
 
     ReleaseArchive release_;
-    ZipArchive archive_;
+    std::optional<ZipArchive> archive_;
+    std::vector<ArchiveAsset> direct_inventory_;
+    std::map<std::string, std::vector<std::uint8_t>> direct_assets_;
+
+public:
+    [[nodiscard]] std::vector<ArchiveAsset> inventory() const;
 };
 
 // A hash-recognised physical leaf encountered outside a recognised release
@@ -156,6 +172,7 @@ private:
     std::size_t next_candidate_ = 0;
     std::vector<ReleaseArchive> releases_;
     std::vector<UnboundDirectMedia> unbound_direct_media_;
+    std::vector<std::filesystem::path> bound_direct_media_paths_;
     ReleaseScanReport report_;
 };
 

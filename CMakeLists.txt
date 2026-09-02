@@ -305,6 +305,8 @@ if(BUILD_TESTING)
     # tests and is never copied into the build tree or a package.
     set(EON_REPLAY_FIXTURE_DIR "" CACHE PATH
         "Absolute external Project Eon replay-fixture directory to verify with CTest")
+    set(EON_DIRECT_DATA_DIR "" CACHE PATH
+        "Absolute original-media root containing recognised installed direct media")
     add_executable(eon-native-tests
         tests/native_tests.cpp
         ${EON_RUNTIME_SOURCES}
@@ -380,6 +382,16 @@ if(BUILD_TESTING)
             # each admitted platform.  It normally completes in under a
             # minute; keep enough room for slow physical media while turning
             # a future scanner or launch-admission hang into a useful failure.
+            TIMEOUT 180)
+    endif()
+    if(EON_DIRECT_DATA_DIR)
+        add_test(NAME cli-real-direct-directory-start
+            COMMAND "${Python3_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_direct_directory_test.py"
+                "$<TARGET_FILE:project-eon>"
+                "${EON_DIRECT_DATA_DIR}")
+        set_tests_properties(cli-real-direct-directory-start PROPERTIES
+            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
             TIMEOUT 180)
     endif()
 endif()

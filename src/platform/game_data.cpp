@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <exception>
 #include <cstdint>
+#include <fstream>
+#include <iterator>
+#include <map>
 #include <stdexcept>
 #include <system_error>
 
@@ -25,6 +28,81 @@ const ReleaseManifestEntry& require_manifest_identity(const ReleaseArchive& rele
         throw std::runtime_error("Release metadata is not an exact recognised manifest identity");
     }
     return *found;
+}
+
+const DirectMediaSetManifestEntry& require_direct_set_identity(const ReleaseArchive& release) {
+    const auto sets = direct_media_set_manifest();
+    const auto found = std::find_if(sets.begin(), sets.end(), [&release](const auto& candidate) {
+        return candidate.content_release_sha256 == release.sha256
+            && candidate.game == release.game && candidate.platform == release.platform
+            && candidate.language == release.language;
+    });
+    if (found == sets.end()) {
+        throw std::runtime_error("Release has no recognised direct-media set identity");
+    }
+    return *found;
+}
+
+std::vector<std::uint8_t> read_exact_regular_file(const std::filesystem::path& path,
+                                                   const std::uint64_t expected_size) {
+    std::error_code error;
+    const auto status = std::filesystem::symlink_status(path, error);
+    if (error || std::filesystem::is_symlink(status) || !std::filesystem::is_regular_file(status)
+        || std::filesystem::file_size(path, error) != expected_size || error) {
+        throw std::runtime_error("Direct media member is not the declared regular file");
+    }
+    std::ifstream stream(path, std::ios::binary);
+    if (!stream) throw std::runtime_error("Unable to open direct media member");
+    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(expected_size));
+    stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (stream.gcount() != static_cast<std::streamsize>(bytes.size()) || stream.peek() != std::char_traits<char>::eof()) {
+        throw std::runtime_error("Direct media member changed while being read");
+    }
+    return bytes;
+}
+
+struct VerifiedDirectSet {
+    std::vector<ArchiveAsset> inventory;
+    std::map<std::string, std::vector<std::uint8_t>> assets;
+};
+
+VerifiedDirectSet verify_direct_set(const std::filesystem::path& root,
+                                    const DirectMediaSetManifestEntry& set,
+                                    const bool retain_bytes) {
+    std::error_code error;
+    const auto root_status = std::filesystem::symlink_status(root, error);
+    if (error || std::filesystem::is_symlink(root_status) || !std::filesystem::is_directory(root_status)) {
+        throw std::runtime_error("Direct media root is not a regular directory");
+    }
+    VerifiedDirectSet verified;
+    std::string canonical;
+    for (const auto& member : set.members) {
+        // The declarative manifest permits bare, direct-child DOS names only.
+        const std::filesystem::path name(member.name);
+        if (name.empty() || name.has_parent_path() || name.filename() != name) {
+            throw std::runtime_error("Unsafe direct-media manifest member name");
+        }
+        const auto path = root / name;
+        auto bytes = read_exact_regular_file(path, member.size);
+        const auto digest = to_hex(sha256(bytes));
+        if (digest != member.sha256) throw std::runtime_error("Direct media member hash mismatch");
+        canonical += std::string(member.name) + "\t" + std::to_string(member.size) + "\t" + digest + "\n";
+        verified.inventory.push_back({std::string(member.name), member.size, digest,
+            classify_asset(member.name, bytes)});
+        if (retain_bytes && !verified.assets.emplace(digest, std::move(bytes)).second) {
+            throw std::runtime_error("Ambiguous direct media asset hash");
+        }
+    }
+    const auto canonical_bytes = std::span(reinterpret_cast<const std::uint8_t*>(canonical.data()), canonical.size());
+    if (to_hex(sha256(canonical_bytes)) != set.set_sha256) {
+        throw std::runtime_error("Direct media set identity mismatch");
+    }
+    return verified;
+}
+
+bool is_bound_direct_path(const std::vector<std::filesystem::path>& paths,
+                          const std::filesystem::path& candidate) {
+    return std::find(paths.begin(), paths.end(), candidate) != paths.end();
 }
 
 bool has_manifest_leaf_size(const std::uintmax_t size) {
@@ -77,6 +155,9 @@ std::vector<ReleaseArchive> find_release_archives(const std::filesystem::path& d
 bool is_recognised_release_identity(const ReleaseArchive& release) {
     try {
         static_cast<void>(require_manifest_identity(release));
+        if (release.layout == ReleaseMediaLayout::verified_directory) {
+            static_cast<void>(require_direct_set_identity(release));
+        }
         return true;
     } catch (...) {
         return false;
@@ -89,23 +170,37 @@ void verify_release_archive(const ReleaseArchive& release) {
 
 VerifiedReleaseMedia VerifiedReleaseMedia::open(const ReleaseArchive& release) {
     static_cast<void>(require_manifest_identity(release));
-    return VerifiedReleaseMedia(release, ZipArchive::open_verified(release.path, release.sha256));
+    if (release.layout == ReleaseMediaLayout::zip_archive) {
+        return VerifiedReleaseMedia(release, ZipArchive::open_verified(release.path, release.sha256));
+    }
+    const auto& set = require_direct_set_identity(release);
+    auto verified = verify_direct_set(release.path, set, true);
+    return VerifiedReleaseMedia(release, std::move(verified.inventory), std::move(verified.assets));
 }
 
 std::optional<std::vector<std::uint8_t>> VerifiedReleaseMedia::extract(
     const std::string_view expected_asset_sha256) const {
-    return archive_.extract_asset_by_sha256(expected_asset_sha256);
+    if (archive_) return archive_->extract_asset_by_sha256(expected_asset_sha256);
+    const auto found = direct_assets_.find(std::string(expected_asset_sha256));
+    if (found == direct_assets_.end()) return std::nullopt;
+    return found->second;
+}
+
+std::vector<ArchiveAsset> VerifiedReleaseMedia::inventory() const {
+    if (!archive_) return direct_inventory_;
+    // Inventory helpers intentionally reopen ZIP sources, so direct callers
+    // use the already admitted snapshot. ZIP callers retain their established
+    // helper semantics below.
+    return inventory_verified_zip(release_.path, release_.sha256);
 }
 
 std::vector<ArchiveAsset> inventory_verified_release(const ReleaseArchive& release) {
-    static_cast<void>(require_manifest_identity(release));
-    return inventory_verified_zip(release.path, release.sha256);
+    return VerifiedReleaseMedia::open(release).inventory();
 }
 
 std::optional<std::vector<std::uint8_t>> extract_verified_release_asset(
     const ReleaseArchive& release, std::string_view expected_asset_sha256) {
-    static_cast<void>(require_manifest_identity(release));
-    return extract_verified_asset_by_sha256(release.path, release.sha256, expected_asset_sha256);
+    return VerifiedReleaseMedia::open(release).extract(expected_asset_sha256);
 }
 
 ReleaseScanner::ReleaseScanner(const std::filesystem::path& directory) {
@@ -138,6 +233,29 @@ ReleaseScanSnapshot ReleaseScanner::snapshot() const {
 
 void ReleaseScanner::finish_candidate_inventory() {
     std::sort(candidates_.begin(), candidates_.end());
+    for (const auto& directory : directories_) {
+        for (const auto& set : direct_media_set_manifest()) {
+            try {
+                static_cast<void>(verify_direct_set(directory, set, false));
+                const auto existing = std::find_if(releases_.begin(), releases_.end(), [&set](const auto& release) {
+                    return release.sha256 == set.content_release_sha256;
+                });
+                if (existing == releases_.end()) {
+                    releases_.push_back({set.game, set.platform, std::string(set.language),
+                        std::string(set.content_release_sha256), directory,
+                        ReleaseMediaLayout::verified_directory});
+                    for (const auto& member : set.members) {
+                        bound_direct_media_paths_.push_back(directory / std::string(member.name));
+                    }
+                } else {
+                    ++report_.duplicate_occurrences;
+                }
+            } catch (const std::exception&) {
+                // An incomplete or changed directory remains ordinary direct
+                // evidence only; its individual leaves are handled below.
+            }
+        }
+    }
     report_.candidates = candidates_.size();
     candidate_inventory_complete_ = true;
 }
@@ -224,7 +342,8 @@ bool ReleaseScanner::advance(std::size_t max_files) {
                     // and record every additional copy/link as evidence only.
                     ++report_.duplicate_occurrences;
                 }
-            } else if (is_manifest_leaf(fingerprint, size)) {
+            } else if (is_manifest_leaf(fingerprint, size)
+                       && !is_bound_direct_path(bound_direct_media_paths_, candidate)) {
                 ++report_.verified_direct_media_occurrences;
                 const auto existing = std::find_if(unbound_direct_media_.begin(),
                     unbound_direct_media_.end(), [&fingerprint](const auto& media) {

@@ -413,4 +413,8 @@ std::string name(AssetKind kind) {
     return "unknown";
 }
 
+AssetKind classify_asset(const std::string_view path, const std::span<const std::uint8_t> bytes) {
+    return classify(path, bytes);
+}
+
 } // namespace eon
