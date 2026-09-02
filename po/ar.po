@@ -28,7 +28,7 @@ msgid "PROJECT EON"
 msgstr "بروجكت إيون"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "حزمة العنوان الحديثة: "
 
 msgid "MODERN ASSET PACK"
 msgstr "حزمة أصول حديثة"
@@ -358,7 +358,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "أعلى/أسفل: صفحة   F10 / ESC: العودة إلى التشخيصات"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "صفحة"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "لا توجد إدخالات دوال مرتبطة بالتجزئة لهذا الإصدار."

@@ -39,7 +39,7 @@ msgid "PROJECT EON"
 msgstr "伊恩计划"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "现代标题包: "
 
 msgid "MODERN ASSET PACK"
 msgstr "现代资源包"
@@ -397,7 +397,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "上/下：页面   F10 / ESC: 返回诊断"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "页面"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "此发行版没有与哈希绑定的函数条目。"

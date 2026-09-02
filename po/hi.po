@@ -39,7 +39,7 @@ msgid "PROJECT EON"
 msgstr "प्रोजेक्ट इऑन"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "आधुनिक शीर्षक पैक: "
 
 msgid "MODERN ASSET PACK"
 msgstr "आधुनिक एसेट पैक"
@@ -358,7 +358,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "ऊपर/नीचे: पृष्ठ   F10 / ESC: निदान पर वापस"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "पृष्ठ"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "इस रिलीज़ के लिए हैश-बद्ध फ़ंक्शन प्रविष्टियाँ नहीं हैं।"

@@ -39,7 +39,7 @@ msgid "PROJECT EON"
 msgstr "프로젝트 이온"
 
 msgid "MODERN TITLE PACK: "
-msgstr "MODERN TITLE PACK: "
+msgstr "모던 타이틀 팩: "
 
 msgid "MODERN ASSET PACK"
 msgstr "모던 에셋 팩"
@@ -397,7 +397,7 @@ msgid "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS"
 msgstr "위/아래: 페이지   F10 / ESC: 진단으로 돌아가기"
 
 msgid "PAGE"
-msgstr "PAGE"
+msgstr "페이지"
 
 msgid "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE."
 msgstr "이 릴리스에 해시로 연결된 함수 항목이 없습니다."

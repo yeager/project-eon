@@ -205,6 +205,19 @@ class CatalogTests(unittest.TestCase):
                 self.assertTrue(all(catalog.get(label) not in {None, "", label}
                                     for label in labels))
 
+    def test_common_title_pack_and_page_labels_are_localized(self) -> None:
+        """These launcher labels are not original-game strings or asset names."""
+        for language in CATALOGS - {"en_GB"}:
+            with self.subTest(language=language, label="MODERN TITLE PACK"):
+                catalog = po_messages(PO / f"{language}.po")
+                self.assertNotEqual(catalog.get("MODERN TITLE PACK: "), "MODERN TITLE PACK: ")
+        # `PAGE` is already the correct French spelling; all other translated
+        # catalogues intentionally use their language's distinct UI label.
+        for language in CATALOGS - {"en_GB", "fr"}:
+            with self.subTest(language=language, label="PAGE"):
+                catalog = po_messages(PO / f"{language}.po")
+                self.assertNotEqual(catalog.get("PAGE"), "PAGE")
+
     def test_unselected_diagnostics_identity_is_translated_before_rendering(self) -> None:
         self.assertIn('diagnostics.release_identity = tr("NOT SELECTED");', LAUNCHER_SOURCE)
         source_catalog = po_messages(PO / "ProjectEon.pot")
