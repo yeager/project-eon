@@ -237,7 +237,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X (ТОЛЬКО ПАМЯТЬ)"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (ТОЛЬКО ПАМЯТЬ)"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "ВЫКЛ. (ОРИГИНАЛЬНЫЕ ПИКСЕЛИ)"
@@ -340,31 +340,31 @@ msgid "RECOVERED OPENING"
 msgstr "ВОССТАНОВЛЕННОЕ ВСТУПЛЕНИЕ"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "ДИАГНОСТИКА РАЗРАБОТЧИКА"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "ОТКРЫТЬ"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "ДИАГНОСТИКА СОВРЕМЕННОЙ СРЕДЫ ВЫПОЛНЕНИЯ"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: НАЗАД К НАСТРОЙКАМ"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "ИДЕНТИЧНОСТЬ ВЫПУСКА"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "ГРАНИЦЫ КАРТЫ ВОССТАНОВЛЕНИЯ"
 
 msgid "STARTUP BOUNDARY"
 msgstr "ГРАНИЦА ЗАПУСКА"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "ДОПУСК ТРАССИРОВКИ"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "НЕ ЗАГРУЖЕНО"
 
 msgid "NOT SELECTED"
 msgstr "НЕ ВЫБРАНО"
@@ -373,19 +373,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "ДОПУСК ВЫПОЛНЕНИЯ"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "НАСТРОЙКИ РЕНДЕРЕРА"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "ТЕМП КАДРОВ"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: ВКЛ."
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: ВЫКЛ."
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "ДИАГНОСТИКА ДОСТУПНА ТОЛЬКО ДЛЯ ЧТЕНИЯ; ИСХОДНЫЕ ДАННЫЕ НЕ ИЗМЕНЯЮТСЯ."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: КАРТА ФУНКЦИЙ   F10 / ESC: НАЗАД К НАСТРОЙКАМ"
