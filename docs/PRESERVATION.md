@@ -1931,6 +1931,16 @@ vector, or service result. This makes static disassembly facts available to
 the launcher/runtime diagnostic layer without upgrading them into dynamic
 trace evidence or gameplay parity.
 
+For native-engine development, a later ordinary Hatari/Capstone cross-check
+located the observed display transition's original bytes at Disk 1 offset
+`$9d800`, inside the separately verified state-1 raw interval beginning at
+`+$55800`. The bytes begin `60 00 09 c2`, disassembling as `BRA.W $b256` when
+observed at relocated `$a892`; the following local instructions prepare
+`Setscreen(-1, -1, 0)` through `TRAP #14`. This identifies a concrete original
+code/data edge to recover as a renderer-side native transition. The observed
+relocation itself remains an implementation target, not a guessed memory map,
+and no Hatari machine state is retained by Eon.
+
 For reproducibility, an ordinary Hatari 2.6.1 diagnostic boot was also run
 against the read-only mounted Replicants Disk 1 and a user-supplied TOS 1.62
 image. The respective SHA-256 values were
