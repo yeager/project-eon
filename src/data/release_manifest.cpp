@@ -21,6 +21,46 @@ constexpr std::array<ReleaseManifestEntry, 8> releases{{
     {"ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd", Game::millennium, Platform::amiga, "en", 425'912},
 }};
 
+constexpr std::array<DirectMediaSetMember, 31> millennium_dos_en_installed{{
+    {"2200AD.EXE", 54'391, "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57"},
+    {"2200AD4.BIN", 12'494, "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d"},
+    {"2200GX.EXE", 46'634, "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb"},
+    {"2200SAVE.I", 9'538, "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7"},
+    {"EG6TXT.BIN", 2'040, "063eefa58c98360d0ca2b4eaf9a77f8f9d13c619aee605dff6b0d0ee8b4a6b20"},
+    {"EGA640.BIN", 4'632, "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a"},
+    {"GX.LIB", 312'748, "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f"},
+    {"LAST.LIB", 18'117, "a3f5c0b447795881dd4cd5316a091ecc218b1bf563f567b6fe3f093f89781510"},
+    {"MCGA.BIN", 4'366, "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228"},
+    {"MILL.COM", 1'445, "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e"},
+    {"SCVX.DRV", 4'053, "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4"},
+    {"SFX1.VOC", 771, "5f796a7fe8bcf5113a65087f76853061f8d96065f9a3cbe66b6c61303b677a88"},
+    {"SFX2.VOC", 514, "7da8ec44f635e5968a7d909a63c2539991a720718ef325a65231ebbe52d3aed3"},
+    {"SFX3.VOC", 511, "95d2029cd015023057a3b911e2683b6612cf13aaad232e701dddd1713aa0126f"},
+    {"SFX4.VOC", 3'938, "3d814191f3d91bb7f9ba8788782c1772e4327310b057a97ee96ce8971b030a66"},
+    {"SFX5.VOC", 4'514, "3e87ca7997f0f8001ab575203c0878222eabfcdca7582c6fbd9c83ea3a85c11b"},
+    {"SFX6.VOC", 4'130, "834bc620d70aea606164c17758bb98aafc7eb43f3f12d62e5e4fea96b02771ed"},
+    {"SFX7.VOC", 2'850, "934d6607b2b042cad283dfd347efae1756fdeecb046a267b70ffe5f8605fd7e0"},
+    {"SFX8.VOC", 2'850, "073576f03b20a037469b7e40b380b9f592218db9edfd3ad5e0fa6dcc9398bf7d"},
+    {"SFX9.VOC", 1'634, "14561107b7d2cdb45ec3a5664654a9ba16f4b77ad821ae42d470b82f350b5e63"},
+    {"SFXA.VOC", 2'146, "5e3aab196c2199de9e045610cf1e5094e04619e78e2f27166d0b10a28a2b65c3"},
+    {"SFXB.VOC", 3'554, "e534ebc67c441b9eb6a944e8ddcb10042e22703847bc869bc2946a76f1157234"},
+    {"SFXC.VOC", 2'530, "a0b87f1e6e8038505cb67d3b0a730fe8e1307921ff816ebce2c92acc462fdca6"},
+    {"SFXD.VOC", 4'066, "004b74bfa6569f2bb86bd63f2c6e6bd97f692af8358591506c1745f174cf66f1"},
+    {"SFXE.VOC", 3'554, "a7f1984ff031b451262eb9f201080dd340a8fe0896f3bd57440c2e1c1c839ea4"},
+    {"SIBM.DRV", 2'871, "f3224caa43c1149907f852fa98816ed68c489b70f1ba795592d684d4e51f31b1"},
+    {"SSBL.DRV", 9'194, "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72"},
+    {"TITLE.LIB", 18'907, "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678"},
+    {"TITLES.EXE", 7'022, "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
+    {"VGA.BIN", 5'336, "a0483497aece13a001e405b6524388f8e35ad13174a36388ce6fee7eddf4fcf4"},
+    {"VGATXT.BIN", 1'024, "c31cb760d5f62a21b3baf9c09a6be413514780bd88eeac0273620e81b5d69318"},
+}};
+
+constexpr std::array<DirectMediaSetManifestEntry, 1> direct_media_sets{{
+    {"d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783",
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        Game::millennium, Platform::dos, "en", millennium_dos_en_installed},
+}};
+
 constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
     {"millennium-atari-equinox-direct-bootstrap", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 0x200},
     {"millennium-atari-equinox-direct-root-inventory", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
@@ -69,6 +109,8 @@ constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
 } // namespace
 
 std::span<const ReleaseManifestEntry> release_manifest() { return releases; }
+
+std::span<const DirectMediaSetManifestEntry> direct_media_set_manifest() { return direct_media_sets; }
 
 std::span<const ParserProfileManifestEntry> parser_profile_manifest() { return profiles; }
 

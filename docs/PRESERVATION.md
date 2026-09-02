@@ -64,9 +64,15 @@ The resulting complete-set SHA-256 is
 `d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783`.
 Its `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, `TITLE.LIB`, `GX.LIB`, video
 drivers, VOC bank, and initial save hashes match the existing English DOS
-parser-profile leaves. This is a real-media evidence record, not yet a runtime
-admission: direct-directory support must verify all 31 declared members on
-each admission and must never construct or cache an archive from them.
+parser-profile leaves. It is now a runtime admission source: the scanner only
+recognises it after every declared direct child is a non-symlink regular file
+with its exact byte count and SHA-256, and rechecks that complete set before
+each runtime admission. The set digest is deliberately separate from the
+logical English DOS release/profile identity
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`; a
+directory is never misrepresented as an outer archive. No ZIP is reconstructed,
+and no source member is unpacked, copied, cached beyond the bounded lifetime of
+the in-memory admission view, or mutated. Unrelated sibling files are not media.
 
 The five current native bootstrap/opening adapters—Millennium DOS/Amiga/Atari
 ST and Deuteros Amiga/Atari ST—are SDL-free engine factories behind that
@@ -77,11 +83,12 @@ an unproven handoff nor changes source bytes. Their resulting objects remain
 bounded bootstrap/opening evidence; moving them out of the SDL layer does not
 execute an unknown ABI or claim game parity.
 
-Admission is transactional. After the outer archive rehash succeeds, the
-coordinator constructs one bounded read-only `VerifiedReleaseMedia` view and
-uses that exact in-memory ZIP for every leaf requested by the selected
-platform adapter. It is destroyed when admission finishes; no archive is
-unpacked, written, cached, or retained as a replacement data source. The
+Admission is transactional. After either the outer archive rehash or complete
+direct-set revalidation succeeds, the coordinator constructs one bounded
+read-only `VerifiedReleaseMedia` view and uses that exact verified snapshot for
+every leaf requested by the selected platform adapter. It is destroyed when
+admission finishes; no archive is unpacked, written, cached, or retained as a
+replacement data source. The
 coordinator then publishes exactly one platform-appropriate engine adapter and
 its launch identity together. A failed parser/leaf admission leaves no active
 identity or prior adapter. SDL owns only renderer, audio-device, and host-input
