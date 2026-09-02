@@ -529,6 +529,7 @@ struct ModernRuntimeDiagnostics {
         std::string profile;
         std::string cpu;
         std::string source_asset_sha256;
+        std::string source_span_sha256;
         std::string source_offset;
         std::string runtime_address;
         std::string address_space;
@@ -849,6 +850,9 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
             std::cout << ",\"cpu\":"; write_json_string(std::cout, function.cpu);
             std::cout << ",\"source_asset_sha256\":";
             write_json_string(std::cout, function.source_asset_sha256);
+            std::cout << ",\"source_span_sha256\":";
+            write_json_string(std::cout, function.source_span_sha256.empty()
+                ? function.source_asset_sha256 : function.source_span_sha256);
             std::cout << ",\"source_offset\":"; write_json_string(std::cout, function.source_offset);
             std::cout << ",\"runtime_address\":"; write_json_string(std::cout, function.runtime_address);
             std::cout << ",\"address_space\":"; write_json_string(std::cout, function.address_space);
@@ -1208,9 +1212,12 @@ void draw_recovery_function_map_popup(SDL_Renderer* renderer,
         SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
         draw_text(renderer, 390, y, entry.id);
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
+        const auto span_identity = entry.source_span_sha256.empty()
+            ? entry.source_asset_sha256 : entry.source_span_sha256;
         draw_text(renderer, 390, y + 22.0F, entry.cpu + " / " + entry.source_offset + " -> "
             + entry.runtime_address + (entry.address_space == "runtime" ? "" : " [" + entry.address_space + "]")
-            + " / SHA " + truncated_identity_hash(entry.source_asset_sha256));
+            + " / OWNER " + truncated_identity_hash(entry.source_asset_sha256)
+            + " / SPAN " + truncated_identity_hash(span_identity));
         draw_text(renderer, 390, y + 44.0F, entry.profile + " / " + entry.evidence_level);
         draw_text(renderer, 390, y + 66.0F, entry.runtime_status + "; " + entry.uncertainty);
     }
@@ -4754,6 +4761,7 @@ int main(int argc, char** argv) {
         for (const auto& entry : report.functions) {
             diagnostics.recovery_functions.push_back({
                 entry.id, entry.parser_profile_id, entry.cpu, entry.source_asset_sha256,
+                entry.source_span_sha256,
                 entry.source_offset, entry.runtime_address, entry.address_space, entry.evidence_level,
                 entry.uncertainty, entry.runtime_status,
             });

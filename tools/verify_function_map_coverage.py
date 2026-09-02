@@ -52,6 +52,8 @@ def load_function_map(path: Path) -> list[dict]:
         ids.add(entry["id"])
         require_digest(entry.get("release_sha256"), "function release_sha256")
         require_digest(entry.get("source_asset_sha256"), "function source_asset_sha256")
+        if "source_span_sha256" in entry:
+            require_digest(entry["source_span_sha256"], "function source_span_sha256")
         if entry.get("cpu") not in {"i8086", "m68000"}:
             raise ReportError("function map has an unsupported CPU")
         space = entry.get("address_space", "runtime")
@@ -121,8 +123,9 @@ def coverage(entries: list[dict], declared: set[tuple[str, str, str, str, int, i
     bound: list[str] = []
     undeclared: list[str] = []
     for entry in entries:
+        range_hash = entry.get("source_span_sha256", entry["source_asset_sha256"])
         matches = [row for row in declared if row[:4] == (
-            entry["release_sha256"], entry["cpu"], entry["_address_space"], entry["source_asset_sha256"])]
+            entry["release_sha256"], entry["cpu"], entry["_address_space"], range_hash)]
         if any(start <= entry["_address"] < start + length for _, _, _, _, start, length in matches):
             bound.append(entry["id"])
         else:

@@ -61,6 +61,18 @@ class FunctionMapCoverageTests(unittest.TestCase):
             declared = TOOL.load_declared_ranges([self.write_sidecar(root)])
             self.assertEqual(TOOL.coverage(entries, declared), ([], ["entry"]))
 
+    def test_span_identity_can_bind_a_function_inside_a_broader_source_asset(self):
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            function_map = self.write_function_map(root)
+            payload = json.loads(function_map.read_text(encoding="utf-8"))
+            payload["entries"][0]["source_span_sha256"] = "b" * 64
+            payload["entries"][0]["source_asset_sha256"] = "d" * 64
+            function_map.write_text(json.dumps(payload), encoding="utf-8")
+            entries = TOOL.load_function_map(function_map)
+            declared = TOOL.load_declared_ranges([self.write_sidecar(root)])
+            self.assertEqual(TOOL.coverage(entries, declared), (["entry"], []))
+
 
 if __name__ == "__main__":
     unittest.main()

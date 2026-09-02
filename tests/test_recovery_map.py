@@ -28,6 +28,8 @@ class RecoveryMapTests(unittest.TestCase):
                 self.assertIn((entry["release_sha256"], entry["parser_profile_id"]), profiles)
                 self.assertEqual(entry["evidence_level"], "verified-static")
                 self.assertRegex(entry["source_asset_sha256"], r"^[0-9a-f]{64}$")
+                if "source_span_sha256" in entry:
+                    self.assertRegex(entry["source_span_sha256"], r"^[0-9a-f]{64}$")
                 self.assertTrue(entry["source_offset"])
                 address_space = entry.get("address_space", "runtime")
                 self.assertIn(address_space, {"runtime", "image-relative-unrelocated"})
@@ -44,6 +46,8 @@ class RecoveryMapTests(unittest.TestCase):
                 for field in ("id", "release_sha256", "parser_profile_id", "source_asset_sha256",
                               "source_offset", "runtime_address", "uncertainty", "runtime_status"):
                     self.assertIn(f'"{entry[field]}"', source)
+                if "source_span_sha256" in entry:
+                    self.assertIn(f'"{entry["source_span_sha256"]}"', source)
 
     def test_compiled_function_map_exactly_matches_json(self):
         function_map = json.loads((ROOT / "docs" / "function-map.json").read_text(encoding="utf-8"))
@@ -52,7 +56,7 @@ class RecoveryMapTests(unittest.TestCase):
             r'\{"([^"]+)", "([0-9a-f]{64})",\s+'
             r'"([^"]+)", Game::(deuteros|millennium), Platform::(amiga|atari_st|dos), "([a-z]+)", "([a-z0-9]+)",\s+'
             r'"([0-9a-f]{64})",\s+"([^"]+)", "([^"]+)", "([a-z-]+)",\s+'
-            r'"([^"]+)",\s+"([^"]+)", "([^"]+)"(?:,\s+"([^"]+)")?\}',
+            r'"([^"]+)",\s+"([^"]+)", "([^"]+)"(?:,\s+"([0-9a-f]{64})")?(?:,\s+"([^"]+)")?\}',
             source,
         )
         compiled = [
@@ -65,6 +69,7 @@ class RecoveryMapTests(unittest.TestCase):
                 "language": language,
                 "cpu": cpu,
                 "source_asset_sha256": source_asset_sha256,
+                "source_span_sha256": source_span_sha256 or "",
                 "source_offset": source_offset,
                 "runtime_address": runtime_address,
                 "evidence_level": evidence_level,
@@ -75,10 +80,11 @@ class RecoveryMapTests(unittest.TestCase):
             }
             for (entry_id, release_sha256, parser_profile_id, game, platform, language, cpu,
                  source_asset_sha256, source_offset, runtime_address, evidence_level, uncertainty,
-                 runtime_status, documentation_anchor, address_space) in rows
+                 runtime_status, documentation_anchor, source_span_sha256, address_space) in rows
         ]
         expected = [
-            {**entry, "address_space": entry.get("address_space", "runtime")}
+            {**entry, "source_span_sha256": entry.get("source_span_sha256", entry["source_asset_sha256"]),
+             "address_space": entry.get("address_space", "runtime")}
             for entry in function_map["entries"]
         ]
         self.assertEqual(compiled, expected)
