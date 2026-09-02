@@ -96,6 +96,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
                 self.assertIn(f"entry.{field}", popup)
         self.assertIn("rows_per_page = 3", popup)
         self.assertIn("UP/DOWN: PAGE", popup)
+        self.assertIn("truncated_diagnostic_value(entry.runtime_status + \"; \" + entry.uncertainty, 92U)", popup)
         self.assertNotIn("SDL_ShowOpenFileDialog", popup)
         self.assertNotIn("reference_trace", popup)
 
