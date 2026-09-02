@@ -375,7 +375,12 @@ if(BUILD_TESTING)
                 "$<TARGET_FILE:project-eon>"
                 "${EON_REAL_DATA_DIR}")
         set_tests_properties(cli-real-platform-starts PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
+            # This black-box scan opens every supplied archive and exercises
+            # each admitted platform.  It normally completes in under a
+            # minute; keep enough room for slow physical media while turning
+            # a future scanner or launch-admission hang into a useful failure.
+            TIMEOUT 180)
     endif()
 endif()
 
