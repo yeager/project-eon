@@ -28,6 +28,31 @@ PLACEHOLDER_PREFIX = re.compile(
     re.IGNORECASE,
 )
 
+# These are names or intentionally stable technical/product labels, not
+# untranslated launcher prose. Keeping this allow-list per catalogue makes a
+# newly added English fallback visible in review and in CI.
+INTENTIONALLY_IDENTICAL_TRANSLATIONS = {
+    "ar": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
+    "de": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "MODERN", "ORIGINAL", "ORIGINAL 4:3", "PROJECT EON", "SCANLINES"},
+    "el": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "PROJECT EON"},
+    "es": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "ORIGINAL", "ORIGINAL 4:3", "PROJECT EON"},
+    "fi": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "PROJECT EON"},
+    "fr": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "ORIGINAL", "ORIGINAL 4:3", "PAGE", "PROJECT EON"},
+    "hi": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
+    "it": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "PROJECT EON"},
+    "ja": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
+    "ko": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
+    "nl": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "MODERN", "PLATFORM: ", "PROJECT EON", "Platform: "},
+    "no": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "ORIGINAL", "ORIGINAL 4:3", "PROJECT EON"},
+    "pl": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "PROJECT EON"},
+    "pt_BR": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "ORIGINAL", "ORIGINAL 4:3", "PROJECT EON"},
+    "ru": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
+    "sv": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "MODERN", "ORIGINAL", "ORIGINAL 4:3", "PROJECT EON"},
+    "tr": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2", "MODERN", "PLATFORM: ", "PROJECT EON", "Platform: "},
+    "uk": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
+    "zh_CN": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
+}
+
 
 def po_messages(path: Path) -> dict[str, str]:
     """Parse the singular, UTF-8 PO subset accepted by src/i18n.cpp."""
@@ -234,6 +259,15 @@ class CatalogTests(unittest.TestCase):
                         PLACEHOLDER_PREFIX.match(translation),
                         f"{language} leaves a placeholder for {message_id!r}",
                     )
+
+    def test_non_english_catalogs_have_only_reviewed_identical_labels(self) -> None:
+        """All other equal source/translation pairs are untranslated UI regressions."""
+        for language, allowed in INTENTIONALLY_IDENTICAL_TRANSLATIONS.items():
+            with self.subTest(language=language):
+                catalog = po_messages(PO / f"{language}.po")
+                identical = {message_id for message_id, translation in catalog.items()
+                             if message_id and message_id == translation}
+                self.assertEqual(identical, allowed)
 
     def test_catalog_headers_and_keys_are_structurally_unambiguous(self) -> None:
         for language in sorted(CATALOGS):
