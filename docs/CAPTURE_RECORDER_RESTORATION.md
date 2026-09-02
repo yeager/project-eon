@@ -131,15 +131,38 @@ original media, project file, package, or `/tmp` path participated.
 
 ### 2026-09-02 experimental observer provenance
 
-State reached: `OBSERVER_BUILD_VERIFY` (not `INDEPENDENT_REVIEW` and not
-`PINNED_RECORDER`). A minimal V21 observer reconstruction was applied only to
-the external source tree named above. Its patch is retained outside the
+The first candidate reached `OBSERVER_FIX_REQUIRED` (not `INDEPENDENT_REVIEW`
+and not `PINNED_RECORDER`). A first minimal V21 observer reconstruction was applied
+only to the external source tree named above. Its patch is retained outside the
 checkout at
 `/home/yeager/.cache/project-eon-tools/recorder-recovery/observer-smoke-20260902/recorder-v21-experimental.patch`
 with SHA-256
 `479c043171fe9c5351340723a034bd2a80019d38e947fd1002d1b6b0775b0574`.
-The locally built experimental executable SHA-256 is
+The first locally built experimental executable SHA-256 was
 `5b9dd55d1c5eab1a34edd9561c60f7f11066ddd9492033cea50734a0dad60f51`.
+
+An independent review rejected that first candidate before admission because
+its opcode literals and record newline were escaped incorrectly, its preimage
+start was one byte too early, and its output handling needed stricter path and
+short-write handling. It must never be used.
+
+A corrected follow-up candidate is retained at
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/observer-smoke-20260902/recorder-v21-experimental-v2.patch`
+with SHA-256
+`72e0e931cfda96f1a5cf786cd59f761975b5b71a1a6021b8f64c18e594282679`.
+Its experimental executable SHA-256 is
+`3c5e205e163bd6166fa517dadea8298bfec91bb965843852ff868ff6dc7be69f`.
+
+The follow-up review also rejected v2 before admission: it read `DS:DX`
+before exact candidate identity had been established and removed a failed
+output by pathname after closing it. A third candidate moves that read behind
+the exact mapped CS:PC and opcode checks, and fail-closes on a write failure
+without pathname removal. Its external patch is
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/observer-smoke-20260902/recorder-v21-experimental-v3.patch`
+with SHA-256
+`eb9f21bd22b6d7105137b1c0495d87b02a894d4a5a2d8533d1dce81ba6aa793c`;
+its experimental executable SHA-256 is
+`26acf29a06ef53abb876b04d155540e38370daf5beb85fc8c51ffcd08bb98fce`.
 
 The delta records an entry-CS map for the two exact 8.3 executable names,
 arms only for the documented software `INT 21h AX=2593h` instruction
@@ -148,13 +171,23 @@ only after DOSBox-X's existing `RealSetVec` has installed vector `93h` with
 the expected `DS:DX`. It does not add guest writes, register/flag assignment,
 callback installation, input handling, debugger calls, scheduler calls or
 guest file operations. The output requires an absolute fresh path and is
-opened with exclusive, no-follow, owner-only permissions. A no-media
-`-version` smoke test with the output environment variable set produced no
-output file.
+opened with exclusive, no-follow, owner-only permissions; the corrected
+candidate also rejects `..` path components and fail-closes if a full write
+cannot complete. A no-media `-version` smoke test with the output
+environment variable set produced no output file.
 
-This is a reproducible candidate for independent review only. It is not the
-approved `18ec0e…` recorder, cannot be located by the Project Eon capture
+The v3 candidate completed an independent static review on 2026-09-02 and may
+enter `INDEPENDENT_REVIEW`. The review rechecked the exact base revision and
+both v3 hashes, opcode/PC identity, post-`RealSetVec` verification, one-shot
+disarming, bounded host output and the absence of added guest writes, register
+or flag changes, input, scheduling, callbacks and guest-file operations. A
+short or failed write intentionally leaves an invalid bounded sidecar rather
+than performing a pathname deletion; the globally disarmed observer cannot
+retry it. This review does not pin the candidate or authorize any media run.
+
+The current state is `INDEPENDENT_REVIEW` (not `PINNED_RECORDER`). It is not
+the approved `18ec0e…` recorder, cannot be located by the Project Eon capture
 tools, and must not be used with original media, a capture helper, or a native
-recovery claim. Independent review must additionally assess all added source
-lines, host-I/O error handling, release identity mapping and runtime behaviour
-before any candidate can be pinned.
+recovery claim. A separate pin decision must assess the persisted review
+record, exact binary and release-identity mapping before any candidate can be
+pinned.
