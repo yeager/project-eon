@@ -62,7 +62,7 @@ for package in "$@"; do
       require_755_directories rpm "$package"
       # Verify the generated package header/payload, then parse the exact
       # CPack-generated spec rather than a disconnected template.
-      rpm --checksig --nogpg "$package"
+      rpm --checksig --nosignature "$package"
       spec_root="$(dirname "$package")/_CPack_Packages"
       spec_file="$(find "$spec_root" -type f -path '*/SPECS/*.spec' -print -quit 2>/dev/null || true)"
       if [ -z "$spec_file" ]; then
