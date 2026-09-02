@@ -26,7 +26,7 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         self.assertIn("### Direct-media evidence boundary", documentation)
         self.assertIn("does not create a `ReleaseArchive`", documentation)
         self.assertIn("complete-set identity", documentation)
-        self.assertIn("unique unbound direct-media leaves", documentation)
+        self.assertIn("unique unbound direct-media leaves", documentation.replace("\n", " "))
         self.assertIn("now a runtime admission source", documentation)
         self.assertIn("directory is never misrepresented as an outer archive", documentation)
 

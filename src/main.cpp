@@ -813,6 +813,15 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(release.platform));
         std::cout << ",\"language\":"; write_json_string(std::cout, release.language);
         std::cout << ",\"sha256\":"; write_json_string(std::cout, release.sha256);
+        std::cout << ",\"media_layout\":";
+        write_json_string(std::cout, release.layout == eon::ReleaseMediaLayout::verified_directory
+            ? "verified-directory" : "zip-archive");
+        std::cout << ",\"direct_set_sha256\":";
+        if (const auto direct_set = eon::direct_media_set_sha256(release)) {
+            write_json_string(std::cout, *direct_set);
+        } else {
+            std::cout << "null";
+        }
         std::cout << ",\"coverage\":";
         write_json_string(std::cout, eon::name(diagnostics.coverage));
         std::cout << ",\"startup_boundary\":";
@@ -909,6 +918,8 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         << ",\"hash_rejected_candidates\":" << scan.hash_rejected_candidates
         << ",\"verified_occurrences\":" << scan.verified_occurrences
         << ",\"duplicate_occurrences\":" << scan.duplicate_occurrences
+        << ",\"verified_direct_set_occurrences\":" << scan.verified_direct_set_occurrences
+        << ",\"duplicate_direct_set_occurrences\":" << scan.duplicate_direct_set_occurrences
         << ",\"verified_unbound_direct_media_occurrences\":"
         << scan.verified_direct_media_occurrences
         << ",\"duplicate_unbound_direct_media_occurrences\":"
@@ -3724,6 +3735,9 @@ int main(int argc, char** argv) {
                 << eon::name(release.platform) << " / " << release.language << '\n'
                 << "          " << release.sha256 << '\n'
                 << "          " << release.path << '\n';
+            if (const auto direct_set = eon::direct_media_set_sha256(release)) {
+                std::cout << "          VERIFIED DIRECTORY SET  " << *direct_set << '\n';
+            }
             report_recovery_map(release);
             report_startup_boundary(release);
             report_atari_launch_boundary(release);
@@ -3789,10 +3803,12 @@ int main(int argc, char** argv) {
                 << report.hashed_candidates << " hashed; "
                 << report.hash_rejected_candidates << " hash-rejected; "
                 << report.verified_occurrences << " verified occurrences; "
+                << report.verified_direct_set_occurrences << " verified direct-set occurrences; "
                 << releases.size() << " unique releases; "
                 << report.verified_direct_media_occurrences << " verified unbound direct-media occurrences; "
                 << scanner->unbound_direct_media().size() << " unique unbound direct-media leaves; "
                 << report.duplicate_occurrences << " duplicate occurrences; "
+                << report.duplicate_direct_set_occurrences << " duplicate direct-set occurrences; "
                 << report.duplicate_direct_media_occurrences << " duplicate unbound direct-media occurrences; "
                 << report.symlink_rejected_entries << " symlink entries rejected; "
                 << report.unreadable_candidates << " unreadable candidates\n";
