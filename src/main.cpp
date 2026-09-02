@@ -3905,7 +3905,15 @@ int main(int argc, char** argv) {
             write_json_string(std::cout, active_launch()->release.language);
             std::cout << ",\"sha256\":";
             write_json_string(std::cout, active_launch()->release.sha256);
-            std::cout << "},\"coverage\":";
+            // The exact presentation is part of the normalized launch
+            // request. Report it beside the immutable release identity so a
+            // preservation workstation can prove an Original check did not
+            // silently become Modern (or vice versa), without serializing
+            // renderer state, pack paths, original bytes, or save data.
+            std::cout << "},\"presentation\":";
+            write_json_string(std::cout, request.presentation == eon::Presentation::original
+                ? "original" : "modern");
+            std::cout << ",\"coverage\":";
             const auto diagnostics = eon::runtime_diagnostics_for_release(active_launch()->release);
             write_json_string(std::cout, eon::name(diagnostics.coverage));
             std::cout << ",\"runtime_admission\":";
