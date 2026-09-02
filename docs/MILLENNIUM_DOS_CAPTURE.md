@@ -953,6 +953,21 @@ For the reviewed external DOSBox-X recorder, the repository includes a
 preflight helper that creates this read-only route but does not contain,
 build, or modify the recorder itself:
 
+If a previously reviewed recorder has been restored to an external cache but
+its path is unknown, find it by the pinned protocol hash before attempting a
+capture. The locator is read-only: it hashes only regular executable files
+below the explicit external root and never builds, launches, patches, copies,
+or accepts an ordinary DOSBox-X installation.
+
+```sh
+python3 tools/locate_capture_recorder.py \
+  --kind millennium-dos --recorder-protocol v21-int93-installation \
+  --root /home/you/.cache/project-eon-tools
+```
+
+Use the returned path verbatim as `--recorder`; a no-match result is not
+permission to substitute another binary.
+
 ```sh
 python3 tools/run_millennium_dos_capture.py \
   --source-release /absolute/path/to/Millennium-Return-to-Earth_DOS_EN.zip \

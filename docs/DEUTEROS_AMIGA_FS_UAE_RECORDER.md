@@ -136,6 +136,18 @@ must not be treated as a game-input or title-display capture. The optional
 
 ## Media and execution safeguards
 
+If the reviewed external FS-UAE recorder has been restored to a cache but its
+path is unknown, identify it by its pinned hash before capture. This lookup is
+read-only and does not accept a normal FS-UAE installation:
+
+```sh
+python3 tools/locate_capture_recorder.py \
+  --kind deuteros-amiga --root /home/you/.cache/project-eon-tools
+```
+
+Use only a returned path as `--recorder`; no match is an explicit capture
+boundary rather than permission to rebuild or substitute a recorder.
+
 Use only the recognised English Deuteros archive and its clean disk-1/disk-2
 hashes listed in [the capture status](DEUTEROS_AMIGA_TITLE_CAPTURE_STATUS.md).
 Expose the outer archive, each selected nested disk ZIP and Kickstart archive
