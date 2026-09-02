@@ -223,14 +223,18 @@ capture interval. The operator must press/release ordinary keys in that window
 only. Terminal input, `xdotool`, AUTOTYPE, debugger input, playback, and
 guest-memory injection remain forbidden.
 
-The known diagnostics-only `INT 6` boundary continues to end a run
-immediately. The current v13 route reaches it before a practical focus period,
-so a focus improvement cannot make it title-input evidence. It must be traced
-as an emulator/callback boundary rather than bypassed or deferred. During a
-future run that reaches a meaningful input window, `HOST INPUT OBSERVED` is a
-live signal that the protected receipt file has begun. The completed receipt is
-still validated only after process exit. The selected focus duration and live
-receipt flag are recorded in `run-status.txt`.
+The known diagnostics-only `INT 6` boundary ends only a
+`diagnostic-no-input` run immediately. A `physical-input` run stays open for
+its configured window after that receipt, unless DOSBox-X exits, the console
+safety cap is reached, or the window expires. This gives the visible operator
+the declared opportunity to produce a host-input receipt without handling the
+interrupt, injecting an event, or changing guest state. The current v13 route
+still reaches that emulator/callback boundary before a title poll, so keeping
+the window open does not make it title-input evidence. It must be traced rather
+than bypassed or deferred. `HOST INPUT OBSERVED` is a live signal that the
+protected receipt file has begun; the completed receipt is still validated only
+after process exit. The selected focus duration and live receipt flag are
+recorded in `run-status.txt`.
 
 ## Confirmed external `INT 6` callback boundary
 
