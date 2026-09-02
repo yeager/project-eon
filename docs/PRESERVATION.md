@@ -54,6 +54,20 @@ complete-set identity (ordered members, hashes, platform, language, and
 evidence) before it can reach `ReleaseRuntimeCoordinator`. No archive is
 constructed, unpacked, copied, or substituted in the meantime.
 
+### Millennium DOS installed-directory evidence
+
+The user-supplied `millennium-return-to-earth-2-2` directory under the default
+data root was measured read-only on 2026-09-02. It contains the 31 regular
+files from the recognised English DOS archive, with every filename, byte count
+and SHA-256 ordered lexically and serialized as `name<TAB>size<TAB>sha256<LF>`.
+The resulting complete-set SHA-256 is
+`d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783`.
+Its `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, `TITLE.LIB`, `GX.LIB`, video
+drivers, VOC bank, and initial save hashes match the existing English DOS
+parser-profile leaves. This is a real-media evidence record, not yet a runtime
+admission: direct-directory support must verify all 31 declared members on
+each admission and must never construct or cache an archive from them.
+
 The five current native bootstrap/opening adapters—Millennium DOS/Amiga/Atari
 ST and Deuteros Amiga/Atari ST—are SDL-free engine factories behind that
 boundary. They select only their named hash-verified leaf and return no
