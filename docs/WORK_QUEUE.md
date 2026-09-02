@@ -74,6 +74,20 @@ remain capped at three known bootstrap sites and retain zero host-delivery
 links. It is additional no-input reachability evidence only, not a guest
 input, title, display, audio, ABI, or gameplay claim.
 
+### 2026-09-02 recorder restoration state
+
+The external Millennium DOS v21 observer reconstruction reached
+`INDEPENDENT_REVIEW`: its exact external v3 patch and binary were rebuilt,
+smoke-tested without media, and independently reviewed for post-`RealSetVec`
+observation, bounded host output and absence of guest/input/scheduler changes.
+It remains an experimental candidate, not a pinned recorder. The locator,
+required recorder digest and capture helpers therefore continue to reject it;
+no original-media capture or native runtime recovery may use it. The next
+state-machine transition is a separate `PINNED_RECORDER` decision, not a
+replay, media run, or hash substitution. See
+[`CAPTURE_RECORDER_RESTORATION.md`](CAPTURE_RECORDER_RESTORATION.md) for exact
+candidate provenance and rejected predecessor records.
+
 ## Operating rule
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
