@@ -1219,7 +1219,13 @@ void draw_recovery_function_map_popup(SDL_Renderer* renderer,
             + " / OWNER " + truncated_identity_hash(entry.source_asset_sha256)
             + " / SPAN " + truncated_identity_hash(span_identity));
         draw_text(renderer, 390, y + 44.0F, entry.profile + " / " + entry.evidence_level);
-        draw_text(renderer, 390, y + 66.0F, entry.runtime_status + "; " + entry.uncertainty);
+        // Function-map uncertainty is preservation metadata, not original
+        // text. Keep it readable within the 720p modal instead of letting a
+        // long, honest boundary run off screen and conceal its status. The
+        // complete value remains available from --inspect-json; truncation
+        // here never changes admission or drops the row from diagnostics.
+        draw_text(renderer, 390, y + 66.0F,
+            truncated_diagnostic_value(entry.runtime_status + "; " + entry.uncertainty, 92U));
     }
     SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
     draw_text(renderer, 390, 630, tr("DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE."));
