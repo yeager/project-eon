@@ -66,3 +66,13 @@ previous reviewed recorder's normal-core and default-callback observation
 hooks. It cannot replace the required v21 recorder, and its state regresses
 from static `INDEPENDENT_REVIEW` to `OBSERVER_FIX_REQUIRED` until a complete
 base-recorder source/patch provenance is restored and independently reviewed.
+
+## Base-recorder recovery search
+
+The complete base-recorder patch was not present in the reachable Project Eon
+Git history, unreachable local Git objects, or the external recorder cache.
+On 2026-09-02, the project's retained GitHub Actions artifact inventory was
+also searched; it contains application/package and Gitleaks artifacts, but no
+DOSBox-X recorder binary, source tree, or patch payload. This is a negative
+provenance result, not permission to reconstruct guest behaviour or relax the
+pinned-recorder admission rule.
