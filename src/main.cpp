@@ -436,6 +436,11 @@ constexpr std::array<float, 3> display_aspect_ratios{{4.0F / 3.0F, 8.0F / 5.0F, 
 constexpr std::array<const char*, 3> display_aspect_names{{
     "ORIGINAL 4:3", "SQUARE PIXELS 8:5", "WIDESCREEN 16:9",
 }};
+// Stable machine-readable counterparts of the translated UI labels. These
+// describe renderer geometry only and are safe to emit in launch diagnostics.
+constexpr std::array<const char*, 3> display_aspect_identifiers{{
+    "original", "square-pixels", "widescreen",
+}};
 
 constexpr std::array<const char*, 5> modern_graphics_preset_names{{
     "CLEAN", "CRT", "CINEMATIC", "HIGH CONTRAST", "CUSTOM",
@@ -3913,6 +3918,13 @@ int main(int argc, char** argv) {
             std::cout << "},\"presentation\":";
             write_json_string(std::cout, request.presentation == eon::Presentation::original
                 ? "original" : "modern");
+            std::cout << ",\"display\":{\"resolution\":";
+            write_json_string(std::cout, std::to_string(request.display.width) + "x"
+                + std::to_string(request.display.height));
+            std::cout << ",\"aspect\":";
+            write_json_string(std::cout,
+                display_aspect_identifiers.at(request.display.aspect_ratio_index));
+            std::cout << '}';
             std::cout << ",\"coverage\":";
             const auto diagnostics = eon::runtime_diagnostics_for_release(active_launch()->release);
             write_json_string(std::cout, eon::name(diagnostics.coverage));
