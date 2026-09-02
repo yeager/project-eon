@@ -176,18 +176,39 @@ candidate also rejects `..` path components and fail-closes if a full write
 cannot complete. A no-media `-version` smoke test with the output
 environment variable set produced no output file.
 
-The v3 candidate completed an independent static review on 2026-09-02 and may
-enter `INDEPENDENT_REVIEW`. The review rechecked the exact base revision and
+The v3 candidate completed an independent static review on 2026-09-02 before
+the functional integration check. The review rechecked the exact base revision and
 both v3 hashes, opcode/PC identity, post-`RealSetVec` verification, one-shot
 disarming, bounded host output and the absence of added guest writes, register
 or flag changes, input, scheduling, callbacks and guest-file operations. A
 short or failed write intentionally leaves an invalid bounded sidecar rather
 than performing a pathname deletion; the globally disarmed observer cannot
-retry it. This review does not pin the candidate or authorize any media run.
+retry it. This review did not pin the candidate.
 
-The current state is `INDEPENDENT_REVIEW` (not `PINNED_RECORDER`). It is not
-the approved `18ec0e…` recorder, cannot be located by the Project Eon capture
-tools, and must not be used with original media, a capture helper, or a native
-recovery claim. A separate pin decision must assess the persisted review
-record, exact binary and release-identity mapping before any candidate can be
-pinned.
+The 2026-09-02 explicit experimental no-input run exposed an integration
+defect: this source tree contains only the new v3 observer on vanilla
+DOSBox-X, not the older recorder's normal-core/default-callback hooks. It
+therefore reproduced the documented unhandled `INT 6` console loop and
+generated neither legacy result streams nor an installer sidecar before the
+64 MiB console safety cap. The run is retained at
+`/home/yeager/.cache/project-eon-tools/millennium-dos-experimental-observer-20260902-02`;
+its receipt explicitly says `experimental-observer-not-for-recovery` and is
+not admissible. The current state is consequently `OBSERVER_FIX_REQUIRED`
+(not `PINNED_RECORDER`). The candidate is not the approved `18ec0e…`
+recorder, cannot be located by the Project Eon capture tools, and must not be
+used for a native recovery claim. A separate pin decision must assess the
+persisted review record, exact binary and release-identity mapping before any
+candidate can be pinned.
+
+### Experimental observer runs
+
+The reviewed v3 candidate may be run only with the explicit
+`--experimental-observer` capture-runner switch and the
+`v21-int93-installation` protocol. This is a visible, read-only emulator
+observation run, useful for testing the candidate's own bounded sidecar against
+real supplied media. Its receipt records
+`recorder_admission=experimental-observer-not-for-recovery`; the normal
+verifier rejects it. A maintainer may inspect its integrity with
+`verify_capture_receipt.py --allow-experimental-observer`, but that command
+does not promote it, alter a pinned hash, admit a trace, or authorize native
+recovery. The ordinary pin prerequisites above remain mandatory.

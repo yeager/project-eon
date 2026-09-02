@@ -1,15 +1,14 @@
 # Experimental recorder candidate manifest
 
 This manifest records the independently reviewed Millennium DOS v21 observer
-candidate. It is provenance for a future pin decision, not an approval to run
-a capture, read original media, update a required digest, or claim a recovered
-runtime path.
+candidate. It is provenance for a future pin decision, not an approval to
+update a required digest or claim a recovered runtime path.
 
 ## Candidate identity
 
 | Field | Value |
 | --- | --- |
-| State | `INDEPENDENT_REVIEW` |
+| State | `OBSERVER_FIX_REQUIRED` |
 | Protocol | `v21-int93-installation` |
 | DOSBox-X source revision | `234797680781567e18c374c9e62da24de5423db0` |
 | Observer patch SHA-256 | `eb9f21bd22b6d7105137b1c0495d87b02a894d4a5a2d8533d1dce81ba6aa793c` |
@@ -45,3 +44,25 @@ requires all of the following, separately recorded and reviewed:
    recorder for the finite protocol.
 4. A final independent review of those records before any required digest,
    locator result or capture helper admission is changed.
+
+## 2026-09-02 functional observer check
+
+At the maintainer's direction, the candidate was run in the explicit
+`--experimental-observer` no-input mode against the recognised, read-only
+English Millennium DOS archive. This run is intentionally not recovery
+admissible. Its external receipt directory is
+`/home/yeager/.cache/project-eon-tools/millennium-dos-experimental-observer-20260902-02`.
+It retains the exact candidate identity and archive identity, then stops at
+the console safety cap: `exit_status=125`,
+`termination_reason=console-safety-cap`, and 67,189,702 console bytes with
+SHA-256 `043006dbf5b63797b109b808edf9d498ab770778f5408cfba792d309bd9e7f61`.
+
+The candidate produced neither the historical `events.raw`/`results.raw`
+streams nor an installer sidecar before that boundary. The retained console
+shows the same repeated DOSBox-X unhandled `INT 6` route documented for the
+unmodified emulator. This establishes a concrete integration defect: the v3
+patch was applied to a vanilla DOSBox-X baseline and does not include the
+previous reviewed recorder's normal-core and default-callback observation
+hooks. It cannot replace the required v21 recorder, and its state regresses
+from static `INDEPENDENT_REVIEW` to `OBSERVER_FIX_REQUIRED` until a complete
+base-recorder source/patch provenance is restored and independently reviewed.

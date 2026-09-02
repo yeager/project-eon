@@ -338,7 +338,7 @@ def verify_millennium_int93_installation(fields: dict[str, str], directory: Path
         raise ValueError("INT 93h installation receipt mismatch")
 
 
-def verify(kind: str, directory: Path) -> None:
+def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = False) -> None:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
     fields = receipt(directory / "run-status.txt")
@@ -365,10 +365,28 @@ def verify(kind: str, directory: Path) -> None:
             raise ValueError("v21 receipt must retain its INT 93h installation recorder protocol")
         if version not in {"12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"} and recorder_protocol != "v11":
             raise ValueError("pre-v12 receipt must retain the v11 recorder protocol")
-        require_identity(fields, "recorder", (tool.RECORDER_PROTOCOLS[recorder_protocol][1], int(fields["recorder_bytes"])))
-        verify_file(fields, directory, "events_raw", "events.raw")
-        verify_file(fields, directory, "results_raw", "results.raw")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"} and fields.get("results_raw") == "present":
+        recorder_admission = fields.get("recorder_admission", "pinned")
+        if recorder_admission == "experimental-observer-not-for-recovery":
+            if not allow_experimental_observer:
+                raise ValueError("experimental observer receipt is not recovery-admissible")
+            expected_recorder = tool.EXPERIMENTAL_OBSERVER_PROTOCOLS.get(recorder_protocol)
+            if expected_recorder is None:
+                raise ValueError("experimental observer receipt uses an unreviewed protocol")
+        elif recorder_admission == "pinned":
+            expected_recorder = tool.RECORDER_PROTOCOLS[recorder_protocol][1]
+        else:
+            raise ValueError("unknown recorder admission state")
+        require_identity(fields, "recorder", (expected_recorder, int(fields["recorder_bytes"])))
+        experimental_observer = recorder_admission == "experimental-observer-not-for-recovery"
+        if experimental_observer:
+            if fields.get("events_raw") != "not-collected" or fields.get("results_raw") != "not-collected":
+                raise ValueError("experimental observer must not claim legacy raw streams")
+            if fields.get("title_input_checkpoint") != "not-collected":
+                raise ValueError("experimental observer must not claim title-input chronology")
+        else:
+            verify_file(fields, directory, "events_raw", "events.raw")
+            verify_file(fields, directory, "results_raw", "results.raw")
+        if not experimental_observer and version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"} and fields.get("results_raw") == "present":
             counts = tool.parse_raw_results(directory / "results.raw", recorder_protocol)
             shapes = ",".join(f"{key}:{counts[key]}" for key in sorted(counts))
             if (fields.get("results_raw_records"), fields.get("results_raw_shapes")) != (
@@ -381,7 +399,7 @@ def verify(kind: str, directory: Path) -> None:
             verify_millennium_machine_profile(fields, directory)
         if version in {"10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}:
             verify_millennium_termination(fields, directory, version)
-        if version in {"13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}:
+        if not experimental_observer and version in {"13", "14", "15", "16", "17", "18", "19", "20", "21", "22"}:
             if fields.get("results_raw") != "present":
                 raise ValueError("v13 title-input checkpoint requires a raw result log")
             verify_millennium_title_input_checkpoint(fields, directory)
@@ -395,8 +413,11 @@ def verify(kind: str, directory: Path) -> None:
             verify_file(fields, directory, "title_entry_transfer", "title-entry-transfer.raw")
             verify_millennium_title_entry_transfer(fields, directory)
         if version == "21" or (version == "22" and recorder_protocol == "v21-int93-installation"):
-            verify_file(fields, directory, "int93_installation", "int93-installation.raw")
-            verify_millennium_int93_installation(fields, directory)
+            if fields.get("int93_installation") == "present":
+                verify_file(fields, directory, "int93_installation", "int93-installation.raw")
+                verify_millennium_int93_installation(fields, directory)
+            elif fields.get("int93_installation") != "absent":
+                raise ValueError("INT 93h installation receipt has an invalid optional state")
         if version == "22":
             verify_capture_intent(fields, tool)
     else:
@@ -439,8 +460,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kind", choices=("millennium-dos", "deuteros-amiga"), required=True)
     parser.add_argument("--capture", type=Path, required=True)
+    parser.add_argument("--allow-experimental-observer", action="store_true",
+                        help="Verify integrity of an unpinned observer run; never admits it for recovery")
     args = parser.parse_args()
-    try: verify(args.kind, args.capture)
+    try: verify(args.kind, args.capture,
+                allow_experimental_observer=args.allow_experimental_observer)
     # The bounded grammar helpers are intentionally shared with the capture
     # runners. They reject malformed recorder lines with their own
     # RuntimeError-derived CaptureError, which must be a normal fail-closed

@@ -52,6 +52,14 @@ RECORDER_PROTOCOLS = {
     # checking its instruction preimage.  It remains diagnostics-only.
     "v21-int93-installation": ("22", "18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1"),
 }
+# This binary has completed the independent *static* observer review but has
+# not completed the release/pin process.  Keeping it separate from
+# RECORDER_PROTOCOLS is deliberate: a normal capture cannot accidentally
+# treat an experimental run as recovery-admissible evidence.
+EXPERIMENTAL_OBSERVER_SHA256 = "26acf29a06ef53abb876b04d155540e38370daf5beb85fc8c51ffcd08bb98fce"
+EXPERIMENTAL_OBSERVER_PROTOCOLS = {
+    "v21-int93-installation": EXPERIMENTAL_OBSERVER_SHA256,
+}
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
 # A new capture must state whether it is an intentionally no-input diagnostic
@@ -686,6 +694,17 @@ def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     return labels
 
 
+def experimental_observer_raw_status() -> str:
+    """Describe deliberately uncollected legacy streams without fabricating them.
+
+    The v3 observer owns only the bounded INT 93h installer sidecar.  It does
+    not implement the unrelated historical event/results observers, so an
+    experimental protocol test must record their absence rather than fail as
+    though a pinned multi-stream recorder had omitted a required file.
+    """
+    return "events_raw=not-collected\nresults_raw=not-collected\n"
+
+
 def title_input_poll_ordinals(path: Path, recorder_protocol: str = "v11") -> list[int]:
     """Read v13 chronology records without assigning a DOS input result.
 
@@ -923,6 +942,12 @@ def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
     receipt_version, recorder_hash = RECORDER_PROTOCOLS[args.recorder_protocol]
+    recorder_admission = "pinned"
+    if args.experimental_observer:
+        if args.recorder_protocol not in EXPERIMENTAL_OBSERVER_PROTOCOLS:
+            raise CaptureError("experimental observer is only available for its reviewed finite protocol")
+        recorder_hash = EXPERIMENTAL_OBSERVER_PROTOCOLS[args.recorder_protocol]
+        recorder_admission = "experimental-observer-not-for-recovery"
     recorder_identity = validate_recorder(recorder, recorder_hash)
     output = reject_unsafe_output(source, Path(args.output))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
@@ -1033,7 +1058,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         receipt_status = input_receipt_status(output / "host-input-receipt.raw")
         intent_status = capture_intent_status(args.capture_intent, receipt_status,
                                               live_input_observed)
-        observation_status = (raw_observation_status(output / "events.raw", "events_raw", args.recorder_protocol)
+        observation_status = (experimental_observer_raw_status() if args.experimental_observer else
+                              raw_observation_status(output / "events.raw", "events_raw", args.recorder_protocol)
                               + raw_observation_status(output / "results.raw", "results_raw", args.recorder_protocol))
         history_status = normal_core_history_status(output / "normal-core-history.raw",
                                                     args.recorder_protocol)
@@ -1048,11 +1074,13 @@ def run_capture(args: argparse.Namespace) -> Path:
             output / "results.raw", args.recorder_protocol, termination_reason)
         installation_status = int93_installation_status(output / "int93-installation.raw",
                                                         args.recorder_protocol)
-        title_checkpoint_status = title_input_checkpoint_status(output / "results.raw",
-            output / "host-input-receipt.raw", args.recorder_protocol)
+        title_checkpoint_status = ("title_input_checkpoint=not-collected\n" if args.experimental_observer else
+                                   title_input_checkpoint_status(output / "results.raw",
+                                       output / "host-input-receipt.raw", args.recorder_protocol))
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={receipt_version}\n"
                         f"recorder_protocol={args.recorder_protocol}\n"
+                        f"recorder_admission={recorder_admission}\n"
                         f"focus_settle_seconds={args.focus_settle_seconds}\n"
                         f"host_input_observed_during_capture={'true' if live_input_observed else 'false'}\n"
                         f"exit_status={exit_status}\ntermination_reason={termination_reason}\n"
@@ -1102,6 +1130,9 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="Explicit DOSBox-X video-machine profile (default: svga_s3)")
     parser.add_argument("--recorder-protocol", choices=tuple(sorted(RECORDER_PROTOCOLS)), default="v11",
                         help="Reviewed recorder output grammar (default: v11)")
+    parser.add_argument("--experimental-observer", action="store_true",
+                        help=("Run only the separately reviewed, unpinned observer for a protocol test. "
+                              "Its receipt is never recovery-admissible."))
     return parser.parse_args(argv)
 
 
