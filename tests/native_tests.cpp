@@ -1582,7 +1582,11 @@ int main() {
         const auto inspect = eon::parse_command_line(2, inspect_args);
         assert(inspect.request && inspect.request->inspect_data);
         char static_control_flow_option[] = "--static-control-flow-sidecar";
+#if defined(_WIN32)
+        char external_static_control_flow[] = "C:\\project-eon-cache\\flow.json";
+#else
         char external_static_control_flow[] = "/var/cache/project-eon/flow.json";
+#endif
         char inspect_json_option[] = "--inspect-json";
         char* static_control_flow_args[] = {program, inspect_json_option,
             static_control_flow_option, external_static_control_flow};

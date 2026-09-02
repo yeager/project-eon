@@ -548,11 +548,11 @@ set(CPACK_PACKAGE_CONTACT "https://github.com/yeager/project-eon")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
     "SDL3 reimplementation project for Millennium 2.2 and Deuteros")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-# The launcher is exposed as a Game/Simulation desktop application and the
-# RPM metadata carries the equivalent Amusements/Games classification.  Keep
-# the Debian control field aligned with that user-facing package identity;
-# ``utils`` would incorrectly classify it in Debian archives and mentors.
-set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+# Project Eon ships a preservation runtime but no game data.  Debian's
+# archive policy rightfully rejects an empty ``games`` package, so classify
+# the standalone media-inspection/launcher utility under ``utils`` while the
+# desktop entry may still advertise its Game/Simulation category.
+set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER
     "Daniel Nylander <1206564+yeager@users.noreply.github.com>")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/yeager/project-eon")

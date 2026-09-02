@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import textwrap
 import unittest
 
@@ -104,7 +105,8 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("Verify AppImage contents contain no game media", workflow)
         self.assertIn("package/appimage/*.AppImage", workflow)
 
-    @unittest.skipIf(os.name == "nt", "the AppImage verifier requires ELF loader tracing")
+    @unittest.skipUnless(sys.platform.startswith("linux"),
+                         "the AppImage verifier fixture requires Linux ELF linker flags")
     def test_appimage_verifier_proves_the_extracted_private_runtime_closure(self) -> None:
         """Exercise the loader-closure path without an AppImage build tool.
 
@@ -238,7 +240,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("directories that are not 0755", source)
         self.assertIn("rpmspec --parse", source)
         self.assertIn("rpmlint --strict", source)
-        self.assertIn("rpm --checksig --nogpg", source)
+        self.assertIn("rpm --checksig --nosignature", source)
 
     def test_debian_package_generates_system_dependencies_without_host_sdl(self) -> None:
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
@@ -247,7 +249,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS", cmake)
         self.assertIn("CPACK_DEBIAN_PACKAGE_MAINTAINER", cmake)
         self.assertIn("CPACK_DEBIAN_FILE_NAME DEB-DEFAULT", cmake)
-        self.assertIn('set(CPACK_DEBIAN_PACKAGE_SECTION "games")', cmake)
+        self.assertIn('set(CPACK_DEBIAN_PACKAGE_SECTION "utils")', cmake)
         self.assertIn("SDLTTF_VENDORED OFF", cmake)
         self.assertIn("if(SDLTTF_VENDORED)", cmake)
         runtime_script = (ROOT / "cmake" / "package_linux_runtime.cmake.in").read_text(
