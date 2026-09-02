@@ -1,4 +1,5 @@
 import json
+import hashlib
 from pathlib import Path
 import re
 import unittest
@@ -53,6 +54,28 @@ class ReleaseManifestTests(unittest.TestCase):
             for entry_id, release_sha256, leaf_sha256, leaf_size, offset, length in rows
         ]
         self.assertEqual(compiled, manifest["parser_profiles"])
+
+    def test_direct_media_set_is_complete_canonical_and_profile_bound(self):
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
+        sets = manifest["direct_media_sets"]
+        self.assertEqual(len(sets), 1)
+        direct_set = sets[0]
+        self.assertEqual(direct_set["schema"], "project-eon.direct-media-set/v1")
+        self.assertEqual(direct_set["content_release_sha256"],
+                         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123")
+        members = direct_set["members"]
+        self.assertEqual(len(members), 31)
+        self.assertEqual([member["name"] for member in members],
+                         sorted(member["name"] for member in members))
+        self.assertEqual(len({member["name"] for member in members}), len(members))
+        for member in members:
+            self.assertRegex(member["name"], r"^[A-Z0-9]+\.[A-Z0-9]+$")
+            self.assertGreater(member["size"], 0)
+            self.assertRegex(member["sha256"], r"^[0-9a-f]{64}$")
+        canonical = "".join(
+            f'{member["name"]}\t{member["size"]}\t{member["sha256"]}\n'
+            for member in members).encode("ascii")
+        self.assertEqual(hashlib.sha256(canonical).hexdigest(), direct_set["set_sha256"])
 
     def test_manifest_explicitly_keeps_variant_profiles_separate(self):
         manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
