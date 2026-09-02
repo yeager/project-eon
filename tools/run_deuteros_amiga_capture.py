@@ -177,7 +177,10 @@ def validate_identity(path: Path, label: str, expected_hash: str, expected_size:
 def validate_recorder(path: Path) -> tuple[str, int]:
     digest, size = sha256_file(path)
     if digest != EXPECTED_RECORDER_SHA256:
-        raise CaptureError("recorder hash does not match the reviewed FS-UAE binary")
+        raise CaptureError(
+            "recorder hash does not match the reviewed FS-UAE binary "
+            f"(expected SHA-256 {EXPECTED_RECORDER_SHA256}, got {digest}); select "
+            "the reviewed external recorder rather than a normal FS-UAE installation")
     return digest, size
 
 
