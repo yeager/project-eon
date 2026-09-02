@@ -4844,6 +4844,15 @@ frame interpolation, or game rule. Once the `$0f` event is returned it stops
 permanently; later host time cannot manufacture opening ticks, PCM, title
 execution, or bypass the lifecycle controller.
 
+While that opening state is active, `DeuterosAmigaOpeningCheckpoint` exposes
+only a read-only native self-consistency record: scheduler tick, VBL counter,
+the recovered input-gate fact, and SHA-256 values for the already composed
+indexed and RGBA frames. It is absent before a first frame and after the title
+handoff, cannot tick the VM or retain media, and is not an emulator trace,
+capture receipt, title-display comparison, or parity claim. Its purpose is to
+provide exact future capture-matching checkpoints without crossing the Exec or
+graphics ABI boundary.
+
 The terminal handoff also executes only the title entry's proven profile-one
 prefix in memory. Bootstrap `$12b0e` (ADF `+0x2f0e`, 14 bytes SHA-256
 `858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd`)

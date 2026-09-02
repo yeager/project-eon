@@ -81,6 +81,12 @@ std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amig
     return events;
 }
 
+std::optional<DeuterosAmigaOpeningCheckpoint>
+NativeSessionController::deuteros_amiga_opening_checkpoint() const {
+    if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
+    return runtime_.coordinator().deuteros_amiga_opening_checkpoint();
+}
+
 void NativeSessionController::begin_return_to_menu() {
     state_ = NativeSessionState::returning_to_menu;
 }

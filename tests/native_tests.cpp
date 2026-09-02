@@ -3822,6 +3822,7 @@ int main() {
             eon::NativeSessionController opening_controller;
             assert(opening_controller.launch_direct(opening_request, releases).accepted());
             assert(opening_controller.state() == eon::NativeSessionState::deuteros_amiga_opening);
+            assert(!opening_controller.deuteros_amiga_opening_checkpoint());
             eon::DeuterosAmigaOpeningRunner opening_runner(opening_controller, 1'000);
             assert(opening_runner.advance(1'019).events.empty());
             assert(opening_controller.observe_input(
@@ -3829,6 +3830,11 @@ int main() {
                 == eon::RuntimeInputDisposition::observed);
             const auto first_advance = opening_runner.advance(1'020);
             assert(first_advance.events.size() == 1 && !first_advance.resynchronized);
+            const auto first_checkpoint = opening_controller.deuteros_amiga_opening_checkpoint();
+            assert(first_checkpoint && first_checkpoint->tick > 0
+                && first_checkpoint->vblank_counter > 0
+                && first_checkpoint->indexed_frame_sha256.size() == 64
+                && first_checkpoint->rgba_frame_sha256.size() == 64);
             const auto catch_up = opening_runner.advance(1'100);
             assert(catch_up.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
                 && !catch_up.resynchronized);
@@ -3860,6 +3866,7 @@ int main() {
                 == "DEUTEROS AMIGA TITLE STAGE");
             assert(opening_controller.state()
                 == eon::NativeSessionState::deuteros_amiga_title_stage_boundary);
+            assert(!opening_controller.deuteros_amiga_opening_checkpoint());
             assert(opening_controller.coordinator().deuteros_amiga());
             const auto& admitted_title_stage = opening_controller.coordinator()
                 .deuteros_amiga()->title_stage_session();

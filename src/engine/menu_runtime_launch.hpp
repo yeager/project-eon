@@ -40,6 +40,7 @@ public:
     [[nodiscard]] bool requires_revocation_for(const LauncherSourceIdentity& source) const;
     void reset();
     [[nodiscard]] ReleaseRuntimeCoordinator& coordinator() { return coordinator_; }
+    [[nodiscard]] const ReleaseRuntimeCoordinator& coordinator() const { return coordinator_; }
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return coordinator_.active(); }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return coordinator_.admission(); }
 

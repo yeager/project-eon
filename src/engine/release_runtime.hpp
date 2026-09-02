@@ -98,6 +98,10 @@ public:
     // coordinator-owned held observation. All non-opening sessions return no
     // result, so SDL cannot accidentally tick a different platform adapter.
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    // Query only: checkpoints never tick or retain a frame outside the active
+    // recovered opening session.
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
+    deuteros_amiga_opening_checkpoint() const;
     [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
         return millennium_amiga_.get();
     }

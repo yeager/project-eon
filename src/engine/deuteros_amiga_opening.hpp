@@ -11,9 +11,21 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace eon {
+
+// A native self-consistency checkpoint for the already recovered opening
+// only. It is not emulator output, a capture receipt, title-stage evidence or
+// a parity claim. Hashes describe frames already composed from the exact ADFs.
+struct DeuterosAmigaOpeningCheckpoint {
+    std::uint64_t tick = 0;
+    std::uint32_t vblank_counter = 0;
+    bool input_gate = false;
+    std::string indexed_frame_sha256;
+    std::string rgba_frame_sha256;
+};
 
 // Live, original-data-backed opening sequence. It owns the ADF image and all
 // VM state, advances the verified VBL source once per scheduler tick, and
@@ -28,6 +40,7 @@ public:
 
     [[nodiscard]] DeuterosAmigaVmEvents tick(bool input_pressed = false);
     [[nodiscard]] std::optional<std::vector<std::uint8_t>> rgba_frame() const;
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint> checkpoint() const;
     [[nodiscard]] bool frame_composed_on_last_tick() const { return frame_composed_on_last_tick_; }
     [[nodiscard]] std::uint64_t ticks() const { return ticks_; }
     [[nodiscard]] std::uint32_t vblank_counter() const { return random_.vblank_counter(); }
