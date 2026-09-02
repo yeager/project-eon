@@ -979,6 +979,20 @@ def main() -> int:
     # An explicit Modern-pack path is part of the requested renderer input.
     # A rejected path must fail the CLI route rather than turn into a green
     # Original-only launch check with the pack silently discarded.
+    original_ignores_modern_pack = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--presentation", "original",
+            "--modern-pack", str(temporary_root / "missing-pack.eonmodern"), "--launch-check"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    if (original_ignores_modern_pack.returncode != 0
+            or "LAUNCH CHECK  " not in original_ignores_modern_pack.stdout
+            or "Modern asset pack" in original_ignores_modern_pack.stderr):
+        raise SystemExit(
+            "Original launch check accessed an irrelevant Modern pack:\n"
+            f"{original_ignores_modern_pack.stdout}\n{original_ignores_modern_pack.stderr}"
+        )
+
     rejected_modern_pack = subprocess.run(
         (str(executable), "--data", str(data_directory), "--game", "millennium",
             "--platform", "dos", "--presentation", "modern",
