@@ -87,3 +87,44 @@ unblocked work, but it must not ask again for generic emulator installation:
 the installed normal emulators are known and insufficient. The next required
 input is either an absolute path to an already pinned recorder, or an external
 reviewed source/patch/build which produces the exact documented digest.
+
+## Recorder restoration state machine
+
+Recorder work is an explicit state machine. A transition may only advance when
+its listed evidence exists; a failure remains recorded at its current state and
+does not weaken an admission rule.
+
+```text
+LOCATOR_EMPTY
+  -> RECORDER_SOURCE_READY
+  -> BASELINE_BUILD
+  -> BASELINE_VERIFY
+  -> OBSERVER_PATCH
+  -> INDEPENDENT_REVIEW
+  -> PINNED_RECORDER
+  -> VISIBLE_CAPTURE
+  -> RECEIPT_VERIFIED
+  -> TRACE_ADMITTED
+  -> NATIVE_ENGINE_RECOVERY
+```
+
+`BASELINE_VERIFY` proves only that a known source revision can make an
+executable on a stated host. `OBSERVER_PATCH` must be a minimal read-only
+observation change. `INDEPENDENT_REVIEW` must verify that it neither injects
+input nor guest state, changes guest timing, or records an unbounded/private
+payload. Only `PINNED_RECORDER` may change one of the required SHA-256 values
+above, and only after the review record is available. An experimental baseline
+or observer must never be passed to a capture helper.
+
+### 2026-09-02 baseline provenance
+
+State reached: `BASELINE_VERIFY` (not `PINNED_RECORDER`). The external cache
+source was DOSBox-X revision `234797680781567e18c374c9e62da24de5423db0`, built
+with `g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0`. The resulting local baseline
+SHA-256 was
+`b4a0727a4229d7581e584536b02488796ad0f1a8e7b84dfdd2f3841dab8eb509`.
+The upstream static-SDL link required an explicit trailing `-lGL`; no source
+file was changed. This digest deliberately does not match an approved recorder
+digest, so the locator must continue to reject it. All source, build and
+temporary paths were under `/home/yeager/.cache/project-eon-tools/`; no
+original media, project file, package, or `/tmp` path participated.
