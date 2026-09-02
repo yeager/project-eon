@@ -292,6 +292,7 @@ def main() -> int:
                     "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
                 },
                 "presentation": "original",
+                "display": {"resolution": "1280x720", "aspect": "original"},
                 "coverage": "RECOVERED STARTUP",
                 "runtime_admission": "READY",
                 "runtime_session": {
@@ -396,6 +397,7 @@ def main() -> int:
                 "language": language, "sha256": sha256,
             },
             "presentation": "original",
+            "display": {"resolution": "1280x720", "aspect": "original"},
             "coverage": coverage,
             "runtime_admission": "READY",
             "runtime_session": {
@@ -455,6 +457,30 @@ def main() -> int:
             "Modern launch check did not retain the Original release/session identity:\n"
             f"{modern_launch_check.stdout}\n{modern_launch_check.stderr}"
         )
+
+    # Resolution and aspect ratio are explicit renderer geometry. A widescreen
+    # request must be visible in the diagnostic while preserving the same
+    # original identity and recovered session in both presentation modes.
+    for presentation in ("original", "modern"):
+        display_launch = subprocess.run(
+            (str(executable), "--data", str(data_directory), "--game", "millennium",
+                "--platform", "dos", "--presentation", presentation,
+                "--resolution", "1920x1080", "--aspect", "widescreen", "--launch-check-json"),
+            env=environment, check=False, capture_output=True, text=True,
+        )
+        try:
+            display_payload = json.loads(display_launch.stdout)
+        except json.JSONDecodeError as error:
+            raise SystemExit(f"{presentation} display launch check did not emit JSON: {error}") from error
+        if (display_launch.returncode != 0
+                or display_payload.get("presentation") != presentation
+                or display_payload.get("display") != {"resolution": "1920x1080", "aspect": "widescreen"}
+                or display_payload.get("release") != launch_check_payload["release"]
+                or display_payload.get("runtime_session") != launch_check_payload["runtime_session"]):
+            raise SystemExit(
+                f"{presentation} display request changed the recovered launch session:\n"
+                f"{display_launch.stdout}\n{display_launch.stderr}"
+            )
 
     # A hash-language mismatch must fail before an SDL loop, rather than
     # normalize one field from a different recognised DOS release.  No output

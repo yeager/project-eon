@@ -267,8 +267,8 @@ rendering, audio, input, game timing, or save activity:
 
 `--launch-check-json` emits the same result as
 `project-eon.launch-check/v1`, including the exact release SHA-256 and the
-explicit `original` or `modern` presentation choice, without creating SDL
-resources.
+explicit `original` or `modern` presentation choice plus renderer-only
+resolution/aspect settings, without creating SDL resources.
 
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It
