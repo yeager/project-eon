@@ -603,3 +603,41 @@ msgstr ""
 
 msgid "STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."
 msgstr ""
+
+#: src/engine/runtime_session.cpp
+msgid "MILLENNIUM DOS TITLE"
+msgstr ""
+
+msgid "MILLENNIUM DOS SOUND DRIVER BOUNDARY"
+msgstr ""
+
+msgid "MILLENNIUM DOS TITLE HANDOFF BOUNDARY"
+msgstr ""
+
+msgid "MILLENNIUM AMIGA BOOTSTRAP"
+msgstr ""
+
+msgid "MILLENNIUM ATARI ST BOOTSTRAP"
+msgstr ""
+
+msgid "DEUTEROS AMIGA OPENING"
+msgstr ""
+
+msgid "DEUTEROS AMIGA TITLE STAGE"
+msgstr ""
+
+msgid "DEUTEROS ATARI ST BOOTSTRAP"
+msgstr ""
+
+msgid "UNKNOWN"
+msgstr ""
+
+msgid "RECOVERED PRESENTATION BOUNDARY"
+msgstr ""
+
+msgid "BOOTSTRAP BOUNDARY"
+msgstr ""
+
+#: src/main.cpp
+msgid "LIFECYCLE STATE"
+msgstr ""
