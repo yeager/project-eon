@@ -1608,7 +1608,9 @@ int main() {
             && *deuteros_modern_pack.request->modern_pack_manifest == modern_manifest);
         char* modern_pack_missing_presentation[] = {program, game_option, millennium, platform_option, dos,
             modern_pack_option, modern_manifest};
-        assert(!eon::parse_command_line(7, modern_pack_missing_presentation).request);
+        const auto original_pack_ignored = eon::parse_command_line(7, modern_pack_missing_presentation);
+        assert(original_pack_ignored.request && original_pack_ignored.request->modern_pack_manifest
+            && original_pack_ignored.request->presentation == eon::Presentation::original);
         char* modern_pack_with_inspect[] = {program, inspect_option, game_option, millennium, platform_option, dos,
             presentation_option, modern, modern_pack_option, modern_manifest};
         assert(!eon::parse_command_line(10, modern_pack_with_inspect).request);
