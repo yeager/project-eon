@@ -34,6 +34,7 @@ struct RuntimeDiagnosticFunction {
     std::string parser_profile_id;
     std::string cpu;
     std::string source_asset_sha256;
+    std::string source_span_sha256;
     std::string source_offset;
     std::string runtime_address;
     std::string evidence_level;

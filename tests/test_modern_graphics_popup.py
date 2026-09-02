@@ -90,7 +90,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
     def test_function_map_is_paged_read_only_provenance_not_a_hook_table(self) -> None:
         popup_start = SOURCE.index("void draw_recovery_function_map_popup")
         popup = SOURCE[popup_start:SOURCE.index("bool inside(", popup_start)]
-        for field in ("id", "profile", "cpu", "source_asset_sha256", "source_offset",
+        for field in ("id", "profile", "cpu", "source_asset_sha256", "source_span_sha256", "source_offset",
                       "runtime_address", "evidence_level", "uncertainty", "runtime_status"):
             with self.subTest(field=field):
                 self.assertIn(f"entry.{field}", popup)

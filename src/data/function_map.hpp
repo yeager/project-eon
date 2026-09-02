@@ -22,6 +22,8 @@ struct FunctionMapEntry {
     Platform platform;
     std::string_view language;
     std::string_view cpu;
+    // The owning original object and the externally declared control-flow
+    // range are distinct identities. They may be equal for a complete leaf.
     std::string_view source_asset_sha256;
     std::string_view source_offset;
     std::string_view runtime_address;
@@ -29,6 +31,7 @@ struct FunctionMapEntry {
     std::string_view uncertainty;
     std::string_view runtime_status;
     std::string_view documentation_anchor;
+    std::string_view source_span_sha256;
     std::string_view address_space = "runtime";
 };
 

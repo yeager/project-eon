@@ -31,6 +31,7 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         body = MAIN[start:MAIN.index("SDL_FRect aspect_viewport", start)]
         self.assertIn(r'\"project-eon.inspect/v1\"', body)
         self.assertIn(r'\"function_map\"', body)
+        self.assertIn(r'\"source_span_sha256\"', body)
         self.assertIn(r'\"coverage\"', body)
         self.assertIn(r'\"source_kind\"', body)
         self.assertIn(r'\"scanned_candidates\"', body)

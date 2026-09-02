@@ -122,7 +122,11 @@ function-map cross-check for the releases named by that sidecar:
 `function_map_direct_range_bindings` and
 `function_map_not_declared_by_sidecar`. A direct binding requires the exact
 effective release identity, CPU, address space, leaf SHA-256, and a
-function-map coordinate inside a sidecar's declared range. It retains no
+function-map coordinate inside a sidecar's declared range. A map row retains
+both `source_asset_sha256` (the owning original object) and its effective
+`source_span_sha256`; where the latter is omitted from the JSON ledger, it is
+identical to the source asset. This preserves a narrow function-byte identity
+without discarding the broader source-object provenance. It retains no
 instruction, edge, sidecar path, or media byte. This is a provenance check
 only: neither result classifies bytes as code nor establishes reachability,
 load state, ABI, timing, input semantics, or execution.

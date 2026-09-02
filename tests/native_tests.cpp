@@ -2559,7 +2559,8 @@ int main() {
     eon::StaticControlFlowSummary coverage_sidecar;
     coverage_sidecar.documents.push_back({std::string(coverage_entry.release_sha256),
         std::string(coverage_entry.cpu), std::string(coverage_entry.address_space)});
-    coverage_sidecar.declared_ranges.push_back({0, std::string(coverage_entry.source_asset_sha256),
+    coverage_sidecar.declared_ranges.push_back({0, std::string(coverage_entry.source_span_sha256.empty()
+        ? coverage_entry.source_asset_sha256 : coverage_entry.source_span_sha256),
         0, 0x1000});
     const auto coverage = eon::function_map_sidecar_coverage(coverage_sidecar);
     const auto same_release_entries = eon::function_map_for_release(coverage_entry.release_sha256);
@@ -2572,6 +2573,9 @@ int main() {
     assert(mismatched_space.direct_range_binding_count == 0);
     auto malformed_function = eon::function_map().front();
     malformed_function.source_asset_sha256 = "not-a-sha256";
+    assert(!eon::function_map_entry_is_well_formed(malformed_function));
+    malformed_function = eon::function_map().front();
+    malformed_function.source_span_sha256 = "not-a-sha256";
     assert(!eon::function_map_entry_is_well_formed(malformed_function));
     malformed_function = eon::function_map().front();
     malformed_function.cpu = "unknown-cpu";

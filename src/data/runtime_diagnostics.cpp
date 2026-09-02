@@ -66,7 +66,8 @@ RuntimeDiagnosticsReport runtime_diagnostics_for_release(const ReleaseArchive& r
         }
         report.functions.push_back({
             std::string(function.id), std::string(function.parser_profile_id), std::string(function.cpu),
-            std::string(function.source_asset_sha256), std::string(function.source_offset),
+            std::string(function.source_asset_sha256), std::string(function.source_span_sha256),
+            std::string(function.source_offset),
             std::string(function.runtime_address), std::string(function.evidence_level),
             std::string(function.uncertainty), std::string(function.runtime_status),
             std::string(function.documentation_anchor), std::string(function.address_space)});

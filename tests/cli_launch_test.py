@@ -260,7 +260,7 @@ def main() -> int:
                 raise SystemExit(f"--inspect-json recovery boundary lost preservation fields: {boundary}")
         for function in release["function_map"]:
             required_function_fields = {
-                "id", "profile", "cpu", "source_asset_sha256", "source_offset",
+                "id", "profile", "cpu", "source_asset_sha256", "source_span_sha256", "source_offset",
                 "runtime_address", "evidence_level", "uncertainty", "runtime_status",
                 "documentation_anchor", "address_space",
             }
