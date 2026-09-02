@@ -42,6 +42,8 @@ public:
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases);
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
+    deuteros_amiga_opening_checkpoint() const;
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

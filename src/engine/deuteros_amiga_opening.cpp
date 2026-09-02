@@ -109,6 +109,15 @@ std::optional<std::vector<std::uint8_t>> DeuterosAmigaOpening::rgba_frame() cons
     return colorize_deuteros_amiga_frame(*last_frame_, palette);
 }
 
+std::optional<DeuterosAmigaOpeningCheckpoint> DeuterosAmigaOpening::checkpoint() const {
+    if (!last_frame_ || title_handed_off_) return std::nullopt;
+    const auto rgba = rgba_frame();
+    if (!rgba) return std::nullopt;
+    return DeuterosAmigaOpeningCheckpoint{
+        ticks_, random_.vblank_counter(), vm_.input_gate(),
+        to_hex(sha256(last_frame_->color_indices)), to_hex(sha256(*rgba))};
+}
+
 std::size_t DeuterosAmigaOpening::active_channel_count() const {
     return static_cast<std::size_t>(std::count_if(vm_.channels().begin(), vm_.channels().end(),
         [](const DeuterosAmigaChannelState& channel) { return channel.active; }));

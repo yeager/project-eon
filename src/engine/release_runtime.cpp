@@ -247,6 +247,13 @@ std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_am
     return events;
 }
 
+std::optional<DeuterosAmigaOpeningCheckpoint>
+ReleaseRuntimeCoordinator::deuteros_amiga_opening_checkpoint() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
+        || !deuteros_amiga_) return std::nullopt;
+    return deuteros_amiga_->checkpoint();
+}
+
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {
     if (!candidate) {
