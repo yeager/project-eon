@@ -3702,6 +3702,19 @@ int main() {
     controlled_dos_runtime.reset();
     assert(controlled_dos_runtime.state() == eon::NativeSessionState::menu
         && !controlled_dos_runtime.active());
+    // Return is an explicit revocation interval. No input, tick, or fresh
+    // admission can reach a coordinator-owned adapter until SDL has finished
+    // releasing its borrowed resources and the controller completes reset.
+    assert(controlled_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
+    controlled_dos_runtime.begin_return_to_menu();
+    assert(controlled_dos_runtime.state() == eon::NativeSessionState::returning_to_menu);
+    assert(controlled_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
+        == eon::RuntimeInputDisposition::rejected);
+    assert(!controlled_dos_runtime.tick_deuteros_amiga_opening());
+    assert(!controlled_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
+    assert(controlled_dos_runtime.state() == eon::NativeSessionState::returning_to_menu);
+    controlled_dos_runtime.finish_return_to_menu();
+    assert(controlled_dos_runtime.is_menu() && !controlled_dos_runtime.active());
     // The coordinator admits only the literal source-level observations for
     // the English sound chooser. It rejects an availability result while that
     // chooser is active, rejects an unknown ASCII byte, then stops at the
@@ -3801,9 +3814,17 @@ int main() {
                 && session_snapshot.capabilities.decoded_presentation
                 && session_snapshot.capabilities.audio_observations
                 && session_snapshot.capabilities.admitted_input);
-            eon::DeuterosAmigaOpeningRunner opening_runner(all_release_runtime, 1'000);
+            eon::LaunchRequest opening_request;
+            opening_request.game = release.game;
+            opening_request.platform = release.platform;
+            opening_request.release_language = release.language;
+            opening_request.release_sha256 = release.sha256;
+            eon::NativeSessionController opening_controller;
+            assert(opening_controller.launch_direct(opening_request, releases).accepted());
+            assert(opening_controller.state() == eon::NativeSessionState::deuteros_amiga_opening);
+            eon::DeuterosAmigaOpeningRunner opening_runner(opening_controller, 1'000);
             assert(opening_runner.advance(1'019).events.empty());
-            assert(all_release_runtime.observe_input(
+            assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::observed);
             const auto first_advance = opening_runner.advance(1'020);
@@ -3814,7 +3835,7 @@ int main() {
             const auto resynchronized = opening_runner.advance(1'220);
             assert(resynchronized.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
                 && resynchronized.resynchronized && opening_runner.scheduled_tick() == 1'220);
-            assert(all_release_runtime.observe_input(
+            assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::ascii('1'))
                 == eon::RuntimeInputDisposition::rejected);
             // The exact opening handoff must publish a title-stage boundary,
@@ -3828,8 +3849,8 @@ int main() {
             }
             assert(title_handoff_observed);
             assert(opening_runner.stopped() && opening_runner.advance(9'999).events.empty());
-            assert(all_release_runtime.session_snapshot());
-            const auto& title_snapshot = *all_release_runtime.session_snapshot();
+            assert(opening_controller.coordinator().session_snapshot());
+            const auto& title_snapshot = *opening_controller.coordinator().session_snapshot();
             assert(title_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_title_stage
                 && title_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
                 && !title_snapshot.capabilities.decoded_presentation
@@ -3837,13 +3858,16 @@ int main() {
                 && !title_snapshot.capabilities.admitted_input);
             assert(eon::runtime_session_kind_label(title_snapshot.kind)
                 == "DEUTEROS AMIGA TITLE STAGE");
-            assert(all_release_runtime.deuteros_amiga());
-            const auto& admitted_title_stage = all_release_runtime.deuteros_amiga()->title_stage_session();
+            assert(opening_controller.state()
+                == eon::NativeSessionState::deuteros_amiga_title_stage_boundary);
+            assert(opening_controller.coordinator().deuteros_amiga());
+            const auto& admitted_title_stage = opening_controller.coordinator()
+                .deuteros_amiga()->title_stage_session();
             assert(admitted_title_stage && admitted_title_stage->local_prefix_executed());
-            assert(all_release_runtime.observe_input(
+            assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
-            assert(!all_release_runtime.tick_deuteros_amiga_opening());
+            assert(!opening_controller.tick_deuteros_amiga_opening());
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(all_release_runtime.deuteros_atari());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap

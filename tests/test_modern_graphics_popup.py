@@ -269,7 +269,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         # release-bound event stream and clears preview audio at handoff.
         self.assertIn("scheduler_period_ms = 20", OPENING_RUNNER_HEADER)
         self.assertIn("maximum_catch_up_ticks", OPENING_RUNNER_HEADER)
-        self.assertIn("coordinator_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("controller_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
         self.assertIn("result.title_handoff", OPENING_RUNNER_SOURCE)
         scheduler = SOURCE.index("deuteros_opening_runner->advance(SDL_GetTicks())")
         renderer = SOURCE.index("const bool modern", scheduler)
@@ -330,7 +330,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("clear_deuteros_opening_input();", f10_block)
         self.assertIn("RuntimeInputObservation::opening_input_held(false)", SOURCE)
         self.assertIn("deuteros_opening_runner->advance(SDL_GetTicks())", SOURCE)
-        self.assertIn("coordinator_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("controller_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
         self.assertLess(f10_guard, modal)
 
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:

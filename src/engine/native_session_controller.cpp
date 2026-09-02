@@ -47,6 +47,9 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
 
 RuntimeCandidateLaunchResult NativeSessionController::launch_direct(const LaunchRequest& candidate,
     const std::vector<ReleaseArchive>& releases) {
+    if (state_ == NativeSessionState::returning_to_menu) {
+        return {runtime_.admission(), std::nullopt};
+    }
     const auto result = runtime_.launch_direct(candidate, releases);
     synchronize_after_runtime_change();
     return result;
@@ -54,18 +57,25 @@ RuntimeCandidateLaunchResult NativeSessionController::launch_direct(const Launch
 
 RuntimeCandidateLaunchResult NativeSessionController::launch_menu(const LauncherSessionState& session,
     const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) {
+    if (state_ == NativeSessionState::returning_to_menu) {
+        return {runtime_.admission(), std::nullopt};
+    }
     const auto result = runtime_.launch_menu(session, base, releases);
     synchronize_after_runtime_change();
     return result;
 }
 
 RuntimeInputDisposition NativeSessionController::observe_input(const RuntimeInputObservation& observation) {
+    if (state_ == NativeSessionState::returning_to_menu) {
+        return RuntimeInputDisposition::rejected;
+    }
     const auto result = runtime_.coordinator().observe_input(observation);
     synchronize_after_runtime_change();
     return result;
 }
 
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {
+    if (state_ == NativeSessionState::returning_to_menu) return std::nullopt;
     const auto events = runtime_.coordinator().tick_deuteros_amiga_opening();
     synchronize_after_runtime_change();
     return events;
@@ -76,6 +86,7 @@ void NativeSessionController::begin_return_to_menu() {
 }
 
 void NativeSessionController::finish_return_to_menu() {
+    if (state_ != NativeSessionState::returning_to_menu) return;
     runtime_.reset();
     state_ = NativeSessionState::menu;
 }

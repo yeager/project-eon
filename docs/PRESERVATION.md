@@ -394,8 +394,9 @@ Deuteros opening ticks, rejection, and revocation synchronize through this
 one vocabulary. SDL may render a menu, F10 modal, texture, audio queue or
 diagnostic panel, but none of those can advance native session state. Before
 an SDL caller clears coordinator-owned state it enters `RETURNING TO MENU`,
-then finishes the reset at `MENU`; stale source-derived resources therefore
-cannot be presented as a new or active original release.
+where launch, input and opening ticks fail closed; it then finishes the reset
+at `MENU`. Stale source-derived resources therefore cannot be presented as a
+new or active original release.
 
 For an unfiltered inspection, `PLATFORM ADMISSION` additionally reports each
 rehashed game/platform card state. `READY` has exactly one verified original
@@ -4833,14 +4834,15 @@ hardware requirements remain unexecuted, so this is not a fabricated title
 screen or a claim that title-stage timing has begun.
 
 `DeuterosAmigaOpeningRunner` is the SDL-free host scheduler for this already
-admitted opening only. It advances the release-bound coordinator at a fixed
-20 ms cadence, permits at most four catch-up ticks before resynchronising the
-host clock, and publishes the original VM events unchanged to the SDL
+admitted opening only. It advances through `NativeSessionController` at a
+fixed 20 ms cadence, permits at most four catch-up ticks before resynchronising
+the host clock, and publishes the original VM events unchanged to the SDL
 renderer/audio layer. Native tests exercise an under-period advance, one tick,
-four-tick catch-up, resynchronisation, and the terminal handoff. The runner
-does not own a path, archive bytes, save, SDL device, frame interpolation, or
-game rule. Once the `$0f` event is returned it stops permanently; later host
-time cannot manufacture opening ticks, PCM, or title execution.
+four-tick catch-up, resynchronisation, the terminal handoff and return-state
+rejection. The runner does not own a path, archive bytes, save, SDL device,
+frame interpolation, or game rule. Once the `$0f` event is returned it stops
+permanently; later host time cannot manufacture opening ticks, PCM, title
+execution, or bypass the lifecycle controller.
 
 The terminal handoff also executes only the title entry's proven profile-one
 prefix in memory. Bootstrap `$12b0e` (ADF `+0x2f0e`, 14 bytes SHA-256
