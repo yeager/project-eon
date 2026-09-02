@@ -76,17 +76,19 @@ input, title, display, audio, ABI, or gameplay claim.
 
 ### 2026-09-02 recorder restoration state
 
-The external Millennium DOS v21 observer reconstruction reached
-`INDEPENDENT_REVIEW`: its exact external v3 patch and binary were rebuilt,
-smoke-tested without media, and independently reviewed for post-`RealSetVec`
-observation, bounded host output and absence of guest/input/scheduler changes.
-It remains an experimental candidate, not a pinned recorder. The locator,
-required recorder digest and capture helpers therefore continue to reject it;
-no original-media capture or native runtime recovery may use it. The next
-state-machine transition is a separate `PINNED_RECORDER` decision, not a
-replay, media run, or hash substitution. See
+The external Millennium DOS v21 observer reconstruction is now
+`OBSERVER_FIX_REQUIRED`. Its v3 delta was independently reviewed for
+post-`RealSetVec` observation, bounded host output and absence of
+guest/input/scheduler changes, but an explicit read-only experimental run
+proved the build contains only that delta on vanilla DOSBox-X. It lacks the
+older normal-core/default-callback recorder hooks and reaches the known
+unhandled-`INT 6` console loop before it produces the legacy receipt streams
+or a v21 installer record. The next work item is therefore to recover and
+review the complete base-recorder patch provenance, then integrate v3 on top
+of it; pinning, locator admission, capture recovery and hash substitution are
+all forbidden until then. See
 [`CAPTURE_RECORDER_RESTORATION.md`](CAPTURE_RECORDER_RESTORATION.md) for exact
-candidate provenance and rejected predecessor records.
+candidate provenance and the retained negative observation.
 
 ## Operating rule
 
