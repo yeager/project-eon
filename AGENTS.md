@@ -17,6 +17,17 @@ never claim parity or invent behaviour that evidence does not support.
 - Use disassembly, raw-media inspection, and reproducible tests. Record file
   offsets, runtime addresses, hashes, and uncertainty in `docs/PRESERVATION.md`.
 
+## Capture recorder restoration
+
+- Normal installed DOSBox-X, DOSBox and FS-UAE are insufficient for admitted
+  capture evidence. Do not ask again for generic emulator installation and do
+  not substitute them for an exact reviewed recorder.
+- Follow `docs/CAPTURE_RECORDER_RESTORATION.md`: locate a recorder by pinned
+  SHA-256 before running a capture, use only fresh external cache output, and
+  require visible manual emulator input. An empty locator result is an
+  evidence boundary, not permission for AUTOTYPE, debugger input, memory
+  injection, screenshots or manually transcribed registers.
+
 ## Runtime and UI
 
 - Support every recognised DOS, Amiga, and Atari ST release without silently
