@@ -44,6 +44,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
     deuteros_amiga_opening_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
+    deuteros_atari_bootstrap_checkpoint() const;
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

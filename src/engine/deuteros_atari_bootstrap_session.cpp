@@ -6,6 +6,20 @@
 
 namespace eon {
 
+DeuterosAtariBootstrapCheckpoint DeuterosAtariBootstrapSession::checkpoint() const {
+    return {
+        first_stage_sha256_,
+        second_stage_sha256_,
+        first_stage_.entry_offset,
+        entry_execution_.dispatcher_entry,
+        state1_service_boundary_.xbios_selector,
+        state0_raw_load_plan_.requests.size(),
+        state1_raw_load_plan_.requests.size(),
+        state5_raw_load_plan_.first_read.source_offset,
+        state5_raw_load_plan_.second_read.source_offset,
+    };
+}
+
 DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     std::vector<std::uint8_t> disk_image) {
     constexpr std::string_view expected_disk_sha256 =

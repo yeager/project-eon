@@ -1922,6 +1922,26 @@ Replicants Disk 1 leaf before it reads either boot stage, so matching stage
 prefixes from another protected-media variant cannot enter this runtime path.
 read a selected state, invoke XBIOS, or materialize a title/game surface.
 
+The native diagnostics path additionally publishes a narrow
+`DeuterosAtariBootstrapCheckpoint` only while that exact hash-gated session is
+active. It contains the two stage hashes, statically recovered entry/dispatcher
+addresses, the observed XBIOS selector, and raw-plan counts/source offsets.
+It contains no emulator registers, RAM, source path, disk bytes, selected
+vector, or service result. This makes static disassembly facts available to
+the launcher/runtime diagnostic layer without upgrading them into dynamic
+trace evidence or gameplay parity.
+
+For reproducibility, an ordinary Hatari 2.6.1 diagnostic boot was also run
+against the read-only mounted Replicants Disk 1 and a user-supplied TOS 1.62
+image. The respective SHA-256 values were
+`aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee` and
+`220fc9b35fd99908db9f9075fb3d850bf196d25741405ac6fa062facbbbd1583`.
+Hatari selected STE mode, loaded TOS at `$e00000`, and confirmed that TOS
+patches were disabled. It did not reach its bounded 300-VBL exit before the
+host safety timeout, so it establishes neither a guest frame nor boot/game
+parity. The logs remain external diagnostic evidence; recorder admission is
+still governed by the separately pinned recorder policy.
+
 The vector's immediate static continuation is now bounded too. Track-2
 `+$1a2` (Disk 1 `+$49a2`, copied RAM `$1fa2`) is exactly `60 00 ff 70`,
 SHA-256 `4d11113ca2040c3c0d8e9fe7fc7ef2b65175cc580b8a4b81466908ae7c537896`.
