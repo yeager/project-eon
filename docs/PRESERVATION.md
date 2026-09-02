@@ -4681,13 +4681,22 @@ Plausibility alone never promotes an inference to verified behaviour.
 Keep source data outside the repository:
 
 ```sh
-cmake -S . -B build -G Ninja -DEON_REAL_DATA_DIR="/path/to/original-data"
+cmake -S . -B build -G Ninja \
+  -DEON_REAL_DATA_DIR="/path/to/complete-archive-corpus" \
+  -DEON_DIRECT_DATA_DIR="/path/to/installed-direct-media"
 cmake --build build
 ctest --test-dir build --output-on-failure
 python3 -m unittest discover -s tests -v
 ./build/project-eon --data "/path/to/original-data" --verify-data millennium
 ./build/project-eon --data "/path/to/original-data" --verify-data deuteros
 ```
+
+`EON_REAL_DATA_DIR` is a strict six-release archive-corpus test input and
+cannot be satisfied by a partial collection or an installed directory set.
+`EON_DIRECT_DATA_DIR` separately exercises recognised direct media in place.
+The distinction keeps the all-platform/cross-language guard strong while
+allowing an installation such as `~/.projecteon` to be verified without being
+misrepresented as a full archive corpus.
 
 Static reports can be regenerated from separately extracted, hash-verified
 inputs with `tools/analyze_dos.py` and `tools/analyze_m68k.py`. Capstone output

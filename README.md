@@ -121,10 +121,17 @@ system package is unavailable.
 
 ```sh
 cmake -S . -B build -G Ninja \
-  -DEON_REAL_DATA_DIR="$HOME/Downloads"
+  -DEON_REAL_DATA_DIR="$HOME/Downloads" \
+  -DEON_DIRECT_DATA_DIR="$HOME/.projecteon"
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+`EON_REAL_DATA_DIR` is optional and, when set, must contain the complete six
+canonical archive releases (both Millennium DOS languages plus every supported
+platform). `EON_DIRECT_DATA_DIR` is optional and independently tests installed
+direct media such as `~/.projecteon`; it must not be substituted for the full
+archive corpus. Both test inputs are read in place.
 
 Start the graphical card menu:
 

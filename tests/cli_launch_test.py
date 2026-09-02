@@ -179,6 +179,37 @@ def main() -> int:
             "--data-dir did not inspect the supplied original media:\n"
             f"{data_dir_inspection.stderr}"
         )
+    # This all-platform test intentionally requires the complete canonical
+    # archive corpus. An installed direct-media set has a different identity
+    # shape and belongs to cli_direct_directory_test.py, not this test.
+    corpus_inspection = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--inspect-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        corpus_payload = json.loads(corpus_inspection.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"archive-corpus preflight did not emit JSON: {error}") from error
+    expected_corpus_releases = {
+        ("Millennium 2.2", "DOS", "en"),
+        ("Millennium 2.2", "DOS", "es"),
+        ("Millennium 2.2", "Amiga", "en"),
+        ("Millennium 2.2", "Atari ST", "en"),
+        ("Deuteros", "Amiga", "en"),
+        ("Deuteros", "Atari ST", "en"),
+    }
+    observed_corpus_releases = {
+        (release.get("game"), release.get("platform"), release.get("language"))
+        for release in corpus_payload.get("releases", [])
+    }
+    if (corpus_inspection.returncode != 0
+            or corpus_payload.get("schema") != "project-eon.inspect/v1"
+            or observed_corpus_releases != expected_corpus_releases):
+        raise SystemExit(
+            "EON_REAL_DATA_DIR requires the complete six-release canonical archive corpus; "
+            "use EON_DIRECT_DATA_DIR for recognised installed direct media.\n"
+            f"expected {sorted(expected_corpus_releases)}, got {sorted(observed_corpus_releases)}"
+        )
     # Both hash-recognised DOS editions expose their own immutable 2200AD4.BIN
     # topology and original-text provenance. The report must not omit Spanish
     # diagnostics or silently reuse the English offsets/hashes.
