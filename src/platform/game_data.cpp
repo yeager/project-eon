@@ -164,6 +164,15 @@ bool is_recognised_release_identity(const ReleaseArchive& release) {
     }
 }
 
+std::optional<std::string> direct_media_set_sha256(const ReleaseArchive& release) {
+    if (release.layout != ReleaseMediaLayout::verified_directory) return std::nullopt;
+    try {
+        return std::string(require_direct_set_identity(release).set_sha256);
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
 void verify_release_archive(const ReleaseArchive& release) {
     static_cast<void>(VerifiedReleaseMedia::open(release));
 }
@@ -237,6 +246,7 @@ void ReleaseScanner::finish_candidate_inventory() {
         for (const auto& set : direct_media_set_manifest()) {
             try {
                 static_cast<void>(verify_direct_set(directory, set, false));
+                ++report_.verified_direct_set_occurrences;
                 const auto existing = std::find_if(releases_.begin(), releases_.end(), [&set](const auto& release) {
                     return release.sha256 == set.content_release_sha256;
                 });
@@ -248,7 +258,7 @@ void ReleaseScanner::finish_candidate_inventory() {
                         bound_direct_media_paths_.push_back(directory / std::string(member.name));
                     }
                 } else {
-                    ++report_.duplicate_occurrences;
+                    ++report_.duplicate_direct_set_occurrences;
                 }
             } catch (const std::exception&) {
                 // An incomplete or changed directory remains ordinary direct

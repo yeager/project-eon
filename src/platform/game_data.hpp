@@ -108,6 +108,11 @@ struct ReleaseScanReport {
     std::size_t direct_media_hashed_candidates = 0;
     std::size_t verified_direct_media_occurrences = 0;
     std::size_t duplicate_direct_media_occurrences = 0;
+    // A complete declared directory set is a launchable media source, unlike
+    // an individual direct leaf. These counters remain separate from outer
+    // archive occurrences so diagnostics cannot call a directory a ZIP.
+    std::size_t verified_direct_set_occurrences = 0;
+    std::size_t duplicate_direct_set_occurrences = 0;
     std::size_t verified_occurrences = 0;
     std::size_t duplicate_occurrences = 0;
     std::size_t unreadable_candidates = 0;
@@ -182,6 +187,9 @@ private:
 // no filesystem access and is used by media-safe diagnostics before they read
 // recovery/function-map rows for a release.
 [[nodiscard]] bool is_recognised_release_identity(const ReleaseArchive& release);
+// Returns the canonical complete-set digest only for a declaratively
+// recognised verified-directory layout. It performs no filesystem access.
+[[nodiscard]] std::optional<std::string> direct_media_set_sha256(const ReleaseArchive& release);
 // Re-open an already discovered release only through its full manifest
 // identity. These helpers verify the exact in-memory outer bytes used for the
 // following archive walk, so recognised media cannot be swapped after scan.

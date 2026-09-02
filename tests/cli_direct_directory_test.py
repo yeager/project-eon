@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -39,6 +40,7 @@ def main() -> int:
     before = snapshot(root)
     launch = run(executable, root, "--launch-check")
     inspection = run(executable, root, "--inspect", "--inventory")
+    inspection_json = run(executable, root, "--inspect-json")
     after = snapshot(root)
     if before != after:
         raise SystemExit("Project Eon changed direct original media")
@@ -46,6 +48,12 @@ def main() -> int:
         raise SystemExit("direct Millennium DOS set did not reach parser-only READY admission")
     if EXPECTED_RELEASE not in inspection:
         raise SystemExit("direct Millennium DOS logical release identity was not inspected")
+    parsed = json.loads(inspection_json)
+    releases = parsed.get("releases", [])
+    if len(releases) != 1 or releases[0].get("media_layout") != "verified-directory":
+        raise SystemExit("inspection did not label direct media as a verified directory")
+    if releases[0].get("direct_set_sha256") != "d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783":
+        raise SystemExit("inspection omitted the verified direct-set identity")
     return 0
 
 
