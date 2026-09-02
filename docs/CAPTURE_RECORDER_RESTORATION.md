@@ -128,3 +128,33 @@ file was changed. This digest deliberately does not match an approved recorder
 digest, so the locator must continue to reject it. All source, build and
 temporary paths were under `/home/yeager/.cache/project-eon-tools/`; no
 original media, project file, package, or `/tmp` path participated.
+
+### 2026-09-02 experimental observer provenance
+
+State reached: `OBSERVER_BUILD_VERIFY` (not `INDEPENDENT_REVIEW` and not
+`PINNED_RECORDER`). A minimal V21 observer reconstruction was applied only to
+the external source tree named above. Its patch is retained outside the
+checkout at
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/observer-smoke-20260902/recorder-v21-experimental.patch`
+with SHA-256
+`479c043171fe9c5351340723a034bd2a80019d38e947fd1002d1b6b0775b0574`.
+The locally built experimental executable SHA-256 is
+`5b9dd55d1c5eab1a34edd9561c60f7f11066ddd9492033cea50734a0dad60f51`.
+
+The delta records an entry-CS map for the two exact 8.3 executable names,
+arms only for the documented software `INT 21h AX=2593h` instruction
+preimages at the mapped CS:PC locations, and emits one bounded host record
+only after DOSBox-X's existing `RealSetVec` has installed vector `93h` with
+the expected `DS:DX`. It does not add guest writes, register/flag assignment,
+callback installation, input handling, debugger calls, scheduler calls or
+guest file operations. The output requires an absolute fresh path and is
+opened with exclusive, no-follow, owner-only permissions. A no-media
+`-version` smoke test with the output environment variable set produced no
+output file.
+
+This is a reproducible candidate for independent review only. It is not the
+approved `18ec0e…` recorder, cannot be located by the Project Eon capture
+tools, and must not be used with original media, a capture helper, or a native
+recovery claim. Independent review must additionally assess all added source
+lines, host-I/O error handling, release identity mapping and runtime behaviour
+before any candidate can be pinned.
