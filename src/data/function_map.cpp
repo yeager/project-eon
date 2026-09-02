@@ -14,7 +14,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 20> entries{{
+constexpr std::array<FunctionMapEntry, 21> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -50,6 +50,13 @@ constexpr std::array<FunctionMapEntry, 20> entries{{
      "TITLES.EXE+0x0127", "$0227", "verified-static",
      "the private INT 91h ABI and observed raw returns are not runtime inputs",
      "diagnostics only", "PRESERVATION.md#english-millennium-dos-reference-trace-adapter",
+     "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
+    {"millennium-dos-en-title-availability-poll", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+     "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086",
+     "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6",
+     "TITLES.EXE+0x0c0a", "$0d0a", "verified-static",
+     "the DOS result, character semantics, title exit, child launch, rendering, and game state remain unproven",
+     "availability boundary only", "PRESERVATION.md#required-dynamic-trace-contract-for-the-next-playable-dos-increment",
      "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-action-poll", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-game-flow", Game::millennium, Platform::dos, "en", "i8086",
