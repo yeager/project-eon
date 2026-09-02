@@ -187,7 +187,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X (الذاكرة فقط)"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (الذاكرة فقط)"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "إيقاف (البكسلات الأصلية)"
@@ -301,31 +301,31 @@ msgid "RECOVERED OPENING"
 msgstr "الافتتاحية المستعادة"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "تشخيصات المطور"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "فتح"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "تشخيصات وقت التشغيل الحديث"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: العودة إلى الإعدادات"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "هوية الإصدار"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "حدود خريطة الاسترداد"
 
 msgid "STARTUP BOUNDARY"
 msgstr "حد بدء التشغيل"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "قبول التتبع"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "غير محمّل"
 
 msgid "NOT SELECTED"
 msgstr "غير محدد"
@@ -334,19 +334,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "قبول وقت التشغيل"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "إعدادات العارض"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "إيقاع الإطار"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: مفعّل"
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: متوقف"
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "التشخيصات للقراءة فقط؛ لا تُعدَّل البيانات الأصلية."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: عرض خريطة الدوال   F10 / ESC: العودة إلى الإعدادات"

@@ -237,7 +237,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X（仅内存）"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X（仅内存）"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "关闭（原始像素）"
@@ -340,31 +340,31 @@ msgid "RECOVERED OPENING"
 msgstr "已恢复开场"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "开发者诊断"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "打开"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "现代运行时诊断"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: 返回设置"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "发行版标识"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "恢复映射边界"
 
 msgid "STARTUP BOUNDARY"
 msgstr "启动边界"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "追踪准入"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "未加载"
 
 msgid "NOT SELECTED"
 msgstr "未选择"
@@ -373,19 +373,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "运行时准入"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "渲染器设置"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "帧节奏"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: 开"
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: 关"
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "诊断为只读；原始数据不会被修改。"
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: 查看函数映射   F10 / ESC: 返回设置"

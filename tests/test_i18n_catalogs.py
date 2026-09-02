@@ -187,6 +187,22 @@ class CatalogTests(unittest.TestCase):
                 self.assertTrue(all(catalog.get(label) not in {None, "", label}
                                     for label in labels))
 
+    def test_complete_f10_diagnostics_have_no_english_fallback(self) -> None:
+        """The expanded F10 diagnostics are Eon UI in every script family."""
+        labels = {
+            "DEVELOPER DIAGNOSTICS", "MODERN RUNTIME DIAGNOSTICS",
+            "F10 / ESC: BACK TO SETTINGS", "RELEASE IDENTITY",
+            "RECOVERY MAP BOUNDARIES", "TRACE ADMISSION", "RENDERER SETTINGS",
+            "FRAME PACING", "SDL VSYNC: ON", "SDL VSYNC: OFF",
+            "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
+            "SCALE4X (MEMORY ONLY)", "NOT LOADED", "OPEN",
+        }
+        for language in {"ar", "el", "hi", "ja", "ko", "ru", "tr", "uk", "zh_CN"}:
+            with self.subTest(language=language):
+                catalog = po_messages(PO / f"{language}.po")
+                self.assertTrue(all(catalog.get(label) not in {None, "", label}
+                                    for label in labels))
+
     def test_unselected_diagnostics_identity_is_translated_before_rendering(self) -> None:
         self.assertIn('diagnostics.release_identity = tr("NOT SELECTED");', LAUNCHER_SOURCE)
         source_catalog = po_messages(PO / "ProjectEon.pot")

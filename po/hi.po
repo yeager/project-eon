@@ -198,7 +198,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X (केवल मेमोरी)"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (केवल मेमोरी)"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "बंद (मूल पिक्सेल)"
@@ -301,31 +301,31 @@ msgid "RECOVERED OPENING"
 msgstr "पुनर्प्राप्त आरंभ"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "डेवलपर निदान"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "खोलें"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "आधुनिक रनटाइम निदान"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: सेटिंग्स पर वापस"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "रिलीज़ पहचान"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "पुनर्प्राप्ति मानचित्र सीमाएँ"
 
 msgid "STARTUP BOUNDARY"
 msgstr "आरंभ सीमा"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "ट्रेस प्रवेश"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "लोड नहीं किया गया"
 
 msgid "NOT SELECTED"
 msgstr "चयनित नहीं"
@@ -334,19 +334,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "रनटाइम स्वीकृति"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "रेंडरर सेटिंग्स"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "फ्रेम गति"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: चालू"
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: बंद"
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "निदान केवल-पठन हैं; मूल डेटा संशोधित नहीं किया जाता।"
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: फ़ंक्शन मानचित्र देखें   F10 / ESC: सेटिंग्स पर वापस"

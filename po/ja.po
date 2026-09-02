@@ -198,7 +198,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X（メモリ内のみ）"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X（メモリのみ）"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "オフ（オリジナルピクセル）"
@@ -301,31 +301,31 @@ msgid "RECOVERED OPENING"
 msgstr "復元済みオープニング"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "開発者向け診断"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "開く"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "モダンランタイム診断"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: 設定に戻る"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "リリース識別情報"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "復元マップの境界"
 
 msgid "STARTUP BOUNDARY"
 msgstr "起動境界"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "トレース受け入れ"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "未読み込み"
 
 msgid "NOT SELECTED"
 msgstr "未選択"
@@ -334,19 +334,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "実行時受け入れ"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "レンダラー設定"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "フレームペーシング"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: オン"
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: オフ"
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "診断は読み取り専用です。オリジナルデータは変更されません。"
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: 関数マップを表示   F10 / ESC: 設定に戻る"

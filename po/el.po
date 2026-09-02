@@ -187,7 +187,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X (ΜΟΝΟ ΜΝΗΜΗ)"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (ΜΟΝΟ ΜΝΗΜΗ)"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "ΑΝΕΝΕΡΓΟ (ΑΡΧΙΚΑ ΕΙΚΟΝΟΣΤΟΙΧΕΙΑ)"
@@ -301,31 +301,31 @@ msgid "RECOVERED OPENING"
 msgstr "ΑΝΑΚΤΗΜΕΝΗ ΕΙΣΑΓΩΓΗ"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "ΔΙΑΓΝΩΣΤΙΚΑ ΠΡΟΓΡΑΜΜΑΤΙΣΤΗ"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "ΑΝΟΙΓΜΑ"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "ΣΥΓΧΡΟΝΑ ΔΙΑΓΝΩΣΤΙΚΑ ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: ΠΙΣΩ ΣΤΙΣ ΡΥΘΜΙΣΕΙΣ"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "ΤΑΥΤΟΤΗΤΑ ΕΚΔΟΣΗΣ"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "ΟΡΙΑ ΧΑΡΤΗ ΑΝΑΚΤΗΣΗΣ"
 
 msgid "STARTUP BOUNDARY"
 msgstr "ΟΡΙΟ ΕΚΚΙΝΗΣΗΣ"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "ΑΠΟΔΟΧΗ ΙΧΝΟΥΣ"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "ΔΕΝ ΦΟΡΤΩΘΗΚΕ"
 
 msgid "NOT SELECTED"
 msgstr "ΔΕΝ ΕΧΕΙ ΕΠΙΛΕΓΕΙ"
@@ -334,19 +334,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "ΑΠΟΔΟΧΗ ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "ΡΥΘΜΙΣΕΙΣ ΑΠΟΔΟΣΗΣ"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "ΡΥΘΜΟΣ ΚΑΡΕ"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: ΕΝΕΡΓΟ"
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: ΑΝΕΝΕΡΓΟ"
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "ΤΑ ΔΙΑΓΝΩΣΤΙΚΑ ΕΙΝΑΙ ΜΟΝΟ ΓΙΑ ΑΝΑΓΝΩΣΗ· ΤΑ ΠΡΩΤΟΤΥΠΑ ΔΕΔΟΜΕΝΑ ΔΕΝ ΤΡΟΠΟΠΟΙΟΥΝΤΑΙ."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: ΠΡΟΒΟΛΗ ΧΑΡΤΗ ΣΥΝΑΡΤΗΣΕΩΝ   F10 / ESC: ΠΙΣΩ ΣΤΙΣ ΡΥΘΜΙΣΕΙΣ"

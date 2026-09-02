@@ -237,7 +237,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X (ЛИШЕ ПАМ’ЯТЬ)"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (ЛИШЕ ПАМ’ЯТЬ)"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "ВИМК. (ОРИГІНАЛЬНІ ПІКСЕЛІ)"
@@ -340,31 +340,31 @@ msgid "RECOVERED OPENING"
 msgstr "ВІДНОВЛЕНИЙ ПОЧАТОК"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "ДІАГНОСТИКА РОЗРОБНИКА"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "ВІДКРИТИ"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "СУЧАСНА ДІАГНОСТИКА ЧАСУ ВИКОНАННЯ"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: НАЗАД ДО НАЛАШТУВАНЬ"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "ІДЕНТИЧНІСТЬ ВИПУСКУ"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "МЕЖІ МАПИ ВІДНОВЛЕННЯ"
 
 msgid "STARTUP BOUNDARY"
 msgstr "МЕЖА ЗАПУСКУ"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "ДОПУСК ТРАСУВАННЯ"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "НЕ ЗАВАНТАЖЕНО"
 
 msgid "NOT SELECTED"
 msgstr "НЕ ВИБРАНО"
@@ -373,19 +373,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "ДОПУСК ВИКОНАННЯ"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "НАЛАШТУВАННЯ РЕНДЕРЕРА"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "ТЕМП КАДРІВ"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: УВІМКНЕНО"
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: ВИМКНЕНО"
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "ДІАГНОСТИКА ЛИШЕ ДЛЯ ЧИТАННЯ; ОРИГІНАЛЬНІ ДАНІ НЕ ЗМІНЮЮТЬСЯ."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: ПЕРЕГЛЯНУТИ МАПУ ФУНКЦІЙ   F10 / ESC: НАЗАД ДО НАЛАШТУВАНЬ"

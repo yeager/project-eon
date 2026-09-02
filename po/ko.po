@@ -237,7 +237,7 @@ msgid "SCALE2X (MEMORY ONLY)"
 msgstr "SCALE2X(메모리 전용)"
 
 msgid "SCALE4X (MEMORY ONLY)"
-msgstr "SCALE4X (MEMORY ONLY)"
+msgstr "SCALE4X (메모리 전용)"
 
 msgid "OFF (ORIGINAL PIXELS)"
 msgstr "끔(원본 픽셀)"
@@ -340,31 +340,31 @@ msgid "RECOVERED OPENING"
 msgstr "복구된 오프닝"
 
 msgid "DEVELOPER DIAGNOSTICS"
-msgstr "DEVELOPER DIAGNOSTICS"
+msgstr "개발자 진단"
 
 msgid "OPEN"
-msgstr "OPEN"
+msgstr "열기"
 
 msgid "MODERN RUNTIME DIAGNOSTICS"
-msgstr "MODERN RUNTIME DIAGNOSTICS"
+msgstr "모던 런타임 진단"
 
 msgid "F10 / ESC: BACK TO SETTINGS"
-msgstr "F10 / ESC: BACK TO SETTINGS"
+msgstr "F10 / ESC: 설정으로 돌아가기"
 
 msgid "RELEASE IDENTITY"
-msgstr "RELEASE IDENTITY"
+msgstr "릴리스 식별 정보"
 
 msgid "RECOVERY MAP BOUNDARIES"
-msgstr "RECOVERY MAP BOUNDARIES"
+msgstr "복구 맵 경계"
 
 msgid "STARTUP BOUNDARY"
 msgstr "시작 경계"
 
 msgid "TRACE ADMISSION"
-msgstr "TRACE ADMISSION"
+msgstr "추적 승인"
 
 msgid "NOT LOADED"
-msgstr "NOT LOADED"
+msgstr "로드되지 않음"
 
 msgid "NOT SELECTED"
 msgstr "선택되지 않음"
@@ -373,19 +373,19 @@ msgid "RUNTIME ADMISSION"
 msgstr "런타임 승인"
 
 msgid "RENDERER SETTINGS"
-msgstr "RENDERER SETTINGS"
+msgstr "렌더러 설정"
 
 msgid "FRAME PACING"
-msgstr "FRAME PACING"
+msgstr "프레임 페이싱"
 
 msgid "SDL VSYNC: ON"
-msgstr "SDL VSYNC: ON"
+msgstr "SDL VSYNC: 켜짐"
 
 msgid "SDL VSYNC: OFF"
-msgstr "SDL VSYNC: OFF"
+msgstr "SDL VSYNC: 꺼짐"
 
 msgid "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
-msgstr "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED."
+msgstr "진단은 읽기 전용이며 원본 데이터는 수정되지 않습니다."
 
 msgid "ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"
 msgstr "ENTER: 함수 맵 보기   F10 / ESC: 설정으로 돌아가기"
