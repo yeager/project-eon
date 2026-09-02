@@ -540,6 +540,9 @@ struct ModernRuntimeDiagnostics {
     };
     std::string release_identity;
     std::string runtime_admission = "NOT SELECTED";
+    // Controller-owned lifecycle state, deliberately separate from the
+    // coordinator snapshot so diagnostics expose revocation in progress.
+    std::string lifecycle_state = "MENU";
     // These originate exclusively from ReleaseRuntimeCoordinator's admitted
     // session snapshot. They never reconstruct session state from launcher
     // focus or add an SDL-side media/input path.
@@ -1150,9 +1153,10 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 174, tr("MODERN RUNTIME DIAGNOSTICS"));
     draw_text(renderer, 390, 212, tr("ENTER: VIEW FUNCTION MAP   F10 / ESC: BACK TO SETTINGS"));
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
-    const std::array<std::pair<const char*, std::string>, 15> rows{{
+    const std::array<std::pair<const char*, std::string>, 16> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
         {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
+        {"LIFECYCLE STATE", diagnostics.lifecycle_state},
         {"SESSION ADAPTER", diagnostics.session_adapter},
         {"SESSION BOUNDARY", diagnostics.session_boundary},
         {"SESSION CAPABILITIES", diagnostics.session_capabilities},
@@ -1177,7 +1181,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"FRAME PACING", tr(render_pacing_names.at(static_cast<std::size_t>(settings.render_pacing)))},
     }};
     for (std::size_t index = 0; index < rows.size(); ++index) {
-        const float y = 226.0F + static_cast<float>(index) * 27.0F;
+        // Sixteen two-line provenance rows must remain above the fixed
+        // read-only notice in the 720p logical diagnostics panel.
+        const float y = 226.0F + static_cast<float>(index) * 24.0F;
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
         draw_text(renderer, 390, y, tr(rows[index].first));
         SDL_SetRenderDrawColor(renderer, 39, 202, 213, 255);
@@ -4737,6 +4743,7 @@ int main(int argc, char** argv) {
         diagnostics.release_identity = tr("NOT SELECTED");
         diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
             runtime_coordinator.admission()));
+        diagnostics.lifecycle_state = std::string(eon::native_session_state_label(runtime.state()));
         // This is a compact, renderer-only diagnostic code. It makes the
         // selected preservation contract visible even before a session is
         // admitted, while the separately reported capabilities remain facts
