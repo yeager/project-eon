@@ -303,14 +303,13 @@ ParseResult parse_command_line(int argc, char** argv) {
     if (request.modern_pack_root && !request.inspect_data) {
         return {{}, "--modern-packs requires --inspect; it is diagnostics-only and never selects a renderer pack", false};
     }
-    if (request.modern_pack_manifest && (request.inspect_data || request.presentation != Presentation::modern
-        || !request.game || !request.platform)) {
-        return {{}, "--modern-pack requires --game, --platform, and --presentation modern; it cannot be used with --inspect", false};
+    if (request.modern_pack_manifest && (request.inspect_data || !request.game || !request.platform)) {
+        return {{}, "--modern-pack requires --game and --platform; it cannot be used with --inspect", false};
     }
     // Every current renderer mapping is bound to a hash-identified English
     // release. Refuse non-English selection before any SDL or pack I/O instead
     // of letting external art become an optional cross-edition fallback.
-    if (request.modern_pack_manifest && request.release_language
+    if (request.modern_pack_manifest && request.presentation == Presentation::modern && request.release_language
         && *request.release_language != "en") {
         return {{}, "--modern-pack currently supports only --release-language en; no cross-edition art fallback is permitted", false};
     }

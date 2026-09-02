@@ -335,7 +335,9 @@ selected original releases have been rehashed. The explicit Modern launch form
 `--game <game> --platform <platform> --presentation modern --modern-pack
 /path/to/pack.eonmodern` may render only a documented, hash-revalidated
 Millennium DOS title target or the finite Deuteros Amiga held-input opening
-sequence; Original never uses an external pack. Each PNG chunk checksum is
+sequence; Original ignores an optional `--modern-pack` path before opening it,
+so the same explicit launch wrapper cannot make a preservation session read
+external Modern data. Each PNG chunk checksum is
 verified before decoding. Neither
 form creates a directory or cache. See [the Modern asset-pack format](docs/MODERN_ASSET_PACK_FORMAT.md)
 for the external, separately installed format.
