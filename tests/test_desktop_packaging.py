@@ -247,7 +247,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS", cmake)
         self.assertIn("CPACK_DEBIAN_PACKAGE_MAINTAINER", cmake)
         self.assertIn("CPACK_DEBIAN_FILE_NAME DEB-DEFAULT", cmake)
-        self.assertIn('set(CPACK_DEBIAN_PACKAGE_SECTION "utils")', cmake)
+        self.assertIn('set(CPACK_DEBIAN_PACKAGE_SECTION "games")', cmake)
         self.assertIn("SDLTTF_VENDORED OFF", cmake)
         self.assertIn("if(SDLTTF_VENDORED)", cmake)
         runtime_script = (ROOT / "cmake" / "package_linux_runtime.cmake.in").read_text(
