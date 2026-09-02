@@ -2553,11 +2553,18 @@ int main() {
     }));
     const auto millennium_dos_functions = eon::function_map_for_release(
         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123");
+    assert(millennium_dos_functions.size() == 12);
     assert(std::any_of(millennium_dos_functions.begin(), millennium_dos_functions.end(), [](const auto& entry) {
         return entry.id == "millennium-dos-en-title-availability-poll"
             && entry.runtime_address == "$0d0a"
             && entry.runtime_status == "availability boundary only";
     }));
+    for (const auto title_boundary_id : {"millennium-dos-en-title-nonzero-branch",
+             "millennium-dos-en-title-exit-closure", "millennium-dos-en-title-private-driver-setup",
+             "millennium-dos-en-title-private-driver-helper"}) {
+        assert(std::any_of(millennium_dos_functions.begin(), millennium_dos_functions.end(),
+            [title_boundary_id](const auto& entry) { return entry.id == title_boundary_id; }));
+    }
     for (const auto& entry : eon::function_map()) {
         assert(eon::function_map_entry_is_well_formed(entry));
     }
