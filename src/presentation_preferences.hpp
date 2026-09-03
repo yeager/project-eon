@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <filesystem>
 #include <optional>
+#include <string>
+#include <string_view>
 
 namespace eon {
 
@@ -19,6 +21,9 @@ struct PresentationPreferences {
     bool smooth_scaling = true;
     bool scanlines = false;
     bool frame = true;
+    // Launcher chrome only. This is intentionally distinct from the selected
+    // original-release language and contains no original game text.
+    std::string launcher_language = "en";
 };
 
 [[nodiscard]] std::filesystem::path default_presentation_preferences_path();
@@ -29,5 +34,11 @@ struct PresentationPreferences {
 // supplied data directory or original save/media file.
 [[nodiscard]] bool save_presentation_preferences(const std::filesystem::path& path,
     const PresentationPreferences& preferences);
+
+// Persist one deliberate launcher-language choice while retaining the current
+// renderer-only settings. This is called only from Eon's card menu; it never
+// looks up, creates, or modifies game-data/media directories.
+[[nodiscard]] bool save_launcher_language_preference(const std::filesystem::path& path,
+    std::string_view language);
 
 } // namespace eon

@@ -121,6 +121,10 @@ struct LaunchRequest {
     DisplayPreferences display;
     bool display_resolution_explicit = false;
     bool display_aspect_explicit = false;
+    // `--language` is an explicit launcher-chrome choice.  It must take
+    // precedence over a persisted menu preference, while an omitted option
+    // can restore the last deliberate menu choice.
+    bool language_explicit = false;
     std::string language;
 };
 

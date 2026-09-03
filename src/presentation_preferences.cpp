@@ -1,5 +1,8 @@
 #include "presentation_preferences.hpp"
 
+#include "i18n.hpp"
+
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <string>
@@ -8,7 +11,13 @@
 namespace eon {
 namespace {
 
-constexpr std::string_view header = "project-eon-presentation-preferences=1";
+constexpr std::string_view header_v1 = "project-eon-presentation-preferences=1";
+constexpr std::string_view header_v2 = "project-eon-presentation-preferences=2";
+
+bool is_canonical_launcher_language(const std::string_view language) {
+    const auto& supported = supported_launcher_languages();
+    return std::find(supported.begin(), supported.end(), language) != supported.end();
+}
 
 std::optional<bool> parse_bool(const std::string_view value) {
     if (value == "0") return false;
@@ -57,10 +66,14 @@ std::optional<PresentationPreferences> load_presentation_preferences(const std::
     std::ifstream input(path, std::ios::binary);
     if (!input) return std::nullopt;
     std::string line;
-    if (!std::getline(input, line) || line != header) return std::nullopt;
+    if (!std::getline(input, line)) return std::nullopt;
+    const bool is_v1 = line == header_v1;
+    const bool is_v2 = line == header_v2;
+    if (!is_v1 && !is_v2) return std::nullopt;
     PresentationPreferences preferences;
     bool resolution = false, aspect = false, preset = false, pacing = false;
     bool reconstruction = false, scaling = false, scanlines = false, frame = false;
+    bool language = false;
     while (std::getline(input, line)) {
         const auto separator = line.find('=');
         if (separator == std::string::npos) return std::nullopt;
@@ -74,9 +87,15 @@ std::optional<PresentationPreferences> load_presentation_preferences(const std::
         else if (key == "scaling") { const auto parsed = parse_bool(value); if (!parsed || scaling) return std::nullopt; preferences.smooth_scaling = *parsed; scaling = true; }
         else if (key == "scanlines") { const auto parsed = parse_bool(value); if (!parsed || scanlines) return std::nullopt; preferences.scanlines = *parsed; scanlines = true; }
         else if (key == "frame") { const auto parsed = parse_bool(value); if (!parsed || frame) return std::nullopt; preferences.frame = *parsed; frame = true; }
+        else if (key == "language") {
+            if (!is_v2 || language || !is_canonical_launcher_language(value)) return std::nullopt;
+            preferences.launcher_language = std::string(value);
+            language = true;
+        }
         else return std::nullopt;
     }
-    if (!resolution || !aspect || !preset || !pacing || !reconstruction || !scaling || !scanlines || !frame) return std::nullopt;
+    if (!resolution || !aspect || !preset || !pacing || !reconstruction || !scaling || !scanlines || !frame
+        || (is_v2 && !language)) return std::nullopt;
     return preferences;
 }
 
@@ -84,13 +103,14 @@ bool save_presentation_preferences(const std::filesystem::path& path,
     const PresentationPreferences& preferences) {
     if (preferences.output_resolution_index > 2 || preferences.aspect_ratio_index > 2
         || preferences.modern_preset_index > 4 || preferences.render_pacing_index > 2
-        || preferences.pixel_reconstruction_index > 2) return false;
+        || preferences.pixel_reconstruction_index > 2
+        || !is_canonical_launcher_language(preferences.launcher_language)) return false;
     std::error_code error;
     std::filesystem::create_directories(path.parent_path(), error);
     if (error) return false;
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
-    output << header << '\n'
+    output << header_v2 << '\n'
            << "resolution=" << preferences.output_resolution_index << '\n'
            << "aspect=" << preferences.aspect_ratio_index << '\n'
            << "preset=" << preferences.modern_preset_index << '\n'
@@ -98,8 +118,17 @@ bool save_presentation_preferences(const std::filesystem::path& path,
            << "reconstruction=" << preferences.pixel_reconstruction_index << '\n'
            << "scaling=" << (preferences.smooth_scaling ? 1 : 0) << '\n'
            << "scanlines=" << (preferences.scanlines ? 1 : 0) << '\n'
-           << "frame=" << (preferences.frame ? 1 : 0) << '\n';
+           << "frame=" << (preferences.frame ? 1 : 0) << '\n'
+           << "language=" << preferences.launcher_language << '\n';
     return static_cast<bool>(output);
+}
+
+bool save_launcher_language_preference(const std::filesystem::path& path,
+    const std::string_view language) {
+    if (!is_canonical_launcher_language(language)) return false;
+    auto preferences = load_presentation_preferences(path).value_or(PresentationPreferences{});
+    preferences.launcher_language = std::string(language);
+    return save_presentation_preferences(path, preferences);
 }
 
 } // namespace eon

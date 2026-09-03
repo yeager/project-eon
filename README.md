@@ -226,6 +226,9 @@ language, or cycle it in the start menu with `L`/the language button. This
 never changes the immutable original-release language. The menu displays each
 launcher locale in its own language (for example, `Svenska` rather than
 `sv`), while release cards retain their exact original-language identity.
+One deliberate menu-language choice is remembered in Eon's own preferences;
+an explicit `--language` always takes priority. With neither an explicit choice
+nor a saved preference, the launcher starts in English.
 Only Project Eon's own UI is translated—original game text remains sourced from
 the selected original media. All 20 UTF-8 catalogs are rendered through the
 bundled, hash-reviewed SDL_ttf/Noto fallback chain; Project Eon never selects a
@@ -314,9 +317,12 @@ separately from game media: Linux uses
 `$XDG_CONFIG_HOME/project-eon/presentation-v1.ini` (or
 `~/.config/project-eon/`), macOS uses Application Support, and Windows uses
 `%APPDATA%/ProjectEon/`. The file contains only Eon's output, aspect, preset,
-filter, and pacing selections. It is never created while merely reading game
-data, never stored in the data directory, and never changes original media or
-saves. Explicit `--resolution` and `--aspect` options override its values.
+filter, pacing, and selected launcher-chrome language. Its current structured
+format is read backward-compatibly from the prior renderer-only schema; a
+missing or malformed file falls back to English/default renderer settings. It
+is never created while merely reading game data, never stored in the data
+directory, and never changes original media or saves. Explicit `--resolution`,
+`--aspect`, and `--language` options override its values.
 
 Verify genuine release archives by SHA-256 without opening SDL:
 
