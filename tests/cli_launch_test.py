@@ -369,6 +369,7 @@ def main() -> int:
                 != launch_check_payload["runtime_admission"]
             or runtime_diagnostics_payload.get("runtime_session")
                 != launch_check_payload["runtime_session"]
+            or runtime_diagnostics_payload.get("atari_bootstrap_checkpoint") is not None
             or recovery.get("coverage") != launch_check_payload["coverage"]
             or recovery.get("trace_admission") != "not-loaded"
             or not recovery.get("startup_boundary")
@@ -392,6 +393,38 @@ def main() -> int:
                 "--runtime-diagnostics-json function map lost preservation provenance: "
                 f"{function}"
             )
+
+    atari_runtime_diagnostics = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "deuteros",
+            "--platform", "atari-st", "--release-language", "en", "--release-sha256",
+            "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+            "--runtime-diagnostics-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        atari_runtime_payload = json.loads(atari_runtime_diagnostics.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(
+            f"Atari --runtime-diagnostics-json did not emit JSON: {error}"
+        ) from error
+    atari_checkpoint = atari_runtime_payload.get("atari_bootstrap_checkpoint")
+    if (atari_runtime_diagnostics.returncode != 0
+            or atari_runtime_payload.get("runtime_session", {}).get("kind")
+                != "DEUTEROS ATARI ST BOOTSTRAP"
+            or not isinstance(atari_checkpoint, dict)
+            or atari_checkpoint.get("relocated_dispatcher_address") != "$1ec4"
+            or atari_checkpoint.get("state1_raw_request_count") != 84
+            or atari_checkpoint.get("state1_display_service") != {
+                "branch_relative_offset": "+0x48000",
+                "service_relative_offset": "+0x489c6",
+                "xbios_selector": "$5",
+            }
+            or any(token in atari_runtime_diagnostics.stdout
+                for token in (str(data_directory), "Hämtningar", "Downloads"))):
+        raise SystemExit(
+            "Atari runtime diagnostics lost the hash-bound display-service checkpoint:\n"
+            f"{atari_runtime_diagnostics.stdout}\n{atari_runtime_diagnostics.stderr}"
+        )
 
     # An explicit original-language selection narrows the release universe
     # before choosing a default outer hash.  Spanish is unique in this real

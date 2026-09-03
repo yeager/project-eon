@@ -1961,6 +1961,10 @@ bytes alone do not encode the third service argument seen by Hatari, prove a
 raw-read result or relocation, or show that the call returns. The session
 retains only those offsets, opcodes, and hashes in its diagnostic checkpoint;
 it never retains the raw state-1 bytes, calls XBIOS, or exposes a display.
+`--runtime-diagnostics-json` publishes this only as the optional
+`atari_bootstrap_checkpoint.state1_display_service` object for the active
+Replicants session; non-Atari sessions emit `null` rather than a fabricated
+cross-platform checkpoint.
 
 For reproducibility, an ordinary Hatari 2.6.1 diagnostic boot was also run
 against the read-only mounted Replicants Disk 1 and a user-supplied TOS 1.62
