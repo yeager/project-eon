@@ -18,6 +18,12 @@ public:
     static constexpr unsigned sectors_per_track = 11;
     static constexpr std::size_t standard_size = sector_size * cylinders * sides * sectors_per_track;
 
+    // Borrow a caller-owned, immutable ADF without materializing another disk
+    // image. The source bytes must outlive this reader and every view returned
+    // from it.
+    explicit AmigaAdf(std::span<const std::uint8_t> image);
+    // Runtime sessions that must retain a disk across the media-extraction
+    // scope can instead transfer ownership once, without a second copy.
     explicit AmigaAdf(std::vector<std::uint8_t> image);
 
     [[nodiscard]] AmigaDiskKind kind() const { return kind_; }
@@ -30,7 +36,10 @@ public:
     [[nodiscard]] std::span<const std::uint8_t> bytes(std::size_t offset, std::size_t length) const;
 
 private:
-    std::vector<std::uint8_t> image_;
+    void identify();
+
+    std::vector<std::uint8_t> owned_image_;
+    std::span<const std::uint8_t> image_;
     AmigaDiskKind kind_ = AmigaDiskKind::unknown;
 };
 

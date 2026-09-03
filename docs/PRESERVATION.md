@@ -74,6 +74,11 @@ directory is never misrepresented as an outer archive. No ZIP is reconstructed,
 and no source member is unpacked, copied, cached beyond the bounded lifetime of
 the in-memory admission view, or mutated. Unrelated sibling files are not media.
 
+The ADF reader follows the same rule: inspection code borrows bounded views of
+a verified source image, while a long-lived native session takes ownership by
+moving the already extracted image exactly once. It never creates a duplicate
+whole-disk buffer merely to parse sectors or raw offsets.
+
 `tools/extract_static_control_flow.py --dos-directory` applies this same
 complete-set model to offline disassembly metadata. It reads the committed
 direct-media-set ledger, rejects a relative or symlinked root, verifies every

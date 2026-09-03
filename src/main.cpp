@@ -1505,8 +1505,8 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
     if (!image) return;
     const auto data_image = eon::extract_verified_release_asset(release, clean_data_adf);
     if (!data_image) throw std::runtime_error("Verified Deuteros Amiga data ADF is unavailable");
-    const eon::AmigaAdf disk(*image);
-    const eon::AmigaAdf data_disk(*data_image);
+    const eon::AmigaAdf disk{std::span<const std::uint8_t>(*image)};
+    const eon::AmigaAdf data_disk{std::span<const std::uint8_t>(*data_image)};
     const auto data_header = eon::inspect_deuteros_amiga_data_disk_header(data_disk);
     const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
     std::cout << "          Paired data ADF: DEU\\0 custom-media header verified; "

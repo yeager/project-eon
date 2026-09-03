@@ -15,7 +15,16 @@ std::uint32_t big32(std::span<const std::uint8_t> bytes, std::size_t offset) {
 
 } // namespace
 
-AmigaAdf::AmigaAdf(std::vector<std::uint8_t> image) : image_(std::move(image)) {
+AmigaAdf::AmigaAdf(const std::span<const std::uint8_t> image) : image_(image) {
+    identify();
+}
+
+AmigaAdf::AmigaAdf(std::vector<std::uint8_t> image)
+    : owned_image_(std::move(image)), image_(owned_image_) {
+    identify();
+}
+
+void AmigaAdf::identify() {
     if (image_.size() != standard_size) throw std::runtime_error("ADF must be a standard 880 KiB image");
     if (image_[0] == 'D' && image_[1] == 'O' && image_[2] == 'S') kind_ = AmigaDiskKind::dos;
     else if (image_[0] == 'D' && image_[1] == 'E' && image_[2] == 'U') kind_ = AmigaDiskKind::deuteros_data;
