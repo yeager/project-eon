@@ -4390,7 +4390,6 @@ int main(int argc, char** argv) {
     std::optional<eon::ModernAssetPackPngSurface> millennium_external_modern_surface;
     bool millennium_external_modern_attempted = false;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
-    eon::MillenniumAtariBootstrapSession* millennium_atari_session = runtime_coordinator.millennium_atari();
     eon::MillenniumAmigaBootstrapSession* millennium_amiga_session = runtime_coordinator.millennium_amiga();
     const auto discard_millennium_assets = [&] {
         if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
@@ -4405,7 +4404,6 @@ int main(int argc, char** argv) {
         millennium_external_modern_attempted = false;
         millennium_gx_canvas_texture = nullptr;
         millennium_assets = nullptr;
-        millennium_atari_session = nullptr;
         millennium_amiga_session = nullptr;
     };
     const auto create_millennium_textures = [&] {
@@ -4732,7 +4730,6 @@ int main(int argc, char** argv) {
         // must not retain an IME/virtual keyboard from the previous visit.
         stop_millennium_title();
         if (!resolve_active_release(eon::Game::millennium)) return;
-        millennium_atari_session = runtime_coordinator.millennium_atari();
         millennium_amiga_session = runtime_coordinator.millennium_amiga();
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
@@ -4786,7 +4783,6 @@ int main(int argc, char** argv) {
         }
         millennium_assets = runtime_coordinator.millennium_dos();
         millennium_amiga_session = runtime_coordinator.millennium_amiga();
-        millennium_atari_session = runtime_coordinator.millennium_atari();
         active_release_sha256 = active_launch()->request.release_sha256;
         active_release_language = active_launch()->request.release_language;
         selected = launcher_route.game;
