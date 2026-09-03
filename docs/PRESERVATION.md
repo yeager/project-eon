@@ -77,6 +77,15 @@ The set digest is
 Runtime admission reopens and verifies every container again, retaining only
 transient in-memory decoded leaves; it never materialises original disks.
 
+The clean English Deuteros Amiga pair is bound the same way: disk 1 outer
+`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`
+contributes `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`,
+and disk 2 outer
+`b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a`
+contributes `99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a`.
+Its ordered set digest is
+`3d5dc5cf605f5b19a1ba42038321d79f9e4d35d3e56f7e4de90d8f732d8a8c45`.
+
 ### Millennium DOS installed-directory evidence
 
 The user-supplied `millennium-return-to-earth-2-2` directory under the default
