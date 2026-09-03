@@ -25,6 +25,7 @@ struct RuntimeHostPresentationSnapshot {
 struct RuntimeHostSnapshot {
     std::uint64_t generation = 0;
     bool revoking = false;
+    bool input_suppressed = false;
     ReleaseRuntimeAdmission admission = ReleaseRuntimeAdmission::unselected;
     ReleaseRuntimeRejection rejection = ReleaseRuntimeRejection::none;
     NativeSessionState state = NativeSessionState::menu;
@@ -54,11 +55,20 @@ public:
     [[nodiscard]] RuntimeHostAdvance advance(std::uint64_t monotonic_tick);
     [[nodiscard]] RuntimeHostSnapshot snapshot() const;
 
+    // A front-end modal owns physical input until it closes. Suppression is
+    // checked before the release-bound coordinator sees an observation; it is
+    // not an alternate input mapping. Enabling it also drops a held opening
+    // signal so it cannot survive behind a modal.
+    void set_input_suppressed(bool suppressed);
+    [[nodiscard]] bool input_suppressed() const { return input_suppressed_; }
+    [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
+
     [[nodiscard]] bool revoking() const;
     [[nodiscard]] std::uint64_t generation() const { return generation_; }
 
 private:
     std::uint64_t generation_ = 0;
+    bool input_suppressed_ = false;
 };
 
 } // namespace eon
