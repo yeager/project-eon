@@ -27,6 +27,10 @@ struct ReleaseRuntimeCapability {
 };
 
 [[nodiscard]] const std::vector<ReleaseRuntimeCapability>& release_runtime_capabilities();
+// The compiled native-adapter map must be a one-to-one companion of the
+// release manifest. This detects an accidental duplicate, omission, or tuple
+// mismatch before a coordinator can select the first matching row.
+[[nodiscard]] bool release_runtime_capability_manifest_is_valid();
 [[nodiscard]] std::optional<ReleaseRuntimeCapability> release_runtime_capability_for(
     const ReleaseArchive& release);
 

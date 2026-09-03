@@ -55,6 +55,11 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         rejection_ = ReleaseRuntimeRejection::launch_identity;
         return false;
     }
+    if (!release_runtime_capability_manifest_is_valid()) {
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::runtime_capability;
+        return false;
+    }
     std::optional<VerifiedReleaseMedia> media;
     try {
         media = VerifiedReleaseMedia::open(launch.release);

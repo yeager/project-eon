@@ -1,5 +1,8 @@
 #include "engine/release_runtime_capability.hpp"
 
+#include "data/release_manifest.hpp"
+
+#include <algorithm>
 #include <array>
 
 namespace eon {
@@ -19,6 +22,30 @@ constexpr std::array<ReleaseRuntimeCapability, 8> capabilities{{
 const std::vector<ReleaseRuntimeCapability>& release_runtime_capabilities() {
     static const std::vector<ReleaseRuntimeCapability> values(capabilities.begin(), capabilities.end());
     return values;
+}
+
+bool release_runtime_capability_manifest_is_valid() {
+    const auto manifest = release_manifest();
+    if (capabilities.size() != manifest.size()) return false;
+    for (const auto& release : manifest) {
+        const auto matches = std::count_if(capabilities.begin(), capabilities.end(),
+            [&release](const auto& capability) {
+                return capability.release_sha256 == release.sha256
+                    && capability.game == release.game && capability.platform == release.platform
+                    && capability.language == release.language;
+            });
+        if (matches != 1) return false;
+    }
+    for (const auto& capability : capabilities) {
+        const auto matches = std::count_if(manifest.begin(), manifest.end(),
+            [&capability](const auto& release) {
+                return release.sha256 == capability.release_sha256
+                    && release.game == capability.game && release.platform == capability.platform
+                    && release.language == capability.language;
+            });
+        if (matches != 1) return false;
+    }
+    return true;
 }
 
 std::optional<ReleaseRuntimeCapability> release_runtime_capability_for(const ReleaseArchive& release) {
