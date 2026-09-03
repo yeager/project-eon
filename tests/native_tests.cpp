@@ -10259,7 +10259,12 @@ int main() {
     assert(sound_bank.sounds[1].length_words == 0x40bc);
     assert(sound_bank.sounds[1].period == 0x1c0 && sound_bank.sounds[2].period == 0x1c2);
     assert(sound_bank.sounds[1].volume == 0x3f);
-    assert(sound_bank.sounds[1].pcm == sound_bank.sounds[2].pcm);
+    assert(sound_bank.sounds[1].pcm.size() == sound_bank.sounds[2].pcm.size());
+    assert(std::equal(sound_bank.sounds[1].pcm.begin(), sound_bank.sounds[1].pcm.end(),
+        sound_bank.sounds[2].pcm.begin()));
+    assert(sound_bank.sounds[1].pcm.data()
+        == system_disk.bytes(first_bundle.disk_offset + sound_bank.sounds[1].sample_relative_offset,
+            sound_bank.sounds[1].pcm.size()).data());
     assert(eon::to_hex(eon::sha256(sound_bank.sounds[1].pcm))
         == "f23fcd05f543be31726271b08ebfe7d907acfe31d1780aaf286fd2db701ae5d5");
     assert(sound_bank.sounds[1].pcm_sha256

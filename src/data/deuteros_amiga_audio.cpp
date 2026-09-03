@@ -65,7 +65,7 @@ DeuterosAmigaSoundBank parse_deuteros_amiga_sound_bank(
         result.sounds.push_back({static_cast<std::uint32_t>(offset), sample_relative_offset,
             length_words, period, volume, control_word, parameter_word,
             to_hex(sha256(encoded.subspan(offset, entry_size))), to_hex(sha256(sample)),
-            std::vector<std::uint8_t>(sample.begin(), sample.end())});
+            sample});
     }
     return result;
 }
