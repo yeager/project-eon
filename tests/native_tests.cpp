@@ -1945,6 +1945,8 @@ int main() {
         // before rejecting an absent route candidate.
         assert(eon::admit_runtime_launch(runtime_coordinator, std::nullopt,
             duplicate_english_releases).admission == eon::ReleaseRuntimeAdmission::identity_rejected);
+        assert(eon::admit_runtime_launch(runtime_coordinator, std::nullopt,
+            duplicate_english_releases).rejection == eon::ReleaseRuntimeRejection::launch_identity);
         assert(!runtime_coordinator.active());
         runtime_coordinator.reset();
         assert(!runtime_coordinator.active()
@@ -1986,6 +1988,7 @@ int main() {
         const auto route_admission = eon::launch_runtime_candidate(route_candidate,
             duplicate_english_releases, runtime_coordinator);
         assert(route_admission.admission == eon::ReleaseRuntimeAdmission::archive_rejected);
+        assert(route_admission.rejection == eon::ReleaseRuntimeRejection::original_media);
         assert(!runtime_coordinator.active());
 
         // The final card-menu handoff is itself SDL-free and has no adapter
@@ -2010,6 +2013,7 @@ int main() {
             menu_candidate, stale_menu_releases, menu_runtime_coordinator);
         assert(stale_menu_result.admission.admission
             == eon::ReleaseRuntimeAdmission::identity_rejected);
+        assert(stale_menu_result.admission.rejection == eon::ReleaseRuntimeRejection::launch_identity);
         assert(!stale_menu_result.accepted() && !stale_menu_result.active_launch
             && !menu_runtime_coordinator.active());
         // Custom has no launch bypass: before renderer confirmation there is
@@ -2019,6 +2023,7 @@ int main() {
             menu_candidate, duplicate_english_releases, menu_runtime_coordinator);
         assert(pending_custom_result.admission.admission
             == eon::ReleaseRuntimeAdmission::identity_rejected);
+        assert(pending_custom_result.admission.rejection == eon::ReleaseRuntimeRejection::launch_identity);
         assert(!pending_custom_result.accepted() && !pending_custom_result.active_launch
             && !menu_runtime_coordinator.active());
 

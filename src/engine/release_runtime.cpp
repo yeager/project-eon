@@ -306,15 +306,17 @@ RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinat
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {
     if (!candidate) {
         coordinator.reset();
-        return {ReleaseRuntimeAdmission::identity_rejected};
+        return {ReleaseRuntimeAdmission::identity_rejected,
+            ReleaseRuntimeRejection::launch_identity};
     }
     const auto resolved = resolve_launch_request_identity(*candidate, releases);
     if (!resolved) {
         coordinator.reset();
-        return {ReleaseRuntimeAdmission::identity_rejected};
+        return {ReleaseRuntimeAdmission::identity_rejected,
+            ReleaseRuntimeRejection::launch_identity};
     }
     static_cast<void>(coordinator.acquire(*resolved));
-    return {coordinator.admission()};
+    return {coordinator.admission(), coordinator.rejection()};
 }
 
 std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const ReleaseArchive& release) {

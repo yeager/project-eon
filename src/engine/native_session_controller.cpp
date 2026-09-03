@@ -48,7 +48,7 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
 RuntimeCandidateLaunchResult NativeSessionController::launch_direct(const LaunchRequest& candidate,
     const std::vector<ReleaseArchive>& releases) {
     if (state_ == NativeSessionState::returning_to_menu) {
-        return {runtime_.admission(), std::nullopt};
+        return {runtime_.admission(), runtime_.coordinator().rejection(), std::nullopt};
     }
     const auto result = runtime_.launch_direct(candidate, releases);
     synchronize_after_runtime_change();
@@ -58,7 +58,7 @@ RuntimeCandidateLaunchResult NativeSessionController::launch_direct(const Launch
 RuntimeCandidateLaunchResult NativeSessionController::launch_menu(const LauncherSessionState& session,
     const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) {
     if (state_ == NativeSessionState::returning_to_menu) {
-        return {runtime_.admission(), std::nullopt};
+        return {runtime_.admission(), runtime_.coordinator().rejection(), std::nullopt};
     }
     const auto result = runtime_.launch_menu(session, base, releases);
     synchronize_after_runtime_change();

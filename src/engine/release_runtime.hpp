@@ -155,7 +155,14 @@ private:
 // prior runtime just like a rejected archive/parser boundary.
 struct RuntimeLaunchAdmission {
     ReleaseRuntimeAdmission admission = ReleaseRuntimeAdmission::unselected;
-    [[nodiscard]] bool accepted() const { return admission == ReleaseRuntimeAdmission::active; }
+    // This result describes the attempted candidate even when the coordinator
+    // was reset before acquisition. It lets CLI and card UI report the same
+    // safe cause without retaining a stale runtime or any media detail.
+    ReleaseRuntimeRejection rejection = ReleaseRuntimeRejection::none;
+    [[nodiscard]] bool accepted() const {
+        return admission == ReleaseRuntimeAdmission::active
+            && rejection == ReleaseRuntimeRejection::none;
+    }
 };
 
 [[nodiscard]] RuntimeLaunchAdmission admit_runtime_launch(
