@@ -4311,8 +4311,8 @@ int main(int argc, char** argv) {
     // the finite held-input route only.  It neither provides VM state nor
     // substitutes a single original pixel in Original mode.
     SDL_Texture* deuteros_external_modern_texture = nullptr;
-    std::optional<eon::ModernAssetPackDeuterosAmigaOpeningSequence>
-        deuteros_external_modern_sequence;
+    std::optional<eon::ModernAssetPackPresentationResolver>
+        deuteros_external_modern_resolver;
     std::optional<eon::ModernAssetPackPngSurface> deuteros_external_modern_surface;
     std::optional<std::uint64_t> deuteros_external_modern_source_tick;
     bool deuteros_external_modern_attempted = false;
@@ -4344,7 +4344,7 @@ int main(int argc, char** argv) {
     const auto discard_deuteros_external_modern_sequence = [&] {
         if (deuteros_external_modern_texture) SDL_DestroyTexture(deuteros_external_modern_texture);
         deuteros_external_modern_texture = nullptr;
-        deuteros_external_modern_sequence.reset();
+        deuteros_external_modern_resolver.reset();
         deuteros_external_modern_surface.reset();
         deuteros_external_modern_source_tick.reset();
         deuteros_external_modern_attempted = false;
@@ -4361,16 +4361,18 @@ int main(int argc, char** argv) {
         const auto release = resolve_active_release(eon::Game::deuteros);
         if (!release) return;
         try {
-            deuteros_external_modern_sequence = eon::load_deuteros_amiga_held_opening_modern_sequence(
-                *selected_modern_pack_manifest, release->sha256);
+            deuteros_external_modern_resolver = eon::ModernAssetPackPresentationResolver::create(
+                *selected_modern_pack_manifest,
+                eon::ModernAssetPackPresentationTarget::deuteros_amiga_held_opening,
+                eon::Game::deuteros, eon::Platform::amiga, release->sha256);
         } catch (const std::exception& error) {
             std::cerr << "Modern Deuteros opening pack not used: " << error.what() << '\n';
-            deuteros_external_modern_sequence.reset();
+            deuteros_external_modern_resolver.reset();
         }
     };
     const auto refresh_deuteros_external_modern_texture = [&](
         const std::uint64_t source_tick, const bool title_handed_off) -> SDL_Texture* {
-        if (!deuteros_external_modern_sequence || source_tick == 0
+        if (!deuteros_external_modern_resolver || source_tick == 0
             || source_tick > eon::deuteros_amiga_held_opening_frame_count
             // Tick 82 is an external rendering target only when the original
             // VM actually took its held-input handoff. Without it, the opening
@@ -4383,8 +4385,7 @@ int main(int argc, char** argv) {
             return deuteros_external_modern_texture;
         }
         try {
-            auto surface = eon::load_deuteros_amiga_held_opening_modern_frame(
-                *deuteros_external_modern_sequence, source_tick);
+            auto surface = deuteros_external_modern_resolver->resolve(source_tick, title_handed_off);
             SDL_IOStream* stream = SDL_IOFromConstMem(surface.png.data(), surface.png.size());
             if (!stream) throw std::runtime_error("Unable to open Modern Deuteros PNG bytes: "
                 + std::string(SDL_GetError()));
@@ -4410,7 +4411,7 @@ int main(int argc, char** argv) {
             std::cerr << "Modern Deuteros opening pack disabled: " << error.what() << '\n';
             if (deuteros_external_modern_texture) SDL_DestroyTexture(deuteros_external_modern_texture);
             deuteros_external_modern_texture = nullptr;
-            deuteros_external_modern_sequence.reset();
+            deuteros_external_modern_resolver.reset();
             deuteros_external_modern_surface.reset();
             deuteros_external_modern_source_tick.reset();
             return nullptr;
@@ -4421,6 +4422,7 @@ int main(int argc, char** argv) {
     eon::ModernPresentationPipeline millennium_modern_pipeline;
     SDL_Texture* millennium_external_modern_texture = nullptr;
     std::optional<eon::ModernAssetPackPngSurface> millennium_external_modern_surface;
+    std::optional<eon::ModernAssetPackPresentationResolver> millennium_external_modern_resolver;
     bool millennium_external_modern_attempted = false;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
     const auto discard_millennium_assets = [&] {
@@ -4433,6 +4435,7 @@ int main(int argc, char** argv) {
         millennium_modern_pipeline.reset();
         millennium_external_modern_texture = nullptr;
         millennium_external_modern_surface.reset();
+        millennium_external_modern_resolver.reset();
         millennium_external_modern_attempted = false;
         millennium_gx_canvas_texture = nullptr;
         millennium_assets.reset();
@@ -4509,8 +4512,11 @@ int main(int argc, char** argv) {
         const auto release = resolve_active_release(eon::Game::millennium);
         if (!release) return;
         try {
-            millennium_external_modern_surface = eon::load_millennium_dos_title_modern_surface(
-                *selected_modern_pack_manifest, release->sha256);
+            millennium_external_modern_resolver = eon::ModernAssetPackPresentationResolver::create(
+                *selected_modern_pack_manifest,
+                eon::ModernAssetPackPresentationTarget::millennium_dos_title,
+                eon::Game::millennium, eon::Platform::dos, release->sha256);
+            millennium_external_modern_surface = millennium_external_modern_resolver->resolve(0);
             const auto& surface = *millennium_external_modern_surface;
             SDL_IOStream* stream = SDL_IOFromConstMem(surface.png.data(), surface.png.size());
             if (!stream) throw std::runtime_error("Unable to open Modern title PNG bytes: " + std::string(SDL_GetError()));
@@ -4527,6 +4533,7 @@ int main(int argc, char** argv) {
             }
         } catch (const std::exception& error) {
             millennium_external_modern_surface.reset();
+            millennium_external_modern_resolver.reset();
             std::cerr << "Modern title pack not used: " << error.what() << '\n';
         }
     };

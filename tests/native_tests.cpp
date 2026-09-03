@@ -764,6 +764,22 @@ void assert_modern_asset_pack_admission() {
         render_root / "pack.eonmodern", release_hash);
     assert(preferred_surface.asset_id == "millennium.dos.title.png-1280x800"
         && preferred_surface.png == png_4x);
+    const auto title_resolver = eon::ModernAssetPackPresentationResolver::create(
+        render_root / "pack.eonmodern", eon::ModernAssetPackPresentationTarget::millennium_dos_title,
+        eon::Game::millennium, eon::Platform::dos, release_hash);
+    const auto resolved_title = title_resolver.resolve(0);
+    assert(resolved_title.asset_id == "millennium.dos.title.png-1280x800"
+        && resolved_title.png == png_4x);
+    bool title_tick_rejected = false;
+    try { static_cast<void>(title_resolver.resolve(1));
+    } catch (const std::runtime_error&) { title_tick_rejected = true; }
+    assert(title_tick_rejected);
+    bool title_identity_rejected = false;
+    try { static_cast<void>(eon::ModernAssetPackPresentationResolver::create(
+        render_root / "pack.eonmodern", eon::ModernAssetPackPresentationTarget::millennium_dos_title,
+        eon::Game::millennium, eon::Platform::amiga, release_hash));
+    } catch (const std::runtime_error&) { title_identity_rejected = true; }
+    assert(title_identity_rejected);
     const auto render_validation = eon::validate_modern_asset_pack(render_root / "pack.eonmodern");
     assert(render_validation.accepted());
     const auto render_preflight = eon::preflight_modern_asset_pack(render_root / "pack.eonmodern",
@@ -914,6 +930,21 @@ void assert_modern_asset_pack_admission() {
     const auto deuteros_first = eon::load_deuteros_amiga_held_opening_modern_frame(deuteros_sequence, 1);
     const auto deuteros_last = eon::load_deuteros_amiga_held_opening_modern_frame(deuteros_sequence, 82);
     assert(deuteros_first.png == deuteros_png && deuteros_last.png == deuteros_png);
+    const auto opening_resolver = eon::ModernAssetPackPresentationResolver::create(
+        deuteros_root / "pack.eonmodern",
+        eon::ModernAssetPackPresentationTarget::deuteros_amiga_held_opening,
+        eon::Game::deuteros, eon::Platform::amiga,
+        "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
+    assert(opening_resolver.resolve(1).png == deuteros_png);
+    bool opening_terminal_without_handoff_rejected = false;
+    try { static_cast<void>(opening_resolver.resolve(82));
+    } catch (const std::runtime_error&) { opening_terminal_without_handoff_rejected = true; }
+    assert(opening_terminal_without_handoff_rejected);
+    assert(opening_resolver.resolve(82, true).png == deuteros_png);
+    bool opening_zero_tick_rejected = false;
+    try { static_cast<void>(opening_resolver.resolve(0));
+    } catch (const std::runtime_error&) { opening_zero_tick_rejected = true; }
+    assert(opening_zero_tick_rejected);
     bool opening_tick_rejected = false;
     try { static_cast<void>(eon::load_deuteros_amiga_held_opening_modern_frame(deuteros_sequence, 83));
     } catch (const std::runtime_error&) { opening_tick_rejected = true; }

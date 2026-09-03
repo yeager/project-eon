@@ -572,6 +572,70 @@ load_deuteros_amiga_held_opening_modern_sequence(
     return *sequence;
 }
 
+ModernAssetPackPresentationResolver ModernAssetPackPresentationResolver::create(
+    const std::filesystem::path& manifest_path, const ModernAssetPackPresentationTarget target,
+    const Game game, const Platform platform, const std::string_view source_release_sha256) {
+    const auto validation = validate_modern_asset_pack(manifest_path);
+    if (!validation.accepted()) {
+        throw std::runtime_error("Modern presentation pack rejected: " + validation.error);
+    }
+    auto pack = validation.pack;
+    if (pack.game != game || pack.platform != platform
+        || pack.source_release_sha256 != source_release_sha256) {
+        throw std::runtime_error("Modern presentation pack does not match selected original release");
+    }
+    if (target == ModernAssetPackPresentationTarget::millennium_dos_title) {
+        if (game != Game::millennium || platform != Platform::dos) {
+            throw std::runtime_error("Modern Millennium title target has the wrong release platform");
+        }
+        for (const auto& candidate_target : millennium_title_png_targets) {
+            const auto found = std::find_if(pack.assets.begin(), pack.assets.end(),
+                [&candidate_target](const auto& candidate) { return candidate.id == candidate_target.id; });
+            if (found != pack.assets.end()) {
+                return ModernAssetPackPresentationResolver(std::move(pack), target, *found,
+                    candidate_target.width, candidate_target.height, std::nullopt);
+            }
+        }
+        throw std::runtime_error("Modern title pack has no supported 640x400 or 1280x800 RGBA PNG title asset");
+    }
+    if (game != Game::deuteros || platform != Platform::amiga) {
+        throw std::runtime_error("Modern Deuteros opening target has the wrong release platform");
+    }
+    const auto sequence = find_deuteros_amiga_held_opening_sequence(pack);
+    if (!sequence) {
+        throw std::runtime_error("Modern opening pack must provide exactly one complete 82-frame 640x400 or 1280x800 held-input sequence");
+    }
+    for (const auto& frame : sequence->frames) {
+        static_cast<void>(load_checked_png_surface(pack.manifest_path.parent_path(), pack, frame,
+            {frame.id, sequence->width, sequence->height}));
+    }
+    return ModernAssetPackPresentationResolver(std::move(pack), target, {}, sequence->width,
+        sequence->height, sequence);
+}
+
+ModernAssetPackPngSurface ModernAssetPackPresentationResolver::resolve(
+    const std::uint64_t source_tick, const bool native_title_handed_off) const {
+    if (target_ == ModernAssetPackPresentationTarget::millennium_dos_title) {
+        if (source_tick != 0) {
+            throw std::runtime_error("Modern Millennium title target does not accept a source tick");
+        }
+        return load_checked_png_surface(pack_.manifest_path.parent_path(), pack_, asset_,
+            {asset_.id, width_, height_});
+    }
+    if (!sequence_ || source_tick == 0 || source_tick > deuteros_amiga_held_opening_frame_count
+        || (source_tick == deuteros_amiga_held_opening_frame_count && !native_title_handed_off)) {
+        throw std::runtime_error("Modern Deuteros opening source tick is not an admitted native frame");
+    }
+    const auto& asset = sequence_->frames[static_cast<std::size_t>(source_tick - 1U)];
+    const auto expected = deuteros_amiga_held_opening_asset_id(
+        static_cast<std::size_t>(source_tick), sequence_->width, sequence_->height);
+    if (asset.id != expected) {
+        throw std::runtime_error("Modern Deuteros opening sequence frame identity is inconsistent");
+    }
+    return load_checked_png_surface(pack_.manifest_path.parent_path(), pack_, asset,
+        {asset.id, sequence_->width, sequence_->height});
+}
+
 ModernAssetPackPngSurface load_deuteros_amiga_held_opening_modern_frame(
     const ModernAssetPackDeuterosAmigaOpeningSequence& sequence,
     const std::uint64_t source_tick) {

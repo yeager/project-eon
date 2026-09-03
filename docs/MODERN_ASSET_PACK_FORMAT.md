@@ -119,6 +119,15 @@ This mapping does not infer original behavior, alter game logic, save data, or
 original media. It creates no cache or extracted output. Other asset IDs remain
 admission-only metadata until separately documented and implemented.
 
+Both renderable mappings pass through one SDL-free presentation resolver. It
+owns only the selected pack metadata and rechecks transient PNG bytes when a
+specific native source target is requested; SDL receives a surface only after
+that result. The resolver accepts tick zero solely for the Millennium title,
+and accepts Deuteros ticks 1–82 solely for the declared held-input route. Tick
+82 requires the native opening session's actual title-handoff observation.
+This keeps target selection, tier preference and terminal-frame gating outside
+the renderer while leaving Original with no pack resolver at all.
+
 ### Deuteros Amiga held-input opening sequence
 
 The second renderable v1 mapping is intentionally finite and route-specific.
