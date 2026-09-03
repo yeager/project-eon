@@ -587,6 +587,15 @@ read-only provenance report. The map contains no guest-to-host hooks, patch
 targets, replacement byte sequences, emulation directives, or inferred code
 flow; it never executes source instructions and never changes original media.
 
+The companion declarative function map is now admitted through the same
+runtime media boundary. Before a native adapter is constructed, Project Eon
+re-hashes the parser-profile span named by every function-map row for the
+selected release and requires it to equal that row's `source_span_sha256`.
+This prevents the CLI/F10 diagnostic map from describing a detached leaf or a
+changed profile interval. It remains provenance only: a matching span does not
+classify bytes as code, establish reachability or ABI semantics, or authorize
+their execution.
+
 The separate compiled `startup_boundary` table contains one exact release
 identity, parser profile, first observed source address, and an explicit
 unresolved boundary for every inventory release. It is accepted only when the

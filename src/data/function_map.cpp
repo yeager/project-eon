@@ -1,6 +1,7 @@
 #include "data/function_map.hpp"
 
 #include "data/release_manifest.hpp"
+#include "data/sha256.hpp"
 
 #include <algorithm>
 #include <array>
@@ -270,6 +271,31 @@ bool release_has_function_map_entry(const std::string_view release_sha256,
     });
     return entry != entries.end()
         && release_has_parser_profile(release_sha256, entry->parser_profile_id);
+}
+
+bool function_map_entries_are_attested_by_media(const VerifiedReleaseMedia& media) {
+    // A function entry's source-span digest is deliberately the digest of the
+    // parser-profile interval, rather than an executable-code assertion. A
+    // profile can cover an ADF/PRG/COM range containing data, relocation
+    // records, or unresolved calls as well as the named static site.
+    const auto profiles = parser_profile_manifest();
+    for (const auto& entry : function_map_for_release(media.release().sha256)) {
+        if (!function_map_entry_is_well_formed(entry)) return false;
+        const auto profile = std::find_if(profiles.begin(), profiles.end(), [&entry](const auto& candidate) {
+            return candidate.release_sha256 == entry.release_sha256
+                && candidate.id == entry.parser_profile_id;
+        });
+        if (profile == profiles.end() || profile->offset > profile->leaf_size
+            || profile->length > profile->leaf_size - profile->offset) return false;
+        const auto leaf = media.extract(profile->leaf_sha256);
+        if (!leaf || leaf->size() != profile->leaf_size
+            || profile->offset > leaf->size()
+            || profile->length > leaf->size() - profile->offset) return false;
+        const auto span = std::span<const std::uint8_t>(*leaf).subspan(
+            static_cast<std::size_t>(profile->offset), static_cast<std::size_t>(profile->length));
+        if (to_hex(sha256(span)) != entry.source_span_sha256) return false;
+    }
+    return true;
 }
 
 FunctionMapSidecarCoverage function_map_sidecar_coverage(const StaticControlFlowSummary& sidecar) {

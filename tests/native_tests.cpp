@@ -2735,6 +2735,8 @@ int main() {
     // has to retain only rows that match the selected immutable release,
     // while reporting no trace admission merely because media was scanned.
     for (const auto& release : releases) {
+        const auto verified_media = eon::VerifiedReleaseMedia::open(release);
+        assert(eon::function_map_entries_are_attested_by_media(verified_media));
         const auto capability = eon::release_runtime_capability_for(release);
         assert(capability.has_value());
         const auto diagnostics = eon::runtime_diagnostics_for_release(release);
