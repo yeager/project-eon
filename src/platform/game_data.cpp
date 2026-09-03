@@ -198,6 +198,35 @@ std::optional<std::vector<std::uint8_t>> VerifiedReleaseMedia::extract(
     return found->second;
 }
 
+bool verified_release_media_has_declared_profile_ranges(const VerifiedReleaseMedia& media) {
+    // Avoid reopening/decompressing the same declared leaf for profiles that
+    // identify different spans within it. Every returned vector is scoped to
+    // this check; no extracted original data is cached or exposed.
+    std::vector<std::pair<std::string_view, std::size_t>> verified_leaves;
+    bool found_profile = false;
+    for (const auto& profile : parser_profile_manifest()) {
+        if (profile.release_sha256 != media.release().sha256) continue;
+        found_profile = true;
+        const auto already_verified = std::find_if(verified_leaves.begin(), verified_leaves.end(),
+            [&profile](const auto& candidate) { return candidate.first == profile.leaf_sha256; });
+        std::size_t leaf_size = 0;
+        if (already_verified == verified_leaves.end()) {
+            const auto leaf = media.extract(profile.leaf_sha256);
+            if (!leaf || leaf->size() != profile.leaf_size) return false;
+            leaf_size = leaf->size();
+            verified_leaves.emplace_back(profile.leaf_sha256, leaf_size);
+        } else {
+            leaf_size = already_verified->second;
+        }
+        // The complete original leaf is hash-verified by `extract`; profile
+        // offsets/lengths are compiled preservation declarations and must
+        // still be bounded before any adapter starts to use them.
+        if (leaf_size != profile.leaf_size || profile.offset > leaf_size
+            || profile.length > leaf_size - profile.offset) return false;
+    }
+    return found_profile;
+}
+
 std::vector<ArchiveAsset> VerifiedReleaseMedia::inventory() const {
     if (!archive_) return direct_inventory_;
     // Inventory helpers intentionally reopen ZIP sources, so direct callers

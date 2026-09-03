@@ -425,7 +425,11 @@ to launch an unrecognised candidate.
 
 `ReleaseRuntimeCoordinator` publishes a `RuntimeSessionSnapshot` only after the
 selected outer release is rehashed and exactly one typed platform adapter is
-constructed. The snapshot holds release identity, the adapter kind, narrowly
+constructed. Before adapter construction, admission also reopens every unique
+leaf named by that release's compiled parser profiles and checks its exact hash,
+declared size and every profile interval bound. This is a fail-closed media
+provenance check; it neither executes original bytes nor promotes a profile to
+a playable path. The snapshot holds release identity, the adapter kind, narrowly
 declared presentation/audio observation capabilities, and the next hard
 boundary. It contains no filesystem path, archive member, original bytes, SDL
 object, inferred input mapping, save state, or generic game model. The
