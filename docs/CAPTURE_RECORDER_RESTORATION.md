@@ -418,6 +418,11 @@ publishes its captured state last. It performs no output, environment lookup,
 allocation, logging, guest write, register/vector change, input handling or
 scheduling.
 
+The exact external source delta is retained as
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/recorder-v23-pod-foundation-20260903.patch`
+with SHA-256
+`71ee7d92bd6ff25f7f16dd5e6218b79629f7efcbb8c48f41d904c9b7c53b8419`.
+
 The slot is deliberately unarmed: the reviewed release identity, loaded-image
 fingerprint and title-prefix predicate do not yet exist. Therefore no `INT 6`
 event is eligible to capture, there is no serializer, and no trace artifact
