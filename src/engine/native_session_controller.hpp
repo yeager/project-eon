@@ -75,9 +75,12 @@ public:
     [[nodiscard]] bool is_menu() const { return state_ == NativeSessionState::menu; }
     [[nodiscard]] bool is_live() const;
     [[nodiscard]] bool requires_revocation_for(const LauncherSourceIdentity& source) const;
-    [[nodiscard]] ReleaseRuntimeCoordinator& coordinator() { return runtime_.coordinator(); }
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return runtime_.active(); }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return runtime_.admission(); }
+    [[nodiscard]] ReleaseRuntimeRejection rejection() const { return runtime_.coordinator().rejection(); }
+    // SDL diagnostics receive a copy of the value-only session declaration,
+    // never the mutable coordinator that owns platform adapters and media.
+    [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
 
 private:
     void synchronize_after_runtime_change();

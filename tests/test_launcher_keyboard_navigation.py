@@ -243,7 +243,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
     def test_profile_launch_rejections_are_visible_without_media_details(self) -> None:
         self.assertIn("std::string launcher_runtime_admission", SOURCE)
         self.assertIn("launcher_runtime_admission = std::string(", SOURCE)
-        self.assertIn("release_runtime_admission_label(runtime_coordinator.admission())", SOURCE)
+        self.assertIn("release_runtime_admission_label(runtime.admission())", SOURCE)
         self.assertIn('tr("RUNTIME ADMISSION")', SOURCE)
         self.assertNotIn("launcher_runtime_admission = resolved->release.path", SOURCE)
 
@@ -264,7 +264,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("LauncherRuntimeController(LauncherRuntimeController&&) = delete", MENU_RUNTIME_HEADER)
         self.assertNotIn("SDL_", MENU_RUNTIME_HEADER + MENU_RUNTIME_SOURCE)
         self.assertNotIn("filesystem", MENU_RUNTIME_HEADER + MENU_RUNTIME_SOURCE)
-        self.assertIn("auto& runtime_coordinator = runtime.coordinator();", SOURCE)
+        self.assertNotIn("runtime.coordinator()", SOURCE)
         reset = SOURCE.index("const auto reset_active_runtime")
         reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
         self.assertLess(reset_body.index("stop_millennium_title();"), reset_body.index("runtime.reset();"))
