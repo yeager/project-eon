@@ -79,6 +79,31 @@ std::string canonical_launcher_language(const std::string_view language) {
     return "en";
 }
 
+std::string_view launcher_language_autonym(const std::string_view language) {
+    const auto canonical = canonical_launcher_language(language);
+    if (canonical == "ar") return "العربية";
+    if (canonical == "de") return "Deutsch";
+    if (canonical == "el") return "Ελληνικά";
+    if (canonical == "en_GB") return "English (UK)";
+    if (canonical == "es") return "Español";
+    if (canonical == "fi") return "Suomi";
+    if (canonical == "fr") return "Français";
+    if (canonical == "hi") return "हिन्दी";
+    if (canonical == "it") return "Italiano";
+    if (canonical == "ja") return "日本語";
+    if (canonical == "ko") return "한국어";
+    if (canonical == "nl") return "Nederlands";
+    if (canonical == "no") return "Norsk";
+    if (canonical == "pl") return "Polski";
+    if (canonical == "pt_BR") return "Português (Brasil)";
+    if (canonical == "ru") return "Русский";
+    if (canonical == "sv") return "Svenska";
+    if (canonical == "tr") return "Türkçe";
+    if (canonical == "uk") return "Українська";
+    if (canonical == "zh_CN") return "简体中文";
+    return "English";
+}
+
 Translator Translator::from_po_file(const std::filesystem::path& path) {
     Translator translator;
     std::ifstream file(path, std::ios::binary);

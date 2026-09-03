@@ -2228,6 +2228,12 @@ int main() {
         assert(eon::canonical_launcher_language("sv_SE.UTF-8") == "sv");
         assert(eon::canonical_launcher_language("en_GB") == "en_GB");
         assert(eon::canonical_launcher_language("not a locale") == "en");
+        assert(eon::launcher_language_autonym("sv_SE.UTF-8") == "Svenska");
+        assert(eon::launcher_language_autonym("zh") == "简体中文");
+        assert(eon::launcher_language_autonym("not a locale") == "English");
+        for (const auto locale : launcher_languages) {
+            assert(!eon::launcher_language_autonym(locale).empty());
+        }
     // The Unicode launcher renderer must never consult a system font when no
     // reviewed bundled asset is present. This is a no-renderer/no-font native
     // contract and therefore requires no host font in CI.

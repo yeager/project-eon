@@ -5542,7 +5542,7 @@ int main(int argc, char** argv) {
             draw_text(renderer, launcher_language_bounds.x + 10.0F,
                 launcher_language_bounds.y + 9.0F,
                 "< " + tr("LANGUAGE") + ": "
-                    + eon::canonical_launcher_language(request.language) + " >");
+                    + std::string(eon::launcher_language_autonym(request.language)) + " >");
             SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
             SDL_RenderFillRect(renderer, &data_directory_picker_bounds);
             SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);

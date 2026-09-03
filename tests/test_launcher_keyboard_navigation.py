@@ -137,6 +137,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("event.key.key == SDLK_L", SOURCE)
         self.assertIn("launcher_language_bounds", SOURCE)
         self.assertIn('tr("LANGUAGE")', SOURCE)
+        self.assertIn("launcher_language_autonym(request.language)", SOURCE)
         self.assertIn("SDL_GAMEPAD_BUTTON_LEFT_SHOULDER", SOURCE)
         self.assertIn("SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER", SOURCE)
         self.assertIn("translator = eon::Translator::from_language(request.language", SOURCE)
