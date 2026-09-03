@@ -10022,7 +10022,7 @@ int main() {
     assert(unproven_resource_rejected);
 
     // The main loader's probe and body pass start at the same physical ADF
-    // offset. These are in-memory copies of the genuine first two complete
+    // offset. These are bounded views of the genuine first two complete
     // resources, not extracted files or inferred data formats.
     const auto transferred_bundle0 = eon::read_deuteros_amiga_main_resource(
         system_disk, load_plan, 0);
@@ -10031,9 +10031,8 @@ int main() {
     assert(transferred_bundle0->probe_destination_address == 0x2ad24);
     assert(transferred_bundle0->payload_destination_address == 0x32a24);
     assert(transferred_bundle0->payload_length == 0x2f3f4);
-    assert(transferred_bundle0->payload == std::vector<std::uint8_t>(
-        system_disk.bytes(0x1b800, 0x2f3f4).begin(),
-        system_disk.bytes(0x1b800, 0x2f3f4).end()));
+    assert(transferred_bundle0->payload.data() == system_disk.bytes(0x1b800, 0x2f3f4).data());
+    assert(transferred_bundle0->payload.size() == 0x2f3f4);
     // $2016a reads the transfer as an even byte-indexed word source, not as
     // an extracted resource. Zero state observes the genuine high length word.
     const auto resource_sample0 = eon::sample_deuteros_amiga_main_resource_consumer(
@@ -10053,9 +10052,8 @@ int main() {
     assert(transferred_bundle1);
     assert(transferred_bundle1->source_disk_offset == 0x4ba00);
     assert(transferred_bundle1->payload_length == 0x215f0);
-    assert(transferred_bundle1->payload == std::vector<std::uint8_t>(
-        system_disk.bytes(0x4ba00, 0x215f0).begin(),
-        system_disk.bytes(0x4ba00, 0x215f0).end()));
+    assert(transferred_bundle1->payload.data() == system_disk.bytes(0x4ba00, 0x215f0).data());
+    assert(transferred_bundle1->payload.size() == 0x215f0);
     const auto resource_sample_bundle1 = eon::sample_deuteros_amiga_main_resource_consumer(
         *transferred_bundle1, main_entry, 0, 0);
     assert(resource_sample_bundle1.sampled_word == 0x0002);

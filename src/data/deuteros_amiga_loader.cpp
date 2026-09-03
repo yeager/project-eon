@@ -682,7 +682,7 @@ read_deuteros_amiga_main_resource(const AmigaAdf& disk,
         plan.main_stage_entry.resource_probe_address,
         plan.main_stage_entry.resource_payload_address,
         payload_length,
-        std::vector<std::uint8_t>(source.begin(), source.end()),
+        source,
     };
 }
 

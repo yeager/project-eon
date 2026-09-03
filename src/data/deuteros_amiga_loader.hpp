@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -287,17 +288,18 @@ struct DeuterosAmigaChannelRequestAdjacentEntry {
 };
 
 // A read-only representation of one completed pass through the main stage's
-// resource loader at $21932. `payload` is copied only into this host-memory
-// value: neither the supplied ADF nor the user's data directory is modified.
-// The bytes deliberately include the four-byte length word because the
-// original second transfer starts at the same source offset as its probe.
+// resource loader at $21932. `payload` is a non-owning view into the supplied
+// ADF, which must outlive this transfer. The host models only the proven
+// destination relationship, never an additional copy of original bytes. The
+// view deliberately includes the four-byte length word because the original
+// second transfer starts at the same source offset as its probe.
 struct DeuterosAmigaMainResourceTransfer {
     std::uint16_t resource_index = 0;
     std::uint32_t source_disk_offset = 0;
     std::uint32_t probe_destination_address = 0;
     std::uint32_t payload_destination_address = 0;
     std::uint32_t payload_length = 0;
-    std::vector<std::uint8_t> payload;
+    std::span<const std::uint8_t> payload;
 };
 
 // One entry in the caller-proved main-resource table. This is an
