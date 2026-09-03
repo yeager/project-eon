@@ -6,6 +6,12 @@
 
 namespace eon {
 
+struct RuntimeHostAdvance {
+    DeuterosAmigaOpeningAdvance opening;
+    bool opening_started = false;
+    bool opening_active = false;
+};
+
 // SDL owns windows, textures, queued device audio and text-input activation.
 // RuntimeHost owns only the corresponding native lifecycle ordering.  It
 // gives every platform front end one explicit revocation interval in which it
@@ -21,6 +27,11 @@ public:
     // Finish only after the front end has released all source-derived borrows.
     // Calling this outside a revocation interval is deliberately inert.
     void finish_source_revocation();
+
+    // SDL supplies a monotonic time value; the host decides whether the one
+    // recovered 50 Hz session may run.  No SDL clock, renderer, device audio
+    // or generic game tick crosses this boundary.
+    [[nodiscard]] RuntimeHostAdvance advance(std::uint64_t monotonic_tick);
 
     [[nodiscard]] bool revoking() const;
     [[nodiscard]] std::uint64_t generation() const { return generation_; }

@@ -278,7 +278,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("maximum_catch_up_ticks", OPENING_RUNNER_HEADER)
         self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
         self.assertIn("result.title_handoff", OPENING_RUNNER_SOURCE)
-        scheduler = SOURCE.index("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())")
+        scheduler = SOURCE.rindex("runtime.advance(SDL_GetTicks())")
         renderer = SOURCE.index("const bool modern", scheduler)
         scheduler_block = SOURCE[scheduler:renderer]
         self.assertIn("if (events.title_handoff)", scheduler_block)
@@ -338,7 +338,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         f10_block = SOURCE[f10_guard:modal]
         self.assertIn("clear_deuteros_opening_input();", f10_block)
         self.assertIn("RuntimeInputObservation::opening_input_held(false)", SOURCE)
-        self.assertIn("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())", SOURCE)
+        self.assertIn("runtime.advance(SDL_GetTicks())", SOURCE)
         self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
         self.assertLess(f10_guard, modal)
 

@@ -214,7 +214,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("advance_deuteros_amiga_opening_scheduler", native_header)
         self.assertIn("deuteros_amiga_opening_runner_", native_header)
         self.assertIn("[this] { return tick_deuteros_amiga_opening(); }", native_source)
-        self.assertIn("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())", SOURCE)
+        self.assertIn("runtime.advance(SDL_GetTicks())", SOURCE)
         self.assertNotIn("deuteros_opening_runner->advance", SOURCE)
 
     def test_millennium_terminal_startup_observations_close_input_routing(self) -> None:
@@ -257,7 +257,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         # Escape and gamepad Back must not retain an active archive, texture,
         # audio stream, or recovered VM behind a newly visible launcher.
         reset = SOURCE.index("const auto reset_active_runtime")
-        self.assertIn("runtime.reset();", SOURCE[reset:reset + 1100])
+        self.assertIn("runtime.begin_source_revocation();", SOURCE[reset:reset + 1100])
+        self.assertIn("runtime.finish_source_revocation();", SOURCE[reset:reset + 1100])
         self.assertIn("reset_deuteros_runtime();", SOURCE[reset:reset + 1100])
         escape = SOURCE.rfind("if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)")
         self.assertIn("reset_active_runtime();", SOURCE[escape:escape + 450])
@@ -273,9 +274,9 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertNotIn("runtime.coordinator()", SOURCE)
         reset = SOURCE.index("const auto reset_active_runtime")
         reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
-        self.assertLess(reset_body.index("stop_millennium_title();"), reset_body.index("runtime.reset();"))
-        self.assertLess(reset_body.index("discard_millennium_assets();"), reset_body.index("runtime.reset();"))
-        self.assertLess(reset_body.index("reset_deuteros_runtime();"), reset_body.index("runtime.reset();"))
+        self.assertLess(reset_body.index("stop_millennium_title();"), reset_body.index("runtime.begin_source_revocation();"))
+        self.assertLess(reset_body.index("discard_millennium_assets();"), reset_body.index("runtime.begin_source_revocation();"))
+        self.assertLess(reset_body.index("reset_deuteros_runtime();"), reset_body.index("runtime.begin_source_revocation();"))
         navigation = SOURCE[SOURCE.index("const auto apply_launcher_navigation"):
                             SOURCE.index("const auto activate_launcher_card")]
         self.assertIn("runtime.requires_revocation_for(launcher_interaction.source_identity())", navigation)
@@ -345,7 +346,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RuntimeInputObservation::available_character()", SOURCE)
         self.assertNotIn("millennium_sound_selection_session->accept_ascii_character", SOURCE)
         self.assertNotIn("millennium_title_session->poll_console(true)", SOURCE)
-        self.assertIn("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())", SOURCE)
+        self.assertIn("runtime.advance(SDL_GetTicks())", SOURCE)
         self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
         self.assertIn("RuntimeInputObservation::opening_input_held", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::directory", SOURCE)
@@ -379,7 +380,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(reset, source_change)
         reset_body = SOURCE[reset:SOURCE.index("const auto start_millennium_title", reset)]
         for clearing in (
-            "runtime.reset();",
+            "runtime.begin_source_revocation();",
+            "runtime.finish_source_revocation();",
             "stop_millennium_title();",
             "millennium_game_session.reset();",
             "discard_millennium_assets();",
@@ -396,7 +398,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         ):
             with self.subTest(clearing=clearing):
                 self.assertIn(clearing, deuteros_body)
-        self.assertIn("runtime.reset();", reset_body)
+        self.assertIn("runtime.begin_source_revocation();", reset_body)
+        self.assertIn("runtime.finish_source_revocation();", reset_body)
         self.assertNotIn("deuteros_opening =", deuteros_body)
         switch_body = SOURCE[source_change:SOURCE.index("} else {", source_change)]
         self.assertIn("reset_active_runtime();", switch_body)
@@ -470,7 +473,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(stop, start)
         self.assertIn("SDL_StopTextInput(window)", SOURCE[stop:start])
         self.assertIn("millennium_startup_input.reset();", SOURCE[stop:start])
-        self.assertIn("runtime.reset();", SOURCE)
+        self.assertIn("runtime.begin_source_revocation();", SOURCE)
+        self.assertIn("runtime.finish_source_revocation();", SOURCE)
         self.assertIn("reset_active_runtime();\n                    screen = Screen::menu;", SOURCE)
         self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])
 

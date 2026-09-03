@@ -4800,7 +4800,7 @@ int main(int argc, char** argv) {
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
-        static_cast<void>(runtime.start_deuteros_amiga_opening_scheduler(SDL_GetTicks()));
+        static_cast<void>(runtime.advance(SDL_GetTicks()));
         deuteros_title_resource.reset();
     };
     const auto launch_menu_selection = [&] {
@@ -5584,21 +5584,20 @@ int main(int argc, char** argv) {
             if (screen == Screen::menu && !request.platform) focus_menu_card(focused);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && !runtime.deuteros_amiga_opening_scheduler_active()
-            && eon::deuteros_amiga_opening_supported(active_platform)
             && runtime.state() == eon::NativeSessionState::deuteros_amiga_opening) {
+            const auto advance = runtime.advance(SDL_GetTicks());
+            if (advance.opening_started) {
+                // A scheduler can only be restarted for this already admitted
+                // native opening. Rebuild transient SDL objects from its live
+                // presentation rather than retaining a prior release's ones.
             create_deuteros_opening_texture();
             start_deuteros_audio();
             load_deuteros_external_modern_sequence();
-            static_cast<void>(runtime.start_deuteros_amiga_opening_scheduler(SDL_GetTicks()));
-        }
-        if (screen == Screen::launching && selected == eon::Game::deuteros
-            && runtime.deuteros_amiga_opening_scheduler_active()) {
-            const auto advance = runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks());
+            }
             // The runner owns only scheduler arithmetic and delegates every
             // tick through the native lifecycle controller. A title-boundary
             // transition is therefore published before SDL sees its events.
-            for (const auto& events : advance.events) {
+            for (const auto& events : advance.opening.events) {
                 if (!events.alternate_resources.empty()) {
                     // Opcode $0f exposes this original bundle-relative target.
                     // It is retained as evidence for the subsequent verified
