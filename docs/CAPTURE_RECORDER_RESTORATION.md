@@ -131,6 +131,25 @@ digest, so the locator must continue to reject it. All source, build and
 temporary paths were under `/home/yeager/.cache/project-eon-tools/`; no
 original media, project file, package, or `/tmp` path participated.
 
+### 2026-09-03 FS-UAE baseline provenance
+
+The externally cached FS-UAE source at reviewed upstream commit
+`4ae7ddaec50b567ed80d71ffbff067cb58e945a3` (tag `v3.2.35`) now builds on
+the current aarch64 Linux host.  Bootstrap completed with the distribution
+Autotools toolchain; the configured baseline used `--disable-jit`, then built
+successfully with `make -j2`.  The resulting external executable was
+61,647,256 bytes with SHA-256
+`1c07a01833922ad3afd53f87380a32d68f832301234be1a72262266d582c9370` and
+reported version `3.2.35`.
+
+This is a `BASELINE_VERIFY` result only.  It establishes a reproducible source
+and host-toolchain boundary for the separately approved recorder work; it does
+not replace the reviewed v10 observer binary, whose hash, bounded observer
+patch and independent review remain the admission contract.  The source and
+all build outputs remain outside the repository at
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/fs-uae-source/`.
+No game data, capture output or `/tmp` path participated.
+
 ### 2026-09-02 experimental observer provenance
 
 The first candidate reached `OBSERVER_FIX_REQUIRED` (not `INDEPENDENT_REVIEW`
