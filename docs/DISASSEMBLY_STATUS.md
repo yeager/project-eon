@@ -254,6 +254,24 @@ into this checkout nor required them to share a repository path. This verifies
 report identity only; it does not change any entry, reachability, code/data,
 ABI, or gameplay boundary recorded above.
 
+### 2026-09-03 whole-program re-verification
+
+The retained external report directory
+`/home/yeager/.cache/project-eon-tools/whole-disassembly-20260901-02` was
+re-verified against the committed v2 inventory. The verifier accepted all
+**14 static spans** represented by **7 unique reports**. The corresponding
+retained static-control-flow set was also verified: **13 control-flow spans**
+represented by **8 unique sidecars**. The remaining inventory span is the
+Millennium Atari `MILL22A.INF` data/config listing; it has a complete linear
+report but deliberately no control-flow sidecar because its execution entry
+is unproven.
+
+This is the complete currently identifiable static disassembly corpus for all
+recognised releases and their established load/image spans. It is still not a
+semantic disassembly: unresolved loader results, external ABI calls,
+indirect-control-flow targets, code/data reachability, timing, input and game
+rules remain explicit boundaries until independently evidenced.
+
 ## Variant separation
 
 The following identities are recognised forensic inputs, not interchangeable

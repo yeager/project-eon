@@ -80,6 +80,11 @@ RuntimeHost::millennium_amiga_bootstrap_presentation() const {
     return NativeSessionController::millennium_amiga_bootstrap_presentation();
 }
 
+std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+RuntimeHost::millennium_atari_bootstrap_presentation() const {
+    return NativeSessionController::millennium_atari_bootstrap_presentation();
+}
+
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;
     ++generation_;

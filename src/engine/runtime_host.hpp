@@ -76,6 +76,8 @@ public:
     deuteros_atari_bootstrap_presentation() const;
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
     millennium_amiga_bootstrap_presentation() const;
+    [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+    millennium_atari_bootstrap_presentation() const;
 
     // Begin before SDL destroys any source-derived object.  A monotonically
     // increasing generation lets a front end reject stale render/audio work
