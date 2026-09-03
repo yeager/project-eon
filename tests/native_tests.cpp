@@ -4480,6 +4480,8 @@ int main() {
     assert(title_flow.input_interrupt == 0x21);
     assert(title_flow.input_service == 0x06);
     assert(title_flow.input_parameter == 0xff);
+    assert(title_flow.input_poll_call_address == 0x1c28);
+    assert(title_flow.input_poll_helper_address == 0x0d0a);
     assert(title_flow.input_nonzero_exit_address == 0x1c54);
     assert(title_flow.input_exit_first_call_address == 0x1c54);
     assert(title_flow.input_exit_first_call_target == 0x1968);

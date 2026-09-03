@@ -27,6 +27,11 @@ struct MillenniumDosTitleFlow {
     std::uint8_t input_interrupt = 0;
     std::uint8_t input_service = 0;
     std::uint8_t input_parameter = 0;
+    // Caller/callee edge for the literal DOS availability poll.  This is
+    // provenance for a future reviewed recorder configuration only; it does
+    // not assign a character, key, or return ABI to the poll.
+    std::uint16_t input_poll_call_address = 0;
+    std::uint16_t input_poll_helper_address = 0;
     std::uint16_t input_nonzero_exit_address = 0;
     std::uint16_t input_exit_first_call_address = 0;
     std::uint16_t input_exit_first_call_target = 0;

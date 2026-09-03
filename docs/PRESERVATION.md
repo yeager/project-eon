@@ -3386,9 +3386,12 @@ effects, composition, color handling, cadence and host-visible transfer remain
 unrecovered; Project Eon does not draw an inferred transition or claim extra
 title frames.
 
-The main title loop polls DOS `INT 21h`, `AH=$06`, `DL=$ff` through helper
-`$0d0a`; at `$1c28` it branches out of the loop only after the returned `AL`
-is nonzero. Cleanup writes zero to the process status byte at `$1a0e`, and the
+The main title loop's byte-locked call at `$1c28` targets the unique helper at
+`$0d0a`, which polls DOS `INT 21h`, `AH=$06`, `DL=$ff`; after that call, the
+local path branches out of the loop only after the returned `AL` is nonzero. These caller/callee
+addresses are exposed as hash-bound parser provenance for a future reviewed
+recorder configuration only; they do not establish a character, key name, or
+return ABI. Cleanup writes zero to the process status byte at `$1a0e`, and the
 common exit stub at `$1a12` executes `INT 21h/AH=$4c`. Thus the verified title
 program itself does not execute the game binary: it exits with status zero.
 
