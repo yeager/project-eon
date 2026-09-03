@@ -21,6 +21,10 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         self.assertIn("verify_direct_set(directory, set)", source)
         self.assertIn("std::map<std::string, VerifiedReleaseMedia::DirectAssetReference>", source)
         self.assertIn("read_exact_regular_file(found->second.path, found->second.size)", source)
+        self.assertIn("VerifiedReleaseMedia::borrow", source)
+        self.assertIn("mutable std::map<std::string, std::vector<std::uint8_t>> borrowed_assets_", header)
+        self.assertIn("return std::span<const std::uint8_t>(inserted->second)", source)
+        self.assertIn("to_hex(sha256(bytes)) != expected_asset_sha256", source)
         self.assertNotIn("std::map<std::string, std::vector<std::uint8_t>> direct_assets_", header)
         self.assertIn("ReleaseMediaLayout::verified_directory", source)
 
