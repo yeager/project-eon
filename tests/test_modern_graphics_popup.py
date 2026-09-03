@@ -337,7 +337,9 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         modal = SOURCE.index("if (show_modern_graphics_settings) {", f10_guard)
         f10_block = SOURCE[f10_guard:modal]
         self.assertIn("clear_deuteros_opening_input();", f10_block)
-        self.assertIn("RuntimeInputObservation::opening_input_held(false)", SOURCE)
+        runtime_host_source = (ROOT / "src" / "engine" / "runtime_host.cpp").read_text(encoding="utf-8")
+        self.assertIn("RuntimeInputObservation::opening_input_held(false)", runtime_host_source)
+        self.assertIn("runtime.set_input_suppressed(true);", SOURCE)
         self.assertIn("runtime.advance(SDL_GetTicks())", SOURCE)
         self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
         self.assertLess(f10_guard, modal)

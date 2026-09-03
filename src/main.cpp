@@ -4610,8 +4610,7 @@ int main(int argc, char** argv) {
         // launcher-modal transition is not an original input poll, so it
         // must cancel any prior host hold rather than letting it leak behind
         // the F10 renderer settings dialog or into a fresh opening session.
-        static_cast<void>(runtime.observe_input(
-            eon::RuntimeInputObservation::opening_input_held(false)));
+        runtime.set_input_suppressed(true);
     };
     std::optional<std::uint32_t> deuteros_title_resource;
     std::optional<eon::MillenniumDosStartupInputSnapshot> millennium_startup_input;
@@ -4859,6 +4858,7 @@ int main(int argc, char** argv) {
             // Custom is a deliberate renderer-only configuration route. It
             // cannot become a third runtime identity or a launch shortcut.
             show_modern_graphics_settings = true;
+            runtime.set_input_suppressed(true);
         } else if (effect == eon::LauncherInteractionEffect::launch) {
             launch_menu_selection();
         }
@@ -5014,7 +5014,8 @@ int main(int argc, char** argv) {
             runtime_view.rejection));
         diagnostics.lifecycle_state = std::string(eon::native_session_state_label(runtime_view.state))
             + " / GEN=" + std::to_string(runtime_view.generation)
-            + " / REVOKING=" + (runtime_view.revoking ? "Y" : "N");
+            + " / REVOKING=" + (runtime_view.revoking ? "Y" : "N")
+            + " / INPUT=" + (runtime_view.input_suppressed ? "SUPPRESSED" : "ACTIVE");
         // This is a compact, renderer-only diagnostic code. It makes the
         // selected preservation contract visible even before a session is
         // admitted, while the separately reported capabilities remain facts
@@ -5173,6 +5174,7 @@ int main(int argc, char** argv) {
         recovery_function_map_page = 0;
         show_modern_runtime_diagnostics = false;
         show_modern_graphics_settings = false;
+        runtime.set_input_suppressed(false);
         if (request.presentation == eon::Presentation::modern) {
             const eon::PresentationPreferences preferences{
                 modern_graphics_settings.output_resolution_index,
@@ -5358,7 +5360,11 @@ int main(int argc, char** argv) {
                     else show_modern_runtime_diagnostics = false;
                     continue;
                 }
-                if (!show_modern_graphics_settings) clear_deuteros_opening_input();
+                if (!show_modern_graphics_settings) {
+                    clear_deuteros_opening_input();
+                } else {
+                    runtime.set_input_suppressed(false);
+                }
                 show_modern_graphics_settings = !show_modern_graphics_settings;
                 modern_graphics_settings.focused_option = std::min(
                     modern_graphics_settings.focused_option, visible_graphics_option_count() - 1);

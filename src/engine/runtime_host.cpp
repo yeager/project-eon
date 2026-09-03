@@ -29,6 +29,7 @@ RuntimeHostSnapshot RuntimeHost::snapshot() const {
     RuntimeHostSnapshot result;
     result.generation = generation_;
     result.revoking = revoking();
+    result.input_suppressed = input_suppressed_;
     result.admission = admission();
     result.rejection = rejection();
     result.state = state();
@@ -42,6 +43,23 @@ RuntimeHostSnapshot RuntimeHost::snapshot() const {
             presentation->capabilities, presentation->input_contract};
     }
     return result;
+}
+
+void RuntimeHost::set_input_suppressed(const bool suppressed) {
+    if (suppressed == input_suppressed_) return;
+    if (suppressed) {
+        // This is a host lifecycle cancellation, not a recovered input poll.
+        // It must reach the coordinator before the gate closes so a prior
+        // held value cannot affect a later native opening tick.
+        static_cast<void>(NativeSessionController::observe_input(
+            RuntimeInputObservation::opening_input_held(false)));
+    }
+    input_suppressed_ = suppressed;
+}
+
+RuntimeInputDisposition RuntimeHost::observe_input(const RuntimeInputObservation& observation) {
+    if (input_suppressed_) return RuntimeInputDisposition::rejected;
+    return NativeSessionController::observe_input(observation);
 }
 
 bool RuntimeHost::revoking() const {
