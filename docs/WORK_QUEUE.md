@@ -22,6 +22,15 @@ behind the first proven input-to-frame-to-state loop.
 | 9 | Remaining Amiga/Atari ST execution adapters | Millennium Amiga `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400`, Millennium Atari `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01`, Deuteros Atari `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653`; the latter has a hash-gated static bootstrap checkpoint and a non-admitted Hatari `Floprd` shape cross-check | Per-release recorder-backed bootstrap/device traces and explicit shared/divergent replay checks | Deferred until a playable vertical slice establishes the right core boundary; ordinary emulator output remains diagnostics-only |
 | 10 | Final UX, localization, packages, and release audit | Existing card route, i18n catalogues, CI package recipes, and preservation contracts | Real-session menu/CLI equivalence, 20-language checks, clean-package scans and end-to-end replay | Continuous maintenance only; never substitutes runtime recovery or authorizes a release |
 
+### 2026-09-03 native media-admission update
+
+The English Millennium DOS native session now admits a read-only catalogue of
+the fourteen executable-named original VOC leaves after exact media
+verification and decoding. It retains filename/hash/sample-rate/sample-count
+facts only and discards PCM bytes. This closes a resource-admission task, not
+an audio-playback task: event-to-index mapping, driver ABI and timing remain
+outside the recovered engine boundary.
+
 ### 2026-08-31 capture-route update
 
 The rank-1 v13 Millennium DOS operator-visible no-input capture is independently
