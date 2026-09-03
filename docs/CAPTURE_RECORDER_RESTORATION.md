@@ -322,14 +322,17 @@ Until those two identities, the host serializer and a visible graceful-stop
 route are independently reviewed together, the candidate remains development
 only and cannot be passed to a capture helper.
 
-The V21 runner now passes the already rehashed recognised outer archive digest
-as `PROJECT_EON_DOSBOX_X_RELEASE_SHA256`, together with the two manifest
-expected loaded-image SHA-256 values. This happens before DOSBox-X starts; it
-does not change the current pinned recorder protocol and a historic recorder
-may ignore the values. A successor must treat them solely as expected identity
-configuration, recompute a bounded loaded-image fingerprint itself, and
-refuse to arm on any mismatch. They are not guest-provided values and do not
-make the development observer admissible.
+The V21 runner now writes the already rehashed recognised outer archive digest,
+direct-media-set digest, and the two manifest expected loaded-image SHA-256
+values and sizes into a recorder-only `[project-eon-recorder-v21]` config
+section. The normal capture receipt already binds the generated configuration
+hash, so this is stronger and more reproducible than an environment variable.
+It does not change the current pinned recorder protocol and a historic recorder
+may ignore the unknown section. A successor must parse it before guest start,
+treat it solely as expected identity configuration, recompute a bounded loaded-
+image fingerprint itself, and refuse to arm on any mismatch. These configured
+values are not guest-provided evidence and do not make the development observer
+admissible.
 
 The V22 binary and source remain external rejected artifacts. They must not
 be pinned, located, run through a capture helper, or used for native recovery.
