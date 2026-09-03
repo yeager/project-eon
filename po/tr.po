@@ -62,6 +62,30 @@ msgstr "REDDEDİLDİ: ARŞİV ÖZETİ"
 msgid "REJECTED: ADAPTER"
 msgstr "REDDEDİLDİ: BAĞDAŞTIRICI"
 
+msgid "NONE"
+msgstr "YOK"
+
+msgid "LAUNCH IDENTITY"
+msgstr "BAŞLATMA KİMLİĞİ"
+
+msgid "ORIGINAL MEDIA"
+msgstr "ÖZGÜN ORTAM"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "ÇALIŞMA ZAMANI YETENEĞİ"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "BAĞDAŞTIRICI OLUŞTURMA"
+
+msgid "INPUT CONTRACT"
+msgstr "GİRDİ SÖZLEŞMESİ"
+
+msgid "CHILD SESSION"
+msgstr "ALT OTURUM"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "YAŞAM DÖNGÜSÜ GEÇİŞİ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ÖZGÜN OYUN VERİSİ KLASÖRÜNÜ SEÇ (O)"
 

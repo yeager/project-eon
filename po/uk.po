@@ -62,6 +62,30 @@ msgstr "ВІДХИЛЕНО: ХЕШ АРХІВУ"
 msgid "REJECTED: ADAPTER"
 msgstr "ВІДХИЛЕНО: АДАПТЕР"
 
+msgid "NONE"
+msgstr "НЕМАЄ"
+
+msgid "LAUNCH IDENTITY"
+msgstr "ІДЕНТИЧНІСТЬ ЗАПУСКУ"
+
+msgid "ORIGINAL MEDIA"
+msgstr "ОРИГІНАЛЬНИЙ НОСІЙ"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "МОЖЛИВІСТЬ СЕРЕДОВИЩА ВИКОНАННЯ"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "СТВОРЕННЯ АДАПТЕРА"
+
+msgid "INPUT CONTRACT"
+msgstr "КОНТРАКТ ВВОДУ"
+
+msgid "CHILD SESSION"
+msgstr "ДОЧІРНІЙ СЕАНС"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "ПЕРЕХІД ЖИТТЄВОГО ЦИКЛУ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ВИБРАТИ ТЕКУ З ОРИГІНАЛЬНИМИ ДАНИМИ ГРИ (O)"
 

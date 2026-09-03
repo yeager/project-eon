@@ -81,6 +81,30 @@ msgstr ""
 msgid "REJECTED: ADAPTER"
 msgstr ""
 
+msgid "NONE"
+msgstr ""
+
+msgid "LAUNCH IDENTITY"
+msgstr ""
+
+msgid "ORIGINAL MEDIA"
+msgstr ""
+
+msgid "RUNTIME CAPABILITY"
+msgstr ""
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr ""
+
+msgid "INPUT CONTRACT"
+msgstr ""
+
+msgid "CHILD SESSION"
+msgstr ""
+
+msgid "LIFECYCLE TRANSITION"
+msgstr ""
+
 #: src/main.cpp
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr ""

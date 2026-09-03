@@ -62,6 +62,30 @@ msgstr "अस्वीकृत: आर्काइव हैश"
 msgid "REJECTED: ADAPTER"
 msgstr "अस्वीकृत: अडैप्टर"
 
+msgid "NONE"
+msgstr "कोई नहीं"
+
+msgid "LAUNCH IDENTITY"
+msgstr "लॉन्च पहचान"
+
+msgid "ORIGINAL MEDIA"
+msgstr "मूल मीडिया"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "रनटाइम क्षमता"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "एडाप्टर निर्माण"
+
+msgid "INPUT CONTRACT"
+msgstr "इनपुट अनुबंध"
+
+msgid "CHILD SESSION"
+msgstr "चाइल्ड सत्र"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "जीवनचक्र संक्रमण"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "मूल गेम डेटा फ़ोल्डर चुनें (O)"
 
