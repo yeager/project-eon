@@ -43,7 +43,17 @@ bool starts_with(std::span<const std::uint8_t> bytes, std::size_t offset,
 
 } // namespace
 
-DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image) : image_(std::move(image)) {
+DeuterosAtariDisk::DeuterosAtariDisk(std::vector<std::uint8_t> image)
+    : owned_image_(std::move(image)), image_(owned_image_) {
+    parse_boot_profile();
+}
+
+DeuterosAtariDisk::DeuterosAtariDisk(const std::span<const std::uint8_t> image)
+    : image_(image) {
+    parse_boot_profile();
+}
+
+void DeuterosAtariDisk::parse_boot_profile() {
     if (image_.size() != standard_size) {
         throw std::runtime_error("Unsupported Deuteros Atari ST disk geometry");
     }
@@ -168,7 +178,7 @@ DeuterosAtariMediaEvidence inspect_deuteros_atari_media(
     }
     result.boot_envelope_status = DeuterosAtariMediaEvidence::BootEnvelopeStatus::valid;
     try {
-        const DeuterosAtariDisk disk(std::vector<std::uint8_t>(image.begin(), image.end()));
+        const DeuterosAtariDisk disk(image);
         const auto& profile = disk.boot_profile();
         result.valid_boot_profile = true;
         result.boot_checksum = profile.boot_checksum;

@@ -805,6 +805,11 @@ public:
     static constexpr std::size_t standard_size = 737'280;
 
     explicit DeuterosAtariDisk(std::vector<std::uint8_t> image);
+    // A scoped inspection view. It never copies the supplied original leaf;
+    // callers must retain the bytes for the disk object's lifetime. Runtime
+    // sessions use the owning constructor above when later sector reads are
+    // required.
+    explicit DeuterosAtariDisk(std::span<const std::uint8_t> image);
 
     [[nodiscard]] const DeuterosAtariBootProfile& boot_profile() const { return profile_; }
     [[nodiscard]] std::vector<std::uint8_t> read_sectors(
@@ -812,7 +817,10 @@ public:
         std::uint16_t sector_count) const;
 
 private:
-    std::vector<std::uint8_t> image_;
+    void parse_boot_profile();
+
+    std::vector<std::uint8_t> owned_image_;
+    std::span<const std::uint8_t> image_;
     DeuterosAtariBootProfile profile_;
 };
 
