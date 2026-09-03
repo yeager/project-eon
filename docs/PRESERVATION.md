@@ -74,6 +74,17 @@ directory is never misrepresented as an outer archive. No ZIP is reconstructed,
 and no source member is unpacked, copied, cached beyond the bounded lifetime of
 the in-memory admission view, or mutated. Unrelated sibling files are not media.
 
+`tools/extract_static_control_flow.py --dos-directory` applies this same
+complete-set model to offline disassembly metadata. It reads the committed
+direct-media-set ledger, rejects a relative or symlinked root, verifies every
+declared direct child as an unchanged non-symlink regular file with its exact
+size and SHA-256, verifies the lexical set digest, and only then decodes the
+explicitly requested executable leaves in memory. Its sidecar labels this
+provenance `verified-direct-media-member`, binds it to the logical release hash,
+and never serializes a filesystem path, source bytes, reconstructed archive, or
+capture evidence. A partial installation, altered leaf, unknown release, or
+requested non-member remains a preservation boundary.
+
 The five current native bootstrap/opening adapters—Millennium DOS/Amiga/Atari
 ST and Deuteros Amiga/Atari ST—are SDL-free engine factories behind that
 boundary. They select only their named hash-verified leaf and return no
