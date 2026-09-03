@@ -52,6 +52,12 @@ std::optional<MillenniumDosStartupInputSnapshot> RuntimeHost::millennium_dos_sta
     return NativeSessionController::millennium_dos_startup_input();
 }
 
+std::optional<MillenniumDosStaticDispatchDiagnostics>
+RuntimeHost::millennium_dos_static_dispatch_diagnostics() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_static_dispatch_diagnostics();
+}
+
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {
     if (revoking()) return std::nullopt;

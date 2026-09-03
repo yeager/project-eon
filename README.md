@@ -286,7 +286,10 @@ without creating SDL resources.
 `--runtime-diagnostics-json` follows the same native launch gate, then emits
 `project-eon.runtime-diagnostics/v1`: the active adapter and capabilities,
 plus the exact release's hash-bound startup boundary, recovery map, and
-declarative function map. It exits before SDL, timing, input, audio, saves,
+declarative function map. For the admitted English Millennium DOS title it
+also emits `millennium_dos_static_dispatch`: the fixed F1–F10 table's code
+addresses as hash-bound, `static_only` provenance. It is not an input binding,
+gameplay-control map, observed action, or executed handler. It exits before SDL, timing, input, audio, saves,
 guest execution, or emulator activity and never serializes paths or original
 media bytes. Its `runtime_session.input_contract` is a machine-readable
 description of only the already recovered host observation envelope; it is

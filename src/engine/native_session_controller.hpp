@@ -47,6 +47,8 @@ public:
     millennium_dos_presentation() const;
     [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
     millennium_dos_startup_input() const;
+    [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
+    millennium_dos_static_dispatch_diagnostics() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     // The 50 Hz opening scheduler is native-session lifecycle state. SDL
     // supplies a monotonic timestamp, receives only immutable VM events, and

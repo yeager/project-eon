@@ -46,6 +46,11 @@ LauncherRuntimeController::millennium_dos_startup_input() const {
     return coordinator_.millennium_dos_startup_input();
 }
 
+std::optional<MillenniumDosStaticDispatchDiagnostics>
+LauncherRuntimeController::millennium_dos_static_dispatch_diagnostics() const {
+    return coordinator_.millennium_dos_static_dispatch_diagnostics();
+}
+
 std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
     return coordinator_.tick_deuteros_amiga_opening();
 }
