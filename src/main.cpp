@@ -968,6 +968,47 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     } else {
         std::cout << "null";
     }
+    // Atari's bootstrap profile has an additional media-safe checkpoint. It
+    // is optional because every other adapter deliberately has no equivalent
+    // inferred machine-state record. The coordinator returns it only while
+    // the exact typed session is live; it contains offsets/hashes/opcodes,
+    // not raw state-1 bytes, registers, paths, or an XBIOS result.
+    std::cout << ",\"atari_bootstrap_checkpoint\":";
+    if (const auto checkpoint = coordinator.deuteros_atari_bootstrap_checkpoint()) {
+        std::cout << "{\"first_stage_sha256\":";
+        write_json_string(std::cout, checkpoint->first_stage_sha256);
+        std::cout << ",\"second_stage_sha256\":";
+        write_json_string(std::cout, checkpoint->second_stage_sha256);
+        std::cout << ",\"relocated_dispatcher_address\":";
+        write_json_string(std::cout, "$" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->relocated_dispatcher_address;
+            return value.str();
+        }());
+        std::cout << ",\"state1_raw_request_count\":"
+            << checkpoint->state1_raw_request_count;
+        std::cout << ",\"state1_display_service\":{\"branch_relative_offset\":";
+        write_json_string(std::cout, "+0x" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state1_display_branch_relative_offset;
+            return value.str();
+        }());
+        std::cout << ",\"service_relative_offset\":";
+        write_json_string(std::cout, "+0x" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state1_display_service_relative_offset;
+            return value.str();
+        }());
+        std::cout << ",\"xbios_selector\":";
+        write_json_string(std::cout, "$" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state1_display_xbios_selector;
+            return value.str();
+        }());
+        std::cout << "}}";
+    } else {
+        std::cout << "null";
+    }
     std::cout << ",\"recovery\":{\"coverage\":";
     write_json_string(std::cout, eon::name(diagnostics.coverage));
     std::cout << ",\"trace_admission\":"; write_json_string(std::cout, diagnostics.trace_admission);
