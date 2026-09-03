@@ -1,6 +1,7 @@
 #include "data/deuteros_amiga_frame.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <stdexcept>
 
 namespace eon {
@@ -23,7 +24,8 @@ void draw_bitmap(DeuterosAmigaFrame& frame, const DeuterosAmigaBitmap& bitmap,
         if (destination_y < 0 || destination_y >= DeuterosAmigaFrame::height) continue;
         for (int source_x = 0; source_x < bitmap.width; ++source_x) {
             const auto color = bitmap.color_indices[
-                static_cast<std::size_t>(source_y) * bitmap.width + source_x];
+                static_cast<std::size_t>(source_y) * static_cast<std::size_t>(bitmap.width)
+                    + static_cast<std::size_t>(source_x)];
             if (transparent && color == 0) continue;
             frame.color_indices[static_cast<std::size_t>(destination_y)
                 * DeuterosAmigaFrame::width + static_cast<std::size_t>(origin_x + source_x)] = color;
@@ -84,7 +86,7 @@ const DeuterosAmigaFrame& DeuterosAmigaCompositor::compose(
             const auto count = std::min<std::size_t>(saved_scanlines_->count,
                 static_cast<std::size_t>(DeuterosAmigaFrame::height - channel.y));
             std::copy_n(saved_scanlines_->pixels.begin(), count * DeuterosAmigaFrame::width,
-                frame_.color_indices.begin() + static_cast<std::size_t>(channel.y)
+                frame_.color_indices.begin() + static_cast<std::ptrdiff_t>(channel.y)
                     * DeuterosAmigaFrame::width);
             continue;
         }
@@ -101,7 +103,7 @@ const DeuterosAmigaFrame& DeuterosAmigaCompositor::compose(
             SavedScanlines saved;
             saved.count = count;
             saved.pixels.resize(static_cast<std::size_t>(count) * DeuterosAmigaFrame::width);
-            std::copy_n(frame_.color_indices.begin() + static_cast<std::size_t>(channel.y)
+            std::copy_n(frame_.color_indices.begin() + static_cast<std::ptrdiff_t>(channel.y)
                     * DeuterosAmigaFrame::width,
                 saved.pixels.size(), saved.pixels.begin());
             saved_scanlines_ = std::move(saved);

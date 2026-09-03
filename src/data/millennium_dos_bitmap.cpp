@@ -110,7 +110,9 @@ MillenniumDosBitmap decode_millennium_dos_bitmap(std::span<const std::uint8_t> b
         if (control <= 0x0d) {
             const auto next = static_cast<std::uint16_t>(result.pixels.back())
                 + static_cast<std::uint16_t>(deltas[control]);
-            append(static_cast<std::uint8_t>(next % palette_size));
+            const auto wrapped = static_cast<std::uint16_t>(
+                static_cast<std::uint32_t>(next) % static_cast<std::uint32_t>(palette_size));
+            append(static_cast<std::uint8_t>(wrapped));
             continue;
         }
         if (control == 0x0f) {
