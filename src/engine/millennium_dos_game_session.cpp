@@ -44,6 +44,7 @@ void MillenniumDosGameSession::clear_last_observation() {
     last_tenth_function_key_trace_.reset();
     last_runtime_byte_effect_.reset();
     last_eighth_function_key_preflight_.reset();
+    last_eighth_function_key_repeat_loop_.reset();
     last_eighth_function_key_table_jump_.reset();
     last_eighth_function_key_selected_record_gate_.reset();
     last_eighth_function_key_runtime_effects_.clear();
@@ -115,6 +116,25 @@ MillenniumDosGameSession::observe_eighth_function_key_table_jump(const std::uint
     });
     reconstructed_da06_ = trace.selected_runtime_byte_value;
     last_eighth_function_key_table_jump_ = trace;
+    return trace;
+}
+
+MillenniumDosEighthFunctionKeyRepeatLoop
+MillenniumDosGameSession::observe_eighth_function_key_repeat_loop(
+    const std::span<const std::uint8_t> helper_return_bl_values) {
+    if (game_executable_.empty() || !last_eighth_function_key_preflight_
+        || last_eighth_function_key_repeat_loop_
+        || last_eighth_function_key_preflight_->outcome
+            != MillenniumDosEighthFunctionKeyPreflightOutcome::returns) {
+        throw std::runtime_error("Millennium DOS F8 repeat loop lacks a returned preflight");
+    }
+    const auto trace = evaluate_millennium_dos_eighth_function_key_repeat_loop(
+        game_executable_, helper_return_bl_values);
+    if (trace.call_address != flow_.eighth_function_key.repeated_call_address
+        || trace.helper_address != 0x09fa) {
+        throw std::runtime_error("Unsupported Millennium DOS F8 repeat-loop profile");
+    }
+    last_eighth_function_key_repeat_loop_ = trace;
     return trace;
 }
 

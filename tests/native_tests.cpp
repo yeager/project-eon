@@ -5987,6 +5987,25 @@ int main() {
     assert(observed_f8_gate.outcome
         == eon::MillenniumDosEighthFunctionKeySelectedRecordOutcome::first_helper_boundary);
     assert(observed_f8_gate.first_helper_address == std::optional<std::uint16_t>{0x7924});
+    eon::MillenniumDosGameSession returned_f8_session(game_flow, *game_executable);
+    const auto returned_f8_preflight = returned_f8_session.observe_eighth_function_key_preflight({
+        .action = {0x0f05, 0x42}, .enabled_byte = {0xda39, 0}, .counter_byte = {0xda0a, 0}});
+    assert(returned_f8_preflight.outcome == eon::MillenniumDosEighthFunctionKeyPreflightOutcome::returns);
+    const std::array<std::uint8_t, 2> observed_f8_helper_returns{{0x01, 0x00}};
+    const auto returned_f8_loop = returned_f8_session.observe_eighth_function_key_repeat_loop(
+        observed_f8_helper_returns);
+    assert((returned_f8_loop.shifted_bl_values == std::vector<std::uint8_t>{0x00, 0x00}));
+    assert(returned_f8_session.last_eighth_function_key_repeat_loop());
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(returned_f8_session.observe_eighth_function_key_repeat_loop(
+                observed_f8_helper_returns));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         eon::MillenniumDosGameSession detached_f8_session(game_flow, *game_executable);
         bool rejected = false;

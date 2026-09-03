@@ -140,6 +140,13 @@ public:
     observe_eighth_function_key_selected_record_gate(MillenniumDosRuntimeByteObservation observation);
     [[nodiscard]] std::optional<MillenniumDosEighthFunctionKeyPreflight>
     last_eighth_function_key_preflight() const { return last_eighth_function_key_preflight_; }
+    // After the exact F8 preflight returns locally, accepts only an ordered
+    // set of observed $09fa BL returns and executes the call-free SHR/JC tail.
+    // It never invokes $09fa or manufactures BL.
+    [[nodiscard]] MillenniumDosEighthFunctionKeyRepeatLoop
+    observe_eighth_function_key_repeat_loop(std::span<const std::uint8_t> helper_return_bl_values);
+    [[nodiscard]] std::optional<MillenniumDosEighthFunctionKeyRepeatLoop>
+    last_eighth_function_key_repeat_loop() const { return last_eighth_function_key_repeat_loop_; }
     [[nodiscard]] std::optional<MillenniumDosEighthFunctionKeyTableJumpPrefix>
     last_eighth_function_key_table_jump() const { return last_eighth_function_key_table_jump_; }
     [[nodiscard]] std::optional<MillenniumDosEighthFunctionKeySelectedRecordGate>
@@ -178,6 +185,7 @@ private:
     std::optional<MillenniumDosTenthFunctionKeyTrace> last_tenth_function_key_trace_;
     std::optional<MillenniumDosRuntimeByteEffect> last_runtime_byte_effect_;
     std::optional<MillenniumDosEighthFunctionKeyPreflight> last_eighth_function_key_preflight_;
+    std::optional<MillenniumDosEighthFunctionKeyRepeatLoop> last_eighth_function_key_repeat_loop_;
     std::optional<MillenniumDosEighthFunctionKeyTableJumpPrefix> last_eighth_function_key_table_jump_;
     std::optional<MillenniumDosEighthFunctionKeySelectedRecordGate>
         last_eighth_function_key_selected_record_gate_;
