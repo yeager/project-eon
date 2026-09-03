@@ -7,7 +7,7 @@ from zipfile import ZipFile
 from eon_test_paths import temporary_directory
 from tools.extract_static_control_flow import (
     CLASSIFICATION, ControlFlowError, _require_external_output, build_sidecar,
-    m68k_direct_edges, x86_direct_edges,
+    _read_verified_dos_directory, m68k_direct_edges, x86_direct_edges,
 )
 
 
@@ -109,6 +109,33 @@ class StaticControlFlowTests(unittest.TestCase):
             self.assertEqual(main(["--dos-archive", str(archive), "--archive-sha256",
                                    hashlib.sha256(archive.read_bytes()).hexdigest(), "--member", "MILL.COM",
                                    "--output", str(output)]), 2)
+
+    def test_direct_dos_directory_requires_a_complete_hash_bound_set(self):
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            media = root / "media"
+            media.mkdir()
+            payload = b"\x90\xcd\x21"
+            digest = hashlib.sha256(payload).hexdigest()
+            release = "a" * 64
+            serialization = f"MILL.COM\t{len(payload)}\t{digest}\n".encode("ascii")
+            manifest = root / "release-manifest.json"
+            manifest.write_text(json.dumps({
+                "schema": "project-eon.release-manifest/v1",
+                "releases": [{"sha256": release, "platform": "dos"}],
+                "direct_media_sets": [{
+                    "content_release_sha256": release,
+                    "platform": "dos",
+                    "set_sha256": hashlib.sha256(serialization).hexdigest(),
+                    "members": [{"name": "MILL.COM", "size": len(payload), "sha256": digest}],
+                }],
+            }), encoding="utf-8")
+            (media / "MILL.COM").write_bytes(payload)
+            documents = _read_verified_dos_directory(media, release, ["MILL.COM"], manifest_path=manifest)
+            self.assertEqual(documents, [("MILL.COM", payload, hashlib.sha256(serialization).hexdigest())])
+            (media / "MILL.COM").write_bytes(b"changed")
+            with self.assertRaisesRegex(ControlFlowError, "declared regular file"):
+                _read_verified_dos_directory(media, release, ["MILL.COM"], manifest_path=manifest)
 
 
 if __name__ == "__main__":

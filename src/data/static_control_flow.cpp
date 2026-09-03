@@ -356,7 +356,8 @@ void parse_document(const JsonObject& document, StaticControlFlowSummary& summar
     const auto& source_kind = string(required(document, "source_kind"), "source_kind");
     const auto has_container = document.contains("container_sha256");
     const auto has_carrier = document.contains("carrier_archive_sha256");
-    const auto simple_i8086 = source_kind == "archive-member" || source_kind == "fat12-root-member";
+    const auto simple_i8086 = source_kind == "archive-member" || source_kind == "fat12-root-member"
+        || source_kind == "verified-direct-media-member";
     const auto nested_m68k = source_kind == "nested-disk-range";
     const auto embedded_m68k = source_kind == "embedded-release-nested-disk-range";
     const auto direct_prg = source_kind == "nested-fat12-root-prg-text-data";

@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from io import BytesIO
 from pathlib import Path
 import stat
@@ -111,6 +112,105 @@ def _verify_archive_sha256(archive_path: Path, expected_archive_sha256: str) -> 
     observed = _sha256(archive_path.read_bytes())
     if observed != expected_archive_sha256:
         raise ControlFlowError(f"archive SHA-256 mismatch: expected {expected_archive_sha256}, got {observed}")
+
+
+def _safe_direct_member_name(value: str) -> str:
+    """Accept only the bare, DOS-style direct-child names in the ledger."""
+    path = Path(value)
+    if not value or path.name != value or path.parent != Path(".") or "/" in value or "\\" in value:
+        raise ControlFlowError("direct-media manifest has an unsafe member name")
+    return value
+
+
+def _direct_media_set_for_release(release_sha256: str, manifest_path: Path = ROOT / "docs" / "release-manifest.json") -> dict:
+    """Read one complete direct-media set from the committed preservation ledger."""
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ControlFlowError(f"unable to read release manifest: {error}") from error
+    if manifest.get("schema") != "project-eon.release-manifest/v1":
+        raise ControlFlowError("release manifest schema is not supported")
+    releases = [release for release in manifest.get("releases", [])
+                if isinstance(release, dict) and release.get("sha256") == release_sha256
+                and release.get("platform") == "dos"]
+    if len(releases) != 1:
+        raise ControlFlowError("archive SHA-256 has no unique recognised DOS release identity")
+    sets = [media_set for media_set in manifest.get("direct_media_sets", [])
+            if isinstance(media_set, dict) and media_set.get("content_release_sha256") == release_sha256
+            and media_set.get("platform") == "dos"]
+    if len(sets) != 1:
+        raise ControlFlowError("recognised DOS release has no unique direct-media set identity")
+    media_set = sets[0]
+    _require_sha256(str(media_set.get("set_sha256", "")), "direct-media set SHA-256")
+    members = media_set.get("members")
+    if not isinstance(members, list) or not members:
+        raise ControlFlowError("direct-media set has no members")
+    canonical: list[str] = []
+    seen: set[str] = set()
+    for member in members:
+        if not isinstance(member, dict) or not isinstance(member.get("name"), str):
+            raise ControlFlowError("direct-media set has an invalid member")
+        name = _safe_direct_member_name(member["name"])
+        size = member.get("size")
+        digest = member.get("sha256")
+        if name in seen or not isinstance(size, int) or size <= 0 or not isinstance(digest, str):
+            raise ControlFlowError("direct-media set has an invalid member identity")
+        _require_sha256(digest, "direct-media member SHA-256")
+        seen.add(name)
+        canonical.append(f"{name}\t{size}\t{digest}\n")
+    if canonical != sorted(canonical):
+        raise ControlFlowError("direct-media set members are not in lexical order")
+    if _sha256("".join(canonical).encode("ascii")) != media_set["set_sha256"]:
+        raise ControlFlowError("direct-media set manifest hash mismatch")
+    return media_set
+
+
+def _read_exact_direct_member(root: Path, name: str, size: int, digest: str) -> bytes:
+    path = root / name
+    try:
+        before = path.lstat()
+    except OSError as error:
+        raise ControlFlowError(f"unable to inspect direct-media member {name!r}: {error}") from error
+    if not stat.S_ISREG(before.st_mode) or stat.S_ISLNK(before.st_mode) or before.st_size != size:
+        raise ControlFlowError(f"direct-media member {name!r} is not its declared regular file")
+    try:
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(path, flags)
+        with os.fdopen(descriptor, "rb") as stream:
+            media = stream.read(size + 1)
+        after = path.lstat()
+    except OSError as error:
+        raise ControlFlowError(f"unable to read direct-media member {name!r}: {error}") from error
+    if (len(media) != size or before.st_dev != after.st_dev or before.st_ino != after.st_ino
+            or before.st_size != after.st_size or before.st_mtime_ns != after.st_mtime_ns):
+        raise ControlFlowError(f"direct-media member {name!r} changed while being read")
+    if _sha256(media) != digest:
+        raise ControlFlowError(f"direct-media member {name!r} SHA-256 mismatch")
+    return media
+
+
+def _read_verified_dos_directory(root: Path, release_sha256: str,
+                                 requested_members: list[str], *, manifest_path: Path = ROOT / "docs" / "release-manifest.json") -> list[tuple[str, bytes, str]]:
+    """Verify the entire declared install set before returning named in-memory leaves."""
+    if not root.is_absolute():
+        raise ControlFlowError("DOS directory must be an absolute path")
+    try:
+        root_info = root.lstat()
+    except OSError as error:
+        raise ControlFlowError(f"unable to inspect DOS directory: {error}") from error
+    if stat.S_ISLNK(root_info.st_mode) or not stat.S_ISDIR(root_info.st_mode):
+        raise ControlFlowError("DOS directory is not a regular non-symlink directory")
+    media_set = _direct_media_set_for_release(release_sha256, manifest_path)
+    declared = {member["name"]: member for member in media_set["members"]}
+    if not requested_members or len(set(requested_members)) != len(requested_members):
+        raise ControlFlowError("DOS directory mode requires unique --member entries")
+    if any(member not in declared for member in requested_members):
+        raise ControlFlowError("requested DOS member is not in the verified direct-media set")
+    observed: dict[str, bytes] = {}
+    for member in media_set["members"]:
+        observed[member["name"]] = _read_exact_direct_member(
+            root, member["name"], member["size"], member["sha256"])
+    return [(member, observed[member], media_set["set_sha256"]) for member in requested_members]
 
 
 def _decode_one(decoder, data: bytes, offset: int, address: int):
@@ -277,6 +377,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--dos-archive", type=Path, help="Original DOS ZIP containing exact --member entries")
+    source.add_argument("--dos-directory", type=Path,
+                        help="Original installed DOS directory; the complete declared set is reverified in place")
     source.add_argument("--fat12-archive", type=Path,
                         help="Original ZIP containing one exact FAT12 --fat12-member image")
     source.add_argument("--amiga-archive", "--m68k-archive", dest="m68k_archive", type=Path,
@@ -317,6 +419,16 @@ def main(argv: list[str] | None = None) -> int:
                 media = _read_zip_member(args.dos_archive, member, args.archive_sha256)
                 documents.append(build_sidecar("i8086", args.archive_sha256, member, media,
                                                [(0, len(media), 0x100, _sha256(media))]))
+        elif args.dos_directory is not None:
+            if (not args.member or args.range or args.nested_member or args.nested_sha256
+                    or args.disk_member or args.fat12_member or args.source_sha256):
+                raise ControlFlowError("DOS directory mode requires --member entries only; ranges are inferred from exact members")
+            for member, media, set_sha256 in _read_verified_dos_directory(
+                    args.dos_directory, args.archive_sha256, args.member):
+                documents.append(build_sidecar("i8086", args.archive_sha256,
+                                               f"direct-media-set:{set_sha256}:{member}", media,
+                                               [(0, len(media), 0x100, _sha256(media))],
+                                               source_kind="verified-direct-media-member"))
         elif args.fat12_archive is not None:
             if (not args.fat12_member or not args.member or args.range or args.nested_member or args.nested_sha256
                     or args.disk_member or not args.source_sha256):

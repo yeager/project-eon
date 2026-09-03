@@ -63,7 +63,10 @@ reachability, code/data classification, ABI results, or gameplay semantics.
 ## External static control-flow sidecars
 
 `tools/extract_static_control_flow.py` generates a separate, hash-bound JSON
-sidecar from explicitly named original archive members. It records only
+sidecar from explicitly named original archive members or a recognised
+installed DOS directory. `--dos-directory` verifies the entire declared
+direct-media set, including its lexical set hash, before it reads any requested
+member in place; it never reconstructs an archive. It records only
 decoder-recognised direct CALL/JMP/conditional-branch/interrupt/return
 candidates with source offsets and declared runtime addresses. The output must
 be a new file outside both the checkout and `/tmp`; it contains neither a full
