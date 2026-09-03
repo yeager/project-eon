@@ -6118,9 +6118,9 @@ int main(int argc, char** argv) {
                         const auto& fopen = atari_bootstrap->fopen_boundary;
                         const auto& fread = atari_bootstrap->fread_frame_prefix;
                         std::ostringstream loader;
-                        loader << "BSS 0x" << std::hex << execution.bss_entry_address
+                        loader << tr("BOOT COPY") << " 0x" << std::hex << execution.bss_entry_address
                                << " -> 0x" << execution.target_address
-                               << "; COPY " << std::dec << execution.first_copy_longwords
+                               << " / " << std::dec << execution.first_copy_longwords
                                << "+" << execution.second_copy_words;
                         draw_text(renderer, 64, 292, loader.str());
                         std::ostringstream open;
