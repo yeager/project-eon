@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from io import BytesIO
+import os
 from pathlib import Path
 import sys
 from zipfile import ZipFile
@@ -31,6 +33,32 @@ def render_instructions(decoder, data: bytes, address: int, *, complete_linear: 
     return lines
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def require_external_output(path: Path) -> Path:
+    if not path.is_absolute():
+        raise ValueError("output path must be absolute")
+    lexical = os.path.normpath(str(path))
+    if lexical == "/tmp" or lexical.startswith("/tmp/") or lexical == "/private/tmp" or lexical.startswith("/private/tmp/"):
+        raise ValueError("output must be outside /tmp")
+    if path.exists() or path.is_symlink():
+        raise ValueError("output must not already exist or be a symlink")
+    parent = path.parent.resolve(strict=True)
+    checkout = Path(__file__).resolve().parents[1]
+    resolved_candidate = parent / path.name
+    if resolved_candidate == checkout or checkout in resolved_candidate.parents:
+        raise ValueError("output must be outside the repository")
+    if not parent.is_dir():
+        raise ValueError("output parent must be an existing directory")
+    return path
+
+
 def read_source(args: argparse.Namespace) -> tuple[bytes, str]:
     """Read one source image in memory, with no media-file output.
 
@@ -43,14 +71,32 @@ def read_source(args: argparse.Namespace) -> tuple[bytes, str]:
     if archive_mode == direct_mode:
         raise SystemExit("Specify exactly one ADF path or --archive source")
     if direct_mode:
+        if not args.adf_sha256:
+            raise SystemExit("Direct ADF input requires --adf-sha256")
+        if not args.adf.is_file() or args.adf.is_symlink() or sha256_file(args.adf) != args.adf_sha256:
+            raise SystemExit("Direct ADF SHA-256 mismatch")
         return args.adf.read_bytes(), args.adf.name
-    if not args.nested_member or not args.member:
-        raise SystemExit("--archive requires --nested-member and --member")
+    if not args.archive_sha256 or not args.member or not args.member_sha256:
+        raise SystemExit("--archive requires --archive-sha256, --member, and --member-sha256")
+    if bool(args.nested_member) != bool(args.nested_sha256):
+        raise SystemExit("--nested-member and --nested-sha256 must be supplied together")
     try:
+        if not args.archive.is_file() or args.archive.is_symlink() or sha256_file(args.archive) != args.archive_sha256:
+            raise ValueError("outer archive SHA-256 mismatch")
         with ZipFile(args.archive) as outer:
-            nested = outer.read(args.nested_member)
-        with ZipFile(BytesIO(nested)) as inner:
-            return inner.read(args.member), f"{args.archive.name}!{args.nested_member}!{args.member}"
+            if args.nested_member is None:
+                data = outer.read(args.member)
+                label = f"{args.archive.name}!{args.member}"
+            else:
+                nested = outer.read(args.nested_member)
+                if hashlib.sha256(nested).hexdigest() != args.nested_sha256:
+                    raise ValueError("nested archive SHA-256 mismatch")
+                with ZipFile(BytesIO(nested)) as inner:
+                    data = inner.read(args.member)
+                label = f"{args.archive.name}!{args.nested_member}!{args.member}"
+        if hashlib.sha256(data).hexdigest() != args.member_sha256:
+            raise ValueError("ADF member SHA-256 mismatch")
+        return data, label
     except (KeyError, OSError, ValueError) as error:
         raise SystemExit(f"Unable to read exact ADF archive member: {error}") from error
 
@@ -58,15 +104,23 @@ def read_source(args: argparse.Namespace) -> tuple[bytes, str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("adf", type=Path, nargs="?", help="Direct ADF path (read only)")
-    parser.add_argument("--archive", type=Path,
-                        help="Outer ZIP containing one exact nested ZIP member")
+    parser.add_argument("--adf-sha256", help="SHA-256 of direct ADF input")
+    parser.add_argument("--archive", type=Path, help="Exact direct or carrier ZIP")
+    parser.add_argument("--archive-sha256", help="SHA-256 of exact outer ZIP")
     parser.add_argument("--nested-member", help="Exact ZIP member holding the inner ZIP")
+    parser.add_argument("--nested-sha256", help="SHA-256 of exact nested ZIP")
     parser.add_argument("--member", help="Exact ADF member inside --nested-member")
+    parser.add_argument("--member-sha256", help="SHA-256 of exact ADF member")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--bytes", type=int, default=144)
     parser.add_argument("--complete-linear", action="store_true",
                         help="Decode each proven loaded range as code/data-unclassified M68000 bytes")
     args = parser.parse_args()
+    if args.output:
+        try:
+            require_external_output(args.output)
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
     try:
         from capstone import CS_ARCH_M68K, CS_MODE_BIG_ENDIAN, CS_MODE_M68K_000, Cs
     except ImportError as error:
@@ -159,7 +213,7 @@ def main() -> None:
     lines.extend(["```", ""])
     report = "\n".join(lines)
     if args.output:
-        args.output.write_text(report, encoding="utf-8")
+        require_external_output(args.output).write_text(report, encoding="utf-8")
     else:
         print(report)
 

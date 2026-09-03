@@ -345,15 +345,25 @@ reports are navigation aids: `docs/generated/dos-millennium.md`,
 `docs/generated/deuteros-amiga-boot.md`, and
 `docs/generated/deuteros-atari-protected-boot.md`.
 
-`tools/analyze_m68k.py` also accepts an exact `--archive`, `--nested-member`,
-and `--member` triplet. It reads that ADF only into process memory. This is the
-reproducible route for the clean Deuteros disk and deliberately rejects an
-ambiguous archive/member selection; a nearby crack or save image cannot become
-an accidental analysis input. Its `--complete-linear` mode covers each
+`tools/analyze_m68k.py` accepts either a direct hash-verified ADF or an exact
+direct/nested ZIP source. ZIP analysis pins outer, optional nested, and ADF
+member SHA-256 identities before it reads the ADF only into process memory.
+This is the reproducible route for the clean Deuteros disk and deliberately
+rejects an ambiguous archive/member selection; a nearby crack or save image
+cannot become an accidental analysis input. Reports must be new external
+files outside the checkout and `/tmp`. Its `--complete-linear` mode covers each
 byte-identified loaded boot/bootstrap/main/title range and labels every result
 code/data-unclassified until a caller-connected map or trace proves otherwise.
 Undecodable bytes remain explicit `.byte` records, so a decoder stop cannot
 silently reduce byte coverage.
+
+On 2026-09-03 the clean, direct Deuteros Amiga Disk 1 container was read under
+that contract. The retained external complete-loaded-spans report has SHA-256
+`6c3390c40d8c5127fe5644845d6de2f50245b36c50c4de95abbd5e1f61f3bf9e` and
+162970 LF lines. Its exact identity is recorded in
+`disassembly-inventory.json`; the report itself remains outside Git. This is
+linear candidate coverage only and does not prove Exec/graphics returns,
+display ownership, title input, timing, or gameplay.
 
 For a FAT12 Atari ST PRG whose GEMDOS load base remains unknown,
 `tools/analyze_atari_st_prg.py` reads either a direct release ZIP or an exact
