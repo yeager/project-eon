@@ -4087,6 +4087,7 @@ int main() {
             const auto hosted_revoking = hosted_opening.snapshot();
             assert(hosted_revoking.revoking && !hosted_revoking.session
                 && !hosted_revoking.presentation);
+            assert(!hosted_opening.active() && !hosted_opening.session_snapshot());
             hosted_opening.finish_source_revocation();
             assert(hosted_opening.snapshot().state == eon::NativeSessionState::menu);
 

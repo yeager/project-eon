@@ -4093,7 +4093,7 @@ int main(int argc, char** argv) {
         eon::release_runtime_admission_label(runtime.admission()));
     std::string launcher_runtime_rejection = std::string(
         eon::release_runtime_rejection_label(runtime.rejection()));
-    const auto active_launch = [&]() -> const std::optional<eon::ResolvedLaunchRequest>& {
+    const auto active_launch = [&]() -> std::optional<eon::ResolvedLaunchRequest> {
         return runtime.active();
     };
     if (request.game && active_platform) {

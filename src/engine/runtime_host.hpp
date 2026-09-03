@@ -52,7 +52,10 @@ public:
     [[nodiscard]] NativeSessionState state() const;
     [[nodiscard]] bool is_menu() const;
     [[nodiscard]] bool requires_revocation_for(const LauncherSourceIdentity& source) const;
-    [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const;
+    // Do not publish a reference into the release coordinator. A copy makes
+    // the active identity safe for diagnostics and impossible to retain
+    // through a source-revocation interval.
+    [[nodiscard]] std::optional<ResolvedLaunchRequest> active() const;
     [[nodiscard]] ReleaseRuntimeAdmission admission() const;
     [[nodiscard]] ReleaseRuntimeRejection rejection() const;
     [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
