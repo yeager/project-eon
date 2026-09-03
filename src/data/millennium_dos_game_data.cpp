@@ -18,8 +18,10 @@ constexpr std::size_t celestial_label_count = 41;
     if (offset > bytes.size() || bytes.size() - offset < 2) {
         throw std::runtime_error("Truncated Millennium DOS save field");
     }
-    return static_cast<std::uint16_t>(bytes[offset])
-        | (static_cast<std::uint16_t>(bytes[offset + 1]) << 8U);
+    const auto low = static_cast<std::uint16_t>(bytes[offset]);
+    const auto high = static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(bytes[offset + 1]) << 8U);
+    return static_cast<std::uint16_t>(low | high);
 }
 
 } // namespace
