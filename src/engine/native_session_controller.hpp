@@ -60,6 +60,8 @@ public:
     deuteros_atari_bootstrap_presentation() const;
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
     millennium_amiga_bootstrap_presentation() const;
+    [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+    millennium_atari_bootstrap_presentation() const;
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

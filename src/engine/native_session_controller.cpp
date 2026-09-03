@@ -140,6 +140,12 @@ NativeSessionController::millennium_amiga_bootstrap_presentation() const {
     return runtime_.coordinator().millennium_amiga_bootstrap_presentation();
 }
 
+std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+NativeSessionController::millennium_atari_bootstrap_presentation() const {
+    if (state_ != NativeSessionState::millennium_atari_bootstrap) return std::nullopt;
+    return runtime_.coordinator().millennium_atari_bootstrap_presentation();
+}
+
 void NativeSessionController::begin_return_to_menu() {
     state_ = NativeSessionState::returning_to_menu;
 }

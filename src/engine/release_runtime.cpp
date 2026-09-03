@@ -418,6 +418,22 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_presentation() const {
     };
 }
 
+std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+ReleaseRuntimeCoordinator::millennium_atari_bootstrap_presentation() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_atari_bootstrap
+        || !millennium_atari_) return std::nullopt;
+    return MillenniumAtariBootstrapPresentationSnapshot{
+        millennium_atari_->bootstrap(), millennium_atari_->bss_entry(),
+        millennium_atari_->bss_source(), millennium_atari_->target(),
+        millennium_atari_->execution(), millennium_atari_->fopen_boundary(),
+        millennium_atari_->fopen_result_gate(), millennium_atari_->fopen_fallthrough(),
+        millennium_atari_->fread_frame_prefix(), millennium_atari_->fread_config_transfer(),
+        millennium_atari_->root_inventory(), millennium_atari_->config(),
+        millennium_atari_->config_entry(), millennium_atari_->fread_config_load_address_boundary(),
+        millennium_atari_->fread_mapped_config_prelude(),
+    };
+}
+
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {
     if (!candidate) {

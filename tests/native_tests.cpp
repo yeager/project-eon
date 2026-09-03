@@ -3894,6 +3894,9 @@ int main() {
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st) {
+            const auto presentation = all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(presentation && presentation->config.present
+                && presentation->fopen_boundary.fopen_filename == presentation->config.requested_filename);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
