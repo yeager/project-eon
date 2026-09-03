@@ -4929,6 +4929,15 @@ Thus the displayed pixels remain derived from user-supplied original data and
 are not packaged in the executable or repository. Archives and ADFs are read
 in place: no game file is unpacked, copied, installed, or written by runtime.
 
+For a recognised installed direct-media set, runtime admission now verifies
+every declared member and retains only its immutable hash, expected size and
+direct-child path. It deliberately discards the verification buffers. A later
+hash-addressed parser read reopens its one member as a regular non-symlink
+file, checks the expected size and rehashes the returned transient bytes before
+they are parsed. This keeps direct installs out of a second all-media cache
+and closes the admission-to-parser replacement interval without constructing a
+replacement archive or writing any game data.
+
 An explicit CLI platform is never a request to substitute another release's
 runtime. Therefore `--game deuteros --platform amiga` may run this ADF-backed
 opening, while `--platform atari-st` remains a verified protected-media boot

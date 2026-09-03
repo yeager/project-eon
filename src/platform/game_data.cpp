@@ -66,12 +66,10 @@ std::vector<std::uint8_t> read_exact_regular_file(const std::filesystem::path& p
 
 struct VerifiedDirectSet {
     std::vector<ArchiveAsset> inventory;
-    std::map<std::string, std::vector<std::uint8_t>> assets;
 };
 
 VerifiedDirectSet verify_direct_set(const std::filesystem::path& root,
-                                    const DirectMediaSetManifestEntry& set,
-                                    const bool retain_bytes) {
+                                    const DirectMediaSetManifestEntry& set) {
     std::error_code error;
     const auto root_status = std::filesystem::symlink_status(root, error);
     if (error || std::filesystem::is_symlink(root_status) || !std::filesystem::is_directory(root_status)) {
@@ -92,9 +90,6 @@ VerifiedDirectSet verify_direct_set(const std::filesystem::path& root,
         canonical += std::string(member.name) + "\t" + std::to_string(member.size) + "\t" + digest + "\n";
         verified.inventory.push_back({std::string(member.name), member.size, digest,
             classify_asset(member.name, bytes)});
-        if (retain_bytes && !verified.assets.emplace(digest, std::move(bytes)).second) {
-            throw std::runtime_error("Ambiguous direct media asset hash");
-        }
     }
     const auto canonical_bytes = std::span(reinterpret_cast<const std::uint8_t*>(canonical.data()), canonical.size());
     if (to_hex(sha256(canonical_bytes)) != set.set_sha256) {
@@ -186,8 +181,16 @@ VerifiedReleaseMedia VerifiedReleaseMedia::open(const ReleaseArchive& release) {
         return VerifiedReleaseMedia(release, ZipArchive::open_verified(release.path, release.sha256));
     }
     const auto& set = require_direct_set_identity(release);
-    auto verified = verify_direct_set(release.path, set, true);
-    return VerifiedReleaseMedia(release, std::move(verified.inventory), std::move(verified.assets));
+    auto verified = verify_direct_set(release.path, set);
+    std::map<std::string, VerifiedReleaseMedia::DirectAssetReference> references;
+    for (const auto& member : set.members) {
+        if (!references.emplace(std::string(member.sha256),
+                VerifiedReleaseMedia::DirectAssetReference{release.path / std::string(member.name), member.size})
+                .second) {
+            throw std::runtime_error("Ambiguous direct media asset hash");
+        }
+    }
+    return VerifiedReleaseMedia(release, std::move(verified.inventory), std::move(references));
 }
 
 std::optional<std::vector<std::uint8_t>> VerifiedReleaseMedia::extract(
@@ -195,7 +198,12 @@ std::optional<std::vector<std::uint8_t>> VerifiedReleaseMedia::extract(
     if (archive_) return archive_->extract_asset_by_sha256(expected_asset_sha256);
     const auto found = direct_assets_.find(std::string(expected_asset_sha256));
     if (found == direct_assets_.end()) return std::nullopt;
-    return found->second;
+    auto bytes = read_exact_regular_file(found->second.path, found->second.size);
+    // `open()` verified the complete set; the second hash closes the interval
+    // between that set admission and this individual parser read. The caller
+    // receives this one transient leaf, never a cached installed collection.
+    if (to_hex(sha256(bytes)) != expected_asset_sha256) return std::nullopt;
+    return bytes;
 }
 
 bool verified_release_media_has_declared_profile_ranges(const VerifiedReleaseMedia& media) {
@@ -277,7 +285,7 @@ void ReleaseScanner::finish_candidate_inventory() {
     for (const auto& directory : directories_) {
         for (const auto& set : direct_media_set_manifest()) {
             try {
-                static_cast<void>(verify_direct_set(directory, set, false));
+                static_cast<void>(verify_direct_set(directory, set));
                 ++report_.verified_direct_set_occurrences;
                 const auto existing = std::find_if(releases_.begin(), releases_.end(), [&set](const auto& release) {
                     return release.sha256 == set.content_release_sha256;

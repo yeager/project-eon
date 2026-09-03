@@ -41,15 +41,24 @@ public:
 private:
     VerifiedReleaseMedia(ReleaseArchive release, ZipArchive archive)
         : release_(std::move(release)), archive_(std::move(archive)) {}
+    struct DirectAssetReference {
+        std::filesystem::path path;
+        std::uint64_t size = 0;
+    };
+
     VerifiedReleaseMedia(ReleaseArchive release, std::vector<ArchiveAsset> assets,
-                         std::map<std::string, std::vector<std::uint8_t>> direct_assets)
+                         std::map<std::string, DirectAssetReference> direct_assets)
         : release_(std::move(release)), direct_inventory_(std::move(assets)),
           direct_assets_(std::move(direct_assets)) {}
 
     ReleaseArchive release_;
     std::optional<ZipArchive> archive_;
     std::vector<ArchiveAsset> direct_inventory_;
-    std::map<std::string, std::vector<std::uint8_t>> direct_assets_;
+    // A direct-media session retains only verified member locations and
+    // sizes. It does not retain a second in-memory copy of the installed
+    // collection; each hash-addressed parser request reopens and rehashes its
+    // one original file immediately before returning a transient byte view.
+    std::map<std::string, DirectAssetReference> direct_assets_;
 
 public:
     [[nodiscard]] std::vector<ArchiveAsset> inventory() const;

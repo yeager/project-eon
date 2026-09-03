@@ -18,7 +18,10 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         self.assertIn("struct UnboundDirectMedia", header)
         self.assertIn("const std::vector<UnboundDirectMedia>& unbound_direct_media()", header)
         self.assertIn("DirectMediaSetManifestEntry", source)
-        self.assertIn("verify_direct_set(directory, set, false)", source)
+        self.assertIn("verify_direct_set(directory, set)", source)
+        self.assertIn("std::map<std::string, VerifiedReleaseMedia::DirectAssetReference>", source)
+        self.assertIn("read_exact_regular_file(found->second.path, found->second.size)", source)
+        self.assertNotIn("std::map<std::string, std::vector<std::uint8_t>> direct_assets_", header)
         self.assertIn("ReleaseMediaLayout::verified_directory", source)
 
     def test_documentation_forbids_leaf_to_release_substitution(self):
@@ -29,6 +32,7 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         self.assertIn("unique unbound direct-media leaves", documentation.replace("\n", " "))
         self.assertIn("now a runtime admission source", documentation)
         self.assertIn("directory is never misrepresented as an outer archive", documentation)
+        self.assertIn("retains only its immutable hash, expected size and", documentation)
 
 
 if __name__ == "__main__":
