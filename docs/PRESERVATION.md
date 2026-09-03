@@ -54,6 +54,29 @@ complete-set identity (ordered members, hashes, platform, language, and
 evidence) before it can reach `ReleaseRuntimeCoordinator`. No archive is
 constructed, unpacked, copied, or substituted in the meantime.
 
+### Split-container media-set boundary
+
+Some legally supplied releases preserve each original disk in a separate ZIP
+container.  A split-container release is admitted only when every declared
+container occurs exactly once, its outer SHA-256 and size match, and that
+specific container supplies its declared hash-addressed disk leaf at the
+declared size.  The canonical ordered disk records are hashed as
+`outer-sha256<TAB>outer-size<TAB>leaf-sha256<TAB>leaf-size<LF>` and bind to a
+known logical release identity.  Discovery does not use filenames, does not
+unpack disks, and rejects a partial, duplicated, repacked, or mixed set.
+
+The first documented set is the English Deuteros Atari ST pair: the
+Replicants disk 1 outer container
+`a9318feb83ff34b79f5a5ea1e5ffcb45828e4432ac75a859f55c3de97d724c93`
+contributes `aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`,
+and the clean disk 2 outer container
+`7842adb599dbc4cf79827e31e912740f259af45718c124d5806e1c8860f2253d`
+contributes `5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`.
+The set digest is
+`0a87871cdfc6e0f11c598b86be0726c842c2cdcb1cb7d0dba651f1d43b835ffa`.
+Runtime admission reopens and verifies every container again, retaining only
+transient in-memory decoded leaves; it never materialises original disks.
+
 ### Millennium DOS installed-directory evidence
 
 The user-supplied `millennium-return-to-earth-2-2` directory under the default

@@ -46,6 +46,12 @@
       {"name":"VGATXT.BIN","size":1024,"sha256":"c31cb760d5f62a21b3baf9c09a6be413514780bd88eeac0273620e81b5d69318"}
     ]}
   ],
+  "container_media_sets": [
+    {"schema":"project-eon.container-media-set/v1","serialization":"outer-sha256<TAB>outer-size<TAB>leaf-sha256<TAB>leaf-size<LF>, declared disk order","set_sha256":"0a87871cdfc6e0f11c598b86be0726c842c2cdcb1cb7d0dba651f1d43b835ffa","content_release_sha256":"c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653","game":"deuteros","platform":"atari_st","language":"en","members":[
+      {"outer_sha256":"a9318feb83ff34b79f5a5ea1e5ffcb45828e4432ac75a859f55c3de97d724c93","outer_size":292448,"leaf_sha256":"aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee","leaf_size":737280},
+      {"outer_sha256":"7842adb599dbc4cf79827e31e912740f259af45718c124d5806e1c8860f2253d","outer_size":264245,"leaf_sha256":"5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193","leaf_size":737280}
+    ]}
+  ],
   "parser_profiles": [
     {"id":"millennium-atari-equinox-direct-bootstrap","release_sha256":"0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69","leaf_sha256":"3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7","leaf_size":819200,"offset":0,"length":512},
     {"id":"millennium-atari-equinox-direct-root-inventory","release_sha256":"0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69","leaf_sha256":"3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7","leaf_size":819200,"offset":0,"length":819200},

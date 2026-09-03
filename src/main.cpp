@@ -849,8 +849,14 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         std::cout << ",\"language\":"; write_json_string(std::cout, release.language);
         std::cout << ",\"sha256\":"; write_json_string(std::cout, release.sha256);
         std::cout << ",\"media_layout\":";
-        write_json_string(std::cout, release.layout == eon::ReleaseMediaLayout::verified_directory
-            ? "verified-directory" : "zip-archive");
+        switch (release.layout) {
+        case eon::ReleaseMediaLayout::zip_archive:
+            write_json_string(std::cout, "zip-archive"); break;
+        case eon::ReleaseMediaLayout::verified_directory:
+            write_json_string(std::cout, "verified-directory"); break;
+        case eon::ReleaseMediaLayout::verified_container_set:
+            write_json_string(std::cout, "verified-container-set"); break;
+        }
         std::cout << ",\"direct_set_sha256\":";
         if (const auto direct_set = eon::direct_media_set_sha256(release)) {
             write_json_string(std::cout, *direct_set);
@@ -5793,7 +5799,8 @@ int main(int argc, char** argv) {
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 184,
                         active_platform
                         ? tr(eon::name(eon::platform_coverage(eon::ReleaseArchive{
-                            launcher_route.game, *active_platform, card.language, card.sha256, {}})))
+                            launcher_route.game, *active_platform, card.language, card.sha256, {},
+                            eon::ReleaseMediaLayout::zip_archive, {}})))
                         : tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
                 }
             } else {
