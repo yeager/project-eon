@@ -65,6 +65,13 @@ struct FunctionMapSidecarCoverage {
 [[nodiscard]] bool function_map_manifest_is_valid();
 [[nodiscard]] bool release_has_function_map_entry(
     std::string_view release_sha256, std::string_view entry_id);
+// Re-hash the declared parser-profile span behind every function-map row for
+// one already verified release. This is an admission-time provenance guard:
+// it proves that the function map's source span still comes from the exact
+// original leaf in the selected media, but does not classify the bytes as
+// executable, make them reachable, or execute them.
+[[nodiscard]] bool function_map_entries_are_attested_by_media(
+    const VerifiedReleaseMedia& media);
 [[nodiscard]] FunctionMapSidecarCoverage function_map_sidecar_coverage(
     const StaticControlFlowSummary& sidecar);
 

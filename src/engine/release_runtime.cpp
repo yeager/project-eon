@@ -6,6 +6,7 @@
 #include "data/reference_trace_registry.hpp"
 #include "data/sha256.hpp"
 #include "data/fat12.hpp"
+#include "data/function_map.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_dos_lib.hpp"
@@ -73,6 +74,15 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         // A whole-container hash is necessary but not sufficient for an
         // adapter: every parser interval it could report must still name an
         // exact available leaf within the just-admitted media snapshot.
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::runtime_capability;
+        return false;
+    }
+    if (!function_map_entries_are_attested_by_media(*media)) {
+        // The F10/CLI function map is only meaningful when every displayed
+        // source-span digest is recomputed from this exact admitted media
+        // snapshot. Do not let diagnostics silently outlive a changed parser
+        // range or a detached original leaf.
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
         rejection_ = ReleaseRuntimeRejection::runtime_capability;
         return false;
