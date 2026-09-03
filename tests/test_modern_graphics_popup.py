@@ -242,8 +242,9 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn('"deuteros.amiga.opening"', SOURCE)
         self.assertIn("millennium_modern_pipeline.matches(requested_key)", SOURCE)
         self.assertIn("deuteros_modern_pipeline.matches(requested_key)", SOURCE)
-        self.assertIn("deuteros_opening->ticks()", SOURCE)
-        self.assertIn("deuteros_opening->rgba_frame()", SOURCE)
+        self.assertIn("opening->checkpoint.tick", SOURCE)
+        self.assertIn("opening->rgba_frame", SOURCE)
+        self.assertIn("runtime.deuteros_amiga_opening_presentation()", SOURCE)
         self.assertIn("deuteros_modern_pipeline.resolve(requested_key, *frame", SOURCE)
         self.assertIn("SDL_DestroyTexture(modern_preview_texture)", SOURCE)
 
@@ -283,29 +284,31 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("TITLE-STAGE EXECUTION IS NOT YET RECOVERED", SOURCE)
 
     def test_deuteros_title_panel_shows_only_session_provenance_before_exec(self) -> None:
-        panel = SOURCE.index("const auto& title_stage = deuteros_opening->title_stage_session();")
-        palette = SOURCE.index("graphics_setup_palette_evidence()", panel)
+        panel = SOURCE.index("const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();")
+        palette = SOURCE.index("graphics_setup_palette", panel)
         handoff_panel = SOURCE[panel:palette]
-        self.assertIn("title_stage->entry_prefix_state()", handoff_panel)
-        self.assertIn("title_stage->exec_prelude()", handoff_panel)
+        self.assertIn("title_stage->entry_prefix_state", handoff_panel)
+        self.assertIn("title_stage->exec_prelude", handoff_panel)
         self.assertIn('prefix_provenance << "0x"', handoff_panel)
         self.assertIn("unresolved Exec read", handoff_panel)
         self.assertNotIn("title_stage->tick", handoff_panel)
+        self.assertNotIn("deuteros_opening->", handoff_panel)
 
-    def test_deuteros_opening_panel_uses_raw_vm_observables(self) -> None:
+    def test_deuteros_opening_panel_uses_lifecycle_gated_vm_snapshot(self) -> None:
         opening_panel = SOURCE.index('tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE")')
         handoff = SOURCE.index("if (deuteros_title_resource)", opening_panel)
         panel = SOURCE[opening_panel:handoff]
         for observable in (
-            "deuteros_opening->ticks()",
-            "deuteros_opening->vblank_counter()",
-            "deuteros_opening->palette_index()",
-            "deuteros_opening->active_channel_count()",
-            "deuteros_opening->input_gate()",
+            "opening->checkpoint.tick",
+            "opening->checkpoint.vblank_counter",
+            "opening->palette_index",
+            "opening->active_channel_count",
+            "opening->checkpoint.input_gate",
         ):
             with self.subTest(observable=observable):
                 self.assertIn(observable, panel)
         self.assertIn("Machine-state telemetry", panel)
+        self.assertNotIn("deuteros_opening->", panel)
 
     def test_popup_is_modal_for_gamepad_navigation(self) -> None:
         self.assertIn("SDL_GAMEPAD_BUTTON_DPAD_UP", SOURCE)

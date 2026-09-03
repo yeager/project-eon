@@ -3933,6 +3933,15 @@ int main() {
                 && first_checkpoint->vblank_counter > 0
                 && first_checkpoint->indexed_frame_sha256.size() == 64
                 && first_checkpoint->rgba_frame_sha256.size() == 64);
+            const auto opening_presentation = opening_controller.deuteros_amiga_opening_presentation();
+            assert(opening_presentation && opening_presentation->checkpoint.tick == first_checkpoint->tick
+                && opening_presentation->checkpoint.rgba_frame_sha256
+                    == first_checkpoint->rgba_frame_sha256
+                && opening_presentation->rgba_frame
+                && opening_presentation->rgba_frame->size()
+                    == static_cast<std::size_t>(eon::DeuterosAmigaFrame::width)
+                        * eon::DeuterosAmigaFrame::height * 4U);
+            assert(!opening_controller.deuteros_amiga_title_stage_boundary());
             const auto catch_up = opening_runner.advance(1'100);
             assert(catch_up.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
                 && !catch_up.resynchronized);
@@ -3965,6 +3974,16 @@ int main() {
             assert(opening_controller.state()
                 == eon::NativeSessionState::deuteros_amiga_title_stage_boundary);
             assert(!opening_controller.deuteros_amiga_opening_checkpoint());
+            assert(!opening_controller.deuteros_amiga_opening_presentation());
+            assert(!opening_controller.render_deuteros_amiga_opening_audio(960));
+            const auto title_boundary = opening_controller.deuteros_amiga_title_stage_boundary();
+            assert(title_boundary && title_boundary->stage.entry_address == 0x40426
+                && title_boundary->original_sha256
+                    == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"
+                && title_boundary->entry_prefix_state.writes[0].address == 0x4040e
+                && title_boundary->exec_prelude.stack_pointer_value == 0x40b62
+                && title_boundary->graphics_setup_palette.size() == 20
+                && title_boundary->alternate_renderer_trace);
             assert(opening_controller.coordinator().deuteros_amiga());
             const auto& admitted_title_stage = opening_controller.coordinator()
                 .deuteros_amiga()->title_stage_session();

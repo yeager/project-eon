@@ -426,8 +426,11 @@ published Millennium/Deuteros session kind, the explicit DOS and Deuteros
 title-stage boundaries, and `RETURNING TO MENU`. Launch, admitted input,
 Deuteros opening ticks, rejection, and revocation synchronize through this
 one vocabulary. SDL may render a menu, F10 modal, texture, audio queue or
-diagnostic panel, but none of those can advance native session state. Before
-an SDL caller clears coordinator-owned state it enters `RETURNING TO MENU`,
+diagnostic panel, but none of those can advance native session state. Opening
+pixels and title-stage facts cross this boundary only as immutable snapshots;
+Paula event submission and mixing remain coordinator-owned, and SDL receives
+only transient float buffers. Before an SDL caller clears coordinator-owned
+state it enters `RETURNING TO MENU`,
 where launch, input and opening ticks fail closed; it then finishes the reset
 at `MENU`. Stale source-derived resources therefore cannot be presented as a
 new or active original release.
@@ -3228,8 +3231,9 @@ recovered opening render route, not evidence of a reconstructed title screen
 or menu.
 
 The host scheduler treats that handoff as terminal as well: after the one
-caller-connected handoff tick, it performs no later opening-VM catch-up calls
-and clears queued opening PCM before disabling the Paula renderer. SDL may
+caller-connected handoff tick, it performs no later opening-VM catch-up calls.
+The coordinator retires its Paula mixer before it publishes the title-stage
+boundary, while SDL clears any already queued host PCM. SDL may
 continue to present the hash-regressed final opening frame, but it never
 advances an invented title-stage clock. In **Original**, that frame is sampled
 with nearest-neighbour scaling. In **Modern**, only the opt-in, memory-only

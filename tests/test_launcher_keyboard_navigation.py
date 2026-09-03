@@ -180,7 +180,9 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("load_millennium_dos_runtime(*media)", acquire)
         self.assertNotIn("eon::load_deuteros_amiga_runtime(", SOURCE)
         self.assertNotIn("eon::load_millennium_dos_runtime(", SOURCE)
-        self.assertIn("runtime_coordinator.deuteros_amiga()", SOURCE)
+        self.assertNotIn("runtime_coordinator.deuteros_amiga()", SOURCE)
+        self.assertIn("runtime.deuteros_amiga_opening_presentation()", SOURCE)
+        self.assertIn("runtime.render_deuteros_amiga_opening_audio", SOURCE)
         self.assertIn("runtime_coordinator.millennium_dos()", SOURCE)
 
     def test_deuteros_opening_handoff_publishes_a_fail_closed_title_stage_session(self) -> None:
@@ -370,13 +372,14 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         deuteros_body = SOURCE[deuteros_reset:reset]
         for clearing in (
             "SDL_ClearAudioStream(deuteros_audio_stream)",
-            "deuteros_opening = nullptr;",
             "deuteros_atari_session = nullptr;",
             "deuteros_title_resource.reset();",
             "discard_deuteros_external_modern_sequence();",
         ):
             with self.subTest(clearing=clearing):
                 self.assertIn(clearing, deuteros_body)
+        self.assertIn("runtime.reset();", reset_body)
+        self.assertNotIn("deuteros_opening =", deuteros_body)
         switch_body = SOURCE[source_change:SOURCE.index("} else {", source_change)]
         self.assertIn("reset_active_runtime();", switch_body)
 
