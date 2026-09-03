@@ -364,6 +364,20 @@ ReleaseRuntimeCoordinator::deuteros_atari_bootstrap_checkpoint() const {
     return deuteros_atari_->checkpoint();
 }
 
+std::optional<DeuterosAtariBootstrapPresentationSnapshot>
+ReleaseRuntimeCoordinator::deuteros_atari_bootstrap_presentation() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_atari_bootstrap
+        || !deuteros_atari_) return std::nullopt;
+    const auto& boot = deuteros_atari_->boot();
+    return DeuterosAtariBootstrapPresentationSnapshot{
+        deuteros_atari_->checkpoint(),
+        boot.first_stage_offset,
+        boot.first_stage_length,
+        deuteros_atari_->first_stage_copy_execution(),
+        deuteros_atari_->entry_execution(),
+    };
+}
+
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {
     if (!candidate) {
