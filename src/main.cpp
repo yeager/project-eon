@@ -6107,6 +6107,35 @@ int main(int argc, char** argv) {
                     draw_text(renderer, 64, 324, boundaries.str());
                     draw_text(renderer, 64, 340,
                         tr("HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."));
+                } else if (*active_platform == eon::Platform::atari_st) {
+                    const auto atari_bootstrap = runtime.millennium_atari_bootstrap_presentation();
+                    if (atari_bootstrap) {
+                        // The Atari session is just as release-bound as the
+                        // Amiga one. Show its locally executed loader facts,
+                        // not a substituted DOS image or a fabricated GEMDOS
+                        // result.
+                        const auto& execution = atari_bootstrap->execution;
+                        const auto& fopen = atari_bootstrap->fopen_boundary;
+                        const auto& fread = atari_bootstrap->fread_frame_prefix;
+                        std::ostringstream loader;
+                        loader << "BSS 0x" << std::hex << execution.bss_entry_address
+                               << " -> 0x" << execution.target_address
+                               << "; COPY " << std::dec << execution.first_copy_longwords
+                               << "+" << execution.second_copy_words;
+                        draw_text(renderer, 64, 292, loader.str());
+                        std::ostringstream open;
+                        open << "GEMDOS FOPEN " << fopen.fopen_filename << " / mode 0x"
+                             << std::hex << fopen.fopen_access_mode << " / TRAP #1 +0x"
+                             << fopen.fopen_trap_offset;
+                        draw_text(renderer, 64, 308, open.str());
+                        std::ostringstream read;
+                        read << "FREAD 0x" << std::hex << fread.byte_count_argument
+                             << " -> 0x" << fread.buffer_address << " / TRAP #1 +0x"
+                             << fread.stop_before_trap_offset;
+                        draw_text(renderer, 64, 324, read.str());
+                        draw_text(renderer, 64, 340,
+                            tr("HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."));
+                    }
                 }
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else if (selected == eon::Game::deuteros && active_platform

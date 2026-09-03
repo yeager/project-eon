@@ -4041,6 +4041,23 @@ int main() {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
+            eon::LaunchRequest atari_request;
+            atari_request.game = release.game;
+            atari_request.platform = release.platform;
+            atari_request.release_language = release.language;
+            atari_request.release_sha256 = release.sha256;
+            eon::RuntimeHost atari_host;
+            assert(atari_host.launch_direct(atari_request, releases).accepted());
+            const auto host_presentation = atari_host.millennium_atari_bootstrap_presentation();
+            assert(host_presentation && host_presentation->config.present
+                && host_presentation->fopen_boundary.fopen_filename
+                    == presentation->fopen_boundary.fopen_filename
+                && host_presentation->fread_frame_prefix.buffer_address
+                    == presentation->fread_frame_prefix.buffer_address);
+            atari_host.begin_source_revocation();
+            assert(!atari_host.active() && !atari_host.session_snapshot()
+                && !atari_host.millennium_atari_bootstrap_presentation());
+            atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
                 && session_snapshot.capabilities.decoded_presentation
