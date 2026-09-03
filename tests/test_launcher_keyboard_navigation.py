@@ -239,6 +239,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("coordinator.active()", MENU_RUNTIME_SOURCE)
         self.assertIn("admit_runtime_launch(coordinator, candidate, releases)", MENU_RUNTIME_SOURCE)
         self.assertIn("runtime.launch_direct(launch_candidate, releases)", SOURCE)
+        self.assertIn("Native runtime admission rejected the selected verified release", SOURCE)
+        self.assertIn("ReleaseRuntimeRejection::launch_identity", SOURCE)
         self.assertIn("runtime.launch_menu(launcher_session, request, releases)", SOURCE)
         launch = SOURCE.index("const auto launch_menu_selection")
         admission = SOURCE.index("runtime.launch_menu", launch)

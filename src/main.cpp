@@ -4100,9 +4100,18 @@ int main(int argc, char** argv) {
         launcher_runtime_rejection = std::string(
             eon::release_runtime_rejection_label(admission.rejection));
         if (!admission.accepted()) {
-            std::cerr << "The selected game and platform need one exact verified original release. "
-                     "Use --release-sha256 when several outer containers share a language; "
-                     "no scan-order fallback was selected.\n";
+            if (admission.rejection == eon::ReleaseRuntimeRejection::launch_identity) {
+                std::cerr << "The selected game and platform need one exact verified original release. "
+                             "Use --release-sha256 when several outer containers share a language; "
+                             "no scan-order fallback was selected.\n";
+            } else {
+                // The common runtime gate intentionally keeps parser and
+                // source details private. Its stable rejection vocabulary is
+                // nevertheless useful to a CLI operator: do not misreport a
+                // media/adapter boundary as an ambiguous release selection.
+                std::cerr << "Native runtime admission rejected the selected verified release: "
+                          << eon::release_runtime_rejection_label(admission.rejection) << ".\n";
+            }
             return 4;
         }
         active_release_sha256 = active_launch()->request.release_sha256;
