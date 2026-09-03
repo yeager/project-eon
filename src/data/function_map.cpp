@@ -203,6 +203,7 @@ bool parse_declared_address(const FunctionMapEntry& entry, std::uint64_t& addres
     const std::string_view prefix = entry.address_space == "runtime" ? "$" : "+0x";
     if (!entry.runtime_address.starts_with(prefix)) return false;
     const auto digits = entry.runtime_address.substr(prefix.size());
+    if (!is_lower_hex(digits)) return false;
     const auto result = std::from_chars(digits.data(), digits.data() + digits.size(), address, 16);
     return result.ec == std::errc{} && result.ptr == digits.data() + digits.size();
 }
@@ -230,11 +231,36 @@ bool function_map_entry_is_well_formed(const FunctionMapEntry& entry) {
         || entry.evidence_level != "verified-static") return false;
     if (entry.cpu != "i8086" && entry.cpu != "m68000") return false;
     if (entry.address_space == "runtime") {
-        return entry.runtime_address.size() > 1U && entry.runtime_address.front() == '$';
+        std::uint64_t address = 0;
+        return parse_declared_address(entry, address);
     }
     return entry.address_space == "image-relative-unrelocated"
         && entry.runtime_address.size() > 3U && entry.runtime_address.starts_with("+0x")
         && is_lower_hex(entry.runtime_address.substr(3));
+}
+
+bool function_map_manifest_is_valid() {
+    const auto releases = release_manifest();
+    const auto profiles = parser_profile_manifest();
+    for (const auto& entry : entries) {
+        if (!function_map_entry_is_well_formed(entry)) return false;
+        if ((entry.platform == Platform::dos && entry.cpu != "i8086")
+            || ((entry.platform == Platform::amiga || entry.platform == Platform::atari_st)
+                && entry.cpu != "m68000")) return false;
+        const auto release_matches = std::count_if(releases.begin(), releases.end(), [&entry](const auto& release) {
+            return release.sha256 == entry.release_sha256 && release.game == entry.game
+                && release.platform == entry.platform && release.language == entry.language;
+        });
+        const auto id_matches = std::count_if(entries.begin(), entries.end(), [&entry](const auto& candidate) {
+            return candidate.id == entry.id;
+        });
+        const auto profile_matches = std::count_if(profiles.begin(), profiles.end(), [&entry](const auto& profile) {
+                return profile.release_sha256 == entry.release_sha256
+                    && profile.id == entry.parser_profile_id;
+            });
+        if (release_matches != 1 || id_matches != 1 || profile_matches != 1) return false;
+    }
+    return true;
 }
 
 bool release_has_function_map_entry(const std::string_view release_sha256,

@@ -296,6 +296,13 @@ can inspect an observation. `runtime_rejection` is `NONE` only after the
 native admission succeeds; a non-`NONE` value names a safe gate class rather
 than exposing parser errors, media paths, emulator state, or gameplay state.
 
+Before it reports preservation provenance, this diagnostics path validates
+the compiled declarative maps: recovery rows cover parser profiles one-to-one,
+startup rows cover recognised releases one-to-one, and function rows have
+unique IDs with exact release/profile bindings. This is a no-I/O diagnostics
+safeguard only; it neither executes original media nor changes native runtime
+admission.
+
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It
 contains only game/platform/language/release hashes plus hash-bound startup and

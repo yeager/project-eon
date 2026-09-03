@@ -3,6 +3,7 @@
 #include "data/release_manifest.hpp"
 
 #include <array>
+#include <algorithm>
 
 namespace eon {
 namespace {
@@ -21,5 +22,26 @@ std::optional<StartupBoundary> startup_boundary_for_release(const std::string_vi
     for (const auto& boundary : boundaries) if (boundary.release_sha256 == hash
         && release_has_parser_profile(hash, boundary.parser_profile_id)) return boundary;
     return std::nullopt;
+}
+
+bool startup_boundary_manifest_is_valid() {
+    const auto releases = release_manifest();
+    if (boundaries.size() != releases.size()) return false;
+    for (const auto& release : releases) {
+        const auto matches = std::count_if(boundaries.begin(), boundaries.end(), [&release](const auto& boundary) {
+            return boundary.release_sha256 == release.sha256;
+        });
+        if (matches != 1) return false;
+    }
+    for (const auto& boundary : boundaries) {
+        if (boundary.release_sha256.empty() || boundary.parser_profile_id.empty()
+            || boundary.source_address.empty() || boundary.unresolved.empty()) return false;
+        const auto release_matches = std::count_if(releases.begin(), releases.end(), [&boundary](const auto& release) {
+            return release.sha256 == boundary.release_sha256;
+        });
+        if (release_matches != 1
+            || !release_has_parser_profile(boundary.release_sha256, boundary.parser_profile_id)) return false;
+    }
+    return true;
 }
 } // namespace eon

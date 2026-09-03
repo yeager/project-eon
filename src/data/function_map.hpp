@@ -59,6 +59,10 @@ struct FunctionMapSidecarCoverage {
 // a function asset to a parser-profile leaf: some verified functions reside
 // in a derived PRG or staged image rather than the outer disk span.
 [[nodiscard]] bool function_map_entry_is_well_formed(const FunctionMapEntry& entry);
+// Every function row must remain an unambiguous diagnostics-only declaration
+// for one manifest release and one parser profile. This validates no media and
+// does not turn the map into an execution table.
+[[nodiscard]] bool function_map_manifest_is_valid();
 [[nodiscard]] bool release_has_function_map_entry(
     std::string_view release_sha256, std::string_view entry_id);
 [[nodiscard]] FunctionMapSidecarCoverage function_map_sidecar_coverage(

@@ -58,6 +58,10 @@ struct RuntimeDiagnosticsReport {
     std::string trace_admission = "not-loaded";
 };
 
+// Cross-check all compiled declarative preservation maps. This is pure
+// metadata validation: it opens no user media and executes no original code.
+[[nodiscard]] bool declarative_provenance_manifests_are_valid();
+
 // Compose this only from hash-bound compiled declarations. Inconsistent rows
 // fail closed rather than displaying a map for another release or language.
 [[nodiscard]] RuntimeDiagnosticsReport runtime_diagnostics_for_release(
