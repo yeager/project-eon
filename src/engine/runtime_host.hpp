@@ -12,6 +12,26 @@ struct RuntimeHostAdvance {
     bool opening_active = false;
 };
 
+struct RuntimeHostPresentationSnapshot {
+    RuntimePresentationKind kind = RuntimePresentationKind::millennium_dos_title;
+    RuntimeSessionBoundary boundary = RuntimeSessionBoundary::bootstrap_boundary;
+    RuntimeSessionCapabilities capabilities;
+    RuntimeInputContract input_contract = RuntimeInputContract::none;
+    constexpr bool operator==(const RuntimeHostPresentationSnapshot&) const = default;
+};
+
+// A copy-only UI/CLI boundary. In particular, it cannot retain a release
+// coordinator, original-media span, adapter pointer or launch DTO reference.
+struct RuntimeHostSnapshot {
+    std::uint64_t generation = 0;
+    bool revoking = false;
+    ReleaseRuntimeAdmission admission = ReleaseRuntimeAdmission::unselected;
+    ReleaseRuntimeRejection rejection = ReleaseRuntimeRejection::none;
+    NativeSessionState state = NativeSessionState::menu;
+    std::optional<RuntimeSessionSnapshot> session;
+    std::optional<RuntimeHostPresentationSnapshot> presentation;
+};
+
 // SDL owns windows, textures, queued device audio and text-input activation.
 // RuntimeHost owns only the corresponding native lifecycle ordering.  It
 // gives every platform front end one explicit revocation interval in which it
@@ -32,6 +52,7 @@ public:
     // recovered 50 Hz session may run.  No SDL clock, renderer, device audio
     // or generic game tick crosses this boundary.
     [[nodiscard]] RuntimeHostAdvance advance(std::uint64_t monotonic_tick);
+    [[nodiscard]] RuntimeHostSnapshot snapshot() const;
 
     [[nodiscard]] bool revoking() const;
     [[nodiscard]] std::uint64_t generation() const { return generation_; }

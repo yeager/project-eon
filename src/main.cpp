@@ -5006,20 +5006,24 @@ int main(int argc, char** argv) {
     }
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
+        const auto runtime_view = runtime.snapshot();
         diagnostics.release_identity = tr("NOT SELECTED");
         diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
-            runtime.admission()));
-        diagnostics.runtime_rejection = launcher_runtime_rejection;
-        diagnostics.lifecycle_state = std::string(eon::native_session_state_label(runtime.state()));
+            runtime_view.admission));
+        diagnostics.runtime_rejection = std::string(eon::release_runtime_rejection_label(
+            runtime_view.rejection));
+        diagnostics.lifecycle_state = std::string(eon::native_session_state_label(runtime_view.state))
+            + " / GEN=" + std::to_string(runtime_view.generation)
+            + " / REVOKING=" + (runtime_view.revoking ? "Y" : "N");
         // This is a compact, renderer-only diagnostic code. It makes the
         // selected preservation contract visible even before a session is
         // admitted, while the separately reported capabilities remain facts
         // about the recovered session rather than a claim about the mode.
         diagnostics.session_capabilities = std::string("MODE=")
             + (request.presentation == eon::Presentation::original ? "ORIGINAL" : "MODERN");
-        if (const auto session = runtime.presentation_snapshot()) {
+        if (const auto& session = runtime_view.presentation) {
             diagnostics.session_adapter = std::string(eon::runtime_presentation_kind_label(session->kind));
-            diagnostics.session_boundary = std::string(session->boundary_label);
+            diagnostics.session_boundary = std::string(eon::runtime_session_boundary_label(session->boundary));
             // Capability values are compact diagnostic codes, like recovery
             // map addresses. Only their launcher row label is translated.
             diagnostics.session_capabilities += " / DECODED_PRESENTATION="
