@@ -5,7 +5,9 @@ import unittest
 from types import SimpleNamespace
 from zipfile import ZIP_STORED, ZipFile
 
-from tools.analyze_dos import disassemble_linear, parse_member_hashes, require_external_output as require_dos_external_output
+from tools.analyze_dos import (disassemble_linear, parse_member_hashes,
+                               read_verified_direct_file,
+                               require_external_output as require_dos_external_output)
 from tools.analyze_m68k import read_source, render_instructions, require_external_output
 from tools.reproduce_disassembly_reports import ReproductionError, require_output_directory
 
@@ -69,6 +71,23 @@ class CompleteLinearDisassemblyTests(unittest.TestCase):
             require_dos_external_output(root / "forbidden-dos-report.md")
         with self.assertRaises(ValueError):
             require_dos_external_output(Path("/tmp/project-eon-dos-report.md"))
+
+    def test_direct_member_read_rehashes_the_opened_regular_file_and_rejects_symlinks(self):
+        cache = Path("/home/yeager/.cache/project-eon-tools/tests")
+        cache.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=cache) as temporary:
+            root = Path(temporary)
+            payload = b"original-direct-media"
+            regular = root / "MILL.COM"
+            regular.write_bytes(payload)
+            digest = hashlib.sha256(payload).hexdigest()
+            self.assertEqual(read_verified_direct_file(regular, digest, len(payload)), payload)
+            alias = root / "alias.com"
+            alias.symlink_to(regular)
+            with self.assertRaises(ValueError):
+                read_verified_direct_file(alias, digest, len(payload))
+            with self.assertRaises(ValueError):
+                read_verified_direct_file(regular, "0" * 64, len(payload))
 
     def test_complete_report_reproduction_requires_a_fresh_external_directory(self):
         root = Path(__file__).resolve().parents[1]

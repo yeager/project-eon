@@ -9,6 +9,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
+import stat
 import sys
 from zipfile import ZipFile
 
@@ -23,6 +24,32 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def read_verified_direct_file(path: Path, expected_sha256: str,
+                              expected_size: int | None = None) -> bytes:
+    """Read one direct-media child through a no-follow descriptor once.
+
+    A directory scan is not authority for a later read: the selected member is
+    reopened and rehashed immediately before it becomes a report source.
+    ``O_NOFOLLOW`` and ``fstat`` close the common replacement/symlink race
+    without creating a materialized copy beside the user's media.
+    """
+    try:
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(path, flags)
+        with os.fdopen(descriptor, "rb") as source:
+            status = os.fstat(source.fileno())
+            if not stat.S_ISREG(status.st_mode) or (expected_size is not None
+                    and status.st_size != expected_size):
+                raise ValueError("direct member is not its declared regular file")
+            data = source.read()
+    except OSError as error:
+        raise ValueError("unable to read declared direct media member") from error
+    if (expected_size is not None and len(data) != expected_size
+            or hashlib.sha256(data).hexdigest() != expected_sha256):
+        raise ValueError("direct member hash mismatch")
+    return data
 
 
 def parse_member_hashes(values: list[str], members: list[str]) -> dict[str, str]:
@@ -55,23 +82,37 @@ def require_external_output(path: Path) -> Path:
     return path
 
 
-def verify_direct_directory(directory: Path, set_sha256: str) -> None:
+def verify_direct_directory(directory: Path, set_sha256: str) -> Path:
     manifest_path = Path(__file__).resolve().parents[1] / "docs" / "release-manifest.json"
     try:
         sets = json.loads(manifest_path.read_text(encoding="utf-8"))["direct_media_sets"]
         declared = next(entry for entry in sets if entry["set_sha256"] == set_sha256)
     except (OSError, json.JSONDecodeError, KeyError, StopIteration) as error:
         raise ValueError("directory media-set identity is not declared") from error
+    try:
+        directory_status = directory.lstat()
+    except OSError as error:
+        raise ValueError("direct media root is unavailable") from error
+    if directory.is_symlink() or not stat.S_ISDIR(directory_status.st_mode):
+        raise ValueError("direct media root must be a regular non-symlink directory")
+    resolved_directory = directory.resolve(strict=True)
     canonical = ""
     for member in declared["members"]:
         name = member["name"]
-        path = directory / name
-        if (not path.is_file() or path.is_symlink() or path.parent != directory
-                or path.stat().st_size != member["size"] or sha256_file(path) != member["sha256"]):
+        # Direct-set manifest members are flat DOS filenames. Reject a ledger
+        # change that tries to traverse away from the admitted root before it
+        # can influence an OS path lookup.
+        if (not name or Path(name).name != name or "/" in name or "\\" in name):
+            raise ValueError("declared direct media-set member name is unsafe")
+        path = resolved_directory / name
+        try:
+            read_verified_direct_file(path, member["sha256"], member["size"])
+        except ValueError:
             raise ValueError("directory does not match declared direct media-set")
         canonical += f'{name}\t{member["size"]}\t{member["sha256"]}\n'
     if hashlib.sha256(canonical.encode("ascii")).hexdigest() != set_sha256:
         raise ValueError("declared direct media-set canonical hash mismatch")
+    return resolved_directory
 
 
 def _render_instruction(instruction) -> str:
@@ -238,13 +279,13 @@ def main() -> None:
         raise SystemExit(str(error)) from error
     if directory_mode:
         try:
-            verify_direct_directory(args.directory, args.directory_set_sha256)
+            directory = verify_direct_directory(args.directory, args.directory_set_sha256)
             sources = []
             for member in args.member:
-                path = args.directory / member
-                if not path.is_file() or path.is_symlink() or sha256_file(path) != member_hashes[member]:
-                    raise ValueError("requested direct member hash mismatch")
-                sources.append((member, path.read_bytes()))
+                if not member or Path(member).name != member or "/" in member or "\\" in member:
+                    raise ValueError("requested direct member name is unsafe")
+                sources.append((member, read_verified_direct_file(
+                    directory / member, member_hashes[member])))
         except (OSError, ValueError) as error:
             raise SystemExit(f"Unable to read exact DOS directory member: {error}") from error
     elif archive_mode:
