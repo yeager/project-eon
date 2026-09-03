@@ -31,7 +31,6 @@ MillenniumDosTitleTransitionSequence parse_millennium_dos_title_transition(
     MillenniumDosTitleTransitionSequence result;
     result.original_step_stride = flow.intro_step_stride;
     result.patches.reserve(flow.intro_transition_steps);
-    std::vector<std::uint8_t> source_bank;
     for (std::uint16_t index = 1; index <= flow.intro_transition_steps; ++index) {
         const auto name = name_for(index);
         const auto* entry = title_library.find(name);
@@ -43,7 +42,6 @@ MillenniumDosTitleTransitionSequence parse_millennium_dos_title_transition(
             throw std::runtime_error("Non-contiguous Millennium DOS title patch bank");
         }
         result.source_bank_size += entry->size;
-        source_bank.insert(source_bank.end(), record.begin(), record.end());
         const auto bitmap = decode_millennium_dos_bitmap(record);
         if (bitmap.pixels.size() != flow.intro_step_stride) {
             throw std::runtime_error("Millennium DOS title patch differs from verified stride");
@@ -66,7 +64,11 @@ MillenniumDosTitleTransitionSequence parse_millennium_dos_title_transition(
             {record.begin() + static_cast<std::ptrdiff_t>(offset),
              record.begin() + static_cast<std::ptrdiff_t>(offset + count)}});
     }
-    result.source_bank_sha256 = to_hex(sha256(source_bank));
+    // The proven P01..P25 range is contiguous in the immutable TITLE.LIB
+    // leaf. Hash it in place rather than constructing a second copy merely
+    // for aggregate provenance.
+    result.source_bank_sha256 = to_hex(sha256(title_library.bytes().subspan(
+        result.source_bank_offset, result.source_bank_size)));
     return result;
 }
 

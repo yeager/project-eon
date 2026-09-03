@@ -4278,6 +4278,9 @@ int main() {
     assert(millennium_title_transition.source_bank_size == 7'890);
     assert(millennium_title_transition.source_bank_sha256
         == "f0ecbfd374b1c6122b407b29a6fe4a872a45a0a21e9ef6584e74829e06b5514d");
+    assert(title_lib.bytes().subspan(millennium_title_transition.source_bank_offset,
+        millennium_title_transition.source_bank_size).data()
+        == title_lib.read(*title_p01).data());
     assert(millennium_title_transition.patches.front().resource_name == "P01");
     assert(millennium_title_transition.patches.front().source_offset == 0x2941);
     assert(millennium_title_transition.patches.front().source_size == 213);
