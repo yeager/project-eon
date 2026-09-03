@@ -46,6 +46,20 @@ const DirectMediaSetManifestEntry& require_direct_set_identity(const ReleaseArch
     return *found;
 }
 
+const ContainerSetManifestEntry& require_container_set_identity(const ReleaseArchive& release) {
+    if (!container_set_manifest_is_valid()) {
+        throw std::runtime_error("Container media-set manifest is not internally consistent");
+    }
+    const auto sets = container_set_manifest();
+    const auto found = std::find_if(sets.begin(), sets.end(), [&release](const auto& candidate) {
+        return candidate.content_release_sha256 == release.sha256
+            && candidate.game == release.game && candidate.platform == release.platform
+            && candidate.language == release.language;
+    });
+    if (found == sets.end()) throw std::runtime_error("Release has no recognised container-media set identity");
+    return *found;
+}
+
 std::vector<std::uint8_t> read_exact_regular_file(const std::filesystem::path& path,
                                                    const std::uint64_t expected_size) {
     std::error_code error;
@@ -95,6 +109,49 @@ VerifiedDirectSet verify_direct_set(const std::filesystem::path& root,
     if (to_hex(sha256(canonical_bytes)) != set.set_sha256) {
         throw std::runtime_error("Direct media set identity mismatch");
     }
+    return verified;
+}
+
+struct VerifiedContainerSet {
+    std::vector<std::filesystem::path> paths;
+    std::vector<ZipArchive> archives;
+    std::vector<ArchiveAsset> inventory;
+};
+
+VerifiedContainerSet verify_container_set(const std::vector<std::filesystem::path>& candidates,
+                                          const ContainerSetManifestEntry& set) {
+    VerifiedContainerSet verified;
+    std::string canonical;
+    for (const auto& member : set.members) {
+        std::vector<std::filesystem::path> matches;
+        for (const auto& candidate : candidates) {
+            std::error_code error;
+            const auto status = std::filesystem::symlink_status(candidate, error);
+            if (error || std::filesystem::is_symlink(status) || !std::filesystem::is_regular_file(status)
+                || std::filesystem::file_size(candidate, error) != member.outer_size || error) continue;
+            if (to_hex(sha256_file(candidate)) == member.outer_sha256) matches.push_back(candidate);
+        }
+        // One exact physical container is required for each declared disk.
+        // A second matching copy is evidence, not an arbitrary tiebreaker.
+        if (matches.size() != 1) throw std::runtime_error("Container media-set member is missing or ambiguous");
+        auto archive = ZipArchive::open_verified(matches.front(), member.outer_sha256);
+        const auto leaf = archive.extract_asset_by_sha256(member.leaf_sha256);
+        if (!leaf || leaf->size() != member.leaf_size) {
+            throw std::runtime_error("Container media-set leaf is absent or changed");
+        }
+        canonical += std::string(member.outer_sha256) + "\t" + std::to_string(member.outer_size) + "\t"
+            + std::string(member.leaf_sha256) + "\t" + std::to_string(member.leaf_size) + "\n";
+        for (const auto& entry : archive.entries()) {
+            if (entry.directory) continue;
+            auto bytes = archive.extract(entry);
+            verified.inventory.push_back({entry.name, bytes.size(), to_hex(sha256(bytes)),
+                classify_asset(entry.name, bytes)});
+        }
+        verified.paths.push_back(matches.front());
+        verified.archives.push_back(std::move(archive));
+    }
+    const auto bytes = std::span(reinterpret_cast<const std::uint8_t*>(canonical.data()), canonical.size());
+    if (to_hex(sha256(bytes)) != set.set_sha256) throw std::runtime_error("Container media-set identity mismatch");
     return verified;
 }
 
@@ -155,6 +212,8 @@ bool is_recognised_release_identity(const ReleaseArchive& release) {
         static_cast<void>(require_manifest_identity(release));
         if (release.layout == ReleaseMediaLayout::verified_directory) {
             static_cast<void>(require_direct_set_identity(release));
+        } else if (release.layout == ReleaseMediaLayout::verified_container_set) {
+            static_cast<void>(require_container_set_identity(release));
         }
         return true;
     } catch (...) {
@@ -179,6 +238,14 @@ VerifiedReleaseMedia VerifiedReleaseMedia::open(const ReleaseArchive& release) {
     static_cast<void>(require_manifest_identity(release));
     if (release.layout == ReleaseMediaLayout::zip_archive) {
         return VerifiedReleaseMedia(release, ZipArchive::open_verified(release.path, release.sha256));
+    }
+    if (release.layout == ReleaseMediaLayout::verified_container_set) {
+        const auto& set = require_container_set_identity(release);
+        if (release.containers.size() != set.members.size()) {
+            throw std::runtime_error("Container media-set release has incomplete path binding");
+        }
+        auto verified = verify_container_set(release.containers, set);
+        return VerifiedReleaseMedia(release, std::move(verified.archives), std::move(verified.inventory));
     }
     const auto& set = require_direct_set_identity(release);
     auto verified = verify_direct_set(release.path, set);
@@ -210,10 +277,14 @@ std::optional<std::span<const std::uint8_t>> VerifiedReleaseMedia::borrow(
         return std::span<const std::uint8_t>(cached->second);
     }
     std::vector<std::uint8_t> bytes;
-    if (archive_) {
-        const auto extracted = archive_->extract_asset_by_sha256(expected_asset_sha256);
-        if (!extracted) return std::nullopt;
-        bytes = std::move(*extracted);
+    if (!archives_.empty()) {
+        for (const auto& archive : archives_) {
+            const auto extracted = archive.extract_asset_by_sha256(expected_asset_sha256);
+            if (!extracted) continue;
+            if (!bytes.empty()) throw std::runtime_error("Ambiguous container media asset hash");
+            bytes = std::move(*extracted);
+        }
+        if (bytes.empty()) return std::nullopt;
     } else {
     const auto found = direct_assets_.find(std::string(expected_asset_sha256));
     if (found == direct_assets_.end()) return std::nullopt;
@@ -259,7 +330,7 @@ bool verified_release_media_has_declared_profile_ranges(const VerifiedReleaseMed
 }
 
 std::vector<ArchiveAsset> VerifiedReleaseMedia::inventory() const {
-    if (!archive_) return direct_inventory_;
+    if (release_.layout != ReleaseMediaLayout::zip_archive) return direct_inventory_;
     // Inventory helpers intentionally reopen ZIP sources, so direct callers
     // use the already admitted snapshot. ZIP callers retain their established
     // helper semantics below.
@@ -316,7 +387,7 @@ void ReleaseScanner::finish_candidate_inventory() {
                 if (existing == releases_.end()) {
                     releases_.push_back({set.game, set.platform, std::string(set.language),
                         std::string(set.content_release_sha256), directory,
-                        ReleaseMediaLayout::verified_directory});
+                        ReleaseMediaLayout::verified_directory, {}});
                     for (const auto& member : set.members) {
                         bound_direct_media_paths_.push_back(directory / std::string(member.name));
                     }
@@ -327,6 +398,22 @@ void ReleaseScanner::finish_candidate_inventory() {
                 // An incomplete or changed directory remains ordinary direct
                 // evidence only; its individual leaves are handled below.
             }
+        }
+    }
+    for (const auto& set : container_set_manifest()) {
+        try {
+            auto verified = verify_container_set(candidates_, set);
+            const auto existing = std::find_if(releases_.begin(), releases_.end(), [&set](const auto& release) {
+                return release.sha256 == set.content_release_sha256;
+            });
+            if (existing == releases_.end()) {
+                releases_.push_back({set.game, set.platform, std::string(set.language),
+                    std::string(set.content_release_sha256), {},
+                    ReleaseMediaLayout::verified_container_set, std::move(verified.paths)});
+            }
+        } catch (const std::exception&) {
+            // Partial, repacked, or ambiguous disk collections remain
+            // unbound preservation evidence and cannot create a launch card.
         }
     }
     report_.candidates = candidates_.size();
@@ -408,7 +495,7 @@ bool ReleaseScanner::advance(std::size_t max_files) {
                     [&fingerprint](const auto& release) { return release.sha256 == fingerprint; });
                 if (existing == releases_.end()) {
                     releases_.push_back({found->game, found->platform, std::string(found->language),
-                        fingerprint, candidate});
+                        fingerprint, candidate, ReleaseMediaLayout::zip_archive, {}});
                 } else {
                     // Candidates are lexically sorted before scanning. Keep
                     // the first path as a deterministic in-place read target

@@ -39,6 +39,26 @@ struct DirectMediaSetManifestEntry {
     std::span<const DirectMediaSetMember> members;
 };
 
+// A split container set binds several independently supplied original
+// containers to one logical release.  Both the outer container and the
+// hash-addressed physical leaf it contributes are measured: a disk from a
+// similarly named, repacked, or mixed release cannot complete the set.
+struct ContainerSetMember {
+    std::string_view outer_sha256;
+    std::uint64_t outer_size;
+    std::string_view leaf_sha256;
+    std::uint64_t leaf_size;
+};
+
+struct ContainerSetManifestEntry {
+    std::string_view set_sha256;
+    std::string_view content_release_sha256;
+    Game game;
+    Platform platform;
+    std::string_view language;
+    std::span<const ContainerSetMember> members;
+};
+
 struct ParserProfileManifestEntry {
     std::string_view id;
     std::string_view release_sha256;
@@ -54,6 +74,8 @@ struct ParserProfileManifestEntry {
 // must therefore map one-to-one to declared archive releases. This performs
 // no filesystem I/O and never opens user media.
 [[nodiscard]] bool direct_media_set_manifest_is_valid();
+[[nodiscard]] std::span<const ContainerSetManifestEntry> container_set_manifest();
+[[nodiscard]] bool container_set_manifest_is_valid();
 [[nodiscard]] std::span<const ParserProfileManifestEntry> parser_profile_manifest();
 
 // This is deliberately a strict identity check.  It does not infer that a

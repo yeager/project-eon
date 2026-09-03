@@ -14,7 +14,7 @@ namespace eon {
 
 enum class Game { millennium, deuteros };
 enum class Platform { dos, amiga, atari_st };
-enum class ReleaseMediaLayout { zip_archive, verified_directory };
+enum class ReleaseMediaLayout { zip_archive, verified_directory, verified_container_set };
 
 struct ReleaseArchive {
     Game game;
@@ -27,6 +27,9 @@ struct ReleaseArchive {
     // the direct-media manifest, rather than pretending the directory is an
     // archive with this digest.
     ReleaseMediaLayout layout = ReleaseMediaLayout::zip_archive;
+    // Only used by verified_container_set. Paths are ordered by the declared
+    // media-set manifest and are reverified before every runtime admission.
+    std::vector<std::filesystem::path> containers;
 };
 
 // One exact, manifest-recognised release archive held only for the duration
@@ -47,7 +50,11 @@ public:
 
 private:
     VerifiedReleaseMedia(ReleaseArchive release, ZipArchive archive)
-        : release_(std::move(release)), archive_(std::move(archive)) {}
+        : release_(std::move(release)), archives_{std::move(archive)} {}
+    VerifiedReleaseMedia(ReleaseArchive release, std::vector<ZipArchive> archives,
+                         std::vector<ArchiveAsset> assets)
+        : release_(std::move(release)), archives_(std::move(archives)),
+          direct_inventory_(std::move(assets)) {}
     struct DirectAssetReference {
         std::filesystem::path path;
         std::uint64_t size = 0;
@@ -59,7 +66,7 @@ private:
           direct_assets_(std::move(direct_assets)) {}
 
     ReleaseArchive release_;
-    std::optional<ZipArchive> archive_;
+    std::vector<ZipArchive> archives_;
     std::vector<ArchiveAsset> direct_inventory_;
     // A direct-media session retains only verified member locations and
     // sizes. It does not retain a second in-memory copy of the installed

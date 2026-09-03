@@ -62,6 +62,22 @@ constexpr std::array<DirectMediaSetManifestEntry, 1> direct_media_sets{{
         Game::millennium, Platform::dos, "en", millennium_dos_en_installed},
 }};
 
+// Canonical set digest input is the ordered lexical sequence
+// `outer-sha256<TAB>outer-size<TAB>leaf-sha256<TAB>leaf-size<LF>`.
+// The order is semantic: it is the documented disk order, never directory
+// order or a filename inference.
+constexpr std::array<ContainerSetMember, 2> deuteros_atari_split_disks{{
+    {"a9318feb83ff34b79f5a5ea1e5ffcb45828e4432ac75a859f55c3de97d724c93", 292'448,
+        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee", 737'280},
+    {"7842adb599dbc4cf79827e31e912740f259af45718c124d5806e1c8860f2253d", 264'245,
+        "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193", 737'280},
+}};
+
+constexpr std::array<ContainerSetManifestEntry, 1> container_sets{{
+    {"0a87871cdfc6e0f11c598b86be0726c842c2cdcb1cb7d0dba651f1d43b835ffa", "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+        Game::deuteros, Platform::atari_st, "en", deuteros_atari_split_disks},
+}};
+
 constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
     {"millennium-atari-equinox-direct-bootstrap", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 0x200},
     {"millennium-atari-equinox-direct-root-inventory", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
@@ -131,6 +147,29 @@ bool direct_media_set_manifest_is_valid() {
                 return candidate.name == member.name;
             });
             if (name_matches != 1) return false;
+        }
+    }
+    return true;
+}
+
+std::span<const ContainerSetManifestEntry> container_set_manifest() { return container_sets; }
+
+bool container_set_manifest_is_valid() {
+    for (const auto& set : container_sets) {
+        if (set.set_sha256.empty() || set.content_release_sha256.empty() || set.members.empty()) return false;
+        if (std::count_if(releases.begin(), releases.end(), [&set](const auto& release) {
+                return release.sha256 == set.content_release_sha256 && release.game == set.game
+                    && release.platform == set.platform && release.language == set.language;
+            }) != 1) return false;
+        if (std::count_if(container_sets.begin(), container_sets.end(), [&set](const auto& candidate) {
+                return candidate.set_sha256 == set.set_sha256;
+            }) != 1) return false;
+        for (const auto& member : set.members) {
+            if (member.outer_sha256.empty() || member.outer_size == 0 || member.leaf_sha256.empty()
+                || member.leaf_size == 0) return false;
+            if (std::count_if(set.members.begin(), set.members.end(), [&member](const auto& candidate) {
+                    return candidate.outer_sha256 == member.outer_sha256;
+                }) != 1) return false;
         }
     }
     return true;
