@@ -7683,6 +7683,9 @@ int main() {
     assert(atari_checkpoint.state1_raw_request_count == 84);
     assert(atari_checkpoint.state5_first_source_offset == 0x55800);
     assert(atari_checkpoint.state5_second_source_offset == 0x60c00);
+    assert(atari_checkpoint.state1_display_branch_relative_offset == 0x48000);
+    assert(atari_checkpoint.state1_display_service_relative_offset == 0x489c6);
+    assert(atari_checkpoint.state1_display_xbios_selector == 5);
     assert(deuteros_atari_session.first_stage().next_destination == 0x70000);
     assert(deuteros_atari_session.second_stage().direct_entry == 0x1ec4);
     assert(deuteros_atari_session.first_stage_copy_execution().source_address == 0x70000);
@@ -7929,12 +7932,43 @@ int main() {
         == "f0eb99896cde59d36a075e624092cbf02de3ce0d201ca3c5050c13f9c65720dc");
     assert(deuteros_state1_skipped_ascii.ascii_sha256
         == "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e");
+    const auto deuteros_state1_display = eon::parse_deuteros_atari_state1_display_service_boundary(
+        deuteros_state1_bytes, deuteros_state1_plan);
+    assert(deuteros_state1_display.branch_relative_offset == 0x48000);
+    assert(deuteros_state1_display.branch_displacement == 0x09c2);
+    assert(deuteros_state1_display.branch_target_relative_offset == 0x489c6);
+    assert(deuteros_state1_display.branch_sha256
+        == "6321ea5a7fcf59fb3f07d02b6bd333a62b9c897be5a67b233a83b3c935a38bf6");
+    assert(deuteros_state1_display.service_setup_relative_offset == 0x489c6);
+    assert(deuteros_state1_display.service_setup_byte_count == 18);
+    assert(deuteros_state1_display.service_setup_sha256
+        == "a07c7766104d5bf581862d24de4e594b60414625824e8360b1677cf92e88c6f3");
+    assert(deuteros_state1_display.first_longword_push_opcode == 0x2f3c);
+    assert(deuteros_state1_display.first_longword_argument == 0xffffffffU);
+    assert(deuteros_state1_display.second_longword_push_opcode == 0x2f17);
+    assert(deuteros_state1_display.selector_push_opcode == 0x3f3c);
+    assert(deuteros_state1_display.xbios_selector == 5);
+    assert(deuteros_state1_display.trap_opcode == 0x4e4e);
+    assert(deuteros_state1_display.stack_cleanup_opcode == 0x4fef);
+    assert(deuteros_state1_display.stack_cleanup_bytes == 12);
     {
         auto altered_state1 = deuteros_state1_bytes;
         altered_state1[0x4800a] ^= 0x01;
         bool rejected = false;
         try {
             static_cast<void>(eon::parse_deuteros_atari_state1_skipped_ascii_block(
+                altered_state1, deuteros_state1_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_state1 = deuteros_state1_bytes;
+        altered_state1[0x489c6] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::parse_deuteros_atari_state1_display_service_boundary(
                 altered_state1, deuteros_state1_plan));
         } catch (const std::runtime_error&) {
             rejected = true;

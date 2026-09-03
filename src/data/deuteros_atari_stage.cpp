@@ -1179,4 +1179,57 @@ parse_deuteros_atari_state1_skipped_ascii_block(
         ascii_sha256};
 }
 
+DeuterosAtariState1DisplayServiceBoundary
+parse_deuteros_atari_state1_display_service_boundary(
+    const std::span<const std::uint8_t> state1_bytes,
+    const DeuterosAtariRawRangeLoadPlan& state1) {
+    // The observed emulator PC was relocated, but this parser deliberately
+    // starts from the physical state-1 interval and retains no guessed RAM
+    // relocation. A 68000 BRA.W displacement is relative to the word after
+    // its extension, hence $48000 + 4 + $09c2 = $489c6.
+    constexpr std::size_t branch_relative_offset = 0x48000;
+    constexpr auto branch = std::to_array<std::uint8_t>({0x60, 0x00, 0x09, 0xc2});
+    constexpr std::int16_t branch_displacement = 0x09c2;
+    constexpr std::size_t branch_target_relative_offset = 0x489c6;
+    constexpr auto branch_sha256 =
+        "6321ea5a7fcf59fb3f07d02b6bd333a62b9c897be5a67b233a83b3c935a38bf6";
+    constexpr auto service_setup = std::to_array<std::uint8_t>({
+        0x2f, 0x3c, 0xff, 0xff, 0xff, 0xff, // move.l #-1,-(a7)
+        0x2f, 0x17,                         // move.l (a7),-(a7)
+        0x3f, 0x3c, 0x00, 0x05,             // move.w #5,-(a7)
+        0x4e, 0x4e,                         // trap #14
+        0x4f, 0xef, 0x00, 0x0c,             // lea 12(a7),a7
+    });
+    constexpr auto service_setup_sha256 =
+        "a07c7766104d5bf581862d24de4e594b60414625824e8360b1677cf92e88c6f3";
+    if (state1.source_offset != 0x55800 || state1.destination != 0xb000
+        || state1.byte_count != 0x5e400 || state1_bytes.size() != state1.byte_count
+        || branch_target_relative_offset > state1_bytes.size()
+        || service_setup.size() > state1_bytes.size() - branch_target_relative_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 display-service placement");
+    }
+    require_bytes(state1_bytes, branch_relative_offset, branch,
+        "Unexpected Deuteros Atari ST state-1 display-service branch");
+    const auto branch_bytes = state1_bytes.subspan(branch_relative_offset, branch.size());
+    const auto service_bytes = state1_bytes.subspan(branch_target_relative_offset, service_setup.size());
+    require_bytes(state1_bytes, branch_target_relative_offset, service_setup,
+        "Unexpected Deuteros Atari ST state-1 display-service setup");
+    if (to_hex(sha256(branch_bytes)) != branch_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 display-service hash");
+    }
+    if (to_hex(sha256(service_bytes)) != service_setup_sha256) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 display-service hash");
+    }
+    const auto computed_target = branch_relative_offset + branch.size()
+        + static_cast<std::size_t>(branch_displacement);
+    if (computed_target != branch_target_relative_offset) {
+        throw std::runtime_error("Unexpected Deuteros Atari ST state-1 display-service branch target");
+    }
+    return {branch_relative_offset, branch_displacement, branch_target_relative_offset,
+        std::string(branch_sha256), branch_target_relative_offset, service_setup.size(),
+        std::string(service_setup_sha256), be16(service_bytes, 0), be32(service_bytes, 2),
+        be16(service_bytes, 6), be16(service_bytes, 8), be16(service_bytes, 10),
+        be16(service_bytes, 12), be16(service_bytes, 14), be16(service_bytes, 16)};
+}
+
 } // namespace eon

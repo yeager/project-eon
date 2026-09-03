@@ -772,6 +772,34 @@ struct DeuterosAtariState1SkippedAsciiBlock {
 parse_deuteros_atari_state1_skipped_ascii_block(
     std::span<const std::uint8_t> state1_bytes, const DeuterosAtariRawRangeLoadPlan& state1);
 
+// A byte-bounded branch in the unselected state-1 interval reaches a local
+// XBIOS setup sequence. This records only the original branch, the two
+// literal -1 longwords, selector $5, TRAP #14, and stack cleanup. In
+// particular, it does not infer the remaining service argument from a host
+// register, invoke XBIOS, claim that the branch runs after a raw read, or
+// describe a title/game display transition.
+struct DeuterosAtariState1DisplayServiceBoundary {
+    std::size_t branch_relative_offset = 0;
+    std::int16_t branch_displacement = 0;
+    std::size_t branch_target_relative_offset = 0;
+    std::string branch_sha256;
+    std::size_t service_setup_relative_offset = 0;
+    std::size_t service_setup_byte_count = 0;
+    std::string service_setup_sha256;
+    std::uint16_t first_longword_push_opcode = 0;
+    std::uint32_t first_longword_argument = 0;
+    std::uint16_t second_longword_push_opcode = 0;
+    std::uint16_t selector_push_opcode = 0;
+    std::uint16_t xbios_selector = 0;
+    std::uint16_t trap_opcode = 0;
+    std::uint16_t stack_cleanup_opcode = 0;
+    std::uint16_t stack_cleanup_bytes = 0;
+};
+
+[[nodiscard]] DeuterosAtariState1DisplayServiceBoundary
+parse_deuteros_atari_state1_display_service_boundary(
+    std::span<const std::uint8_t> state1_bytes, const DeuterosAtariRawRangeLoadPlan& state1);
+
 class DeuterosAtariDisk {
 public:
     static constexpr std::size_t standard_size = 737'280;
