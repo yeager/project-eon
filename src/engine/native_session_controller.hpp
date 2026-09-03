@@ -41,6 +41,10 @@ public:
     [[nodiscard]] RuntimeCandidateLaunchResult launch_menu(const LauncherSessionState& session,
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases);
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
+    [[nodiscard]] std::optional<MillenniumDosPresentationSnapshot>
+    millennium_dos_presentation() const;
+    [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
+    millennium_dos_startup_input() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);

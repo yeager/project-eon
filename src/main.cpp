@@ -4090,7 +4090,8 @@ int main(int argc, char** argv) {
         if (!active_launch() || active_launch()->request.game != game) return std::nullopt;
         return active_launch()->release;
     };
-    const eon::MillenniumDosRuntimeAssets* millennium_assets = runtime_coordinator.millennium_dos();
+    std::optional<eon::MillenniumDosPresentationSnapshot> millennium_assets =
+        runtime.millennium_dos_presentation();
     // The command-line path is an initial explicit selection, not a mutable
     // request object. Custom's native picker may replace this session-local
     // candidate before launch; neither route has a default pack location.
@@ -4402,24 +4403,26 @@ int main(int argc, char** argv) {
         millennium_external_modern_surface.reset();
         millennium_external_modern_attempted = false;
         millennium_gx_canvas_texture = nullptr;
-        millennium_assets = nullptr;
+        millennium_assets.reset();
     };
     const auto create_millennium_textures = [&] {
         if (!millennium_assets || millennium_preview_texture) return;
         millennium_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-            SDL_TEXTUREACCESS_STATIC, millennium_assets->title.width, millennium_assets->title.height);
+            SDL_TEXTUREACCESS_STATIC, millennium_assets->assets.title.width,
+            millennium_assets->assets.title.height);
         if (millennium_preview_texture) {
             SDL_UpdateTexture(millennium_preview_texture, nullptr,
-                millennium_assets->title.rgba_frames.front().data(), millennium_assets->title.width * 4);
+                millennium_assets->assets.title.rgba_frames.front().data(),
+                millennium_assets->assets.title.width * 4);
         }
-        if (millennium_assets->gx_canvas) {
+        if (millennium_assets->assets.gx_canvas) {
             millennium_gx_canvas_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
-                SDL_TEXTUREACCESS_STATIC, millennium_assets->gx_canvas->width,
-                millennium_assets->gx_canvas->height);
+                SDL_TEXTUREACCESS_STATIC, millennium_assets->assets.gx_canvas->width,
+                millennium_assets->assets.gx_canvas->height);
             if (millennium_gx_canvas_texture) {
                 SDL_UpdateTexture(millennium_gx_canvas_texture, nullptr,
-                    millennium_assets->gx_canvas->rgba_frames.front().data(),
-                    millennium_assets->gx_canvas->width * 4);
+                    millennium_assets->assets.gx_canvas->rgba_frames.front().data(),
+                    millennium_assets->assets.gx_canvas->width * 4);
             }
         }
     };
@@ -4436,7 +4439,7 @@ int main(int argc, char** argv) {
             SDL_DestroyTexture(millennium_modern_preview_texture);
             millennium_modern_preview_texture = nullptr;
         }
-        const auto& title = millennium_assets->title;
+        const auto& title = millennium_assets->assets.title;
         if (title.rgba_frames.empty()) return millennium_preview_texture;
         const auto* enhanced = millennium_modern_pipeline.resolve(requested_key,
             title.rgba_frames.front(), title.width, title.height);
@@ -4463,10 +4466,10 @@ int main(int argc, char** argv) {
     // only when the scanner has actually found the selected original media.
     const auto load_millennium_assets_if_available = [&] {
         if (!millennium_assets) {
-            millennium_assets = runtime_coordinator.millennium_dos();
+            millennium_assets = runtime.millennium_dos_presentation();
             create_millennium_textures();
         }
-        if (!millennium_assets || millennium_assets->language != "en"
+        if (!millennium_assets || millennium_assets->assets.language != "en"
             || millennium_external_modern_attempted || !selected_modern_pack_manifest
             || request.presentation != eon::Presentation::modern
             || active_platform != eon::Platform::dos) return;
@@ -4566,8 +4569,7 @@ int main(int argc, char** argv) {
             eon::RuntimeInputObservation::opening_input_held(false)));
     };
     std::optional<std::uint32_t> deuteros_title_resource;
-    eon::MillenniumDosSoundSelectionSession* millennium_sound_selection_session = nullptr;
-    eon::MillenniumDosTitleSession* millennium_title_session = nullptr;
+    std::optional<eon::MillenniumDosStartupInputSnapshot> millennium_startup_input;
     // SDL text input is the host analogue of DOS' character-availability
     // poll. Keep it active only while TITLES.EXE's recovered title boundary
     // is live; raw key presses alone do not prove a nonzero DOS AL result.
@@ -4679,8 +4681,7 @@ int main(int argc, char** argv) {
         // DOS availability result nor modifies original title/game data.
         if (millennium_title_text_input_active) SDL_StopTextInput(window);
         millennium_title_text_input_active = false;
-        millennium_sound_selection_session = nullptr;
-        millennium_title_session = nullptr;
+        millennium_startup_input.reset();
     };
     const auto reset_deuteros_runtime = [&] {
         // A replacement scanner has no authority to retain decoded frames,
@@ -4731,12 +4732,13 @@ int main(int argc, char** argv) {
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
         // The coordinator constructed these exact, parser-validated input
-        // boundaries during rehash admission. SDL receives only a borrow; it
-        // cannot synthesize a title/input state or retain it after reset.
-        millennium_sound_selection_session = runtime_coordinator.millennium_dos_sound_selection();
-        millennium_title_session = runtime_coordinator.millennium_dos_title();
-        if (millennium_title_session) millennium_state_page = 0;
-        if ((millennium_sound_selection_session || millennium_title_session)
+        // boundaries during rehash admission. SDL receives a value snapshot
+        // only; it cannot synthesize a title/input state or retain an adapter
+        // borrow after reset.
+        millennium_startup_input = runtime.millennium_dos_startup_input();
+        if (millennium_startup_input && millennium_startup_input->title_active) millennium_state_page = 0;
+        if (millennium_startup_input && (millennium_startup_input->sound_selection_active
+                || millennium_startup_input->title_active)
             && !millennium_title_text_input_active) {
             if (!SDL_StartTextInput(window)) {
                 std::cerr << "Unable to enable Millennium DOS title text input: "
@@ -4778,7 +4780,7 @@ int main(int argc, char** argv) {
             && selected_modern_pack_manifest) {
             admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch()->release);
         }
-        millennium_assets = runtime_coordinator.millennium_dos();
+        millennium_assets = runtime.millennium_dos_presentation();
         active_release_sha256 = active_launch()->request.release_sha256;
         active_release_language = active_launch()->request.release_language;
         selected = launcher_route.game;
@@ -5411,13 +5413,17 @@ int main(int argc, char** argv) {
             }
             if (event.type == SDL_EVENT_TEXT_INPUT && event.text.text && event.text.text[0] != '\0'
                 && screen == Screen::launching && selected == eon::Game::millennium
-                && (millennium_sound_selection_session || millennium_title_session)) {
-                if (millennium_sound_selection_session) {
+                && millennium_startup_input
+                && (millennium_startup_input->sound_selection_active
+                    || millennium_startup_input->title_active)) {
+                if (millennium_startup_input->sound_selection_active) {
                     // The source-level menu accepts literal ASCII data bytes,
                     // not an SDL scancode or an inferred device choice. Its
                     // one selection ends at the driver ABI boundary.
-                    if (runtime.observe_input(eon::RuntimeInputObservation::ascii(event.text.text[0]))
-                            == eon::RuntimeInputDisposition::boundary_reached
+                    const auto input_result = runtime.observe_input(
+                        eon::RuntimeInputObservation::ascii(event.text.text[0]));
+                    millennium_startup_input = runtime.millennium_dos_startup_input();
+                    if (input_result == eon::RuntimeInputDisposition::boundary_reached
                         && millennium_title_text_input_active) {
                         SDL_StopTextInput(window);
                         millennium_title_text_input_active = false;
@@ -5428,9 +5434,11 @@ int main(int argc, char** argv) {
                 // console character from a raw physical key. SDL text input
                 // supplies only that availability signal; UTF-8 contents are
                 // deliberately never decoded as a DOS character or command.
-                if (!millennium_title_session->handed_off()) {
-                    if (runtime.observe_input(eon::RuntimeInputObservation::available_character())
-                            == eon::RuntimeInputDisposition::boundary_reached
+                if (!millennium_startup_input->title_handed_off) {
+                    const auto input_result = runtime.observe_input(
+                        eon::RuntimeInputObservation::available_character());
+                    millennium_startup_input = runtime.millennium_dos_startup_input();
+                    if (input_result == eon::RuntimeInputDisposition::boundary_reached
                         && millennium_title_text_input_active) {
                         SDL_StopTextInput(window);
                         millennium_title_text_input_active = false;
@@ -5771,17 +5779,19 @@ int main(int argc, char** argv) {
             draw_text(renderer, 64, 156, tr("Original data is present and selected."));
             draw_text(renderer, 64, 180, tr("The simulation is incomplete; no synthetic substitute will run."));
             if (selected == eon::Game::millennium && millennium_assets
-                && millennium_sound_selection_session && millennium_assets->sound_selection_prompt) {
+                && millennium_startup_input && millennium_startup_input->sound_selection_active
+                && millennium_assets->assets.sound_selection_prompt) {
                 // These lines are unmodified text bytes from the verified
                 // launcher, rendered with Eon's UI font only because the DOS
                 // text-mode font/mode has not been recovered. They are not
                 // translated launcher text and are not a visual-parity claim.
                 draw_original_multiline_text(renderer, 64, 222,
-                    *millennium_assets->sound_selection_prompt);
-                if (!millennium_sound_selection_session->awaiting_choice()) {
+                    *millennium_assets->assets.sound_selection_prompt);
+                if (!millennium_startup_input->sound_selection_awaiting_choice
+                    && millennium_startup_input->selected_original_filename) {
                     draw_original_text(renderer, 64, 430,
-                        millennium_sound_selection_session->selected_original_filename());
-                    draw_text(renderer, 64, 454, millennium_sound_selection_session->selected_driver_is_admitted()
+                        *millennium_startup_input->selected_original_filename);
+                    draw_text(renderer, 64, 454, millennium_startup_input->selected_driver_is_admitted
                         ? tr("VERIFIED ORIGINAL DATA") : tr("STARTUP BOUNDARY"));
                     draw_text(renderer, 64, 478,
                         tr("The simulation is incomplete; no synthetic substitute will run."));
@@ -5806,17 +5816,17 @@ int main(int argc, char** argv) {
                     draw_text(renderer, 64, 238,
                         tr("ORIGINAL GX CANVAS + READ-ONLY 2200SAVE.I POSITIONAL TABLE"));
                 } else {
-                    if (millennium_assets->language == "es") {
+                    if (millennium_assets->assets.language == "es") {
                         draw_text(renderer, 64, 220,
                             tr("AUTHENTIC SPANISH DOS TITLE - FAT12 TITLE.LIB P00 + VGA RGB6 DAC"));
-                        draw_text(renderer, 64, 238, millennium_title_session
-                                && millennium_title_session->handed_off()
+                        draw_text(renderer, 64, 238, millennium_startup_input
+                                && millennium_startup_input->title_handed_off
                             ? tr("The simulation is incomplete; no synthetic substitute will run.")
                             : tr("TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
                     } else {
                         draw_text(renderer, 64, 220, tr("AUTHENTIC DOS TITLE - P00 INDICES + VGA RGB6 DAC"));
-                        draw_text(renderer, 64, 238, millennium_title_session
-                                && millennium_title_session->handed_off()
+                        draw_text(renderer, 64, 238, millennium_startup_input
+                                && millennium_startup_input->title_handed_off
                             ? tr("The simulation is incomplete; no synthetic substitute will run.")
                             : tr("TYPE A CHARACTER: ORIGINAL INT 21h/AH=06h TITLE HANDOFF"));
                     }
@@ -5832,7 +5842,7 @@ int main(int argc, char** argv) {
                 if (modern) draw_modern_preset_overlay(renderer, preview_bounds,
                     modern_graphics_settings.preset);
                 if (millennium_game_execution_observed) {
-                    const auto& save = *millennium_assets->initial_save;
+                    const auto& save = *millennium_assets->assets.initial_save;
                     constexpr std::size_t records_per_page = 8;
                     const auto first_record = millennium_state_page * records_per_page;
                     std::ostringstream heading;

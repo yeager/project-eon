@@ -188,6 +188,35 @@ void ReleaseRuntimeCoordinator::reset() {
     rejection_ = ReleaseRuntimeRejection::none;
 }
 
+std::optional<MillenniumDosPresentationSnapshot>
+ReleaseRuntimeCoordinator::millennium_dos_presentation() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title
+        || !millennium_dos_) return std::nullopt;
+    return MillenniumDosPresentationSnapshot{*millennium_dos_};
+}
+
+std::optional<MillenniumDosStartupInputSnapshot>
+ReleaseRuntimeCoordinator::millennium_dos_startup_input() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title
+        || (!millennium_dos_sound_selection_ && !millennium_dos_title_)) return std::nullopt;
+    MillenniumDosStartupInputSnapshot snapshot;
+    if (millennium_dos_sound_selection_) {
+        snapshot.sound_selection_active = true;
+        snapshot.sound_selection_awaiting_choice = millennium_dos_sound_selection_->awaiting_choice();
+        if (!snapshot.sound_selection_awaiting_choice) {
+            snapshot.selected_original_filename =
+                millennium_dos_sound_selection_->selected_original_filename();
+            snapshot.selected_driver_is_admitted =
+                millennium_dos_sound_selection_->selected_driver_is_admitted();
+        }
+    }
+    if (millennium_dos_title_) {
+        snapshot.title_active = true;
+        snapshot.title_handed_off = millennium_dos_title_->handed_off();
+    }
+    return snapshot;
+}
+
 MillenniumDosGxStartupTraceAdmission
 ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace(
     const ReferenceTrace& trace) const {

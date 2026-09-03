@@ -79,6 +79,18 @@ RuntimeInputDisposition NativeSessionController::observe_input(const RuntimeInpu
     return result;
 }
 
+std::optional<MillenniumDosPresentationSnapshot>
+NativeSessionController::millennium_dos_presentation() const {
+    if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
+    return runtime_.coordinator().millennium_dos_presentation();
+}
+
+std::optional<MillenniumDosStartupInputSnapshot>
+NativeSessionController::millennium_dos_startup_input() const {
+    if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
+    return runtime_.coordinator().millennium_dos_startup_input();
+}
+
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {
     if (state_ == NativeSessionState::returning_to_menu) return std::nullopt;
     const auto events = runtime_.coordinator().tick_deuteros_amiga_opening();

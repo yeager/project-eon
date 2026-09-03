@@ -3762,7 +3762,7 @@ int main() {
     eon::ReleaseRuntimeCoordinator admitted_dos_runtime;
     assert(admitted_dos_runtime.acquire(admitted_dos_launch));
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "READY");
-    assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos());
+    assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos_presentation());
     assert(admitted_dos_runtime.session_snapshot());
     const auto& dos_session_snapshot = *admitted_dos_runtime.session_snapshot();
     assert(dos_session_snapshot.game == eon::Game::millennium
@@ -3815,14 +3815,14 @@ int main() {
     // the English sound chooser. It rejects an availability result while that
     // chooser is active, rejects an unknown ASCII byte, then stops at the
     // documented driver boundary for the exact `1` selection.
-    assert(admitted_dos_runtime.millennium_dos_sound_selection());
+    assert(admitted_dos_runtime.millennium_dos_startup_input()->sound_selection_active);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::available_character())
         == eon::RuntimeInputDisposition::rejected);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('x'))
         == eon::RuntimeInputDisposition::ignored);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
         == eon::RuntimeInputDisposition::boundary_reached);
-    assert(admitted_dos_runtime.millennium_dos_sound_selection()->selected_original_filename()
+    assert(admitted_dos_runtime.millennium_dos_startup_input()->selected_original_filename
         == "ssbl.drv");
     assert(admitted_dos_runtime.session_snapshot());
     const auto& sound_driver_snapshot = *admitted_dos_runtime.session_snapshot();
@@ -3836,9 +3836,8 @@ int main() {
         == "MILLENNIUM DOS SOUND DRIVER BOUNDARY");
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
         == eon::RuntimeInputDisposition::rejected);
-    assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari());
     admitted_dos_runtime.reset();
-    assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos()
+    assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos_presentation()
         && !admitted_dos_runtime.session_snapshot());
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
     // The Spanish release has no recovered sound-driver route. Its one
@@ -3884,22 +3883,17 @@ int main() {
         assert(session_snapshot.game == release.game && session_snapshot.platform == release.platform
             && session_snapshot.language == release.language
             && session_snapshot.release_sha256 == release.sha256);
-        const auto adapter_count = static_cast<int>(all_release_runtime.millennium_dos() != nullptr)
-            + static_cast<int>(all_release_runtime.millennium_amiga() != nullptr)
-            + static_cast<int>(all_release_runtime.millennium_atari() != nullptr);
-        assert(adapter_count == (release.game == eon::Game::millennium ? 1 : 0));
         if (release.game == eon::Game::millennium && release.platform == eon::Platform::dos) {
-            assert(all_release_runtime.millennium_dos());
+            assert(all_release_runtime.millennium_dos_presentation());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_title
                 && session_snapshot.capabilities.decoded_presentation
                 && session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::amiga) {
-            assert(all_release_runtime.millennium_amiga());
+            assert(all_release_runtime.millennium_amiga_bootstrap_presentation());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_amiga_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st) {
-            assert(all_release_runtime.millennium_atari());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -4025,8 +4019,8 @@ int main() {
     }
     all_release_runtime.reset();
     assert(!all_release_runtime.session_snapshot());
-    assert(!all_release_runtime.active() && !all_release_runtime.millennium_dos()
-        && !all_release_runtime.millennium_amiga() && !all_release_runtime.millennium_atari());
+    assert(!all_release_runtime.active() && !all_release_runtime.millennium_dos_presentation()
+        && !all_release_runtime.millennium_amiga_bootstrap_presentation());
     auto forged_release_metadata = *english_dos;
     forged_release_metadata.language = "es";
     assert(!eon::is_recognised_release_identity(forged_release_metadata));
@@ -5307,7 +5301,8 @@ int main() {
         assert(runtime_trace_admission.session->overlay_byte(0x65) == 0x8f);
         // The trace gate remains a non-launching operation: no active release,
         // adapter, session snapshot, input route, or opening tick can appear.
-        assert(!trace_gate.active() && !trace_gate.session_snapshot() && !trace_gate.millennium_dos());
+        assert(!trace_gate.active() && !trace_gate.session_snapshot()
+            && !trace_gate.millennium_dos_presentation());
         assert(trace_gate.observe_input(eon::RuntimeInputObservation::available_character())
             == eon::RuntimeInputDisposition::rejected);
         assert(!trace_gate.tick_deuteros_amiga_opening());
@@ -5319,7 +5314,8 @@ int main() {
             trace_gate.admit_millennium_dos_gx_startup_reference_trace(runtime_trace);
         assert(!changed_trace_admission.session
             && changed_trace_admission.error == "Reference trace events changed after validation");
-        assert(!trace_gate.active() && !trace_gate.session_snapshot() && !trace_gate.millennium_dos());
+        assert(!trace_gate.active() && !trace_gate.session_snapshot()
+            && !trace_gate.millennium_dos_presentation());
         std::filesystem::remove(trace_events_path);
     }
     {
