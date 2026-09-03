@@ -10,6 +10,7 @@
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/menu_runtime_launch.hpp"
 #include "engine/native_session_controller.hpp"
+#include "engine/runtime_host.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -4083,7 +4084,7 @@ int main(int argc, char** argv) {
     auto& active_platform = launcher_route.platform;
     auto& active_release_language = launcher_route.release_language;
     auto& active_release_sha256 = launcher_route.release_sha256;
-    eon::NativeSessionController runtime;
+    eon::RuntimeHost runtime;
     // This status is limited to the same three media-safe admission classes
     // exposed by F10. It gives a rejected profile-card launch an immediate
     // visible result without retaining a path, leaf name, or parser error in
@@ -4759,7 +4760,8 @@ int main(int argc, char** argv) {
         reset_deuteros_runtime();
         // SDL-side resources and scheduler state are revoked before the
         // controller discards its coordinator-owned native session.
-        runtime.reset();
+        runtime.begin_source_revocation();
+        runtime.finish_source_revocation();
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(runtime.admission()));
         launcher_runtime_rejection = std::string(
