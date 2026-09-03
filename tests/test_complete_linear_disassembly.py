@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 from zipfile import ZIP_STORED, ZipFile
 
-from tools.analyze_dos import disassemble_linear
+from tools.analyze_dos import disassemble_linear, parse_member_hashes, require_external_output as require_dos_external_output
 from tools.analyze_m68k import read_source, render_instructions, require_external_output
 
 
@@ -50,3 +50,21 @@ class CompleteLinearDisassemblyTests(unittest.TestCase):
             require_external_output(root / "forbidden-m68k-report.md")
         with self.assertRaises(ValueError):
             require_external_output(Path("/tmp/project-eon-m68k-report.md"))
+
+    def test_dos_member_hash_declarations_are_complete_and_unambiguous(self):
+        first = "1" * 64
+        second = "2" * 64
+        self.assertEqual(parse_member_hashes([f"MILL.COM={first}", f"TITLE.EXE={second}"],
+                                             ["MILL.COM", "TITLE.EXE"]),
+                         {"MILL.COM": first, "TITLE.EXE": second})
+        with self.assertRaises(ValueError):
+            parse_member_hashes([f"MILL.COM={first}"], ["MILL.COM", "TITLE.EXE"])
+        with self.assertRaises(ValueError):
+            parse_member_hashes([f"MILL.COM={first}", f"MILL.COM={second}"], ["MILL.COM"])
+
+    def test_dos_reports_reject_checkout_and_system_scratch(self):
+        root = Path(__file__).resolve().parents[1]
+        with self.assertRaises(ValueError):
+            require_dos_external_output(root / "forbidden-dos-report.md")
+        with self.assertRaises(ValueError):
+            require_dos_external_output(Path("/tmp/project-eon-dos-report.md"))

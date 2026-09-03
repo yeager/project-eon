@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 from io import BytesIO
+import json
+import os
 from pathlib import Path
 import sys
 from zipfile import ZipFile
@@ -13,6 +15,63 @@ from zipfile import ZipFile
 # Allow direct execution from a source checkout without installing the package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from eon.dos import describe_bytes
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def parse_member_hashes(values: list[str], members: list[str]) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for value in values:
+        name, separator, digest = value.partition("=")
+        if not separator or not name or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            raise ValueError("--member-sha256 must be exact-member-path=lowercase-sha256")
+        if name in hashes:
+            raise ValueError("duplicate --member-sha256 path")
+        hashes[name] = digest
+    if set(hashes) != set(members):
+        raise ValueError("every requested --member needs exactly one --member-sha256")
+    return hashes
+
+
+def require_external_output(path: Path) -> Path:
+    if not path.is_absolute():
+        raise ValueError("output path must be absolute")
+    lexical = os.path.normpath(str(path))
+    if lexical == "/tmp" or lexical.startswith("/tmp/") or lexical == "/private/tmp" or lexical.startswith("/private/tmp/"):
+        raise ValueError("output must be outside /tmp")
+    if path.exists() or path.is_symlink():
+        raise ValueError("output must not already exist or be a symlink")
+    parent = path.parent.resolve(strict=True)
+    checkout = Path(__file__).resolve().parents[1]
+    candidate = parent / path.name
+    if candidate == checkout or checkout in candidate.parents:
+        raise ValueError("output must be outside the repository")
+    return path
+
+
+def verify_direct_directory(directory: Path, set_sha256: str) -> None:
+    manifest_path = Path(__file__).resolve().parents[1] / "docs" / "release-manifest.json"
+    try:
+        sets = json.loads(manifest_path.read_text(encoding="utf-8"))["direct_media_sets"]
+        declared = next(entry for entry in sets if entry["set_sha256"] == set_sha256)
+    except (OSError, json.JSONDecodeError, KeyError, StopIteration) as error:
+        raise ValueError("directory media-set identity is not declared") from error
+    canonical = ""
+    for member in declared["members"]:
+        name = member["name"]
+        path = directory / name
+        if (not path.is_file() or path.is_symlink() or path.parent != directory
+                or path.stat().st_size != member["size"] or sha256_file(path) != member["sha256"]):
+            raise ValueError("directory does not match declared direct media-set")
+        canonical += f'{name}\t{member["size"]}\t{member["sha256"]}\n'
+    if hashlib.sha256(canonical.encode("ascii")).hexdigest() != set_sha256:
+        raise ValueError("declared direct media-set canonical hash mismatch")
 
 
 def _render_instruction(instruction) -> str:
@@ -135,15 +194,21 @@ def read_fat12_members(image: bytes, names: list[str]) -> list[tuple[str, bytes]
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path, nargs="?",
-                        help="Read-only DOS directory (legacy investigator input)")
+                        help="Exact installed DOS directory")
+    parser.add_argument("--directory-set-sha256", help="Declared complete direct-media set SHA-256")
     parser.add_argument("--archive", type=Path,
                         help="Original outer ZIP; requires one or more exact --member paths")
+    parser.add_argument("--archive-sha256", help="SHA-256 of exact --archive")
     parser.add_argument("--fat12-archive", type=Path,
                         help="Original ZIP with one exact FAT12 --fat12-member image")
+    parser.add_argument("--fat12-archive-sha256", help="SHA-256 of exact --fat12-archive")
     parser.add_argument("--fat12-member",
                         help="Exact FAT12 image member inside --fat12-archive")
+    parser.add_argument("--fat12-member-sha256", help="SHA-256 of exact FAT12 image member")
     parser.add_argument("--member", action="append", default=[],
                         help="Exact EXE/COM path inside --archive; repeat for every program")
+    parser.add_argument("--member-sha256", action="append", default=[],
+                        help="Exact member path=lowercase-sha256; repeat for every --member")
     parser.add_argument("--complete-linear", action="store_true",
                         help="Decode every byte as an explicitly unproven linear x86 candidate")
     parser.add_argument("--output", type=Path)
@@ -155,22 +220,55 @@ def main() -> None:
         raise SystemExit("Specify exactly one directory, --archive, or --fat12-archive")
     if (archive_mode or fat12_archive_mode) and not args.member:
         raise SystemExit("archive modes require one or more exact --member names")
-    if fat12_archive_mode != (args.fat12_member is not None):
-        raise SystemExit("--fat12-archive requires --fat12-member")
+    if directory_mode and not args.member:
+        raise SystemExit("direct directory input requires one or more exact --member names")
+    if fat12_archive_mode != (args.fat12_member is not None) or fat12_archive_mode != (args.fat12_member_sha256 is not None):
+        raise SystemExit("--fat12-archive requires --fat12-member and --fat12-member-sha256")
+    if directory_mode != (args.directory_set_sha256 is not None):
+        raise SystemExit("direct directory input requires --directory-set-sha256")
+    if archive_mode and not args.archive_sha256:
+        raise SystemExit("--archive requires --archive-sha256")
+    if fat12_archive_mode and not args.fat12_archive_sha256:
+        raise SystemExit("--fat12-archive requires --fat12-archive-sha256")
+    try:
+        member_hashes = parse_member_hashes(args.member_sha256, args.member)
+        if args.output:
+            require_external_output(args.output)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
     if directory_mode:
-        sources = [(path.name, path.read_bytes()) for path in sorted(
-            [*args.directory.glob("*.EXE"), *args.directory.glob("*.COM")])]
+        try:
+            verify_direct_directory(args.directory, args.directory_set_sha256)
+            sources = []
+            for member in args.member:
+                path = args.directory / member
+                if not path.is_file() or path.is_symlink() or sha256_file(path) != member_hashes[member]:
+                    raise ValueError("requested direct member hash mismatch")
+                sources.append((member, path.read_bytes()))
+        except (OSError, ValueError) as error:
+            raise SystemExit(f"Unable to read exact DOS directory member: {error}") from error
     elif archive_mode:
         try:
+            if not args.archive.is_file() or args.archive.is_symlink() or sha256_file(args.archive) != args.archive_sha256:
+                raise ValueError("outer archive SHA-256 mismatch")
             with ZipFile(args.archive) as archive:
                 sources = [(member, archive.read(member)) for member in args.member]
+            if any(hashlib.sha256(data).hexdigest() != member_hashes[name] for name, data in sources):
+                raise ValueError("archive member SHA-256 mismatch")
         except (KeyError, OSError, ValueError) as error:
             raise SystemExit(f"Unable to read exact DOS archive member: {error}") from error
     else:
         try:
+            if (not args.fat12_archive.is_file() or args.fat12_archive.is_symlink()
+                    or sha256_file(args.fat12_archive) != args.fat12_archive_sha256):
+                raise ValueError("outer FAT12 archive SHA-256 mismatch")
             with ZipFile(args.fat12_archive) as archive:
                 image = archive.read(args.fat12_member)
+            if hashlib.sha256(image).hexdigest() != args.fat12_member_sha256:
+                raise ValueError("FAT12 member SHA-256 mismatch")
             sources = read_fat12_members(image, args.member)
+            if any(hashlib.sha256(data).hexdigest() != member_hashes[name] for name, data in sources):
+                raise ValueError("FAT12 program SHA-256 mismatch")
         except (KeyError, OSError, ValueError) as error:
             raise SystemExit(f"Unable to read exact FAT12 DOS members: {error}") from error
     lines = ["# Generated Millennium DOS binary report", ""]
@@ -223,7 +321,7 @@ def main() -> None:
         lines.append("")
     output = "\n".join(lines)
     if args.output:
-        args.output.write_text(output, encoding="utf-8")
+        require_external_output(args.output).write_text(output, encoding="utf-8")
     else:
         print(output)
 

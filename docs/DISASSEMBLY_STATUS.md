@@ -318,13 +318,16 @@ unzip -p /path/to/Millennium-Return-to-Earth_DOS_EN.zip \
 ```
 
 For the four known Millennium DOS program images in one reproducible report,
-use `tools/analyze_dos.py --archive` and repeat the exact `--member` argument.
-Add `--complete-linear` only when a complete byte-coverage candidate listing
-is needed. It reads each member into process memory, emits source hashes, and
-rejects a missing/ambiguous member rather than scanning an archive for a
-convenient substitute. The complete-linear mode labels every decoded byte range
-as code/data-unclassified; a byte that Capstone cannot decode is retained as
-an explicit `.byte` record. It is not a semantic control-flow claim.
+use `tools/analyze_dos.py` with either an exact outer-archive SHA-256 or the
+declared installed-directory set SHA-256, then repeat each exact `--member`
+and matching `--member-sha256 path=hash`. Add `--complete-linear` only when a
+complete byte-coverage candidate listing is needed. It rehashes the complete
+selected source and every requested member in memory, and rejects a
+missing/ambiguous member rather than scanning for a convenient substitute.
+The complete-linear mode labels every decoded byte range as
+code/data-unclassified; a byte that Capstone cannot decode is retained as an
+explicit `.byte` record. Reports must be new external files outside the
+checkout and `/tmp`. It is not a semantic control-flow claim.
 
 The same tool accepts `--fat12-archive` and `--fat12-member` for a DOS floppy
 image, and then reads only each explicitly named root file in memory. This
@@ -332,7 +335,9 @@ keeps Spanish FAT12 programs separate from the English ZIP members:
 
 ```sh
 python3 tools/analyze_dos.py --fat12-archive /path/to/Millennium-Return-to-Earth_DOS_ES_Floppy-Disk-Image-v201.zip \
-  --fat12-member MRTE.IMG --member IBM.COM --member TITLES.EXE --member 2200AD.EXE \
+  --fat12-archive-sha256 <outer-sha256> --fat12-member MRTE.IMG --fat12-member-sha256 <image-sha256> \
+  --member IBM.COM --member-sha256 IBM.COM=<sha256> --member TITLES.EXE --member-sha256 TITLES.EXE=<sha256> \
+  --member 2200AD.EXE --member-sha256 2200AD.EXE=<sha256> \
   --complete-linear --output /home/user/.cache/project-eon-tools/millennium-spanish-dos.md
 ```
 
