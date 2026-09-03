@@ -3733,7 +3733,8 @@ int main() {
     // the recovered Original title at 320x200 indexed pixels.
     assert(english_dos_runtime->title.width == 320 && english_dos_runtime->title.height == 200);
     assert(english_dos_runtime->title.rgba_frames.size() == 1);
-    assert(english_dos_runtime->gx_canvas && english_dos_runtime->title_flow
+    assert(english_dos_runtime->gx_canvas && english_dos_runtime->static_game_data
+        && english_dos_runtime->static_data_evidence && english_dos_runtime->title_flow
         && english_dos_runtime->sound_selection && english_dos_runtime->sound_selection_prompt
         && english_dos_runtime->game_flow && english_dos_runtime->ega_video_driver
         && english_dos_runtime->mcga_video_driver && english_dos_runtime->initial_save);
@@ -3741,6 +3742,9 @@ int main() {
     // leaf are both exact-hash admissions. The runtime keeps descriptors, not
     // archive bytes or a host audio implementation.
     assert(english_dos_runtime->sound_blaster_driver && english_dos_runtime->covox_driver);
+    assert(english_dos_runtime->static_game_data->celestial_labels.size() == 41);
+    assert(english_dos_runtime->static_game_data->celestial_labels[4].text == "Earth ");
+    assert(english_dos_runtime->static_data_evidence->pointer_count == 435);
     assert(english_dos_runtime->sound_blaster_driver->original_filename == "ssbl.drv");
     assert(english_dos_runtime->covox_driver->original_filename == "scvx.drv");
     const auto spanish_dos = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
@@ -3752,9 +3756,11 @@ int main() {
     assert(spanish_dos_runtime && spanish_dos_runtime->language == "es");
     assert(spanish_dos_runtime->title.width == 320 && spanish_dos_runtime->title.height == 200);
     assert(spanish_dos_runtime->title.rgba_frames.size() == 1);
-    assert(spanish_dos_runtime->spanish_title_boundary && !spanish_dos_runtime->gx_canvas
+    assert(spanish_dos_runtime->spanish_title_boundary && spanish_dos_runtime->static_game_data
+        && spanish_dos_runtime->static_data_evidence && !spanish_dos_runtime->gx_canvas
         && !spanish_dos_runtime->title_flow && !spanish_dos_runtime->game_flow
         && !spanish_dos_runtime->initial_save);
+    assert(spanish_dos_runtime->static_game_data->celestial_labels[4].text == "Tierra ");
     // The coordinator publishes an adapter only after the exact outer archive
     // has been rehashed and that adapter has fully parsed its own leaves.
     eon::ResolvedLaunchRequest admitted_dos_launch;
