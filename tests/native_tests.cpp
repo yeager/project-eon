@@ -1951,6 +1951,17 @@ int main() {
         runtime_coordinator.reset();
         assert(!runtime_coordinator.active()
             && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::unselected);
+        // A launch requested while the explicit source-resource teardown is
+        // in progress cannot borrow the prior READY status or reset it early.
+        eon::NativeSessionController returning_controller;
+        returning_controller.begin_return_to_menu();
+        const auto transition_launch = returning_controller.launch_direct(menu_candidate,
+            duplicate_english_releases);
+        assert(transition_launch.admission == eon::ReleaseRuntimeAdmission::identity_rejected);
+        assert(transition_launch.rejection == eon::ReleaseRuntimeRejection::lifecycle_transition);
+        assert(!transition_launch.accepted() && !transition_launch.active_launch);
+        returning_controller.finish_return_to_menu();
+        assert(returning_controller.is_menu());
 
         // The DOS asset factory is equally strict before it reaches any
         // archive path: its recognised title evidence cannot become an

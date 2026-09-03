@@ -34,7 +34,7 @@ enum class ReleaseRuntimeAdmission {
 // includes paths, archive-member names, original bytes, or parser exceptions.
 enum class ReleaseRuntimeRejection {
     none, launch_identity, original_media, runtime_capability,
-    adapter_construction, input_contract, child_session,
+    adapter_construction, input_contract, child_session, lifecycle_transition,
 };
 
 // This is intentionally a small, media-safe diagnostic vocabulary. It
