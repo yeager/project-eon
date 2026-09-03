@@ -77,6 +77,19 @@ class ReleaseManifestTests(unittest.TestCase):
             for member in members).encode("ascii")
         self.assertEqual(hashlib.sha256(canonical).hexdigest(), direct_set["set_sha256"])
 
+        # The native directory scanner consumes a compiled table while offline
+        # preservation tools consume JSON. Keep those independently parsed
+        # declarations byte-for-byte equivalent, not merely compatible.
+        source = (ROOT / "src" / "data" / "release_manifest.cpp").read_text(encoding="utf-8")
+        begin = source.index("millennium_dos_en_installed{{")
+        end = source.index("}};", begin)
+        compiled = [
+            {"name": name, "size": int(size.replace("'", "")), "sha256": digest}
+            for name, size, digest in re.findall(
+                r'\{"([A-Z0-9]+\.[A-Z0-9]+)", ([0-9\']+), "([0-9a-f]{64})"\}', source[begin:end])
+        ]
+        self.assertEqual(compiled, members)
+
     def test_manifest_explicitly_keeps_variant_profiles_separate(self):
         manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
         profiles = {profile["id"]: profile for profile in manifest["parser_profiles"]}

@@ -9,6 +9,7 @@ orphaned when the preservation records evolve independently.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -71,6 +72,42 @@ def verify(root: Path) -> dict[str, int]:
         require(isinstance(release.get("language"), str) and release["language"], f"release {release_hash} has no language")
         require(isinstance(release.get("size"), int) and release["size"] > 0, f"release {release_hash} has invalid size")
 
+    direct_sets: set[str] = set()
+    direct_member_identities: dict[tuple[str, str], tuple[int, str]] = {}
+    for media_set in manifest.get("direct_media_sets", []):
+        require(isinstance(media_set, dict)
+                and media_set.get("schema") == "project-eon.direct-media-set/v1",
+                "direct-media set has an unsupported schema")
+        release_hash = media_set.get("content_release_sha256")
+        set_hash = media_set.get("set_sha256")
+        require(isinstance(release_hash, str) and release_hash in releases,
+                "direct-media set references an unknown release")
+        require(isinstance(set_hash, str) and SHA256.fullmatch(set_hash) and set_hash not in direct_sets,
+                "direct-media set has an invalid or duplicate identity")
+        direct_sets.add(set_hash)
+        release = releases[release_hash]
+        require(all(media_set.get(field) == release.get(field) for field in ("game", "platform", "language")),
+                "direct-media set differs from its release identity")
+        require(media_set.get("serialization") == "name<TAB>size<TAB>sha256<LF>, lexical member order",
+                "direct-media set has an unsupported serialization")
+        members = media_set.get("members")
+        require(isinstance(members, list) and members, "direct-media set has no members")
+        canonical: list[str] = []
+        names: set[str] = set()
+        for member in members:
+            name, size, digest = (member.get("name"), member.get("size"), member.get("sha256")) if isinstance(member, dict) else (None, None, None)
+            require(isinstance(name, str) and re.fullmatch(r"[A-Z0-9]+\.[A-Z0-9]+", name),
+                    "direct-media set has an unsafe member name")
+            require(name not in names and isinstance(size, int) and size > 0
+                    and isinstance(digest, str) and SHA256.fullmatch(digest),
+                    "direct-media set has an invalid member identity")
+            names.add(name)
+            direct_member_identities[(release_hash, digest)] = (size, name)
+            canonical.append(f"{name}\t{size}\t{digest}\n")
+        require(canonical == sorted(canonical), "direct-media set members are not in lexical order")
+        require(hashlib.sha256("".join(canonical).encode("ascii")).hexdigest() == set_hash,
+                "direct-media set canonical hash mismatch")
+
     profiles = unique_index(manifest.get("parser_profiles", []), "id", "parser profile")
     profile_pairs: set[tuple[str, str]] = set()
     leaf_sizes: dict[tuple[str, str], int] = {}
@@ -90,6 +127,10 @@ def verify(root: Path) -> dict[str, int]:
         profile_pairs.add(pair)
         key = (release_hash, leaf_hash)
         leaf_sizes[key] = max(leaf_sizes.get(key, 0), leaf_size)
+        direct_member = direct_member_identities.get(key)
+        if direct_member is not None:
+            require(direct_member[0] == leaf_size,
+                    f"profile {profile_id} disagrees with its direct-media leaf size")
 
     recovery_entries = unique_index(recovery.get("entries", []), "id", "recovery-map entry")
     recovery_pairs: set[tuple[str, str]] = set()
@@ -182,7 +223,8 @@ def verify(root: Path) -> dict[str, int]:
                     "control-flow sidecar has an invalid or duplicate span reference")
             control_flow_ids.add(span_id)
 
-    return {"releases": len(releases), "profiles": len(profiles), "spans": span_count,
+    return {"releases": len(releases), "direct_media_sets": len(direct_sets),
+            "profiles": len(profiles), "spans": span_count,
             "control_flow_sidecars": len(disassembly.get("control_flow_sidecars", []))}
 
 
@@ -197,7 +239,8 @@ def main() -> int:
         print(f"PRESERVATION LEDGER REJECTED  {error}")
         return 2
     print("PRESERVATION LEDGER VERIFIED  "
-          f"{result['releases']} releases, {result['profiles']} profiles, {result['spans']} static spans, "
+          f"{result['releases']} releases, {result['direct_media_sets']} direct-media sets, "
+          f"{result['profiles']} profiles, {result['spans']} static spans, "
           f"{result['control_flow_sidecars']} control-flow sidecars")
     return 0
 
