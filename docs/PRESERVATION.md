@@ -199,8 +199,10 @@ console-poll result); it does not name a game action. `deuteros-amiga-opening-
 held-signal` means only the recovered physical held signal exists during the
 finite opening. All bootstrap and terminal snapshots use `none`. Admission
 rejects a release capability record whose `admitted_input` flag disagrees with
-that contract. This makes the CLI and F10 diagnostics useful for future
-Modern remapping work without inventing original controls.
+that contract, and the native coordinator applies it as a typed fail-closed
+gate before it reaches a release-specific input session. This makes the CLI
+and F10 diagnostics useful for future Modern remapping work without inventing
+original controls.
 
 ## Original and Modern mode contract
 

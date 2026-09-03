@@ -284,7 +284,9 @@ declarative function map. It exits before SDL, timing, input, audio, saves,
 guest execution, or emulator activity and never serializes paths or original
 media bytes. Its `runtime_session.input_contract` is a machine-readable
 description of only the already recovered host observation envelope; it is
-not a game-control map or a claim about later title/gameplay input.
+not a game-control map or a claim about later title/gameplay input. The native
+runtime uses it as a fail-closed gate before a release-specific input session
+can inspect an observation.
 
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It

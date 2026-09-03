@@ -986,6 +986,20 @@ int main() {
     assert(eon::runtime_input_contract_identifier(
         eon::RuntimeInputContract::millennium_dos_startup_observation)
         == "millennium-dos-startup-observation");
+    assert(eon::runtime_input_contract_accepts_observation(
+        eon::RuntimeInputContract::millennium_dos_startup_observation,
+        eon::RuntimeInputObservationKind::ascii_character));
+    assert(eon::runtime_input_contract_accepts_observation(
+        eon::RuntimeInputContract::millennium_dos_startup_observation,
+        eon::RuntimeInputObservationKind::character_available));
+    assert(!eon::runtime_input_contract_accepts_observation(
+        eon::RuntimeInputContract::millennium_dos_startup_observation,
+        eon::RuntimeInputObservationKind::opening_input_held));
+    assert(eon::runtime_input_contract_accepts_observation(
+        eon::RuntimeInputContract::deuteros_amiga_opening_held_signal,
+        eon::RuntimeInputObservationKind::opening_input_held));
+    assert(!eon::runtime_input_contract_accepts_observation(
+        eon::RuntimeInputContract::none, eon::RuntimeInputObservationKind::ascii_character));
     assert(eon::native_session_state_label(eon::NativeSessionState::returning_to_menu)
         == "RETURNING TO MENU");
     eon::NativeSessionController state_controller;
