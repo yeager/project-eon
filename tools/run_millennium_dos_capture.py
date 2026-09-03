@@ -24,6 +24,12 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_RELEASE_SHA256 = "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123"
 EXPECTED_RELEASE_SIZE = 328_383
+# V21's successor receives these immutable identities before guest execution.
+# A future reviewed observer must still recompute the loaded image fingerprints
+# itself; environment values are an expected-identity configuration, never
+# evidence from the guest or a substitute for the runner's source hash check.
+EXPECTED_TITLES_EXE_SHA256 = "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"
+EXPECTED_2200AD_EXE_SHA256 = "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57"
 # The capture helper never accepts a merely executable emulator as a recorder:
 # its hooks and input-receipt contract are part of the provenance boundary.
 EXPECTED_RECORDER_SHA256 = "7b959f7aee3d2db0513db4f14e3075f306e798e25adaeeebd96aedd81aef65da"
@@ -987,6 +993,14 @@ def run_capture(args: argparse.Namespace) -> Path:
             environment["PROJECT_EON_DOSBOX_X_TITLE_TRANSFER_RECORD"] = str(output / "title-entry-transfer.raw")
         if args.recorder_protocol == "v21-int93-installation":
             environment["PROJECT_EON_DOSBOX_X_INT93_INSTALL_RECORD"] = str(output / "int93-installation.raw")
+            # These values belong to the runner's already re-hashed recognised
+            # archive. They are deliberately passed before DOSBox-X starts,
+            # so a successor never has to inspect its environment while an
+            # interrupt handler is executing. The exact loaded program hashes
+            # are manifest identities, not bytes copied from the archive.
+            environment["PROJECT_EON_DOSBOX_X_RELEASE_SHA256"] = source_hash
+            environment["PROJECT_EON_DOSBOX_X_TITLES_EXE_SHA256"] = EXPECTED_TITLES_EXE_SHA256
+            environment["PROJECT_EON_DOSBOX_X_2200AD_EXE_SHA256"] = EXPECTED_2200AD_EXE_SHA256
         for instruction in capture_operator_instructions(args.capture_intent):
             print(instruction)
         print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
