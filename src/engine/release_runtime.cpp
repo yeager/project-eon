@@ -69,6 +69,14 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         rejection_ = ReleaseRuntimeRejection::original_media;
         return false;
     }
+    if (!verified_release_media_has_declared_profile_ranges(*media)) {
+        // A whole-container hash is necessary but not sufficient for an
+        // adapter: every parser interval it could report must still name an
+        // exact available leaf within the just-admitted media snapshot.
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::runtime_capability;
+        return false;
+    }
     const auto capability = release_runtime_capability_for(launch.release);
     if (!capability) {
         admission_ = ReleaseRuntimeAdmission::identity_rejected;

@@ -3885,6 +3885,8 @@ int main() {
     // is destroyed before the next hash-checked release can become active.
     eon::ReleaseRuntimeCoordinator all_release_runtime;
     for (const auto& release : releases) {
+        const auto verified_media = eon::VerifiedReleaseMedia::open(release);
+        assert(eon::verified_release_media_has_declared_profile_ranges(verified_media));
         eon::ResolvedLaunchRequest launch;
         launch.release = release;
         launch.request.game = release.game;

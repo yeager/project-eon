@@ -55,6 +55,13 @@ public:
     [[nodiscard]] std::vector<ArchiveAsset> inventory() const;
 };
 
+// Check that every parser profile declared for this exact release names an
+// available, byte-exact leaf and stays within that leaf's declared bounds.
+// This is an admission-time provenance guard only: it does not parse a
+// profile, execute original code, or retain a second media copy.
+[[nodiscard]] bool verified_release_media_has_declared_profile_ranges(
+    const VerifiedReleaseMedia& media);
+
 // A hash-recognised physical leaf encountered outside a recognised release
 // container.  It is deliberately *not* a ReleaseArchive: one disk can be
 // shared by several container releases, and a leaf alone does not prove that
