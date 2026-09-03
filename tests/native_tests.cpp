@@ -8868,9 +8868,8 @@ int main() {
     assert(first_title_exit_copy.byte_count == 0x9392);
     assert(first_title_exit_copy.source_sha256
         == "2951d0ae6dd01f84c1fb9b6cbb766c15378af1abb9a91fa5ded748d70b3e90eb");
-    assert(first_title_exit_copy.copied_bytes.size() == first_title_exit_copy.byte_count);
-    assert(first_title_exit_copy.copied_bytes == std::vector<std::uint8_t>(
-        system_disk.bytes(0x6e006, 0x9392).begin(), system_disk.bytes(0x6e006, 0x9392).end()));
+    assert(eon::to_hex(eon::sha256(system_disk.bytes(first_title_exit_copy.source_disk_offset,
+        first_title_exit_copy.byte_count))) == first_title_exit_copy.source_sha256);
     assert(first_title_exit_copy.stop_before_subroutine_address == 0x37f7a);
     // The next straight-line tail is conditional on the unresolved BSR
     // returning. It exposes instruction destinations only, never controller

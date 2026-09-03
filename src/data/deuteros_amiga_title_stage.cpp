@@ -2589,7 +2589,6 @@ DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     result.destination_address = destination_address;
     result.byte_count = byte_count;
     result.source_sha256 = std::string(source_hash);
-    result.copied_bytes.assign(source.begin(), source.end());
     result.stop_before_subroutine_address = stop_before_subroutine_address;
     return result;
 }
