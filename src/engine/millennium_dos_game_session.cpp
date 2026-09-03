@@ -29,6 +29,7 @@ void MillenniumDosGameSession::clear_last_observation() {
     last_function_key_index_.reset();
     last_special_action_.reset();
     last_first_special_action_trace_.reset();
+    last_shared_helper_prefix_.reset();
     last_second_special_action_trace_.reset();
     last_special_runtime_byte_effect_.reset();
     last_first_function_key_trace_.reset();
@@ -159,6 +160,24 @@ MillenniumDosFirstSpecialActionPrefix MillenniumDosGameSession::observe_first_sp
     };
     reconstructed_07f9_ = trace.toggled_runtime_byte;
     last_first_special_action_trace_ = trace;
+    return trace;
+}
+
+MillenniumDosSharedHelperPrefix
+MillenniumDosGameSession::observe_first_special_action_shared_helper_prefix() {
+    if (game_executable_.empty() || !last_first_special_action_trace_ || last_shared_helper_prefix_) {
+        throw std::runtime_error("Millennium DOS shared helper lacks an observed first special action");
+    }
+    const auto& first = *last_first_special_action_trace_;
+    if (first.action != flow_.special_action_0 || first.helper_address != 0x0666) {
+        throw std::runtime_error("Millennium DOS shared helper is detached from the verified action route");
+    }
+    const auto trace = evaluate_millennium_dos_shared_helper_prefix(
+        game_executable_, first.selected_ax_value);
+    if (trace.entry_address != first.helper_address || trace.caller_ax != first.selected_ax_value) {
+        throw std::runtime_error("Unsupported Millennium DOS shared-helper profile");
+    }
+    last_shared_helper_prefix_ = trace;
     return trace;
 }
 
