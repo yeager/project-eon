@@ -30,11 +30,20 @@ enum class ReleaseRuntimeAdmission {
     unselected, active, identity_rejected, archive_rejected, adapter_rejected,
 };
 
+// Stable, media-safe diagnostic reason for a rejected native launch. It never
+// includes paths, archive-member names, original bytes, or parser exceptions.
+enum class ReleaseRuntimeRejection {
+    none, launch_identity, original_media, runtime_capability,
+    adapter_construction, input_contract, child_session,
+};
+
 // This is intentionally a small, media-safe diagnostic vocabulary. It
 // describes only which preservation boundary declined admission; it never
 // surfaces archive paths, member names, original bytes, or parser exceptions.
 [[nodiscard]] std::string_view release_runtime_admission_label(
     ReleaseRuntimeAdmission admission);
+[[nodiscard]] std::string_view release_runtime_rejection_label(
+    ReleaseRuntimeRejection rejection);
 
 // Immutable decoded pixels remain derived from the caller's already verified
 // original media. This DTO deliberately contains no SDL objects, and its
@@ -78,6 +87,7 @@ public:
     void reset();
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return active_; }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return admission_; }
+    [[nodiscard]] ReleaseRuntimeRejection rejection() const { return rejection_; }
     // A populated snapshot is proof that one exact adapter was constructed
     // after rehashing. It contains no source path or original bytes and is
     // cleared together with the adapter on every reset/rejection.
@@ -136,6 +146,7 @@ private:
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari_;
     std::optional<RuntimeSessionSnapshot> session_snapshot_;
     ReleaseRuntimeAdmission admission_ = ReleaseRuntimeAdmission::unselected;
+    ReleaseRuntimeRejection rejection_ = ReleaseRuntimeRejection::none;
 };
 
 // The one common final launch gate for CLI and card-menu candidates. It

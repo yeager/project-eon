@@ -1932,12 +1932,15 @@ int main() {
         assert(!runtime_coordinator.acquire(forged_runtime_launch));
         assert(!runtime_coordinator.active()
             && runtime_coordinator.admission() == eon::ReleaseRuntimeAdmission::archive_rejected);
+        assert(runtime_coordinator.rejection() == eon::ReleaseRuntimeRejection::original_media);
         assert(eon::release_runtime_admission_label(
             eon::ReleaseRuntimeAdmission::identity_rejected) == "REJECTED: IDENTITY");
         assert(eon::release_runtime_admission_label(
             eon::ReleaseRuntimeAdmission::archive_rejected) == "REJECTED: ARCHIVE HASH");
         assert(eon::release_runtime_admission_label(
             eon::ReleaseRuntimeAdmission::adapter_rejected) == "REJECTED: ADAPTER");
+        assert(eon::release_runtime_rejection_label(
+            eon::ReleaseRuntimeRejection::input_contract) == "INPUT CONTRACT");
         // The common CLI/card-menu admission gate clears any previous runtime
         // before rejecting an absent route candidate.
         assert(eon::admit_runtime_launch(runtime_coordinator, std::nullopt,
