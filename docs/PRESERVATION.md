@@ -4150,6 +4150,16 @@ Modern additionally exposes smooth scaling, scanline, renderer-frame and other
 explicit renderer-only toggles. Neither panel maps F10 into the original
 action-dispatch range.
 
+For the live, hash-admitted English DOS title session only, the Modern F10
+diagnostics readout and `--runtime-diagnostics-json` may additionally report
+the immutable F1–F10 table address, stride, dispatcher address and handler
+entry addresses. The JSON object is named `millennium_dos_static_dispatch`
+and declares `static_only: true`. It is coordinator-owned, revoked with the
+title adapter, and has no input observer, handler invocation, runtime-cell,
+save, media-byte, or guest-execution surface. It is a preservation navigation
+aid for the verified code table—not a control map or evidence that the title
+has handed control to `2200AD.EXE`.
+
 `MillenniumDosGameSession` can now retain a non-owning view of the authenticated
 English `2200AD.EXE` specifically for offline/runtime-trace observation of the
 two special actions. It does not make this path reachable from SDL: the title
