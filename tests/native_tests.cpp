@@ -3837,7 +3837,7 @@ int main() {
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
         == eon::RuntimeInputDisposition::rejected);
     assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari()
-        && !admitted_dos_runtime.deuteros_amiga() && !admitted_dos_runtime.deuteros_atari());
+        && !admitted_dos_runtime.deuteros_atari());
     admitted_dos_runtime.reset();
     assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos()
         && !admitted_dos_runtime.session_snapshot());
@@ -3888,9 +3888,9 @@ int main() {
         const auto adapter_count = static_cast<int>(all_release_runtime.millennium_dos() != nullptr)
             + static_cast<int>(all_release_runtime.millennium_amiga() != nullptr)
             + static_cast<int>(all_release_runtime.millennium_atari() != nullptr)
-            + static_cast<int>(all_release_runtime.deuteros_amiga() != nullptr)
             + static_cast<int>(all_release_runtime.deuteros_atari() != nullptr);
-        assert(adapter_count == 1);
+        assert(adapter_count == (release.game == eon::Game::deuteros
+            && release.platform == eon::Platform::amiga ? 0 : 1));
         if (release.game == eon::Game::millennium && release.platform == eon::Platform::dos) {
             assert(all_release_runtime.millennium_dos());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_title
@@ -3907,7 +3907,6 @@ int main() {
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
-            assert(all_release_runtime.deuteros_amiga());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
                 && session_snapshot.capabilities.decoded_presentation
                 && session_snapshot.capabilities.audio_observations
@@ -3982,12 +3981,9 @@ int main() {
                     == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"
                 && title_boundary->entry_prefix_state.writes[0].address == 0x4040e
                 && title_boundary->exec_prelude.stack_pointer_value == 0x40b62
+                && title_boundary->local_prefix_executed
                 && title_boundary->graphics_setup_palette.size() == 20
                 && title_boundary->alternate_renderer_trace);
-            assert(opening_controller.coordinator().deuteros_amiga());
-            const auto& admitted_title_stage = opening_controller.coordinator()
-                .deuteros_amiga()->title_stage_session();
-            assert(admitted_title_stage && admitted_title_stage->local_prefix_executed());
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
@@ -4026,7 +4022,7 @@ int main() {
     assert(!all_release_runtime.session_snapshot());
     assert(!all_release_runtime.active() && !all_release_runtime.millennium_dos()
         && !all_release_runtime.millennium_amiga() && !all_release_runtime.millennium_atari()
-        && !all_release_runtime.deuteros_amiga() && !all_release_runtime.deuteros_atari());
+        && !all_release_runtime.deuteros_atari());
     auto forged_release_metadata = *english_dos;
     forged_release_metadata.language = "es";
     assert(!eon::is_recognised_release_identity(forged_release_metadata));

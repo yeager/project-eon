@@ -76,6 +76,7 @@ struct DeuterosAmigaTitleStageBoundarySnapshot {
     std::string original_sha256;
     DeuterosAmigaTitleEntryPrefixState entry_prefix_state;
     DeuterosAmigaTitleExecPrelude exec_prelude;
+    bool local_prefix_executed = false;
     std::array<RgbColor, 20> graphics_setup_palette{};
     std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace;
 };
@@ -159,9 +160,6 @@ public:
     }
     [[nodiscard]] MillenniumAtariBootstrapSession* millennium_atari() const {
         return millennium_atari_.get();
-    }
-    [[nodiscard]] DeuterosAmigaOpening* deuteros_amiga() const {
-        return deuteros_amiga_.get();
     }
     [[nodiscard]] DeuterosAtariBootstrapSession* deuteros_atari() const {
         return deuteros_atari_.get();

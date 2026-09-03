@@ -351,6 +351,7 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_stage_boundary() const {
         title_stage.original_sha256(),
         title_stage.entry_prefix_state(),
         title_stage.exec_prelude(),
+        title_stage.local_prefix_executed(),
         title_stage.graphics_setup_palette_evidence(),
         deuteros_amiga_->alternate_renderer_trace(),
     };
