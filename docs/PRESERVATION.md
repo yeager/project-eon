@@ -106,6 +106,12 @@ identity or prior adapter. SDL owns only renderer, audio-device, and host-input
 resources; it borrows the admitted adapter and never reloads a release
 independently.
 
+`NativeSessionController` reaches the coordinator only through the typed
+`LauncherRuntimeController` facade. That facade returns copied snapshots or
+transient audio/event buffers and offers no coordinator reference, so the
+launcher cannot independently acquire an adapter, reopen source media, retain
+a mutable input session, or bypass the return-to-menu revocation order.
+
 The F10 developer readout reports the result as **ready**, **not selected**,
 or one of three deliberately non-sensitive rejection classes: **identity**,
 **archive hash**, or **adapter**. It identifies the preservation boundary that

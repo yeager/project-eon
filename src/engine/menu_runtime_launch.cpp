@@ -31,6 +31,69 @@ void LauncherRuntimeController::reset() {
     coordinator_.reset();
 }
 
+RuntimeInputDisposition LauncherRuntimeController::observe_input(
+    const RuntimeInputObservation& observation) {
+    return coordinator_.observe_input(observation);
+}
+
+std::optional<MillenniumDosPresentationSnapshot>
+LauncherRuntimeController::millennium_dos_presentation() const {
+    return coordinator_.millennium_dos_presentation();
+}
+
+std::optional<MillenniumDosStartupInputSnapshot>
+LauncherRuntimeController::millennium_dos_startup_input() const {
+    return coordinator_.millennium_dos_startup_input();
+}
+
+std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
+    return coordinator_.tick_deuteros_amiga_opening();
+}
+
+std::optional<std::vector<float>>
+LauncherRuntimeController::render_deuteros_amiga_opening_audio(const std::size_t frames) {
+    return coordinator_.render_deuteros_amiga_opening_audio(frames);
+}
+
+std::optional<DeuterosAmigaOpeningCheckpoint>
+LauncherRuntimeController::deuteros_amiga_opening_checkpoint() const {
+    return coordinator_.deuteros_amiga_opening_checkpoint();
+}
+
+std::optional<DeuterosAmigaOpeningPresentationSnapshot>
+LauncherRuntimeController::deuteros_amiga_opening_presentation() const {
+    return coordinator_.deuteros_amiga_opening_presentation();
+}
+
+std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
+LauncherRuntimeController::deuteros_amiga_title_stage_boundary() const {
+    return coordinator_.deuteros_amiga_title_stage_boundary();
+}
+
+std::optional<DeuterosAtariBootstrapCheckpoint>
+LauncherRuntimeController::deuteros_atari_bootstrap_checkpoint() const {
+    return coordinator_.deuteros_atari_bootstrap_checkpoint();
+}
+
+std::optional<DeuterosAtariBootstrapPresentationSnapshot>
+LauncherRuntimeController::deuteros_atari_bootstrap_presentation() const {
+    return coordinator_.deuteros_atari_bootstrap_presentation();
+}
+
+std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
+LauncherRuntimeController::millennium_amiga_bootstrap_presentation() const {
+    return coordinator_.millennium_amiga_bootstrap_presentation();
+}
+
+std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+LauncherRuntimeController::millennium_atari_bootstrap_presentation() const {
+    return coordinator_.millennium_atari_bootstrap_presentation();
+}
+
+std::optional<RuntimeSessionSnapshot> LauncherRuntimeController::session_snapshot() const {
+    return coordinator_.session_snapshot();
+}
+
 MenuRuntimeLaunchResult launch_menu_runtime(const LauncherSessionState& session,
     const LaunchRequest& base, const std::vector<ReleaseArchive>& releases,
     ReleaseRuntimeCoordinator& coordinator) {

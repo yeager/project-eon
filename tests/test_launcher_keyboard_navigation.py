@@ -274,6 +274,14 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
                             SOURCE.index("const auto activate_launcher_card")]
         self.assertIn("runtime.requires_revocation_for(launcher_interaction.source_identity())", navigation)
 
+    def test_native_session_controller_cannot_borrow_the_release_coordinator(self) -> None:
+        controller_header = (ROOT / "src" / "engine" / "native_session_controller.hpp").read_text(encoding="utf-8")
+        controller_source = (ROOT / "src" / "engine" / "native_session_controller.cpp").read_text(encoding="utf-8")
+        self.assertNotIn("coordinator()", controller_header + controller_source)
+        self.assertNotIn("coordinator()", MENU_RUNTIME_HEADER)
+        self.assertIn("RuntimeInputDisposition observe_input", MENU_RUNTIME_HEADER)
+        self.assertIn("std::optional<RuntimeSessionSnapshot> session_snapshot() const", MENU_RUNTIME_HEADER)
+
     def test_automatic_verified_platform_also_updates_keyboard_card_focus(self) -> None:
         # If a game has only Amiga/Atari media, selecting its game card must
         # not leave Enter/South-A focused on the disabled DOS card.
