@@ -1869,6 +1869,12 @@ the track-2 bytes to `$1e00` and enters `$1ec4`; no loader-return continuation
 selecting the duplicate has been recovered. The remaining state-0 chunks stay
 unclassified raw data.
 
+`DeuterosAtariBootstrapSession` validates this same state-0 prefix once from
+the exact four raw requests and retains only its length, entry/dispatcher
+offsets, and stage hash in the active diagnostic checkpoint. It immediately
+discards the materialized raw span and never selects state 0, enters its
+duplicate, or assigns it a title/game meaning.
+
 `build_deuteros_atari_state1_raw_load_plan` records the second vector's
 equally static read as 84 original requests: 83 complete nine-sector side
 spans followed by one seven-sector span. It starts at Disk 1 `+$55800`, loads

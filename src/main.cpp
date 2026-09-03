@@ -990,6 +990,23 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
         }());
         std::cout << ",\"state1_raw_request_count\":"
             << checkpoint->state1_raw_request_count;
+        std::cout << ",\"state0_duplicate_stage\":{\"byte_count\":"
+            << checkpoint->state0_duplicate_byte_count;
+        std::cout << ",\"direct_entry_offset\":";
+        write_json_string(std::cout, "+0x" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state0_duplicate_direct_entry_offset;
+            return value.str();
+        }());
+        std::cout << ",\"dispatcher_offset\":";
+        write_json_string(std::cout, "+0x" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state0_duplicate_dispatcher_offset;
+            return value.str();
+        }());
+        std::cout << ",\"sha256\":";
+        write_json_string(std::cout, checkpoint->state0_duplicate_sha256);
+        std::cout << "}";
         std::cout << ",\"state1_skipped_ascii\":{\"branch_relative_offset\":";
         write_json_string(std::cout, "+0x" + [&] {
             std::ostringstream value;
@@ -3424,6 +3441,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto second_profile = eon::parse_deuteros_atari_second_stage(second_stage);
         const auto dispatch = eon::parse_deuteros_atari_dispatch(second_stage);
         const auto& state0_plan = live_bootstrap.state0_raw_load_plan();
+        const auto& state0_duplicate = live_bootstrap.state0_duplicate_stage_prefix();
         const auto& state1_plan = live_bootstrap.state1_raw_load_plan();
         const auto& state1_service = live_bootstrap.state1_service_boundary();
         const auto& state1_skipped_ascii = live_bootstrap.state1_skipped_ascii_block();
@@ -3490,6 +3508,12 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << state0_plan.requests.size() << " original nine-sector reads; SHA-256 "
             << eon::to_hex(eon::sha256(state0_bytes))
             << " (not selected or interpreted at runtime)\n";
+        std::cout << "          State-0 duplicate-stage boundary: prefix +0x0 +0x"
+            << std::hex << state0_duplicate.byte_count << " SHA-256 "
+            << state0_duplicate.sha256 << "; direct entry +0x"
+            << state0_duplicate.direct_entry_offset << ", dispatcher +0x"
+            << state0_duplicate.dispatcher_offset << std::dec
+            << " (identity only; no state-0 selection or entry inferred)\n";
         std::vector<std::uint8_t> state1_bytes;
         state1_bytes.reserve(state1_plan.byte_count);
         for (const auto& request : state1_plan.requests) {

@@ -14,6 +14,10 @@ DeuterosAtariBootstrapCheckpoint DeuterosAtariBootstrapSession::checkpoint() con
         entry_execution_.dispatcher_entry,
         state1_service_boundary_.xbios_selector,
         state0_raw_load_plan_.requests.size(),
+        state0_duplicate_stage_prefix_.byte_count,
+        state0_duplicate_stage_prefix_.direct_entry_offset,
+        state0_duplicate_stage_prefix_.dispatcher_offset,
+        state0_duplicate_stage_prefix_.sha256,
         state1_raw_load_plan_.requests.size(),
         state1_skipped_ascii_block_.branch_relative_offset,
         state1_skipped_ascii_block_.ascii_relative_offset,
@@ -79,6 +83,24 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     state0_raw_load_plan_ = build_deuteros_atari_state0_raw_load_plan(second_stage_, dispatch_);
     state1_raw_load_plan_ = build_deuteros_atari_state1_raw_load_plan(second_stage_, dispatch_);
     state5_raw_load_plan_ = build_deuteros_atari_state5_raw_load_plan(second_stage_, dispatch_);
+    // State 0 is not selected or loaded into a native runtime. Its first
+    // source interval is nevertheless independently claimed to duplicate the
+    // verified second stage, so validate that immutable relationship once and
+    // retain only the resulting offsets/hash.
+    std::vector<std::uint8_t> state0_bytes;
+    state0_bytes.reserve(state0_raw_load_plan_.byte_count);
+    for (const auto& request : state0_raw_load_plan_.requests) {
+        const auto chunk = disk.read_sectors(request.track, request.side,
+            request.first_sector, request.sector_count);
+        state0_bytes.insert(state0_bytes.end(), chunk.begin(), chunk.end());
+    }
+    try {
+        state0_duplicate_stage_prefix_ = parse_deuteros_atari_state0_duplicate_stage_prefix(
+            state0_bytes, second_stage_bytes);
+    } catch (const std::runtime_error& error) {
+        throw std::runtime_error("Invalid Deuteros Atari ST state-0 duplicate-stage boundary: "
+            + std::string(error.what()));
+    }
     // This is a one-shot byte verification over the exact raw requests above.
     // The vector is not selected, the data is not retained, and no XBIOS call
     // is made; the resulting profile is only source offsets/opcodes/hashes.

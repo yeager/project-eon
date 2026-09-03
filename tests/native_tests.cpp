@@ -7714,6 +7714,11 @@ int main() {
     assert(atari_checkpoint.relocated_dispatcher_address == 0x1ec4);
     assert(atari_checkpoint.state1_xbios_selector == 0x26);
     assert(atari_checkpoint.state0_raw_request_count == 4);
+    assert(atari_checkpoint.state0_duplicate_byte_count == 0x1200);
+    assert(atari_checkpoint.state0_duplicate_direct_entry_offset == 0);
+    assert(atari_checkpoint.state0_duplicate_dispatcher_offset == 0xc4);
+    assert(atari_checkpoint.state0_duplicate_sha256
+        == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
     assert(atari_checkpoint.state1_raw_request_count == 84);
     assert(atari_checkpoint.state1_skipped_ascii_branch_relative_offset == 0x48000);
     assert(atari_checkpoint.state1_skipped_ascii_relative_offset == 0x4800a);
