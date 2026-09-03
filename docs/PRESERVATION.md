@@ -3730,6 +3730,14 @@ original 10,000 Hz and 6,024 Hz rates. This is a read-only completeness check
 of the resource family, not an audio subsystem: no sound is scheduled or sent
 to SDL without a recovered event-to-index and driver-ABI chain.
 
+The admitted English native session now carries the same fourteen-entry voice
+bank catalogue (original filename/hash, decoded sample rate and sample count)
+after revalidating each leaf through its already verified media snapshot. PCM
+bytes are discarded after this validation and the catalogue has no playback,
+event-selection, mixer, SDL-device or save-write API. Spanish DOS has no such
+catalogue because the matching executable/resource chain has not been
+recovered for that release.
+
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
 their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 92h, and 95h. `2200AD.EXE` jumps from file offset `0x0004` to `0xd1b0`, then

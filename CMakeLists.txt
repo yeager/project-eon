@@ -132,6 +132,7 @@ add_executable(project-eon
     src/data/atari_st_prg.cpp
     src/data/atari_st_stx.cpp
     src/data/creative_voice.cpp
+    src/data/millennium_dos_voice_bank.cpp
     src/data/deuteros_amiga_bundle.cpp
     src/data/deuteros_amiga_data_disk.cpp
     src/data/deuteros_amiga_audio.cpp
