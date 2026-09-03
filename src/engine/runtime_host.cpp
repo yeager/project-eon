@@ -101,6 +101,13 @@ void RuntimeHost::begin_source_revocation() {
 }
 
 void RuntimeHost::finish_source_revocation() {
+    if (!revoking()) return;
+    // A modal belongs to the outgoing front-end generation.  Retaining its
+    // input gate after the coordinator has discarded that source would make a
+    // fresh, independently admitted session silently reject its first real
+    // observation. This is lifecycle cleanup only; the outgoing source has
+    // already been made inaccessible by begin_source_revocation().
+    input_suppressed_ = false;
     finish_return_to_menu();
 }
 

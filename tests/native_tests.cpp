@@ -1118,6 +1118,15 @@ int main() {
     runtime_host.finish_source_revocation();
     assert(!runtime_host.revoking() && runtime_host.is_menu());
 
+    // The input modal is source-generation state. Teardown, including a
+    // route change while F10 is open, must not carry suppression into the
+    // next independently admitted session.
+    runtime_host.set_input_suppressed(true);
+    assert(runtime_host.input_suppressed());
+    runtime_host.begin_source_revocation();
+    runtime_host.finish_source_revocation();
+    assert(runtime_host.is_menu() && !runtime_host.input_suppressed());
+
     // Static-control-flow sidecars are external preservation evidence, not a
     // media parser or a dispatch table.  The native reader therefore accepts
     // only the exact v1 envelope and preserves the unclassified boundary.
