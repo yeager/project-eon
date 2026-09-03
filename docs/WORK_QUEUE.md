@@ -31,6 +31,29 @@ facts only and discards PCM bytes. This closes a resource-admission task, not
 an audio-playback task: event-to-index mapping, driver ABI and timing remain
 outside the recovered engine boundary.
 
+### 2026-09-03 split-container Deuteros discovery
+
+A read-only scan of the user-supplied `~/.projecteon` collection found real
+single-disk ZIP containers whose inner disk hashes match existing Deuteros
+parser leaves but whose outer ZIP hashes are not the one combined-release
+archive currently represented by `ReleaseArchive`. In particular, the Atari
+ST pair contains the existing first-stage leaf
+`aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`
+(Replicants disk 1) and the existing killer-boot leaf
+`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`
+(clean disk 2). The clean Amiga disk 1 likewise contains the existing
+`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`
+leaf.
+
+These are not release admissions: a matching leaf inside a different outer
+container is insufficient, and no disk is copied, unpacked or substituted.
+The next scanner work is a hash-addressed, ordered multi-container manifest
+that binds every required disk and its outer-container identity before a
+`ReleaseArchive` or native session can be published. It must reject an
+incomplete, reordered, altered, duplicate or mixed-release pair. This is a
+media-admission task ahead of platform runtime recovery, not evidence of a
+Deuteros game start, title, frame, input, audio or parity.
+
 ### 2026-08-31 capture-route update
 
 The rank-1 v13 Millennium DOS operator-visible no-input capture is independently
