@@ -3793,6 +3793,17 @@ int main(int argc, char** argv) {
         return 2;
     }
     auto request = *parsed.request;
+    const auto presentation_preferences_path = eon::default_presentation_preferences_path();
+    const auto saved_presentation_preferences = eon::load_presentation_preferences(
+        presentation_preferences_path);
+    // Persisted locale is a card-menu preference, never an ambient host-locale
+    // inference and never a diagnostic/CLI output switch. English remains the
+    // default when no setting exists; an explicit --language always wins.
+    const bool graphical_menu_requested = !request.verify_game && !request.inspect_data && !request.game
+        && !request.reference_trace && !request.inspect_save;
+    if (graphical_menu_requested && !request.language_explicit && saved_presentation_preferences) {
+        request.language = saved_presentation_preferences->launcher_language;
+    }
     auto translator = eon::Translator::from_language(request.language,
         argc > 0 ? std::filesystem::path(argv[0]) : std::filesystem::path{});
     active_translator = &translator;
@@ -3800,9 +3811,6 @@ int main(int argc, char** argv) {
         return std::string(translator.translate(message));
     };
     if (request.inspect_save) return inspect_millennium_dos_save(*request.inspect_save);
-    const auto presentation_preferences_path = eon::default_presentation_preferences_path();
-    const auto saved_presentation_preferences = eon::load_presentation_preferences(
-        presentation_preferences_path);
     if (saved_presentation_preferences) {
         if (!request.display_resolution_explicit) {
             request.display.width = output_resolutions.at(
@@ -4872,6 +4880,11 @@ int main(int argc, char** argv) {
         // This changes Eon's chrome only. `release_language` remains the
         // selected original archive identity and never follows UI locale.
         active_translator = &translator;
+        if (!eon::save_launcher_language_preference(presentation_preferences_path,
+                request.language)) {
+            std::cerr << "Unable to save launcher language preference: "
+                      << presentation_preferences_path << '\n';
+        }
     };
     const auto handle_menu_pointer_down = [&](const float x, const float y) {
         // SDL mouse and touch input share one card route. The latter is
@@ -5116,6 +5129,7 @@ int main(int argc, char** argv) {
                 modern_graphics_settings.smooth_scaling,
                 modern_graphics_settings.scanlines,
                 modern_graphics_settings.frame,
+                request.language,
             };
             if (!eon::save_presentation_preferences(presentation_preferences_path, preferences)) {
                 std::cerr << "Unable to save Modern presentation preferences: "

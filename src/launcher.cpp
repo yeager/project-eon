@@ -277,6 +277,7 @@ ParseResult parse_command_line(int argc, char** argv) {
         } else if (argument == "--language" || argument == "-l") {
             request.language = normalize_language(value);
             if (request.language.empty()) return {{}, "Unknown language: " + std::string(value), false};
+            request.language_explicit = true;
         } else {
             return {{}, "Unknown option: " + std::string(argument), false};
         }

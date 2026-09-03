@@ -67,3 +67,6 @@ values and aspect-ratio labels. Its drawing function receives the selected
 `Translator` explicitly and resolves every visible label through the shipped
 PO catalogue before rendering. This keeps its settings legible in every
 supported launcher language without translating original game text or data.
+The menu's deliberate language choice is persisted only in Eon's own
+presentation-preferences file. A command-line `--language` remains explicit
+and wins over that setting; absent both, English is the deterministic default.

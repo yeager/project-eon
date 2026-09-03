@@ -2242,7 +2242,7 @@ int main() {
     const auto temporary_root = std::filesystem::path(test_tmpdir);
     std::filesystem::create_directories(temporary_root);
     const auto preferences_path = temporary_root / "presentation-preferences.ini";
-    const eon::PresentationPreferences preferences{2, 1, 3, 2, 0, true, true, false};
+    const eon::PresentationPreferences preferences{2, 1, 3, 2, 0, true, true, false, "sv"};
     assert(eon::save_presentation_preferences(preferences_path, preferences));
     const auto loaded_preferences = eon::load_presentation_preferences(preferences_path);
     assert(loaded_preferences && loaded_preferences->output_resolution_index == 2
@@ -2250,14 +2250,27 @@ int main() {
         && loaded_preferences->modern_preset_index == 3
         && loaded_preferences->render_pacing_index == 2
         && loaded_preferences->pixel_reconstruction_index == 0 && loaded_preferences->smooth_scaling
-        && loaded_preferences->scanlines && !loaded_preferences->frame);
-    const eon::PresentationPreferences invalid_reconstruction{2, 1, 3, 2, 3, true, true, false};
+        && loaded_preferences->scanlines && !loaded_preferences->frame
+        && loaded_preferences->launcher_language == "sv");
+    const eon::PresentationPreferences invalid_reconstruction{2, 1, 3, 2, 3, true, true, false, "en"};
     assert(!eon::save_presentation_preferences(preferences_path, invalid_reconstruction));
     {
         std::ofstream malformed_preferences(preferences_path, std::ios::binary | std::ios::trunc);
         malformed_preferences << "project-eon-presentation-preferences=1\nresolution=9\n";
     }
     assert(!eon::load_presentation_preferences(preferences_path));
+    {
+        std::ofstream v1_preferences(preferences_path, std::ios::binary | std::ios::trunc);
+        v1_preferences << "project-eon-presentation-preferences=1\n"
+                       << "resolution=0\naspect=0\npreset=0\npacing=0\nreconstruction=1\n"
+                       << "scaling=1\nscanlines=0\nframe=1\n";
+    }
+    const auto migrated_preferences = eon::load_presentation_preferences(preferences_path);
+    assert(migrated_preferences && migrated_preferences->launcher_language == "en");
+    assert(eon::save_launcher_language_preference(preferences_path, "ja"));
+    const auto language_preferences = eon::load_presentation_preferences(preferences_path);
+    assert(language_preferences && language_preferences->launcher_language == "ja");
+    assert(!eon::save_launcher_language_preference(preferences_path, "invalid"));
     std::filesystem::remove(preferences_path);
     assert(!eon::UnicodeTextRenderer::create(nullptr,
         temporary_root / "project-eon-no-host-font.ttf"));
@@ -2265,7 +2278,8 @@ int main() {
         char swedish[] = "sv_SE.UTF-8";
         char* language_args[] = {program, language_option, swedish};
         const auto language = eon::parse_command_line(3, language_args);
-        assert(language.request && language.request->language == "sv_SE");
+        assert(language.request && language.request->language == "sv_SE"
+            && language.request->language_explicit);
 
         const auto temporary_po = temporary_root / "project-eon-i18n-test.po";
         {
