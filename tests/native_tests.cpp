@@ -5907,6 +5907,22 @@ int main() {
     assert(observed_game_session.last_special_runtime_byte_effect()->value == 0x5b);
     assert(observed_game_session.reconstructed_runtime_byte(0x07f9)
         == std::optional<std::uint8_t>{0x5b});
+    const auto observed_shared_helper = observed_game_session
+        .observe_first_special_action_shared_helper_prefix();
+    assert(observed_shared_helper.entry_address == 0x0666);
+    assert(observed_shared_helper.caller_ax == observed_first_special.selected_ax_value);
+    assert(observed_shared_helper.shifted_ax == static_cast<std::uint16_t>(
+        observed_first_special.selected_ax_value << 1U));
+    assert(observed_game_session.last_shared_helper_prefix());
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(observed_game_session.observe_first_special_action_shared_helper_prefix());
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         bool rejected = false;
         try {

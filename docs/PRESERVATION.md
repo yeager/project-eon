@@ -4251,6 +4251,13 @@ It does not invent the segment, dereference the selected table word, invoke
 `$05f7`, assume a return, or commit any instruction's provenance to host or
 original game state.
 
+`MillenniumDosGameSession` can advance this helper only after its exact
+observed `$0b` prefix, using that handler's proven selected AX value. The
+advance is one-shot, rehashes the executable through the evaluator, and stops
+at the same `$05f7` boundary. It cannot be entered before `$0b`, repeated, or
+reached from an SDL key; it supplies neither the original segment/table word
+nor any helper result or game-state effect.
+
 The next English-only special action `$0c` is likewise bounded. Its admission
 prefix `$d3e8..$d3f6` (15 bytes at `+$d2e8`, SHA-256
 `e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3`)

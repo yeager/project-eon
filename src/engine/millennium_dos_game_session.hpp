@@ -79,6 +79,14 @@ public:
     observe_second_special_action(MillenniumDosRuntimeByteObservation observation);
     [[nodiscard]] std::optional<MillenniumDosFirstSpecialActionPrefix>
     last_first_special_action_trace() const { return last_first_special_action_trace_; }
+    // Advances only the already observed action-$0b prefix into its exact
+    // shared local helper prefix. It revalidates the original executable and
+    // stops before that helper's first unresolved call; it does not use a
+    // host value as the original segment/table input.
+    [[nodiscard]] MillenniumDosSharedHelperPrefix
+    observe_first_special_action_shared_helper_prefix();
+    [[nodiscard]] std::optional<MillenniumDosSharedHelperPrefix>
+    last_shared_helper_prefix() const { return last_shared_helper_prefix_; }
     [[nodiscard]] std::optional<MillenniumDosSecondSpecialActionPrefix>
     last_second_special_action_trace() const { return last_second_special_action_trace_; }
     [[nodiscard]] std::optional<MillenniumDosRuntimeByteEffect>
@@ -155,6 +163,7 @@ private:
     std::optional<std::size_t> last_function_key_index_;
     std::optional<std::uint8_t> last_special_action_;
     std::optional<MillenniumDosFirstSpecialActionPrefix> last_first_special_action_trace_;
+    std::optional<MillenniumDosSharedHelperPrefix> last_shared_helper_prefix_;
     std::optional<MillenniumDosSecondSpecialActionPrefix> last_second_special_action_trace_;
     std::optional<MillenniumDosRuntimeByteEffect> last_special_runtime_byte_effect_;
     std::optional<MillenniumDosFirstFunctionKeyTrace> last_first_function_key_trace_;
