@@ -246,6 +246,8 @@ def main() -> int:
         raise SystemExit("--inspect did not identify its read-only provenance boundary")
     if "RECOVERY MAP  " not in data_dir_inspection.stdout:
         raise SystemExit("--inspect did not report the hash-bound recovery map")
+    if "State-1 display-service boundary: Disk 1 +0x9d800" not in data_dir_inspection.stdout:
+        raise SystemExit("--inspect did not report the Deuteros Atari display-service boundary")
 
     # The JSON report is a complete release-exact preservation index, not a
     # filename inventory. Check every supplied release, including bootstrap
