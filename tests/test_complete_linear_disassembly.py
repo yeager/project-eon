@@ -7,6 +7,7 @@ from zipfile import ZIP_STORED, ZipFile
 
 from tools.analyze_dos import disassemble_linear, parse_member_hashes, require_external_output as require_dos_external_output
 from tools.analyze_m68k import read_source, render_instructions, require_external_output
+from tools.reproduce_disassembly_reports import ReproductionError, require_output_directory
 
 
 class CompleteLinearDisassemblyTests(unittest.TestCase):
@@ -68,3 +69,19 @@ class CompleteLinearDisassemblyTests(unittest.TestCase):
             require_dos_external_output(root / "forbidden-dos-report.md")
         with self.assertRaises(ValueError):
             require_dos_external_output(Path("/tmp/project-eon-dos-report.md"))
+
+    def test_complete_report_reproduction_requires_a_fresh_external_directory(self):
+        root = Path(__file__).resolve().parents[1]
+        with self.assertRaises(ReproductionError):
+            require_output_directory(root)
+        with self.assertRaises(ReproductionError):
+            require_output_directory(Path("/tmp"))
+        cache = Path("/home/yeager/.cache/project-eon-tools/tests")
+        cache.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=cache) as temporary:
+            output = Path(temporary) / "reports"
+            output.mkdir()
+            self.assertEqual(require_output_directory(output), output.resolve())
+            (output / "stale.md").write_text("not a report", encoding="utf-8")
+            with self.assertRaises(ReproductionError):
+                require_output_directory(output)
