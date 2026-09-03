@@ -334,6 +334,19 @@ image fingerprint itself, and refuse to arm on any mismatch. These configured
 values are not guest-provided evidence and do not make the development observer
 admissible.
 
+The reviewed DOSBox-X integration order is also fixed. A successor registers
+`project-eon-recorder-v21` with `Config::AddSection_prop()` in `sdlmain.cpp`
+immediately after `DOSBOX_SetupConfigSections()` and before the first
+`ParseConfigFile`. Every identity property is `OnlyAtStart` with an empty
+default. It validates strict lowercase hexadecimal values and exact sizes only
+after configuration parsing has completed but before `DOSBOX_RealInit` can
+start guest execution. The ordinary DOSBox-X environment configuration pass
+must explicitly skip this recorder-only section: otherwise a crafted host
+environment can override a value that the runner's retained config hash was
+supposed to bind. Unknown configuration sections are discarded by DOSBox-X,
+so the successor must register this section; it cannot rely on a generic
+unknown-section reader.
+
 The V22 binary and source remain external rejected artifacts. They must not
 be pinned, located, run through a capture helper, or used for native recovery.
 The only acceptable successor records a bounded callback fact in recorder-
