@@ -277,6 +277,13 @@ rendering, audio, input, game timing, or save activity:
 explicit `original` or `modern` presentation choice plus renderer-only
 resolution/aspect settings, without creating SDL resources.
 
+`--runtime-diagnostics-json` follows the same native launch gate, then emits
+`project-eon.runtime-diagnostics/v1`: the active adapter and capabilities,
+plus the exact release's hash-bound startup boundary, recovery map, and
+declarative function map. It exits before SDL, timing, input, audio, saves,
+guest execution, or emulator activity and never serializes paths or original
+media bytes.
+
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It
 contains only game/platform/language/release hashes plus hash-bound startup and

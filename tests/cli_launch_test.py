@@ -341,6 +341,58 @@ def main() -> int:
             f"{launch_check_json.stdout}\n{launch_check_json.stderr}"
         )
 
+    # The fuller native diagnostic must cross the same hash-bound gate as the
+    # compact launch check while retaining all declarative recovery provenance.
+    # It remains a no-SDL, no-emulator report: paths and original bytes must
+    # not become a convenient side channel merely because the function map is
+    # useful to preservation tooling.
+    runtime_diagnostics = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--presentation", "original",
+            "--runtime-diagnostics-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        runtime_diagnostics_payload = json.loads(runtime_diagnostics.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(
+            f"--runtime-diagnostics-json did not emit JSON: {error}"
+        ) from error
+    recovery = runtime_diagnostics_payload.get("recovery", {})
+    if (runtime_diagnostics.returncode != 0
+            or runtime_diagnostics_payload.get("schema")
+                != "project-eon.runtime-diagnostics/v1"
+            or runtime_diagnostics_payload.get("release") != launch_check_payload["release"]
+            or runtime_diagnostics_payload.get("presentation") != "original"
+            or runtime_diagnostics_payload.get("display") != launch_check_payload["display"]
+            or runtime_diagnostics_payload.get("runtime_admission")
+                != launch_check_payload["runtime_admission"]
+            or runtime_diagnostics_payload.get("runtime_session")
+                != launch_check_payload["runtime_session"]
+            or recovery.get("coverage") != launch_check_payload["coverage"]
+            or recovery.get("trace_admission") != "not-loaded"
+            or not recovery.get("startup_boundary")
+            or not recovery.get("boundaries")
+            or not recovery.get("function_map")
+            or any(token in runtime_diagnostics.stdout
+                for token in (str(data_directory), "Hämtningar", "Downloads"))):
+        raise SystemExit(
+            "--runtime-diagnostics-json did not preserve the admitted native release boundary:\n"
+            f"{runtime_diagnostics.stdout}\n{runtime_diagnostics.stderr}"
+        )
+    for function in recovery["function_map"]:
+        required_function_fields = {
+            "id", "profile", "cpu", "source_asset_sha256", "source_span_sha256",
+            "source_offset", "runtime_address", "address_space", "evidence_level",
+            "uncertainty", "runtime_status", "documentation_anchor",
+        }
+        if (not required_function_fields <= function.keys()
+                or not function["documentation_anchor"].startswith("PRESERVATION.md#")):
+            raise SystemExit(
+                "--runtime-diagnostics-json function map lost preservation provenance: "
+                f"{function}"
+            )
+
     # An explicit original-language selection narrows the release universe
     # before choosing a default outer hash.  Spanish is unique in this real
     # data set even though English remains the no-language default, so it

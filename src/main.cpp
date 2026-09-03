@@ -933,6 +933,91 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         << "}}\n";
 }
 
+// This is the active-session companion to --inspect-json. It is deliberately
+// created only after the common runtime coordinator has rehashed one exact
+// release and constructed its native adapter. The report contains declarative
+// recovery facts and the adapter's bounded capabilities, but no local path,
+// archive member, original byte, SDL object, emulator state, or guest action.
+void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
+    const eon::ReleaseRuntimeCoordinator& coordinator, const eon::Presentation presentation,
+    const eon::DisplayPreferences& display, const std::string_view aspect_identifier) {
+    const auto diagnostics = eon::runtime_diagnostics_for_release(launch.release);
+    std::cout << "{\"schema\":\"project-eon.runtime-diagnostics/v1\",\"release\":{\"game\":";
+    write_json_string(std::cout, eon::name(launch.release.game));
+    std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(launch.release.platform));
+    std::cout << ",\"language\":"; write_json_string(std::cout, launch.release.language);
+    std::cout << ",\"sha256\":"; write_json_string(std::cout, launch.release.sha256);
+    std::cout << "},\"presentation\":";
+    write_json_string(std::cout, presentation == eon::Presentation::original ? "original" : "modern");
+    std::cout << ",\"display\":{\"resolution\":";
+    write_json_string(std::cout, std::to_string(display.width) + "x" + std::to_string(display.height));
+    std::cout << ",\"aspect\":"; write_json_string(std::cout, aspect_identifier);
+    std::cout << "},\"runtime_admission\":";
+    write_json_string(std::cout, eon::release_runtime_admission_label(coordinator.admission()));
+    std::cout << ",\"runtime_session\":";
+    if (const auto& session = coordinator.session_snapshot()) {
+        std::cout << "{\"kind\":"; write_json_string(std::cout, eon::runtime_session_kind_label(session->kind));
+        std::cout << ",\"boundary\":";
+        write_json_string(std::cout, eon::runtime_session_boundary_label(session->boundary));
+        std::cout << ",\"capabilities\":{\"decoded_presentation\":"
+            << (session->capabilities.decoded_presentation ? "true" : "false")
+            << ",\"audio_observations\":"
+            << (session->capabilities.audio_observations ? "true" : "false")
+            << ",\"admitted_input\":"
+            << (session->capabilities.admitted_input ? "true" : "false") << "}}";
+    } else {
+        std::cout << "null";
+    }
+    std::cout << ",\"recovery\":{\"coverage\":";
+    write_json_string(std::cout, eon::name(diagnostics.coverage));
+    std::cout << ",\"trace_admission\":"; write_json_string(std::cout, diagnostics.trace_admission);
+    std::cout << ",\"startup_boundary\":";
+    if (const auto& startup = diagnostics.startup_boundary) {
+        std::cout << "{\"profile\":"; write_json_string(std::cout, startup->parser_profile_id);
+        std::cout << ",\"source_address\":"; write_json_string(std::cout, startup->source_address);
+        std::cout << ",\"unresolved\":"; write_json_string(std::cout, startup->unresolved);
+        std::cout << '}';
+    } else {
+        std::cout << "null";
+    }
+    std::cout << ",\"boundaries\":[";
+    for (std::size_t index = 0; index < diagnostics.recovery_boundaries.size(); ++index) {
+        if (index != 0) std::cout << ',';
+        const auto& boundary = diagnostics.recovery_boundaries[index];
+        std::cout << "{\"id\":"; write_json_string(std::cout, boundary.id);
+        std::cout << ",\"profile\":"; write_json_string(std::cout, boundary.parser_profile_id);
+        std::cout << ",\"cpu\":"; write_json_string(std::cout, boundary.cpu);
+        std::cout << ",\"source_address\":"; write_json_string(std::cout, boundary.source_address);
+        std::cout << ",\"evidence_level\":"; write_json_string(std::cout, boundary.evidence_level);
+        std::cout << ",\"runtime_status\":"; write_json_string(std::cout, boundary.runtime_status);
+        std::cout << ",\"documentation_anchor\":";
+        write_json_string(std::cout, boundary.documentation_anchor);
+        std::cout << '}';
+    }
+    std::cout << "],\"function_map\":[";
+    for (std::size_t index = 0; index < diagnostics.functions.size(); ++index) {
+        if (index != 0) std::cout << ',';
+        const auto& function = diagnostics.functions[index];
+        std::cout << "{\"id\":"; write_json_string(std::cout, function.id);
+        std::cout << ",\"profile\":"; write_json_string(std::cout, function.parser_profile_id);
+        std::cout << ",\"cpu\":"; write_json_string(std::cout, function.cpu);
+        std::cout << ",\"source_asset_sha256\":"; write_json_string(std::cout, function.source_asset_sha256);
+        std::cout << ",\"source_span_sha256\":";
+        write_json_string(std::cout, function.source_span_sha256.empty()
+            ? function.source_asset_sha256 : function.source_span_sha256);
+        std::cout << ",\"source_offset\":"; write_json_string(std::cout, function.source_offset);
+        std::cout << ",\"runtime_address\":"; write_json_string(std::cout, function.runtime_address);
+        std::cout << ",\"address_space\":"; write_json_string(std::cout, function.address_space);
+        std::cout << ",\"evidence_level\":"; write_json_string(std::cout, function.evidence_level);
+        std::cout << ",\"uncertainty\":"; write_json_string(std::cout, function.uncertainty);
+        std::cout << ",\"runtime_status\":"; write_json_string(std::cout, function.runtime_status);
+        std::cout << ",\"documentation_anchor\":";
+        write_json_string(std::cout, function.documentation_anchor);
+        std::cout << '}';
+    }
+    std::cout << "]}}\n";
+}
+
 // A validated capture is evidence, not a runtime input. This compact export
 // deliberately reports its admitted identity, boundaries and checkpoint
 // counts without serializing local paths, event bytes, media bytes, or
@@ -3936,6 +4021,12 @@ int main(int argc, char** argv) {
         if (!active_launch()) {
             std::cerr << "Launch check has no admitted original release.\n";
             return 4;
+        }
+        if (request.runtime_diagnostics_json) {
+            report_runtime_diagnostics_json(*active_launch(), runtime_coordinator,
+                request.presentation, request.display,
+                display_aspect_identifiers.at(request.display.aspect_ratio_index));
+            return 0;
         }
         if (request.launch_check_json) {
             std::cout << "{\"schema\":\"project-eon.launch-check/v1\",\"release\":{\"game\":";

@@ -121,6 +121,14 @@ emulator, replay, renderer, input path, audio path, or save operation.
 explicit presentation and renderer-geometry choices but never
 a local path, member name, original bytes, or parser exception.
 
+`--runtime-diagnostics-json` is the fuller active-native-session report,
+`project-eon.runtime-diagnostics/v1`. It crosses that same explicit
+game/platform/hash admission gate and exits before SDL initialization. It
+adds the admitted adapter/boundary/capabilities and the selected release's
+declarative startup, recovery, and function-map facts. It does not expose a
+path, archive member, original byte, guest state, trace contents, emulator
+state, or a route for executing original code.
+
 For a corpus containing more than one release for a game/platform, automation
 must pass both `--release-language` and `--release-sha256`.  They are one
 four-field identity with game and platform, not independent display filters:

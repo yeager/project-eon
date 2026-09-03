@@ -1684,6 +1684,17 @@ int main() {
         const auto launch_check_json = eon::parse_command_line(6, launch_check_json_args);
         assert(launch_check_json.request && launch_check_json.request->launch_check
             && launch_check_json.request->launch_check_json);
+        char runtime_diagnostics_json_option[] = "--runtime-diagnostics-json";
+        char* runtime_diagnostics_json_args[] = {program, game_option, millennium,
+            platform_option, dos, runtime_diagnostics_json_option};
+        const auto runtime_diagnostics_json = eon::parse_command_line(6,
+            runtime_diagnostics_json_args);
+        assert(runtime_diagnostics_json.request && runtime_diagnostics_json.request->launch_check
+            && runtime_diagnostics_json.request->runtime_diagnostics_json
+            && !runtime_diagnostics_json.request->launch_check_json);
+        char* runtime_diagnostics_without_target_args[] = {program,
+            runtime_diagnostics_json_option};
+        assert(!eon::parse_command_line(2, runtime_diagnostics_without_target_args).request);
         char* launch_check_without_target_args[] = {program, launch_check_option};
         assert(!eon::parse_command_line(2, launch_check_without_target_args).request);
         char* launch_check_with_inspect_args[] = {program, inspect_option, game_option, millennium,
