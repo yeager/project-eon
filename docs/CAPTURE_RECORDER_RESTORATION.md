@@ -406,6 +406,26 @@ record*, not a synthetic one. A future recorder invocation consequently needs
 a separately reviewed visible graceful termination path and an exclusive,
 regular, mode-0600 output sink validated outside guest execution.
 
+### 2026-09-03 V23 POD callback foundation
+
+An external clean DOSBox-X source copy at
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/dosbox-x-v23-pod-observer/`
+was created from revision `234797680781567e18c374c9e62da24de5423db0` for the
+next recorder implementation. It contains a zero-initialised, fixed-size
+`ProjectEonInt6Slot` in `src/cpu/callback.cpp`. At the literal callback site,
+the slot can only copy the bounded exception frame and scalar registers, and
+publishes its captured state last. It performs no output, environment lookup,
+allocation, logging, guest write, register/vector change, input handling or
+scheduling.
+
+The slot is deliberately unarmed: the reviewed release identity, loaded-image
+fingerprint and title-prefix predicate do not yet exist. Therefore no `INT 6`
+event is eligible to capture, there is no serializer, and no trace artifact
+exists. The CPU component compiled on the configured external host. A full
+recursive Autotools build is not recorded because interrupted tool execution
+left competing make children; this is an implementation foundation only,
+below `OBSERVER_FIX_REQUIRED`, never a recorder, pin, trace or capture target.
+
 ### Experimental observer runs
 
 The reviewed v3 candidate may be run only with the explicit
