@@ -3360,7 +3360,9 @@ sequence: P01 through P25 are codec-2 16x23 (368-index) records, matching the
 P25's is `d7e44c796aed167010cdef9ab7ccef38b3b260854b51b2fba818972f30dd35dd`.
 The preservation parser additionally records each unmodified source span,
 requires P01 through P25 to be contiguous, and exposes the bank identity in
-inspection diagnostics. It also requires the full English `TITLE.LIB` leaf
+inspection diagnostics. That bank SHA-256 is computed directly over the
+immutable original `TITLE.LIB` range, without a second source-byte copy. It
+also requires the full English `TITLE.LIB` leaf
 hash before admitting that transition, so a valid LIB directory with matching
 P01–P25 records cannot silently stand in for the original resource bank. For
 the supplied release, P01 is `+$2941`, 213 bytes,

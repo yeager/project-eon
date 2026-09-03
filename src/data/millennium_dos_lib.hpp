@@ -28,6 +28,9 @@ public:
     // making the format reader itself a cross-edition admission policy.
     [[nodiscard]] const std::string& source_sha256() const { return source_sha256_; }
     [[nodiscard]] const std::vector<MillenniumDosLibEntry>& entries() const { return entries_; }
+    // Exposes the immutable original leaf for aggregate provenance checks.
+    // It has the same lifetime as every entry view returned by read().
+    [[nodiscard]] std::span<const std::uint8_t> bytes() const { return bytes_; }
     [[nodiscard]] const MillenniumDosLibEntry* find(std::string_view name) const;
     [[nodiscard]] std::span<const std::uint8_t> read(const MillenniumDosLibEntry& entry) const;
 
