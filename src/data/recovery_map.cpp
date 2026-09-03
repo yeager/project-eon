@@ -61,6 +61,41 @@ constexpr std::array<RecoveryMapEntry, 42> entries{{
 
 std::span<const RecoveryMapEntry> recovery_map() { return entries; }
 
+bool recovery_map_manifest_is_valid() {
+    const auto profiles = parser_profile_manifest();
+    if (entries.size() != profiles.size()) return false;
+    for (const auto& profile : profiles) {
+        const auto matches = std::count_if(entries.begin(), entries.end(), [&profile](const auto& entry) {
+            return entry.release_sha256 == profile.release_sha256
+                && entry.parser_profile_id == profile.id;
+        });
+        if (matches != 1) return false;
+    }
+    const auto releases = release_manifest();
+    for (const auto& entry : entries) {
+        if (entry.id.empty() || entry.parser_profile_id.empty() || entry.cpu.empty()
+            || entry.source_address.empty() || entry.evidence_level != "verified-static"
+            || entry.runtime_status.empty()
+            || !entry.documentation_anchor.starts_with("PRESERVATION.md#")) return false;
+        if ((entry.platform == Platform::dos && entry.cpu != "i8086")
+            || ((entry.platform == Platform::amiga || entry.platform == Platform::atari_st)
+                && entry.cpu != "m68000")) return false;
+        const auto release_matches = std::count_if(releases.begin(), releases.end(), [&entry](const auto& release) {
+            return release.sha256 == entry.release_sha256 && release.game == entry.game
+                && release.platform == entry.platform && release.language == entry.language;
+        });
+        const auto entry_matches = std::count_if(entries.begin(), entries.end(), [&entry](const auto& candidate) {
+            return candidate.id == entry.id;
+        });
+        const auto profile_matches = std::count_if(profiles.begin(), profiles.end(), [&entry](const auto& profile) {
+            return profile.release_sha256 == entry.release_sha256
+                && profile.id == entry.parser_profile_id;
+        });
+        if (release_matches != 1 || entry_matches != 1 || profile_matches != 1) return false;
+    }
+    return true;
+}
+
 bool release_has_recovery_map_entry(const std::string_view release_sha256,
     const std::string_view entry_id) {
     for (const auto& entry : entries) {

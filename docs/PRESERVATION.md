@@ -119,8 +119,8 @@ emulator, replay, renderer, input path, audio path, or save operation.
 `--launch-check-json` writes this same minimal result as
 `project-eon.launch-check/v1`; it includes the exact release SHA-256 and
 explicit presentation and renderer-geometry choices plus the stable,
-media-safe `runtime_rejection` code. It never
-a local path, member name, original bytes, or parser exception.
+media-safe `runtime_rejection` code. It never exposes a local path, member
+name, original bytes, or parser exception.
 
 `--runtime-diagnostics-json` is the fuller active-native-session report,
 `project-eon.runtime-diagnostics/v1`. It crosses that same explicit
@@ -133,6 +133,16 @@ after a successful admission; otherwise it identifies only the native gate
 class (launch identity, original media, capability, adapter construction,
 input contract, or child session). It is not an emulator result or gameplay
 state.
+
+Before it exposes those provenance records, the diagnostics composition
+validates the compiled startup-boundary, recovery-map, and function-map
+declarations as one no-I/O contract. Recovery records are one-to-one with
+parser profiles; startup records are one-to-one with recognised releases; and
+function records must have unique IDs plus an exact release/profile binding.
+An inconsistent declaration fails closed for diagnostics rather than becoming
+a cross-release fact. These maps remain read-only preservation metadata: this
+diagnostic validation does not execute media and does not change native
+runtime admission.
 
 For a corpus containing more than one release for a game/platform, automation
 must pass both `--release-language` and `--release-sha256`.  They are one

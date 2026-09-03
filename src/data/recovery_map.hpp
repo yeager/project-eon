@@ -27,6 +27,11 @@ struct RecoveryMapEntry {
 
 [[nodiscard]] std::span<const RecoveryMapEntry> recovery_map();
 
+// The recovery map is a complete one-to-one companion of the parser-profile
+// manifest.  Validate its release tuple, profile binding, and diagnostics-only
+// fields before diagnostics reports it as preservation provenance.
+[[nodiscard]] bool recovery_map_manifest_is_valid();
+
 // A map row can only be reported for its exact recognised outer archive and
 // the exact bounded profile declared in the compiled release manifest.
 [[nodiscard]] bool release_has_recovery_map_entry(

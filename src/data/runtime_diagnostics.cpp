@@ -22,12 +22,20 @@ void require_release_identity(const ReleaseArchive& release, const Game game,
 
 } // namespace
 
+bool declarative_provenance_manifests_are_valid() {
+    return recovery_map_manifest_is_valid() && function_map_manifest_is_valid()
+        && startup_boundary_manifest_is_valid();
+}
+
 RuntimeDiagnosticsReport runtime_diagnostics_for_release(const ReleaseArchive& release) {
     // Diagnostics are declarative and do not reopen user media, but they are
     // still release-bound: a forged DTO must never borrow the named map rows
     // belonging to a different game, platform, or language.
     if (!is_recognised_release_identity(release)) {
         throw std::runtime_error("Runtime diagnostics release is not an exact recognised manifest identity");
+    }
+    if (!declarative_provenance_manifests_are_valid()) {
+        throw std::runtime_error("Runtime diagnostics declarative provenance manifests are invalid");
     }
     RuntimeDiagnosticsReport report;
     report.game = release.game;
