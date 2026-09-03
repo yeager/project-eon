@@ -91,11 +91,16 @@ public:
     last_second_special_action_trace() const { return last_second_special_action_trace_; }
     [[nodiscard]] std::optional<MillenniumDosRuntimeByteEffect>
     last_special_runtime_byte_effect() const { return last_special_runtime_byte_effect_; }
-    // Present only after raw action $3b has traversed the verified first
-    // table record. This is an observation of original code/data, not a
-    // writable replacement for the game's runtime state.
+    // Present only after raw action $3b and an explicit return observation
+    // from its first native $d0c9 call. This is original code/data evidence,
+    // not a writable replacement for the game's runtime state.
     [[nodiscard]] std::optional<MillenniumDosFirstFunctionKeyTrace>
     last_first_function_key_trace() const { return last_first_function_key_trace_; }
+    // Records the code-validated setup prefix after F1's first native call
+    // only when a trace has independently observed that exact call return.
+    // It does not invoke $d0c9 or make its effects available to host state.
+    [[nodiscard]] MillenniumDosFirstFunctionKeyTrace
+    observe_first_function_key_display_selector_return();
     // Present only after raw action $3c has traversed the verified second
     // table record. The runtime availability byte is deliberately not supplied
     // or written by the host.

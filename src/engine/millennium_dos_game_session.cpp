@@ -220,6 +220,24 @@ MillenniumDosSecondSpecialActionPrefix MillenniumDosGameSession::observe_second_
     return trace;
 }
 
+MillenniumDosFirstFunctionKeyTrace
+MillenniumDosGameSession::observe_first_function_key_display_selector_return() {
+    if (game_executable_.empty() || last_function_key_index_ != std::optional<std::size_t>{0}
+        || last_first_function_key_trace_) {
+        throw std::runtime_error("Millennium DOS F1 setup lacks an observed display-selector return");
+    }
+    const auto verified_flow = parse_millennium_dos_game_flow(game_executable_);
+    if (verified_flow.first_function_key.handler_address != flow_.first_function_key.handler_address
+        || verified_flow.first_function_key.display_selector_call_address
+            != flow_.first_function_key.display_selector_call_address
+        || verified_flow.first_function_key.setup_entry_address
+            != flow_.first_function_key.setup_entry_address) {
+        throw std::runtime_error("Unsupported Millennium DOS F1 setup profile");
+    }
+    last_first_function_key_trace_ = verified_flow.first_function_key;
+    return *last_first_function_key_trace_;
+}
+
 std::optional<std::size_t> MillenniumDosGameSession::observe_action(
     const MillenniumDosActionObservation observation) {
     if (observation.poll_address != flow_.action_poll_address) {
@@ -236,9 +254,7 @@ std::optional<std::size_t> MillenniumDosGameSession::observe_action(
         return std::nullopt;
     }
     last_function_key_index_ = normalized;
-    if (normalized == 0) {
-        last_first_function_key_trace_ = flow_.first_function_key;
-    } else if (normalized == 1) {
+    if (normalized == 1) {
         last_second_function_key_trace_ = flow_.second_function_key;
     } else if (normalized == 2) {
         last_third_function_key_trace_ = flow_.third_function_key;

@@ -4131,10 +4131,12 @@ pointer table at `$27c4`, and therefore selects original in-image record
 call at `$5b1f`. The selected record begins
 `03 00 11 00 00 00 00 00` (notably byte `+02 = $11` and byte `+24 = $00`).
 All these F1 setup stores occur after the native `$d0c9` call, whose return and
-side effects are not yet emulated. Project Eon consequently exposes this
-strict boundary only as immutable evidence: it neither creates a host overlay
-for F1 nor names the handler nor writes any original executable, archive, or
-save byte.
+side effects are not yet emulated. `MillenniumDosGameSession` therefore keeps
+an observed `$3b` poll separate from the later setup profile: it exposes the
+profile only after an explicit trace observation that this exact `$d0c9` call
+returned, and revalidates the complete executable then. Project Eon still
+neither creates a host overlay for F1 nor names the handler nor writes any
+original executable, archive, or save byte.
 
 The second table record (raw F2 / `$3c`) is `06 0c 09 1b 31 01 ca 71`, with
 handler entry `$71ca`. This handler reads its runtime byte at `$da26` and
