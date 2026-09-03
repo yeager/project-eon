@@ -1084,6 +1084,9 @@ int main() {
     eon::RuntimeHost runtime_host;
     assert(runtime_host.generation() == 0 && !runtime_host.revoking()
         && runtime_host.is_menu());
+    const auto idle_host_advance = runtime_host.advance(1'000);
+    assert(!idle_host_advance.opening_started && !idle_host_advance.opening_active
+        && idle_host_advance.opening.events.empty());
     runtime_host.begin_source_revocation();
     assert(runtime_host.generation() == 1 && runtime_host.revoking());
     // A duplicated front-end teardown must neither manufacture another
