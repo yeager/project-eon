@@ -383,11 +383,14 @@ direct and a carrier-contained release remain different source identities even
 when their named `.st` and PRG hashes match.
 
 For an Atari ST raw stage (or any other range with an independently proven
-disk-to-RAM mapping), `tools/disassemble_m68k_range.py` requires the exact
-outer ZIP, nested ZIP, member, source interval, runtime address, and SHA-256
-of the interval. It refuses a range hash mismatch. This preserves the stage's
-media provenance while permitting direct in-memory full-range inspection.
-Its full-range listing is byte-complete by the same explicit `.byte` rule.
+disk-to-RAM mapping), `tools/disassemble_m68k_range.py` requires exact outer
+ZIP, disk-member, and interval SHA-256 identities. It supports either a direct
+disk ZIP or an explicit nested ZIP with a separately pinned nested hash; it
+never searches member names or substitutes one layout for the other. It
+refuses an outer, nested, disk, or range hash mismatch. Reports can only be
+new absolute files outside the checkout and `/tmp`. This preserves media
+provenance while permitting direct in-memory full-range inspection. Its
+full-range listing is byte-complete by the same explicit `.byte` rule.
 
 ## Completion rule
 
