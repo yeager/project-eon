@@ -39,8 +39,41 @@ struct RuntimeHostSnapshot {
 // must discard source-derived host objects before the native coordinator can
 // release the read-only media adapters.  This is not a game-state abstraction
 // and does not broaden the recovered input contract.
-class RuntimeHost : public NativeSessionController {
+class RuntimeHost : private NativeSessionController {
 public:
+    // This is the intentionally narrow native-engine surface used by SDL and
+    // the CLI. Private inheritance prevents a front end from bypassing the
+    // host's modal gate, scheduler ownership or revocation interval through
+    // an implicit NativeSessionController conversion.
+    [[nodiscard]] RuntimeCandidateLaunchResult launch_direct(const LaunchRequest& candidate,
+        const std::vector<ReleaseArchive>& releases);
+    [[nodiscard]] RuntimeCandidateLaunchResult launch_menu(const LauncherSessionState& session,
+        const LaunchRequest& base, const std::vector<ReleaseArchive>& releases);
+    [[nodiscard]] NativeSessionState state() const;
+    [[nodiscard]] bool is_menu() const;
+    [[nodiscard]] bool requires_revocation_for(const LauncherSourceIdentity& source) const;
+    [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const;
+    [[nodiscard]] ReleaseRuntimeAdmission admission() const;
+    [[nodiscard]] ReleaseRuntimeRejection rejection() const;
+    [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
+
+    [[nodiscard]] std::optional<MillenniumDosPresentationSnapshot>
+    millennium_dos_presentation() const;
+    [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
+    millennium_dos_startup_input() const;
+    [[nodiscard]] std::optional<std::vector<float>>
+    render_deuteros_amiga_opening_audio(std::size_t frames);
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningPresentationSnapshot>
+    deuteros_amiga_opening_presentation() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
+    deuteros_amiga_title_stage_boundary() const;
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
+    deuteros_atari_bootstrap_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapPresentationSnapshot>
+    deuteros_atari_bootstrap_presentation() const;
+    [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
+    millennium_amiga_bootstrap_presentation() const;
+
     // Begin before SDL destroys any source-derived object.  A monotonically
     // increasing generation lets a front end reject stale render/audio work
     // it scheduled for the preceding exact release.
