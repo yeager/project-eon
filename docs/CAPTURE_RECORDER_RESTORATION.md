@@ -81,12 +81,14 @@ media, visible operator-driven input only, then
 
 ## Current recovery boundary
 
-As of 2026-09-02, both locators returned no matching recorder under the
-project cache or Downloads. Project Eon must retain that fact and continue
-unblocked work, but it must not ask again for generic emulator installation:
-the installed normal emulators are known and insufficient. The next required
-input is either an absolute path to an already pinned recorder, or an external
-reviewed source/patch/build which produces the exact documented digest.
+As of 2026-09-03, both locators again returned no matching recorder under the
+project cache: Millennium's `v21-int93-installation` search and Deuteros
+Amiga's reviewed-FS-UAE search both produced the explicit empty result. Project
+Eon must retain that fact and continue unblocked work, but it must not ask
+again for generic emulator installation: the installed normal emulators are
+known and insufficient. The next required input is either an absolute path to
+an already pinned recorder, or an external reviewed source/patch/build which
+produces the exact documented digest.
 
 ## Recorder restoration state machine
 
