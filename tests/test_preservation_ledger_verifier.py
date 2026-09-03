@@ -26,7 +26,27 @@ class PreservationLedgerVerifierTests(unittest.TestCase):
         return directory
 
     def test_current_repository_ledgers_are_cross_consistent(self) -> None:
-        self.assertEqual(TOOL.verify(ROOT)["releases"], 8)
+        result = TOOL.verify(ROOT)
+        self.assertEqual(result["releases"], 8)
+        self.assertEqual(result["direct_media_sets"], 1)
+
+    def test_rejects_direct_media_set_that_no_longer_matches_its_canonical_hash(self) -> None:
+        root = self.copied_docs()
+        path = root / "docs" / "release-manifest.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["direct_media_sets"][0]["members"][0]["size"] += 1
+        path.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaisesRegex(TOOL.LedgerError, "canonical hash"):
+            TOOL.verify(root)
+
+    def test_rejects_direct_media_set_that_crosses_release_identity(self) -> None:
+        root = self.copied_docs()
+        path = root / "docs" / "release-manifest.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["direct_media_sets"][0]["language"] = "es"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaisesRegex(TOOL.LedgerError, "differs from its release identity"):
+            TOOL.verify(root)
 
     def test_rejects_an_orphaned_parity_release(self) -> None:
         root = self.copied_docs()
