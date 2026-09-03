@@ -15,10 +15,10 @@ from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
 
-from analyze_atari_st_prg import fat12_member
+from analyze_atari_st_prg import fat12_member, require_sha256, sha256_file
 
 
-def require_external_output(path: Path) -> None:
+def require_external_output(path: Path) -> Path:
     """Reject report destinations that could commit or use system scratch."""
     # Preserve the contractual ``/tmp`` spelling before macOS resolves it as
     # ``/private/tmp``.  On Windows, a POSIX-looking ``/tmp`` route is also
@@ -30,7 +30,15 @@ def require_external_output(path: Path) -> None:
             or bool(path.anchor and len(parts) > 1
                     and parts[1].casefold() == "tmp")):
         raise SystemExit("output must be outside /tmp")
-    resolved = path.resolve(strict=False)
+    if not path.is_absolute():
+        raise SystemExit("output must be absolute")
+    if path.exists() or path.is_symlink():
+        raise SystemExit("output must not already exist or be a symlink")
+    try:
+        parent = path.parent.resolve(strict=True)
+    except OSError as error:
+        raise SystemExit(f"output parent cannot be resolved: {error}") from error
+    resolved = parent / path.name
     normalized_resolved = resolved.as_posix().replace("\\", "/")
     if (normalized_resolved == "/tmp" or normalized_resolved.startswith("/tmp/")
             or normalized_resolved == "/private/tmp"
@@ -39,10 +47,9 @@ def require_external_output(path: Path) -> None:
     repository = Path(__file__).resolve().parents[1]
     if resolved == repository or repository in resolved.parents:
         raise SystemExit("output must be outside the repository")
-    if path.exists():
-        raise SystemExit("output must not already exist")
-    if not path.parent.is_dir():
+    if not parent.is_dir():
         raise SystemExit("output parent directory must already exist")
+    return resolved
 
 
 def linear_listing(data: bytes) -> list[str]:
@@ -67,16 +74,28 @@ def linear_listing(data: bytes) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
+    parser.add_argument("--archive-sha256", required=True)
     parser.add_argument("--nested-member", required=True)
+    parser.add_argument("--nested-sha256", required=True)
     parser.add_argument("--disk-member", required=True)
     parser.add_argument("--disk-sha256", required=True)
     parser.add_argument("--file-sha256", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    require_external_output(args.output)
+    output = require_external_output(args.output)
     try:
+        require_sha256(args.archive_sha256, "outer archive SHA-256")
+        require_sha256(args.nested_sha256, "nested archive SHA-256")
+        require_sha256(args.disk_sha256, "disk SHA-256")
+        require_sha256(args.file_sha256, "MILL22A.INF SHA-256")
+        if not args.archive.is_file() or args.archive.is_symlink():
+            raise ValueError("outer archive is not an existing regular non-symlink file")
+        if sha256_file(args.archive) != args.archive_sha256:
+            raise ValueError("outer archive SHA-256 mismatch")
         with ZipFile(args.archive) as outer:
             nested = outer.read(args.nested_member)
+        if hashlib.sha256(nested).hexdigest() != args.nested_sha256:
+            raise ValueError("nested archive SHA-256 mismatch")
         with ZipFile(BytesIO(nested)) as inner:
             disk = inner.read(args.disk_member)
     except (KeyError, OSError, ValueError) as error:
@@ -89,6 +108,8 @@ def main() -> None:
     report = [
         "# Hash-locked Millennium Atari ST MILL22A.INF linear candidate disassembly", "",
         f"- Source: `{args.archive.name}!{args.nested_member}!{args.disk_member}:MILL22A.INF`",
+        f"- Outer archive SHA-256: `{args.archive_sha256}`",
+        f"- Nested archive SHA-256: `{args.nested_sha256}`",
         f"- Disk SHA-256: `{disk_hash}`",
         f"- File SHA-256: `{config_hash}`",
         f"- File bytes: `{len(config)}`",
@@ -97,7 +118,7 @@ def main() -> None:
         "- Coverage: every source byte is rendered as an instruction or explicit `.byte`.", "", "```asm",
         *linear_listing(config), "```", "",
     ]
-    args.output.write_text("\n".join(report), encoding="utf-8")
+    output.write_text("\n".join(report), encoding="utf-8")
 
 
 if __name__ == "__main__":

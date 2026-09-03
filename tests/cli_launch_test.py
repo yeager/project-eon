@@ -770,7 +770,9 @@ def main() -> int:
         analysis = subprocess.run(
             (sys.executable, str(Path(__file__).resolve().parents[1] / "tools" / "analyze_atari_st_config.py"),
              "--archive", str(atari_archive),
+             "--archive-sha256", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
              "--nested-member", "Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].zip",
+             "--nested-sha256", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69",
              "--disk-member", "Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].st",
              "--disk-sha256", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7",
              "--file-sha256", "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6",
@@ -781,8 +783,8 @@ def main() -> int:
             raise SystemExit(f"MILL22A.INF candidate disassembly failed:\n{analysis.stderr}")
         report_bytes = report.read_bytes()
         if (hashlib.sha256(report_bytes).hexdigest()
-                != "0ffc140d1bcde59f2a715a60da04d3493c8c278a1a823023c5e585658cbe415b"
-                or report_bytes.count(b"\n") != 2493
+                != "f8c6e335c1ebb7eb985bccd6baf1c3a106eeb0eca51ec3e6497e1f2efe89b420"
+                or report_bytes.count(b"\n") != 2495
                 or b"file-image-relative, unrelocated" not in report_bytes):
             raise SystemExit("MILL22A.INF report did not retain its file-relative preservation identity")
     dos_archive = archive_by_sha256.get(

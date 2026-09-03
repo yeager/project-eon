@@ -232,7 +232,7 @@ proves reachability, code/data classification, an ABI result, or gameplay.
 | Millennium Amiga English Defjam direct container | byte-identical shared-resident ADF range `+0x16400`, length `0x2c000` → `$68000` | `ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
 | Millennium Atari ST English Equinox | `MILENIUM.TOS` PRG TEXT+DATA, file `+0x1c`, 49,010 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548` | 17,519 |
 | Millennium Atari ST English Equinox direct container | byte-identical `MILENIUM.TOS` PRG TEXT+DATA, file `+0x1c`, 49,010 bytes, **image-relative only** | `0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69` | `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548` | 17,519 |
-| Millennium Atari ST English Equinox | `MILL22A.INF`, file `+0x0`, 7,506 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `0ffc140d1bcde59f2a715a60da04d3493c8c278a1a823023c5e585658cbe415b` | 2,493 |
+| Millennium Atari ST English Equinox | `MILL22A.INF`, file `+0x0`, 7,506 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `f8c6e335c1ebb7eb985bccd6baf1c3a106eeb0eca51ec3e6497e1f2efe89b420` | 2,495 |
 | Deuteros Amiga English clean Disk 1 | boot/bootstrap/main/title loaded spans; M68000 origins from the validated load plan | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `db4379bb4f50cb18f9ef72fdc1066796d5a8621a798e519d730f5282610c1791` | 162,970 |
 | Deuteros Atari ST English Replicants Disk 1 | raw disk `+0x4ec00`, length `0x1200` → `$1200` | `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `4c4bd8add9873e1ab2a52ba0d23a9c225005a7a6d2ecb7435f24191f32b88c35` | 1,979 |
 
@@ -396,6 +396,25 @@ For a directly supplied Equinox release ZIP, omit both `--nested-member` and
 `--nested-sha256`; `--archive-sha256` then binds that direct ZIP itself. A
 direct and a carrier-contained release remain different source identities even
 when their named `.st` and PRG hashes match.
+
+`tools/analyze_atari_st_config.py` applies the same complete-container rule to
+the `MILL22A.INF` candidate listing: it pins the outer carrier ZIP, named
+nested release ZIP, disk image and FAT12 file before it reads a byte. This
+keeps a matching configuration file from being detached from its release
+container. The report remains file-image-relative and has no inferred runtime
+entry or GEMDOS load address:
+
+```sh
+python3 tools/analyze_atari_st_config.py \
+  --archive /path/to/Millennium-Return-to-Earth_Atari-ST_EN.zip \
+  --archive-sha256 ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01 \
+  --nested-member 'Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].zip' \
+  --nested-sha256 0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69 \
+  --disk-member 'Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].st' \
+  --disk-sha256 3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7 \
+  --file-sha256 74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6 \
+  --output /home/user/.cache/project-eon-tools/millennium-atari-config.md
+```
 
 For an Atari ST raw stage (or any other range with an independently proven
 disk-to-RAM mapping), `tools/disassemble_m68k_range.py` requires exact outer

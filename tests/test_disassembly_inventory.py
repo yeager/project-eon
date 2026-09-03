@@ -21,12 +21,17 @@ class DisassemblyInventoryTests(unittest.TestCase):
         self.assertIn("output must be outside /tmp", tool)
         self.assertIn("output must be outside the repository", tool)
         self.assertIn("file-image-relative, unrelocated", tool)
+        self.assertIn("--archive-sha256", tool)
+        self.assertIn("--nested-sha256", tool)
+        self.assertIn("outer archive SHA-256 mismatch", tool)
+        self.assertIn("nested archive SHA-256 mismatch", tool)
         self.assertIn("MILL22A.INF", status)
 
     def test_mill22a_tool_rejects_checkout_and_system_scratch_before_media_read(self):
         tool = ROOT / "tools" / "analyze_atari_st_config.py"
         arguments = (
             "--archive", "missing.zip", "--nested-member", "missing-inner.zip",
+            "--archive-sha256", "2" * 64, "--nested-sha256", "3" * 64,
             "--disk-member", "missing.st", "--disk-sha256", "0" * 64,
             "--file-sha256", "1" * 64,
         )
