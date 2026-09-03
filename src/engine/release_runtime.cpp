@@ -27,6 +27,19 @@ std::string_view release_runtime_admission_label(const ReleaseRuntimeAdmission a
     return "REJECTED: ADAPTER";
 }
 
+std::string_view release_runtime_rejection_label(const ReleaseRuntimeRejection rejection) {
+    switch (rejection) {
+    case ReleaseRuntimeRejection::none: return "NONE";
+    case ReleaseRuntimeRejection::launch_identity: return "LAUNCH IDENTITY";
+    case ReleaseRuntimeRejection::original_media: return "ORIGINAL MEDIA";
+    case ReleaseRuntimeRejection::runtime_capability: return "RUNTIME CAPABILITY";
+    case ReleaseRuntimeRejection::adapter_construction: return "ADAPTER CONSTRUCTION";
+    case ReleaseRuntimeRejection::input_contract: return "INPUT CONTRACT";
+    case ReleaseRuntimeRejection::child_session: return "CHILD SESSION";
+    }
+    return "ADAPTER CONSTRUCTION";
+}
+
 bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     reset();
     // A launcher card can produce this object only through exact hash
@@ -39,6 +52,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         || *launch.request.release_sha256 != launch.release.sha256
         || *launch.request.release_language != launch.release.language) {
         admission_ = ReleaseRuntimeAdmission::identity_rejected;
+        rejection_ = ReleaseRuntimeRejection::launch_identity;
         return false;
     }
     std::optional<VerifiedReleaseMedia> media;
@@ -46,11 +60,13 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         media = VerifiedReleaseMedia::open(launch.release);
     } catch (...) {
         admission_ = ReleaseRuntimeAdmission::archive_rejected;
+        rejection_ = ReleaseRuntimeRejection::original_media;
         return false;
     }
     const auto capability = release_runtime_capability_for(launch.release);
     if (!capability) {
         admission_ = ReleaseRuntimeAdmission::identity_rejected;
+        rejection_ = ReleaseRuntimeRejection::runtime_capability;
         return false;
     }
     // Construct one typed adapter into local storage before publishing the
@@ -91,6 +107,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     if (!session_snapshot || (!millennium_dos && !millennium_amiga && !millennium_atari
         && !deuteros_amiga && !deuteros_atari)) {
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::adapter_construction;
         return false;
     }
     // The release table may narrow presentation/audio facts, but it must
@@ -100,6 +117,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         || session_snapshot->input_contract
             != runtime_input_contract_for_session(session_snapshot->kind)) {
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::input_contract;
         return false;
     }
     try {
@@ -119,6 +137,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     } catch (...) {
         reset();
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::child_session;
         return false;
     }
     millennium_dos_ = std::move(millennium_dos);
@@ -131,6 +150,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     session_snapshot_ = std::move(session_snapshot);
     active_ = launch;
     admission_ = ReleaseRuntimeAdmission::active;
+    rejection_ = ReleaseRuntimeRejection::none;
     return true;
 }
 
@@ -146,6 +166,7 @@ void ReleaseRuntimeCoordinator::reset() {
     session_snapshot_.reset();
     active_.reset();
     admission_ = ReleaseRuntimeAdmission::unselected;
+    rejection_ = ReleaseRuntimeRejection::none;
 }
 
 MillenniumDosGxStartupTraceAdmission
