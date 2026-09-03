@@ -48,10 +48,19 @@ def require_regular_input(path: Path, label: str) -> Path:
     return path
 
 
+def is_system_temporary_path(path: Path) -> bool:
+    """Reject temporary-root spellings without probing the temporary root."""
+    normalized = path.as_posix().replace("\\", "/")
+    return (normalized == "/tmp" or normalized.startswith("/tmp/")
+            or normalized == "/private/tmp" or normalized.startswith("/private/tmp/"))
+
+
 def require_external_output(path: Path) -> Path:
     """Reject paths that could turn a preservation report into repository data."""
     if not path.is_absolute():
         raise AnalysisError("output path must be absolute")
+    if is_system_temporary_path(path):
+        raise AnalysisError("output path must be outside /tmp")
     if path.exists() or path.is_symlink():
         raise AnalysisError("output path must not already exist or be a symlink")
     try:
@@ -63,8 +72,7 @@ def require_external_output(path: Path) -> Path:
     resolved = parent / path.name
     if resolved == ROOT or ROOT in resolved.parents:
         raise AnalysisError("output path must be outside the repository")
-    tmp = Path("/tmp")
-    if resolved == tmp or tmp in resolved.parents:
+    if is_system_temporary_path(resolved):
         raise AnalysisError("output path must be outside /tmp")
     return resolved
 

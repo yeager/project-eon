@@ -26,12 +26,15 @@ def require_external_output(path: Path) -> None:
     normalized = path.as_posix().replace("\\", "/")
     parts = path.parts
     if (normalized == "/tmp" or normalized.startswith("/tmp/")
+            or normalized == "/private/tmp" or normalized.startswith("/private/tmp/")
             or bool(path.anchor and len(parts) > 1
                     and parts[1].casefold() == "tmp")):
         raise SystemExit("output must be outside /tmp")
     resolved = path.resolve(strict=False)
-    tmp_root = Path("/tmp").resolve(strict=False)
-    if resolved == tmp_root or tmp_root in resolved.parents:
+    normalized_resolved = resolved.as_posix().replace("\\", "/")
+    if (normalized_resolved == "/tmp" or normalized_resolved.startswith("/tmp/")
+            or normalized_resolved == "/private/tmp"
+            or normalized_resolved.startswith("/private/tmp/")):
         raise SystemExit("output must be outside /tmp")
     repository = Path(__file__).resolve().parents[1]
     if resolved == repository or repository in resolved.parents:
