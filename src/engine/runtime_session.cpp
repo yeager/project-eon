@@ -27,6 +27,38 @@ std::string_view runtime_session_boundary_label(const RuntimeSessionBoundary bou
     return "BOOTSTRAP BOUNDARY";
 }
 
+RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind kind) {
+    switch (kind) {
+    case RuntimeSessionKind::millennium_dos_title:
+        return RuntimeInputContract::millennium_dos_startup_observation;
+    case RuntimeSessionKind::deuteros_amiga_opening:
+        return RuntimeInputContract::deuteros_amiga_opening_held_signal;
+    case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
+    case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
+    case RuntimeSessionKind::millennium_amiga_bootstrap:
+    case RuntimeSessionKind::millennium_atari_bootstrap:
+    case RuntimeSessionKind::deuteros_amiga_title_stage:
+    case RuntimeSessionKind::deuteros_atari_bootstrap:
+        return RuntimeInputContract::none;
+    }
+    return RuntimeInputContract::none;
+}
+
+std::string_view runtime_input_contract_identifier(const RuntimeInputContract contract) {
+    switch (contract) {
+    case RuntimeInputContract::none: return "none";
+    case RuntimeInputContract::millennium_dos_startup_observation:
+        return "millennium-dos-startup-observation";
+    case RuntimeInputContract::deuteros_amiga_opening_held_signal:
+        return "deuteros-amiga-opening-held-signal";
+    }
+    return "none";
+}
+
+bool runtime_input_contract_admits_host_observation(const RuntimeInputContract contract) {
+    return contract != RuntimeInputContract::none;
+}
+
 RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest& launch,
     const RuntimeSessionKind kind) {
     RuntimeSessionSnapshot snapshot;
@@ -35,6 +67,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
     snapshot.language = launch.release.language;
     snapshot.release_sha256 = launch.release.sha256;
     snapshot.kind = kind;
+    snapshot.input_contract = runtime_input_contract_for_session(kind);
     switch (kind) {
     case RuntimeSessionKind::millennium_dos_title:
         snapshot.boundary = RuntimeSessionBoundary::recovered_presentation_boundary;

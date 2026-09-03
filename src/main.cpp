@@ -959,6 +959,9 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
         std::cout << "{\"kind\":"; write_json_string(std::cout, eon::runtime_session_kind_label(session->kind));
         std::cout << ",\"boundary\":";
         write_json_string(std::cout, eon::runtime_session_boundary_label(session->boundary));
+        std::cout << ",\"input_contract\":";
+        write_json_string(std::cout,
+            eon::runtime_input_contract_identifier(session->input_contract));
         std::cout << ",\"capabilities\":{\"decoded_presentation\":"
             << (session->capabilities.decoded_presentation ? "true" : "false")
             << ",\"audio_observations\":"
@@ -4122,6 +4125,9 @@ int main(int argc, char** argv) {
                 std::cout << ",\"boundary\":";
                 write_json_string(std::cout,
                     eon::runtime_session_boundary_label(session->boundary));
+                std::cout << ",\"input_contract\":";
+                write_json_string(std::cout,
+                    eon::runtime_input_contract_identifier(session->input_contract));
                 std::cout << ",\"capabilities\":{\"decoded_presentation\":"
                     << (session->capabilities.decoded_presentation ? "true" : "false")
                     << ",\"audio_observations\":"
@@ -4902,7 +4908,8 @@ int main(int argc, char** argv) {
             diagnostics.session_capabilities += " / DECODED_PRESENTATION="
                 + std::string(session->capabilities.decoded_presentation ? "Y" : "N")
                 + " / AUDIO=" + (session->capabilities.audio_observations ? "Y" : "N")
-                + " / INPUT=" + (session->capabilities.admitted_input ? "Y" : "N");
+                + " / INPUT=" + std::string(
+                    eon::runtime_input_contract_identifier(session->input_contract));
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");

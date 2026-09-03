@@ -60,8 +60,25 @@ struct RuntimeInputObservation {
 
 enum class RuntimeInputDisposition { rejected, ignored, observed, boundary_reached };
 
+// This is a declarative statement of the *currently recovered* host-input
+// envelope. It is deliberately narrower than a controller map or a gameplay
+// action list, so it cannot infer unknown title or gameplay controls.
+enum class RuntimeInputContract {
+    none,
+    // MILL.COM/TITLES.EXE accept only their separately recovered source
+    // observations: a literal chooser byte or a nonzero console-poll result.
+    millennium_dos_startup_observation,
+    // The Amiga opening consumes one physical held signal; its meaning beyond
+    // the recovered finite opening is intentionally unspecified.
+    deuteros_amiga_opening_held_signal,
+};
+
 [[nodiscard]] std::string_view runtime_session_kind_label(RuntimeSessionKind kind);
 [[nodiscard]] std::string_view runtime_session_boundary_label(RuntimeSessionBoundary boundary);
+[[nodiscard]] RuntimeInputContract runtime_input_contract_for_session(RuntimeSessionKind kind);
+// Stable machine identifier for CLI/F10 diagnostics; not localized game text.
+[[nodiscard]] std::string_view runtime_input_contract_identifier(RuntimeInputContract contract);
+[[nodiscard]] bool runtime_input_contract_admits_host_observation(RuntimeInputContract contract);
 
 struct RuntimeSessionCapabilities {
     // These flags describe only an already decoded in-memory presentation or
@@ -82,6 +99,7 @@ struct RuntimeSessionSnapshot {
     std::string release_sha256;
     RuntimeSessionKind kind = RuntimeSessionKind::millennium_dos_title;
     RuntimeSessionBoundary boundary = RuntimeSessionBoundary::bootstrap_boundary;
+    RuntimeInputContract input_contract = RuntimeInputContract::none;
     RuntimeSessionCapabilities capabilities;
     constexpr bool operator==(const RuntimeSessionSnapshot&) const = default;
 };

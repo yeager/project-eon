@@ -89,7 +89,11 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         session_snapshot->capabilities = capability->initial_capabilities;
     }
     if (!session_snapshot || (!millennium_dos && !millennium_amiga && !millennium_atari
-        && !deuteros_amiga && !deuteros_atari)) {
+        && !deuteros_amiga && !deuteros_atari)
+        // The release table may narrow presentation/audio facts, but it must
+        // never disagree with the separately declared input envelope.
+        || session_snapshot->capabilities.admitted_input
+            != runtime_input_contract_admits_host_observation(session_snapshot->input_contract)) {
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
         return false;
     }

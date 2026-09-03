@@ -191,7 +191,16 @@ a nonzero `TITLES.EXE` console-poll result becomes **Millennium DOS Title
 Handoff Boundary**. Both snapshots reject further host input and expose no
 successor screen, audio, simulation, or save state until the original ABI and
 return chain are evidenced.
-single SDL-free identity comparison.
+
+Every runtime snapshot also carries an immutable input-contract identifier.
+`millennium-dos-startup-observation` means only the recovered literal startup
+observations may be forwarded (the English chooser byte or the verified DOS
+console-poll result); it does not name a game action. `deuteros-amiga-opening-
+held-signal` means only the recovered physical held signal exists during the
+finite opening. All bootstrap and terminal snapshots use `none`. Admission
+rejects a release capability record whose `admitted_input` flag disagrees with
+that contract. This makes the CLI and F10 diagnostics useful for future
+Modern remapping work without inventing original controls.
 
 ## Original and Modern mode contract
 
