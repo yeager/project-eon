@@ -31,7 +31,7 @@ facts only and discards PCM bytes. This closes a resource-admission task, not
 an audio-playback task: event-to-index mapping, driver ABI and timing remain
 outside the recovered engine boundary.
 
-### 2026-09-03 split-container Deuteros discovery
+### 2026-09-03 split-container Deuteros admission
 
 A read-only scan of the user-supplied `~/.projecteon` collection found real
 single-disk ZIP containers whose inner disk hashes match existing Deuteros
@@ -45,14 +45,20 @@ ST pair contains the existing first-stage leaf
 `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`
 leaf.
 
-These are not release admissions: a matching leaf inside a different outer
-container is insufficient, and no disk is copied, unpacked or substituted.
-The next scanner work is a hash-addressed, ordered multi-container manifest
-that binds every required disk and its outer-container identity before a
-`ReleaseArchive` or native session can be published. It must reject an
-incomplete, reordered, altered, duplicate or mixed-release pair. This is a
-media-admission task ahead of platform runtime recovery, not evidence of a
-Deuteros game start, title, frame, input, audio or parity.
+The scanner now admits two declarative, ordered split-container sets. Each
+required ZIP occurs exactly once; its outer hash/size and its specific inner
+disk hash/size are independently verified before an ordered-set digest binds
+the logical release identity. The pair is rejected when incomplete,
+ambiguous, altered, or mixed, and runtime admission reopens every selected
+container instead of trusting scan-time state. No disk is copied, unpacked,
+or substituted.
+
+The admitted Atari ST set is a bootstrap-only native session: it proves static
+loader facts but not XBIOS/raw-read results, title, input, frame, audio or
+gameplay. The admitted clean Amiga pair supplies both hash-addressed ADFs to
+the existing native recovered-opening session, which now reaches `READY` from
+the user collection. That is not parity: title-display ABI, player controls,
+and game state remain governed by ranks 3–6.
 
 ### 2026-08-31 capture-route update
 
