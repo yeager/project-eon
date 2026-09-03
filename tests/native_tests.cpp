@@ -10,6 +10,7 @@
 #include "engine/release_runtime_capability.hpp"
 #include "engine/menu_runtime_launch.hpp"
 #include "engine/native_session_controller.hpp"
+#include "engine/runtime_host.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
@@ -1080,6 +1081,19 @@ int main() {
     assert(state_controller.state() == eon::NativeSessionState::returning_to_menu);
     state_controller.finish_return_to_menu();
     assert(state_controller.is_menu() && !state_controller.is_live());
+    eon::RuntimeHost runtime_host;
+    assert(runtime_host.generation() == 0 && !runtime_host.revoking()
+        && runtime_host.is_menu());
+    runtime_host.begin_source_revocation();
+    assert(runtime_host.generation() == 1 && runtime_host.revoking());
+    // A duplicated front-end teardown must neither manufacture another
+    // generation nor revive the controller while SDL objects are draining.
+    runtime_host.begin_source_revocation();
+    assert(runtime_host.generation() == 1 && runtime_host.revoking());
+    assert(runtime_host.observe_input(
+        eon::RuntimeInputObservation::available_character()) == eon::RuntimeInputDisposition::rejected);
+    runtime_host.finish_source_revocation();
+    assert(!runtime_host.revoking() && runtime_host.is_menu());
 
     // Static-control-flow sidecars are external preservation evidence, not a
     // media parser or a dispatch table.  The native reader therefore accepts
