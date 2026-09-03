@@ -101,6 +101,28 @@ struct MillenniumAmigaBootstrapPresentationSnapshot {
     MillenniumAmigaResidentEvidenceSnapshot resident_evidence;
 };
 
+// Immutable Millennium Atari ST bootstrap provenance.  It reports only the
+// locally recovered copy, Fopen and Fread-prefix facts.  The snapshot cannot
+// issue GEMDOS/XBIOS calls, materialize a guest Fread result, or cross the
+// configuration-transfer boundary.
+struct MillenniumAtariBootstrapPresentationSnapshot {
+    MillenniumAtariBootstrap bootstrap;
+    MillenniumAtariBssEntry bss_entry;
+    MillenniumAtariBssSource bss_source;
+    MillenniumAtariMaterializedTarget target;
+    MillenniumAtariBootstrapExecution execution;
+    MillenniumAtariTrapEntry fopen_boundary;
+    MillenniumAtariFopenResultGateExecution fopen_result_gate;
+    MillenniumAtariFopenFallthrough fopen_fallthrough;
+    MillenniumAtariFreadFramePrefixExecution fread_frame_prefix;
+    MillenniumAtariFreadConfigTransferBoundary fread_config_transfer;
+    MillenniumAtariRootInventory root_inventory;
+    MillenniumAtariConfigEvidence config;
+    MillenniumAtariConfigEntry config_entry;
+    MillenniumAtariFreadConfigLoadAddressBoundary fread_config_load_address_boundary;
+    MillenniumAtariFreadMappedConfigPrelude fread_mapped_config_prelude;
+};
+
 // The recovered DOS title/runtime evidence for one exact archive identity.
 // Spanish is title-only until its executable handoff is evidenced; English
 // retains the additional parser outputs below. No field is a fallback for a
@@ -194,6 +216,8 @@ public:
     deuteros_atari_bootstrap_presentation() const;
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
     millennium_amiga_bootstrap_presentation() const;
+    [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+    millennium_atari_bootstrap_presentation() const;
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime and retains neither trace
     // nor media bytes. Every other trace remains diagnostics-only.
