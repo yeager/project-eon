@@ -198,6 +198,16 @@ void SDLCALL receive_original_data_source_dialog_selection(void* userdata,
     return !relative.is_absolute();
 }
 
+// Do not query the host system temporary directory merely to reject it: that
+// would make the preservation-sidecar path itself depend on /tmp. Check both
+// the operator spelling and the canonical result, because macOS canonically
+// represents /tmp under /private/tmp.
+[[nodiscard]] bool path_is_system_temporary(const std::filesystem::path& path) {
+    const auto normalized = path.generic_string();
+    return normalized == "/tmp" || normalized.starts_with("/tmp/")
+        || normalized == "/private/tmp" || normalized.starts_with("/private/tmp/");
+}
+
 // The sidecar is deliberately not a game-data source. This bounded reader
 // accepts an explicitly named, external evidence file after resolving its
 // physical target, and returns only parser aggregate metadata. In particular,
@@ -206,6 +216,9 @@ void SDLCALL receive_original_data_source_dialog_selection(void* userdata,
     const std::filesystem::path& supplied_path) {
     if (!supplied_path.is_absolute()) {
         throw std::runtime_error("Static control-flow sidecar must be an absolute path");
+    }
+    if (path_is_system_temporary(supplied_path)) {
+        throw std::runtime_error("Static control-flow sidecar must remain outside the repository and /tmp");
     }
     std::error_code error;
     const auto supplied_status = std::filesystem::symlink_status(supplied_path, error);
@@ -222,13 +235,9 @@ void SDLCALL receive_original_data_source_dialog_selection(void* userdata,
     if (path_is_within(resolved_path, source_root)) {
         throw std::runtime_error("Static control-flow sidecar must remain outside the repository and /tmp");
     }
-#if !defined(_WIN32)
-    const auto temporary_root = std::filesystem::canonical("/tmp", error);
-    if (error) throw std::runtime_error("Unable to resolve temporary-directory boundary");
-    if (path_is_within(resolved_path, temporary_root)) {
+    if (path_is_system_temporary(resolved_path)) {
         throw std::runtime_error("Static control-flow sidecar must remain outside the repository and /tmp");
     }
-#endif
     const auto size = std::filesystem::file_size(resolved_path, error);
     constexpr std::uintmax_t maximum_bytes = 32U * 1024U * 1024U;
     if (error || size == 0U || size > maximum_bytes) {
