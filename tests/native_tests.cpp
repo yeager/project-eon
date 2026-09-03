@@ -6874,7 +6874,10 @@ int main() {
     }
     assert(eon::to_hex(eon::sha256(disk.read(*graphics)))
         == "e27d1c697da677994e2f864a776f4fc900c7feb4ec4b85500b2bfea3bc834767");
-    const eon::MillenniumDosLib spanish_title_lib(disk.read(*spanish_title));
+    // MillenniumDosLib borrows the supplied byte span, so retain the direct
+    // FAT12 read for every resource view and decode below.
+    const auto spanish_title_bytes = disk.read(*spanish_title);
+    const eon::MillenniumDosLib spanish_title_lib(spanish_title_bytes);
     assert(spanish_title_lib.directory_offset() == 0x486e);
     assert(spanish_title_lib.entries().size() == 38);
     const auto* spanish_p00 = spanish_title_lib.find("P00");

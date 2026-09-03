@@ -2038,7 +2038,11 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         if (!title_entry || !static_entry || !ibm_entry || !manual_entry || !titles_entry || !game_entry) {
             throw std::runtime_error("Verified Spanish Millennium media missing title data");
         }
-        const eon::MillenniumDosLib title_lib(disk.read(*title_entry));
+        // MillenniumDosLib is a non-owning view. Keep the FAT12 file bytes
+        // alive through resource lookup and decode; the original image stays
+        // read-only in memory throughout.
+        const auto title_library_bytes = disk.read(*title_entry);
+        const eon::MillenniumDosLib title_lib(title_library_bytes);
         const auto* p00 = title_lib.find("P00");
         if (!p00) throw std::runtime_error("Verified Spanish TITLE.LIB has no P00 entry");
         const auto resource = title_lib.read(*p00);
