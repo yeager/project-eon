@@ -51,6 +51,30 @@ msgstr "ΑΠΟΡΡΙΦΘΗΚΕ: HASH ΑΡΧΕΙΟΥ"
 msgid "REJECTED: ADAPTER"
 msgstr "ΑΠΟΡΡΙΦΘΗΚΕ: ΠΡΟΣΑΡΜΟΓΕΑΣ"
 
+msgid "NONE"
+msgstr "ΚΑΝΕΝΑ"
+
+msgid "LAUNCH IDENTITY"
+msgstr "ΤΑΥΤΟΤΗΤΑ ΕΚΚΙΝΗΣΗΣ"
+
+msgid "ORIGINAL MEDIA"
+msgstr "ΠΡΩΤΟΤΥΠΑ ΜΕΣΑ"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "ΔΥΝΑΤΟΤΗΤΑ ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "ΔΗΜΙΟΥΡΓΙΑ ΠΡΟΣΑΡΜΟΓΕΑ"
+
+msgid "INPUT CONTRACT"
+msgstr "ΣΥΜΒΟΛΑΙΟ ΕΙΣΟΔΟΥ"
+
+msgid "CHILD SESSION"
+msgstr "ΘΥΓΑΤΡΙΚΗ ΣΥΝΕΔΡΙΑ"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "ΜΕΤΑΒΑΣΗ ΚΥΚΛΟΥ ΖΩΗΣ"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "ΕΠΙΛΟΓΗ ΦΑΚΕΛΟΥ ΑΡΧΙΚΩΝ ΔΕΔΟΜΕΝΩΝ (O)"
 

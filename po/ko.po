@@ -62,6 +62,30 @@ msgstr "거부됨: 아카이브 해시"
 msgid "REJECTED: ADAPTER"
 msgstr "거부됨: 어댑터"
 
+msgid "NONE"
+msgstr "없음"
+
+msgid "LAUNCH IDENTITY"
+msgstr "실행 ID"
+
+msgid "ORIGINAL MEDIA"
+msgstr "원본 미디어"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "런타임 기능"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "어댑터 구성"
+
+msgid "INPUT CONTRACT"
+msgstr "입력 계약"
+
+msgid "CHILD SESSION"
+msgstr "하위 세션"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "수명 주기 전환"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "원본 게임 데이터 폴더 선택 (O)"
 

@@ -62,6 +62,30 @@ msgstr "已拒绝：存档哈希"
 msgid "REJECTED: ADAPTER"
 msgstr "已拒绝：适配器"
 
+msgid "NONE"
+msgstr "无"
+
+msgid "LAUNCH IDENTITY"
+msgstr "启动标识"
+
+msgid "ORIGINAL MEDIA"
+msgstr "原始介质"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "运行时能力"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "适配器构建"
+
+msgid "INPUT CONTRACT"
+msgstr "输入约定"
+
+msgid "CHILD SESSION"
+msgstr "子会话"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "生命周期转换"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "选择原始游戏数据文件夹 (O)"
 

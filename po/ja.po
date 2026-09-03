@@ -62,6 +62,30 @@ msgstr "拒否: アーカイブハッシュ"
 msgid "REJECTED: ADAPTER"
 msgstr "拒否: アダプター"
 
+msgid "NONE"
+msgstr "なし"
+
+msgid "LAUNCH IDENTITY"
+msgstr "起動識別子"
+
+msgid "ORIGINAL MEDIA"
+msgstr "オリジナルメディア"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "ランタイム機能"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "アダプター構築"
+
+msgid "INPUT CONTRACT"
+msgstr "入力契約"
+
+msgid "CHILD SESSION"
+msgstr "子セッション"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "ライフサイクル遷移"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "オリジナルゲームデータのフォルダーを選択 (O)"
 

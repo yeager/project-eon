@@ -51,6 +51,30 @@ msgstr "مرفوض: تجزئة الأرشيف"
 msgid "REJECTED: ADAPTER"
 msgstr "مرفوض: المهايئ"
 
+msgid "NONE"
+msgstr "لا شيء"
+
+msgid "LAUNCH IDENTITY"
+msgstr "هوية التشغيل"
+
+msgid "ORIGINAL MEDIA"
+msgstr "الوسائط الأصلية"
+
+msgid "RUNTIME CAPABILITY"
+msgstr "قدرة وقت التشغيل"
+
+msgid "ADAPTER CONSTRUCTION"
+msgstr "إنشاء المهايئ"
+
+msgid "INPUT CONTRACT"
+msgstr "عقد الإدخال"
+
+msgid "CHILD SESSION"
+msgstr "جلسة فرعية"
+
+msgid "LIFECYCLE TRANSITION"
+msgstr "انتقال دورة الحياة"
+
 msgid "CHOOSE ORIGINAL DATA FOLDER (O)"
 msgstr "اختر مجلد بيانات اللعبة الأصلية (O)"
 

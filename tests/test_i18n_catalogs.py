@@ -176,6 +176,9 @@ class CatalogTests(unittest.TestCase):
             "DEVELOPER DIAGNOSTICS", "OPEN", "MODERN RUNTIME DIAGNOSTICS",
             "F10 / ESC: BACK TO SETTINGS", "RELEASE IDENTITY", "RUNTIME ADMISSION",
             "REJECTED: IDENTITY", "REJECTED: ARCHIVE HASH", "REJECTED: ADAPTER",
+            "NONE", "LAUNCH IDENTITY", "ORIGINAL MEDIA", "RUNTIME CAPABILITY",
+            "ADAPTER CONSTRUCTION", "INPUT CONTRACT", "CHILD SESSION",
+            "LIFECYCLE TRANSITION",
             "RECOVERY MAP BOUNDARIES",
             "STARTUP BOUNDARY", "TRACE ADMISSION", "MODERN PACK", "PACK RENDER TARGETS",
             "NOT LOADED", "NOT SELECTED", "RENDERER SETTINGS", "FRAME PACING",
@@ -185,6 +188,20 @@ class CatalogTests(unittest.TestCase):
             "RECOVERY FUNCTION MAP", "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS",
             "PAGE", "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE.",
             "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.",
+        }
+        source_catalog = po_messages(PO / "ProjectEon.pot")
+        self.assertTrue(labels <= set(source_catalog))
+        for language in sorted(CATALOGS):
+            with self.subTest(language=language):
+                catalog = po_messages(PO / f"{language}.po")
+                self.assertTrue(all(catalog.get(label) for label in labels))
+
+    def test_runtime_rejection_vocabulary_is_localized_in_every_catalog(self) -> None:
+        """Safe native admission reasons are launcher UI, never raw errors."""
+        labels = {
+            "NONE", "LAUNCH IDENTITY", "ORIGINAL MEDIA", "RUNTIME CAPABILITY",
+            "ADAPTER CONSTRUCTION", "INPUT CONTRACT", "CHILD SESSION",
+            "LIFECYCLE TRANSITION",
         }
         source_catalog = po_messages(PO / "ProjectEon.pot")
         self.assertTrue(labels <= set(source_catalog))
