@@ -294,6 +294,35 @@ write guest memory, alter registers/vectors, request a stop, or schedule work.
 An independently reviewed host-safe shutdown/flush point remains required;
 the in-memory slot alone cannot survive a forced process kill.
 
+### V22 successor implementation boundary
+
+The first implementation attempt must not turn the existing INT 93 installer
+observer into the required title-prefix arm. Its two executable-name/CS/PC
+checks are for a different request (the `INT 21h AX=2593` vector-installation
+observation), and that request is absent from the observed title-to-INT6
+route. Likewise, a filename, an `INT 6`, a default-callback address, or an
+old recorder receipt is not a release identity or causal arm.
+
+Before the successor may capture a slot, it therefore needs two independently
+reviewed additions: a configured recognised-archive identity plus a mapped
+loaded-image/site/opcode predicate, and a state transition that proves that
+predicate occurred on the relevant Millennium title prefix. Until both exist,
+the callback receiver remains deliberately unarmed and records nothing.
+
+Once such an arm is proven, the receiver belongs beside DOSBox-X's CPU callback
+code as a zero-initialised, preallocated POD slot with the states `empty`,
+`captured`, and `flushed`. It tests the arm and all literal callback gates,
+copies the bounded words, and marks `captured` last. It has no strings,
+environment lookup, logging, allocation, locking, or host/guest writes.
+
+The host may serialise a captured slot only on DOSBox-X's terminal shutdown
+path after `DOSBOX_RunMachine()` has returned and before callback/memory
+teardown. The current Project Eon runner's early `process.kill()` path cannot
+be used: forced termination cannot execute that flush and must yield *no
+record*, not a synthetic one. A future recorder invocation consequently needs
+a separately reviewed visible graceful termination path and an exclusive,
+regular, mode-0600 output sink validated outside guest execution.
+
 ### Experimental observer runs
 
 The reviewed v3 candidate may be run only with the explicit
