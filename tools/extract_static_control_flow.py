@@ -334,9 +334,12 @@ def parse_range(value: str) -> tuple[int, int, int, str]:
 def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: bytes,
                   ranges: list[tuple[int, int, int, str]], *, source_kind: str = "archive-member",
                   address_space: str = "runtime", container_sha256: str | None = None,
-                  carrier_archive_sha256: str | None = None) -> dict:
+                  carrier_archive_sha256: str | None = None,
+                  direct_media_set_sha256: str | None = None) -> dict:
     if address_space not in {"runtime", "image-relative-unrelocated"}:
         raise ControlFlowError("unsupported control-flow address space")
+    if direct_media_set_sha256 is not None:
+        _require_sha256(direct_media_set_sha256, "direct-media set SHA-256")
     address_key = "runtime_address" if address_space == "runtime" else "image_relative_address"
     target_key = "target_runtime_address" if address_space == "runtime" else "target_image_relative_address"
     records: list[dict] = []
@@ -370,7 +373,9 @@ def build_sidecar(cpu: str, archive_sha256: str, source_label: str, source: byte
             "address_space": address_space, "ranges": records,
             **({"container_sha256": container_sha256} if container_sha256 is not None else {}),
             **({"carrier_archive_sha256": carrier_archive_sha256}
-               if carrier_archive_sha256 is not None else {})}
+               if carrier_archive_sha256 is not None else {}),
+            **({"direct_media_set_sha256": direct_media_set_sha256}
+               if direct_media_set_sha256 is not None else {})}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -428,7 +433,8 @@ def main(argv: list[str] | None = None) -> int:
                 documents.append(build_sidecar("i8086", args.archive_sha256,
                                                f"direct-media-set:{set_sha256}:{member}", media,
                                                [(0, len(media), 0x100, _sha256(media))],
-                                               source_kind="verified-direct-media-member"))
+                                               source_kind="verified-direct-media-member",
+                                               direct_media_set_sha256=set_sha256))
         elif args.fat12_archive is not None:
             if (not args.fat12_member or not args.member or args.range or args.nested_member or args.nested_sha256
                     or args.disk_member or not args.source_sha256):

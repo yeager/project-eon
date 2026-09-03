@@ -343,27 +343,30 @@ void parse_edge(const JsonObject& edge, const std::string_view address_key,
 void parse_document(const JsonObject& document, StaticControlFlowSummary& summary) {
     require_keys(document, {"schema", "cpu", "archive_sha256", "source", "source_kind", "source_sha256",
                             "classification", "ranges"},
-                 {"address_space", "container_sha256", "carrier_archive_sha256"});
+                 {"address_space", "container_sha256", "carrier_archive_sha256", "direct_media_set_sha256"});
     if (string(required(document, "schema"), "document schema") != "project-eon.static-control-flow/v1") reject("unsupported document schema");
     const auto& cpu = string(required(document, "cpu"), "cpu");
     if (cpu != "i8086" && cpu != "m68000") reject("unsupported CPU");
     require_digest(document, "archive_sha256");
     require_digest(document, "source_sha256");
-    for (const auto key : {"container_sha256", "carrier_archive_sha256"}) {
+    for (const auto key : {"container_sha256", "carrier_archive_sha256", "direct_media_set_sha256"}) {
         if (document.contains(key) && !lower_hex_digest(string(required(document, key), key))) reject(std::string(key) + " must be lower-case SHA-256");
     }
     if (string(required(document, "source"), "source").empty()) reject("source provenance must not be empty");
     const auto& source_kind = string(required(document, "source_kind"), "source_kind");
     const auto has_container = document.contains("container_sha256");
     const auto has_carrier = document.contains("carrier_archive_sha256");
+    const auto has_direct_set = document.contains("direct_media_set_sha256");
     const auto simple_i8086 = source_kind == "archive-member" || source_kind == "fat12-root-member"
         || source_kind == "verified-direct-media-member";
+    const auto direct_media = source_kind == "verified-direct-media-member";
     const auto nested_m68k = source_kind == "nested-disk-range";
     const auto embedded_m68k = source_kind == "embedded-release-nested-disk-range";
     const auto direct_prg = source_kind == "nested-fat12-root-prg-text-data";
     const auto embedded_prg = source_kind == "embedded-release-nested-fat12-prg-text-data";
     if (!simple_i8086 && !nested_m68k && !embedded_m68k && !direct_prg && !embedded_prg) reject("unsupported source kind");
     if ((simple_i8086 && (cpu != "i8086" || has_container || has_carrier))
+        || (direct_media != has_direct_set)
         || ((nested_m68k || direct_prg) && (cpu != "m68000" || has_carrier))
         || (nested_m68k && has_container)
         || (direct_prg && !has_container)
