@@ -371,6 +371,8 @@ def main() -> int:
             or runtime_diagnostics_payload.get("display") != launch_check_payload["display"]
             or runtime_diagnostics_payload.get("runtime_admission")
                 != launch_check_payload["runtime_admission"]
+            or runtime_diagnostics_payload.get("runtime_rejection")
+                != launch_check_payload["runtime_rejection"]
             or runtime_diagnostics_payload.get("runtime_session")
                 != launch_check_payload["runtime_session"]
             or runtime_diagnostics_payload.get("atari_bootstrap_checkpoint") is not None
