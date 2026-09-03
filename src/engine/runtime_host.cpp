@@ -24,7 +24,8 @@ bool RuntimeHost::requires_revocation_for(const LauncherSourceIdentity& source) 
     return NativeSessionController::requires_revocation_for(source);
 }
 
-const std::optional<ResolvedLaunchRequest>& RuntimeHost::active() const {
+std::optional<ResolvedLaunchRequest> RuntimeHost::active() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::active();
 }
 
@@ -37,6 +38,7 @@ ReleaseRuntimeRejection RuntimeHost::rejection() const {
 }
 
 std::optional<RuntimeSessionSnapshot> RuntimeHost::session_snapshot() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::session_snapshot();
 }
 
