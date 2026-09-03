@@ -2028,7 +2028,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
             "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
         const auto image = eon::extract_verified_release_asset(release, spanish_image_sha256);
         if (!image) throw std::runtime_error("Verified Spanish Millennium floppy missing");
-        const eon::Fat12Disk disk(*image);
+        const eon::Fat12Disk disk{std::span<const std::uint8_t>(*image)};
         const auto* title_entry = disk.find("TITLE.LIB");
         const auto* static_entry = disk.find("2200AD4.BIN");
         const auto* ibm_entry = disk.find("IBM.COM");
@@ -2954,7 +2954,7 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
         "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd";
     const auto image = eon::extract_verified_release_asset(release, equinox_disk_sha256);
     if (!image) return;
-    const eon::Fat12Disk disk(*image);
+    const eon::Fat12Disk disk{std::span<const std::uint8_t>(*image)};
     const auto* executable = disk.find("MILENIUM.TOS");
     if (!executable) throw std::runtime_error("Verified Millennium Atari ST disk has no MILENIUM.TOS");
     const auto executable_bytes = disk.read(*executable);

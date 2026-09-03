@@ -530,7 +530,7 @@ std::unique_ptr<MillenniumAtariBootstrapSession> load_millennium_atari_runtime(c
     try {
         const auto image = media.extract(disk);
         if (!image) return {};
-        const Fat12Disk volume(*image);
+        const Fat12Disk volume{std::span<const std::uint8_t>(*image)};
         const auto* executable = volume.find("MILENIUM.TOS");
         return executable ? std::make_unique<MillenniumAtariBootstrapSession>(volume, volume.read(*executable)) : nullptr;
     } catch (...) { return {}; }
@@ -578,7 +578,7 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
                 "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d";
             const auto image = media.extract(spanish_image_sha256);
             if (!image) return std::nullopt;
-            const Fat12Disk disk(*image);
+            const Fat12Disk disk{std::span<const std::uint8_t>(*image)};
             const auto* title_entry = disk.find("TITLE.LIB");
             const auto* titles_entry = disk.find("TITLES.EXE");
             const auto* static_data_entry = disk.find("2200AD4.BIN");

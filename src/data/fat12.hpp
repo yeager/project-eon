@@ -18,6 +18,10 @@ struct Fat12Entry {
 
 class Fat12Disk {
 public:
+    // Inspection callers can borrow a verified disk image. The source must
+    // outlive this reader and all of its direct raw-media views.
+    explicit Fat12Disk(std::span<const std::uint8_t> image);
+    // Long-lived sessions may take the already read disk image exactly once.
     explicit Fat12Disk(std::vector<std::uint8_t> image);
 
     [[nodiscard]] std::uint16_t bytes_per_sector() const { return bytes_per_sector_; }
@@ -30,9 +34,11 @@ public:
     [[nodiscard]] const Fat12Entry* find(std::string_view name) const;
 
 private:
+    void parse();
     [[nodiscard]] std::uint16_t next_cluster(std::uint16_t cluster) const;
 
-    std::vector<std::uint8_t> image_;
+    std::vector<std::uint8_t> owned_image_;
+    std::span<const std::uint8_t> image_;
     std::uint16_t bytes_per_sector_ = 0;
     std::uint8_t sectors_per_cluster_ = 0;
     std::uint16_t reserved_sectors_ = 0;

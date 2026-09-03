@@ -6831,7 +6831,8 @@ int main() {
     const auto atari_image = eon::extract_asset_by_sha256(atari_release->path,
         "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7");
     assert(atari_image);
-    const eon::Fat12Disk atari_disk(*atari_image);
+    const eon::Fat12Disk atari_disk{std::span<const std::uint8_t>(*atari_image)};
+    assert(atari_disk.bytes().data() == atari_image->data());
     assert(atari_disk.root_entries().size() == 13);
     const auto* atari_data = atari_disk.find("DATA12.BIN");
     const auto* atari_executable = atari_disk.find("MILENIUM.TOS");
