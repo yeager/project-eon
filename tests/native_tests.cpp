@@ -2756,6 +2756,16 @@ int main() {
     }
     assert(eon::release_runtime_capabilities().size() == eon::release_manifest().size());
     assert(eon::release_runtime_capability_manifest_is_valid());
+    for (const auto& capability : eon::release_runtime_capabilities()) {
+        assert(eon::runtime_session_declaration_is_valid(capability.initial_kind,
+            capability.initial_boundary, capability.initial_capabilities));
+    }
+    assert(!eon::runtime_session_declaration_is_valid(
+        eon::RuntimeSessionKind::millennium_dos_title,
+        eon::RuntimeSessionBoundary::bootstrap_boundary, {true, false, true}));
+    assert(!eon::runtime_session_declaration_is_valid(
+        eon::RuntimeSessionKind::deuteros_amiga_opening,
+        eon::RuntimeSessionBoundary::recovered_presentation_boundary, {true, false, false}));
     assert(eon::direct_media_set_manifest_is_valid());
     assert(eon::recovery_map_manifest_is_valid());
     assert(eon::function_map_manifest_is_valid());
