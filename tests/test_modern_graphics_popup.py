@@ -173,8 +173,9 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("screen != Screen::menu || launcher_page != LauncherPage::profiles", SOURCE)
         self.assertIn("focused_profile_card != 2 || custom_profile_ready", SOURCE)
         self.assertIn("filelist && filelist[0] && !filelist[1]", SOURCE)
-        self.assertIn("load_deuteros_amiga_held_opening_modern_sequence", SOURCE)
-        self.assertIn("load_millennium_dos_title_modern_surface", SOURCE)
+        self.assertIn("ModernAssetPackPresentationResolver::create", SOURCE)
+        self.assertIn("ModernAssetPackPresentationTarget::deuteros_amiga_held_opening", SOURCE)
+        self.assertIn("ModernAssetPackPresentationTarget::millennium_dos_title", SOURCE)
 
     def test_popup_controls_only_renderer_options(self) -> None:
         for option in ("output_resolution_index", "aspect_ratio_index", "render_pacing", "smooth_scaling", "scanlines", "frame"):
@@ -255,13 +256,13 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("request.presentation != eon::Presentation::modern", loader_block)
         self.assertIn("active_platform != eon::Platform::amiga", loader_block)
         self.assertIn("resolve_active_release(eon::Game::deuteros)", loader_block)
-        self.assertIn("load_deuteros_amiga_held_opening_modern_sequence", loader_block)
+        self.assertIn("ModernAssetPackPresentationResolver::create", loader_block)
         refresh = SOURCE.index("const auto refresh_deuteros_external_modern_texture", loader)
         refresh_block = SOURCE[refresh:renderer]
         self.assertIn("source_tick > eon::deuteros_amiga_held_opening_frame_count", refresh_block)
         self.assertIn("source_tick == eon::deuteros_amiga_held_opening_frame_count && !title_handed_off", refresh_block)
-        self.assertIn("load_deuteros_amiga_held_opening_modern_frame", refresh_block)
-        self.assertIn("deuteros_external_modern_sequence.reset()", refresh_block)
+        self.assertIn("deuteros_external_modern_resolver->resolve(source_tick, title_handed_off)", refresh_block)
+        self.assertIn("deuteros_external_modern_resolver.reset()", refresh_block)
         render_block = SOURCE[renderer:SOURCE.index("SDL_SetTextureScaleMode(texture", renderer)]
         self.assertIn("if (modern)", render_block)
         self.assertIn("refresh_deuteros_external_modern_texture(source_tick", render_block)

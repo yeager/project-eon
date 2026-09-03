@@ -5,8 +5,10 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace eon {
@@ -99,6 +101,47 @@ struct ModernAssetPackDeuterosAmigaOpeningSequence {
     std::uint32_t width = 0;
     std::uint32_t height = 0;
     std::array<ModernAssetPackAsset, deuteros_amiga_held_opening_frame_count> frames;
+};
+
+// The renderer-visible routes are deliberately finite declarations, not a
+// filename convention. This resolver owns only admitted pack metadata; PNG
+// bytes remain transient and are rehashed by `resolve` immediately before an
+// SDL caller may decode/upload them.
+enum class ModernAssetPackPresentationTarget {
+    millennium_dos_title,
+    deuteros_amiga_held_opening,
+};
+
+class ModernAssetPackPresentationResolver {
+public:
+    [[nodiscard]] static ModernAssetPackPresentationResolver create(
+        const std::filesystem::path& manifest_path,
+        ModernAssetPackPresentationTarget target, Game game, Platform platform,
+        std::string_view source_release_sha256);
+
+    // Millennium's finite title target accepts source tick zero only.
+    // Deuteros accepts its already recovered 1..82 held-input ticks, with
+    // tick 82 additionally gated by the native title-handoff observation.
+    [[nodiscard]] ModernAssetPackPngSurface resolve(std::uint64_t source_tick,
+        bool native_title_handed_off = false) const;
+    [[nodiscard]] const std::string& pack_id() const { return pack_.id; }
+    [[nodiscard]] const std::string& provenance() const { return pack_.provenance; }
+    [[nodiscard]] ModernAssetPackPresentationTarget target() const { return target_; }
+
+private:
+    ModernAssetPackPresentationResolver(ModernAssetPack pack,
+        ModernAssetPackPresentationTarget target, ModernAssetPackAsset asset,
+        std::uint32_t width, std::uint32_t height,
+        std::optional<ModernAssetPackDeuterosAmigaOpeningSequence> sequence)
+        : pack_(std::move(pack)), target_(target), asset_(std::move(asset)),
+          width_(width), height_(height), sequence_(std::move(sequence)) {}
+
+    ModernAssetPack pack_;
+    ModernAssetPackPresentationTarget target_;
+    ModernAssetPackAsset asset_;
+    std::uint32_t width_ = 0;
+    std::uint32_t height_ = 0;
+    std::optional<ModernAssetPackDeuterosAmigaOpeningSequence> sequence_;
 };
 
 // Validate one exact pack.eonmodern manifest and its declared asset bytes.
