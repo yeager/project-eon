@@ -41,10 +41,36 @@ public:
     // the coordinator-owned adapters that supplied them.
     [[nodiscard]] bool requires_revocation_for(const LauncherSourceIdentity& source) const;
     void reset();
-    [[nodiscard]] ReleaseRuntimeCoordinator& coordinator() { return coordinator_; }
-    [[nodiscard]] const ReleaseRuntimeCoordinator& coordinator() const { return coordinator_; }
+    // Typed native operations are deliberately forwarded here instead of
+    // exposing the mutable release coordinator to the session/UI layer.
+    // Every result is a value copy or a transient buffer; SDL cannot acquire
+    // an adapter, media view, or mutable input session through this facade.
+    [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
+    [[nodiscard]] std::optional<MillenniumDosPresentationSnapshot>
+    millennium_dos_presentation() const;
+    [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
+    millennium_dos_startup_input() const;
+    [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    [[nodiscard]] std::optional<std::vector<float>>
+    render_deuteros_amiga_opening_audio(std::size_t frames);
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
+    deuteros_amiga_opening_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningPresentationSnapshot>
+    deuteros_amiga_opening_presentation() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
+    deuteros_amiga_title_stage_boundary() const;
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
+    deuteros_atari_bootstrap_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapPresentationSnapshot>
+    deuteros_atari_bootstrap_presentation() const;
+    [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
+    millennium_amiga_bootstrap_presentation() const;
+    [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
+    millennium_atari_bootstrap_presentation() const;
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return coordinator_.active(); }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return coordinator_.admission(); }
+    [[nodiscard]] ReleaseRuntimeRejection rejection() const { return coordinator_.rejection(); }
+    [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
 
 private:
     ReleaseRuntimeCoordinator coordinator_;

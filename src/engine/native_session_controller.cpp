@@ -74,7 +74,7 @@ RuntimeInputDisposition NativeSessionController::observe_input(const RuntimeInpu
     if (state_ == NativeSessionState::returning_to_menu) {
         return RuntimeInputDisposition::rejected;
     }
-    const auto result = runtime_.coordinator().observe_input(observation);
+    const auto result = runtime_.observe_input(observation);
     synchronize_after_runtime_change();
     return result;
 }
@@ -82,18 +82,18 @@ RuntimeInputDisposition NativeSessionController::observe_input(const RuntimeInpu
 std::optional<MillenniumDosPresentationSnapshot>
 NativeSessionController::millennium_dos_presentation() const {
     if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
-    return runtime_.coordinator().millennium_dos_presentation();
+    return runtime_.millennium_dos_presentation();
 }
 
 std::optional<MillenniumDosStartupInputSnapshot>
 NativeSessionController::millennium_dos_startup_input() const {
     if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
-    return runtime_.coordinator().millennium_dos_startup_input();
+    return runtime_.millennium_dos_startup_input();
 }
 
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {
     if (state_ == NativeSessionState::returning_to_menu) return std::nullopt;
-    const auto events = runtime_.coordinator().tick_deuteros_amiga_opening();
+    const auto events = runtime_.tick_deuteros_amiga_opening();
     synchronize_after_runtime_change();
     return events;
 }
@@ -101,49 +101,49 @@ std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amig
 std::optional<std::vector<float>>
 NativeSessionController::render_deuteros_amiga_opening_audio(const std::size_t frames) {
     if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
-    return runtime_.coordinator().render_deuteros_amiga_opening_audio(frames);
+    return runtime_.render_deuteros_amiga_opening_audio(frames);
 }
 
 std::optional<DeuterosAmigaOpeningCheckpoint>
 NativeSessionController::deuteros_amiga_opening_checkpoint() const {
     if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
-    return runtime_.coordinator().deuteros_amiga_opening_checkpoint();
+    return runtime_.deuteros_amiga_opening_checkpoint();
 }
 
 std::optional<DeuterosAmigaOpeningPresentationSnapshot>
 NativeSessionController::deuteros_amiga_opening_presentation() const {
     if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
-    return runtime_.coordinator().deuteros_amiga_opening_presentation();
+    return runtime_.deuteros_amiga_opening_presentation();
 }
 
 std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
 NativeSessionController::deuteros_amiga_title_stage_boundary() const {
     if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
-    return runtime_.coordinator().deuteros_amiga_title_stage_boundary();
+    return runtime_.deuteros_amiga_title_stage_boundary();
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>
 NativeSessionController::deuteros_atari_bootstrap_checkpoint() const {
     if (state_ != NativeSessionState::deuteros_atari_bootstrap) return std::nullopt;
-    return runtime_.coordinator().deuteros_atari_bootstrap_checkpoint();
+    return runtime_.deuteros_atari_bootstrap_checkpoint();
 }
 
 std::optional<DeuterosAtariBootstrapPresentationSnapshot>
 NativeSessionController::deuteros_atari_bootstrap_presentation() const {
     if (state_ != NativeSessionState::deuteros_atari_bootstrap) return std::nullopt;
-    return runtime_.coordinator().deuteros_atari_bootstrap_presentation();
+    return runtime_.deuteros_atari_bootstrap_presentation();
 }
 
 std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
 NativeSessionController::millennium_amiga_bootstrap_presentation() const {
     if (state_ != NativeSessionState::millennium_amiga_bootstrap) return std::nullopt;
-    return runtime_.coordinator().millennium_amiga_bootstrap_presentation();
+    return runtime_.millennium_amiga_bootstrap_presentation();
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>
 NativeSessionController::millennium_atari_bootstrap_presentation() const {
     if (state_ != NativeSessionState::millennium_atari_bootstrap) return std::nullopt;
-    return runtime_.coordinator().millennium_atari_bootstrap_presentation();
+    return runtime_.millennium_atari_bootstrap_presentation();
 }
 
 void NativeSessionController::begin_return_to_menu() {
@@ -175,12 +175,12 @@ bool NativeSessionController::requires_revocation_for(const LauncherSourceIdenti
 }
 
 std::optional<RuntimeSessionSnapshot> NativeSessionController::session_snapshot() const {
-    return runtime_.coordinator().session_snapshot();
+    return runtime_.session_snapshot();
 }
 
 void NativeSessionController::synchronize_after_runtime_change() {
     if (state_ == NativeSessionState::returning_to_menu) return;
-    state_ = native_session_state_for(runtime_.coordinator().session_snapshot(), runtime_.admission());
+    state_ = native_session_state_for(runtime_.session_snapshot(), runtime_.admission());
 }
 
 } // namespace eon
