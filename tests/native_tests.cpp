@@ -89,11 +89,15 @@
 #include <set>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <zlib.h>
 
 namespace {
+
+static_assert(!std::is_convertible_v<eon::RuntimeHost*, eon::NativeSessionController*>);
+static_assert(!std::is_convertible_v<const eon::RuntimeHost*, const eon::NativeSessionController*>);
 
 void assert_deuteros_atari_post_callback_callees(const std::vector<std::uint8_t>& second_stage,
     const eon::DeuterosAtariSecondStageProfile& stage,
