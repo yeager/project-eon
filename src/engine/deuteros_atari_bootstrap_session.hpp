@@ -23,6 +23,9 @@ struct DeuterosAtariBootstrapCheckpoint {
     std::size_t state1_raw_request_count = 0;
     std::size_t state5_first_source_offset = 0;
     std::size_t state5_second_source_offset = 0;
+    std::size_t state1_display_branch_relative_offset = 0;
+    std::size_t state1_display_service_relative_offset = 0;
+    std::uint16_t state1_display_xbios_selector = 0;
 };
 
 // Materializes only the two raw stages explicitly requested by the supplied
@@ -54,6 +57,8 @@ public:
     [[nodiscard]] const DeuterosAtariState5RawLoadPlan& state5_raw_load_plan() const {
         return state5_raw_load_plan_;
     }
+    [[nodiscard]] const DeuterosAtariState1DisplayServiceBoundary&
+    state1_display_service_boundary() const { return state1_display_service_boundary_; }
     [[nodiscard]] const DeuterosAtariState5ReturnProfile& state5_return() const {
         return state5_return_;
     }
@@ -108,6 +113,7 @@ private:
     DeuterosAtariRawLoadPlan state0_raw_load_plan_;
     DeuterosAtariRawRangeLoadPlan state1_raw_load_plan_;
     DeuterosAtariState5RawLoadPlan state5_raw_load_plan_;
+    DeuterosAtariState1DisplayServiceBoundary state1_display_service_boundary_;
     DeuterosAtariState5ReturnProfile state5_return_;
     DeuterosAtariSupervisorCallbackProfile supervisor_callback_;
     DeuterosAtariSupervisorCallbackContinuation supervisor_callback_continuation_;

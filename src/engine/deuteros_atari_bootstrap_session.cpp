@@ -17,6 +17,9 @@ DeuterosAtariBootstrapCheckpoint DeuterosAtariBootstrapSession::checkpoint() con
         state1_raw_load_plan_.requests.size(),
         state5_raw_load_plan_.first_read.source_offset,
         state5_raw_load_plan_.second_read.source_offset,
+        state1_display_service_boundary_.branch_relative_offset,
+        state1_display_service_boundary_.service_setup_relative_offset,
+        state1_display_service_boundary_.xbios_selector,
     };
 }
 
@@ -71,6 +74,23 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     state0_raw_load_plan_ = build_deuteros_atari_state0_raw_load_plan(second_stage_, dispatch_);
     state1_raw_load_plan_ = build_deuteros_atari_state1_raw_load_plan(second_stage_, dispatch_);
     state5_raw_load_plan_ = build_deuteros_atari_state5_raw_load_plan(second_stage_, dispatch_);
+    // This is a one-shot byte verification over the exact raw requests above.
+    // The vector is not selected, the data is not retained, and no XBIOS call
+    // is made; the resulting profile is only source offsets/opcodes/hashes.
+    std::vector<std::uint8_t> state1_bytes;
+    state1_bytes.reserve(state1_raw_load_plan_.byte_count);
+    for (const auto& request : state1_raw_load_plan_.requests) {
+        const auto chunk = disk.read_sectors(request.track, request.side,
+            request.first_sector, request.sector_count);
+        state1_bytes.insert(state1_bytes.end(), chunk.begin(), chunk.end());
+    }
+    try {
+        state1_display_service_boundary_ = parse_deuteros_atari_state1_display_service_boundary(
+            state1_bytes, state1_raw_load_plan_);
+    } catch (const std::runtime_error& error) {
+        throw std::runtime_error("Invalid Deuteros Atari ST state-1 display-service boundary: "
+            + std::string(error.what()));
+    }
     state5_return_ = parse_deuteros_atari_state5_return(second_stage_bytes, second_stage_, dispatch_);
     supervisor_callback_ = parse_deuteros_atari_supervisor_callback(second_stage_bytes, second_stage_);
     supervisor_callback_continuation_ = parse_deuteros_atari_supervisor_callback_continuation(

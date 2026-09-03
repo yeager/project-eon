@@ -1949,6 +1949,19 @@ code/data edge to recover as a renderer-side native transition. The observed
 relocation itself remains an implementation target, not a guessed memory map,
 and no Hatari machine state is retained by Eon.
 
+The native `DeuterosAtariState1DisplayServiceBoundary` now locks that edge to
+the unselected state-1 source interval rather than the observed emulator PC:
+the branch is state-1 `+$48000`, SHA-256
+`6321ea5a7fcf59fb3f07d02b6bd333a62b9c897be5a67b233a83b3c935a38bf6`, and
+targets `+$489c6`. Its 18-byte local setup has SHA-256
+`a07c7766104d5bf581862d24de4e594b60414625824e8360b1677cf92e88c6f3`; it
+encodes one literal `-1` longword push, a second stack-copy longword push,
+XBIOS selector `$0005`, `TRAP #14`, and 12-byte stack cleanup. The source
+bytes alone do not encode the third service argument seen by Hatari, prove a
+raw-read result or relocation, or show that the call returns. The session
+retains only those offsets, opcodes, and hashes in its diagnostic checkpoint;
+it never retains the raw state-1 bytes, calls XBIOS, or exposes a display.
+
 For reproducibility, an ordinary Hatari 2.6.1 diagnostic boot was also run
 against the read-only mounted Replicants Disk 1 and a user-supplied TOS 1.62
 image. The respective SHA-256 values were
