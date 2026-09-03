@@ -13,7 +13,7 @@ namespace {
 constexpr std::size_t header_size = 6;
 constexpr std::size_t directory_entry_size = 12;
 
-std::uint16_t little16(const std::vector<std::uint8_t>& bytes, std::size_t offset) {
+std::uint16_t little16(const std::span<const std::uint8_t> bytes, std::size_t offset) {
     if (offset > bytes.size() || bytes.size() - offset < 2) {
         throw std::runtime_error("Truncated Millennium DOS LIB field");
     }
@@ -22,12 +22,12 @@ std::uint16_t little16(const std::vector<std::uint8_t>& bytes, std::size_t offse
 }
 
 std::uint32_t banked_offset(
-    const std::vector<std::uint8_t>& bytes, std::size_t offset, std::size_t bank_offset) {
+    const std::span<const std::uint8_t> bytes, std::size_t offset, std::size_t bank_offset) {
     return static_cast<std::uint32_t>(little16(bytes, offset))
         | (static_cast<std::uint32_t>(bytes[bank_offset]) << 16U);
 }
 
-std::string decode_name(const std::vector<std::uint8_t>& bytes, std::size_t offset) {
+std::string decode_name(const std::span<const std::uint8_t> bytes, std::size_t offset) {
     std::string name;
     bool padding = false;
     for (std::size_t index = 0; index < 8; ++index) {
@@ -55,8 +55,8 @@ std::string upper(std::string_view text) {
 
 } // namespace
 
-MillenniumDosLib::MillenniumDosLib(std::vector<std::uint8_t> bytes)
-    : bytes_(std::move(bytes)) {
+MillenniumDosLib::MillenniumDosLib(const std::span<const std::uint8_t> bytes)
+    : bytes_(bytes) {
     if (bytes_.size() < header_size) throw std::runtime_error("Millennium DOS LIB is too short");
     source_sha256_ = to_hex(sha256(bytes_));
     const auto count = little16(bytes_, 0);
@@ -102,7 +102,7 @@ const MillenniumDosLibEntry* MillenniumDosLib::find(std::string_view name) const
     return found == entries_.end() ? nullptr : &*found;
 }
 
-std::vector<std::uint8_t> MillenniumDosLib::read(const MillenniumDosLibEntry& entry) const {
+std::span<const std::uint8_t> MillenniumDosLib::read(const MillenniumDosLibEntry& entry) const {
     const auto found = std::find_if(entries_.begin(), entries_.end(), [&entry](const auto& candidate) {
         return candidate.name == entry.name && candidate.offset == entry.offset
             && candidate.size == entry.size;
@@ -111,8 +111,7 @@ std::vector<std::uint8_t> MillenniumDosLib::read(const MillenniumDosLibEntry& en
         || entry.size > bytes_.size() - entry.offset) {
         throw std::runtime_error("Millennium DOS LIB entry does not belong to library");
     }
-    const auto begin = bytes_.begin() + static_cast<std::ptrdiff_t>(entry.offset);
-    return {begin, begin + static_cast<std::ptrdiff_t>(entry.size)};
+    return bytes_.subspan(entry.offset, entry.size);
 }
 
 } // namespace eon

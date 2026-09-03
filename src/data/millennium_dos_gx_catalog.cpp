@@ -18,7 +18,7 @@ MillenniumDosGxBitmapCatalog inspect_millennium_dos_gx_bitmap_catalog(
         throw std::runtime_error("Unsupported Millennium English DOS GX library");
     }
 
-    const MillenniumDosLib library({gx_lib.begin(), gx_lib.end()});
+    const MillenniumDosLib library(gx_lib);
     MillenniumDosGxBitmapCatalog result;
     result.source_sha256 = std::string(english_gx_library_sha256);
     result.resource_count = library.entries().size();

@@ -4155,6 +4155,9 @@ int main() {
     assert(title_lib.entries().front().name == "P00");
     assert(title_lib.entries().front().offset == 6);
     assert(title_lib.entries().front().size == 10'555);
+    assert(title_lib.read(title_lib.entries().front()).data() == title_bytes->data() + 6);
+    assert(gx_lib.read(gx_lib.entries().front()).data()
+        == gx_bytes->data() + gx_lib.entries().front().offset);
     const auto* title_p01 = title_lib.find("p01");
     const auto* title_p25 = title_lib.find("P25");
     assert(title_p01 && title_p01->offset == 0x2941 && title_p01->size == 213);

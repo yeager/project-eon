@@ -49,7 +49,7 @@ MillenniumDosGameplayScreen parse_millennium_dos_gameplay_screen(
     if (to_hex(sha256(gx_lib)) != english_gx_library_sha256) {
         throw std::runtime_error("Unsupported Millennium English DOS GX library");
     }
-    const MillenniumDosLib library({gx_lib.begin(), gx_lib.end()});
+    const MillenniumDosLib library(gx_lib);
     const auto palette_bytes = library.read(require_entry(library, "IMG00"));
     const auto canvas_bytes = library.read(require_entry(library, "IMG01"));
 
