@@ -69,7 +69,8 @@ direct-media set, including its lexical set hash, before it reads any requested
 member in place; it never reconstructs an archive. Each resulting direct-media
 document carries that `direct_media_set_sha256` as a mandatory separate
 provenance identity; archive, FAT, and nested-media documents reject that field.
-It records only
+Inspection accepts a direct document only when the current scanned sources
+contain a reverified directory with that same set identity. It records only
 decoder-recognised direct CALL/JMP/conditional-branch/interrupt/return
 candidates with source offsets and declared runtime addresses. The output must
 be a new file outside both the checkout and `/tmp`; it contains neither a full

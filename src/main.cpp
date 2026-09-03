@@ -267,6 +267,17 @@ struct StaticControlFlowInspection {
         }
         inspection.release_bindings.emplace_back(release_by_hash.at(archive_sha256), document_count);
     }
+    for (const auto& document : inspection.summary.documents) {
+        if (!document.direct_media_set_sha256) continue;
+        const auto direct_source = std::find_if(releases.begin(), releases.end(), [&](const auto& release) {
+            const auto set = eon::direct_media_set_sha256(release);
+            return release.sha256 == document.release_sha256 && set
+                && *set == *document.direct_media_set_sha256;
+        });
+        if (direct_source == releases.end()) {
+            throw std::runtime_error("Direct static control-flow document is not bound to a reverified inspected direct-media set");
+        }
+    }
     inspection.function_map_coverage = eon::function_map_sidecar_coverage(inspection.summary);
     return inspection;
 }
