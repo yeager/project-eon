@@ -147,6 +147,10 @@ struct ReleaseScanReport {
     // archive occurrences so diagnostics cannot call a directory a ZIP.
     std::size_t verified_direct_set_occurrences = 0;
     std::size_t duplicate_direct_set_occurrences = 0;
+    // A split-container occurrence is a complete, ordered set of separately
+    // supplied archives that has already passed the outer and leaf identity
+    // gate. Its constituent archives are not size/hash rejections.
+    std::size_t verified_container_set_occurrences = 0;
     std::size_t verified_occurrences = 0;
     std::size_t duplicate_occurrences = 0;
     std::size_t unreadable_candidates = 0;
@@ -212,6 +216,7 @@ private:
     std::vector<ReleaseArchive> releases_;
     std::vector<UnboundDirectMedia> unbound_direct_media_;
     std::vector<std::filesystem::path> bound_direct_media_paths_;
+    std::vector<std::filesystem::path> bound_container_media_paths_;
     ReleaseScanReport report_;
 };
 
