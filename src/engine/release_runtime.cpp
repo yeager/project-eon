@@ -544,6 +544,8 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
+    constexpr auto static_data_sha256 =
+        "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d";
     constexpr auto ega640_sha256 =
         "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
     constexpr auto mcga_sha256 =
@@ -561,9 +563,11 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
             const Fat12Disk disk(*image);
             const auto* title_entry = disk.find("TITLE.LIB");
             const auto* titles_entry = disk.find("TITLES.EXE");
-            if (!title_entry || !titles_entry) return std::nullopt;
+            const auto* static_data_entry = disk.find("2200AD4.BIN");
+            if (!title_entry || !titles_entry || !static_data_entry) return std::nullopt;
             auto title_library_bytes = disk.read(*title_entry);
             const auto titles_bytes = disk.read(*titles_entry);
+            const auto static_data = disk.read(*static_data_entry);
             static_cast<void>(parse_millennium_dos_spanish_title_presentation_evidence(
                 titles_bytes, title_library_bytes));
             const MillenniumDosLib title_lib(std::move(title_library_bytes));
@@ -577,6 +581,8 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
                     {colorize_millennium_dos_bitmap(bitmap, palette)}},
                 .language = "es",
                 .gx_canvas = std::nullopt,
+                .static_game_data = parse_millennium_dos_game_data(static_data),
+                .static_data_evidence = parse_millennium_dos_static_data_evidence(static_data),
                 .title_flow = std::nullopt,
                 .sound_selection = std::nullopt,
                 .sound_selection_prompt = std::nullopt,
@@ -597,11 +603,12 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         const auto launcher = media.extract(launcher_sha256);
         const auto game = media.extract(game_sha256);
         const auto initial_save = media.extract(initial_save_sha256);
+        const auto static_data = media.extract(static_data_sha256);
         const auto ega640 = media.extract(ega640_sha256);
         const auto mcga = media.extract(mcga_sha256);
         const auto sound_blaster = media.extract(sound_blaster_sha256);
         const auto covox = media.extract(covox_sha256);
-        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !ega640 || !mcga
+        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !static_data || !ega640 || !mcga
             || !sound_blaster || !covox) {
             return std::nullopt;
         }
@@ -625,6 +632,8 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
             .language = "en",
             .gx_canvas = MillenniumDosPreviewAnimation{
                 gx_canvas.canvas.width, gx_canvas.canvas.height, {gx_canvas.rgba}},
+            .static_game_data = parse_millennium_dos_game_data(*static_data),
+            .static_data_evidence = parse_millennium_dos_static_data_evidence(*static_data),
             .title_flow = title_flow,
             .sound_selection = sound_selection,
             .sound_selection_prompt = sound_selection_prompt,

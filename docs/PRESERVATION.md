@@ -90,7 +90,11 @@ The five current native bootstrap/opening adapters—Millennium DOS/Amiga/Atari
 ST and Deuteros Amiga/Atari ST—are SDL-free engine factories behind that
 boundary. They select only their named hash-verified leaf and return no
 substitute if the selected release, language, or leaf is absent. The DOS
-factory returns parser-only title and startup evidence; it neither executes
+factory also retains the original `2200AD4.BIN` celestial-label table and
+pointer-table topology as immutable source data for the selected English or
+Spanish edition; it neither translates those bytes nor presents them as a
+recovered game UI. It otherwise returns parser-only title and startup evidence;
+it neither executes
 an unproven handoff nor changes source bytes. Their resulting objects remain
 bounded bootstrap/opening evidence; moving them out of the SDL layer does not
 execute an unknown ABI or claim game parity.

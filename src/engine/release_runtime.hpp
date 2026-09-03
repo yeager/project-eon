@@ -131,6 +131,11 @@ struct MillenniumDosRuntimeAssets {
     MillenniumDosPreviewAnimation title;
     std::string language;
     std::optional<MillenniumDosPreviewAnimation> gx_canvas;
+    // Immutable original labels and pointer-table topology. These establish
+    // source data for a later recovered game core, not a host-generated UI
+    // or a claim that any label has reached a live simulation state.
+    std::optional<MillenniumDosGameData> static_game_data;
+    std::optional<MillenniumDosStaticDataEvidence> static_data_evidence;
     std::optional<MillenniumDosTitleFlow> title_flow;
     std::optional<MillenniumDosSoundSelectionEvidence> sound_selection;
     std::optional<std::string> sound_selection_prompt;
