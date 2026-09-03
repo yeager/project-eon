@@ -92,6 +92,15 @@ struct DeuterosAtariBootstrapPresentationSnapshot {
     DeuterosAtariSecondStageEntryExecutionPrefix entry_execution;
 };
 
+// Immutable, static Millennium Amiga bootstrap provenance. It contains the
+// exact read-only load ranges and caller-side handoff facts, never a decoded
+// first stage, an Amiga OS result, input, or runnable execution state.
+struct MillenniumAmigaBootstrapPresentationSnapshot {
+    MillenniumAmigaLoadPlan plan;
+    MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary;
+    MillenniumAmigaResidentEvidenceSnapshot resident_evidence;
+};
+
 // The recovered DOS title/runtime evidence for one exact archive identity.
 // Spanish is title-only until its executable handoff is evidenced; English
 // retains the additional parser outputs below. No field is a fallback for a
@@ -171,6 +180,8 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
         return millennium_amiga_.get();
     }
+    [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
+    millennium_amiga_bootstrap_presentation() const;
     [[nodiscard]] MillenniumAtariBootstrapSession* millennium_atari() const {
         return millennium_atari_.get();
     }
