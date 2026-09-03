@@ -2388,8 +2388,11 @@ routine at `$212ca` installs bundle auxiliary pointer 3 in `$22aa6`; pointer 4
 is subsequently consumed as the following resource, giving a strict boundary
 for this table. In bundle 0 this is `0x121b4..0x122de`: 21 exact 14-byte
 records plus four raw tail bytes (`0001ce8e`) which the 14-byte stride cannot
-reach. They are retained verbatim rather than treated as padding or a guessed
-twenty-second sound record.
+reach. They are retained as a bundle-relative offset, length and SHA-256
+(`3f82cccd0194a3cda5510304a0696c3a9436c38e798c73441c1d9d9d6868ce0d`),
+rather than treated as padding or a guessed twenty-second sound record. The
+runtime does not make a second copy; the original ADF remains their byte
+source.
 
 The complete 298-byte table at ADF `0x2d9b4..0x2dace` is SHA-256
 `04491b3f24bc635cfc7be4cfdad4536dc83fa8c3056848092aecb662594b68a4`.
