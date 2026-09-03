@@ -282,7 +282,9 @@ resolution/aspect settings, without creating SDL resources.
 plus the exact release's hash-bound startup boundary, recovery map, and
 declarative function map. It exits before SDL, timing, input, audio, saves,
 guest execution, or emulator activity and never serializes paths or original
-media bytes.
+media bytes. Its `runtime_session.input_contract` is a machine-readable
+description of only the already recovered host observation envelope; it is
+not a game-control map or a claim about later title/gameplay input.
 
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It

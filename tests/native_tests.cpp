@@ -976,6 +976,16 @@ int main() {
         assert(eon::native_session_state_for(state_fixture, eon::ReleaseRuntimeAdmission::active)
             == expected);
     }
+    assert(eon::runtime_input_contract_for_session(eon::RuntimeSessionKind::millennium_dos_title)
+        == eon::RuntimeInputContract::millennium_dos_startup_observation);
+    assert(eon::runtime_input_contract_for_session(eon::RuntimeSessionKind::deuteros_amiga_opening)
+        == eon::RuntimeInputContract::deuteros_amiga_opening_held_signal);
+    assert(eon::runtime_input_contract_for_session(
+        eon::RuntimeSessionKind::millennium_dos_sound_driver_boundary)
+        == eon::RuntimeInputContract::none);
+    assert(eon::runtime_input_contract_identifier(
+        eon::RuntimeInputContract::millennium_dos_startup_observation)
+        == "millennium-dos-startup-observation");
     assert(eon::native_session_state_label(eon::NativeSessionState::returning_to_menu)
         == "RETURNING TO MENU");
     eon::NativeSessionController state_controller;
@@ -3695,7 +3705,9 @@ int main() {
             == eon::RuntimeSessionBoundary::recovered_presentation_boundary
         && dos_session_snapshot.capabilities.decoded_presentation
         && !dos_session_snapshot.capabilities.audio_observations
-        && dos_session_snapshot.capabilities.admitted_input);
+        && dos_session_snapshot.capabilities.admitted_input
+        && dos_session_snapshot.input_contract
+            == eon::RuntimeInputContract::millennium_dos_startup_observation);
     assert(eon::runtime_session_kind_label(dos_session_snapshot.kind) == "MILLENNIUM DOS TITLE");
     assert(eon::runtime_session_boundary_label(dos_session_snapshot.boundary)
         == "RECOVERED PRESENTATION BOUNDARY");
@@ -3749,7 +3761,8 @@ int main() {
         && sound_driver_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
         && !sound_driver_snapshot.capabilities.decoded_presentation
         && !sound_driver_snapshot.capabilities.audio_observations
-        && !sound_driver_snapshot.capabilities.admitted_input);
+        && !sound_driver_snapshot.capabilities.admitted_input
+        && sound_driver_snapshot.input_contract == eon::RuntimeInputContract::none);
     assert(eon::runtime_session_kind_label(sound_driver_snapshot.kind)
         == "MILLENNIUM DOS SOUND DRIVER BOUNDARY");
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
@@ -3780,7 +3793,8 @@ int main() {
         && spanish_handoff_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
         && !spanish_handoff_snapshot.capabilities.decoded_presentation
         && !spanish_handoff_snapshot.capabilities.audio_observations
-        && !spanish_handoff_snapshot.capabilities.admitted_input);
+        && !spanish_handoff_snapshot.capabilities.admitted_input
+        && spanish_handoff_snapshot.input_contract == eon::RuntimeInputContract::none);
     assert(eon::runtime_session_kind_label(spanish_handoff_snapshot.kind)
         == "MILLENNIUM DOS TITLE HANDOFF BOUNDARY");
     assert(admitted_spanish_runtime.observe_input(eon::RuntimeInputObservation::available_character())

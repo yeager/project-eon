@@ -331,6 +331,7 @@ def main() -> int:
                 "runtime_session": {
                     "kind": "MILLENNIUM DOS TITLE",
                     "boundary": "RECOVERED PRESENTATION BOUNDARY",
+                    "input_contract": "millennium-dos-startup-observation",
                     "capabilities": {
                         "decoded_presentation": True,
                         "audio_observations": False,
@@ -521,6 +522,12 @@ def main() -> int:
             "runtime_session": {
                 "kind": session_kind,
                 "boundary": session_boundary,
+                "input_contract": (
+                    "millennium-dos-startup-observation"
+                    if session_kind == "MILLENNIUM DOS TITLE" else
+                    "deuteros-amiga-opening-held-signal"
+                    if session_kind == "DEUTEROS AMIGA OPENING" else "none"
+                ),
                 "capabilities": capabilities,
             },
         }
