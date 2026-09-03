@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -37,6 +38,12 @@ public:
     [[nodiscard]] const ReleaseArchive& release() const { return release_; }
     [[nodiscard]] std::optional<std::vector<std::uint8_t>> extract(
         std::string_view expected_asset_sha256) const;
+    // Reads one hash-addressed original leaf at most once for this admitted
+    // media session and returns a non-owning view backed by the session. The
+    // first read is size- and hash-verified after open; ZIP members remain
+    // transient in-memory decompressions and are never written to disk.
+    [[nodiscard]] std::optional<std::span<const std::uint8_t>> borrow(
+        std::string_view expected_asset_sha256) const;
 
 private:
     VerifiedReleaseMedia(ReleaseArchive release, ZipArchive archive)
@@ -59,6 +66,10 @@ private:
     // collection; each hash-addressed parser request reopens and rehashes its
     // one original file immediately before returning a transient byte view.
     std::map<std::string, DirectAssetReference> direct_assets_;
+    // Session-scoped backing for hash-addressed parser views. It is mutable
+    // only as an internal read-through cache; callers receive const spans and
+    // no path or media buffer escapes a release-bound adapter.
+    mutable std::map<std::string, std::vector<std::uint8_t>> borrowed_assets_;
 
 public:
     [[nodiscard]] std::vector<ArchiveAsset> inventory() const;

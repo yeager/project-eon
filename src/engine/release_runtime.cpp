@@ -614,19 +614,19 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
                 .initial_save = std::nullopt,
             };
         }
-        const auto bytes = media.extract(title_lib_sha256);
+        const auto bytes = media.borrow(title_lib_sha256);
         if (!bytes) return std::nullopt;
         const MillenniumDosLib title_lib(*bytes);
-        const auto gx_bytes = media.extract(gx_lib_sha256);
-        const auto titles = media.extract(titles_sha256);
-        const auto launcher = media.extract(launcher_sha256);
-        const auto game = media.extract(game_sha256);
-        const auto initial_save = media.extract(initial_save_sha256);
-        const auto static_data = media.extract(static_data_sha256);
-        const auto ega640 = media.extract(ega640_sha256);
-        const auto mcga = media.extract(mcga_sha256);
-        const auto sound_blaster = media.extract(sound_blaster_sha256);
-        const auto covox = media.extract(covox_sha256);
+        const auto gx_bytes = media.borrow(gx_lib_sha256);
+        const auto titles = media.borrow(titles_sha256);
+        const auto launcher = media.borrow(launcher_sha256);
+        const auto game = media.borrow(game_sha256);
+        const auto initial_save = media.borrow(initial_save_sha256);
+        const auto static_data = media.borrow(static_data_sha256);
+        const auto ega640 = media.borrow(ega640_sha256);
+        const auto mcga = media.borrow(mcga_sha256);
+        const auto sound_blaster = media.borrow(sound_blaster_sha256);
+        const auto covox = media.borrow(covox_sha256);
         if (!gx_bytes || !titles || !launcher || !game || !initial_save || !static_data || !ega640 || !mcga
             || !sound_blaster || !covox) {
             return std::nullopt;

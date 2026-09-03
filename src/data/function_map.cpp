@@ -287,11 +287,11 @@ bool function_map_entries_are_attested_by_media(const VerifiedReleaseMedia& medi
         });
         if (profile == profiles.end() || profile->offset > profile->leaf_size
             || profile->length > profile->leaf_size - profile->offset) return false;
-        const auto leaf = media.extract(profile->leaf_sha256);
+        const auto leaf = media.borrow(profile->leaf_sha256);
         if (!leaf || leaf->size() != profile->leaf_size
             || profile->offset > leaf->size()
             || profile->length > leaf->size() - profile->offset) return false;
-        const auto span = std::span<const std::uint8_t>(*leaf).subspan(
+        const auto span = leaf->subspan(
             static_cast<std::size_t>(profile->offset), static_cast<std::size_t>(profile->length));
         if (to_hex(sha256(span)) != entry.source_span_sha256) return false;
     }

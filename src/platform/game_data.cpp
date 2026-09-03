@@ -195,21 +195,44 @@ VerifiedReleaseMedia VerifiedReleaseMedia::open(const ReleaseArchive& release) {
 
 std::optional<std::vector<std::uint8_t>> VerifiedReleaseMedia::extract(
     const std::string_view expected_asset_sha256) const {
-    if (archive_) return archive_->extract_asset_by_sha256(expected_asset_sha256);
+    const auto leaf = borrow(expected_asset_sha256);
+    if (!leaf) return std::nullopt;
+    // Compatibility for readers that intentionally take ownership (for
+    // example fragmented filesystem materialisation). New span-aware paths
+    // should use borrow() so they do not duplicate this original leaf.
+    return std::vector<std::uint8_t>(leaf->begin(), leaf->end());
+}
+
+std::optional<std::span<const std::uint8_t>> VerifiedReleaseMedia::borrow(
+    const std::string_view expected_asset_sha256) const {
+    const auto cached = borrowed_assets_.find(std::string(expected_asset_sha256));
+    if (cached != borrowed_assets_.end()) {
+        return std::span<const std::uint8_t>(cached->second);
+    }
+    std::vector<std::uint8_t> bytes;
+    if (archive_) {
+        const auto extracted = archive_->extract_asset_by_sha256(expected_asset_sha256);
+        if (!extracted) return std::nullopt;
+        bytes = std::move(*extracted);
+    } else {
     const auto found = direct_assets_.find(std::string(expected_asset_sha256));
     if (found == direct_assets_.end()) return std::nullopt;
-    auto bytes = read_exact_regular_file(found->second.path, found->second.size);
+        bytes = read_exact_regular_file(found->second.path, found->second.size);
+    }
     // `open()` verified the complete set; the second hash closes the interval
-    // between that set admission and this individual parser read. The caller
-    // receives this one transient leaf, never a cached installed collection.
+    // between that set admission and this individual parser read. The
+    // session retains only this immutable, hash-addressed leaf backing.
     if (to_hex(sha256(bytes)) != expected_asset_sha256) return std::nullopt;
-    return bytes;
+    const auto [inserted, added] = borrowed_assets_.emplace(
+        std::string(expected_asset_sha256), std::move(bytes));
+    if (!added) return std::nullopt;
+    return std::span<const std::uint8_t>(inserted->second);
 }
 
 bool verified_release_media_has_declared_profile_ranges(const VerifiedReleaseMedia& media) {
     // Avoid reopening/decompressing the same declared leaf for profiles that
-    // identify different spans within it. Every returned vector is scoped to
-    // this check; no extracted original data is cached or exposed.
+    // identify different spans within it. Borrowed views stay internal to
+    // this release-bound media session and expose no paths or mutable bytes.
     std::vector<std::pair<std::string_view, std::size_t>> verified_leaves;
     bool found_profile = false;
     for (const auto& profile : parser_profile_manifest()) {
@@ -219,7 +242,7 @@ bool verified_release_media_has_declared_profile_ranges(const VerifiedReleaseMed
             [&profile](const auto& candidate) { return candidate.first == profile.leaf_sha256; });
         std::size_t leaf_size = 0;
         if (already_verified == verified_leaves.end()) {
-            const auto leaf = media.extract(profile.leaf_sha256);
+            const auto leaf = media.borrow(profile.leaf_sha256);
             if (!leaf || leaf->size() != profile.leaf_size) return false;
             leaf_size = leaf->size();
             verified_leaves.emplace_back(profile.leaf_sha256, leaf_size);
