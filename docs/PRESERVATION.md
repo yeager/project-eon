@@ -4745,9 +4745,10 @@ post-stream index table selects entries from the `IMG00` DAC. The bounded DOS
 LIB reader now returns borrowed ranges into the hash-verified supplied library
 rather than retaining a whole-LIB or per-entry copy; callers retain the source
 for the lifetime of each view. Project Eon decodes this pair in memory and
-retains the remaining resource-table bytes as opaque rather than inventing UI
-or state meaning. Exact offsets, sizes and pixel hashes are in [the GX canvas
-evidence](generated/millennium-dos-gx-canvas.md).
+records the remaining resource-table tails only as original-library offset,
+length and SHA-256 rather than retaining opaque source-byte copies or
+inventing UI/state meaning. Exact offsets, sizes and pixel hashes are in [the
+GX canvas evidence](generated/millennium-dos-gx-canvas.md).
 GX and `2200SAVE.I` are inspection-only preservation evidence. The verified
 `TITLES.EXE` poll establishes neither a process exit nor a DOS return to
 `MILL.COM`, let alone `2200ad.exe` startup, GX selection, or save-state

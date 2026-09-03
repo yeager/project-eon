@@ -14,11 +14,11 @@ namespace {
 constexpr std::size_t bitmap_header_size = 0x1c;
 constexpr std::size_t dac_bytes = 256U * 3U;
 
-[[nodiscard]] std::vector<std::uint8_t> tail_after_pixels(
+[[nodiscard]] std::span<const std::uint8_t> tail_after_pixels(
     std::span<const std::uint8_t> resource, const MillenniumDosBitmap& bitmap) {
     const auto offset = bitmap_header_size + static_cast<std::size_t>(bitmap.encoded_span);
     if (offset > resource.size()) throw std::runtime_error("Invalid Millennium DOS GX bitmap range");
-    return {resource.begin() + static_cast<std::ptrdiff_t>(offset), resource.end()};
+    return resource.subspan(offset);
 }
 
 [[nodiscard]] const MillenniumDosLibEntry& require_entry(
@@ -73,8 +73,13 @@ MillenniumDosGameplayScreen parse_millennium_dos_gameplay_screen(
             result.dac_rgb6[index][component] = value;
         }
     }
-    result.palette_resource_auxiliary.assign(palette_tail.begin() + static_cast<std::ptrdiff_t>(dac_bytes),
-        palette_tail.end());
+    const auto palette_auxiliary = palette_tail.subspan(dac_bytes);
+    result.palette_resource_auxiliary = MillenniumDosGameplayOpaqueRange{
+        static_cast<std::uint32_t>(palette_bytes.data() - gx_lib.data() + bitmap_header_size
+            + result.palette_resource.encoded_span + dac_bytes),
+        static_cast<std::uint32_t>(palette_auxiliary.size()),
+        to_hex(sha256(palette_auxiliary)),
+    };
 
     const auto canvas_tail = tail_after_pixels(canvas_bytes, result.canvas);
     const auto canvas_count = static_cast<std::size_t>(result.canvas.max_palette_index) + 1U;
@@ -83,8 +88,13 @@ MillenniumDosGameplayScreen parse_millennium_dos_gameplay_screen(
     }
     result.canvas_logical_to_dac.assign(canvas_tail.begin(),
         canvas_tail.begin() + static_cast<std::ptrdiff_t>(canvas_count));
-    result.canvas_auxiliary.assign(canvas_tail.begin() + static_cast<std::ptrdiff_t>(canvas_count),
-        canvas_tail.end());
+    const auto canvas_auxiliary = canvas_tail.subspan(canvas_count);
+    result.canvas_auxiliary = MillenniumDosGameplayOpaqueRange{
+        static_cast<std::uint32_t>(canvas_bytes.data() - gx_lib.data() + bitmap_header_size
+            + result.canvas.encoded_span + canvas_count),
+        static_cast<std::uint32_t>(canvas_auxiliary.size()),
+        to_hex(sha256(canvas_auxiliary)),
+    };
 
     result.rgba.reserve(result.canvas.pixels.size() * 4U);
     for (const auto logical_index : result.canvas.pixels) {

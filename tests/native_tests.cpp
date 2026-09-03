@@ -6444,6 +6444,17 @@ int main() {
     }
     assert(rejected_altered_gx_catalog);
     assert(gameplay_canvas.canvas.width == 320 && gameplay_canvas.canvas.height == 167);
+    assert(gameplay_canvas.palette_resource_auxiliary.length != 0);
+    assert(gameplay_canvas.canvas_auxiliary.length != 0);
+    const auto gx_source = std::span<const std::uint8_t>(*gx_bytes);
+    assert(eon::to_hex(eon::sha256(gx_source.subspan(
+        gameplay_canvas.palette_resource_auxiliary.source_offset,
+        gameplay_canvas.palette_resource_auxiliary.length)))
+        == gameplay_canvas.palette_resource_auxiliary.sha256);
+    assert(eon::to_hex(eon::sha256(gx_source.subspan(
+        gameplay_canvas.canvas_auxiliary.source_offset,
+        gameplay_canvas.canvas_auxiliary.length)))
+        == gameplay_canvas.canvas_auxiliary.sha256);
     assert(gx_catalog.source_sha256 == "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f");
     assert(gx_catalog.resource_count == 180 && gx_catalog.resources.size() == 180);
     assert(gx_catalog.bitmap_decoder_admitted_count + gx_catalog.bitmap_decoder_boundary_count
