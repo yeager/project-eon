@@ -272,6 +272,28 @@ then flushes it from a separately reviewed host-safe point after guest
 execution has stopped. It must also bind the exact release/image/site/opcode
 identity and fail closed without consuming a later eligible observation.
 
+### V22 successor callback contract
+
+The reviewed successor has one narrow callback contract. DOSBox-X reaches
+`default_handler` only after it decodes its default stub `FE 38 03 00`; the
+permitted callback point is therefore `f000:ca64`, with stub origin
+`f000:ca60` and callback index `3`. It must require all of those literals,
+`lastint == 0x06`, and a prior exact Millennium title-prefix arm. A
+non-matching callback cannot consume the recorder slot.
+
+Only after that gate, the callback may copy the three already-pushed real-mode
+IRET words at `SS:SP`—`return_ip`, `return_cs`, and `return_flags`—plus the
+listed scalar registers into one preallocated recorder-owned POD slot. They
+are raw exception-frame facts, never a title ABI, function return, mapping, or
+game result. The canonical bounded record contains the schema identifier
+`unhandled-int6-v2`, interrupt, callback CS/IP/stub/index, SS:SP, those three
+raw words, and AX/BX/CX/DX.
+
+The callback may not allocate, log, open or write a file, inspect environment,
+write guest memory, alter registers/vectors, request a stop, or schedule work.
+An independently reviewed host-safe shutdown/flush point remains required;
+the in-memory slot alone cannot survive a forced process kill.
+
 ### Experimental observer runs
 
 The reviewed v3 candidate may be run only with the explicit
