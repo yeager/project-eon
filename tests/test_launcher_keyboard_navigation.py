@@ -184,7 +184,11 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertNotIn("runtime_coordinator.deuteros_amiga()", SOURCE)
         self.assertIn("runtime.deuteros_amiga_opening_presentation()", SOURCE)
         self.assertIn("runtime.render_deuteros_amiga_opening_audio", SOURCE)
-        self.assertIn("runtime_coordinator.millennium_dos()", SOURCE)
+        self.assertIn("runtime.millennium_dos_presentation()", SOURCE)
+        self.assertIn("runtime.millennium_dos_startup_input()", SOURCE)
+        self.assertNotIn("runtime_coordinator.millennium_dos()", SOURCE)
+        self.assertNotIn("runtime_coordinator.millennium_dos_title()", SOURCE)
+        self.assertNotIn("runtime_coordinator.millennium_dos_sound_selection()", SOURCE)
 
     def test_deuteros_opening_handoff_publishes_a_fail_closed_title_stage_session(self) -> None:
         session_header = (ROOT / "src" / "engine" / "runtime_session.hpp").read_text(encoding="utf-8")
@@ -451,7 +455,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         start = SOURCE.index("const auto start_millennium_title")
         self.assertLess(stop, start)
         self.assertIn("SDL_StopTextInput(window)", SOURCE[stop:start])
-        self.assertIn("millennium_title_session = nullptr;", SOURCE[stop:start])
+        self.assertIn("millennium_startup_input.reset();", SOURCE[stop:start])
         self.assertIn("runtime.reset();", SOURCE)
         self.assertIn("reset_active_runtime();\n                    screen = Screen::menu;", SOURCE)
         self.assertIn("stop_millennium_title();", SOURCE[SOURCE.index("const auto start_deuteros"):])

@@ -124,6 +124,26 @@ struct MillenniumDosRuntimeAssets {
     std::optional<MillenniumDosSaveSession> initial_save;
 };
 
+// A value-only view of one admitted Millennium DOS session.  It deliberately
+// copies decoded, media-derived values so SDL cannot retain the coordinator's
+// adapter or any of its input/session objects across reset or a new launch.
+struct MillenniumDosPresentationSnapshot {
+    MillenniumDosRuntimeAssets assets;
+};
+
+// The only DOS startup-input facts the UI needs.  The raw title and sound
+// selection sessions remain coordinator-owned; callers can request a fresh
+// snapshot after forwarding an observation but cannot poll or mutate either
+// session themselves.
+struct MillenniumDosStartupInputSnapshot {
+    bool sound_selection_active = false;
+    bool sound_selection_awaiting_choice = false;
+    std::optional<std::string> selected_original_filename;
+    bool selected_driver_is_admitted = false;
+    bool title_active = false;
+    bool title_handed_off = false;
+};
+
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
 // outside this class; this is the common source boundary for every platform
@@ -141,15 +161,10 @@ public:
     [[nodiscard]] const std::optional<RuntimeSessionSnapshot>& session_snapshot() const {
         return session_snapshot_;
     }
-    [[nodiscard]] const MillenniumDosRuntimeAssets* millennium_dos() const {
-        return millennium_dos_ ? &*millennium_dos_ : nullptr;
-    }
-    [[nodiscard]] MillenniumDosSoundSelectionSession* millennium_dos_sound_selection() const {
-        return millennium_dos_sound_selection_.get();
-    }
-    [[nodiscard]] MillenniumDosTitleSession* millennium_dos_title() const {
-        return millennium_dos_title_.get();
-    }
+    [[nodiscard]] std::optional<MillenniumDosPresentationSnapshot>
+    millennium_dos_presentation() const;
+    [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
+    millennium_dos_startup_input() const;
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
     // Advances exactly one recovered Deuteros Amiga opening tick using the
     // coordinator-owned held observation. All non-opening sessions return no
@@ -177,14 +192,8 @@ public:
     deuteros_atari_bootstrap_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAtariBootstrapPresentationSnapshot>
     deuteros_atari_bootstrap_presentation() const;
-    [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
-        return millennium_amiga_.get();
-    }
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
     millennium_amiga_bootstrap_presentation() const;
-    [[nodiscard]] MillenniumAtariBootstrapSession* millennium_atari() const {
-        return millennium_atari_.get();
-    }
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime and retains neither trace
     // nor media bytes. Every other trace remains diagnostics-only.
