@@ -4181,6 +4181,9 @@ int main(int argc, char** argv) {
             std::cout << ",\"runtime_admission\":";
             write_json_string(std::cout,
                 eon::release_runtime_admission_label(runtime_coordinator.admission()));
+            std::cout << ",\"runtime_rejection\":";
+            write_json_string(std::cout,
+                eon::release_runtime_rejection_label(runtime_coordinator.rejection()));
             // The coordinator owns this snapshot; do not reconstruct a
             // parallel session identity from mutable launcher state. It is
             // intentionally limited to adapter/boundary/capability facts and
