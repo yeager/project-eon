@@ -37,6 +37,8 @@ bool release_runtime_capability_manifest_is_valid() {
         if (matches != 1) return false;
     }
     for (const auto& capability : capabilities) {
+        if (!runtime_session_declaration_is_valid(capability.initial_kind,
+                capability.initial_boundary, capability.initial_capabilities)) return false;
         const auto matches = std::count_if(manifest.begin(), manifest.end(),
             [&capability](const auto& release) {
                 return release.sha256 == capability.release_sha256

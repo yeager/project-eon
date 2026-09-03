@@ -73,6 +73,32 @@ bool runtime_input_contract_accepts_observation(const RuntimeInputContract contr
     return false;
 }
 
+bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
+    const RuntimeSessionBoundary boundary, const RuntimeSessionCapabilities capabilities) {
+    RuntimeSessionBoundary expected_boundary = RuntimeSessionBoundary::bootstrap_boundary;
+    RuntimeSessionCapabilities expected_capabilities;
+    switch (kind) {
+    case RuntimeSessionKind::millennium_dos_title:
+        expected_boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
+        expected_capabilities = {true, false, true};
+        break;
+    case RuntimeSessionKind::deuteros_amiga_opening:
+        expected_boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
+        expected_capabilities = {true, true, true};
+        break;
+    case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
+    case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
+    case RuntimeSessionKind::millennium_amiga_bootstrap:
+    case RuntimeSessionKind::millennium_atari_bootstrap:
+    case RuntimeSessionKind::deuteros_amiga_title_stage:
+    case RuntimeSessionKind::deuteros_atari_bootstrap:
+        break;
+    }
+    return boundary == expected_boundary && capabilities == expected_capabilities
+        && capabilities.admitted_input
+            == runtime_input_contract_admits_host_observation(runtime_input_contract_for_session(kind));
+}
+
 RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest& launch,
     const RuntimeSessionKind kind) {
     RuntimeSessionSnapshot snapshot;

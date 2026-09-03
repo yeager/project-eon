@@ -109,6 +109,14 @@ struct RuntimeSessionSnapshot {
     constexpr bool operator==(const RuntimeSessionSnapshot&) const = default;
 };
 
+// Validate the declaration that a release-capability table makes about a
+// typed native session. This is independent of media and does not construct a
+// session; it prevents a table row from broadening SDL-facing rights beyond
+// the implementation's exact recovered envelope.
+[[nodiscard]] bool runtime_session_declaration_is_valid(
+    RuntimeSessionKind kind, RuntimeSessionBoundary boundary,
+    RuntimeSessionCapabilities capabilities);
+
 [[nodiscard]] RuntimeSessionSnapshot make_runtime_session_snapshot(
     const ResolvedLaunchRequest& launch, RuntimeSessionKind kind);
 
