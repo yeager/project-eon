@@ -236,6 +236,31 @@ ReleaseRuntimeCoordinator::millennium_dos_startup_input() const {
     return snapshot;
 }
 
+std::optional<MillenniumDosStaticDispatchDiagnostics>
+ReleaseRuntimeCoordinator::millennium_dos_static_dispatch_diagnostics() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title
+        || !millennium_dos_ || !millennium_dos_->game_flow) return std::nullopt;
+    const auto& flow = *millennium_dos_->game_flow;
+    // The parser admits precisely ten records. Keep the public DTO fixed-size
+    // so diagnostic consumers cannot mistake an unbounded byte range for an
+    // executable game-control mapping.
+    if (flow.function_key_count != 10) return std::nullopt;
+    return MillenniumDosStaticDispatchDiagnostics{
+        .action_poll_address = flow.action_poll_address,
+        .first_action = flow.function_key_first_action,
+        .action_count = flow.function_key_count,
+        .table_address = flow.function_key_table_address,
+        .table_stride = flow.function_key_table_stride,
+        .dispatch_address = flow.function_key_dispatch_address,
+        .handler_addresses = {flow.first_function_key.handler_address,
+            flow.second_function_key.handler_address, flow.third_function_key.handler_address,
+            flow.fourth_function_key.handler_address, flow.fifth_function_key.handler_address,
+            flow.sixth_function_key.handler_address, flow.seventh_function_key.handler_address,
+            flow.eighth_function_key.handler_address, flow.ninth_function_key.handler_address,
+            flow.tenth_function_key.handler_address},
+    };
+}
+
 MillenniumDosGxStartupTraceAdmission
 ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace(
     const ReferenceTrace& trace) const {

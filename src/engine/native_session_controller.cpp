@@ -95,6 +95,12 @@ NativeSessionController::millennium_dos_startup_input() const {
     return runtime_.millennium_dos_startup_input();
 }
 
+std::optional<MillenniumDosStaticDispatchDiagnostics>
+NativeSessionController::millennium_dos_static_dispatch_diagnostics() const {
+    if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
+    return runtime_.millennium_dos_static_dispatch_diagnostics();
+}
+
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {
     if (state_ == NativeSessionState::returning_to_menu) return std::nullopt;
     const auto events = runtime_.tick_deuteros_amiga_opening();

@@ -375,6 +375,17 @@ def main() -> int:
                 != launch_check_payload["runtime_rejection"]
             or runtime_diagnostics_payload.get("runtime_session")
                 != launch_check_payload["runtime_session"]
+            or runtime_diagnostics_payload.get("millennium_dos_static_dispatch") != {
+                "static_only": True,
+                "action_poll_address": "$f05",
+                "first_action": 59,
+                "action_count": 10,
+                "table_address": "$2fbf",
+                "table_stride": 8,
+                "dispatch_address": "$76f0",
+                "handler_addresses": ["$6f9a", "$71ca", "$6faa", "$72f9", "$7597",
+                    "$7415", "$7521", "$7306", "$7339", "$7384"],
+            }
             or runtime_diagnostics_payload.get("atari_bootstrap_checkpoint") is not None
             or recovery.get("coverage") != launch_check_payload["coverage"]
             or recovery.get("trace_admission") != "not-loaded"

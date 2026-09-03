@@ -175,6 +175,20 @@ struct MillenniumDosStartupInputSnapshot {
     bool title_handed_off = false;
 };
 
+// Hash-gated, static dispatch provenance for 2200AD.EXE.  This deliberately
+// describes the table encoded in the admitted executable, not a playable
+// game session: no action has been observed, no handler has executed, and
+// no native runtime cells are exposed or reconstructed here.
+struct MillenniumDosStaticDispatchDiagnostics {
+    std::uint32_t action_poll_address = 0;
+    std::uint8_t first_action = 0;
+    std::size_t action_count = 0;
+    std::uint16_t table_address = 0;
+    std::size_t table_stride = 0;
+    std::uint32_t dispatch_address = 0;
+    std::array<std::uint16_t, 10> handler_addresses{};
+};
+
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
 // outside this class; this is the common source boundary for every platform
@@ -196,6 +210,10 @@ public:
     millennium_dos_presentation() const;
     [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
     millennium_dos_startup_input() const;
+    // A value-only diagnostics view. It is available only for the live,
+    // exact Millennium DOS title adapter and is revoked with that adapter.
+    [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
+    millennium_dos_static_dispatch_diagnostics() const;
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
     // Advances exactly one recovered Deuteros Amiga opening tick using the
     // coordinator-owned held observation. All non-opening sessions return no

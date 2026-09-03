@@ -3923,6 +3923,14 @@ int main() {
     assert(admitted_dos_runtime.acquire(admitted_dos_launch));
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "READY");
     assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos_presentation());
+    const auto dos_static_dispatch = admitted_dos_runtime.millennium_dos_static_dispatch_diagnostics();
+    const std::array<std::uint16_t, 10> expected_dos_handlers{0x6f9a, 0x71ca, 0x6faa, 0x72f9,
+        0x7597, 0x7415, 0x7521, 0x7306, 0x7339, 0x7384};
+    assert(dos_static_dispatch && dos_static_dispatch->action_poll_address == 0x0f05
+        && dos_static_dispatch->first_action == 0x3b && dos_static_dispatch->action_count == 10
+        && dos_static_dispatch->table_address == 0x2fbf && dos_static_dispatch->table_stride == 8
+        && dos_static_dispatch->dispatch_address == 0x76f0
+        && dos_static_dispatch->handler_addresses == expected_dos_handlers);
     assert(admitted_dos_runtime.session_snapshot());
     const auto& dos_session_snapshot = *admitted_dos_runtime.session_snapshot();
     assert(dos_session_snapshot.game == eon::Game::millennium
@@ -3999,7 +4007,8 @@ int main() {
         == eon::RuntimeInputDisposition::rejected);
     admitted_dos_runtime.reset();
     assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos_presentation()
-        && !admitted_dos_runtime.session_snapshot());
+        && !admitted_dos_runtime.session_snapshot()
+        && !admitted_dos_runtime.millennium_dos_static_dispatch_diagnostics());
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
     // The Spanish release has no recovered sound-driver route. Its one
     // availability observation must instead become the explicit TITLES.EXE

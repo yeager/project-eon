@@ -979,6 +979,7 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
 void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     const eon::ReleaseRuntimeAdmission admission, const eon::ReleaseRuntimeRejection rejection,
     const std::optional<eon::RuntimeSessionSnapshot>& session,
+    const std::optional<eon::MillenniumDosStaticDispatchDiagnostics>& millennium_dispatch,
     const std::optional<eon::DeuterosAtariBootstrapCheckpoint>& atari_checkpoint,
     const eon::Presentation presentation,
     const eon::DisplayPreferences& display, const std::string_view aspect_identifier) {
@@ -1011,6 +1012,35 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
             << (session->capabilities.audio_observations ? "true" : "false")
             << ",\"admitted_input\":"
             << (session->capabilities.admitted_input ? "true" : "false") << "}}";
+    } else {
+        std::cout << "null";
+    }
+    // This is static code provenance, never a live control binding. In
+    // particular, the action values are not accepted as SDL input and no
+    // handler execution is reported by this no-SDL diagnostics invocation.
+    std::cout << ",\"millennium_dos_static_dispatch\":";
+    if (millennium_dispatch) {
+        const auto hex = [](const auto value) {
+            std::ostringstream output;
+            output << '$' << std::hex << value;
+            return output.str();
+        };
+        std::cout << "{\"static_only\":true,\"action_poll_address\":";
+        write_json_string(std::cout, hex(millennium_dispatch->action_poll_address));
+        std::cout << ",\"first_action\":"
+            << static_cast<unsigned>(millennium_dispatch->first_action)
+            << ",\"action_count\":" << millennium_dispatch->action_count
+            << ",\"table_address\":";
+        write_json_string(std::cout, hex(millennium_dispatch->table_address));
+        std::cout << ",\"table_stride\":" << millennium_dispatch->table_stride
+            << ",\"dispatch_address\":";
+        write_json_string(std::cout, hex(millennium_dispatch->dispatch_address));
+        std::cout << ",\"handler_addresses\":[";
+        for (std::size_t index = 0; index < millennium_dispatch->handler_addresses.size(); ++index) {
+            if (index != 0) std::cout << ',';
+            write_json_string(std::cout, hex(millennium_dispatch->handler_addresses[index]));
+        }
+        std::cout << "]}";
     } else {
         std::cout << "null";
     }
@@ -4207,7 +4237,8 @@ int main(int argc, char** argv) {
         }
         if (request.runtime_diagnostics_json) {
             report_runtime_diagnostics_json(*active_launch(), runtime.admission(), runtime.rejection(),
-                runtime.session_snapshot(), runtime.deuteros_atari_bootstrap_checkpoint(),
+                runtime.session_snapshot(), runtime.millennium_dos_static_dispatch_diagnostics(),
+                runtime.deuteros_atari_bootstrap_checkpoint(),
                 request.presentation, request.display,
                 display_aspect_identifiers.at(request.display.aspect_ratio_index));
             return 0;
