@@ -2395,9 +2395,10 @@ hardware routine at `$22bea` copies the first ten bytes directly to
 retained verbatim because `$22c08` onward uses their individual flags for
 runtime modulation and looping. The native reader validates the boundary,
 nonzero period/length, `volume <= 64`, and that the complete `length × 2` DMA
-range remains inside the original bundle. It returns the exact signed 8-bit
-Paula PCM bytes in memory only; it neither converts, unpacks, nor writes the
-game media.
+range remains inside the original bundle. Each descriptor retains a
+non-owning span into the already owned, verified ADF rather than duplicating
+its PCM range; the sound bank cannot outlive that ADF. It neither converts,
+unpacks, copies, nor writes the game media.
 
 The opening's second scheduler tick proves live use of entries 1 and 2:
 `$0b,$0001,$0001` then `$0b,$0002,$0002`. They share source offset `0x2a8b`

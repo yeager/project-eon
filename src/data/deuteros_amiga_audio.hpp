@@ -3,14 +3,16 @@
 #include "data/deuteros_amiga_bundle.hpp"
 
 #include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 
 namespace eon {
 
 // A single 14-byte entry consumed by the original Paula setup routine at
-// $22ab8. `pcm` retains the exact DMA bytes (signed 8-bit samples on Paula);
-// no file is unpacked or rewritten by this reader.
+// $22ab8. `pcm` is a non-owning view of the exact DMA bytes (signed 8-bit
+// samples on Paula). The supplied ADF must outlive this sound bank; no file
+// is unpacked, copied, or rewritten by this reader.
 struct DeuterosAmigaSound {
     // These offsets and digests identify the exact original descriptor and
     // DMA range used by a later renderer/audio sink. They are provenance,
@@ -24,7 +26,7 @@ struct DeuterosAmigaSound {
     std::uint16_t parameter_word = 0;
     std::string descriptor_sha256;
     std::string pcm_sha256;
-    std::vector<std::uint8_t> pcm;
+    std::span<const std::uint8_t> pcm;
 };
 
 struct DeuterosAmigaSoundBank {
