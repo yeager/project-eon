@@ -32,6 +32,8 @@ class ArchiveInventoryCliTests(unittest.TestCase):
         self.assertIn(r'\"project-eon.inspect/v1\"', body)
         self.assertIn(r'\"function_map\"', body)
         self.assertIn("document.direct_media_set_sha256", MAIN)
+        self.assertIn("verify_release_archive(*direct_source)", MAIN)
+        self.assertIn("source changed before inspection", MAIN)
         self.assertIn(r'\"source_span_sha256\"', body)
         self.assertIn(r'\"coverage\"', body)
         self.assertIn(r'\"source_kind\"', body)
