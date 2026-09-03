@@ -588,6 +588,10 @@ struct ModernRuntimeDiagnostics {
     std::vector<RecoveryFunction> recovery_functions;
     std::string trace_admission = "NOT LOADED";
     std::optional<StaticControlFlow> static_control_flow;
+    // The live runtime provides only this static, hash-bound table summary.
+    // It is deliberately absent after title handoff/revocation and cannot be
+    // interpreted as an active input mapping or executed game path.
+    std::string millennium_dos_static_dispatch;
     // This comes only from the launcher preflight object. It does not expose
     // a local path, decode an external asset, or imply the renderer loaded it.
     std::string modern_pack = "NOT SELECTED";
@@ -1415,7 +1419,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"RECOVERY MAP BOUNDARIES", std::to_string(diagnostics.recovery_boundary_count)},
         {"TRACE ADMISSION", tr(diagnostics.trace_admission)},
         {"STATIC CONTROL FLOW", static_control_flow_diagnostics_summary(
-            diagnostics.static_control_flow, translator)},
+            diagnostics.static_control_flow, translator)
+            + (diagnostics.millennium_dos_static_dispatch.empty() ? ""
+                : " / " + diagnostics.millennium_dos_static_dispatch)},
         {"MODERN PACK", diagnostics.modern_pack},
         {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -5080,6 +5086,14 @@ int main(int argc, char** argv) {
                 + " / AUDIO=" + (session->capabilities.audio_observations ? "Y" : "N")
                 + " / INPUT=" + std::string(
                     eon::runtime_input_contract_identifier(session->input_contract));
+        }
+        if (const auto dispatch = runtime.millennium_dos_static_dispatch_diagnostics()) {
+            std::ostringstream summary;
+            summary << "F1-F10 TABLE=$" << std::hex << dispatch->table_address
+                    << " STRIDE=" << std::dec << dispatch->table_stride
+                    << " DISPATCH=$" << std::hex << dispatch->dispatch_address
+                    << " (STATIC ONLY)";
+            diagnostics.millennium_dos_static_dispatch = summary.str();
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");
