@@ -4062,6 +4062,8 @@ int main(int argc, char** argv) {
     // the start menu.
     std::string launcher_runtime_admission = std::string(
         eon::release_runtime_admission_label(runtime.admission()));
+    std::string launcher_runtime_rejection = std::string(
+        eon::release_runtime_rejection_label(runtime_coordinator.rejection()));
     const auto active_launch = [&]() -> const std::optional<eon::ResolvedLaunchRequest>& {
         return runtime.active();
     };
@@ -4073,6 +4075,8 @@ int main(int argc, char** argv) {
         const auto admission = runtime.launch_direct(launch_candidate, releases);
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(admission.admission));
+        launcher_runtime_rejection = std::string(
+            eon::release_runtime_rejection_label(admission.rejection));
         if (!admission.accepted()) {
             std::cerr << "The selected game and platform need one exact verified original release. "
                      "Use --release-sha256 when several outer containers share a language; "
@@ -4776,6 +4780,8 @@ int main(int argc, char** argv) {
         const auto menu_launch = runtime.launch_menu(launcher_session, request, releases);
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(menu_launch.admission));
+        launcher_runtime_rejection = std::string(
+            eon::release_runtime_rejection_label(menu_launch.rejection));
         if (!menu_launch.accepted()) return;
         // The chosen release card is part of the Modern-pack identity.  A
         // previously valid candidate becomes rejected rather than silently
@@ -4968,8 +4974,7 @@ int main(int argc, char** argv) {
         diagnostics.release_identity = tr("NOT SELECTED");
         diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
             runtime_coordinator.admission()));
-        diagnostics.runtime_rejection = std::string(eon::release_runtime_rejection_label(
-            runtime_coordinator.rejection()));
+        diagnostics.runtime_rejection = launcher_runtime_rejection;
         diagnostics.lifecycle_state = std::string(eon::native_session_state_label(runtime.state()));
         // This is a compact, renderer-only diagnostic code. It makes the
         // selected preservation contract visible even before a session is

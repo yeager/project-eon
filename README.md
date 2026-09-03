@@ -303,6 +303,12 @@ unique IDs with exact release/profile bindings. This is a no-I/O diagnostics
 safeguard only; it neither executes original media nor changes native runtime
 admission.
 
+The shared CLI/card launch result also preserves a media-safe rejection code
+for the attempted route. This remains available when an absent, stale, or
+ambiguous candidate resets the coordinator, so the start menu can identify a
+launch-identity failure without retaining a former release or exposing paths,
+member names, parser errors, or original bytes.
+
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It
 contains only game/platform/language/release hashes plus hash-bound startup and

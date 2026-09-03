@@ -10,10 +10,12 @@ namespace eon {
 // It has no SDL, renderer, save, Modern-pack, or game-media decoding surface.
 struct RuntimeCandidateLaunchResult {
     ReleaseRuntimeAdmission admission = ReleaseRuntimeAdmission::unselected;
+    ReleaseRuntimeRejection rejection = ReleaseRuntimeRejection::none;
     std::optional<ResolvedLaunchRequest> active_launch;
 
     [[nodiscard]] bool accepted() const {
-        return admission == ReleaseRuntimeAdmission::active && active_launch.has_value();
+        return admission == ReleaseRuntimeAdmission::active
+            && rejection == ReleaseRuntimeRejection::none && active_launch.has_value();
     }
 };
 
