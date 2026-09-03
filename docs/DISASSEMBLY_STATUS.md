@@ -60,6 +60,26 @@ copies report or game-media contents. A successful identity check proves only
 that the retained report is the recorded linear listing; it does not establish
 reachability, code/data classification, ABI results, or gameplay semantics.
 
+For the recognised project corpus, `tools/reproduce_disassembly_reports.py`
+builds the seven report identities and invokes that verifier as one fail-closed
+operation. It takes every original container explicitly, writes only fresh
+derived reports to one empty external directory, and pins the outer/nested
+container, disk, program and range hashes in the underlying analyzers. It does
+not discover by filename, extract media, or accept an existing report as new
+evidence:
+
+```sh
+mkdir /home/user/.cache/project-eon-tools/all-linear-reports
+python3 tools/reproduce_disassembly_reports.py \
+  --output-directory /home/user/.cache/project-eon-tools/all-linear-reports \
+  --millennium-dos-directory /home/user/.projecteon/millennium-return-to-earth-2-2 \
+  --millennium-dos-spanish-archive /home/user/Downloads/Millennium-Return-to-Earth_DOS_ES_Floppy-Disk-Image-v201.zip \
+  --millennium-amiga-archive /home/user/Downloads/Millennium-Return-to-Earth_Amiga_EN.zip \
+  --millennium-atari-archive /home/user/Downloads/Millennium-Return-to-Earth_Atari-ST_EN.zip \
+  --deuteros-amiga-disk-archive '/home/user/.projecteon/Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).zip' \
+  --deuteros-atari-archive /home/user/Downloads/Deuteros-The-Next-Millennium_Atari-ST_EN.zip
+```
+
 ## External static control-flow sidecars
 
 `tools/extract_static_control_flow.py` generates a separate, hash-bound JSON
