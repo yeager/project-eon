@@ -13,6 +13,7 @@ namespace {
 
 constexpr std::string_view header_v1 = "project-eon-presentation-preferences=1";
 constexpr std::string_view header_v2 = "project-eon-presentation-preferences=2";
+constexpr std::string_view header_v3 = "project-eon-presentation-preferences=3";
 
 bool is_canonical_launcher_language(const std::string_view language) {
     const auto& supported = supported_launcher_languages();
@@ -69,10 +70,11 @@ std::optional<PresentationPreferences> load_presentation_preferences(const std::
     if (!std::getline(input, line)) return std::nullopt;
     const bool is_v1 = line == header_v1;
     const bool is_v2 = line == header_v2;
-    if (!is_v1 && !is_v2) return std::nullopt;
+    const bool is_v3 = line == header_v3;
+    if (!is_v1 && !is_v2 && !is_v3) return std::nullopt;
     PresentationPreferences preferences;
     bool resolution = false, aspect = false, preset = false, pacing = false;
-    bool reconstruction = false, scaling = false, scanlines = false, frame = false;
+    bool reconstruction = false, scaling = false, scanlines = false, frame = false, reduced_motion = false;
     bool language = false;
     while (std::getline(input, line)) {
         const auto separator = line.find('=');
@@ -87,15 +89,16 @@ std::optional<PresentationPreferences> load_presentation_preferences(const std::
         else if (key == "scaling") { const auto parsed = parse_bool(value); if (!parsed || scaling) return std::nullopt; preferences.smooth_scaling = *parsed; scaling = true; }
         else if (key == "scanlines") { const auto parsed = parse_bool(value); if (!parsed || scanlines) return std::nullopt; preferences.scanlines = *parsed; scanlines = true; }
         else if (key == "frame") { const auto parsed = parse_bool(value); if (!parsed || frame) return std::nullopt; preferences.frame = *parsed; frame = true; }
+        else if (key == "reduced-motion") { const auto parsed = parse_bool(value); if (!is_v3 || !parsed || reduced_motion) return std::nullopt; preferences.reduced_motion = *parsed; reduced_motion = true; }
         else if (key == "language") {
-            if (!is_v2 || language || !is_canonical_launcher_language(value)) return std::nullopt;
+            if ((!is_v2 && !is_v3) || language || !is_canonical_launcher_language(value)) return std::nullopt;
             preferences.launcher_language = std::string(value);
             language = true;
         }
         else return std::nullopt;
     }
     if (!resolution || !aspect || !preset || !pacing || !reconstruction || !scaling || !scanlines || !frame
-        || (is_v2 && !language)) return std::nullopt;
+        || ((is_v2 || is_v3) && !language) || (is_v3 && !reduced_motion)) return std::nullopt;
     return preferences;
 }
 
@@ -110,7 +113,7 @@ bool save_presentation_preferences(const std::filesystem::path& path,
     if (error) return false;
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) return false;
-    output << header_v2 << '\n'
+    output << header_v3 << '\n'
            << "resolution=" << preferences.output_resolution_index << '\n'
            << "aspect=" << preferences.aspect_ratio_index << '\n'
            << "preset=" << preferences.modern_preset_index << '\n'
@@ -119,6 +122,7 @@ bool save_presentation_preferences(const std::filesystem::path& path,
            << "scaling=" << (preferences.smooth_scaling ? 1 : 0) << '\n'
            << "scanlines=" << (preferences.scanlines ? 1 : 0) << '\n'
            << "frame=" << (preferences.frame ? 1 : 0) << '\n'
+           << "reduced-motion=" << (preferences.reduced_motion ? 1 : 0) << '\n'
            << "language=" << preferences.launcher_language << '\n';
     return static_cast<bool>(output);
 }

@@ -272,6 +272,9 @@ msgstr "LINHAS DE VARREDURA"
 msgid "MODERN FRAME"
 msgstr "MOLDURA MODERNA"
 
+msgid "REDUCED MOTION"
+msgstr "MOVIMENTO REDUZIDO"
+
 msgid "ON"
 msgstr "LIGADO"
 

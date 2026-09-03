@@ -233,6 +233,9 @@ msgstr "LINEE DI SCANSIONE"
 msgid "MODERN FRAME"
 msgstr "CORNICE MODERNA"
 
+msgid "REDUCED MOTION"
+msgstr "MOVIMENTO RIDOTTO"
+
 msgid "ON"
 msgstr "ATTIVO"
 

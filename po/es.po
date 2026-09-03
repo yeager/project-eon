@@ -222,6 +222,9 @@ msgstr "LÍNEAS DE ESCANEO"
 msgid "MODERN FRAME"
 msgstr "MARCO MODERNO"
 
+msgid "REDUCED MOTION"
+msgstr "MOVIMIENTO REDUCIDO"
+
 msgid "ON"
 msgstr "ACTIVADO"
 

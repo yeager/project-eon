@@ -222,6 +222,9 @@ msgstr "SCANLINES"
 msgid "MODERN FRAME"
 msgstr "MODERN FRAME"
 
+msgid "REDUCED MOTION"
+msgstr "REDUCED MOTION"
+
 msgid "ON"
 msgstr "ON"
 

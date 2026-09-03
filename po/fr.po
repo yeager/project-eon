@@ -233,6 +233,9 @@ msgstr "LIGNES DE BALAYAGE"
 msgid "MODERN FRAME"
 msgstr "CADRE MODERNE"
 
+msgid "REDUCED MOTION"
+msgstr "MOUVEMENT RÉDUIT"
+
 msgid "ON"
 msgstr "ACTIVÉ"
 

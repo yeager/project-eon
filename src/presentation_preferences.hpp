@@ -21,6 +21,9 @@ struct PresentationPreferences {
     bool smooth_scaling = true;
     bool scanlines = false;
     bool frame = true;
+    // Suppresses Eon's own animated/ornamental Modern overlay. It has no
+    // connection to original game timing, media, controls or input polling.
+    bool reduced_motion = false;
     // Launcher chrome only. This is intentionally distinct from the selected
     // original-release language and contains no original game text.
     std::string launcher_language = "en";
