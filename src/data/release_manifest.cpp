@@ -1,5 +1,6 @@
 #include "data/release_manifest.hpp"
 
+#include <algorithm>
 #include <array>
 
 namespace eon {
@@ -111,6 +112,29 @@ constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
 std::span<const ReleaseManifestEntry> release_manifest() { return releases; }
 
 std::span<const DirectMediaSetManifestEntry> direct_media_set_manifest() { return direct_media_sets; }
+
+bool direct_media_set_manifest_is_valid() {
+    for (const auto& set : direct_media_sets) {
+        if (set.set_sha256.empty() || set.content_release_sha256.empty() || set.members.empty()) return false;
+        const auto release_matches = std::count_if(releases.begin(), releases.end(), [&set](const auto& release) {
+            return release.sha256 == set.content_release_sha256 && release.game == set.game
+                && release.platform == set.platform && release.language == set.language;
+        });
+        if (release_matches != 1) return false;
+        const auto set_matches = std::count_if(direct_media_sets.begin(), direct_media_sets.end(), [&set](const auto& candidate) {
+            return candidate.set_sha256 == set.set_sha256;
+        });
+        if (set_matches != 1) return false;
+        for (const auto& member : set.members) {
+            if (member.name.empty() || member.size == 0 || member.sha256.empty()) return false;
+            const auto name_matches = std::count_if(set.members.begin(), set.members.end(), [&member](const auto& candidate) {
+                return candidate.name == member.name;
+            });
+            if (name_matches != 1) return false;
+        }
+    }
+    return true;
+}
 
 std::span<const ParserProfileManifestEntry> parser_profile_manifest() { return profiles; }
 
