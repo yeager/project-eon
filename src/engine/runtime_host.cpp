@@ -25,6 +25,25 @@ RuntimeHostAdvance RuntimeHost::advance(const std::uint64_t monotonic_tick) {
     return result;
 }
 
+RuntimeHostSnapshot RuntimeHost::snapshot() const {
+    RuntimeHostSnapshot result;
+    result.generation = generation_;
+    result.revoking = revoking();
+    result.admission = admission();
+    result.rejection = rejection();
+    result.state = state();
+    // A revocation interval is specifically the point at which SDL releases
+    // its previous-generation borrows. Do not offer an old session/value to a
+    // newly scheduled UI task during that interval.
+    if (result.revoking) return result;
+    result.session = session_snapshot();
+    if (const auto presentation = presentation_snapshot()) {
+        result.presentation = {presentation->kind, presentation->boundary,
+            presentation->capabilities, presentation->input_contract};
+    }
+    return result;
+}
+
 bool RuntimeHost::revoking() const {
     return state() == NativeSessionState::returning_to_menu;
 }

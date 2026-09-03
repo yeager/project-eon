@@ -1087,8 +1087,16 @@ int main() {
     const auto idle_host_advance = runtime_host.advance(1'000);
     assert(!idle_host_advance.opening_started && !idle_host_advance.opening_active
         && idle_host_advance.opening.events.empty());
+    const auto idle_host_snapshot = runtime_host.snapshot();
+    assert(idle_host_snapshot.generation == 0 && !idle_host_snapshot.revoking
+        && idle_host_snapshot.admission == eon::ReleaseRuntimeAdmission::unselected
+        && idle_host_snapshot.state == eon::NativeSessionState::menu
+        && !idle_host_snapshot.session && !idle_host_snapshot.presentation);
     runtime_host.begin_source_revocation();
     assert(runtime_host.generation() == 1 && runtime_host.revoking());
+    const auto revoking_host_snapshot = runtime_host.snapshot();
+    assert(revoking_host_snapshot.revoking && !revoking_host_snapshot.session
+        && !revoking_host_snapshot.presentation);
     // A duplicated front-end teardown must neither manufacture another
     // generation nor revive the controller while SDL objects are draining.
     runtime_host.begin_source_revocation();
