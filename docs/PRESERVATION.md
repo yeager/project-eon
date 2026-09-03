@@ -4702,8 +4702,10 @@ The same data file begins with a verified 435-entry, 16-bit static-text
 pointer table ending at `$0365`. It maps to 434 distinct raw records in the
 English release (one target is intentionally shared) and is not target-sorted.
 Project Eon preserves pointer order and raw record boundaries without assigning
-meaning to the native control bytes. The exact cross-edition evidence is in
-[the static-text report](generated/millennium-dos-static-text.md).
+meaning to the native control bytes. Each boundary is retained as an original
+offset, length and SHA-256 rather than a copied byte vector; the supplied
+`2200AD4.BIN` remains the only byte source. The exact cross-edition evidence
+is in [the static-text report](generated/millennium-dos-static-text.md).
 
 `MillenniumDosStaticDataEvidence` now admits this diagnostic only for the two
 complete, hash-recognised `2200AD4.BIN` leaves: English (12,494 bytes,

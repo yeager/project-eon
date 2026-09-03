@@ -6388,7 +6388,9 @@ int main() {
     assert(text_catalog.pointers[401].target_offset == 0x2c1f);
     assert(text_catalog.pointers[402].target_offset == 0x2c0c);
     assert(text_catalog.records.front().source_offset == 0x366);
-    assert(text_catalog.records.front().bytes == std::vector<std::uint8_t>({0x20, 0x00}));
+    assert(text_catalog.records.front().source_size == 2);
+    assert(text_catalog.records.front().sha256
+        == "869f1dfb999a452f497a4cf7f44db2d6ee661f74a9e7e05251bc1420e50672d4");
     const auto static_data_evidence = eon::parse_millennium_dos_static_data_evidence(*static_data);
     assert(static_data_evidence.source_size == 12'494);
     assert(static_data_evidence.celestial_table_offset == 0x3d2);

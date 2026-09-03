@@ -83,9 +83,10 @@ MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
     for (auto it = record_offsets.begin(); it != record_offsets.end(); ++it) {
         const auto next = std::next(it) == record_offsets.end() ? static_data.size() : *std::next(it);
         if (next <= *it) throw std::runtime_error("Invalid Millennium DOS static text record range");
-        result.records.push_back({.source_offset = *it,
-            .bytes = {static_data.begin() + static_cast<std::ptrdiff_t>(*it),
-                static_data.begin() + static_cast<std::ptrdiff_t>(next)}});
+        const auto length = next - *it;
+        const auto source = static_data.subspan(*it, length);
+        result.records.push_back({.source_offset = *it, .source_size = length,
+            .sha256 = to_hex(sha256(source))});
     }
     return result;
 }
