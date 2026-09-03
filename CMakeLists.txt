@@ -115,6 +115,7 @@ add_executable(project-eon
     src/engine/native_session_controller.cpp
     src/engine/release_runtime.cpp
     src/engine/release_runtime_capability.cpp
+    src/engine/runtime_presentation.cpp
     src/engine/runtime_session.cpp
     src/engine/deuteros_amiga_title_stage_session.cpp
     src/engine/deuteros_amiga_paula.cpp

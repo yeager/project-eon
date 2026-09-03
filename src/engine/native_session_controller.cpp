@@ -1,4 +1,5 @@
 #include "engine/native_session_controller.hpp"
+#include "engine/runtime_presentation.hpp"
 
 namespace eon {
 
@@ -89,7 +90,8 @@ NativeSessionController::millennium_dos_presentation() const {
 
 std::optional<MillenniumDosStartupInputSnapshot>
 NativeSessionController::millennium_dos_startup_input() const {
-    if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
+    if (state_ != NativeSessionState::millennium_dos_title
+        && state_ != NativeSessionState::millennium_dos_sound_driver_boundary) return std::nullopt;
     return runtime_.millennium_dos_startup_input();
 }
 
@@ -198,6 +200,10 @@ bool NativeSessionController::requires_revocation_for(const LauncherSourceIdenti
 
 std::optional<RuntimeSessionSnapshot> NativeSessionController::session_snapshot() const {
     return runtime_.session_snapshot();
+}
+
+std::optional<RuntimePresentationSnapshot> NativeSessionController::presentation_snapshot() const {
+    return runtime_presentation_for(state_, runtime_.admission(), runtime_.session_snapshot());
 }
 
 void NativeSessionController::synchronize_after_runtime_change() {

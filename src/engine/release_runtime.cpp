@@ -215,7 +215,8 @@ ReleaseRuntimeCoordinator::millennium_dos_presentation() const {
 
 std::optional<MillenniumDosStartupInputSnapshot>
 ReleaseRuntimeCoordinator::millennium_dos_startup_input() const {
-    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title
+    if (!session_snapshot_ || (session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title
+            && session_snapshot_->kind != RuntimeSessionKind::millennium_dos_sound_driver_boundary)
         || (!millennium_dos_sound_selection_ && !millennium_dos_title_)) return std::nullopt;
     MillenniumDosStartupInputSnapshot snapshot;
     if (millennium_dos_sound_selection_) {
