@@ -3955,8 +3955,8 @@ int main() {
             }
             assert(title_handoff_observed);
             assert(opening_runner.stopped() && opening_runner.advance(9'999).events.empty());
-            assert(opening_controller.coordinator().session_snapshot());
-            const auto& title_snapshot = *opening_controller.coordinator().session_snapshot();
+            assert(opening_controller.session_snapshot());
+            const auto title_snapshot = *opening_controller.session_snapshot();
             assert(title_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_title_stage
                 && title_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
                 && !title_snapshot.capabilities.decoded_presentation

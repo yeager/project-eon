@@ -174,6 +174,10 @@ bool NativeSessionController::requires_revocation_for(const LauncherSourceIdenti
     return runtime_.requires_revocation_for(source);
 }
 
+std::optional<RuntimeSessionSnapshot> NativeSessionController::session_snapshot() const {
+    return runtime_.coordinator().session_snapshot();
+}
+
 void NativeSessionController::synchronize_after_runtime_change() {
     if (state_ == NativeSessionState::returning_to_menu) return;
     state_ = native_session_state_for(runtime_.coordinator().session_snapshot(), runtime_.admission());

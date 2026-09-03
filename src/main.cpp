@@ -935,12 +935,15 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
 }
 
 // This is the active-session companion to --inspect-json. It is deliberately
-// created only after the common runtime coordinator has rehashed one exact
-// release and constructed its native adapter. The report contains declarative
+// created only after the native controller has rehashed one exact release and
+// constructed its native adapter. The report contains declarative
 // recovery facts and the adapter's bounded capabilities, but no local path,
 // archive member, original byte, SDL object, emulator state, or guest action.
 void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
-    const eon::ReleaseRuntimeCoordinator& coordinator, const eon::Presentation presentation,
+    const eon::ReleaseRuntimeAdmission admission, const eon::ReleaseRuntimeRejection rejection,
+    const std::optional<eon::RuntimeSessionSnapshot>& session,
+    const std::optional<eon::DeuterosAtariBootstrapCheckpoint>& atari_checkpoint,
+    const eon::Presentation presentation,
     const eon::DisplayPreferences& display, const std::string_view aspect_identifier) {
     const auto diagnostics = eon::runtime_diagnostics_for_release(launch.release);
     std::cout << "{\"schema\":\"project-eon.runtime-diagnostics/v1\",\"release\":{\"game\":";
@@ -954,11 +957,11 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     write_json_string(std::cout, std::to_string(display.width) + "x" + std::to_string(display.height));
     std::cout << ",\"aspect\":"; write_json_string(std::cout, aspect_identifier);
     std::cout << "},\"runtime_admission\":";
-    write_json_string(std::cout, eon::release_runtime_admission_label(coordinator.admission()));
+    write_json_string(std::cout, eon::release_runtime_admission_label(admission));
     std::cout << ",\"runtime_rejection\":";
-    write_json_string(std::cout, eon::release_runtime_rejection_label(coordinator.rejection()));
+    write_json_string(std::cout, eon::release_runtime_rejection_label(rejection));
     std::cout << ",\"runtime_session\":";
-    if (const auto& session = coordinator.session_snapshot()) {
+    if (session) {
         std::cout << "{\"kind\":"; write_json_string(std::cout, eon::runtime_session_kind_label(session->kind));
         std::cout << ",\"boundary\":";
         write_json_string(std::cout, eon::runtime_session_boundary_label(session->boundary));
@@ -976,11 +979,12 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     }
     // Atari's bootstrap profile has an additional media-safe checkpoint. It
     // is optional because every other adapter deliberately has no equivalent
-    // inferred machine-state record. The coordinator returns it only while
+    // inferred machine-state record. The controller returns it only while
     // the exact typed session is live; it contains offsets/hashes/opcodes,
     // not raw state-1 bytes, registers, paths, or an XBIOS result.
     std::cout << ",\"atari_bootstrap_checkpoint\":";
-    if (const auto checkpoint = coordinator.deuteros_atari_bootstrap_checkpoint()) {
+    if (atari_checkpoint) {
+        const auto* checkpoint = &*atari_checkpoint;
         std::cout << "{\"first_stage_sha256\":";
         write_json_string(std::cout, checkpoint->first_stage_sha256);
         std::cout << ",\"second_stage_sha256\":";
@@ -4055,7 +4059,6 @@ int main(int argc, char** argv) {
     auto& active_release_language = launcher_route.release_language;
     auto& active_release_sha256 = launcher_route.release_sha256;
     eon::NativeSessionController runtime;
-    auto& runtime_coordinator = runtime.coordinator();
     // This status is limited to the same three media-safe admission classes
     // exposed by F10. It gives a rejected profile-card launch an immediate
     // visible result without retaining a path, leaf name, or parser error in
@@ -4063,7 +4066,7 @@ int main(int argc, char** argv) {
     std::string launcher_runtime_admission = std::string(
         eon::release_runtime_admission_label(runtime.admission()));
     std::string launcher_runtime_rejection = std::string(
-        eon::release_runtime_rejection_label(runtime_coordinator.rejection()));
+        eon::release_runtime_rejection_label(runtime.rejection()));
     const auto active_launch = [&]() -> const std::optional<eon::ResolvedLaunchRequest>& {
         return runtime.active();
     };
@@ -4151,7 +4154,8 @@ int main(int argc, char** argv) {
             return 4;
         }
         if (request.runtime_diagnostics_json) {
-            report_runtime_diagnostics_json(*active_launch(), runtime_coordinator,
+            report_runtime_diagnostics_json(*active_launch(), runtime.admission(), runtime.rejection(),
+                runtime.session_snapshot(), runtime.deuteros_atari_bootstrap_checkpoint(),
                 request.presentation, request.display,
                 display_aspect_identifiers.at(request.display.aspect_ratio_index));
             return 0;
@@ -4185,17 +4189,17 @@ int main(int argc, char** argv) {
             write_json_string(std::cout, eon::name(diagnostics.coverage));
             std::cout << ",\"runtime_admission\":";
             write_json_string(std::cout,
-                eon::release_runtime_admission_label(runtime_coordinator.admission()));
+                eon::release_runtime_admission_label(runtime.admission()));
             std::cout << ",\"runtime_rejection\":";
             write_json_string(std::cout,
-                eon::release_runtime_rejection_label(runtime_coordinator.rejection()));
-            // The coordinator owns this snapshot; do not reconstruct a
+                eon::release_runtime_rejection_label(runtime.rejection()));
+            // The controller publishes this copy; do not reconstruct a
             // parallel session identity from mutable launcher state. It is
             // intentionally limited to adapter/boundary/capability facts and
             // never serializes source paths, original bytes, SDL state or an
             // inferred game input contract.
             std::cout << ",\"runtime_session\":";
-            if (const auto& session = runtime_coordinator.session_snapshot()) {
+            if (const auto session = runtime.session_snapshot()) {
                 std::cout << "{\"kind\":";
                 write_json_string(std::cout, eon::runtime_session_kind_label(session->kind));
                 std::cout << ",\"boundary\":";
@@ -4220,7 +4224,7 @@ int main(int argc, char** argv) {
         std::cout << "LAUNCH CHECK  " << eon::name(active_launch()->release.game) << " / "
                   << eon::name(active_launch()->release.platform) << " / "
                   << active_launch()->release.language << " / "
-                  << eon::release_runtime_admission_label(runtime_coordinator.admission()) << '\n';
+                  << eon::release_runtime_admission_label(runtime.admission()) << '\n';
         return 0;
     }
 
@@ -4720,7 +4724,7 @@ int main(int argc, char** argv) {
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(runtime.admission()));
         launcher_runtime_rejection = std::string(
-            eon::release_runtime_rejection_label(runtime_coordinator.rejection()));
+            eon::release_runtime_rejection_label(runtime.rejection()));
     };
     const auto start_millennium_title = [&] {
         // A title session is intentionally one-shot after its observed
@@ -4962,7 +4966,7 @@ int main(int argc, char** argv) {
         ModernRuntimeDiagnostics diagnostics;
         diagnostics.release_identity = tr("NOT SELECTED");
         diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
-            runtime_coordinator.admission()));
+            runtime.admission()));
         diagnostics.runtime_rejection = launcher_runtime_rejection;
         diagnostics.lifecycle_state = std::string(eon::native_session_state_label(runtime.state()));
         // This is a compact, renderer-only diagnostic code. It makes the
@@ -4971,7 +4975,7 @@ int main(int argc, char** argv) {
         // about the recovered session rather than a claim about the mode.
         diagnostics.session_capabilities = std::string("MODE=")
             + (request.presentation == eon::Presentation::original ? "ORIGINAL" : "MODERN");
-        if (const auto& session = runtime_coordinator.session_snapshot()) {
+        if (const auto session = runtime.session_snapshot()) {
             diagnostics.session_adapter = std::string(eon::runtime_session_kind_label(session->kind));
             diagnostics.session_boundary = std::string(
                 eon::runtime_session_boundary_label(session->boundary));
