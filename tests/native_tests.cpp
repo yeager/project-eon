@@ -2897,7 +2897,7 @@ int main() {
     assert(eon::direct_media_set_manifest_is_valid());
     assert(eon::container_set_manifest_is_valid());
     const auto container_sets = eon::container_set_manifest();
-    assert(container_sets.size() == 1);
+    assert(container_sets.size() == 2);
     const auto& deuteros_atari_set = container_sets.front();
     assert(deuteros_atari_set.game == eon::Game::deuteros);
     assert(deuteros_atari_set.platform == eon::Platform::atari_st);
@@ -2906,6 +2906,14 @@ int main() {
         == "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee");
     assert(deuteros_atari_set.members[1].leaf_sha256
         == "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193");
+    const auto& deuteros_amiga_set = container_sets[1];
+    assert(deuteros_amiga_set.game == eon::Game::deuteros);
+    assert(deuteros_amiga_set.platform == eon::Platform::amiga);
+    assert(deuteros_amiga_set.members.size() == 2);
+    assert(deuteros_amiga_set.members[0].leaf_sha256
+        == "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+    assert(deuteros_amiga_set.members[1].leaf_sha256
+        == "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a");
     assert(eon::recovery_map_manifest_is_valid());
     assert(eon::function_map_manifest_is_valid());
     assert(eon::startup_boundary_manifest_is_valid());

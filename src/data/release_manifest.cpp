@@ -73,9 +73,18 @@ constexpr std::array<ContainerSetMember, 2> deuteros_atari_split_disks{{
         "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193", 737'280},
 }};
 
-constexpr std::array<ContainerSetManifestEntry, 1> container_sets{{
+constexpr std::array<ContainerSetMember, 2> deuteros_amiga_clean_split_disks{{
+    {"7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533", 449'666,
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120},
+    {"b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a", 490'962,
+        "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a", 901'120},
+}};
+
+constexpr std::array<ContainerSetManifestEntry, 2> container_sets{{
     {"0a87871cdfc6e0f11c598b86be0726c842c2cdcb1cb7d0dba651f1d43b835ffa", "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
         Game::deuteros, Platform::atari_st, "en", deuteros_atari_split_disks},
+    {"3d5dc5cf605f5b19a1ba42038321d79f9e4d35d3e56f7e4de90d8f732d8a8c45", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+        Game::deuteros, Platform::amiga, "en", deuteros_amiga_clean_split_disks},
 }};
 
 constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
