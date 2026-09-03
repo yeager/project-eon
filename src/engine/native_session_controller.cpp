@@ -86,10 +86,28 @@ std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amig
     return events;
 }
 
+std::optional<std::vector<float>>
+NativeSessionController::render_deuteros_amiga_opening_audio(const std::size_t frames) {
+    if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
+    return runtime_.coordinator().render_deuteros_amiga_opening_audio(frames);
+}
+
 std::optional<DeuterosAmigaOpeningCheckpoint>
 NativeSessionController::deuteros_amiga_opening_checkpoint() const {
     if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
     return runtime_.coordinator().deuteros_amiga_opening_checkpoint();
+}
+
+std::optional<DeuterosAmigaOpeningPresentationSnapshot>
+NativeSessionController::deuteros_amiga_opening_presentation() const {
+    if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
+    return runtime_.coordinator().deuteros_amiga_opening_presentation();
+}
+
+std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
+NativeSessionController::deuteros_amiga_title_stage_boundary() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
+    return runtime_.coordinator().deuteros_amiga_title_stage_boundary();
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>

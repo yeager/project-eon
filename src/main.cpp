@@ -4261,8 +4261,6 @@ int main(int argc, char** argv) {
     // Project Eon branding is original launcher artwork, never recovered game
     // pixels. It remains a renderer-only menu resource in every profile.
     SDL_Texture* project_eon_logo_texture = load_branding_texture(renderer, "project-eon-logo-v1.png");
-    eon::DeuterosAmigaOpening* deuteros_opening = runtime_coordinator.deuteros_amiga();
-    std::unique_ptr<eon::DeuterosAmigaPaulaMixer> deuteros_paula;
     SDL_AudioStream* deuteros_audio_stream = nullptr;
     SDL_Texture* preview_texture = nullptr;
     // These transient textures are derived from decoded original pixels only.
@@ -4286,15 +4284,13 @@ int main(int argc, char** argv) {
     std::optional<std::uint64_t> deuteros_external_modern_source_tick;
     bool deuteros_external_modern_attempted = false;
     const auto create_deuteros_opening_texture = [&] {
-        if (!deuteros_opening || preview_texture) return;
+        if (runtime.state() != eon::NativeSessionState::deuteros_amiga_opening || preview_texture) return;
         preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
             SDL_TEXTUREACCESS_STREAMING, eon::DeuterosAmigaFrame::width,
             eon::DeuterosAmigaFrame::height);
     };
     const auto start_deuteros_audio = [&] {
-        if (!deuteros_opening) return;
-        deuteros_paula = std::make_unique<eon::DeuterosAmigaPaulaMixer>(
-            deuteros_opening->sound_bank());
+        if (runtime.state() != eon::NativeSessionState::deuteros_amiga_opening) return;
         if (deuteros_audio_stream) {
             static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
             return;
@@ -4323,7 +4319,8 @@ int main(int argc, char** argv) {
     const auto load_deuteros_external_modern_sequence = [&] {
         if (deuteros_external_modern_attempted) return;
         deuteros_external_modern_attempted = true;
-        if (!deuteros_opening || !selected_modern_pack_manifest
+        if (runtime.state() != eon::NativeSessionState::deuteros_amiga_opening
+            || !selected_modern_pack_manifest
             || request.presentation != eon::Presentation::modern
             || active_platform != eon::Platform::amiga || !active_release_language
             || !active_release_sha256
@@ -4699,8 +4696,6 @@ int main(int argc, char** argv) {
         if (deuteros_audio_stream) {
             static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
         }
-        deuteros_paula.reset();
-        deuteros_opening = nullptr;
         deuteros_atari_session = nullptr;
         deuteros_title_resource.reset();
         deuteros_preview_rgba.reset();
@@ -4724,9 +4719,8 @@ int main(int argc, char** argv) {
         millennium_state_page = 0;
         discard_millennium_assets();
         reset_deuteros_runtime();
-        // SDL-side pointers above borrow coordinator-owned adapters. Destroy
-        // every borrow and dependent mixer/runner before invalidating those
-        // adapters at the common runtime boundary.
+        // SDL-side resources and scheduler state are revoked before the
+        // controller discards its coordinator-owned native session.
         runtime.reset();
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(runtime.admission()));
@@ -4765,7 +4759,6 @@ int main(int argc, char** argv) {
         reset_deuteros_runtime();
         if (!resolve_active_release(eon::Game::deuteros)) return;
         deuteros_atari_session = runtime_coordinator.deuteros_atari();
-        deuteros_opening = runtime_coordinator.deuteros_amiga();
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
@@ -4797,7 +4790,6 @@ int main(int argc, char** argv) {
         millennium_assets = runtime_coordinator.millennium_dos();
         millennium_amiga_session = runtime_coordinator.millennium_amiga();
         millennium_atari_session = runtime_coordinator.millennium_atari();
-        deuteros_opening = runtime_coordinator.deuteros_amiga();
         deuteros_atari_session = runtime_coordinator.deuteros_atari();
         active_release_sha256 = active_launch()->request.release_sha256;
         active_release_language = active_launch()->request.release_language;
@@ -5548,8 +5540,8 @@ int main(int argc, char** argv) {
             if (screen == Screen::menu && !request.platform) focus_menu_card(focused);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && !deuteros_opening && eon::deuteros_amiga_opening_supported(active_platform)) {
-            deuteros_opening = runtime_coordinator.deuteros_amiga();
+            && !deuteros_opening_runner && eon::deuteros_amiga_opening_supported(active_platform)
+            && runtime.state() == eon::NativeSessionState::deuteros_amiga_opening) {
             create_deuteros_opening_texture();
             start_deuteros_audio();
             load_deuteros_external_modern_sequence();
@@ -5560,21 +5552,12 @@ int main(int argc, char** argv) {
             deuteros_atari_session = runtime_coordinator.deuteros_atari();
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && deuteros_opening && deuteros_opening_runner) {
+            && deuteros_opening_runner) {
             const auto advance = deuteros_opening_runner->advance(SDL_GetTicks());
             // The runner owns only scheduler arithmetic and delegates every
             // tick through the native lifecycle controller. A title-boundary
             // transition is therefore published before SDL sees its events.
             for (const auto& events : advance.events) {
-                if (deuteros_paula) {
-                    for (const auto& sound : events.sounds) {
-                        if (!deuteros_paula->submit(sound) && sound.sound != 0) {
-                            std::cerr << "Deuteros event uses unsupported Paula descriptor "
-                                << sound.sound << " / mask 0x" << std::hex << sound.channels
-                                << std::dec << '\n';
-                        }
-                    }
-                }
                 if (!events.alternate_resources.empty()) {
                     // Opcode $0f exposes this original bundle-relative target.
                     // It is retained as evidence for the subsequent verified
@@ -5588,24 +5571,23 @@ int main(int argc, char** argv) {
                     if (deuteros_audio_stream) {
                         static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
                     }
-                    deuteros_paula.reset();
                 }
             }
             // VM events are proven at 50 Hz, but the exact relation between
             // that scheduler and host-device latency is not yet recovered.
             // Keep just one VBL of original PCM queued; do not manufacture a
             // silent/fallback waveform to fill the device.
-            if (deuteros_audio_stream && deuteros_paula && deuteros_paula->has_active_channels()) {
+            if (deuteros_audio_stream) {
                 constexpr int queued_target_bytes = 960 * 2 * static_cast<int>(sizeof(float));
                 constexpr int bytes_per_frame = 2 * static_cast<int>(sizeof(float));
                 int queued = SDL_GetAudioStreamQueued(deuteros_audio_stream);
-                while (queued >= 0 && queued < queued_target_bytes
-                    && deuteros_paula->has_active_channels()) {
+                while (queued >= 0 && queued < queued_target_bytes) {
                     const auto missing_frames = static_cast<std::size_t>(
                         (queued_target_bytes - queued + bytes_per_frame - 1) / bytes_per_frame);
-                    const auto samples = deuteros_paula->render(missing_frames);
-                    if (!SDL_PutAudioStreamData(deuteros_audio_stream, samples.data(),
-                        static_cast<int>(samples.size() * sizeof(float)))) {
+                    const auto samples = runtime.render_deuteros_amiga_opening_audio(missing_frames);
+                    if (!samples || samples->empty()) break;
+                    if (!SDL_PutAudioStreamData(deuteros_audio_stream, samples->data(),
+                        static_cast<int>(samples->size() * sizeof(float)))) {
                         std::cerr << "Unable to queue Deuteros audio: " << SDL_GetError() << '\n';
                         break;
                     }
@@ -6112,10 +6094,22 @@ int main(int argc, char** argv) {
                         tr("STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY."));
                 }
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
-            } else if (selected == eon::Game::deuteros && preview_texture && deuteros_opening) {
-                const auto source_tick = deuteros_opening->ticks();
-                if (!deuteros_preview_source_tick || *deuteros_preview_source_tick != source_tick) {
-                    deuteros_preview_rgba = deuteros_opening->rgba_frame();
+            } else if (selected == eon::Game::deuteros && preview_texture) {
+                // The active opening and its post-handoff title evidence are
+                // copied through the native-session firewall.  In particular,
+                // this renderer never inspects the coordinator-owned VM or
+                // title-stage adapter after a lifecycle transition.
+                const auto opening = runtime.deuteros_amiga_opening_presentation();
+                const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();
+                if (!opening && !title_stage) {
+                    draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
+                    continue;
+                }
+                const auto source_tick = opening ? opening->checkpoint.tick
+                    : deuteros_preview_source_tick.value_or(0);
+                if (opening && (!deuteros_preview_source_tick
+                        || *deuteros_preview_source_tick != source_tick)) {
+                    deuteros_preview_rgba = opening->rgba_frame;
                     deuteros_preview_source_tick = source_tick;
                     if (deuteros_preview_rgba) {
                         SDL_UpdateTexture(preview_texture, nullptr, deuteros_preview_rgba->data(),
@@ -6123,19 +6117,23 @@ int main(int argc, char** argv) {
                     }
                 }
                 const auto& frame = deuteros_preview_rgba;
-                draw_text(renderer, 64, 220, tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"));
-                draw_text(renderer, 64, 238, tr("HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"));
-                draw_text(renderer, 64, 252, tr("PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"));
+                if (opening) {
+                    draw_text(renderer, 64, 220, tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"));
+                    draw_text(renderer, 64, 238, tr("HOLD SPACE / ENTER: ORIGINAL INPUT SIGNAL"));
+                    draw_text(renderer, 64, 252, tr("PAULA: ORIGINAL PCM + PERIOD + VOLUME (FIRST DMA PASS)"));
+                }
                 // Machine-state telemetry is deliberately notation-only: it
                 // makes the recovered 50 Hz opening observable without
                 // naming a title/menu action or creating a host control.
                 std::ostringstream opening_provenance;
-                opening_provenance << "T=" << deuteros_opening->ticks()
-                                  << "; VBL=0x" << std::hex << deuteros_opening->vblank_counter()
-                                  << "; PAL=" << std::dec << deuteros_opening->palette_index()
-                                  << "; CH=" << deuteros_opening->active_channel_count()
-                                  << "; $2171e=" << (deuteros_opening->input_gate() ? 1 : 0);
-                draw_text(renderer, 760, 238, opening_provenance.str());
+                if (opening) {
+                    opening_provenance << "T=" << opening->checkpoint.tick
+                                      << "; VBL=0x" << std::hex << opening->checkpoint.vblank_counter
+                                      << "; PAL=" << std::dec << opening->palette_index
+                                      << "; CH=" << opening->active_channel_count
+                                      << "; $2171e=" << (opening->checkpoint.input_gate ? 1 : 0);
+                    draw_text(renderer, 760, 238, opening_provenance.str());
+                }
                 if (deuteros_title_resource) {
                     std::ostringstream handoff;
                     handoff << std::hex << *deuteros_title_resource;
@@ -6144,25 +6142,24 @@ int main(int argc, char** argv) {
                         + "; "
                         + tr("TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"));
                 }
-                const auto& title_stage = deuteros_opening->title_stage_session();
                 if (title_stage) {
                     std::ostringstream provenance;
                     provenance << tr("AUTHENTIC TITLE STAGE READY") << ": ADF +0x" << std::hex
-                               << title_stage->stage().disk_offset << "; 0x"
-                               << title_stage->stage().length << " -> RAM 0x"
-                               << title_stage->stage().destination << "; 0x"
-                               << title_stage->stage().entry_address;
+                               << title_stage->stage.disk_offset << "; 0x"
+                               << title_stage->stage.length << " -> RAM 0x"
+                               << title_stage->stage.destination << "; 0x"
+                               << title_stage->stage.entry_address;
                     draw_text(renderer, 64, 284, provenance.str());
                     draw_text(renderer, 64, 298,
                         tr("TITLE-STAGE EXECUTION IS NOT YET RECOVERED; NO TITLE SCREEN IS FABRICATED"));
                     draw_text(renderer, 64, 312,
-                        tr("ORIGINAL TITLE STAGE SHA-256: ") + title_stage->original_sha256());
+                        tr("ORIGINAL TITLE STAGE SHA-256: ") + title_stage->original_sha256);
                     // This compact row is machine-state provenance, not
                     // launcher prose or a simulated title display. These
                     // are the only caller-proven title writes before the
                     // unresolved Exec read, followed by its local A7 setup.
-                    const auto& prefix_state = title_stage->entry_prefix_state();
-                    const auto& exec_prelude = title_stage->exec_prelude();
+                    const auto& prefix_state = title_stage->entry_prefix_state;
+                    const auto& exec_prelude = title_stage->exec_prelude;
                     std::ostringstream prefix_provenance;
                     prefix_provenance << "0x" << std::hex << prefix_state.writes[0].address
                                       << ".w=0x" << prefix_state.writes[0].value
@@ -6170,7 +6167,7 @@ int main(int argc, char** argv) {
                                       << ".b=0x" << prefix_state.writes[1].value
                                       << "; A7=0x" << exec_prelude.stack_pointer_value;
                     draw_text(renderer, 64, 326, prefix_provenance.str());
-                    const auto palette = title_stage->graphics_setup_palette_evidence();
+                    const auto& palette = title_stage->graphics_setup_palette;
                     for (std::size_t index = 0; index < palette.size(); ++index) {
                         const auto& color = palette[index];
                         SDL_SetRenderDrawColor(renderer, color.red, color.green, color.blue, 255);
@@ -6181,16 +6178,17 @@ int main(int argc, char** argv) {
                         SDL_RenderRect(renderer, &swatch);
                     }
                 }
-                if (const auto& trace = deuteros_opening->alternate_renderer_trace()) {
+                if (title_stage && title_stage->alternate_renderer_trace) {
+                    const auto& trace = *title_stage->alternate_renderer_trace;
                     draw_text(renderer, 64, title_stage ? 342 : 284, tr("ORIGINAL $20580 STREAM: +0x")
-                        + [&] { std::ostringstream stream; stream << std::hex << trace->stream_offset;
+                        + [&] { std::ostringstream stream; stream << std::hex << trace.stream_offset;
                             return stream.str(); }()
-                        + " - " + std::to_string(trace->glyph_codes.size()));
+                        + " - " + std::to_string(trace.glyph_codes.size()));
                 }
                 SDL_Texture* texture = preview_texture;
                 if (modern) {
                     if (SDL_Texture* external = refresh_deuteros_external_modern_texture(source_tick,
-                            deuteros_opening->title_handed_off())) {
+                            title_stage.has_value())) {
                         texture = external;
                         const auto& surface = *deuteros_external_modern_surface;
                         draw_text(renderer, 64, title_stage ? 342 : 284,

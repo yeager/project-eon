@@ -2,6 +2,7 @@
 
 #include "launcher.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/deuteros_amiga_paula.hpp"
 #include "engine/runtime_session.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -52,6 +53,31 @@ struct MillenniumDosPreviewAnimation {
     int width = 0;
     int height = 0;
     std::vector<std::vector<std::uint8_t>> rgba_frames;
+};
+
+// Presentation facts copied out of the coordinator-owned Deuteros opening
+// adapter.  SDL may retain this value for its current draw only, but cannot
+// retain a mutable VM, ADF, title-stage session, or an adapter borrow past a
+// lifecycle transition.  `rgba_frame` is decoded from the admitted media and
+// exists only while the recovered opening session remains active.
+struct DeuterosAmigaOpeningPresentationSnapshot {
+    DeuterosAmigaOpeningCheckpoint checkpoint;
+    std::uint16_t palette_index = 0;
+    std::size_t active_channel_count = 0;
+    bool frame_composed_on_last_tick = false;
+    std::optional<std::vector<std::uint8_t>> rgba_frame;
+};
+
+// The narrow, immutable facts that are safe to show after the opening has
+// handed control to its hash-validated title stage.  This is deliberately a
+// preservation boundary, not a title-stage executor or a display surface.
+struct DeuterosAmigaTitleStageBoundarySnapshot {
+    AmigaLoadStage stage;
+    std::string original_sha256;
+    DeuterosAmigaTitleEntryPrefixState entry_prefix_state;
+    DeuterosAmigaTitleExecPrelude exec_prelude;
+    std::array<RgbColor, 20> graphics_setup_palette{};
+    std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace;
 };
 
 // The recovered DOS title/runtime evidence for one exact archive identity.
@@ -108,10 +134,22 @@ public:
     // coordinator-owned held observation. All non-opening sessions return no
     // result, so SDL cannot accidentally tick a different platform adapter.
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    // Audio is mixed within the same owner as the recovered VM and is
+    // therefore revoked at title handoff/reset. SDL receives only a transient
+    // float buffer; it never borrows the opening sound bank or its PCM bytes.
+    [[nodiscard]] std::optional<std::vector<float>>
+    render_deuteros_amiga_opening_audio(std::size_t frames);
     // Query only: checkpoints never tick or retain a frame outside the active
     // recovered opening session.
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
     deuteros_amiga_opening_checkpoint() const;
+    // These safe copies are the only presentation/title-stage observations
+    // SDL should consume. Both are revoked automatically when the session
+    // kind changes, admission fails, or the coordinator resets.
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningPresentationSnapshot>
+    deuteros_amiga_opening_presentation() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
+    deuteros_amiga_title_stage_boundary() const;
     // Query only: this reports static, hash-gated Atari bootstrap facts. It
     // neither selects a runtime state nor invokes an Atari service.
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
@@ -142,6 +180,7 @@ private:
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
+    std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula_;
     bool deuteros_amiga_opening_input_held_ = false;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari_;
     std::optional<RuntimeSessionSnapshot> session_snapshot_;

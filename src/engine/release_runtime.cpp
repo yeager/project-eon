@@ -84,6 +84,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
+    std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari;
     std::optional<RuntimeSessionSnapshot> session_snapshot;
     switch (capability->adapter) {
@@ -115,6 +116,16 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
         rejection_ = ReleaseRuntimeRejection::adapter_construction;
         return false;
+    }
+    if (deuteros_amiga) {
+        try {
+            deuteros_amiga_paula = std::make_unique<DeuterosAmigaPaulaMixer>(
+                deuteros_amiga->sound_bank());
+        } catch (...) {
+            admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+            rejection_ = ReleaseRuntimeRejection::adapter_construction;
+            return false;
+        }
     }
     // The release table may narrow presentation/audio facts, but it must
     // never disagree with the separately declared input envelope.
@@ -152,6 +163,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     millennium_amiga_ = std::move(millennium_amiga);
     millennium_atari_ = std::move(millennium_atari);
     deuteros_amiga_ = std::move(deuteros_amiga);
+    deuteros_amiga_paula_ = std::move(deuteros_amiga_paula);
     deuteros_atari_ = std::move(deuteros_atari);
     session_snapshot_ = std::move(session_snapshot);
     active_ = launch;
@@ -166,6 +178,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_.reset();
     millennium_amiga_.reset();
     millennium_atari_.reset();
+    deuteros_amiga_paula_.reset();
     deuteros_amiga_.reset();
     deuteros_amiga_opening_input_held_ = false;
     deuteros_atari_.reset();
@@ -276,6 +289,11 @@ std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_am
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
         || !deuteros_amiga_ || deuteros_amiga_->title_handed_off()) return std::nullopt;
     auto events = deuteros_amiga_->tick(deuteros_amiga_opening_input_held_);
+    if (deuteros_amiga_paula_) {
+        for (const auto& sound : events.sounds) {
+            static_cast<void>(deuteros_amiga_paula_->submit(sound));
+        }
+    }
     if (events.title_handoff) {
         // The opening object remains owner of the original ADF/title-stage
         // evidence, but the live session has crossed its last recovered VBL
@@ -285,8 +303,20 @@ std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_am
         session_snapshot_ = make_runtime_session_snapshot(*active_,
             RuntimeSessionKind::deuteros_amiga_title_stage);
         deuteros_amiga_opening_input_held_ = false;
+        // The title stage has no admitted audio capability.  Drop every
+        // opening DMA channel before its boundary becomes visible to SDL.
+        deuteros_amiga_paula_.reset();
     }
     return events;
+}
+
+std::optional<std::vector<float>>
+ReleaseRuntimeCoordinator::render_deuteros_amiga_opening_audio(const std::size_t frames) {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
+        || !deuteros_amiga_paula_ || !deuteros_amiga_paula_->has_active_channels()) {
+        return std::nullopt;
+    }
+    return deuteros_amiga_paula_->render(frames);
 }
 
 std::optional<DeuterosAmigaOpeningCheckpoint>
@@ -294,6 +324,36 @@ ReleaseRuntimeCoordinator::deuteros_amiga_opening_checkpoint() const {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
         || !deuteros_amiga_) return std::nullopt;
     return deuteros_amiga_->checkpoint();
+}
+
+std::optional<DeuterosAmigaOpeningPresentationSnapshot>
+ReleaseRuntimeCoordinator::deuteros_amiga_opening_presentation() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
+        || !deuteros_amiga_) return std::nullopt;
+    const auto checkpoint = deuteros_amiga_->checkpoint();
+    if (!checkpoint) return std::nullopt;
+    return DeuterosAmigaOpeningPresentationSnapshot{
+        *checkpoint,
+        deuteros_amiga_->palette_index(),
+        deuteros_amiga_->active_channel_count(),
+        deuteros_amiga_->frame_composed_on_last_tick(),
+        deuteros_amiga_->rgba_frame(),
+    };
+}
+
+std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
+ReleaseRuntimeCoordinator::deuteros_amiga_title_stage_boundary() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !deuteros_amiga_->title_stage_session()) return std::nullopt;
+    const auto& title_stage = *deuteros_amiga_->title_stage_session();
+    return DeuterosAmigaTitleStageBoundarySnapshot{
+        title_stage.stage(),
+        title_stage.original_sha256(),
+        title_stage.entry_prefix_state(),
+        title_stage.exec_prelude(),
+        title_stage.graphics_setup_palette_evidence(),
+        deuteros_amiga_->alternate_renderer_trace(),
+    };
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>

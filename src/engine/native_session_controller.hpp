@@ -42,8 +42,14 @@ public:
         const LaunchRequest& base, const std::vector<ReleaseArchive>& releases);
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    [[nodiscard]] std::optional<std::vector<float>>
+    render_deuteros_amiga_opening_audio(std::size_t frames);
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
     deuteros_amiga_opening_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningPresentationSnapshot>
+    deuteros_amiga_opening_presentation() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
+    deuteros_amiga_title_stage_boundary() const;
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
     deuteros_atari_bootstrap_checkpoint() const;
 
