@@ -1937,6 +1937,10 @@ two in-memory spans directly and locks their shared prefix to SHA-256
 also retaining state 1's full independent hash. This is a media-geometry and
 byte-identity fact only: overlapping physical reads do not prove vector
 selection, load success, ownership, resource type, or any title/game meaning.
+The active native bootstrap session verifies the same two direct read spans
+against its temporary state-1 interval and retains only the shared prefix's
+source offset, byte count, and SHA-256 in diagnostics before both temporary
+raw vectors are discarded.
 
 The live `DeuterosAtariBootstrapSession` retains these three static plans,
 the vector-5 return profile, and the XBIOS callback-byte boundary after

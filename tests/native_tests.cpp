@@ -7728,6 +7728,10 @@ int main() {
         == "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e");
     assert(atari_checkpoint.state5_first_source_offset == 0x55800);
     assert(atari_checkpoint.state5_second_source_offset == 0x60c00);
+    assert(atari_checkpoint.state5_state1_prefix_source_offset == 0x55800);
+    assert(atari_checkpoint.state5_state1_prefix_byte_count == 0x57c00);
+    assert(atari_checkpoint.state5_state1_prefix_sha256
+        == "ed55ad2a893a87af9f11d269faa6358420c47ed6beb1fee7a177e9beaed1e77c");
     assert(atari_checkpoint.state1_display_branch_relative_offset == 0x48000);
     assert(atari_checkpoint.state1_display_service_relative_offset == 0x489c6);
     assert(atari_checkpoint.state1_display_xbios_selector == 5);

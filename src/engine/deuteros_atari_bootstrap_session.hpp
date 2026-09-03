@@ -32,6 +32,9 @@ struct DeuterosAtariBootstrapCheckpoint {
     std::string state1_skipped_ascii_sha256;
     std::size_t state5_first_source_offset = 0;
     std::size_t state5_second_source_offset = 0;
+    std::size_t state5_state1_prefix_source_offset = 0;
+    std::size_t state5_state1_prefix_byte_count = 0;
+    std::string state5_state1_prefix_sha256;
     std::size_t state1_display_branch_relative_offset = 0;
     std::size_t state1_display_service_relative_offset = 0;
     std::uint16_t state1_display_xbios_selector = 0;
@@ -71,6 +74,9 @@ public:
     }
     [[nodiscard]] const DeuterosAtariState5RawLoadPlan& state5_raw_load_plan() const {
         return state5_raw_load_plan_;
+    }
+    [[nodiscard]] const DeuterosAtariState5State1Prefix& state5_state1_prefix() const {
+        return state5_state1_prefix_;
     }
     [[nodiscard]] const DeuterosAtariState1DisplayServiceBoundary&
     state1_display_service_boundary() const { return state1_display_service_boundary_; }
@@ -130,6 +136,7 @@ private:
     DeuterosAtariRawRangeLoadPlan state1_raw_load_plan_;
     DeuterosAtariState1SkippedAsciiBlock state1_skipped_ascii_block_;
     DeuterosAtariState5RawLoadPlan state5_raw_load_plan_;
+    DeuterosAtariState5State1Prefix state5_state1_prefix_;
     DeuterosAtariState1DisplayServiceBoundary state1_display_service_boundary_;
     DeuterosAtariState5ReturnProfile state5_return_;
     DeuterosAtariSupervisorCallbackProfile supervisor_callback_;

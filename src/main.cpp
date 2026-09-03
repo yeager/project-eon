@@ -990,6 +990,16 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
         }());
         std::cout << ",\"state1_raw_request_count\":"
             << checkpoint->state1_raw_request_count;
+        std::cout << ",\"state5_state1_prefix\":{\"source_offset\":";
+        write_json_string(std::cout, "+0x" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state5_state1_prefix_source_offset;
+            return value.str();
+        }());
+        std::cout << ",\"byte_count\":" << checkpoint->state5_state1_prefix_byte_count;
+        std::cout << ",\"sha256\":";
+        write_json_string(std::cout, checkpoint->state5_state1_prefix_sha256);
+        std::cout << "}";
         std::cout << ",\"state0_duplicate_stage\":{\"byte_count\":"
             << checkpoint->state0_duplicate_byte_count;
         std::cout << ",\"direct_entry_offset\":";
@@ -3447,6 +3457,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto& state1_skipped_ascii = live_bootstrap.state1_skipped_ascii_block();
         const auto& state1_display_service = live_bootstrap.state1_display_service_boundary();
         const auto& state5_plan = live_bootstrap.state5_raw_load_plan();
+        const auto& state5_state1_prefix = live_bootstrap.state5_state1_prefix();
         const auto& state5_return = live_bootstrap.state5_return();
         const auto& supervisor_callback = live_bootstrap.supervisor_callback();
         const auto& second_callee_continuation = live_bootstrap.second_callee_continuation();
@@ -3551,6 +3562,10 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << " SHA-256 " << state1_display_service.service_setup_sha256
             << "; XBIOS selector 0x" << state1_display_service.xbios_selector << std::dec
             << " (static branch/setup only; no relocation, service result, display, or execution inferred)\n";
+        std::cout << "          State-5/State-1 prefix: Disk 1 +0x" << std::hex
+            << state5_state1_prefix.source_offset << " +0x" << state5_state1_prefix.byte_count
+            << " SHA-256 " << state5_state1_prefix.sha256 << std::dec
+            << " (physical byte identity only; no state-5 selection or raw-reader result inferred)\n";
         const auto materialize_raw_range = [&disk1](const auto& plan) {
             std::vector<std::uint8_t> bytes;
             bytes.reserve(plan.byte_count);
