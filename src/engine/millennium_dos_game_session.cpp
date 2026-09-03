@@ -130,8 +130,12 @@ MillenniumDosGameSession::observe_eighth_function_key_repeat_loop(
     }
     const auto trace = evaluate_millennium_dos_eighth_function_key_repeat_loop(
         game_executable_, helper_return_bl_values);
-    if (trace.call_address != flow_.eighth_function_key.repeated_call_address
-        || trace.helper_address != 0x09fa) {
+    // The flow's recovered repeated-call address names the helper target
+    // ($09fa). The evaluator separately reports the CALL instruction site
+    // ($7312); comparing those two different address spaces rejected the
+    // verified original route after a genuine returned preflight.
+    if (trace.call_address != 0x7312
+        || trace.helper_address != flow_.eighth_function_key.repeated_call_address) {
         throw std::runtime_error("Unsupported Millennium DOS F8 repeat-loop profile");
     }
     last_eighth_function_key_repeat_loop_ = trace;

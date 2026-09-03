@@ -1008,6 +1008,46 @@ int main() {
         assert(eon::native_session_state_for(state_fixture, eon::ReleaseRuntimeAdmission::active)
             == expected);
     }
+    const std::array presentation_cases{
+        std::pair{eon::RuntimeSessionKind::millennium_dos_title,
+            eon::RuntimePresentationKind::millennium_dos_title},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_sound_driver_boundary,
+            eon::RuntimePresentationKind::millennium_dos_sound_driver_boundary},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_title_handoff_boundary,
+            eon::RuntimePresentationKind::millennium_dos_title_handoff_boundary},
+        std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
+            eon::RuntimePresentationKind::millennium_amiga_bootstrap},
+        std::pair{eon::RuntimeSessionKind::millennium_atari_bootstrap,
+            eon::RuntimePresentationKind::millennium_atari_bootstrap},
+        std::pair{eon::RuntimeSessionKind::deuteros_amiga_opening,
+            eon::RuntimePresentationKind::deuteros_amiga_opening},
+        std::pair{eon::RuntimeSessionKind::deuteros_amiga_title_stage,
+            eon::RuntimePresentationKind::deuteros_amiga_title_stage_boundary},
+        std::pair{eon::RuntimeSessionKind::deuteros_atari_bootstrap,
+            eon::RuntimePresentationKind::deuteros_atari_bootstrap},
+    };
+    eon::ResolvedLaunchRequest presentation_launch;
+    for (const auto& [kind, expected] : presentation_cases) {
+        const auto snapshot = eon::make_runtime_session_snapshot(presentation_launch, kind);
+        const auto state = eon::native_session_state_for(snapshot, eon::ReleaseRuntimeAdmission::active);
+        const auto presentation = eon::runtime_presentation_for(
+            state, eon::ReleaseRuntimeAdmission::active, snapshot);
+        assert(presentation && presentation->kind == expected && presentation->state == state
+            && presentation->boundary == snapshot.boundary
+            && presentation->capabilities == snapshot.capabilities
+            && presentation->input_contract == snapshot.input_contract
+            && presentation->state_label == eon::native_session_state_label(state)
+            && presentation->boundary_label == eon::runtime_session_boundary_label(snapshot.boundary));
+        assert(!eon::runtime_presentation_for(eon::NativeSessionState::menu,
+            eon::ReleaseRuntimeAdmission::active, snapshot));
+    }
+    assert(!eon::runtime_presentation_for(eon::NativeSessionState::menu,
+        eon::ReleaseRuntimeAdmission::unselected, {}));
+    auto invalid_presentation_snapshot = eon::make_runtime_session_snapshot(
+        presentation_launch, eon::RuntimeSessionKind::millennium_dos_title);
+    invalid_presentation_snapshot.boundary = eon::RuntimeSessionBoundary::bootstrap_boundary;
+    assert(!eon::runtime_presentation_for(eon::NativeSessionState::millennium_dos_title,
+        eon::ReleaseRuntimeAdmission::active, invalid_presentation_snapshot));
     assert(eon::runtime_input_contract_for_session(eon::RuntimeSessionKind::millennium_dos_title)
         == eon::RuntimeInputContract::millennium_dos_startup_observation);
     assert(eon::runtime_input_contract_for_session(eon::RuntimeSessionKind::deuteros_amiga_opening)
@@ -3870,15 +3910,16 @@ int main() {
     // the English sound chooser. It rejects an availability result while that
     // chooser is active, rejects an unknown ASCII byte, then stops at the
     // documented driver boundary for the exact `1` selection.
-    assert(admitted_dos_runtime.millennium_dos_startup_input()->sound_selection_active);
+    const auto initial_startup_input = admitted_dos_runtime.millennium_dos_startup_input();
+    assert(initial_startup_input && initial_startup_input->sound_selection_active);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::available_character())
         == eon::RuntimeInputDisposition::rejected);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('x'))
         == eon::RuntimeInputDisposition::ignored);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
         == eon::RuntimeInputDisposition::boundary_reached);
-    assert(admitted_dos_runtime.millennium_dos_startup_input()->selected_original_filename
-        == "ssbl.drv");
+    const auto selected_startup_input = admitted_dos_runtime.millennium_dos_startup_input();
+    assert(selected_startup_input && selected_startup_input->selected_original_filename == "ssbl.drv");
     assert(admitted_dos_runtime.session_snapshot());
     const auto& sound_driver_snapshot = *admitted_dos_runtime.session_snapshot();
     assert(sound_driver_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_sound_driver_boundary

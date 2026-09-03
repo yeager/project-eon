@@ -2,6 +2,7 @@
 
 #include "engine/menu_runtime_launch.hpp"
 #include "engine/deuteros_amiga_opening_runner.hpp"
+#include "engine/runtime_presentation.hpp"
 
 #include <optional>
 #include <string_view>
@@ -89,6 +90,9 @@ public:
     // SDL diagnostics receive a copy of the value-only session declaration,
     // never the mutable coordinator that owns platform adapters and media.
     [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
+    // A value-only SDL boundary. This cannot expose original media borrows or
+    // allow the UI to manufacture a runtime state.
+    [[nodiscard]] std::optional<RuntimePresentationSnapshot> presentation_snapshot() const;
 
 private:
     void synchronize_after_runtime_change();

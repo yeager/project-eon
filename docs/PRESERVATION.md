@@ -128,6 +128,15 @@ transient audio/event buffers and offers no coordinator reference, so the
 launcher cannot independently acquire an adapter, reopen source media, retain
 a mutable input session, or bypass the return-to-menu revocation order.
 
+The controller also derives one SDL-free `RuntimePresentationSnapshot` for
+each live, internally consistent session. It contains only the declared
+native state, presentation boundary, capabilities, input-contract identifier,
+and stable labels. Menu, rejection, teardown, stale-state, and invalid
+declaration combinations produce no snapshot. This gives every platform a
+single UI-facing boundary contract without handing SDL original pixels, audio
+samples, paths, archive handles, adapter references, or a way to create an
+engine state.
+
 The F10 developer readout reports the result as **ready**, **not selected**,
 or one of three deliberately non-sensitive rejection classes: **identity**,
 **archive hash**, or **adapter**. It identifies the preservation boundary that

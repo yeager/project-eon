@@ -5008,10 +5008,9 @@ int main(int argc, char** argv) {
         // about the recovered session rather than a claim about the mode.
         diagnostics.session_capabilities = std::string("MODE=")
             + (request.presentation == eon::Presentation::original ? "ORIGINAL" : "MODERN");
-        if (const auto session = runtime.session_snapshot()) {
-            diagnostics.session_adapter = std::string(eon::runtime_session_kind_label(session->kind));
-            diagnostics.session_boundary = std::string(
-                eon::runtime_session_boundary_label(session->boundary));
+        if (const auto session = runtime.presentation_snapshot()) {
+            diagnostics.session_adapter = std::string(eon::runtime_presentation_kind_label(session->kind));
+            diagnostics.session_boundary = std::string(session->boundary_label);
             // Capability values are compact diagnostic codes, like recovery
             // map addresses. Only their launcher row label is translated.
             diagnostics.session_capabilities += " / DECODED_PRESENTATION="
