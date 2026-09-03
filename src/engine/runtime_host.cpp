@@ -43,45 +43,54 @@ std::optional<RuntimeSessionSnapshot> RuntimeHost::session_snapshot() const {
 }
 
 std::optional<MillenniumDosPresentationSnapshot> RuntimeHost::millennium_dos_presentation() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_dos_presentation();
 }
 
 std::optional<MillenniumDosStartupInputSnapshot> RuntimeHost::millennium_dos_startup_input() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_dos_startup_input();
 }
 
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::render_deuteros_amiga_opening_audio(frames);
 }
 
 std::optional<DeuterosAmigaOpeningPresentationSnapshot>
 RuntimeHost::deuteros_amiga_opening_presentation() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_amiga_opening_presentation();
 }
 
 std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
 RuntimeHost::deuteros_amiga_title_stage_boundary() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_amiga_title_stage_boundary();
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>
 RuntimeHost::deuteros_atari_bootstrap_checkpoint() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_atari_bootstrap_checkpoint();
 }
 
 std::optional<DeuterosAtariBootstrapPresentationSnapshot>
 RuntimeHost::deuteros_atari_bootstrap_presentation() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_atari_bootstrap_presentation();
 }
 
 std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
 RuntimeHost::millennium_amiga_bootstrap_presentation() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_amiga_bootstrap_presentation();
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>
 RuntimeHost::millennium_atari_bootstrap_presentation() const {
+    if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_atari_bootstrap_presentation();
 }
 
