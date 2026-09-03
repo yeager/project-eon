@@ -34,13 +34,13 @@ MillenniumDosVoiceBankEvidence parse_millennium_dos_voice_bank(
         "004b74bfa6569f2bb86bd63f2c6e6bd97f692af8358591506c1745f174cf66f1",
         "a7f1984ff031b451262eb9f201080dd340a8fe0896f3bd57440c2e1c1c839ea4",
     }};
-    const auto executable = media.extract(executable_sha256);
+    const auto executable = media.borrow(executable_sha256);
     if (!executable) throw std::runtime_error("Millennium DOS VOC name source is unavailable");
     MillenniumDosVoiceBankEvidence result;
     result.name_table = parse_millennium_dos_sound_effect_name_table_evidence(*executable);
     result.voices.reserve(voice_sha256.size());
     for (std::size_t index = 0; index < voice_sha256.size(); ++index) {
-        const auto bytes = media.extract(voice_sha256[index]);
+        const auto bytes = media.borrow(voice_sha256[index]);
         if (!bytes) throw std::runtime_error("Millennium DOS VOC leaf is unavailable");
         const auto voice = decode_creative_voice(*bytes);
         if (voice.unsigned_pcm.size()

@@ -3754,9 +3754,16 @@ int main() {
     // adapter leaf during a single admission. It is an exact rehash of the
     // supplied archive, never an extracted media cache.
     const auto verified_dos_media = eon::VerifiedReleaseMedia::open(*english_dos);
+    const auto borrowed_title = verified_dos_media.borrow(
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678");
+    const auto borrowed_title_again = verified_dos_media.borrow(
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678");
+    assert(borrowed_title && borrowed_title_again && !borrowed_title->empty());
+    assert(borrowed_title->data() == borrowed_title_again->data());
     const auto verified_title = verified_dos_media.extract(
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678");
     assert(verified_title && !verified_title->empty());
+    assert(std::equal(verified_title->begin(), verified_title->end(), borrowed_title->begin()));
     const auto verified_dos_runtime = eon::load_millennium_dos_runtime(verified_dos_media);
     assert(verified_dos_runtime && verified_dos_runtime->language == "en");
     const auto verified_dos_assets = eon::inventory_verified_release(*english_dos);
