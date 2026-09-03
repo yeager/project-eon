@@ -8495,8 +8495,10 @@ int main() {
     const auto amiga_disk2 = eon::extract_asset_by_sha256(deuteros_amiga->path,
         "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a");
     assert(amiga_disk1 && amiga_disk2);
-    const eon::AmigaAdf system_disk(*amiga_disk1);
-    const eon::AmigaAdf data_disk(*amiga_disk2);
+    const eon::AmigaAdf system_disk{std::span<const std::uint8_t>(*amiga_disk1)};
+    const eon::AmigaAdf data_disk{std::span<const std::uint8_t>(*amiga_disk2)};
+    assert(system_disk.bytes(0, 1).data() == amiga_disk1->data());
+    assert(data_disk.bytes(0, 1).data() == amiga_disk2->data());
     assert(system_disk.kind() == eon::AmigaDiskKind::dos);
     assert(data_disk.kind() == eon::AmigaDiskKind::deuteros_data);
     assert(system_disk.identifier() == std::string("DOS\0", 4));
