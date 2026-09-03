@@ -26,6 +26,9 @@ DeuterosAtariBootstrapCheckpoint DeuterosAtariBootstrapSession::checkpoint() con
         state1_skipped_ascii_block_.ascii_sha256,
         state5_raw_load_plan_.first_read.source_offset,
         state5_raw_load_plan_.second_read.source_offset,
+        state5_state1_prefix_.source_offset,
+        state5_state1_prefix_.byte_count,
+        state5_state1_prefix_.sha256,
         state1_display_service_boundary_.branch_relative_offset,
         state1_display_service_boundary_.service_setup_relative_offset,
         state1_display_service_boundary_.xbios_selector,
@@ -112,6 +115,19 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
         state1_bytes.insert(state1_bytes.end(), chunk.begin(), chunk.end());
     }
     try {
+        std::vector<std::uint8_t> state5_bytes;
+        state5_bytes.reserve(state5_raw_load_plan_.first_read.byte_count
+            + state5_raw_load_plan_.second_read.byte_count);
+        for (const auto* plan : {&state5_raw_load_plan_.first_read,
+                &state5_raw_load_plan_.second_read}) {
+            for (const auto& request : plan->requests) {
+                const auto chunk = disk.read_sectors(request.track, request.side,
+                    request.first_sector, request.sector_count);
+                state5_bytes.insert(state5_bytes.end(), chunk.begin(), chunk.end());
+            }
+        }
+        state5_state1_prefix_ = validate_deuteros_atari_state5_state1_prefix(
+            state1_raw_load_plan_, state5_raw_load_plan_, state1_bytes, state5_bytes);
         state1_skipped_ascii_block_ = parse_deuteros_atari_state1_skipped_ascii_block(
             state1_bytes, state1_raw_load_plan_);
         state1_display_service_boundary_ = parse_deuteros_atari_state1_display_service_boundary(
