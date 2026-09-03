@@ -34,5 +34,9 @@ private:
 // Resolves accepted CLI aliases to one shipped launcher catalog. This is UI
 // locale selection only and must never be used for original release identity.
 [[nodiscard]] std::string canonical_launcher_language(std::string_view language);
+// A stable native-language name for the launcher locale selector. Autonyms
+// avoid displaying implementation-oriented catalog stems such as `sv` or
+// `zh_CN`, while remaining independent from the selected original release.
+[[nodiscard]] std::string_view launcher_language_autonym(std::string_view language);
 
 } // namespace eon

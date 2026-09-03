@@ -223,7 +223,9 @@ Norwegian, Polish, Brazilian Portuguese, Russian, Swedish, Turkish, Ukrainian,
 and Simplified Chinese. English is the default launcher language. Select a
 launcher language with `--language sv` (or `-l sv`) to choose the initial UI
 language, or cycle it in the start menu with `L`/the language button. This
-never changes the immutable original-release language.
+never changes the immutable original-release language. The menu displays each
+launcher locale in its own language (for example, `Svenska` rather than
+`sv`), while release cards retain their exact original-language identity.
 Only Project Eon's own UI is translated—original game text remains sourced from
 the selected original media. All 20 UTF-8 catalogs are rendered through the
 bundled, hash-reviewed SDL_ttf/Noto fallback chain; Project Eon never selects a
