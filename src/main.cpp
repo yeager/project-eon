@@ -277,6 +277,15 @@ struct StaticControlFlowInspection {
         if (direct_source == releases.end()) {
             throw std::runtime_error("Direct static control-flow document is not bound to a reverified inspected direct-media set");
         }
+        // The scanner may have completed before the operator supplies this
+        // external sidecar. Reopen every declared direct member now, so a
+        // changed directory cannot retain a prior scan's set identity merely
+        // by reusing the same logical release hash in sidecar metadata.
+        try {
+            eon::verify_release_archive(*direct_source);
+        } catch (const std::exception&) {
+            throw std::runtime_error("Direct static control-flow document source changed before inspection");
+        }
     }
     inspection.function_map_coverage = eon::function_map_sidecar_coverage(inspection.summary);
     return inspection;

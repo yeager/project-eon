@@ -70,7 +70,8 @@ member in place; it never reconstructs an archive. Each resulting direct-media
 document carries that `direct_media_set_sha256` as a mandatory separate
 provenance identity; archive, FAT, and nested-media documents reject that field.
 Inspection accepts a direct document only when the current scanned sources
-contain a reverified directory with that same set identity. It records only
+contain a directory with that same set identity and the directory is reopened
+and fully rehashed immediately before the binding is accepted. It records only
 decoder-recognised direct CALL/JMP/conditional-branch/interrupt/return
 candidates with source offsets and declared runtime addresses. The output must
 be a new file outside both the checkout and `/tmp`; it contains neither a full
