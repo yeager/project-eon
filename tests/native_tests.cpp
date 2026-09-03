@@ -1073,6 +1073,10 @@ int main() {
     assert(static_flow_summary.edge_kind_counts.at("trap") == 1);
     assert(static_flow_summary.target_scope_counts.at("within-declared-range") == 1);
     assert(static_flow_summary.documents.size() == 2);
+    assert(static_flow_summary.documents.front().direct_media_set_sha256
+        && *static_flow_summary.documents.front().direct_media_set_sha256
+            == "8888888888888888888888888888888888888888888888888888888888888888");
+    assert(!static_flow_summary.documents.back().direct_media_set_sha256);
     assert(static_flow_summary.declared_ranges.size() == 3);
     auto runtime_default_sidecar = static_flow_sidecar;
     const auto runtime_address_space = runtime_default_sidecar.find("\"address_space\":\"runtime\",");

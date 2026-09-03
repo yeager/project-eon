@@ -391,7 +391,9 @@ void parse_document(const JsonObject& document, StaticControlFlowSummary& summar
         : string(required(document, "archive_sha256"), "archive_sha256");
     const auto document_index = summary.documents.size();
     if (document_index == std::numeric_limits<std::size_t>::max()) reject("too many sidecar documents");
-    summary.documents.push_back({release_identity, std::string(cpu), std::string(address_space)});
+    summary.documents.push_back({release_identity, std::string(cpu), std::string(address_space),
+        has_direct_set ? std::optional<std::string>(string(
+            required(document, "direct_media_set_sha256"), "direct_media_set_sha256")) : std::nullopt});
     for (const auto& value : ranges) {
         const auto& range = object(value, "range");
         require_keys(range, {"source_offset", "length", address_key, "sha256", "edges"});

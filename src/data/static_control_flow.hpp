@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -26,6 +27,9 @@ struct StaticControlFlowDocumentIdentity {
     std::string release_sha256;
     std::string cpu;
     std::string address_space;
+    // Present only for a document read from a complete, reverified direct
+    // media set. This remains metadata and never exposes a source path.
+    std::optional<std::string> direct_media_set_sha256;
 };
 
 // A bounded, metadata-only view of tools/extract_static_control_flow.py's v1
