@@ -39,6 +39,7 @@
 #include "data/millennium_dos_game_data.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
+#include "data/millennium_dos_voice_bank.hpp"
 #include "data/millennium_dos_gx_catalog.hpp"
 #include "data/millennium_dos_last_screen.hpp"
 #include "data/millennium_save_comparison.hpp"
@@ -3900,10 +3901,16 @@ int main() {
             && session_snapshot.language == release.language
             && session_snapshot.release_sha256 == release.sha256);
         if (release.game == eon::Game::millennium && release.platform == eon::Platform::dos) {
-            assert(all_release_runtime.millennium_dos_presentation());
+            const auto assets = all_release_runtime.millennium_dos_presentation();
+            assert(assets);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_title
                 && session_snapshot.capabilities.decoded_presentation
                 && session_snapshot.capabilities.admitted_input);
+            if (release.language == "en") {
+                assert(assets->assets.voice_bank && assets->assets.voice_bank->voices.size() == 14);
+            } else {
+                assert(!assets->assets.voice_bank);
+            }
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::amiga) {
             assert(all_release_runtime.millennium_amiga_bootstrap_presentation());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_amiga_bootstrap
@@ -4589,6 +4596,14 @@ int main() {
         == "5bc252a34057b25239c81ce4ead178c294456e9af233bdd98d2d6f0f3cb4d008");
     assert(sound_effect_names.filenames.front() == "SFX1.VOC");
     assert(sound_effect_names.filenames.back() == "SFXE.VOC");
+    const auto english_media = eon::VerifiedReleaseMedia::open(*english_dos);
+    const auto voice_bank = eon::parse_millennium_dos_voice_bank(english_media);
+    assert(voice_bank.name_table.table_sha256 == sound_effect_names.table_sha256
+        && voice_bank.voices.size() == sound_effect_names.filenames.size()
+        && voice_bank.voices.front().original_filename == "SFX1.VOC"
+        && voice_bank.voices.back().original_filename == "SFXE.VOC"
+        && voice_bank.total_unsigned_pcm_sample_count > 0
+        && !voice_bank.sample_rates.empty());
     auto altered_sound_effect_names = *game_executable;
     altered_sound_effect_names[0xcfdd - 0x100] = 'X';
     bool rejected_sound_effect_names = false;

@@ -15,6 +15,7 @@
 #include "data/millennium_dos_sound_driver.hpp"
 #include "data/millennium_dos_title_flow.hpp"
 #include "data/millennium_dos_video_driver.hpp"
+#include "data/millennium_dos_voice_bank.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -136,6 +137,9 @@ struct MillenniumDosRuntimeAssets {
     // or a claim that any label has reached a live simulation state.
     std::optional<MillenniumDosGameData> static_game_data;
     std::optional<MillenniumDosStaticDataEvidence> static_data_evidence;
+    // Exact original VOC catalogue metadata. Its presence does not permit
+    // playback: event mapping, driver ABI and timing remain unrecovered.
+    std::optional<MillenniumDosVoiceBankEvidence> voice_bank;
     std::optional<MillenniumDosTitleFlow> title_flow;
     std::optional<MillenniumDosSoundSelectionEvidence> sound_selection;
     std::optional<std::string> sound_selection_prompt;
