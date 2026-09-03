@@ -79,6 +79,12 @@ a verified source image, while a long-lived native session takes ownership by
 moving the already extracted image exactly once. It never creates a duplicate
 whole-disk buffer merely to parse sectors or raw offsets.
 
+The FAT12 reader applies the same ownership boundary to Millennium's DOS/ST
+media: directory inspection and provenance parsing borrow a verified disk
+image, while a session may take that image by move. A FAT cluster chain is
+materialized only when a consumer explicitly requests its logically contiguous
+file bytes; parsing the disk itself never duplicates the complete image.
+
 `tools/extract_static_control_flow.py --dos-directory` applies this same
 complete-set model to offline disassembly metadata. It reads the committed
 direct-media-set ledger, rejects a relative or symlinked root, verifies every

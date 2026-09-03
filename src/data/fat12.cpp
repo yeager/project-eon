@@ -40,7 +40,16 @@ std::string lower(std::string_view text) {
 
 } // namespace
 
-Fat12Disk::Fat12Disk(std::vector<std::uint8_t> image) : image_(std::move(image)) {
+Fat12Disk::Fat12Disk(const std::span<const std::uint8_t> image) : image_(image) {
+    parse();
+}
+
+Fat12Disk::Fat12Disk(std::vector<std::uint8_t> image)
+    : owned_image_(std::move(image)), image_(owned_image_) {
+    parse();
+}
+
+void Fat12Disk::parse() {
     if (image_.size() < 512) throw std::runtime_error("FAT12 image is too short");
     bytes_per_sector_ = little16(image_, 11);
     sectors_per_cluster_ = image_[13];
@@ -72,8 +81,8 @@ Fat12Disk::Fat12Disk(std::vector<std::uint8_t> image) : image_(std::move(image))
         const auto attributes = image_[offset + 11];
         if (first == 0) break;
         if (first == 0xe5 || attributes == 0x0f || (attributes & 0x08U) != 0) continue;
-        auto filename = trim_name(std::span(image_).subspan(offset, 8));
-        const auto extension = trim_name(std::span(image_).subspan(offset + 8, 3));
+        auto filename = trim_name(image_.subspan(offset, 8));
+        const auto extension = trim_name(image_.subspan(offset + 8, 3));
         if (!extension.empty()) filename += "." + extension;
         root_entries_.push_back({filename, attributes, little16(image_, offset + 26),
             little32(image_, offset + 28)});
