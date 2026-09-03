@@ -1032,6 +1032,7 @@ int main() {
           "schema":"project-eon.static-control-flow/v1",
           "source":"FIXTURE.EXE",
           "source_kind":"verified-direct-media-member",
+          "direct_media_set_sha256":"8888888888888888888888888888888888888888888888888888888888888888",
           "source_sha256":"3333333333333333333333333333333333333333333333333333333333333333"
         },
         {
@@ -1090,7 +1091,10 @@ int main() {
                  "\"target_scope\":\"outside-declared-range\""),
              std::string(static_flow_sidecar).replace(
                  static_flow_sidecar.find("\"source_kind\":\"verified-direct-media-member\""), 0,
-                 "\"unexpected\":true,\"source_kind\":\"verified-direct-media-member\"")}) {
+                 "\"unexpected\":true,\"source_kind\":\"verified-direct-media-member\""),
+             std::string(static_flow_sidecar).replace(
+                 static_flow_sidecar.find("\"direct_media_set_sha256\":\"8888888888888888888888888888888888888888888888888888888888888888\","),
+                 std::string("\"direct_media_set_sha256\":\"8888888888888888888888888888888888888888888888888888888888888888\",").size(), "")}) {
         bool rejected = false;
         try {
             static_cast<void>(eon::parse_static_control_flow_sidecar(malformed));

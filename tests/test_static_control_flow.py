@@ -78,6 +78,19 @@ class StaticControlFlowTests(unittest.TestCase):
         self.assertEqual(document["container_sha256"], "2" * 64)
         self.assertEqual(document["carrier_archive_sha256"], "3" * 64)
 
+    def test_direct_media_sidecar_retains_its_complete_set_identity(self):
+        source = b"\x90"
+        document = build_sidecar("i8086", "1" * 64, "direct-media-set:fixture:MILL.COM", source,
+                                 [(0, 1, 0x100, hashlib.sha256(source).hexdigest())],
+                                 source_kind="verified-direct-media-member",
+                                 direct_media_set_sha256="2" * 64)
+        self.assertEqual(document["direct_media_set_sha256"], "2" * 64)
+        with self.assertRaisesRegex(ControlFlowError, "direct-media set SHA-256"):
+            build_sidecar("i8086", "1" * 64, "fixture", source,
+                          [(0, 1, 0x100, hashlib.sha256(source).hexdigest())],
+                          source_kind="verified-direct-media-member",
+                          direct_media_set_sha256="bad")
+
     def test_destination_refuses_repository_tmp_and_existing_paths(self):
         with self.assertRaisesRegex(ControlFlowError, "outside /tmp"):
             _require_external_output(Path("/tmp/project-eon-static-flow.json"))

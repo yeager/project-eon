@@ -80,8 +80,9 @@ direct-media-set ledger, rejects a relative or symlinked root, verifies every
 declared direct child as an unchanged non-symlink regular file with its exact
 size and SHA-256, verifies the lexical set digest, and only then decodes the
 explicitly requested executable leaves in memory. Its sidecar labels this
-provenance `verified-direct-media-member`, binds it to the logical release hash,
-and never serializes a filesystem path, source bytes, reconstructed archive, or
+provenance `verified-direct-media-member`, binds it to the logical release hash
+and mandatory complete-set SHA-256, and never serializes a filesystem path,
+source bytes, reconstructed archive, or
 capture evidence. A partial installation, altered leaf, unknown release, or
 requested non-member remains a preservation boundary.
 
