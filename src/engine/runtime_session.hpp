@@ -79,6 +79,11 @@ enum class RuntimeInputContract {
 // Stable machine identifier for CLI/F10 diagnostics; not localized game text.
 [[nodiscard]] std::string_view runtime_input_contract_identifier(RuntimeInputContract contract);
 [[nodiscard]] bool runtime_input_contract_admits_host_observation(RuntimeInputContract contract);
+// This gate is deliberately about observed value shape, not physical keys,
+// controller bindings, or game actions. The coordinator remains responsible
+// for the release-specific parser/session check after this gate succeeds.
+[[nodiscard]] bool runtime_input_contract_accepts_observation(RuntimeInputContract contract,
+    RuntimeInputObservationKind observation);
 
 struct RuntimeSessionCapabilities {
     // These flags describe only an already decoded in-memory presentation or
@@ -86,8 +91,8 @@ struct RuntimeSessionCapabilities {
     // host audio device, input mapping, simulation transition or save write.
     bool decoded_presentation = false;
     bool audio_observations = false;
-    // No current release has a cross-platform inferred input contract. Keep
-    // this explicit so a caller must add evidence before forwarding input.
+    // This must exactly match whether the immutable input_contract admits at
+    // least one typed observation. It never by itself grants a controller map.
     bool admitted_input = false;
     constexpr bool operator==(const RuntimeSessionCapabilities&) const = default;
 };

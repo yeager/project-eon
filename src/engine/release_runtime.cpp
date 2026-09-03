@@ -89,11 +89,16 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         session_snapshot->capabilities = capability->initial_capabilities;
     }
     if (!session_snapshot || (!millennium_dos && !millennium_amiga && !millennium_atari
-        && !deuteros_amiga && !deuteros_atari)
-        // The release table may narrow presentation/audio facts, but it must
-        // never disagree with the separately declared input envelope.
-        || session_snapshot->capabilities.admitted_input
-            != runtime_input_contract_admits_host_observation(session_snapshot->input_contract)) {
+        && !deuteros_amiga && !deuteros_atari)) {
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        return false;
+    }
+    // The release table may narrow presentation/audio facts, but it must
+    // never disagree with the separately declared input envelope.
+    if (session_snapshot->capabilities.admitted_input
+            != runtime_input_contract_admits_host_observation(session_snapshot->input_contract)
+        || session_snapshot->input_contract
+            != runtime_input_contract_for_session(session_snapshot->kind)) {
         admission_ = ReleaseRuntimeAdmission::adapter_rejected;
         return false;
     }
@@ -198,22 +203,28 @@ ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace(
 RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
     const RuntimeInputObservation& observation) {
     // Do not accept a generic input event just because a session is active.
-    // The two branches below are the complete, typed evidence currently
-    // admitted for Millennium DOS; all other adapters fail closed.
-    if (!session_snapshot_) {
+    // First gate its value shape through the immutable session contract. This
+    // makes the contract used by the CLI/F10 diagnostic authoritative here,
+    // while the branches below retain their stricter release/session checks.
+    if (!session_snapshot_ || session_snapshot_->input_contract
+            != runtime_input_contract_for_session(session_snapshot_->kind)
+        || !runtime_input_contract_accepts_observation(session_snapshot_->input_contract,
+            observation.kind)) {
         return RuntimeInputDisposition::rejected;
     }
-    if (session_snapshot_->kind == RuntimeSessionKind::deuteros_amiga_opening) {
-        if (observation.kind != RuntimeInputObservationKind::opening_input_held) {
+    switch (session_snapshot_->input_contract) {
+    case RuntimeInputContract::deuteros_amiga_opening_held_signal:
+        if (session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening) {
             return RuntimeInputDisposition::rejected;
         }
         deuteros_amiga_opening_input_held_ = observation.ascii_character != '\0';
         return RuntimeInputDisposition::observed;
-    }
-    if (session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title) {
+    case RuntimeInputContract::millennium_dos_startup_observation:
+        break;
+    case RuntimeInputContract::none:
         return RuntimeInputDisposition::rejected;
     }
-    if (observation.kind == RuntimeInputObservationKind::opening_input_held) {
+    if (session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title) {
         return RuntimeInputDisposition::rejected;
     }
     if (observation.kind == RuntimeInputObservationKind::ascii_character) {

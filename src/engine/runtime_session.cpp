@@ -59,6 +59,20 @@ bool runtime_input_contract_admits_host_observation(const RuntimeInputContract c
     return contract != RuntimeInputContract::none;
 }
 
+bool runtime_input_contract_accepts_observation(const RuntimeInputContract contract,
+    const RuntimeInputObservationKind observation) {
+    switch (contract) {
+    case RuntimeInputContract::millennium_dos_startup_observation:
+        return observation == RuntimeInputObservationKind::ascii_character
+            || observation == RuntimeInputObservationKind::character_available;
+    case RuntimeInputContract::deuteros_amiga_opening_held_signal:
+        return observation == RuntimeInputObservationKind::opening_input_held;
+    case RuntimeInputContract::none:
+        return false;
+    }
+    return false;
+}
+
 RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest& launch,
     const RuntimeSessionKind kind) {
     RuntimeSessionSnapshot snapshot;
