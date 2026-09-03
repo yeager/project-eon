@@ -35,7 +35,10 @@ struct MillenniumDosStaticTextPointer {
 
 struct MillenniumDosStaticTextRecord {
     std::size_t source_offset = 0;
-    std::vector<std::uint8_t> bytes;
+    std::size_t source_size = 0;
+    // The static-text parser establishes record bounds, not record semantics.
+    // Keep an identity for each original range without duplicating its bytes.
+    std::string sha256;
 };
 
 struct MillenniumDosStaticTextCatalog {
@@ -105,7 +108,7 @@ struct MillenniumDosSaveLayout {
 
 // Preserves the full pointer-to-raw-record topology of the original static
 // data. No text is normalized, decoded as a UI command, or assigned gameplay
-// meaning; callers can only inspect bytes read from supplied media.
+// meaning; records report original offsets, lengths and hashes only.
 [[nodiscard]] MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
     std::span<const std::uint8_t> static_data);
 
