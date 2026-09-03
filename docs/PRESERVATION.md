@@ -1852,6 +1852,10 @@ both hashes and the first-stage checksum, then records the second-stage
 dispatcher. It stops before `Floprd`, callback/XBIOS behavior, state
 selection, or a display is invented; other protected disks are detected but
 never substituted for this profile.
+The release-neutral protected-media preflight borrows the already verified
+disk span only long enough to derive its boot profile; it no longer creates a
+second full-disk buffer for that inspection. A later bootstrap session retains
+an owning read-only image only when it needs its documented sector ranges.
 The first-stage copy is now retained separately as a hash-gated, isolated RAM
 record: its literal byte loop copies the complete 4,608-byte track-2 interval
 from `$70000` to `$1e00`, preserving the same SHA-256 at both locations. Its

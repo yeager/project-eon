@@ -7826,6 +7826,15 @@ int main() {
     assert(deuteros_st_disk1 && deuteros_st_disk2);
     const eon::DeuterosAtariDisk deuteros_disk1(*deuteros_st_disk1);
     const eon::DeuterosAtariDisk deuteros_disk2(*deuteros_st_disk2);
+    // The preflight-only disk view deliberately borrows the supplied bytes.
+    // It must derive the same static boot facts without manufacturing a full
+    // second disk buffer; sessions still use the owning constructor.
+    const eon::DeuterosAtariDisk deuteros_disk1_view{
+        std::span<const std::uint8_t>(*deuteros_st_disk1)};
+    assert(deuteros_disk1_view.boot_profile().boot_checksum
+        == deuteros_disk1.boot_profile().boot_checksum);
+    assert(deuteros_disk1_view.boot_profile().first_stage_offset
+        == deuteros_disk1.boot_profile().first_stage_offset);
     const eon::DeuterosAtariBootstrapSession deuteros_atari_session(*deuteros_st_disk1);
     {
         auto altered_deuteros_st_disk1 = *deuteros_st_disk1;
