@@ -4357,6 +4357,12 @@ launcher route constructs this session, maps an SDL key to F8, or uses these
 facts to enter `2200AD.EXE`. This is a capture-consumption boundary for a
 future fully admitted game trace, not a game-input implementation.
 
+For the distinct local-return arm of `$731a` (`$da39 = 0`, `$da0a = 0`), that
+same session may additionally consume one ordered sequence of observed `$09fa`
+BL returns and execute only the hash-validated `$7312` `SHR`/`JC` tail. It is
+one-shot and rejects a table-jump/opaque-helper preflight or an unterminated
+sequence; neither `$09fa` nor BL is emulated or synthesized.
+
 The tenth table record (raw F10 / `$44`) is `36 3c 09 1b 39 09 84 73`, with
 handler entry `$7384`. It returns when native runtime word `$a19e` is nonzero.
 Its admitted path clears AX and calls `$d0c9`, clears `$da30`, loads `AL=$02`,
