@@ -6033,8 +6033,30 @@ int main() {
     assert(!observe_game_action(0));
     assert(!game_session.last_function_key_index());
     assert(observe_game_action(0x3b) == std::optional<std::size_t>{0});
-    assert(game_session.last_first_function_key_trace());
-    assert(game_session.last_first_function_key_trace()->selected_record_address == 0x12cc);
+    assert(!game_session.last_first_function_key_trace());
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(game_session.observe_first_function_key_display_selector_return());
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    eon::MillenniumDosGameSession observed_f1_session(game_flow, *game_executable);
+    assert(observed_f1_session.observe_action({0x0f05, 0x3b}) == std::optional<std::size_t>{0});
+    const auto observed_f1 = observed_f1_session.observe_first_function_key_display_selector_return();
+    assert(observed_f1.selected_record_address == 0x12cc);
+    assert(observed_f1_session.last_first_function_key_trace());
+    {
+        bool rejected = false;
+        try {
+            static_cast<void>(observed_f1_session.observe_first_function_key_display_selector_return());
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(observe_game_action(0x3c) == std::optional<std::size_t>{1});
     assert(game_session.last_second_function_key_trace());
     assert(game_session.last_second_function_key_trace()->first_record_address == 0x1384);
