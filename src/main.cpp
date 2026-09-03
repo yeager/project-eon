@@ -954,6 +954,8 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     std::cout << ",\"aspect\":"; write_json_string(std::cout, aspect_identifier);
     std::cout << "},\"runtime_admission\":";
     write_json_string(std::cout, eon::release_runtime_admission_label(coordinator.admission()));
+    std::cout << ",\"runtime_rejection\":";
+    write_json_string(std::cout, eon::release_runtime_rejection_label(coordinator.rejection()));
     std::cout << ",\"runtime_session\":";
     if (const auto& session = coordinator.session_snapshot()) {
         std::cout << "{\"kind\":"; write_json_string(std::cout, eon::runtime_session_kind_label(session->kind));
