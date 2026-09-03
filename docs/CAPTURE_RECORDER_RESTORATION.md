@@ -264,6 +264,36 @@ It also lacked a release/site/opcode gate, consumed its one observation on an
 unrelated or unwritable occurrence, emitted a non-canonical literal `\\n`,
 and was not portable to the project's Windows DOSBox-X build surface.
 
+### 2026-09-03 independent re-review of the V21 development rebuild
+
+State remains: `OBSERVER_FIX_REQUIRED` (not `INDEPENDENT_REVIEW` and not
+`PINNED_RECORDER`). A clean external development rebuild of the existing V21
+v3 patch was independently inspected again. Its source base was
+`234797680781567e18c374c9e62da24de5423db0`, the dirty source diff matched the
+external v3 patch SHA-256
+`eb9f21bd22b6d7105137b1c0495d87b02a894d4a5a2d8533d1dce81ba6aa793c`, and its
+aarch64 executable SHA-256 was
+`783502776b2a5acb856395445a60296ff2c7160bda41398598146a5ed4f52bba`.
+It was built externally with Ubuntu g++ 15.2.0.  A no-media `-version` smoke
+test with the observer-output environment variable set created no sidecar.
+
+The re-review rejects the binary for capture admission. Although the source
+gate still checks the mapped CS:PC and exact nine-byte installer preimage
+before reading `DS:DX`, its `open`/`write`/`close` sidecar operation occurs
+inside `DOS_21Handler` while guest execution is active. That synchronous host
+filesystem work can perturb wall-clock timing or event scheduling. The
+candidate also identifies an image only by its two canonical executable names,
+entry CS and instruction bytes; it does not bind a recognised outer release or
+loaded-image digest. Finally, its unconditional POSIX output code has not been
+reviewed for the Windows DOSBox-X build surface. These are admission failures,
+not evidence gaps that a capture runner may waive.
+
+The successor must retain at most one bounded POD observation in recorder-owned
+memory during guest execution, bind the recognised release plus loaded
+image/site/opcode identity before arming, and flush only at a separately
+reviewed host-safe point after guest execution has stopped. It must have a
+reproducible build record before any new independent review or pin decision.
+
 The V22 binary and source remain external rejected artifacts. They must not
 be pinned, located, run through a capture helper, or used for native recovery.
 The only acceptable successor records a bounded callback fact in recorder-
