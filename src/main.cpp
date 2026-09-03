@@ -990,6 +990,24 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
         }());
         std::cout << ",\"state1_raw_request_count\":"
             << checkpoint->state1_raw_request_count;
+        std::cout << ",\"state1_skipped_ascii\":{\"branch_relative_offset\":";
+        write_json_string(std::cout, "+0x" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state1_skipped_ascii_branch_relative_offset;
+            return value.str();
+        }());
+        std::cout << ",\"block_relative_offset\":";
+        write_json_string(std::cout, "+0x" + [&] {
+            std::ostringstream value;
+            value << std::hex << checkpoint->state1_skipped_ascii_relative_offset;
+            return value.str();
+        }());
+        std::cout << ",\"byte_count\":" << checkpoint->state1_skipped_ascii_byte_count;
+        std::cout << ",\"printable_run_count\":"
+            << checkpoint->state1_skipped_ascii_printable_run_count;
+        std::cout << ",\"sha256\":";
+        write_json_string(std::cout, checkpoint->state1_skipped_ascii_sha256);
+        std::cout << "}";
         std::cout << ",\"state1_display_service\":{\"branch_relative_offset\":";
         write_json_string(std::cout, "+0x" + [&] {
             std::ostringstream value;
@@ -3408,6 +3426,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto& state0_plan = live_bootstrap.state0_raw_load_plan();
         const auto& state1_plan = live_bootstrap.state1_raw_load_plan();
         const auto& state1_service = live_bootstrap.state1_service_boundary();
+        const auto& state1_skipped_ascii = live_bootstrap.state1_skipped_ascii_block();
         const auto& state1_display_service = live_bootstrap.state1_display_service_boundary();
         const auto& state5_plan = live_bootstrap.state5_raw_load_plan();
         const auto& state5_return = live_bootstrap.state5_return();
@@ -3484,8 +3503,6 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << state1_plan.requests.size() << " original reads; SHA-256 "
             << eon::to_hex(eon::sha256(state1_bytes))
             << " (not selected or interpreted at runtime)\n";
-        const auto state1_skipped_ascii = eon::parse_deuteros_atari_state1_skipped_ascii_block(
-            state1_bytes, state1_plan);
         std::cout << "          State-1 skipped ASCII evidence: Disk 1 +0x" << std::hex
             << state1_plan.source_offset + state1_skipped_ascii.branch_relative_offset
             << " BRA.W displacement 0x" << static_cast<std::uint16_t>(

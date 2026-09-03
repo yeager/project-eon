@@ -15,6 +15,11 @@ DeuterosAtariBootstrapCheckpoint DeuterosAtariBootstrapSession::checkpoint() con
         state1_service_boundary_.xbios_selector,
         state0_raw_load_plan_.requests.size(),
         state1_raw_load_plan_.requests.size(),
+        state1_skipped_ascii_block_.branch_relative_offset,
+        state1_skipped_ascii_block_.ascii_relative_offset,
+        state1_skipped_ascii_block_.ascii_byte_count,
+        state1_skipped_ascii_block_.printable_run_count,
+        state1_skipped_ascii_block_.ascii_sha256,
         state5_raw_load_plan_.first_read.source_offset,
         state5_raw_load_plan_.second_read.source_offset,
         state1_display_service_boundary_.branch_relative_offset,
@@ -85,10 +90,12 @@ DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
         state1_bytes.insert(state1_bytes.end(), chunk.begin(), chunk.end());
     }
     try {
+        state1_skipped_ascii_block_ = parse_deuteros_atari_state1_skipped_ascii_block(
+            state1_bytes, state1_raw_load_plan_);
         state1_display_service_boundary_ = parse_deuteros_atari_state1_display_service_boundary(
             state1_bytes, state1_raw_load_plan_);
     } catch (const std::runtime_error& error) {
-        throw std::runtime_error("Invalid Deuteros Atari ST state-1 display-service boundary: "
+        throw std::runtime_error("Invalid Deuteros Atari ST state-1 static boundary: "
             + std::string(error.what()));
     }
     state5_return_ = parse_deuteros_atari_state5_return(second_stage_bytes, second_stage_, dispatch_);

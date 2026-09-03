@@ -1970,8 +1970,9 @@ encodes one literal `-1` longword push, a second stack-copy longword push,
 XBIOS selector `$0005`, `TRAP #14`, and 12-byte stack cleanup. The source
 bytes alone do not encode the third service argument seen by Hatari, prove a
 raw-read result or relocation, or show that the call returns. The session
-retains only those offsets, opcodes, and hashes in its diagnostic checkpoint;
-it never retains the raw state-1 bytes, calls XBIOS, or exposes a display.
+also retains the already parser-validated skipped-ASCII profile as offsets,
+run count, and one block hash. It never retains the raw state-1 bytes, calls
+XBIOS, exposes the ASCII strings, or exposes a display.
 `--runtime-diagnostics-json` publishes this only as the optional
 `atari_bootstrap_checkpoint.state1_display_service` object for the active
 Replicants session; non-Atari sessions emit `null` rather than a fabricated
