@@ -417,6 +417,13 @@ def main() -> int:
             or not isinstance(atari_checkpoint, dict)
             or atari_checkpoint.get("relocated_dispatcher_address") != "$1ec4"
             or atari_checkpoint.get("state1_raw_request_count") != 84
+            or atari_checkpoint.get("state1_skipped_ascii") != {
+                "branch_relative_offset": "+0x48000",
+                "block_relative_offset": "+0x4800a",
+                "byte_count": 1080,
+                "printable_run_count": 18,
+                "sha256": "8dd46e7c760a38d07273b18a4cbd3c03eb44a6b57c8c401580dd47fa4646484e",
+            }
             or atari_checkpoint.get("state1_display_service") != {
                 "branch_relative_offset": "+0x48000",
                 "service_relative_offset": "+0x489c6",
