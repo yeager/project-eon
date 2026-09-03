@@ -270,13 +270,14 @@ class ModernGraphicsPopupTests(unittest.TestCase):
 
     def test_deuteros_title_handoff_stops_host_vm_scheduling(self) -> None:
         """The retained frame is presentation evidence, never a fake title VM."""
-        # Timing belongs to the SDL-free runner; main only consumes its
-        # release-bound event stream and clears preview audio at handoff.
+        # Timing belongs to the native session's SDL-free runner; main only
+        # consumes its release-bound event stream and clears preview audio at
+        # handoff.
         self.assertIn("scheduler_period_ms = 20", OPENING_RUNNER_HEADER)
         self.assertIn("maximum_catch_up_ticks", OPENING_RUNNER_HEADER)
-        self.assertIn("controller_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
         self.assertIn("result.title_handoff", OPENING_RUNNER_SOURCE)
-        scheduler = SOURCE.index("deuteros_opening_runner->advance(SDL_GetTicks())")
+        scheduler = SOURCE.index("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())")
         renderer = SOURCE.index("const bool modern", scheduler)
         scheduler_block = SOURCE[scheduler:renderer]
         self.assertIn("if (events.title_handoff)", scheduler_block)
@@ -336,8 +337,8 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         f10_block = SOURCE[f10_guard:modal]
         self.assertIn("clear_deuteros_opening_input();", f10_block)
         self.assertIn("RuntimeInputObservation::opening_input_held(false)", SOURCE)
-        self.assertIn("deuteros_opening_runner->advance(SDL_GetTicks())", SOURCE)
-        self.assertIn("controller_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())", SOURCE)
+        self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
         self.assertLess(f10_guard, modal)
 
     def test_f10_does_not_signal_the_unrecovered_title_handoff(self) -> None:

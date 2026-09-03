@@ -1,8 +1,10 @@
 #pragma once
 
-#include "engine/native_session_controller.hpp"
+#include "engine/deuteros_amiga_opening.hpp"
 
 #include <cstdint>
+#include <functional>
+#include <optional>
 #include <vector>
 
 namespace eon {
@@ -22,13 +24,19 @@ public:
     static constexpr std::uint64_t scheduler_period_ms = 20;
     static constexpr std::size_t maximum_catch_up_ticks = 4;
 
-    DeuterosAmigaOpeningRunner(NativeSessionController& controller, std::uint64_t initial_tick);
+    // The scheduler deliberately owns only a narrow tick callback.  The
+    // native session controller supplies it, keeping the runner independent
+    // of SDL and preventing this scheduling helper from gaining a mutable
+    // media/session reference of its own.
+    using TickSource = std::function<std::optional<DeuterosAmigaVmEvents>()>;
+
+    DeuterosAmigaOpeningRunner(TickSource tick_source, std::uint64_t initial_tick);
     [[nodiscard]] DeuterosAmigaOpeningAdvance advance(std::uint64_t now);
     [[nodiscard]] std::uint64_t scheduled_tick() const { return scheduled_tick_; }
     [[nodiscard]] bool stopped() const { return stopped_; }
 
 private:
-    NativeSessionController& controller_;
+    TickSource tick_source_;
     std::uint64_t scheduled_tick_;
     bool stopped_ = false;
 };

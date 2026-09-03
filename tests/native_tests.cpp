@@ -3928,12 +3928,12 @@ int main() {
             assert(opening_controller.launch_direct(opening_request, releases).accepted());
             assert(opening_controller.state() == eon::NativeSessionState::deuteros_amiga_opening);
             assert(!opening_controller.deuteros_amiga_opening_checkpoint());
-            eon::DeuterosAmigaOpeningRunner opening_runner(opening_controller, 1'000);
-            assert(opening_runner.advance(1'019).events.empty());
+            assert(opening_controller.start_deuteros_amiga_opening_scheduler(1'000));
+            assert(opening_controller.advance_deuteros_amiga_opening_scheduler(1'019).events.empty());
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::observed);
-            const auto first_advance = opening_runner.advance(1'020);
+            const auto first_advance = opening_controller.advance_deuteros_amiga_opening_scheduler(1'020);
             assert(first_advance.events.size() == 1 && !first_advance.resynchronized);
             const auto first_checkpoint = opening_controller.deuteros_amiga_opening_checkpoint();
             assert(first_checkpoint && first_checkpoint->tick > 0
@@ -3949,12 +3949,12 @@ int main() {
                     == static_cast<std::size_t>(eon::DeuterosAmigaFrame::width)
                         * eon::DeuterosAmigaFrame::height * 4U);
             assert(!opening_controller.deuteros_amiga_title_stage_boundary());
-            const auto catch_up = opening_runner.advance(1'100);
+            const auto catch_up = opening_controller.advance_deuteros_amiga_opening_scheduler(1'100);
             assert(catch_up.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
                 && !catch_up.resynchronized);
-            const auto resynchronized = opening_runner.advance(1'220);
+            const auto resynchronized = opening_controller.advance_deuteros_amiga_opening_scheduler(1'220);
             assert(resynchronized.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
-                && resynchronized.resynchronized && opening_runner.scheduled_tick() == 1'220);
+                && resynchronized.resynchronized);
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::ascii('1'))
                 == eon::RuntimeInputDisposition::rejected);
@@ -3964,11 +3964,13 @@ int main() {
             // physical held observation; it never fabricates title input.
             bool title_handoff_observed = false;
             for (std::size_t tick = 0; tick < 128 && !title_handoff_observed; ++tick) {
-                const auto handoff_events = opening_runner.advance(1'240 + tick * 20U);
+                const auto handoff_events = opening_controller.advance_deuteros_amiga_opening_scheduler(
+                    1'240 + tick * 20U);
                 title_handoff_observed = handoff_events.title_handoff;
             }
             assert(title_handoff_observed);
-            assert(opening_runner.stopped() && opening_runner.advance(9'999).events.empty());
+            assert(!opening_controller.deuteros_amiga_opening_scheduler_active()
+                && opening_controller.advance_deuteros_amiga_opening_scheduler(9'999).events.empty());
             assert(opening_controller.session_snapshot());
             const auto title_snapshot = *opening_controller.session_snapshot();
             assert(title_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_title_stage
@@ -3996,6 +3998,12 @@ int main() {
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
             assert(!opening_controller.tick_deuteros_amiga_opening());
+            assert(!opening_controller.start_deuteros_amiga_opening_scheduler(10'000));
+            opening_controller.begin_return_to_menu();
+            assert(!opening_controller.deuteros_amiga_opening_scheduler_active()
+                && opening_controller.advance_deuteros_amiga_opening_scheduler(10'020).events.empty());
+            opening_controller.finish_return_to_menu();
+            assert(opening_controller.state() == eon::NativeSessionState::menu);
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation

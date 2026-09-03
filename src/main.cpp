@@ -10,7 +10,6 @@
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/menu_runtime_launch.hpp"
 #include "engine/native_session_controller.hpp"
-#include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -4583,7 +4582,6 @@ int main(int argc, char** argv) {
     bool show_modern_runtime_diagnostics = false;
     bool show_recovery_function_map = false;
     std::size_t recovery_function_map_page = 0;
-    std::optional<eon::DeuterosAmigaOpeningRunner> deuteros_opening_runner;
     const auto clear_deuteros_opening_input = [&] {
         // The recovered `$14` path receives only a held host signal. A
         // launcher-modal transition is not an original input poll, so it
@@ -4725,7 +4723,6 @@ int main(int argc, char** argv) {
         preview_texture = nullptr;
         modern_preview_texture = nullptr;
         discard_deuteros_external_modern_sequence();
-        deuteros_opening_runner.reset();
     };
     const auto reset_active_runtime = [&] {
         // Leaving a launch or changing its source is a hard preservation
@@ -4779,7 +4776,7 @@ int main(int argc, char** argv) {
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
-        deuteros_opening_runner.emplace(runtime, SDL_GetTicks());
+        static_cast<void>(runtime.start_deuteros_amiga_opening_scheduler(SDL_GetTicks()));
         deuteros_title_resource.reset();
     };
     const auto launch_menu_selection = [&] {
@@ -5560,16 +5557,17 @@ int main(int argc, char** argv) {
             if (screen == Screen::menu && !request.platform) focus_menu_card(focused);
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && !deuteros_opening_runner && eon::deuteros_amiga_opening_supported(active_platform)
+            && !runtime.deuteros_amiga_opening_scheduler_active()
+            && eon::deuteros_amiga_opening_supported(active_platform)
             && runtime.state() == eon::NativeSessionState::deuteros_amiga_opening) {
             create_deuteros_opening_texture();
             start_deuteros_audio();
             load_deuteros_external_modern_sequence();
-            deuteros_opening_runner.emplace(runtime, SDL_GetTicks());
+            static_cast<void>(runtime.start_deuteros_amiga_opening_scheduler(SDL_GetTicks()));
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && deuteros_opening_runner) {
-            const auto advance = deuteros_opening_runner->advance(SDL_GetTicks());
+            && runtime.deuteros_amiga_opening_scheduler_active()) {
+            const auto advance = runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks());
             // The runner owns only scheduler arithmetic and delegates every
             // tick through the native lifecycle controller. A title-boundary
             // transition is therefore published before SDL sees its events.
