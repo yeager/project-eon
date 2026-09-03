@@ -131,7 +131,7 @@ path, archive member, original byte, guest state, trace contents, emulator
 state, or a route for executing original code. `runtime_rejection` is `NONE`
 after a successful admission; otherwise it identifies only the native gate
 class (launch identity, original media, capability, adapter construction,
-input contract, or child session). It is not an emulator result or gameplay
+input contract, child session, or lifecycle transition). It is not an emulator result or gameplay
 state.
 
 Before it exposes those provenance records, the diagnostics composition

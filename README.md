@@ -309,6 +309,11 @@ ambiguous candidate resets the coordinator, so the start menu can identify a
 launch-identity failure without retaining a former release or exposing paths,
 member names, parser errors, or original bytes.
 
+During the explicit return-to-menu teardown, a launch attempt is reported as
+`LIFECYCLE TRANSITION` rather than reusing the prior active admission. This
+keeps the native state machine honest while SDL destroys source-derived
+resources; it is not a game or emulator state.
+
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It
 contains only game/platform/language/release hashes plus hash-bound startup and

@@ -48,7 +48,11 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
 RuntimeCandidateLaunchResult NativeSessionController::launch_direct(const LaunchRequest& candidate,
     const std::vector<ReleaseArchive>& releases) {
     if (state_ == NativeSessionState::returning_to_menu) {
-        return {runtime_.admission(), runtime_.coordinator().rejection(), std::nullopt};
+        // SDL may still be releasing source-derived borrows. Do not expose
+        // the preceding active admission as an attempted new launch, and do
+        // not reset the coordinator before that teardown is complete.
+        return {ReleaseRuntimeAdmission::identity_rejected,
+            ReleaseRuntimeRejection::lifecycle_transition, std::nullopt};
     }
     const auto result = runtime_.launch_direct(candidate, releases);
     synchronize_after_runtime_change();
@@ -58,7 +62,8 @@ RuntimeCandidateLaunchResult NativeSessionController::launch_direct(const Launch
 RuntimeCandidateLaunchResult NativeSessionController::launch_menu(const LauncherSessionState& session,
     const LaunchRequest& base, const std::vector<ReleaseArchive>& releases) {
     if (state_ == NativeSessionState::returning_to_menu) {
-        return {runtime_.admission(), runtime_.coordinator().rejection(), std::nullopt};
+        return {ReleaseRuntimeAdmission::identity_rejected,
+            ReleaseRuntimeRejection::lifecycle_transition, std::nullopt};
     }
     const auto result = runtime_.launch_menu(session, base, releases);
     synchronize_after_runtime_change();

@@ -36,6 +36,7 @@ std::string_view release_runtime_rejection_label(const ReleaseRuntimeRejection r
     case ReleaseRuntimeRejection::adapter_construction: return "ADAPTER CONSTRUCTION";
     case ReleaseRuntimeRejection::input_contract: return "INPUT CONTRACT";
     case ReleaseRuntimeRejection::child_session: return "CHILD SESSION";
+    case ReleaseRuntimeRejection::lifecycle_transition: return "LIFECYCLE TRANSITION";
     }
     return "ADAPTER CONSTRUCTION";
 }
