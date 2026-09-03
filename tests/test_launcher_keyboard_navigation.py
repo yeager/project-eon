@@ -71,12 +71,13 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         panel_start = SOURCE.index('tr("VERIFIED DEUTEROS ATARI ST MEDIA - PROTECTED BOOT CHAIN ONLY")')
         panel_end = SOURCE.index('} else if (selected == eon::Game::deuteros && preview_texture', panel_start)
         panel = SOURCE[panel_start:panel_end]
-        self.assertIn("if (deuteros_atari_session)", panel)
-        self.assertIn("deuteros_atari_session->boot()", panel)
-        self.assertIn("first_stage_copy_execution()", panel)
-        self.assertIn("entry_execution()", panel)
-        self.assertIn("first_stage_sha256()", panel)
-        self.assertIn("second_stage_sha256()", panel)
+        self.assertIn("runtime.deuteros_atari_bootstrap_presentation()", panel)
+        self.assertIn("if (atari_bootstrap)", panel)
+        self.assertIn("atari_bootstrap->first_stage_disk_offset", panel)
+        self.assertIn("atari_bootstrap->copy_execution", panel)
+        self.assertIn("atari_bootstrap->entry_execution", panel)
+        self.assertIn("atari_bootstrap->checkpoint.first_stage_sha256", panel)
+        self.assertIn("atari_bootstrap->checkpoint.second_stage_sha256", panel)
         self.assertIn('tr("STATIC BOOT EVIDENCE ONLY — NO XBIOS, RAW READ, STATE SELECTION, TITLE, OR GAMEPLAY.")', panel)
         self.assertNotIn("state_selection_layout()", panel)
         self.assertNotIn("raw_reader_call_layout()", panel)
@@ -372,7 +373,6 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         deuteros_body = SOURCE[deuteros_reset:reset]
         for clearing in (
             "SDL_ClearAudioStream(deuteros_audio_stream)",
-            "deuteros_atari_session = nullptr;",
             "deuteros_title_resource.reset();",
             "discard_deuteros_external_modern_sequence();",
         ):

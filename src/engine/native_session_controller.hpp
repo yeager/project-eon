@@ -52,6 +52,8 @@ public:
     deuteros_amiga_title_stage_boundary() const;
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
     deuteros_atari_bootstrap_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapPresentationSnapshot>
+    deuteros_atari_bootstrap_presentation() const;
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

@@ -4570,7 +4570,6 @@ int main(int argc, char** argv) {
             eon::RuntimeInputObservation::opening_input_held(false)));
     };
     std::optional<std::uint32_t> deuteros_title_resource;
-    eon::DeuterosAtariBootstrapSession* deuteros_atari_session = runtime_coordinator.deuteros_atari();
     eon::MillenniumDosSoundSelectionSession* millennium_sound_selection_session = nullptr;
     eon::MillenniumDosTitleSession* millennium_title_session = nullptr;
     // SDL text input is the host analogue of DOS' character-availability
@@ -4696,7 +4695,6 @@ int main(int argc, char** argv) {
         if (deuteros_audio_stream) {
             static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
         }
-        deuteros_atari_session = nullptr;
         deuteros_title_resource.reset();
         deuteros_preview_rgba.reset();
         deuteros_preview_source_tick.reset();
@@ -4758,7 +4756,6 @@ int main(int argc, char** argv) {
         stop_millennium_title();
         reset_deuteros_runtime();
         if (!resolve_active_release(eon::Game::deuteros)) return;
-        deuteros_atari_session = runtime_coordinator.deuteros_atari();
         create_deuteros_opening_texture();
         start_deuteros_audio();
         load_deuteros_external_modern_sequence();
@@ -4790,7 +4787,6 @@ int main(int argc, char** argv) {
         millennium_assets = runtime_coordinator.millennium_dos();
         millennium_amiga_session = runtime_coordinator.millennium_amiga();
         millennium_atari_session = runtime_coordinator.millennium_atari();
-        deuteros_atari_session = runtime_coordinator.deuteros_atari();
         active_release_sha256 = active_launch()->request.release_sha256;
         active_release_language = active_launch()->request.release_language;
         selected = launcher_route.game;
@@ -5548,10 +5544,6 @@ int main(int argc, char** argv) {
             deuteros_opening_runner.emplace(runtime, SDL_GetTicks());
         }
         if (screen == Screen::launching && selected == eon::Game::deuteros
-            && active_platform == eon::Platform::atari_st && !deuteros_atari_session) {
-            deuteros_atari_session = runtime_coordinator.deuteros_atari();
-        }
-        if (screen == Screen::launching && selected == eon::Game::deuteros
             && deuteros_opening_runner) {
             const auto advance = deuteros_opening_runner->advance(SDL_GetTicks());
             // The runner owns only scheduler arithmetic and delegates every
@@ -6064,20 +6056,20 @@ int main(int argc, char** argv) {
                     tr("INTERACTIVE ATARI ST PRESENTATION IS NOT YET RECOVERED."));
                 draw_text(renderer, 64, 268,
                     tr("NO AMIGA PREVIEW OR SYNTHETIC STATE WILL RUN FOR THIS PLATFORM."));
-                if (deuteros_atari_session) {
+                const auto atari_bootstrap = runtime.deuteros_atari_bootstrap_presentation();
+                if (atari_bootstrap) {
                     // This panel consumes only byte-validated facts retained by
                     // the admitted session.  In particular, it neither selects
                     // a protected boot state nor crosses the XBIOS/raw-read
                     // boundary to fabricate an interactive presentation.
-                    const auto& boot = deuteros_atari_session->boot();
-                    const auto& copy = deuteros_atari_session->first_stage_copy_execution();
-                    const auto& entry = deuteros_atari_session->entry_execution();
+                    const auto& copy = atari_bootstrap->copy_execution;
+                    const auto& entry = atari_bootstrap->entry_execution;
                     std::ostringstream stages;
                     stages << tr("BOOT STAGES") << ": SHA-256 "
-                           << deuteros_atari_session->first_stage_sha256().substr(0, 16)
-                           << " / " << deuteros_atari_session->second_stage_sha256().substr(0, 16)
-                           << "; +0x" << std::hex << boot.first_stage_offset << "/0x"
-                           << boot.first_stage_length;
+                           << atari_bootstrap->checkpoint.first_stage_sha256.substr(0, 16)
+                           << " / " << atari_bootstrap->checkpoint.second_stage_sha256.substr(0, 16)
+                           << "; +0x" << std::hex << atari_bootstrap->first_stage_disk_offset << "/0x"
+                           << atari_bootstrap->first_stage_length;
                     draw_text(renderer, 64, 292, stages.str());
                     std::ostringstream relocation;
                     relocation << tr("BOOT COPY") << ": 0x" << std::hex

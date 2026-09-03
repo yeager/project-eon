@@ -3836,8 +3836,7 @@ int main() {
         == "MILLENNIUM DOS SOUND DRIVER BOUNDARY");
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
         == eon::RuntimeInputDisposition::rejected);
-    assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari()
-        && !admitted_dos_runtime.deuteros_atari());
+    assert(!admitted_dos_runtime.millennium_amiga() && !admitted_dos_runtime.millennium_atari());
     admitted_dos_runtime.reset();
     assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos()
         && !admitted_dos_runtime.session_snapshot());
@@ -3887,10 +3886,8 @@ int main() {
             && session_snapshot.release_sha256 == release.sha256);
         const auto adapter_count = static_cast<int>(all_release_runtime.millennium_dos() != nullptr)
             + static_cast<int>(all_release_runtime.millennium_amiga() != nullptr)
-            + static_cast<int>(all_release_runtime.millennium_atari() != nullptr)
-            + static_cast<int>(all_release_runtime.deuteros_atari() != nullptr);
-        assert(adapter_count == (release.game == eon::Game::deuteros
-            && release.platform == eon::Platform::amiga ? 0 : 1));
+            + static_cast<int>(all_release_runtime.millennium_atari() != nullptr);
+        assert(adapter_count == (release.game == eon::Game::millennium ? 1 : 0));
         if (release.game == eon::Game::millennium && release.platform == eon::Platform::dos) {
             assert(all_release_runtime.millennium_dos());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_dos_title
@@ -3989,7 +3986,6 @@ int main() {
                 == eon::RuntimeInputDisposition::rejected);
             assert(!opening_controller.tick_deuteros_amiga_opening());
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
-            assert(all_release_runtime.deuteros_atari());
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -4008,8 +4004,17 @@ int main() {
             assert(controller_checkpoint
                 && controller_checkpoint->first_stage_sha256 == checkpoint->first_stage_sha256
                 && controller_checkpoint->second_stage_sha256 == checkpoint->second_stage_sha256);
+            const auto controller_presentation = atari_controller.deuteros_atari_bootstrap_presentation();
+            assert(controller_presentation
+                && controller_presentation->checkpoint.first_stage_sha256
+                    == controller_checkpoint->first_stage_sha256
+                && controller_presentation->first_stage_disk_offset == 0x9d800
+                && controller_presentation->first_stage_length == 0x1200
+                && controller_presentation->copy_execution.relocated_entry_address == 0x1ec4
+                && controller_presentation->entry_execution.stop_before_dispatcher_source_offset == 0xc4);
             atari_controller.reset();
-            assert(atari_controller.is_menu() && !atari_controller.deuteros_atari_bootstrap_checkpoint());
+            assert(atari_controller.is_menu() && !atari_controller.deuteros_atari_bootstrap_checkpoint()
+                && !atari_controller.deuteros_atari_bootstrap_presentation());
         } else {
             assert(false && "unrecognised release reached runtime admission");
         }
@@ -4021,8 +4026,7 @@ int main() {
     all_release_runtime.reset();
     assert(!all_release_runtime.session_snapshot());
     assert(!all_release_runtime.active() && !all_release_runtime.millennium_dos()
-        && !all_release_runtime.millennium_amiga() && !all_release_runtime.millennium_atari()
-        && !all_release_runtime.deuteros_atari());
+        && !all_release_runtime.millennium_amiga() && !all_release_runtime.millennium_atari());
     auto forged_release_metadata = *english_dos;
     forged_release_metadata.language = "es";
     assert(!eon::is_recognised_release_identity(forged_release_metadata));

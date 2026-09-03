@@ -81,6 +81,17 @@ struct DeuterosAmigaTitleStageBoundarySnapshot {
     std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace;
 };
 
+// Media-safe facts for the exact Deuteros Atari ST bootstrap boundary.  The
+// retained prefixes are only local copy/entry results; this DTO cannot select
+// a protected state, issue Floprd, or cross the unrecovered XBIOS boundary.
+struct DeuterosAtariBootstrapPresentationSnapshot {
+    DeuterosAtariBootstrapCheckpoint checkpoint;
+    std::size_t first_stage_disk_offset = 0;
+    std::size_t first_stage_length = 0;
+    DeuterosAtariFirstStageCopyExecutionPrefix copy_execution;
+    DeuterosAtariSecondStageEntryExecutionPrefix entry_execution;
+};
+
 // The recovered DOS title/runtime evidence for one exact archive identity.
 // Spanish is title-only until its executable handoff is evidenced; English
 // retains the additional parser outputs below. No field is a fallback for a
@@ -155,14 +166,13 @@ public:
     // neither selects a runtime state nor invokes an Atari service.
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
     deuteros_atari_bootstrap_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAtariBootstrapPresentationSnapshot>
+    deuteros_atari_bootstrap_presentation() const;
     [[nodiscard]] MillenniumAmigaBootstrapSession* millennium_amiga() const {
         return millennium_amiga_.get();
     }
     [[nodiscard]] MillenniumAtariBootstrapSession* millennium_atari() const {
         return millennium_atari_.get();
-    }
-    [[nodiscard]] DeuterosAtariBootstrapSession* deuteros_atari() const {
-        return deuteros_atari_.get();
     }
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime and retains neither trace
