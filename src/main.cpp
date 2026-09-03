@@ -540,6 +540,7 @@ struct ModernRuntimeDiagnostics {
     };
     std::string release_identity;
     std::string runtime_admission = "NOT SELECTED";
+    std::string runtime_rejection = "NONE";
     // Controller-owned lifecycle state, deliberately separate from the
     // coordinator snapshot so diagnostics expose revocation in progress.
     std::string lifecycle_state = "MENU";
@@ -1331,7 +1332,8 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
     const auto& resolution = output_resolutions.at(settings.output_resolution_index);
     const std::array<std::pair<const char*, std::string>, 16> rows{{
         {"RELEASE IDENTITY", diagnostics.release_identity},
-        {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission)},
+        {"RUNTIME ADMISSION", tr(diagnostics.runtime_admission) + " / "
+            + tr(diagnostics.runtime_rejection)},
         {"LIFECYCLE STATE", tr(diagnostics.lifecycle_state)},
         {"SESSION ADAPTER", tr(diagnostics.session_adapter)},
         {"SESSION BOUNDARY", tr(diagnostics.session_boundary)},
@@ -4963,6 +4965,8 @@ int main(int argc, char** argv) {
         diagnostics.release_identity = tr("NOT SELECTED");
         diagnostics.runtime_admission = std::string(eon::release_runtime_admission_label(
             runtime_coordinator.admission()));
+        diagnostics.runtime_rejection = std::string(eon::release_runtime_rejection_label(
+            runtime_coordinator.rejection()));
         diagnostics.lifecycle_state = std::string(eon::native_session_state_label(runtime.state()));
         // This is a compact, renderer-only diagnostic code. It makes the
         // selected preservation contract visible even before a session is
