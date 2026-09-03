@@ -42,6 +42,21 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(TOOL.CaptureError, "finite profile"):
             TOOL.recorder_config(Path("/safe/read-only/game-root"), "vgaonly")
 
+    def test_v21_identity_section_is_config_bound_and_complete(self) -> None:
+        configuration = TOOL.recorder_config(
+            Path("/safe/read-only/game-root"), release_sha256=TOOL.EXPECTED_RELEASE_SHA256)
+        self.assertIn("[project-eon-recorder-v21]", configuration)
+        self.assertIn(f"outer_release_sha256={TOOL.EXPECTED_RELEASE_SHA256}", configuration)
+        self.assertIn(f"direct_media_set_sha256={TOOL.EXPECTED_DIRECT_MEDIA_SET_SHA256}", configuration)
+        self.assertIn(f"titles_exe_sha256={TOOL.EXPECTED_TITLES_EXE_SHA256}", configuration)
+        self.assertIn(f"titles_exe_bytes={TOOL.EXPECTED_TITLES_EXE_SIZE}", configuration)
+        self.assertIn(f"2200ad_exe_sha256={TOOL.EXPECTED_2200AD_EXE_SHA256}", configuration)
+        self.assertIn(f"2200ad_exe_bytes={TOOL.EXPECTED_2200AD_EXE_SIZE}", configuration)
+
+    def test_v21_identity_section_rejects_another_outer_release(self) -> None:
+        with self.assertRaisesRegex(TOOL.CaptureError, "recognised DOS release hash"):
+            TOOL.recorder_config(Path("/safe/read-only/game-root"), release_sha256="0" * 64)
+
     def test_output_rejects_repository_media_and_system_temp_paths(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
