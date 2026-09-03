@@ -1,5 +1,7 @@
 #include "data/release_manifest.hpp"
 
+#include "data/sha256.hpp"
+
 #include <algorithm>
 #include <array>
 
@@ -180,6 +182,13 @@ bool container_set_manifest_is_valid() {
                     return candidate.outer_sha256 == member.outer_sha256;
                 }) != 1) return false;
         }
+        std::string canonical;
+        for (const auto& member : set.members) {
+            canonical += std::string(member.outer_sha256) + "\t" + std::to_string(member.outer_size) + "\t"
+                + std::string(member.leaf_sha256) + "\t" + std::to_string(member.leaf_size) + "\n";
+        }
+        const auto bytes = std::span(reinterpret_cast<const std::uint8_t*>(canonical.data()), canonical.size());
+        if (to_hex(sha256(bytes)) != set.set_sha256) return false;
     }
     return true;
 }

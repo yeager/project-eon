@@ -44,16 +44,16 @@
       {"name":"TITLES.EXE","size":7022,"sha256":"3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
       {"name":"VGA.BIN","size":5336,"sha256":"a0483497aece13a001e405b6524388f8e35ad13174a36388ce6fee7eddf4fcf4"},
       {"name":"VGATXT.BIN","size":1024,"sha256":"c31cb760d5f62a21b3baf9c09a6be413514780bd88eeac0273620e81b5d69318"}
-    ]},
-    {"schema":"project-eon.container-media-set/v1","serialization":"outer-sha256<TAB>outer-size<TAB>leaf-sha256<TAB>leaf-size<LF>, declared disk order","set_sha256":"3d5dc5cf605f5b19a1ba42038321d79f9e4d35d3e56f7e4de90d8f732d8a8c45","content_release_sha256":"f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04","game":"deuteros","platform":"amiga","language":"en","members":[
-      {"outer_sha256":"7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533","outer_size":449666,"leaf_sha256":"6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38","leaf_size":901120},
-      {"outer_sha256":"b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a","outer_size":490962,"leaf_sha256":"99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a","leaf_size":901120}
     ]}
   ],
   "container_media_sets": [
     {"schema":"project-eon.container-media-set/v1","serialization":"outer-sha256<TAB>outer-size<TAB>leaf-sha256<TAB>leaf-size<LF>, declared disk order","set_sha256":"0a87871cdfc6e0f11c598b86be0726c842c2cdcb1cb7d0dba651f1d43b835ffa","content_release_sha256":"c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653","game":"deuteros","platform":"atari_st","language":"en","members":[
       {"outer_sha256":"a9318feb83ff34b79f5a5ea1e5ffcb45828e4432ac75a859f55c3de97d724c93","outer_size":292448,"leaf_sha256":"aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee","leaf_size":737280},
       {"outer_sha256":"7842adb599dbc4cf79827e31e912740f259af45718c124d5806e1c8860f2253d","outer_size":264245,"leaf_sha256":"5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193","leaf_size":737280}
+    ]},
+    {"schema":"project-eon.container-media-set/v1","serialization":"outer-sha256<TAB>outer-size<TAB>leaf-sha256<TAB>leaf-size<LF>, declared disk order","set_sha256":"3d5dc5cf605f5b19a1ba42038321d79f9e4d35d3e56f7e4de90d8f732d8a8c45","content_release_sha256":"f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04","game":"deuteros","platform":"amiga","language":"en","members":[
+      {"outer_sha256":"7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533","outer_size":449666,"leaf_sha256":"6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38","leaf_size":901120},
+      {"outer_sha256":"b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a","outer_size":490962,"leaf_sha256":"99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a","leaf_size":901120}
     ]}
   ],
   "parser_profiles": [

@@ -90,6 +90,42 @@ class ReleaseManifestTests(unittest.TestCase):
         ]
         self.assertEqual(compiled, members)
 
+    def test_container_media_sets_are_canonical_and_match_compiled_table(self):
+        """Split containers are release identities, never filename pairings."""
+        manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
+        releases = {entry["sha256"] for entry in manifest["releases"]}
+        sets = manifest["container_media_sets"]
+        self.assertEqual(len(sets), 2)
+        self.assertEqual(len({entry["set_sha256"] for entry in sets}), len(sets))
+        for entry in sets:
+            self.assertEqual(entry["schema"], "project-eon.container-media-set/v1")
+            self.assertIn(entry["content_release_sha256"], releases)
+            self.assertEqual(len(entry["members"]), 2)
+            self.assertEqual(len({member["outer_sha256"] for member in entry["members"]}), 2)
+            canonical = "".join(
+                f'{member["outer_sha256"]}\t{member["outer_size"]}\t'
+                f'{member["leaf_sha256"]}\t{member["leaf_size"]}\n'
+                for member in entry["members"]
+            ).encode("ascii")
+            self.assertEqual(hashlib.sha256(canonical).hexdigest(), entry["set_sha256"])
+            for member in entry["members"]:
+                self.assertRegex(member["outer_sha256"], r"^[0-9a-f]{64}$")
+                self.assertRegex(member["leaf_sha256"], r"^[0-9a-f]{64}$")
+                self.assertGreater(member["outer_size"], 0)
+                self.assertGreater(member["leaf_size"], 0)
+
+        source = (ROOT / "src" / "data" / "release_manifest.cpp").read_text(encoding="utf-8")
+        compiled_sets = re.findall(
+            r'\{"([0-9a-f]{64})", "([0-9a-f]{64})",\n'
+            r'\s*Game::(deuteros), Platform::(atari_st|amiga), "(en)", '
+            r'(deuteros_(?:atari|amiga_clean)_split_disks)\}', source)
+        self.assertEqual(
+            [(entry["set_sha256"], entry["content_release_sha256"], entry["game"],
+              entry["platform"], entry["language"])
+             for entry in sets],
+            [row[:5] for row in compiled_sets],
+        )
+
     def test_manifest_explicitly_keeps_variant_profiles_separate(self):
         manifest = json.loads((ROOT / "docs" / "release-manifest.json").read_text(encoding="utf-8"))
         profiles = {profile["id"]: profile for profile in manifest["parser_profiles"]}
