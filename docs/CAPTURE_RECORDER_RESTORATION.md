@@ -253,6 +253,25 @@ to reject it. The next recorder change is limited to restoring those
 read-only observation hooks atop this fresh source before a new independent
 review and pin decision.
 
+### 2026-09-03 V22 callback-probe review
+
+The first V22 follow-up was rejected before any emulator run or capture. It
+added one host-side INT6 callback record to the clean v3 development build,
+but its synchronous filesystem I/O occurred inside DOSBox-X's default callback
+before the existing return. That can perturb wall-clock timing and host-event
+scheduling even though it does not directly write guest registers or memory.
+It also lacked a release/site/opcode gate, consumed its one observation on an
+unrelated or unwritable occurrence, emitted a non-canonical literal `\\n`,
+and was not portable to the project's Windows DOSBox-X build surface.
+
+The V22 binary and source remain external rejected artifacts. They must not
+be pinned, located, run through a capture helper, or used for native recovery.
+The only acceptable successor records a bounded callback fact in recorder-
+owned in-process storage without filesystem work at the callback boundary,
+then flushes it from a separately reviewed host-safe point after guest
+execution has stopped. It must also bind the exact release/image/site/opcode
+identity and fail closed without consuming a later eligible observation.
+
 ### Experimental observer runs
 
 The reviewed v3 candidate may be run only with the explicit
