@@ -294,6 +294,34 @@ image/site/opcode identity before arming, and flush only at a separately
 reviewed host-safe point after guest execution has stopped. It must have a
 reproducible build record before any new independent review or pin decision.
 
+The reviewed candidate host-safe point is DOSBox-X's terminal-only path in
+`src/gui/sdlmain.cpp`, immediately before `GFX_ShutDown()` (the current source
+location is line 10556). All restart, BIOS and guest-OS paths jump back to
+`fresh_boot` before that point. `DOSBOX_RunMachine()` is explicitly unsuitable:
+it is recursive and can return from callbacks, interrupts and page-fault
+paths while guest execution continues. DOS shutdown events and generic exit
+callbacks are unsuitable for the same reason or run after the required
+recorder state may have been torn down.
+
+The next external patch must therefore make the `INT 21h` boundary write only
+one zero-initialised recorder-owned POD slot. It may copy the already verified
+scalar source CS:PC, DS:DX, target preimage and installed vector values, then
+publish `captured` last. It may not inspect the environment, allocate, log,
+open, write, close, lock, schedule work or read additional guest memory at
+that boundary. A host-only serializer may consume that slot only at the
+terminal point above, before callback/memory teardown; a forced process kill
+must produce no record. The output path must be parsed and validated before
+guest execution, not fetched from an environment variable while an interrupt
+is being handled.
+
+This design remains incomplete by intent. The present name-plus-entry-CS-plus-
+opcode predicate is not a recognised-release identity. Before arming, the
+successor also needs a configured recognised outer-release identity and a
+reviewed loaded-image fingerprint bound to the same entry CS and mapped site.
+Until those two identities, the host serializer and a visible graceful-stop
+route are independently reviewed together, the candidate remains development
+only and cannot be passed to a capture helper.
+
 The V22 binary and source remain external rejected artifacts. They must not
 be pinned, located, run through a capture helper, or used for native recovery.
 The only acceptable successor records a bounded callback fact in recorder-
