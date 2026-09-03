@@ -160,6 +160,11 @@ bool is_bound_direct_path(const std::vector<std::filesystem::path>& paths,
     return std::find(paths.begin(), paths.end(), candidate) != paths.end();
 }
 
+bool is_bound_container_path(const std::vector<std::filesystem::path>& paths,
+                             const std::filesystem::path& candidate) {
+    return std::find(paths.begin(), paths.end(), candidate) != paths.end();
+}
+
 bool has_manifest_leaf_size(const std::uintmax_t size) {
     return std::any_of(parser_profile_manifest().begin(), parser_profile_manifest().end(),
         [size](const auto& profile) { return profile.leaf_size == size; });
@@ -403,9 +408,12 @@ void ReleaseScanner::finish_candidate_inventory() {
     for (const auto& set : container_set_manifest()) {
         try {
             auto verified = verify_container_set(candidates_, set);
+            ++report_.verified_container_set_occurrences;
             const auto existing = std::find_if(releases_.begin(), releases_.end(), [&set](const auto& release) {
                 return release.sha256 == set.content_release_sha256;
             });
+            bound_container_media_paths_.insert(bound_container_media_paths_.end(),
+                verified.paths.begin(), verified.paths.end());
             if (existing == releases_.end()) {
                 releases_.push_back({set.game, set.platform, std::string(set.language),
                     std::string(set.content_release_sha256), {},
@@ -474,6 +482,10 @@ bool ReleaseScanner::advance(std::size_t max_files) {
                 continue;
             }
             const auto size = std::filesystem::file_size(candidate);
+            // Full split sets were verified before this incremental archive
+            // pass. They are a recognised original-media layout, not loose
+            // archives whose size should be reported as rejected.
+            if (is_bound_container_path(bound_container_media_paths_, candidate)) continue;
             const auto manifest = release_manifest();
             const bool outer_size_matches = std::any_of(manifest.begin(), manifest.end(),
                 [size](const auto& known) { return known.size == size; });

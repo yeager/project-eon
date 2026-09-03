@@ -961,6 +961,7 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         << ",\"duplicate_occurrences\":" << scan.duplicate_occurrences
         << ",\"verified_direct_set_occurrences\":" << scan.verified_direct_set_occurrences
         << ",\"duplicate_direct_set_occurrences\":" << scan.duplicate_direct_set_occurrences
+        << ",\"verified_container_set_occurrences\":" << scan.verified_container_set_occurrences
         << ",\"verified_unbound_direct_media_occurrences\":"
         << scan.verified_direct_media_occurrences
         << ",\"duplicate_unbound_direct_media_occurrences\":"
@@ -4064,6 +4065,7 @@ int main(int argc, char** argv) {
                 << report.hash_rejected_candidates << " hash-rejected; "
                 << report.verified_occurrences << " verified occurrences; "
                 << report.verified_direct_set_occurrences << " verified direct-set occurrences; "
+                << report.verified_container_set_occurrences << " verified container-set occurrences; "
                 << releases.size() << " unique releases; "
                 << report.verified_direct_media_occurrences << " verified unbound direct-media occurrences; "
                 << scanner->unbound_direct_media().size() << " unique unbound direct-media leaves; "
