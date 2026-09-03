@@ -168,7 +168,9 @@ struct DeuterosAtariFirstStageCopyExecutionPrefix {
     std::uint32_t destination_address = 0;
     std::size_t byte_count = 0;
     std::string source_sha256;
-    std::vector<std::uint8_t> relocated_bytes;
+    // The native copy loop's resulting RAM bytes are identical to the
+    // hash-verified source interval. Do not retain a duplicate pseudo-RAM
+    // image when the engine stops before dispatch.
     std::string relocated_sha256;
     std::size_t direct_entry_source_offset = 0;
     std::uint32_t relocated_entry_address = 0;

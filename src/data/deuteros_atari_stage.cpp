@@ -252,13 +252,12 @@ execute_deuteros_atari_first_stage_copy_prefix(
     if (source_digest != expected_sha256) {
         throw std::runtime_error("Unexpected Deuteros Atari ST first-stage copy source");
     }
-    std::vector<std::uint8_t> relocated_bytes(second_stage_bytes.begin(), second_stage_bytes.end());
-    const auto relocated_digest = to_hex(sha256(relocated_bytes));
+    const auto relocated_digest = to_hex(sha256(second_stage_bytes));
     if (relocated_digest != source_digest) {
         throw std::runtime_error("Deuteros Atari ST first-stage relocation lost original bytes");
     }
     return {expected_source, expected_destination, expected_byte_count, source_digest,
-        std::move(relocated_bytes), relocated_digest, expected_entry_offset,
+        relocated_digest, expected_entry_offset,
         expected_destination + static_cast<std::uint32_t>(expected_entry_offset)};
 }
 
