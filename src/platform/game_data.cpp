@@ -31,6 +31,9 @@ const ReleaseManifestEntry& require_manifest_identity(const ReleaseArchive& rele
 }
 
 const DirectMediaSetManifestEntry& require_direct_set_identity(const ReleaseArchive& release) {
+    if (!direct_media_set_manifest_is_valid()) {
+        throw std::runtime_error("Direct media-set manifest is not internally consistent");
+    }
     const auto sets = direct_media_set_manifest();
     const auto found = std::find_if(sets.begin(), sets.end(), [&release](const auto& candidate) {
         return candidate.content_release_sha256 == release.sha256

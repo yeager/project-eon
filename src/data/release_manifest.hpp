@@ -50,6 +50,10 @@ struct ParserProfileManifestEntry {
 
 [[nodiscard]] std::span<const ReleaseManifestEntry> release_manifest();
 [[nodiscard]] std::span<const DirectMediaSetManifestEntry> direct_media_set_manifest();
+// Direct installed-media sets are independently launchable identities and
+// must therefore map one-to-one to declared archive releases. This performs
+// no filesystem I/O and never opens user media.
+[[nodiscard]] bool direct_media_set_manifest_is_valid();
 [[nodiscard]] std::span<const ParserProfileManifestEntry> parser_profile_manifest();
 
 // This is deliberately a strict identity check.  It does not infer that a

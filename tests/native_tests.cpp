@@ -2740,6 +2740,7 @@ int main() {
     }
     assert(eon::release_runtime_capabilities().size() == eon::release_manifest().size());
     assert(eon::release_runtime_capability_manifest_is_valid());
+    assert(eon::direct_media_set_manifest_is_valid());
     for (const auto& manifest_release : eon::release_manifest()) {
         const eon::ReleaseArchive release{manifest_release.game, manifest_release.platform,
             std::string(manifest_release.language), std::string(manifest_release.sha256), {}};
