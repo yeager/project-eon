@@ -4730,6 +4730,8 @@ int main(int argc, char** argv) {
         runtime.reset();
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(runtime.admission()));
+        launcher_runtime_rejection = std::string(
+            eon::release_runtime_rejection_label(runtime_coordinator.rejection()));
     };
     const auto start_millennium_title = [&] {
         // A title session is intentionally one-shot after its observed
@@ -4810,6 +4812,11 @@ int main(int argc, char** argv) {
         // All four must revoke the prior admitted adapter before a different
         // game/platform/language/hash can be presented or launched.
         clear_modern_pack_admission();
+        // A rejection belongs to one attempted immutable route. Once a card
+        // changes that route, do not show its cause for the next game or
+        // release—even when there was no active adapter left to revoke.
+        launcher_runtime_admission = "NOT SELECTED";
+        launcher_runtime_rejection = "NONE";
         if (runtime.requires_revocation_for(launcher_interaction.source_identity())) {
             reset_active_runtime();
         }
@@ -5766,7 +5773,8 @@ int main(int argc, char** argv) {
                 if (launcher_runtime_admission != "NOT SELECTED"
                     && launcher_runtime_admission != "READY") {
                     draw_text(renderer, 64, 530, std::string(tr("RUNTIME ADMISSION")) + ": "
-                        + tr(launcher_runtime_admission));
+                        + tr(launcher_runtime_admission) + " / "
+                        + tr(launcher_runtime_rejection));
                 }
             }
             if (show_scanner) {
