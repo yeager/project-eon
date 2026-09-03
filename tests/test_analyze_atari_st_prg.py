@@ -88,6 +88,11 @@ class AnalyzeAtariStPrgTests(unittest.TestCase):
                     archive, hashlib.sha256(archive.read_bytes()).hexdigest(),
                     Path.cwd() / "forbidden-prg-report.md"))
 
+    def test_system_temporary_output_is_rejected_without_probing_it(self):
+        with self.assertRaisesRegex(tool.AnalysisError, "outside /tmp"):
+            tool.require_external_output(Path("/tmp/project-eon-report.md"))
+        self.assertTrue(tool.is_system_temporary_path(Path("/private/tmp/report.md")))
+
     def test_static_flow_atari_carrier_requires_and_records_nested_identity(self):
         with temporary_directory() as temporary:
             root = Path(temporary)
