@@ -4047,6 +4047,45 @@ int main() {
             opening_request.platform = release.platform;
             opening_request.release_language = release.language;
             opening_request.release_sha256 = release.sha256;
+
+            // Exercise the production host boundary with a real, admitted
+            // release. A front-end modal must not let a physical held signal
+            // leak through while it owns input, and its value-only snapshot
+            // must stop exposing the release as soon as teardown begins.
+            eon::RuntimeHost hosted_opening;
+            assert(hosted_opening.launch_direct(opening_request, releases).accepted());
+            const auto hosted_admission = hosted_opening.snapshot();
+            assert(hosted_admission.session
+                && hosted_admission.session->release_sha256 == release.sha256
+                && hosted_admission.presentation
+                && hosted_admission.presentation->kind
+                    == eon::RuntimePresentationKind::deuteros_amiga_opening
+                && hosted_admission.presentation->input_contract
+                    == eon::RuntimeInputContract::deuteros_amiga_opening_held_signal);
+            const auto hosted_start = hosted_opening.advance(1'000);
+            assert(hosted_start.opening_started && hosted_start.opening_active
+                && hosted_start.opening.events.empty());
+            assert(hosted_opening.advance(1'019).opening.events.empty());
+            assert(hosted_opening.observe_input(
+                eon::RuntimeInputObservation::opening_input_held(true))
+                == eon::RuntimeInputDisposition::observed);
+            hosted_opening.set_input_suppressed(true);
+            assert(hosted_opening.input_suppressed()
+                && hosted_opening.observe_input(eon::RuntimeInputObservation::opening_input_held(true))
+                    == eon::RuntimeInputDisposition::rejected);
+            const auto hosted_modal_tick = hosted_opening.advance(1'020);
+            assert(hosted_modal_tick.opening_active && hosted_modal_tick.opening.events.size() == 1);
+            hosted_opening.set_input_suppressed(false);
+            assert(!hosted_opening.input_suppressed()
+                && hosted_opening.observe_input(eon::RuntimeInputObservation::opening_input_held(true))
+                    == eon::RuntimeInputDisposition::observed);
+            hosted_opening.begin_source_revocation();
+            const auto hosted_revoking = hosted_opening.snapshot();
+            assert(hosted_revoking.revoking && !hosted_revoking.session
+                && !hosted_revoking.presentation);
+            hosted_opening.finish_source_revocation();
+            assert(hosted_opening.snapshot().state == eon::NativeSessionState::menu);
+
             eon::NativeSessionController opening_controller;
             assert(opening_controller.launch_direct(opening_request, releases).accepted());
             assert(opening_controller.state() == eon::NativeSessionState::deuteros_amiga_opening);
