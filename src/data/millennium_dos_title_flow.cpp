@@ -205,6 +205,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     constexpr std::size_t file_to_load_bias = 0x100;
     constexpr std::size_t title_selection_offset = 0x1c14 - file_to_load_bias;
     constexpr std::size_t input_branch_offset = 0x1c28 - file_to_load_bias;
+    constexpr std::size_t input_poll_call_address = 0x1c28;
+    constexpr std::size_t input_poll_helper_address = 0x0d0a;
     constexpr std::size_t clean_exit_offset = 0x1c5a - file_to_load_bias;
     constexpr std::size_t dos_exit_offset = 0x1a12 - file_to_load_bias;
     if (!has_bytes(titles_executable, title_selection_offset, title_selection)
@@ -245,7 +247,10 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         throw std::runtime_error("Unsupported Millennium DOS title selection nested leaf");
     }
     static_cast<void>(require_unique(titles_executable, transition_setup, "title transition loop"));
-    static_cast<void>(require_unique(titles_executable, input_poll, "title input poll"));
+    if (require_unique(titles_executable, input_poll, "title input poll")
+        != input_poll_helper_address - file_to_load_bias) {
+        throw std::runtime_error("Unsupported Millennium DOS title input-poll helper");
+    }
 
     // This is a caller-side fact only.  MILL.COM loads DX with each adjacent
     // program string, makes two near calls to the same local target, and
@@ -463,6 +468,8 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
         .input_interrupt = 0x21,
         .input_service = 0x06,
         .input_parameter = 0xff,
+        .input_poll_call_address = input_poll_call_address,
+        .input_poll_helper_address = input_poll_helper_address,
         .input_nonzero_exit_address = 0x1c54,
         .input_exit_first_call_address = 0x1c54,
         .input_exit_first_call_target = 0x1968,
