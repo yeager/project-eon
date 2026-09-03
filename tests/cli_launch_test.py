@@ -328,6 +328,7 @@ def main() -> int:
                 "display": {"resolution": "1280x720", "aspect": "original"},
                 "coverage": "RECOVERED STARTUP",
                 "runtime_admission": "READY",
+                "runtime_rejection": "NONE",
                 "runtime_session": {
                     "kind": "MILLENNIUM DOS TITLE",
                     "boundary": "RECOVERED PRESENTATION BOUNDARY",
@@ -537,6 +538,7 @@ def main() -> int:
             "display": {"resolution": "1280x720", "aspect": "original"},
             "coverage": coverage,
             "runtime_admission": "READY",
+            "runtime_rejection": "NONE",
             "runtime_session": {
                 "kind": session_kind,
                 "boundary": session_boundary,
