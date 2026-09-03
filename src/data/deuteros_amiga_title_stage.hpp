@@ -1001,7 +1001,8 @@ struct DeuterosAmigaFirstTitleExitCopy {
     std::uint32_t destination_address = 0;
     std::uint32_t byte_count = 0;
     std::string source_sha256;
-    std::vector<std::uint8_t> copied_bytes;
+    // The source range is proven but never materialized as a synthetic title
+    // memory write. Offset, length and hash are the complete provenance.
     std::uint32_t stop_before_subroutine_address = 0;
 };
 
