@@ -280,7 +280,8 @@ rendering, audio, input, game timing, or save activity:
 `--launch-check-json` emits the same result as
 `project-eon.launch-check/v1`, including the exact release SHA-256 and the
 explicit `original` or `modern` presentation choice plus renderer-only
-resolution/aspect settings, without creating SDL resources.
+resolution/aspect settings and a stable media-safe `runtime_rejection` code,
+without creating SDL resources.
 
 `--runtime-diagnostics-json` follows the same native launch gate, then emits
 `project-eon.runtime-diagnostics/v1`: the active adapter and capabilities,
@@ -291,7 +292,9 @@ media bytes. Its `runtime_session.input_contract` is a machine-readable
 description of only the already recovered host observation envelope; it is
 not a game-control map or a claim about later title/gameplay input. The native
 runtime uses it as a fail-closed gate before a release-specific input session
-can inspect an observation.
+can inspect an observation. `runtime_rejection` is `NONE` only after the
+native admission succeeds; a non-`NONE` value names a safe gate class rather
+than exposing parser errors, media paths, emulator state, or gameplay state.
 
 For preservation tooling, `--inspect-json` emits one deterministic JSON
 document (`project-eon.inspect/v1`) after rehashing every selected release. It

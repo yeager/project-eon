@@ -118,7 +118,8 @@ safe admission result, and exits before SDL initialization. It is not an
 emulator, replay, renderer, input path, audio path, or save operation.
 `--launch-check-json` writes this same minimal result as
 `project-eon.launch-check/v1`; it includes the exact release SHA-256 and
-explicit presentation and renderer-geometry choices but never
+explicit presentation and renderer-geometry choices plus the stable,
+media-safe `runtime_rejection` code. It never
 a local path, member name, original bytes, or parser exception.
 
 `--runtime-diagnostics-json` is the fuller active-native-session report,
@@ -127,7 +128,11 @@ game/platform/hash admission gate and exits before SDL initialization. It
 adds the admitted adapter/boundary/capabilities and the selected release's
 declarative startup, recovery, and function-map facts. It does not expose a
 path, archive member, original byte, guest state, trace contents, emulator
-state, or a route for executing original code.
+state, or a route for executing original code. `runtime_rejection` is `NONE`
+after a successful admission; otherwise it identifies only the native gate
+class (launch identity, original media, capability, adapter construction,
+input contract, or child session). It is not an emulator result or gameplay
+state.
 
 For a corpus containing more than one release for a game/platform, automation
 must pass both `--release-language` and `--release-sha256`.  They are one
