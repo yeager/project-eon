@@ -4730,10 +4730,13 @@ texts are therefore not host controls.
 The first two `GX.LIB` entries establish a separate authentic bitmap path.
 `IMG00` is a codec-2 240×33 resource containing a 256-entry RGB6 DAC after
 its stream; `IMG01` is a codec-2 320×167 indexed canvas. Its 68-byte
-post-stream index table selects entries from the `IMG00` DAC. Project Eon
-decodes this pair in memory and retains the remaining resource-table bytes as
-opaque rather than inventing UI or state meaning. Exact offsets, sizes and
-pixel hashes are in [the GX canvas evidence](generated/millennium-dos-gx-canvas.md).
+post-stream index table selects entries from the `IMG00` DAC. The bounded DOS
+LIB reader now returns borrowed ranges into the hash-verified supplied library
+rather than retaining a whole-LIB or per-entry copy; callers retain the source
+for the lifetime of each view. Project Eon decodes this pair in memory and
+retains the remaining resource-table bytes as opaque rather than inventing UI
+or state meaning. Exact offsets, sizes and pixel hashes are in [the GX canvas
+evidence](generated/millennium-dos-gx-canvas.md).
 GX and `2200SAVE.I` are inspection-only preservation evidence. The verified
 `TITLES.EXE` poll establishes neither a process exit nor a DOS return to
 `MILL.COM`, let alone `2200ad.exe` startup, GX selection, or save-state

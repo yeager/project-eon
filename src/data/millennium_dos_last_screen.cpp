@@ -16,7 +16,7 @@ MillenniumDosLastScreen parse_millennium_dos_last_screen(
         throw std::runtime_error("Unsupported Millennium English DOS LAST library");
     }
 
-    const MillenniumDosLib library({last_lib.begin(), last_lib.end()});
+    const MillenniumDosLib library(last_lib);
     if (library.entries().size() != 1 || library.entries().front().name != "last") {
         throw std::runtime_error("Unsupported Millennium DOS LAST.LIB directory");
     }
