@@ -418,3 +418,23 @@ verifier rejects it. A maintainer may inspect its integrity with
 `verify_capture_receipt.py --allow-experimental-observer`, but that command
 does not promote it, alter a pinned hash, admit a trace, or authorize native
 recovery. The ordinary pin prerequisites above remain mandatory.
+
+### 2026-09-03 V21 configuration registration build
+
+The external DOSBox-X development tree was rebuilt sequentially with `make
+-C src -j2` after a clean. The resulting executable is 128,692,024 bytes and
+has SHA-256
+`53f2f569b7cf44df50cfe2eb55dd770765e1ee1ae617dffd60c2f2bad83910ef`.
+This rebuild includes an inert registration of the runner's
+`[project-eon-recorder-v21]` configuration section immediately after
+`DOSBOX_SetupConfigSections()`. `strings` confirms the section and its two
+release-set identity keys are present in the output.
+
+This establishes only that the configuration registration itself compiles on
+the stated external source/toolchain. It does **not** validate the values,
+prevent environment override, fingerprint a loaded executable, arm an
+observer, provide the POD callback slot, or provide the graceful host-only
+serializer. The source also retains the previously rejected synchronous-I/O
+observer changes. Consequently this hash is an `OBSERVER_FIX_REQUIRED`
+development artifact, never a recorder locator value, capture target, or
+native-recovery evidence. No media was mounted or read during the rebuild.
