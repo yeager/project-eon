@@ -231,6 +231,28 @@ used for a native recovery claim. A separate pin decision must assess the
 persisted review record, exact binary and release-identity mapping before any
 candidate can be pinned.
 
+### 2026-09-03 clean DOSBox-X observer rebuild
+
+The interrupted worktree attempt was retained outside the repository as an
+invalid external artifact after its Git metadata and checked-out source files
+were observed to be zero bytes. A fresh ordinary clone was then made outside
+the repository from the already reviewed DOSBox-X revision
+`234797680781567e18c374c9e62da24de5423db0`. The existing v3 observer patch
+was applied cleanly and the source was bootstrapped with Autotools and
+configured with `--enable-debug=heavy --enable-sdl2 --prefix=/usr
+--disable-sdltest --disable-opengl`. Explicit `--enable-sdl2` is required by
+this upstream revision; merely having `sdl2-config` on `PATH` is not enough.
+
+The resulting external executable is 121 MiB and has SHA-256
+`35eca0e9248d42a8b682d67cc7e112193be51360728b740e9938f96c504cebaa`.
+Its `-version` output identifies DOSBox-X `2026.08.02` with SDL2. This is a
+reproducible development build only, not an approved recorder: its different
+toolchain/configuration hash and its missing legacy normal-core/default-
+callback observers mean the locator and normal capture runner must continue
+to reject it. The next recorder change is limited to restoring those
+read-only observation hooks atop this fresh source before a new independent
+review and pin decision.
+
 ### Experimental observer runs
 
 The reviewed v3 candidate may be run only with the explicit
