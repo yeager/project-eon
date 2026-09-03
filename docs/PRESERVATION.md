@@ -4785,7 +4785,10 @@ triples (DAC index 0 first, component order R/G/B); their SHA-256 is
 `b6dd34314102e429fdd98390b1fda27d3ea94d16bfcefa2983e3e319a2a20eae`.
 The 36-byte table at `$28f3..$2916` (SHA-256
 `652ea21cfa18c27470daaee4521d863a3d377f803a5f80ba0132af49b24083d4`) is
-retained exactly but neutrally named: this path does not prove its purpose.
+retained as an original-record offset, length, and SHA-256 but neutrally
+named: this path does not prove its purpose. Project Eon deliberately does not
+make a second byte copy of this opaque table; the supplied record remains its
+only byte source.
 The final 36 bytes at `$2917..$293a` translate the decoded logical indices
 `0..35` to VGA DAC indices; their SHA-256 is
 `cd7a7f81dd75249a8669e0f4c1792d99b37f3ea28c54319a3f2e84b4a86ff3e2`.

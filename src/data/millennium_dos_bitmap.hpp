@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -21,6 +22,16 @@ struct MillenniumDosBitmap {
     std::vector<std::uint8_t> pixels;
 };
 
+// An opaque byte range whose meaning has not been recovered.  Its coordinates
+// are relative to the bitmap record supplied to the decoder.  Recording this
+// identity rather than a duplicate buffer keeps the original medium as the
+// sole source of its bytes.
+struct MillenniumDosOpaqueRange {
+    std::uint32_t source_offset = 0;
+    std::uint32_t length = 0;
+    std::string sha256;
+};
+
 // The VGA form of a bitmap record appends its 256-entry RGB6 DAC table, a
 // separately retained 36-byte table, then a logical-index to DAC-index table
 // after the compressed pixels.
@@ -28,9 +39,10 @@ struct MillenniumDosBitmap {
 // is only a presentation adapter.
 struct MillenniumDosPalette {
     std::array<std::array<std::uint8_t, 3>, 256> dac_rgb6{};
-    // Retained verbatim. It is located immediately after RGB6 data but is not
-    // the TITLES.EXE mode-1 XLAT table, so it remains deliberately neutral.
-    std::vector<std::uint8_t> auxiliary_translation;
+    // Located immediately after RGB6 data but not the TITLES.EXE mode-1 XLAT
+    // table. Its purpose remains deliberately neutral, so retain only its
+    // original source range and identity rather than a copied byte buffer.
+    MillenniumDosOpaqueRange auxiliary_translation;
     std::vector<std::uint8_t> logical_to_dac;
 };
 

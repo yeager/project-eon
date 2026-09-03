@@ -50,7 +50,7 @@ MillenniumDosTitlePresentationAssets parse_millennium_dos_title_presentation_ass
     }
     result.base_palette = decode_millennium_dos_palette(base_record, result.base_bitmap);
     if (result.base_palette.logical_to_dac.size() != 36
-        || result.base_palette.auxiliary_translation.size() != 36) {
+        || result.base_palette.auxiliary_translation.length != 36) {
         throw std::runtime_error("Unsupported Millennium English DOS P00 palette profile");
     }
     result.base_rgba = colorize_millennium_dos_bitmap(result.base_bitmap, result.base_palette);

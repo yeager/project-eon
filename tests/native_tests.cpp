@@ -4182,13 +4182,14 @@ int main() {
     const auto title_palette = eon::decode_millennium_dos_palette(
         title_lib.read(title_lib.entries().front()), title_bitmap);
     assert(title_palette.logical_to_dac.size() == 36);
-    assert(title_palette.auxiliary_translation.size() == 36);
+    assert(title_palette.auxiliary_translation.source_offset == 0x28f3);
+    assert(title_palette.auxiliary_translation.length == 36);
     assert(eon::to_hex(eon::sha256(std::span<const std::uint8_t>(
         reinterpret_cast<const std::uint8_t*>(title_palette.dac_rgb6.data()), 768)))
         == "b6dd34314102e429fdd98390b1fda27d3ea94d16bfcefa2983e3e319a2a20eae");
     assert(eon::to_hex(eon::sha256(title_palette.logical_to_dac))
         == "cd7a7f81dd75249a8669e0f4c1792d99b37f3ea28c54319a3f2e84b4a86ff3e2");
-    assert(eon::to_hex(eon::sha256(title_palette.auxiliary_translation))
+    assert(title_palette.auxiliary_translation.sha256
         == "652ea21cfa18c27470daaee4521d863a3d377f803a5f80ba0132af49b24083d4");
     assert(title_palette.logical_to_dac[0] == 0x00);
     assert(title_palette.logical_to_dac[5] == 0xff);

@@ -1,5 +1,7 @@
 #include "data/millennium_dos_bitmap.hpp"
 
+#include "data/sha256.hpp"
+
 #include <array>
 #include <cstddef>
 #include <stdexcept>
@@ -156,8 +158,10 @@ MillenniumDosPalette decode_millennium_dos_palette(
     }
     const auto auxiliary_offset = palette_offset + dac_bytes;
     const auto translation_offset = auxiliary_offset + translation_count;
-    result.auxiliary_translation.assign(bytes.begin() + static_cast<std::ptrdiff_t>(auxiliary_offset),
-        bytes.begin() + static_cast<std::ptrdiff_t>(translation_offset));
+    result.auxiliary_translation.source_offset = static_cast<std::uint32_t>(auxiliary_offset);
+    result.auxiliary_translation.length = static_cast<std::uint32_t>(translation_count);
+    result.auxiliary_translation.sha256 = to_hex(sha256(
+        bytes.subspan(auxiliary_offset, translation_count)));
     result.logical_to_dac.assign(bytes.begin() + static_cast<std::ptrdiff_t>(translation_offset),
         bytes.end());
     return result;
