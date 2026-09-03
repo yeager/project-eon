@@ -10324,7 +10324,10 @@ int main() {
     assert(sound_bank.table_length == 0x12a);
     assert(sound_bank.table_sha256
         == "04491b3f24bc635cfc7be4cfdad4536dc83fa8c3056848092aecb662594b68a4");
-    assert((sound_bank.trailing_bytes == std::vector<std::uint8_t>{0x00, 0x01, 0xce, 0x8e}));
+    assert(sound_bank.trailing_bytes.relative_offset == 0x122da);
+    assert(sound_bank.trailing_bytes.length == 4);
+    assert(sound_bank.trailing_bytes.sha256
+        == "3f82cccd0194a3cda5510304a0696c3a9436c38e798c73441c1d9d9d6868ce0d");
     assert(sound_bank.sounds[1].descriptor_relative_offset == 0x0e);
     assert(sound_bank.sounds[1].descriptor_sha256
         == "61b726d283ffc7966dcf70a203a6eab6ed9ba62ce1991c70d09f5ee813e42e20");

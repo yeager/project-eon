@@ -38,11 +38,12 @@ DeuterosAmigaSoundBank parse_deuteros_amiga_sound_bank(
     const auto table_size = (encoded.size() / entry_size) * entry_size;
     if (table_size == 0) throw std::runtime_error("Empty Deuteros sound-table layout");
     // The physical tail cannot be another entry because $22ab8 strides by
-    // exactly 14 bytes. Preserve it verbatim: bundle 0 has four non-zero
-    // bytes here.
+    // exactly 14 bytes. Preserve its source identity: bundle 0 has four
+    // non-zero bytes here, but no recovered code reaches them as a record.
     DeuterosAmigaSoundBank result{table, static_cast<std::uint32_t>(encoded.size()),
-        to_hex(sha256(encoded)), {}, std::vector<std::uint8_t>(
-            encoded.begin() + table_size, encoded.end())};
+        to_hex(sha256(encoded)), {}, {static_cast<std::uint32_t>(table + table_size),
+            static_cast<std::uint32_t>(encoded.size() - table_size),
+            to_hex(sha256(encoded.subspan(table_size)))}};
     result.sounds.reserve(table_size / entry_size);
     for (std::size_t offset = 0; offset < table_size; offset += entry_size) {
         const auto sample_relative_offset = big32(encoded, offset);

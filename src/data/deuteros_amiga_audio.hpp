@@ -29,6 +29,14 @@ struct DeuterosAmigaSound {
     std::span<const std::uint8_t> pcm;
 };
 
+// A bundle-relative byte interval whose semantics have not been recovered.
+// It identifies original bytes without retaining a duplicate buffer.
+struct DeuterosAmigaOpaqueRange {
+    std::uint32_t relative_offset = 0;
+    std::uint32_t length = 0;
+    std::string sha256;
+};
+
 struct DeuterosAmigaSoundBank {
     std::uint32_t table_relative_offset = 0;
     std::uint32_t table_length = 0;
@@ -37,8 +45,9 @@ struct DeuterosAmigaSoundBank {
     std::string table_sha256;
     std::vector<DeuterosAmigaSound> sounds;
     // Bytes before the next auxiliary object that are not reachable through
-    // the routine's 14-byte stride. Kept verbatim rather than guessed away.
-    std::vector<std::uint8_t> trailing_bytes;
+    // the routine's 14-byte stride. Retained as provenance rather than
+    // guessed away or copied out of the original bundle.
+    DeuterosAmigaOpaqueRange trailing_bytes;
 };
 
 // Parses the raw, bundle-relative table installed into $22aa6 by $212d0.
