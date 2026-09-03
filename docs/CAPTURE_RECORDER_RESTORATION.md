@@ -150,6 +150,16 @@ all build outputs remain outside the repository at
 `/home/yeager/.cache/project-eon-tools/recorder-recovery/fs-uae-source/`.
 No game data, capture output or `/tmp` path participated.
 
+Maintainer decision, 2026-09-03: this exact external FS-UAE executable is
+approved as the recorder-development baseline. The approval is bound to the
+upstream revision and executable SHA-256 above; a filename, a different build
+of `v3.2.35`, or the system-installed FS-UAE is not interchangeable. This
+authorizes work on the bounded observer protocol, but does not assert that
+the unmodified baseline emits the reviewed v10 raw-PC/host-delivery records.
+Accordingly it remains `BASELINE_VERIFY` for capture admission: no capture or
+native recovery claim may use it until the observer output is implemented,
+reviewed, and pinned for that protocol.
+
 ### 2026-09-02 experimental observer provenance
 
 The first candidate reached `OBSERVER_FIX_REQUIRED` (not `INDEPENDENT_REVIEW`
