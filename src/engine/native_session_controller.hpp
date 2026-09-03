@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/menu_runtime_launch.hpp"
+#include "engine/deuteros_amiga_opening_runner.hpp"
 
 #include <optional>
 #include <string_view>
@@ -46,6 +47,13 @@ public:
     [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
     millennium_dos_startup_input() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    // The 50 Hz opening scheduler is native-session lifecycle state. SDL
+    // supplies a monotonic timestamp, receives only immutable VM events, and
+    // cannot retain a runner that outlives a source switch or teardown.
+    [[nodiscard]] bool start_deuteros_amiga_opening_scheduler(std::uint64_t initial_tick);
+    [[nodiscard]] DeuterosAmigaOpeningAdvance
+    advance_deuteros_amiga_opening_scheduler(std::uint64_t now);
+    [[nodiscard]] bool deuteros_amiga_opening_scheduler_active() const;
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
@@ -86,6 +94,7 @@ private:
     void synchronize_after_runtime_change();
 
     LauncherRuntimeController runtime_;
+    std::optional<DeuterosAmigaOpeningRunner> deuteros_amiga_opening_runner_;
     NativeSessionState state_ = NativeSessionState::menu;
 };
 

@@ -200,18 +200,22 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RuntimeSessionKind::deuteros_amiga_title_stage", tick)
         self.assertIn("deuteros_amiga_opening_input_held_ = false", tick)
 
-    def test_deuteros_opening_scheduler_stays_outside_the_sdl_loop(self) -> None:
+    def test_deuteros_opening_scheduler_is_owned_by_the_native_session(self) -> None:
         self.assertIn("class DeuterosAmigaOpeningRunner", OPENING_RUNNER_HEADER)
         self.assertIn("scheduler_period_ms = 20", OPENING_RUNNER_HEADER)
         self.assertIn("maximum_catch_up_ticks = 4", OPENING_RUNNER_HEADER)
-        self.assertIn("NativeSessionController& controller", OPENING_RUNNER_HEADER)
-        self.assertIn("controller_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
-        self.assertNotIn("coordinator_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("using TickSource", OPENING_RUNNER_HEADER)
+        self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
+        self.assertNotIn("ReleaseRuntimeCoordinator", OPENING_RUNNER_SOURCE)
         self.assertIn("result.resynchronized = true", OPENING_RUNNER_SOURCE)
-        self.assertIn("deuteros_opening_runner->advance(SDL_GetTicks())", SOURCE)
-        opening_loop = SOURCE[SOURCE.index("deuteros_opening_runner->advance(SDL_GetTicks())"):
-                              SOURCE.index("const bool modern", SOURCE.index("deuteros_opening_runner->advance(SDL_GetTicks())"))]
-        self.assertNotIn("runtime_coordinator.tick_deuteros_amiga_opening()", opening_loop)
+        native_header = (ROOT / "src" / "engine" / "native_session_controller.hpp").read_text(encoding="utf-8")
+        native_source = (ROOT / "src" / "engine" / "native_session_controller.cpp").read_text(encoding="utf-8")
+        self.assertIn("start_deuteros_amiga_opening_scheduler", native_header)
+        self.assertIn("advance_deuteros_amiga_opening_scheduler", native_header)
+        self.assertIn("deuteros_amiga_opening_runner_", native_header)
+        self.assertIn("[this] { return tick_deuteros_amiga_opening(); }", native_source)
+        self.assertIn("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())", SOURCE)
+        self.assertNotIn("deuteros_opening_runner->advance", SOURCE)
 
     def test_millennium_terminal_startup_observations_close_input_routing(self) -> None:
         session_header = (ROOT / "src" / "engine" / "runtime_session.hpp").read_text(encoding="utf-8")
@@ -339,8 +343,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("RuntimeInputObservation::available_character()", SOURCE)
         self.assertNotIn("millennium_sound_selection_session->accept_ascii_character", SOURCE)
         self.assertNotIn("millennium_title_session->poll_console(true)", SOURCE)
-        self.assertIn("deuteros_opening_runner->advance(SDL_GetTicks())", SOURCE)
-        self.assertIn("controller_.tick_deuteros_amiga_opening()", OPENING_RUNNER_SOURCE)
+        self.assertIn("runtime.advance_deuteros_amiga_opening_scheduler(SDL_GetTicks())", SOURCE)
+        self.assertIn("tick_source_ ? tick_source_()", OPENING_RUNNER_SOURCE)
         self.assertIn("RuntimeInputObservation::opening_input_held", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::directory", SOURCE)
         self.assertIn("OriginalDataSourceDialogKind::archive", SOURCE)

@@ -1,17 +1,19 @@
 #include "engine/deuteros_amiga_opening_runner.hpp"
 
+#include <utility>
+
 namespace eon {
 
-DeuterosAmigaOpeningRunner::DeuterosAmigaOpeningRunner(NativeSessionController& controller,
+DeuterosAmigaOpeningRunner::DeuterosAmigaOpeningRunner(TickSource tick_source,
     const std::uint64_t initial_tick)
-    : controller_(controller), scheduled_tick_(initial_tick) {}
+    : tick_source_(std::move(tick_source)), scheduled_tick_(initial_tick) {}
 
 DeuterosAmigaOpeningAdvance DeuterosAmigaOpeningRunner::advance(const std::uint64_t now) {
     DeuterosAmigaOpeningAdvance result;
     if (stopped_ || now < scheduled_tick_) return result;
     while (now - scheduled_tick_ >= scheduler_period_ms
         && result.events.size() < maximum_catch_up_ticks && !stopped_) {
-        const auto events = controller_.tick_deuteros_amiga_opening();
+        const auto events = tick_source_ ? tick_source_() : std::nullopt;
         if (!events) {
             stopped_ = true;
             break;

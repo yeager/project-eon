@@ -4957,15 +4957,19 @@ hardware requirements remain unexecuted, so this is not a fabricated title
 screen or a claim that title-stage timing has begun.
 
 `DeuterosAmigaOpeningRunner` is the SDL-free host scheduler for this already
-admitted opening only. It advances through `NativeSessionController` at a
-fixed 20 ms cadence, permits at most four catch-up ticks before resynchronising
-the host clock, and publishes the original VM events unchanged to the SDL
-renderer/audio layer. Native tests exercise an under-period advance, one tick,
-four-tick catch-up, resynchronisation, the terminal handoff and return-state
-rejection. The runner does not own a path, archive bytes, save, SDL device,
-frame interpolation, or game rule. Once the `$0f` event is returned it stops
-permanently; later host time cannot manufacture opening ticks, PCM, title
-execution, or bypass the lifecycle controller.
+admitted opening only. It is owned by `NativeSessionController`, which starts
+it only for the matching active session and revokes it before a replacement
+launch or return to the menu. SDL supplies a monotonic timestamp and receives
+the original VM events unchanged through the controller; it cannot retain or
+advance a scheduler after the source-bound native session is gone. The runner
+uses a narrow tick callback rather than a media or coordinator borrow, advances
+at a fixed 20 ms cadence, and permits at most four catch-up ticks before
+resynchronising the host clock. Native tests exercise an under-period advance,
+one tick, four-tick catch-up, resynchronisation, the terminal handoff and
+return-state rejection. The runner does not own a path, archive bytes, save,
+SDL device, frame interpolation, or game rule. Once the `$0f` event is
+returned it stops permanently; later host time cannot manufacture opening
+ticks, PCM, title execution, or bypass the lifecycle controller.
 
 While that opening state is active, `DeuterosAmigaOpeningCheckpoint` exposes
 only a read-only native self-consistency record: scheduler tick, VBL counter,

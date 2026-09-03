@@ -54,6 +54,7 @@ RuntimeCandidateLaunchResult NativeSessionController::launch_direct(const Launch
         return {ReleaseRuntimeAdmission::identity_rejected,
             ReleaseRuntimeRejection::lifecycle_transition, std::nullopt};
     }
+    deuteros_amiga_opening_runner_.reset();
     const auto result = runtime_.launch_direct(candidate, releases);
     synchronize_after_runtime_change();
     return result;
@@ -65,6 +66,7 @@ RuntimeCandidateLaunchResult NativeSessionController::launch_menu(const Launcher
         return {ReleaseRuntimeAdmission::identity_rejected,
             ReleaseRuntimeRejection::lifecycle_transition, std::nullopt};
     }
+    deuteros_amiga_opening_runner_.reset();
     const auto result = runtime_.launch_menu(session, base, releases);
     synchronize_after_runtime_change();
     return result;
@@ -96,6 +98,25 @@ std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amig
     const auto events = runtime_.tick_deuteros_amiga_opening();
     synchronize_after_runtime_change();
     return events;
+}
+
+bool NativeSessionController::start_deuteros_amiga_opening_scheduler(
+    const std::uint64_t initial_tick) {
+    if (state_ != NativeSessionState::deuteros_amiga_opening) return false;
+    deuteros_amiga_opening_runner_.emplace(
+        [this] { return tick_deuteros_amiga_opening(); }, initial_tick);
+    return true;
+}
+
+DeuterosAmigaOpeningAdvance
+NativeSessionController::advance_deuteros_amiga_opening_scheduler(const std::uint64_t now) {
+    if (!deuteros_amiga_opening_runner_) return {};
+    return deuteros_amiga_opening_runner_->advance(now);
+}
+
+bool NativeSessionController::deuteros_amiga_opening_scheduler_active() const {
+    return state_ == NativeSessionState::deuteros_amiga_opening
+        && deuteros_amiga_opening_runner_ && !deuteros_amiga_opening_runner_->stopped();
 }
 
 std::optional<std::vector<float>>
@@ -147,6 +168,7 @@ NativeSessionController::millennium_atari_bootstrap_presentation() const {
 }
 
 void NativeSessionController::begin_return_to_menu() {
+    deuteros_amiga_opening_runner_.reset();
     state_ = NativeSessionState::returning_to_menu;
 }
 
