@@ -10,14 +10,14 @@ SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
 
 class MillenniumAmigaProvenancePanelTests(unittest.TestCase):
     def test_amiga_panel_uses_one_hash_validated_session(self) -> None:
-        panel = SOURCE.index("if (*active_platform == eon::Platform::amiga && millennium_amiga_session)")
+        panel = SOURCE.index("if (*active_platform == eon::Platform::amiga && amiga_bootstrap)")
         end = SOURCE.index('draw_text(renderer, 64, 680', panel)
         panel = SOURCE[panel:end]
         for fact in (
-            "millennium_amiga_session->plan()",
-            "millennium_amiga_session->opaque_invocation_boundary()",
-            "millennium_amiga_session->resident_entry()",
-            "millennium_amiga_session->resident_evidence()",
+            "amiga_bootstrap->plan",
+            "amiga_bootstrap->opaque_invocation_boundary",
+            "amiga_bootstrap->resident_evidence.entry",
+            "amiga_bootstrap->resident_evidence",
             "plan.first_stage.disk_offset",
             "plan.resident_stage.disk_offset",
             "handoff.first_stage_invocation_address",
@@ -29,7 +29,7 @@ class MillenniumAmigaProvenancePanelTests(unittest.TestCase):
                 self.assertIn(fact, panel)
         self.assertIn("opaque first stage", panel)
         self.assertIn("NO CALL RETURN OR RUNTIME STATE", panel)
-        self.assertNotIn("millennium_amiga_session->tick", panel)
+        self.assertNotIn("millennium_amiga_session->", panel)
 
     def test_cli_report_consumes_session_snapshot(self) -> None:
         report = SOURCE[SOURCE.index("void report_millennium_amiga("):

@@ -4390,7 +4390,6 @@ int main(int argc, char** argv) {
     std::optional<eon::ModernAssetPackPngSurface> millennium_external_modern_surface;
     bool millennium_external_modern_attempted = false;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
-    eon::MillenniumAmigaBootstrapSession* millennium_amiga_session = runtime_coordinator.millennium_amiga();
     const auto discard_millennium_assets = [&] {
         if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
         if (millennium_modern_preview_texture) SDL_DestroyTexture(millennium_modern_preview_texture);
@@ -4404,7 +4403,6 @@ int main(int argc, char** argv) {
         millennium_external_modern_attempted = false;
         millennium_gx_canvas_texture = nullptr;
         millennium_assets = nullptr;
-        millennium_amiga_session = nullptr;
     };
     const auto create_millennium_textures = [&] {
         if (!millennium_assets || millennium_preview_texture) return;
@@ -4730,7 +4728,6 @@ int main(int argc, char** argv) {
         // must not retain an IME/virtual keyboard from the previous visit.
         stop_millennium_title();
         if (!resolve_active_release(eon::Game::millennium)) return;
-        millennium_amiga_session = runtime_coordinator.millennium_amiga();
         if (active_platform == eon::Platform::atari_st || active_platform == eon::Platform::amiga) return;
         load_millennium_assets_if_available();
         // The coordinator constructed these exact, parser-validated input
@@ -4782,7 +4779,6 @@ int main(int argc, char** argv) {
             admit_modern_pack_for_release(*selected_modern_pack_manifest, active_launch()->release);
         }
         millennium_assets = runtime_coordinator.millennium_dos();
-        millennium_amiga_session = runtime_coordinator.millennium_amiga();
         active_release_sha256 = active_launch()->request.release_sha256;
         active_release_language = active_launch()->request.release_language;
         selected = launcher_route.game;
@@ -6009,15 +6005,16 @@ int main(int argc, char** argv) {
                     tr("INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED."));
                 draw_text(renderer, 64, 268,
                     tr("NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."));
-                if (*active_platform == eon::Platform::amiga && millennium_amiga_session) {
+                const auto amiga_bootstrap = runtime.millennium_amiga_bootstrap_presentation();
+                if (*active_platform == eon::Platform::amiga && amiga_bootstrap) {
                     // These are source-range and caller-side handoff facts
                     // from the same hash-validated session. They make the
                     // native Amiga boundary inspectable, but do not decode
                     // the opaque first stage or manufacture a screen.
-                    const auto& plan = millennium_amiga_session->plan();
-                    const auto& handoff = millennium_amiga_session->opaque_invocation_boundary();
-                    const auto& resident = millennium_amiga_session->resident_entry();
-                    const auto& evidence = millennium_amiga_session->resident_evidence();
+                    const auto& plan = amiga_bootstrap->plan;
+                    const auto& handoff = amiga_bootstrap->opaque_invocation_boundary;
+                    const auto& resident = amiga_bootstrap->resident_evidence.entry;
+                    const auto& evidence = amiga_bootstrap->resident_evidence;
                     std::ostringstream ranges;
                     ranges << "ADF+0x" << std::hex << plan.first_stage.disk_offset
                            << "/0x" << plan.first_stage.length << " -> RAM 0x"
