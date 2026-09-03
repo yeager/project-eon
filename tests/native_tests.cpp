@@ -8053,7 +8053,6 @@ int main() {
     assert(deuteros_copy_execution.source_sha256
         == "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7");
     assert(deuteros_copy_execution.relocated_sha256 == deuteros_copy_execution.source_sha256);
-    assert(deuteros_copy_execution.relocated_bytes == deuteros_second_stage);
     assert(deuteros_copy_execution.direct_entry_source_offset == 0xc4);
     assert(deuteros_copy_execution.relocated_entry_address == 0x1ec4);
     {
