@@ -3405,6 +3405,7 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
         const auto& state0_plan = live_bootstrap.state0_raw_load_plan();
         const auto& state1_plan = live_bootstrap.state1_raw_load_plan();
         const auto& state1_service = live_bootstrap.state1_service_boundary();
+        const auto& state1_display_service = live_bootstrap.state1_display_service_boundary();
         const auto& state5_plan = live_bootstrap.state5_raw_load_plan();
         const auto& state5_return = live_bootstrap.state5_return();
         const auto& supervisor_callback = live_bootstrap.supervisor_callback();
@@ -3496,6 +3497,16 @@ void report_deuteros_atari_st(const eon::ReleaseArchive& release) {
             << state1_skipped_ascii.game_name_marker_offsets[0] << "/+0x"
             << state1_skipped_ascii.game_name_marker_offsets[1] << std::dec
             << " (preservation metadata only; never rendered, translated, or interpreted)\n";
+        std::cout << "          State-1 display-service boundary: Disk 1 +0x" << std::hex
+            << state1_plan.source_offset + state1_display_service.branch_relative_offset
+            << " BRA.W displacement 0x" << static_cast<std::uint16_t>(
+                state1_display_service.branch_displacement)
+            << " -> +0x" << state1_plan.source_offset
+                + state1_display_service.service_setup_relative_offset
+            << "; setup +0x" << state1_display_service.service_setup_byte_count
+            << " SHA-256 " << state1_display_service.service_setup_sha256
+            << "; XBIOS selector 0x" << state1_display_service.xbios_selector << std::dec
+            << " (static branch/setup only; no relocation, service result, display, or execution inferred)\n";
         const auto materialize_raw_range = [&disk1](const auto& plan) {
             std::vector<std::uint8_t> bytes;
             bytes.reserve(plan.byte_count);
