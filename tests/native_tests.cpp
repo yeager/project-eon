@@ -4104,7 +4104,10 @@ int main() {
             const auto hosted_revoking = hosted_opening.snapshot();
             assert(hosted_revoking.revoking && !hosted_revoking.session
                 && !hosted_revoking.presentation);
-            assert(!hosted_opening.active() && !hosted_opening.session_snapshot());
+            assert(!hosted_opening.active() && !hosted_opening.session_snapshot()
+                && !hosted_opening.deuteros_amiga_opening_presentation()
+                && !hosted_opening.deuteros_amiga_title_stage_boundary()
+                && !hosted_opening.render_deuteros_amiga_opening_audio(1));
             hosted_opening.finish_source_revocation();
             assert(hosted_opening.snapshot().state == eon::NativeSessionState::menu);
 
@@ -4225,6 +4228,30 @@ int main() {
             assert(all_release_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
                 == eon::RuntimeInputDisposition::rejected);
         }
+        // No platform-specific direct accessor may bypass the host revocation
+        // interval. Exercise the complete public façade for every recognised
+        // source, rather than only the presentation that happened to be
+        // visible in the preceding adapter-specific assertions.
+        eon::RuntimeHost revocation_host;
+        eon::LaunchRequest revocation_request;
+        revocation_request.game = release.game;
+        revocation_request.platform = release.platform;
+        revocation_request.release_language = release.language;
+        revocation_request.release_sha256 = release.sha256;
+        assert(revocation_host.launch_direct(revocation_request, releases).accepted());
+        revocation_host.begin_source_revocation();
+        assert(revocation_host.revoking()
+            && !revocation_host.millennium_dos_presentation()
+            && !revocation_host.millennium_dos_startup_input()
+            && !revocation_host.render_deuteros_amiga_opening_audio(1)
+            && !revocation_host.deuteros_amiga_opening_presentation()
+            && !revocation_host.deuteros_amiga_title_stage_boundary()
+            && !revocation_host.deuteros_atari_bootstrap_checkpoint()
+            && !revocation_host.deuteros_atari_bootstrap_presentation()
+            && !revocation_host.millennium_amiga_bootstrap_presentation()
+            && !revocation_host.millennium_atari_bootstrap_presentation());
+        revocation_host.finish_source_revocation();
+        assert(revocation_host.is_menu());
     }
     all_release_runtime.reset();
     assert(!all_release_runtime.session_snapshot());
