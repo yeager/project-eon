@@ -354,6 +354,9 @@ msgstr ""
 msgid "MODERN FRAME"
 msgstr ""
 
+msgid "REDUCED MOTION"
+msgstr ""
+
 msgid "ON"
 msgstr ""
 

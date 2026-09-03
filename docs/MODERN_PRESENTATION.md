@@ -34,6 +34,11 @@ Any individual output, ratio, pacing, Scale2x/Scale4x, filtering, scanline or fr
 change switches the panel to Custom. Original has no path to invoke these
 settings.
 
+Modern/Custom also offers **Reduced motion**. It suppresses Eon's own
+ornamental Cinematic wash and vignette; it does not alter an original frame,
+game clock, input poll, media byte, save, or recovered session. This is a
+launcher accessibility setting, not a claim about original-game controls.
+
 The shipped Custom selector provides bounded transient **Scale4x** as well as
 Scale2x and original-pixel output. Scale4x is exactly two Scale2x passes over
 already decoded RGBA pixels, subject to a four-times-smaller source pixel

@@ -429,6 +429,7 @@ struct ModernGraphicsSettings {
     PixelReconstruction pixel_reconstruction = PixelReconstruction::scale2x;
     bool scanlines = false;
     bool frame = true;
+    bool reduced_motion = false;
     // Presets only select combinations of the renderer controls below.  They
     // are never serialized into a supplied save or sent to a recovered VM.
     ModernGraphicsPreset preset = ModernGraphicsPreset::clean;
@@ -469,14 +470,14 @@ constexpr std::array<const char*, 3> render_pacing_names{{
     "VSYNC (DISPLAY)", "120 FPS (RENDER ONLY)", "UNCAPPED (RENDER ONLY)",
 }};
 constexpr int original_display_option_count = 2;
-constexpr int modern_graphics_option_count = 10;
+constexpr int modern_graphics_option_count = 11;
 
 // These renderer-space bounds are shared by drawing and touch handling.  A
 // Custom profile must remain usable on an iPad even when no hardware F10 key
 // is attached; they are Eon's own chrome, never a game input surface.
 constexpr SDL_FRect modern_graphics_popup_bounds{356, 32, 568, 680};
 constexpr float modern_graphics_option_first_baseline = 272.0F;
-constexpr float modern_graphics_option_stride = 42.0F;
+constexpr float modern_graphics_option_stride = 38.0F;
 
 // This is intentionally a presentation-only preset table.  It has no access
 // to game state, media bytes, input state or saves.  Changing a single
@@ -738,9 +739,9 @@ void draw_scanlines(SDL_Renderer* renderer, const SDL_FRect& bounds) {
 // The named profiles are presentation looks rather than accessibility claims:
 // users retain Custom controls and Original never calls this function.
 void draw_modern_preset_overlay(SDL_Renderer* renderer, const SDL_FRect& bounds,
-    const ModernGraphicsPreset preset) {
+    const ModernGraphicsPreset preset, const bool reduced_motion) {
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    if (preset == ModernGraphicsPreset::cinematic) {
+    if (preset == ModernGraphicsPreset::cinematic && !reduced_motion) {
         // A restrained warm wash plus a vignette makes this profile visibly
         // distinct from Clean without touching any original texture bytes.
         SDL_SetRenderDrawColor(renderer, 106, 62, 18, 24);
@@ -1287,7 +1288,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
     draw_text(renderer, 390, 232, tr("TOUCH: TAP ROW TO CHANGE   TAP OUTSIDE TO CLOSE"));
     constexpr std::array<const char*, modern_graphics_option_count> names{{
         "GRAPHICS PRESET", "OUTPUT RESOLUTION", "ASPECT RATIO", "RENDER PACING", "PIXEL RECONSTRUCTION", "SMOOTH SCALING", "SCANLINES", "MODERN FRAME",
-        "MODERN ASSET PACK", "DEVELOPER DIAGNOSTICS",
+        "MODERN ASSET PACK", "DEVELOPER DIAGNOSTICS", "REDUCED MOTION",
     }};
     constexpr std::array<const char*, original_display_option_count> original_names{{
         "OUTPUT RESOLUTION", "ASPECT RATIO",
@@ -1307,6 +1308,7 @@ void draw_modern_graphics_popup(SDL_Renderer* renderer,
         tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "CHOOSE…"),
         tr("OPEN"),
+        tr(settings.reduced_motion ? "ON" : "OFF"),
     }};
     const std::array<std::string, original_display_option_count> original_values{{
         std::to_string(resolution.width) + "x" + std::to_string(resolution.height),
@@ -4998,6 +5000,7 @@ int main(int argc, char** argv) {
         modern_graphics_settings.smooth_scaling = saved.smooth_scaling;
         modern_graphics_settings.scanlines = saved.scanlines;
         modern_graphics_settings.frame = saved.frame;
+        modern_graphics_settings.reduced_motion = saved.reduced_motion;
     }
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
@@ -5154,6 +5157,8 @@ int main(int argc, char** argv) {
             recovery_function_map_page = 0;
             show_modern_runtime_diagnostics = true;
             break;
+        case 10: modern_graphics_settings.reduced_motion = !modern_graphics_settings.reduced_motion;
+            mark_modern_graphics_custom(modern_graphics_settings); break;
         default: break;
         }
     };
@@ -5172,6 +5177,7 @@ int main(int argc, char** argv) {
                 modern_graphics_settings.smooth_scaling,
                 modern_graphics_settings.scanlines,
                 modern_graphics_settings.frame,
+                modern_graphics_settings.reduced_motion,
                 request.language,
             };
             if (!eon::save_presentation_preferences(presentation_preferences_path, preferences)) {
@@ -5881,7 +5887,7 @@ int main(int argc, char** argv) {
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
                 if (modern) draw_modern_preset_overlay(renderer, preview_bounds,
-                    modern_graphics_settings.preset);
+                    modern_graphics_settings.preset, modern_graphics_settings.reduced_motion);
                 if (millennium_game_execution_observed) {
                     const auto& save = *millennium_assets->assets.initial_save;
                     constexpr std::size_t records_per_page = 8;
@@ -6280,7 +6286,7 @@ int main(int argc, char** argv) {
                 SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
                 if (modern) draw_modern_preset_overlay(renderer, preview_bounds,
-                    modern_graphics_settings.preset);
+                    modern_graphics_settings.preset, modern_graphics_settings.reduced_motion);
                 draw_text(renderer, 64, 580, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             } else {
                 draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));

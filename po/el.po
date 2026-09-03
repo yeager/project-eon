@@ -475,3 +475,5 @@ msgstr "ΟΡΙΟ ΑΝΑΚΤΗΜΕΝΗΣ ΠΑΡΟΥΣΙΑΣΗΣ"
 
 msgid "BOOTSTRAP BOUNDARY"
 msgstr "ΟΡΙΟ ΕΚΚΙΝΗΣΗΣ"
+msgid "REDUCED MOTION"
+msgstr "ΜΕΙΩΜΕΝΗ ΚΙΝΗΣΗ"

@@ -2341,7 +2341,7 @@ int main() {
     const auto temporary_root = std::filesystem::path(test_tmpdir);
     std::filesystem::create_directories(temporary_root);
     const auto preferences_path = temporary_root / "presentation-preferences.ini";
-    const eon::PresentationPreferences preferences{2, 1, 3, 2, 0, true, true, false, "sv"};
+    const eon::PresentationPreferences preferences{2, 1, 3, 2, 0, true, true, false, true, "sv"};
     assert(eon::save_presentation_preferences(preferences_path, preferences));
     const auto loaded_preferences = eon::load_presentation_preferences(preferences_path);
     assert(loaded_preferences && loaded_preferences->output_resolution_index == 2
@@ -2349,9 +2349,9 @@ int main() {
         && loaded_preferences->modern_preset_index == 3
         && loaded_preferences->render_pacing_index == 2
         && loaded_preferences->pixel_reconstruction_index == 0 && loaded_preferences->smooth_scaling
-        && loaded_preferences->scanlines && !loaded_preferences->frame
+        && loaded_preferences->scanlines && !loaded_preferences->frame && loaded_preferences->reduced_motion
         && loaded_preferences->launcher_language == "sv");
-    const eon::PresentationPreferences invalid_reconstruction{2, 1, 3, 2, 3, true, true, false, "en"};
+    const eon::PresentationPreferences invalid_reconstruction{2, 1, 3, 2, 3, true, true, false, false, "en"};
     assert(!eon::save_presentation_preferences(preferences_path, invalid_reconstruction));
     {
         std::ofstream malformed_preferences(preferences_path, std::ios::binary | std::ios::trunc);

@@ -261,6 +261,9 @@ msgstr "SKANLINJER"
 msgid "MODERN FRAME"
 msgstr "MODERN RAM"
 
+msgid "REDUCED MOTION"
+msgstr "MINSKA RÖRELSER"
+
 msgid "ON"
 msgstr "PÅ"
 
