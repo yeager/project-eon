@@ -62,6 +62,12 @@ public:
     millennium_dos_presentation() const;
     [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
     millennium_dos_startup_input() const;
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_parent_exec_return(MillenniumDosTitleToGameInterruptObservation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_child_status(MillenniumDosTitleToGameInterruptObservation);
+    [[nodiscard]] std::optional<MillenniumDosTitleToGameCheckpoint> millennium_dos_title_to_game_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
     [[nodiscard]] std::optional<MillenniumDosNativeProcessCheckpoint>
@@ -222,6 +228,10 @@ public:
     deuteros_atari_bootstrap_presentation() const;
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
     millennium_amiga_bootstrap_presentation() const;
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bootstrap_relocator_overread(MillenniumAmigaBootstrapRelocatorObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bootstrap_relocator_terminal_jump(MillenniumAmigaBootstrapRelocatorObservation);
+    [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
+
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
     millennium_atari_bootstrap_presentation() const;
 

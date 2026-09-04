@@ -89,13 +89,12 @@ constexpr std::array<ContainerSetManifestEntry, 2> container_sets{{
         Game::deuteros, Platform::amiga, "en", deuteros_amiga_clean_split_disks},
 }};
 
-constexpr std::array<ParserProfileManifestEntry, 43> profiles{{
+constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
     {"millennium-atari-equinox-direct-bootstrap", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 0x200},
     {"millennium-atari-equinox-direct-root-inventory", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
     {"millennium-atari-equinox-direct-prg-chain", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
     {"millennium-atari-equinox-direct-config-chain", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
     {"millennium-atari-equinox-direct-auxiliary-resource", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
-    {"millennium-atari-direct-physical-control-text", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69", "081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd", 423'696, 0x0, 423'696},
     {"deuteros-amiga-clean-main-stage", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x5800, 0x4200},
     {"deuteros-amiga-clean-title-handoff", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x6e000, 0x6ca00},
     {"deuteros-amiga-bundle-0", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", 901'120, 0x1b800, 0x2f3f4},

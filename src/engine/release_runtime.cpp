@@ -102,6 +102,8 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title;
     std::optional<MillenniumDosNativeProcessAdmission> millennium_dos_native_process;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga;
+    std::optional<MillenniumAmigaBootstrapRelocatorSession> millennium_amiga_relocator;
+    NativeRuntimeMemory runtime_memory;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula;
@@ -202,18 +204,40 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         rejection_ = ReleaseRuntimeRejection::child_session;
         return false;
     }
+    try {
+        constexpr std::string_view direct_defjam_release=
+            "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd";
+        constexpr std::string_view defjam_adf=
+            "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
+        if(millennium_amiga&&launch.release.sha256==direct_defjam_release){
+            const auto disk=media->extract(defjam_adf);
+            if(!disk)throw std::runtime_error("Direct Defjam relocator image is unavailable");
+            millennium_amiga_relocator.emplace(*disk);
+            NativeRuntimeEffectBatch batch{"millennium-amiga-bootstrap-relocator-1-prefix",true,{}};
+            batch.effects.reserve(millennium_amiga_relocator->copy_effects().size());
+            std::size_t order=1;
+            for(const auto& effect:millennium_amiga_relocator->copy_effects())batch.effects.push_back({order++,{NativeRuntimeAddressSpace::linear,std::nullopt,effect.destination_address},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,effect.value});
+            const auto applied=runtime_memory.apply(batch);
+            if(!applied.accepted)throw std::runtime_error(applied.error);
+        }
+    } catch (...) {
+        reset(); admission_=ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_=ReleaseRuntimeRejection::child_session; return false;
+    }
     millennium_dos_ = std::move(millennium_dos);
     millennium_dos_sound_selection_ = std::move(millennium_dos_sound_selection);
     millennium_dos_title_ = std::move(millennium_dos_title);
     millennium_dos_native_process_ = std::move(millennium_dos_native_process);
     millennium_amiga_ = std::move(millennium_amiga);
+    millennium_amiga_relocator_=std::move(millennium_amiga_relocator);
+    millennium_amiga_relocator_generation_=millennium_amiga_relocator_?1:0;
     millennium_atari_ = std::move(millennium_atari);
     deuteros_amiga_ = std::move(deuteros_amiga);
     deuteros_amiga_paula_ = std::move(deuteros_amiga_paula);
     deuteros_atari_ = std::move(deuteros_atari);
     session_snapshot_ = std::move(session_snapshot);
     active_ = launch;
-    native_runtime_memory_.emplace();
+    native_runtime_memory_=std::move(runtime_memory);
     admission_ = ReleaseRuntimeAdmission::active;
     rejection_ = ReleaseRuntimeRejection::none;
     return true;
@@ -221,6 +245,13 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 
 void ReleaseRuntimeCoordinator::reset() {
     native_runtime_memory_.reset();
+    millennium_dos_title_to_game_.reset();
+    millennium_dos_title_to_game_generation_ = 0;
+    millennium_dos_title_to_game_last_sequence_ = 0;
+    millennium_amiga_relocator_.reset();
+    millennium_amiga_relocator_generation_=0;
+    millennium_amiga_relocator_overread_sequence_.reset();
+    millennium_amiga_relocator_terminal_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -338,6 +369,90 @@ ReleaseRuntimeCoordinator::millennium_dos_startup_input() const {
         snapshot.title_handed_off = millennium_dos_title_->handed_off();
     }
     return snapshot;
+}
+
+namespace {
+MillenniumDosTitleToGameObservationResult title_to_game_rejected(std::string error) {
+    return {false, std::move(error)};
+}
+}
+
+MillenniumDosTitleToGameObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_to_game_call_return(
+    const MillenniumDosTitleToGameCallReturnObservation observation) {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        || !millennium_dos_title_to_game_ || observation.sequence <= millennium_dos_title_to_game_last_sequence_)
+        return title_to_game_rejected("Title-to-game call return requires the active boundary and a later sequence");
+    auto next = *millennium_dos_title_to_game_;
+    try { next.observe_call_return(observation.call_address, observation.return_address); }
+    catch (const std::exception& e) { return title_to_game_rejected(e.what()); }
+    millennium_dos_title_to_game_ = std::move(next);
+    millennium_dos_title_to_game_last_sequence_ = observation.sequence;
+    return {true, {}};
+}
+
+MillenniumDosTitleToGameObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_to_game_stack_word(
+    const MillenniumDosTitleToGameStackWordObservation observation) {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        || !millennium_dos_title_to_game_ || observation.sequence <= millennium_dos_title_to_game_last_sequence_)
+        return title_to_game_rejected("Title-to-game stack word requires the active boundary and a later sequence");
+    auto next = *millennium_dos_title_to_game_;
+    try { next.observe_stack_word(observation.instruction_address, observation.address, observation.value); }
+    catch (const std::exception& e) { return title_to_game_rejected(e.what()); }
+    millennium_dos_title_to_game_ = std::move(next);
+    millennium_dos_title_to_game_last_sequence_ = observation.sequence;
+    return {true, {}};
+}
+
+MillenniumDosTitleToGameObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_to_game_title_termination(
+    const MillenniumDosTitleToGameInterruptObservation observation) {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        || !millennium_dos_title_to_game_ || observation.sequence <= millennium_dos_title_to_game_last_sequence_)
+        return title_to_game_rejected("Title termination requires the active title-to-game boundary and a later sequence");
+    auto next = *millennium_dos_title_to_game_;
+    try { next.observe_title_termination(observation.interrupt_address, observation.ax); }
+    catch (const std::exception& e) { return title_to_game_rejected(e.what()); }
+    millennium_dos_title_to_game_ = std::move(next); millennium_dos_title_to_game_last_sequence_ = observation.sequence;
+    return {true, {}};
+}
+
+MillenniumDosTitleToGameObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_to_game_parent_exec_return(
+    const MillenniumDosTitleToGameInterruptObservation observation) {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        || !millennium_dos_title_to_game_ || observation.sequence <= millennium_dos_title_to_game_last_sequence_)
+        return title_to_game_rejected("Parent EXEC return requires the active title-to-game boundary and a later sequence");
+    auto next = *millennium_dos_title_to_game_;
+    try { next.observe_parent_exec_return(observation.interrupt_address, observation.carry); }
+    catch (const std::exception& e) { return title_to_game_rejected(e.what()); }
+    millennium_dos_title_to_game_ = std::move(next); millennium_dos_title_to_game_last_sequence_ = observation.sequence;
+    return {true, {}};
+}
+
+MillenniumDosTitleToGameObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_to_game_child_status(
+    const MillenniumDosTitleToGameInterruptObservation observation) {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        || !millennium_dos_title_to_game_ || observation.sequence <= millennium_dos_title_to_game_last_sequence_)
+        return title_to_game_rejected("Child status requires the active title-to-game boundary and a later sequence");
+    auto next = *millennium_dos_title_to_game_;
+    try { next.observe_child_status(observation.interrupt_address, observation.al, observation.carry); }
+    catch (const std::exception& e) { return title_to_game_rejected(e.what()); }
+    millennium_dos_title_to_game_ = std::move(next); millennium_dos_title_to_game_last_sequence_ = observation.sequence;
+    return {true, {}};
+}
+
+std::optional<MillenniumDosTitleToGameCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_title_to_game_checkpoint() const {
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        || !millennium_dos_title_to_game_) return std::nullopt;
+    return MillenniumDosTitleToGameCheckpoint{
+        millennium_dos_title_to_game_generation_, millennium_dos_title_to_game_last_sequence_,
+        millennium_dos_title_to_game_->state(), millennium_dos_title_to_game_->boundary(),
+        millennium_dos_title_to_game_->effects(), millennium_dos_title_to_game_->restored_stack_pointer(),
+        millennium_dos_title_to_game_->child_status_al()};
 }
 
 std::optional<MillenniumDosStaticDispatchDiagnostics>
@@ -1398,6 +1513,23 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
     if (!millennium_dos_title_) return RuntimeInputDisposition::rejected;
     if (!millennium_dos_title_->poll_console(true)) return RuntimeInputDisposition::ignored;
     if (!active_) return RuntimeInputDisposition::rejected;
+    constexpr std::string_view english_release =
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
+    if (active_->release.sha256 == english_release) {
+        try {
+            const auto media = VerifiedReleaseMedia::open(active_->release);
+            const auto launcher = admit_native_code_image(media,
+                "millennium-dos-mill-com-linear", "millennium-dos-launcher");
+            const auto titles = admit_native_code_image(media,
+                "millennium-dos-titles-exe-linear", "millennium-dos-title-flow");
+            if (!launcher.accepted() || !titles.accepted()) return RuntimeInputDisposition::rejected;
+            millennium_dos_title_to_game_.emplace(launcher.view->bytes, titles.view->bytes);
+            ++millennium_dos_title_to_game_generation_;
+            millennium_dos_title_to_game_last_sequence_ = 0;
+        } catch (...) {
+            return RuntimeInputDisposition::rejected;
+        }
+    }
     session_snapshot_ = make_runtime_session_snapshot(*active_,
         RuntimeSessionKind::millennium_dos_title_handoff_boundary);
     return RuntimeInputDisposition::boundary_reached;
@@ -1751,6 +1883,33 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_presentation() const {
         millennium_amiga_->opaque_invocation_boundary(),
         millennium_amiga_->resident_evidence(),
     };
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_bootstrap_relocator_overread(
+    const MillenniumAmigaBootstrapRelocatorObservation observation){
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_amiga_bootstrap||!millennium_amiga_relocator_||!native_runtime_memory_||millennium_amiga_relocator_overread_sequence_||observation.sequence==0){result.error="Relocator over-read requires the active direct Defjam bootstrap";return result;}
+    try{auto next_session=*millennium_amiga_relocator_;next_session.observe_overread_byte(observation.instruction_address,observation.source_or_target_address,observation.value);const auto& effect=next_session.copy_effects().back();NativeRuntimeEffectBatch batch{"millennium-amiga-bootstrap-relocator-"+std::to_string(millennium_amiga_relocator_generation_)+"-overread",true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,effect.destination_address},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,effect.value}}};auto next_memory=*native_runtime_memory_;const auto applied=next_memory.apply(batch);if(!applied.accepted){result.error="Runtime-memory application rejected: "+applied.error;return result;}*millennium_amiga_relocator_=std::move(next_session);*native_runtime_memory_=std::move(next_memory);millennium_amiga_relocator_overread_sequence_=observation.sequence;result.accepted=true;}catch(const std::exception&e){result.error=std::string("Relocator over-read rejected: ")+e.what();}return result;
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_bootstrap_relocator_terminal_jump(
+    const MillenniumAmigaBootstrapRelocatorObservation observation){
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_amiga_bootstrap||!millennium_amiga_relocator_||!millennium_amiga_relocator_overread_sequence_||millennium_amiga_relocator_terminal_sequence_||observation.sequence<=*millennium_amiga_relocator_overread_sequence_){result.error="Relocator jump requires the later active over-read generation";return result;}try{auto next=*millennium_amiga_relocator_;next.observe_terminal_jump(observation.instruction_address,observation.source_or_target_address);*millennium_amiga_relocator_=std::move(next);millennium_amiga_relocator_terminal_sequence_=observation.sequence;result.accepted=true;}catch(const std::exception&e){result.error=std::string("Relocator jump rejected: ")+e.what();}return result;
+}
+
+std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint>
+ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()const{
+    if(!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::millennium_amiga_bootstrap
+        ||!millennium_amiga_relocator_) return std::nullopt;
+    const auto& session=*millennium_amiga_relocator_;
+    return MillenniumAmigaBootstrapRelocatorCheckpoint{
+        millennium_amiga_relocator_generation_,session.state(),session.boundary(),
+        session.copy_effects().size(),session.custom_chip_effect(),session.final_a3(),
+        session.final_a5(),session.final_d1()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

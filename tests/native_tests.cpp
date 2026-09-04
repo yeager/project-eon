@@ -16,6 +16,7 @@
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_relocator_session.hpp"
+#include "engine/millennium_dos_title_to_game_session.hpp"
 #include "data/zip_archive.hpp"
 #include "data/native_code_image_admission.hpp"
 #include "data/amiga_adf.hpp"
@@ -1589,6 +1590,16 @@ int main() {
   }
   assert(!eon::startup_boundary_for_release(
       "0000000000000000000000000000000000000000000000000000000000000000"));
+  // The standalone Equinox archive contains only its flat ST image. Keep the
+  // separately supplied original STX attached to the multi-member release so
+  // runtime admission never demands or borrows corpus media outside the
+  // explicitly selected archive.
+  constexpr std::string_view direct_equinox_release =
+      "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69";
+  assert(!eon::release_has_parser_profile(
+      direct_equinox_release, "millennium-atari-direct-physical-control-text"));
+  assert(!eon::release_has_recovery_map_entry(
+      direct_equinox_release, "millennium-atari-direct-physical-control-text"));
 
     // These synthetic strings exercise only the strict external-record
     // grammar. They are not game data or a capture fixture and never invoke
@@ -4393,6 +4404,9 @@ int main() {
     // documented driver boundary for the exact `1` selection.
     const auto initial_startup_input = admitted_dos_runtime.millennium_dos_startup_input();
     assert(initial_startup_input && initial_startup_input->sound_selection_active);
+    assert(!admitted_dos_runtime.millennium_dos_title_to_game_checkpoint());
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_to_game_call_return(
+        {1, 0x1c54, 0x1c57}).accepted);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::available_character())
         == eon::RuntimeInputDisposition::rejected);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('x'))
@@ -4443,6 +4457,12 @@ int main() {
         && spanish_handoff_snapshot.input_contract == eon::RuntimeInputContract::none);
     assert(eon::runtime_session_kind_label(spanish_handoff_snapshot.kind)
         == "MILLENNIUM DOS TITLE HANDOFF BOUNDARY");
+    // Spanish reaches its own genuine title handoff, but must never borrow
+    // the English MILL.COM/TITLES.EXE continuation merely because addresses
+    // happen to resemble it.
+    assert(!admitted_spanish_runtime.millennium_dos_title_to_game_checkpoint());
+    assert(!admitted_spanish_runtime.observe_millennium_dos_title_to_game_call_return(
+        {1, 0x1c54, 0x1c57}).accepted);
     assert(admitted_spanish_runtime.observe_input(eon::RuntimeInputObservation::available_character())
         == eon::RuntimeInputDisposition::rejected);
     // Every recognised outer identity admits exactly one engine-owned startup
@@ -4480,6 +4500,27 @@ int main() {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_amiga_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
+            constexpr std::string_view direct_defjam=
+                "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd";
+            if(release.sha256==direct_defjam){
+                const auto relocator=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(relocator&&relocator->generation==1&&relocator->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte&&relocator->admitted_copy_effect_count==974&&relocator->boundary.instruction_address==0x70036);
+                const auto prefix_memory=all_release_runtime.native_runtime_memory_diagnostics();
+                assert(prefix_memory&&prefix_memory->initialized_byte_count==974&&prefix_memory->applied_batch_count==1);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_relocator_overread({1,0x70036,0x70401,0xa5}).accepted);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum==prefix_memory->checksum);
+                assert(all_release_runtime.observe_millennium_amiga_bootstrap_relocator_overread({1,0x70036,0x70400,0xa5}).accepted);
+                const auto overread_memory=all_release_runtime.native_runtime_memory_diagnostics();
+                assert(overread_memory&&overread_memory->initialized_byte_count==975&&overread_memory->applied_batch_count==2&&overread_memory->checksum!=prefix_memory->checksum);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_relocator_overread({2,0x70036,0x70400,0}).accepted);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_relocator_terminal_jump({1,0x7003c,0x6629e,0}).accepted);
+                assert(all_release_runtime.observe_millennium_amiga_bootstrap_relocator_terminal_jump({2,0x7003c,0x6629e,0}).accepted);
+                const auto transferred=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(transferred&&transferred->state==eon::MillenniumAmigaBootstrapRelocatorState::transferred&&transferred->admitted_copy_effect_count==975&&transferred->final_a3==0x66401&&transferred->final_a5==0x70401&&transferred->final_d1==0xffff);
+            }else{
+                assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
+            }
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st) {
             const auto presentation = all_release_runtime.millennium_atari_bootstrap_presentation();
             assert(presentation && presentation->config.present
@@ -4868,6 +4909,10 @@ int main() {
         revocation_request.release_sha256 = release.sha256;
         assert(revocation_host.launch_direct(revocation_request, releases).accepted());
         revocation_host.begin_source_revocation();
+        assert(!revocation_host.observe_millennium_amiga_bootstrap_relocator_overread(
+            {1,0x70036,0x70400,0}).accepted);
+        assert(!revocation_host.observe_millennium_amiga_bootstrap_relocator_terminal_jump(
+            {2,0x7003c,0x6629e,0}).accepted);
         assert(!revocation_host.observe_deuteros_amiga_title_exec_return(
             {1,4,0x4045a,-0x96,0x4045e,0,0}).accepted);
         assert(!revocation_host.advance_deuteros_amiga_title_local_prefix().accepted);
@@ -4900,6 +4945,7 @@ int main() {
             && !revocation_host.deuteros_atari_bootstrap_checkpoint()
             && !revocation_host.deuteros_atari_bootstrap_presentation()
             && !revocation_host.millennium_amiga_bootstrap_presentation()
+            && !revocation_host.millennium_amiga_bootstrap_relocator_checkpoint()
             && !revocation_host.millennium_atari_bootstrap_presentation());
         revocation_host.finish_source_revocation();
         assert(revocation_host.is_menu());
@@ -5140,6 +5186,57 @@ int main() {
     assert(title_exit.exit_stub_address == 0x1a0f);
     assert(title_exit.exit_stub_preceding_call_target_address == 0x112e);
     assert(title_exit.exit_interrupt == 0x21 && title_exit.exit_service == 0x4c);
+    eon::MillenniumDosTitleToGameSession title_to_game(*mill_bytes,*titles_bytes);
+    assert((title_to_game.boundary()==eon::MillenniumDosTitleToGameBoundary{
+        eon::MillenniumDosTitleToGameBoundaryKind::call_return,0x1c54,0x1c57,0,0}));
+    title_to_game.observe_call_return(0x1c54,0x1c57);
+    title_to_game.observe_call_return(0x1c57,0x1c5a);
+    assert(title_to_game.effects().size()==1
+        && title_to_game.effects().front().address==0x1a0e
+        && title_to_game.effects().front().value==0);
+    assert(title_to_game.boundary().kind
+        == eon::MillenniumDosTitleToGameBoundaryKind::runtime_word);
+    title_to_game.observe_stack_word(0x1c60,0x1aa0,0xbeef);
+    assert(title_to_game.restored_stack_pointer()==0xbeef);
+    title_to_game.observe_call_return(0x1c64,0x1c67);
+    title_to_game.observe_call_return(0x1a0f,0x1a12);
+    title_to_game.observe_title_termination(0x1a18,0x4c00);
+    title_to_game.observe_parent_exec_return(0x0337,false);
+    title_to_game.observe_child_status(0x0348,0,false);
+    assert(title_to_game.state()==eon::MillenniumDosTitleToGameState::game_exec_boundary);
+    assert((title_to_game.boundary()==eon::MillenniumDosTitleToGameBoundary{
+        eon::MillenniumDosTitleToGameBoundaryKind::dos_exec,0x024c,0x031c,0x069a,0}));
+    {
+        bool rejected=false;
+        try {
+            eon::MillenniumDosTitleToGameSession wrong(*mill_bytes,*titles_bytes);
+            wrong.observe_call_return(0x1c57,0x1c5a);
+        } catch(const std::runtime_error&) { rejected=true; }
+        assert(rejected);
+    }
+    {
+        auto altered=*mill_bytes;
+        altered[0x240-0x100]^=1;
+        bool rejected=false;
+        try { static_cast<void>(eon::MillenniumDosTitleToGameSession(
+            altered,*titles_bytes)); }
+        catch(const std::runtime_error&) { rejected=true; }
+        assert(rejected);
+    }
+    {
+        bool rejected=false;
+        try {
+            eon::MillenniumDosTitleToGameSession failed(*mill_bytes,*titles_bytes);
+            failed.observe_call_return(0x1c54,0x1c57);
+            failed.observe_call_return(0x1c57,0x1c5a);
+            failed.observe_stack_word(0x1c60,0x1aa0,1);
+            failed.observe_call_return(0x1c64,0x1c67);
+            failed.observe_call_return(0x1a0f,0x1a12);
+            failed.observe_title_termination(0x1a18,0x4c00);
+            failed.observe_parent_exec_return(0x0337,true);
+        } catch(const std::runtime_error&) { rejected=true; }
+        assert(rejected);
+    }
     {
         auto altered_title_exit = *titles_bytes;
         altered_title_exit[0x1c64 - 0x100] ^= 0x01;
@@ -11302,18 +11399,48 @@ int main() {
         {copy_sequence + 15, 0x1fa0a, 0x2ff09, 0x12});
     assert(command_12 && command_12->unresolved_call_address == 0x1fa52);
     assert(command_12->unresolved_call_target == 0x1fe3c);
-    assert(title_stage_session.observe_command_call_return(
-        {copy_sequence + 16, 0x1fa52, 0x1fe3c, 0x1fa56,
-            0x2ff0b, 0x5678, 0x2004}));
+    assert(command_12->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::repeat_byte_boundary);
+    const auto repeat_bytes = title_stage_session.observe_command_repeat_bytes(
+        {copy_sequence + 16, {{0x1fe40, 0x1fe44}},
+            {{0x2ff0a, 0x2ff0b}}, 2, 0x41});
+    assert(repeat_bytes);
+    assert(repeat_bytes->iteration_count == 2);
+    assert(repeat_bytes->call_address == 0x1fe46);
+    assert(repeat_bytes->call_target == 0x1fbe6);
+    bool rejected_repeat_return = false;
+    try {
+        static_cast<void>(title_stage_session.observe_command_repeat_call_return(
+            {copy_sequence + 17, 0x1fe46, 0x1fbe6, 0x1fe4a,
+                0x2ff0a, 0x41, 0x2000}));
+    } catch (const std::runtime_error&) {
+        rejected_repeat_return = true;
+    }
+    assert(rejected_repeat_return);
+    const auto first_repeat = title_stage_session.observe_command_repeat_call_return(
+        {copy_sequence + 17, 0x1fe46, 0x1fbe6, 0x1fe4a,
+            0x2ff0b, 0x41, 0x2000});
+    assert(first_repeat);
+    assert(first_repeat->completed_iterations == 1);
+    assert(first_repeat->remaining_iterations == 1);
+    assert(first_repeat->next_call_address == 0x1fe46);
+    const auto final_repeat = title_stage_session.observe_command_repeat_call_return(
+        {copy_sequence + 18, 0x1fe46, 0x1fbe6, 0x1fe4a,
+            0x2ff0b, 0x41, 0x2000});
+    assert(final_repeat);
+    assert(final_repeat->completed_iterations == 2);
+    assert(final_repeat->remaining_iterations == 0);
+    assert(final_repeat->next_stream_address == 0x2ff0c);
+    assert(final_repeat->next_opcode_read_address == 0x1fa0a);
     const auto command_4 = title_stage_session.observe_command_opcode(
-        {copy_sequence + 17, 0x1fa0a, 0x2ff0b, 0x04});
+        {copy_sequence + 19, 0x1fa0a, 0x2ff0c, 0x04});
     assert(command_4 && command_4->unresolved_call_address == 0x1faaa);
     assert(command_4->unresolved_call_target == 0x402ac);
     assert(title_stage_session.observe_command_call_return(
-        {copy_sequence + 18, 0x1faaa, 0x402ac, 0x1fab0,
-            0x2ff0d, 0x9abc, 0x2010}));
+        {copy_sequence + 20, 0x1faaa, 0x402ac, 0x1fab0,
+            0x2ff0e, 0x9abc, 0x2010}));
     const auto command_external_call = title_stage_session.observe_command_opcode(
-        {copy_sequence + 19, 0x1fa0a, 0x2ff0d, 0x20});
+        {copy_sequence + 21, 0x1fa0a, 0x2ff0e, 0x20});
     assert(command_external_call);
     assert(command_external_call->outcome
         == eon::DeuterosAmigaTitleCommandOpcodeOutcome::unresolved_boundary);
@@ -11322,48 +11449,48 @@ int main() {
     bool rejected_command_return = false;
     try {
         static_cast<void>(title_stage_session.observe_command_call_return(
-            {copy_sequence + 20, 0x1fac2, 0x1fbe6, 0x1fac8,
-                0x2ff0e, 0x12, 0x2000}));
+            {copy_sequence + 22, 0x1fac2, 0x1fbe6, 0x1fac8,
+                0x2ff0f, 0x12, 0x2000}));
     } catch (const std::runtime_error&) {
         rejected_command_return = true;
     }
     assert(rejected_command_return);
     const auto command_call_return = title_stage_session.observe_command_call_return(
-        {copy_sequence + 20, 0x1fac2, 0x1fbe6, 0x1fac6,
-            0x2ff0e, 0x12, 0x2000});
+        {copy_sequence + 22, 0x1fac2, 0x1fbe6, 0x1fac6,
+            0x2ff0f, 0x12, 0x2000});
     assert(command_call_return);
     assert(command_call_return->observation.result_d0 == 0x12);
     assert(command_call_return->observation.result_sr == 0x2000);
-    assert(command_call_return->next_stream_address == 0x2ff0e);
+    assert(command_call_return->next_stream_address == 0x2ff0f);
     assert(command_call_return->next_opcode_read_address == 0x1fa0a);
     const auto command_16 = title_stage_session.observe_command_opcode(
-        {copy_sequence + 21, 0x1fa0a, 0x2ff0e, 0x16});
+        {copy_sequence + 23, 0x1fa0a, 0x2ff0f, 0x16});
     assert(command_16);
     assert(command_16->unresolved_call_address == 0x1fa1c);
     assert(command_16->unresolved_call_target == 0x1fb00);
     assert(command_16->stop_before_address == 0x1fb00);
     const auto command_16_mode = title_stage_session.observe_command_two_operand_mode(
-        {copy_sequence + 22, 0x1fb00, 0x1f98e, 1});
+        {copy_sequence + 24, 0x1fb00, 0x1f98e, 1});
     assert(command_16_mode);
     assert((command_16_mode->operand_source_addresses
-        == std::array<std::uint32_t, 2>{{0x2ff0f, 0x2ff10}}));
+        == std::array<std::uint32_t, 2>{{0x2ff10, 0x2ff11}}));
     const auto command_16_operands = title_stage_session.observe_command_two_operands(
-        {copy_sequence + 23, {{0x1fb0c, 0x1fb10}},
-            {{0x2ff0f, 0x2ff10}}, {{3, 2}}});
+        {copy_sequence + 25, {{0x1fb0c, 0x1fb10}},
+            {{0x2ff10, 0x2ff11}}, {{3, 2}}});
     assert(command_16_operands);
     assert(command_16_operands->runtime_instruction_address == 0x1fb46);
     assert(command_16_operands->runtime_source_address == 0x1f994);
-    assert(command_16_operands->next_stream_address == 0x2ff11);
+    assert(command_16_operands->next_stream_address == 0x2ff12);
     const auto command_16_result =
         title_stage_session.observe_command_two_operand_runtime_long(
-            {copy_sequence + 24, 0x1fb46, 0x1f994, 0x00000005});
+            {copy_sequence + 26, 0x1fb46, 0x1f994, 0x00000005});
     assert(command_16_result);
     assert(command_16_result->destination_address == 0x1f974);
     assert(command_16_result->destination_value == 0x256eb);
-    assert(command_16_result->next_stream_address == 0x2ff11);
+    assert(command_16_result->next_stream_address == 0x2ff12);
     assert(command_16_result->next_opcode_read_address == 0x1fa0a);
     const auto command_end = title_stage_session.observe_command_opcode(
-        {copy_sequence + 25, 0x1fa0a, 0x2ff11, 0});
+        {copy_sequence + 27, 0x1fa0a, 0x2ff12, 0});
     assert(command_end);
     assert(command_end->outcome
         == eon::DeuterosAmigaTitleCommandOpcodeOutcome::complete);
@@ -11372,7 +11499,7 @@ int main() {
     assert(command_end->caller_resume_address == 0x404fe);
     assert(command_end->stop_before_address == 0x404fe);
     assert(!title_stage_session.observe_command_opcode(
-        {copy_sequence + 26, 0x1fa0a, 0x2ff12, 0}));
+        {copy_sequence + 28, 0x1fa0a, 0x2ff13, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_word(
         {copy_sequence + 2, 0x1fba4, 0x30002, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_base(

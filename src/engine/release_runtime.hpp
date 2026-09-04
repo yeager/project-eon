@@ -7,6 +7,7 @@
 #include "engine/runtime_session.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
+#include "engine/millennium_amiga_bootstrap_relocator_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
@@ -15,6 +16,7 @@
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
 #include "engine/millennium_dos_external_transfer_admission.hpp"
 #include "engine/millennium_dos_title_session.hpp"
+#include "engine/millennium_dos_title_to_game_session.hpp"
 #include "engine/native_runtime_memory.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
@@ -126,6 +128,16 @@ struct MillenniumAmigaBootstrapPresentationSnapshot {
     MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary;
     MillenniumAmigaResidentEvidenceSnapshot resident_evidence;
 };
+struct MillenniumAmigaBootstrapRelocatorObservation { std::uint64_t sequence=0; std::uint32_t instruction_address=0; std::uint32_t source_or_target_address=0; std::uint8_t value=0; };
+struct MillenniumAmigaBootstrapRelocatorObservationResult { bool accepted=false; std::string error; };
+struct MillenniumAmigaBootstrapRelocatorCheckpoint {
+    std::uint64_t generation=0;
+    MillenniumAmigaBootstrapRelocatorState state=MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte;
+    MillenniumAmigaBootstrapRelocatorBoundary boundary;
+    std::size_t admitted_copy_effect_count=0;
+    MillenniumAmigaBootstrapCustomChipEffect custom_chip_effect;
+    std::uint32_t final_a3=0, final_a5=0, final_d1=0;
+};
 
 // Immutable Millennium Atari ST bootstrap provenance.  It reports only the
 // locally recovered copy, Fopen and Fread-prefix facts.  The snapshot cannot
@@ -198,6 +210,36 @@ struct MillenniumDosStartupInputSnapshot {
     bool selected_driver_is_admitted = false;
     bool title_active = false;
     bool title_handed_off = false;
+};
+
+struct MillenniumDosTitleToGameCallReturnObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t call_address = 0;
+    std::uint16_t return_address = 0;
+};
+struct MillenniumDosTitleToGameStackWordObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t address = 0;
+    std::uint16_t value = 0;
+};
+struct MillenniumDosTitleToGameInterruptObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t ax = 0;
+    std::uint8_t al = 0;
+    bool carry = false;
+};
+struct MillenniumDosTitleToGameObservationResult { bool accepted=false; std::string error; };
+struct MillenniumDosTitleToGameCheckpoint {
+    std::uint64_t generation = 0;
+    std::uint64_t last_sequence = 0;
+    MillenniumDosTitleToGameState state =
+        MillenniumDosTitleToGameState::awaiting_title_cleanup_return;
+    MillenniumDosTitleToGameBoundary boundary;
+    std::vector<MillenniumDosTitleToGameByteEffect> effects;
+    std::uint16_t restored_stack_pointer = 0;
+    std::uint8_t child_status_al = 0;
 };
 
 // Hash-gated, static dispatch provenance for 2200AD.EXE.  This deliberately
@@ -530,6 +572,23 @@ public:
     millennium_dos_presentation() const;
     [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
     millennium_dos_startup_input() const;
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult
+    observe_millennium_dos_title_to_game_call_return(
+        MillenniumDosTitleToGameCallReturnObservation observation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult
+    observe_millennium_dos_title_to_game_stack_word(
+        MillenniumDosTitleToGameStackWordObservation observation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult
+    observe_millennium_dos_title_to_game_title_termination(
+        MillenniumDosTitleToGameInterruptObservation observation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult
+    observe_millennium_dos_title_to_game_parent_exec_return(
+        MillenniumDosTitleToGameInterruptObservation observation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult
+    observe_millennium_dos_title_to_game_child_status(
+        MillenniumDosTitleToGameInterruptObservation observation);
+    [[nodiscard]] std::optional<MillenniumDosTitleToGameCheckpoint>
+    millennium_dos_title_to_game_checkpoint() const;
     // A value-only diagnostics view. It is available only for the live,
     // exact Millennium DOS title adapter and is revoked with that adapter.
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
@@ -616,6 +675,10 @@ public:
     deuteros_atari_bootstrap_presentation() const;
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapPresentationSnapshot>
     millennium_amiga_bootstrap_presentation() const;
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bootstrap_relocator_overread(MillenniumAmigaBootstrapRelocatorObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bootstrap_relocator_terminal_jump(MillenniumAmigaBootstrapRelocatorObservation);
+    [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
+
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
     millennium_atari_bootstrap_presentation() const;
     // This is a transient, trace-gated exception for the proven GX suffix.
@@ -767,6 +830,9 @@ private:
     std::optional<MillenniumDosRuntimeAssets> millennium_dos_;
     std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection_;
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title_;
+    std::optional<MillenniumDosTitleToGameSession> millennium_dos_title_to_game_;
+    std::uint64_t millennium_dos_title_to_game_generation_ = 0;
+    std::uint64_t millennium_dos_title_to_game_last_sequence_ = 0;
     std::optional<MillenniumDosGxStartupTraceAdmission> millennium_dos_gx_startup_;
     std::optional<MillenniumDosNativeProcessAdmission> millennium_dos_native_process_;
     // This span-based session is destroyed before its preceding admission,
@@ -804,6 +870,10 @@ private:
     std::optional<NativeRuntimeMemory> native_runtime_memory_;
     std::optional<MillenniumDosTenthFunctionSession> millennium_dos_tenth_function_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
+    std::optional<MillenniumAmigaBootstrapRelocatorSession> millennium_amiga_relocator_;
+    std::uint64_t millennium_amiga_relocator_generation_ = 0;
+    std::optional<std::uint64_t> millennium_amiga_relocator_overread_sequence_;
+    std::optional<std::uint64_t> millennium_amiga_relocator_terminal_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
