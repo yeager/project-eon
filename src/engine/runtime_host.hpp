@@ -72,6 +72,7 @@ public:
     [[nodiscard]] MillenniumDosTitleExecEntryObservationResult observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry);
     [[nodiscard]] MillenniumDosTitleExecEntryObservationResult advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation);
     [[nodiscard]] std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> millennium_dos_title_exec_entry_checkpoint() const;
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_private_interrupt_result(MillenniumDosTitlePrivateInterruptResultObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation);

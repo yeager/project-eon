@@ -10,6 +10,25 @@ namespace eon {
 enum class MillenniumDosTitleInitializationState {
     awaiting_entry,
     private_interrupt_result_boundary,
+    selected_local_call_boundary,
+};
+
+enum class MillenniumDosTitleInitializationEffectWidth { byte, word };
+
+struct MillenniumDosTitlePrivateInterruptResultObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    std::uint16_t ax = 0;
+    std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleInitializationMemoryEffect {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t offset = 0;
+    MillenniumDosTitleInitializationEffectWidth width =
+        MillenniumDosTitleInitializationEffectWidth::byte;
+    std::uint16_t value = 0;
 };
 
 struct MillenniumDosTitleInitializationRegisterEffect {
@@ -36,7 +55,13 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint64_t last_sequence = 0;
     std::uint16_t child_code_segment = 0;
     std::vector<MillenniumDosTitleInitializationRegisterEffect> register_effects;
+    std::vector<MillenniumDosTitleInitializationMemoryEffect> memory_effects;
     MillenniumDosTitlePrivateInterruptBoundary boundary;
+    std::uint16_t observed_ax = 0;
+    std::uint16_t observed_flags = 0;
+    std::uint8_t selected_mode = 0;
+    std::uint16_t selected_call_address = 0;
+    std::uint16_t selected_call_target = 0;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -53,6 +78,8 @@ public:
     void execute_exact_startup(std::uint64_t sequence,
         std::uint16_t entry_address, std::uint16_t call_address,
         std::uint16_t wrapper_address, std::uint8_t interrupt);
+    void observe_private_interrupt_result(
+        const MillenniumDosTitlePrivateInterruptResultObservation&);
 
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
@@ -62,7 +89,13 @@ private:
     std::uint64_t last_sequence_ = 0;
     std::uint16_t child_code_segment_ = 0;
     std::vector<MillenniumDosTitleInitializationRegisterEffect> effects_;
+    std::vector<MillenniumDosTitleInitializationMemoryEffect> memory_effects_;
     MillenniumDosTitlePrivateInterruptBoundary boundary_;
+    std::uint16_t observed_ax_ = 0;
+    std::uint16_t observed_flags_ = 0;
+    std::uint8_t selected_mode_ = 0;
+    std::uint16_t selected_call_address_ = 0;
+    std::uint16_t selected_call_target_ = 0;
 };
 
 } // namespace eon

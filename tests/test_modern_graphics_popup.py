@@ -260,7 +260,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
 
     def test_deuteros_external_opening_pack_is_modern_only_and_tick_bound(self) -> None:
         loader = SOURCE.index("const auto load_deuteros_external_modern_sequence")
-        renderer = SOURCE.index("SDL_Texture* texture = preview_texture;", loader)
+        renderer = SOURCE.index("SDL_Texture* texture = title_surface", loader)
         loader_block = SOURCE[loader:renderer]
         self.assertIn("request.presentation != eon::Presentation::modern", loader_block)
         self.assertIn("active_platform != eon::Platform::amiga", loader_block)
@@ -273,10 +273,25 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("deuteros_external_modern_resolver->resolve(source_tick, title_handed_off)", refresh_block)
         self.assertIn("deuteros_external_modern_resolver.reset()", refresh_block)
         render_block = SOURCE[renderer:SOURCE.index("SDL_SetTextureScaleMode(texture", renderer)]
-        self.assertIn("if (modern)", render_block)
+        self.assertIn("if (modern && !title_surface)", render_block)
         self.assertIn("refresh_deuteros_external_modern_texture(source_tick", render_block)
         self.assertLess(render_block.index("refresh_deuteros_external_modern_texture"),
                         render_block.index("deuteros_modern_pipeline.resolve(requested_key, *frame"))
+
+    def test_sparse_deuteros_title_surface_never_fabricates_missing_pixels(self) -> None:
+        query = SOURCE.index("runtime.deuteros_amiga_title_planar_surface()")
+        renderer = SOURCE.index("SDL_Texture* texture = title_surface", query)
+        block = SOURCE[query:SOURCE.index("draw_text(renderer, 64, 580", renderer)]
+        self.assertIn("SDL_BLENDMODE_BLEND", block)
+        self.assertIn("title_surface->rgba.data()", block)
+        self.assertIn("title_surface->decoded_pixel_count", block)
+        self.assertIn("? deuteros_title_planar_texture : preview_texture", block)
+        self.assertIn("if (modern && !title_surface)", block)
+        reset = SOURCE.index("const auto reset_deuteros_runtime")
+        reset_block = SOURCE[reset:SOURCE.index("const auto reset_active_runtime", reset)]
+        self.assertIn("SDL_DestroyTexture(deuteros_title_planar_texture)", reset_block)
+        self.assertIn("deuteros_title_planar_generation.reset()", reset_block)
+        self.assertIn("deuteros_title_planar_memory_checksum.reset()", reset_block)
 
     def test_deuteros_title_handoff_stops_host_vm_scheduling(self) -> None:
         """The retained frame is presentation evidence, never a fake title VM."""

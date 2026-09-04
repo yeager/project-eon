@@ -95,6 +95,40 @@ AtariStPrgLoadCheckpoint materialize_atari_st_prg_load(
     return result;
 }
 
+NativeRuntimeEffectBatch make_atari_st_prg_load_effect_batch(
+    const AtariStPrgLoadCheckpoint& checkpoint, std::string id) {
+    if (id.empty() || checkpoint.image.empty() || checkpoint.load_base == 0
+        || checkpoint.entry_address != checkpoint.load_base
+        || checkpoint.image.size()
+            != static_cast<std::uint64_t>(checkpoint.text_bytes)
+                + checkpoint.data_bytes + checkpoint.bss_bytes
+        || checkpoint.materialized_image_sha256 != to_hex(sha256(checkpoint.image))) {
+        throw std::runtime_error("Unadmitted Atari ST PRG image effect batch");
+    }
+    NativeRuntimeEffectBatch batch{std::move(id), true, {}};
+    batch.effects.reserve(checkpoint.image.size());
+    for (std::size_t index = 0; index < checkpoint.image.size(); ++index) {
+        batch.effects.push_back({index + 1,
+            {NativeRuntimeAddressSpace::linear, std::nullopt,
+                static_cast<std::uint64_t>(checkpoint.load_base) + index},
+            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian,
+            checkpoint.image[index]});
+    }
+    return batch;
+}
+
+AtariStPrgLoadDiagnostics atari_st_prg_load_diagnostics(
+    const AtariStPrgLoadCheckpoint& checkpoint) {
+    if (checkpoint.image.empty() || checkpoint.relocation_effects.empty()
+        || checkpoint.materialized_image_sha256 != to_hex(sha256(checkpoint.image))) {
+        throw std::runtime_error("Unadmitted Atari ST PRG diagnostics checkpoint");
+    }
+    return {checkpoint.load_base, checkpoint.entry_address, checkpoint.image.size(),
+        checkpoint.relocation_effects.size(), checkpoint.source_sha256,
+        checkpoint.materialized_image_sha256, checkpoint.relocation_effects.front(),
+        checkpoint.relocation_effects.back()};
+}
+
 MillenniumAtariPrgLoadSession::MillenniumAtariPrgLoadSession(
     const std::span<const std::uint8_t> program) {
     constexpr std::string_view expected_sha256 =

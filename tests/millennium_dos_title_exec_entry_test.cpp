@@ -109,10 +109,44 @@ int main(int argc, char** argv) {
         &&initialized.boundary.record_offset==0x1ac4
         &&!initialized.boundary.result_observed
         &&!initialized.boundary.stack_storage_modeled);
+    initialization.observe_private_interrupt_result(
+        {4,0x0127,0x0129,0x0101,0x7202});
+    const auto selected=initialization.checkpoint();
+    assert(selected.state
+        ==eon::MillenniumDosTitleInitializationState::selected_local_call_boundary
+        &&selected.last_sequence==4&&selected.observed_ax==0x0101
+        &&selected.observed_flags==0x7202&&selected.selected_mode==1
+        &&selected.selected_call_address==0x1bad
+        &&selected.selected_call_target==0x1ac6
+        &&selected.boundary.result_observed
+        &&selected.memory_effects.size()==4
+        &&selected.memory_effects[0].offset==0x1a9c
+        &&selected.memory_effects[0].width
+            ==eon::MillenniumDosTitleInitializationEffectWidth::word
+        &&selected.memory_effects[0].value==0x0101
+        &&selected.memory_effects[1].offset==0x1aaa
+        &&selected.memory_effects[1].value==1
+        &&selected.memory_effects[2].offset==0x0107
+        &&selected.memory_effects[2].value==1
+        &&selected.memory_effects[3].offset==0x1aa0
+        &&selected.memory_effects[3].value==0xda00);
+    eon::MillenniumDosTitleInitializationSession other_mode(titles,0x2468,2);
+    other_mode.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
+    other_mode.observe_private_interrupt_result({4,0x0127,0x0129,0x00ff,0});
+    assert(other_mode.checkpoint().selected_mode==0
+        &&other_mode.checkpoint().selected_call_address==0x1bb2
+        &&other_mode.checkpoint().selected_call_target==0x1ada);
     bool detached_initialization_rejected=false;
     try {
         eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
         detached.execute_exact_startup(4,0x1b80,0x1b95,0x0122,0x91);
     } catch(const std::runtime_error&) { detached_initialization_rejected=true; }
     assert(detached_initialization_rejected);
+    bool detached_result_rejected=false;
+    try {
+        eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
+        detached.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
+        detached.observe_private_interrupt_result({4,0x0128,0x0129,0,0});
+    } catch(const std::runtime_error&) { detached_result_rejected=true; }
+    assert(detached_result_rejected);
 }

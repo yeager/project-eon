@@ -2,6 +2,7 @@
 #include "data/fat12.hpp"
 #include "data/sha256.hpp"
 #include "engine/atari_st_prg_load_session.hpp"
+#include "engine/millennium_atari_bootstrap_session.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -52,12 +53,41 @@ int main(const int argc, const char* const argv[]) {
         const auto* entry = disk.find("MILENIUM.TOS");
         assert(entry && !entry->directory());
         const auto program = disk.read(*entry);
-        const eon::MillenniumAtariPrgLoadSession session(program);
-        const auto& exact = session.checkpoint();
+        const eon::MillenniumAtariBootstrapSession session(disk, program);
+        const auto& exact = session.native_prg_image();
         assert(exact.entry_address == 0x10000 && exact.image.size() == 130392);
         assert(exact.relocation_effects.size() == 227);
         assert(exact.materialized_image_sha256
             == "92eac35edb2b5db721dd5353cfc3260dfb5fb4120026b76788659aaa342f887c");
+        eon::NativeRuntimeMemory memory(0x01000000U);
+        const auto image_result = memory.apply(eon::make_atari_st_prg_load_effect_batch(
+            exact, "millennium-atari-1-prg"));
+        assert(image_result.accepted);
+        const auto& gemdos = session.read_only_gemdos();
+        const auto config_result = memory.apply(
+            gemdos.make_fread_effect_batch("millennium-atari-1-config"));
+        assert(config_result.accepted);
+        const auto memory_checkpoint = memory.checkpoint();
+        assert(memory_checkpoint.applied_batch_count == 2
+            && memory_checkpoint.initialized_bytes.size() == exact.image.size());
+        assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2a500}) == 0x4e);
+        assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2a501}) == 0xf9);
+        eon::MillenniumAtariReadOnlyGemdosSession mutable_gemdos(1, disk,
+            session.fopen_boundary(), session.fread_frame_prefix(),
+            session.fread_config_transfer());
+        assert(!mutable_gemdos.revoke(2).accepted);
+        assert(mutable_gemdos.revoke(1).accepted);
+        assert(mutable_gemdos.checkpoint().state
+            == eon::MillenniumAtariReadOnlyGemdosState::revoked);
+        bool revoked_batch_rejected = false;
+        try {
+            static_cast<void>(mutable_gemdos.make_fread_effect_batch("stale"));
+        } catch (const std::runtime_error&) {
+            revoked_batch_rejected = true;
+        }
+        assert(revoked_batch_rejected);
         return 0;
     }
     assert(argc == 1);

@@ -164,6 +164,7 @@ add_executable(project-eon
     src/engine/millennium_dos_save_session.cpp
     src/engine/millennium_atari_bootstrap_session.cpp
     src/engine/atari_st_prg_load_session.cpp
+    src/engine/millennium_atari_read_only_gemdos_session.cpp
     src/engine/millennium_amiga_bootstrap_session.cpp
     src/engine/millennium_amiga_bootstrap_relocator_session.cpp
     src/data/amiga_adf.cpp
@@ -410,6 +411,9 @@ if(BUILD_TESTING)
     add_executable(eon-atari-st-prg-load-session-test
         tests/atari_st_prg_load_session_test.cpp
         src/engine/atari_st_prg_load_session.cpp
+        src/engine/millennium_atari_bootstrap_session.cpp
+        src/engine/millennium_atari_read_only_gemdos_session.cpp
+        src/engine/native_runtime_memory.cpp
         src/data/atari_st_prg.cpp
         src/data/fat12.cpp
         src/data/sha256.cpp)

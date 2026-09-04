@@ -50,6 +50,10 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
         fread_config_transfer_, payload, config_entry_);
     fread_mapped_config_prelude_ = parse_millennium_atari_fread_mapped_config_prelude(
         fread_config_transfer_, payload, config_entry_);
+    // One coordinator-owned Atari session is one compatibility generation.
+    // RuntimeHost revokes the entire coordinator before any source switch.
+    read_only_gemdos_.emplace(1, disk, trap_, fread_frame_prefix_,
+        fread_config_transfer_);
 }
 
 } // namespace eon
