@@ -41,6 +41,11 @@ enum class MillenniumDosTitleInitializationState {
     bios_int15_second_result_boundary,
     post_library_next_setup_call_boundary,
     post_library_followup_call_boundary,
+    timer_vector_far_read_boundary,
+    post_vector_hook_call_boundary,
+    video_vector_far_read_boundary,
+    post_video_hook_mode_call_boundary,
+    post_video_setup_call_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };
@@ -178,6 +183,24 @@ struct MillenniumDosTitleSetupBiosBoundary {
     bool result_observed = false;
 };
 
+struct MillenniumDosTitleFarReadBoundary {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t source_segment = 0;
+    std::uint16_t source_offset = 0;
+    std::uint16_t word_count = 0;
+    std::uint16_t destination_segment = 0;
+    std::uint16_t destination_offset = 0;
+};
+
+struct MillenniumDosTitleFarWordsObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t source_segment = 0;
+    std::uint16_t source_offset = 0;
+    std::uint16_t first_word = 0;
+    std::uint16_t second_word = 0;
+};
+
 struct MillenniumDosTitleDosBoundary {
     std::uint16_t interrupt_address = 0;
     std::uint16_t return_address = 0;
@@ -201,6 +224,7 @@ struct MillenniumDosTitleInitializationMemoryEffect {
         MillenniumDosTitleInitializationEffectWidth::byte;
     std::uint16_t value = 0;
     std::uint16_t segment = 0;
+    bool explicit_segment = false;
 };
 
 struct MillenniumDosTitleInitializationRegisterEffect {
@@ -249,6 +273,8 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::vector<MillenniumDosTitleDosVectorResultRecord> dos_vector_results;
     MillenniumDosTitleSetupBiosBoundary setup_bios_boundary;
     std::vector<MillenniumDosTitleSetupBiosResultObservation> setup_bios_results;
+    MillenniumDosTitleFarReadBoundary far_read_boundary;
+    std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations;
     std::uint16_t failure_address = 0;
     std::uint16_t continuation_address = 0;
 };
@@ -296,6 +322,13 @@ public:
         const MillenniumDosTitleSetupBiosResultObservation&);
     void execute_next_setup(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
+    void execute_followup_setup(std::uint64_t sequence,
+        std::uint16_t call_address, std::uint16_t call_target);
+    void observe_far_words(const MillenniumDosTitleFarWordsObservation&);
+    void execute_video_hook_setup(std::uint64_t sequence,
+        std::uint16_t call_address, std::uint16_t call_target);
+    void execute_post_video_mode_call(std::uint64_t sequence,
+        std::uint16_t call_address, std::uint16_t call_target);
 
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
@@ -317,6 +350,7 @@ private:
     std::uint16_t selected_callee_observed_flags_ = 0;
     std::uint16_t selected_followup_call_address_ = 0;
     std::uint16_t selected_followup_call_target_ = 0;
+    bool post_video_repeat_ = false;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary_;
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results_;
     std::uint16_t title_main_call_address_ = 0;
@@ -337,6 +371,8 @@ private:
     std::vector<MillenniumDosTitleDosVectorResultRecord> dos_vector_results_;
     MillenniumDosTitleSetupBiosBoundary setup_bios_boundary_;
     std::vector<MillenniumDosTitleSetupBiosResultObservation> setup_bios_results_;
+    MillenniumDosTitleFarReadBoundary far_read_boundary_;
+    std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations_;
 };
 
 } // namespace eon

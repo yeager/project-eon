@@ -2,6 +2,7 @@
 #include "data/sha256.hpp"
 
 #include <array>
+#include <algorithm>
 #include <stdexcept>
 
 namespace eon {
@@ -281,6 +282,38 @@ constexpr std::array definitions{
         "Asteroides ", "Asteroids", "es"},
 };
 
+LocalizedGameText localize_definition(const GameTextDefinition& definition,
+    const std::string_view selected_language, const Translator& translator) {
+    const auto language = canonical_launcher_language(selected_language);
+    if (language == "en") {
+        return {std::string(definition.id), std::string(definition.original_text),
+            std::string(definition.canonical_english), language,
+            std::string(definition.source_sha256), definition.source_offset,
+            definition.source_size, std::string(definition.source_language), true, false};
+    }
+    if (!translator.has_translation(definition.canonical_english)) {
+        throw std::runtime_error("Selected catalog lacks recovered game text: "
+            + std::string(definition.id));
+    }
+    return {std::string(definition.id), std::string(definition.original_text),
+        std::string(translator.translate(definition.canonical_english)), language,
+        std::string(definition.source_sha256), definition.source_offset,
+        definition.source_size, std::string(definition.source_language), true, true};
+}
+
+bool game_text_range_matches(const GameTextDefinition& definition,
+    const std::span<const std::uint8_t> source_bytes) {
+    if (definition.source_offset > source_bytes.size()
+        || definition.source_size > source_bytes.size() - definition.source_offset
+        || definition.source_size != definition.original_text.size()) return false;
+    const auto source = source_bytes.subspan(definition.source_offset, definition.source_size);
+    for (std::size_t index = 0; index < source.size(); ++index) {
+        if (source[index] != static_cast<std::uint8_t>(
+                static_cast<unsigned char>(definition.original_text[index]))) return false;
+    }
+    return true;
+}
+
 } // namespace
 
 std::span<const GameTextDefinition> game_text_definitions() {
@@ -289,12 +322,8 @@ std::span<const GameTextDefinition> game_text_definitions() {
 
 bool verify_game_text_source(const GameTextDefinition& definition,
     const std::span<const std::uint8_t> source_bytes) {
-    if (to_hex(sha256(source_bytes)) != definition.source_sha256
-        || definition.source_offset > source_bytes.size()
-        || definition.source_size > source_bytes.size() - definition.source_offset
-        || definition.source_size != definition.original_text.size()) return false;
-    const auto source = source_bytes.subspan(definition.source_offset, definition.source_size);
-    return std::equal(source.begin(), source.end(), definition.original_text.begin());
+    return to_hex(sha256(source_bytes)) == definition.source_sha256
+        && game_text_range_matches(definition, source_bytes);
 }
 
 LocalizedGameText localize_game_text(const Game game, const Platform platform,
@@ -305,22 +334,54 @@ LocalizedGameText localize_game_text(const Game game, const Platform platform,
         if (definition.game != game || definition.platform != platform
             || definition.source_sha256 != source_sha256
             || definition.original_text != original_text) continue;
-        if (language == "en") {
-            return {std::string(definition.id), std::string(original_text),
-                std::string(definition.canonical_english), language,
-                std::string(definition.source_sha256), definition.source_offset,
-                definition.source_size, std::string(definition.source_language), true, false};
-        }
-        if (!translator.has_translation(definition.canonical_english)) {
-            throw std::runtime_error("Selected catalog lacks recovered game text: "
-                + std::string(definition.id));
-        }
-        return {std::string(definition.id), std::string(original_text),
-            std::string(translator.translate(definition.canonical_english)),
-            language, std::string(definition.source_sha256), definition.source_offset,
-            definition.source_size, std::string(definition.source_language), true, true};
+        return localize_definition(definition, language, translator);
     }
     throw std::runtime_error("Uncatalogued user-presented original game text");
+}
+
+LocalizedGameText localize_game_text_at_source(const Game game, const Platform platform,
+    const std::string_view source_leaf, const std::span<const std::uint8_t> source_bytes,
+    const std::size_t source_offset, const std::size_t source_size,
+    const std::string_view selected_language, const Translator& translator) {
+    const auto source_sha256 = to_hex(sha256(source_bytes));
+    for (const auto& definition : definitions) {
+        if (definition.game != game || definition.platform != platform
+            || definition.source_leaf != source_leaf
+            || definition.source_sha256 != source_sha256
+            || definition.source_offset != source_offset
+            || definition.source_size != source_size) continue;
+        if (!game_text_range_matches(definition, source_bytes))
+            throw std::runtime_error("Recovered game-text source range is invalid");
+        return localize_definition(definition, selected_language, translator);
+    }
+    throw std::runtime_error("Uncatalogued user-presented original game-text range");
+}
+
+std::vector<LocalizedGameText> localize_all_game_text_from_source(
+    const Game game, const Platform platform, const std::string_view source_leaf,
+    const std::span<const std::uint8_t> source_bytes,
+    const std::string_view selected_language, const Translator& translator) {
+    const auto source_sha256 = to_hex(sha256(source_bytes));
+    std::vector<const GameTextDefinition*> matches;
+    for (const auto& definition : definitions) {
+        if (definition.game == game && definition.platform == platform
+            && definition.source_leaf == source_leaf
+            && definition.source_sha256 == source_sha256) matches.push_back(&definition);
+    }
+    if (matches.empty()) throw std::runtime_error("Uncatalogued original game-text source leaf");
+    std::ranges::sort(matches, {}, &GameTextDefinition::source_offset);
+    std::size_t preceding_end = 0;
+    std::vector<LocalizedGameText> localized;
+    localized.reserve(matches.size());
+    for (const auto* definition : matches) {
+        if (!game_text_range_matches(*definition, source_bytes))
+            throw std::runtime_error("Recovered game-text source range is invalid");
+        if (!localized.empty() && definition->source_offset < preceding_end)
+            throw std::runtime_error("Recovered game-text source ranges overlap");
+        preceding_end = definition->source_offset + definition->source_size;
+        localized.push_back(localize_definition(*definition, selected_language, translator));
+    }
+    return localized;
 }
 
 } // namespace eon

@@ -153,6 +153,7 @@ MillenniumDosTitleInitializationObservationResult NativeSessionController::obser
 MillenniumDosTitleInitializationObservationResult NativeSessionController::observe_millennium_dos_title_dos_file_result(MillenniumDosTitleDosFileResultObservation o){if(state_!=NativeSessionState::millennium_dos_title)return {false,"Title DOS-file result requires the active title boundary"};return runtime_.observe_millennium_dos_title_dos_file_result(o);}
 MillenniumDosTitleInitializationObservationResult NativeSessionController::observe_millennium_dos_title_dos_vector_result(MillenniumDosTitleDosVectorResultObservation o){if(state_!=NativeSessionState::millennium_dos_title)return {false,"Title DOS-vector result requires the active title boundary"};return runtime_.observe_millennium_dos_title_dos_vector_result(o);}
 MillenniumDosTitleInitializationObservationResult NativeSessionController::observe_millennium_dos_title_setup_bios_result(MillenniumDosTitleSetupBiosResultObservation o){if(state_!=NativeSessionState::millennium_dos_title)return {false,"Title setup BIOS result requires the active title boundary"};return runtime_.observe_millennium_dos_title_setup_bios_result(o);}
+MillenniumDosTitleInitializationObservationResult NativeSessionController::observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation o){if(state_!=NativeSessionState::millennium_dos_title)return {false,"Title far words require the active title boundary"};return runtime_.observe_millennium_dos_title_far_words(o);}
 
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_stack_word(o);}
@@ -563,6 +564,11 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_first_dispat
 EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_second_dispatch,(),())
 EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_second_dispatch_decode,(),())
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_second_dispatch_destination_words,(const DeuterosAmigaObservedTitleSecondDispatchDestinationWords o),(o))
+EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_service_route_prefix,(),())
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_first_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_second_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_third_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_nested_words,(const DeuterosAmigaObservedTitlePostCommandNestedWords o),(o))
 #undef EON_NATIVE_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -706,6 +712,14 @@ MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_d0_indexed_word(const MillenniumAtariD0IndexedWordObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Indexed word requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_d0_indexed_word(o);}
 
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_a0_indexed_word(const MillenniumAtariA0IndexedWordObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"A0-indexed word requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_a0_indexed_word(o);}
+
+MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_atari_loop_iteration_setup(){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Loop setup requires Millennium Atari bootstrap"};return runtime_.execute_millennium_atari_loop_iteration_setup();}
+
+MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_atari_loop_epilogue(){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Loop epilogue requires Millennium Atari bootstrap"};return runtime_.execute_millennium_atari_loop_epilogue();}
+
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_movem_frame(const MillenniumAtariMovemFrameObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"MOVEM frame requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_movem_frame(o);}
+
+MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_atari_jsr_2aa68(){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"JSR $2aa68 requires Millennium Atari bootstrap"};return runtime_.execute_millennium_atari_jsr_2aa68();}
 
 void NativeSessionController::begin_return_to_menu() {
     deuteros_amiga_opening_runner_.reset();

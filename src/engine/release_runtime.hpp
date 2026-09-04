@@ -651,6 +651,7 @@ public:
         MillenniumDosTitleDosFileResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_dos_vector_result(MillenniumDosTitleDosVectorResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_setup_bios_result(MillenniumDosTitleSetupBiosResultObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_call_return(
         MillenniumDosTitleToGameCallReturnObservation observation);
@@ -752,6 +753,11 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_second_dispatch();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_second_dispatch_decode();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_second_dispatch_destination_words(DeuterosAmigaObservedTitleSecondDispatchDestinationWords);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_service_route_prefix();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_service_first_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_service_second_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_service_third_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_nested_words(DeuterosAmigaObservedTitlePostCommandNestedWords);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -794,6 +800,10 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_a1_setup();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_d0_indexed_word(MillenniumAtariD0IndexedWordObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_a0_indexed_word(MillenniumAtariA0IndexedWordObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_loop_iteration_setup();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_loop_epilogue();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_movem_frame(MillenniumAtariMovemFrameObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2aa68();
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

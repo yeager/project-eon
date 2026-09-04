@@ -557,6 +557,67 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().memory_effects[18928].offset==0x1181
         &&other_success.checkpoint().memory_effects[18929].value==0x0444
         &&other_success.checkpoint().memory_effects[18930].value==0x1178);
+    other_success.execute_followup_setup(57,0x1bf5,0x114e);
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::timer_vector_far_read_boundary
+        &&other_success.checkpoint().continuation_address==0x115d
+        &&other_success.checkpoint().far_read_boundary.instruction_address==0x115d
+        &&other_success.checkpoint().far_read_boundary.source_segment==0
+        &&other_success.checkpoint().far_read_boundary.source_offset==0x0070
+        &&other_success.checkpoint().far_read_boundary.word_count==2
+        &&other_success.checkpoint().far_read_boundary.destination_segment==0x2468
+        &&other_success.checkpoint().far_read_boundary.destination_offset==0x10dc);
+    other_success.observe_far_words({58,0x115d,0,0x0070,0xaaaa,0xbbbb});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_vector_hook_call_boundary
+        &&other_success.checkpoint().continuation_address==0x1bf8
+        &&other_success.checkpoint().far_word_observations.size()==1
+        &&other_success.checkpoint().memory_effects[18931].value==0xaaaa
+        &&other_success.checkpoint().memory_effects[18932].value==0xbbbb
+        &&other_success.checkpoint().memory_effects[18933].explicit_segment
+        &&other_success.checkpoint().memory_effects[18933].segment==0
+        &&other_success.checkpoint().memory_effects[18933].offset==0x0070
+        &&other_success.checkpoint().memory_effects[18933].value==0x11d8
+        &&other_success.checkpoint().memory_effects[18934].value==0x2468
+        &&other_success.checkpoint().memory_effects[18935].offset==0x112c
+        &&other_success.checkpoint().memory_effects[18935].value==1);
+    other_success.execute_video_hook_setup(59,0x1bf8,0x12a0);
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::video_vector_far_read_boundary
+        &&other_success.checkpoint().continuation_address==0x12ad
+        &&other_success.checkpoint().far_read_boundary.instruction_address==0x12ad
+        &&other_success.checkpoint().far_read_boundary.source_segment==0
+        &&other_success.checkpoint().far_read_boundary.source_offset==0x0024
+        &&other_success.checkpoint().far_read_boundary.word_count==2
+        &&other_success.checkpoint().far_read_boundary.destination_offset==0x1266);
+    other_success.observe_far_words({60,0x12ad,0,0x0024,0xcccc,0xdddd});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_hook_mode_call_boundary
+        &&other_success.checkpoint().continuation_address==0x1c02
+        &&other_success.checkpoint().far_word_observations.size()==2
+        &&other_success.checkpoint().memory_effects[18936].offset==0x1266
+        &&other_success.checkpoint().memory_effects[18936].value==0xcccc
+        &&other_success.checkpoint().memory_effects[18937].offset==0x1268
+        &&other_success.checkpoint().memory_effects[18937].value==0xdddd
+        &&other_success.checkpoint().memory_effects[18938].explicit_segment
+        &&other_success.checkpoint().memory_effects[18938].segment==0
+        &&other_success.checkpoint().memory_effects[18938].offset==0x0024
+        &&other_success.checkpoint().memory_effects[18938].value==0x126a
+        &&other_success.checkpoint().memory_effects[18939].explicit_segment
+        &&other_success.checkpoint().memory_effects[18939].offset==0x0026
+        &&other_success.checkpoint().memory_effects[18939].value==0x2468);
+    other_success.execute_post_video_mode_call(61,0x1c02,0x1ada);
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::selected_callee_private_interrupt_result_boundary
+        &&other_success.checkpoint().continuation_address==0x0127
+        &&other_success.checkpoint().selected_callee_boundary.call_address==0x1ae2);
+    other_success.observe_selected_callee_private_interrupt_result(
+        {62,0x0127,0x0129,0x1ae5,0x4444,0x0202});
+    other_success.execute_selected_followup_start(63,0x1ae5,0x0487);
+    for(std::uint64_t sequence=64;sequence<80;++sequence)
+        other_success.observe_bios_palette_result(
+            {sequence,0x0497,0x0499,0x1000,0x0202},titles);
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_setup_call_boundary
+        &&other_success.checkpoint().last_sequence==79
+        &&other_success.checkpoint().continuation_address==0x1c0e
+        &&other_success.checkpoint().memory_effects.size()==18941
+        &&other_success.checkpoint().memory_effects.back().offset==0x010a
+        &&other_success.checkpoint().memory_effects.back().value==0xb800);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

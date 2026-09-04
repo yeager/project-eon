@@ -4,6 +4,7 @@
 #include "engine/millennium_atari_read_only_gemdos_session.hpp"
 #include "engine/native_runtime_memory.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -26,6 +27,9 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     d0_indexed_word_boundary,
     a0_indexed_word_boundary,
     loop_branch_boundary,
+    movem_restore_boundary,
+    jsr_2aa68_boundary,
+    xbios_selector_38_boundary,
     revoked,
 };
 
@@ -106,6 +110,7 @@ struct MillenniumAtariD0IndexedWordObservation {
     std::uint16_t source_word = 0;
 };
 using MillenniumAtariA0IndexedWordObservation = MillenniumAtariD0IndexedWordObservation;
+struct MillenniumAtariMovemFrameObservation { std::uint64_t generation=0; std::uint64_t sequence=0; std::uint32_t instruction_address=0; std::uint32_t frame_address=0; std::array<std::uint32_t,15> registers{}; std::uint32_t rts_return_address=0; };
 
 struct MillenniumAtariConfigHardwareWrite {
     std::size_t order = 0;
@@ -213,6 +218,18 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint16_t loop_d7_value = 0;
     std::uint32_t loop_branch_target = 0;
     std::string a0_indexed_tail_sha256;
+    std::uint32_t loop_iteration = 0;
+    std::uint32_t loop_current_a1 = 0;
+    std::string loop_setup_sha256;
+    std::string loop_epilogue_sha256;
+    std::uint32_t movem_instruction_address = 0;
+    std::uint16_t movem_register_mask = 0;
+    bool movem_frame_observed=false; std::uint32_t movem_frame_address=0;
+    std::array<std::uint32_t,15> restored_registers{};
+    std::uint32_t restored_stack_address=0; std::uint32_t rts_return_address=0;
+    std::string movem_rts_sha256; std::string caller_jsr_2aa68_sha256;
+    std::uint32_t selector_38_pointer_argument = 0;
+    std::string jsr_2aa68_prefix_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -276,6 +293,12 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_a0_indexed_word(
         const MillenniumAtariA0IndexedWordObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_a0_indexed_tail_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_loop_iteration_setup();
+    [[nodiscard]] NativeRuntimeEffectBatch make_loop_iteration_setup_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_loop_epilogue();
+    [[nodiscard]] NativeRuntimeEffectBatch make_loop_epilogue_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_movem_frame(const MillenniumAtariMovemFrameObservation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2aa68();
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

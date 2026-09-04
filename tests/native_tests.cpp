@@ -3149,7 +3149,7 @@ int main() {
     }
     const auto deuteros_amiga_functions = eon::function_map_for_release(
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
-    assert(deuteros_amiga_functions.size() == 18);
+    assert(deuteros_amiga_functions.size() == 19);
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-exec-boundary";
     }));
@@ -3178,6 +3178,10 @@ int main() {
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-second-paired-dispatch"
             && entry.runtime_status == "native complete second merge loop";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-title-post-command-service-prefix"
+            && entry.runtime_status == "native nested first-loop branch boundary";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
@@ -5109,6 +5113,32 @@ int main() {
             assert(loop_user && loop_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::loop_branch_boundary
                 && loop_user->config_consumer.loop_branch_target==0x2b5b8
                 && loop_user->config_consumer.loop_a0_value==0x56eee4);
+            assert(all_release_runtime.execute_millennium_atari_loop_iteration_setup().accepted);
+            const auto loop1_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(loop1_user && loop1_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::d0_indexed_word_boundary
+                && loop1_user->config_consumer.loop_iteration==1
+                && loop1_user->config_consumer.loop_current_a1==0x2b64e);
+            assert(all_release_runtime.observe_millennium_atari_d0_indexed_word({1,12,0x2b5de,2,0x2be00,0x0d24}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_a0_indexed_word({1,13,0x2b5ec,0,0x26ee4,0}).accepted);
+            assert(all_release_runtime.execute_millennium_atari_loop_iteration_setup().accepted);
+            assert(all_release_runtime.observe_millennium_atari_d0_indexed_word({1,14,0x2b5de,2,0x2be00,0x0d24}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_a0_indexed_word({1,15,0x2b5ec,0,0x26ee4,0}).accepted);
+            assert(all_release_runtime.execute_millennium_atari_loop_epilogue().accepted);
+            const auto restore_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(restore_user && restore_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::movem_restore_boundary
+                && restore_user->config_consumer.movem_instruction_address==0x2b562);
+            std::array<std::uint32_t,15> atari_restored{};
+            for(std::size_t i=0;i<atari_restored.size();++i)atari_restored[i]=static_cast<std::uint32_t>(i+1U);
+            assert(!all_release_runtime.observe_millennium_atari_movem_frame({1,16,0x2b562,0x80000,atari_restored,0x2aacc}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_movem_frame({1,16,0x2b562,0x80000,atari_restored,0x2aac8}).accepted);
+            const auto jsr_2aa68_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(jsr_2aa68_user && jsr_2aa68_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::jsr_2aa68_boundary
+                && jsr_2aa68_user->config_consumer.next_jsr_target==0x2aa68);
+            assert(all_release_runtime.execute_millennium_atari_jsr_2aa68().accepted);
+            const auto xbios38_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(xbios38_user && xbios38_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::xbios_selector_38_boundary
+                && xbios38_user->config_consumer.xbios_trap_address==0x2aa72
+                && xbios38_user->config_consumer.selector_38_pointer_argument==0x2aa42);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -5188,6 +5218,10 @@ int main() {
             assert(!atari_host.execute_millennium_atari_a1_setup().accepted);
             assert(!atari_host.observe_millennium_atari_d0_indexed_word({1,17,0x2b5de,0,0x2bdfe,0}).accepted);
             assert(!atari_host.observe_millennium_atari_a0_indexed_word({1,18,0x2b5ec,0,0x26ee4,0}).accepted);
+            assert(!atari_host.execute_millennium_atari_loop_iteration_setup().accepted);
+            assert(!atari_host.execute_millennium_atari_loop_epilogue().accepted);
+            assert(!atari_host.observe_millennium_atari_movem_frame({1,19,0x2b562,0x80000,{},0x2aac8}).accepted);
+            assert(!atari_host.execute_millennium_atari_jsr_2aa68().accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5647,6 +5681,63 @@ int main() {
                 second_merge_words).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_second_dispatch_destination_words(
                 second_merge_words).accepted);
+            const auto before_service_prefix=opening_controller.native_runtime_memory_diagnostics();
+            assert(opening_controller.advance_deuteros_amiga_title_post_command_service_route_prefix().accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_service_route_prefix().accepted);
+            const auto service_prefix_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(service_prefix_memory && before_service_prefix
+                && service_prefix_memory->applied_batch_count==before_service_prefix->applied_batch_count+1);
+            const auto service_prefix_byte=[&](const std::uint32_t address){
+                const auto it=std::find_if(service_prefix_memory->initialized_bytes.begin(),
+                    service_prefix_memory->initialized_bytes.end(),[address](const auto& cell){return cell.location.offset==address;});
+                return it==service_prefix_memory->initialized_bytes.end()?std::uint8_t{0xff}:it->value;
+            };
+            assert(service_prefix_byte(0x222ae)==0x00 && service_prefix_byte(0x222af)==0x02
+                && service_prefix_byte(0x222b0)==0x15 && service_prefix_byte(0x222b1)==0x1a);
+            assert(service_prefix_byte(0x13052)==0x00 && service_prefix_byte(0x13055)==0x50);
+            assert(service_prefix_byte(0x13126)==0 && service_prefix_byte(0x13127)==0);
+            eon::DeuterosAmigaObservedLocalCallReturn service_first_return{
+                runtime_copy_sequence+27,0x20e6a,0x1fb9a,0x20e70,0xdeadbeef,0x0015};
+            auto bad_service_first_return=service_first_return;
+            bad_service_first_return.return_address=0x20e72;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_service_first_return(
+                bad_service_first_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_service_first_return(
+                service_first_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_service_first_return(
+                service_first_return).accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn service_second_return{
+                runtime_copy_sequence+28,0x20e7a,0x1ff08,0x20e80,0xcafebabe,0x0019};
+            auto bad_service_second_return=service_second_return;
+            bad_service_second_return.call_target=0x1ff0a;
+            const auto before_second_return=opening_controller.native_runtime_memory_diagnostics();
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_service_second_return(
+                bad_service_second_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_service_second_return(
+                service_second_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_service_second_return(
+                service_second_return).accepted);
+            const auto after_second_return=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_second_return && before_second_return
+                && after_second_return->applied_batch_count==before_second_return->applied_batch_count+1);
+            const auto selected_long_byte=[&](const std::uint32_t address){
+                const auto it=std::find_if(after_second_return->initialized_bytes.begin(),
+                    after_second_return->initialized_bytes.end(),[address](const auto& cell){return cell.location.offset==address;});
+                return it==after_second_return->initialized_bytes.end()?std::uint8_t{0}:it->value;
+            };
+            assert(selected_long_byte(0x1378e)==0x12 && selected_long_byte(0x1378f)==0x7a
+                && selected_long_byte(0x13790)==0x39 && selected_long_byte(0x13791)==0x80);
+            eon::DeuterosAmigaObservedLocalCallReturn service_third_return{
+                runtime_copy_sequence+29,0x20e96,0x22bca,0x20e9c,0x01020304,0x0011};
+            auto bad_service_third_return=service_third_return;bad_service_third_return.return_address++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_service_third_return(bad_service_third_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_service_third_return(service_third_return).accepted);
+            eon::DeuterosAmigaObservedTitlePostCommandNestedWords nested_words{
+                runtime_copy_sequence+30,{{0x20bae,0x20bb6}},{{0x13008,0x202bc}},{{0x1234,0x0001}}};
+            auto bad_nested_words=nested_words;bad_nested_words.source_addresses[0]++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_nested_words(bad_nested_words).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_nested_words(nested_words).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_nested_words(nested_words).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

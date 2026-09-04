@@ -71,6 +71,7 @@ MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millenniu
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_dos_file_result(MillenniumDosTitleDosFileResultObservation o){if(revoking())return {false,"Title DOS-file result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_dos_file_result(o);}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_dos_vector_result(MillenniumDosTitleDosVectorResultObservation o){if(revoking())return {false,"Title DOS-vector result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_dos_vector_result(o);}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_setup_bios_result(MillenniumDosTitleSetupBiosResultObservation o){if(revoking())return {false,"Title setup BIOS result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_setup_bios_result(o);}
+MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation o){if(revoking())return {false,"Title far words rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_far_words(o);}
 
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_stack_word(o);}
@@ -375,6 +376,11 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_first_dispatch
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_second_dispatch,(),())
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_second_dispatch_decode,(),())
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_second_dispatch_destination_words,(const DeuterosAmigaObservedTitleSecondDispatchDestinationWords o),(o))
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_service_route_prefix,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_first_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_second_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_third_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_nested_words,(const DeuterosAmigaObservedTitlePostCommandNestedWords o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -482,6 +488,14 @@ MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_a1_set
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_d0_indexed_word(const MillenniumAtariD0IndexedWordObservation o){if(revoking())return{false,"Indexed word rejected during revocation"};return NativeSessionController::observe_millennium_atari_d0_indexed_word(o);}
 
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_a0_indexed_word(const MillenniumAtariA0IndexedWordObservation o){if(revoking())return{false,"A0-indexed word rejected during revocation"};return NativeSessionController::observe_millennium_atari_a0_indexed_word(o);}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_loop_iteration_setup(){if(revoking())return{false,"Loop setup rejected during revocation"};return NativeSessionController::execute_millennium_atari_loop_iteration_setup();}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_loop_epilogue(){if(revoking())return{false,"Loop epilogue rejected during revocation"};return NativeSessionController::execute_millennium_atari_loop_epilogue();}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_movem_frame(const MillenniumAtariMovemFrameObservation o){if(revoking())return{false,"MOVEM frame rejected during revocation"};return NativeSessionController::observe_millennium_atari_movem_frame(o);}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_jsr_2aa68(){if(revoking())return{false,"JSR $2aa68 rejected during revocation"};return NativeSessionController::execute_millennium_atari_jsr_2aa68();}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;

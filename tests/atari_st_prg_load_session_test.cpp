@@ -251,6 +251,36 @@ int main(const int argc, const char* const argv[]) {
         assert(bsr_memory.apply(user_consumer.make_a0_indexed_tail_effect_batch("tail")).accepted);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b620})==0x00);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b623})==0xe4);
+        assert(user_consumer.execute_loop_iteration_setup().accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::d0_indexed_word_boundary
+            && user_consumer.checkpoint().loop_iteration==1
+            && user_consumer.checkpoint().loop_current_a1==0x2b64e);
+        assert(bsr_memory.apply(user_consumer.make_loop_iteration_setup_effect_batch("loop1")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b669})==1);
+        assert(user_consumer.observe_d0_indexed_word({1,12,0x2b5de,2,0x2be00,0x0d24}).accepted);
+        assert(user_consumer.observe_a0_indexed_word({1,13,0x2b5ec,0,0x26ee4,0}).accepted);
+        assert(user_consumer.checkpoint().loop_d7_value==0);
+        assert(user_consumer.execute_loop_iteration_setup().accepted);
+        assert(user_consumer.checkpoint().loop_iteration==2 && user_consumer.checkpoint().loop_current_a1==0x2b67e);
+        assert(user_consumer.observe_d0_indexed_word({1,14,0x2b5de,2,0x2be00,0x0d24}).accepted);
+        assert(user_consumer.observe_a0_indexed_word({1,15,0x2b5ec,0,0x26ee4,0}).accepted);
+        assert(user_consumer.checkpoint().loop_d7_value==0xffff && user_consumer.checkpoint().loop_branch_target==0x2b600);
+        assert(user_consumer.execute_loop_epilogue().accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::movem_restore_boundary
+            && user_consumer.checkpoint().movem_instruction_address==0x2b562);
+        assert(bsr_memory.apply(user_consumer.make_loop_epilogue_effect_batch("epilogue")).accepted);
+        std::array<std::uint32_t,15> restored{};
+        for(std::size_t i=0;i<restored.size();++i)restored[i]=static_cast<std::uint32_t>(i+1U);
+        assert(user_consumer.observe_movem_frame({1,16,0x2b562,0x80000,restored,0x2aac8}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2aa68_boundary
+            && user_consumer.checkpoint().restored_stack_address==0x80040
+            && user_consumer.checkpoint().next_jsr_address==0x2aac8
+            && user_consumer.checkpoint().next_jsr_target==0x2aa68);
+        assert(user_consumer.execute_jsr_2aa68().accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::xbios_selector_38_boundary
+            && user_consumer.checkpoint().xbios_trap_address==0x2aa72
+            && user_consumer.checkpoint().xbios_selector==0x26
+            && user_consumer.checkpoint().selector_38_pointer_argument==0x2aa42);
         assert(!user_consumer.observe_status_register(
             {1, 2, 0x2aa88, 0, eon::MillenniumAtariObservedPrivilege::user}).accepted);
 

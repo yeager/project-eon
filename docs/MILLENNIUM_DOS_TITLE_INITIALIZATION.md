@@ -319,3 +319,36 @@ It clears `$118d`, copies the proven zero word at `$1187` to `$1181`, and
 copies the immutable words `$0444/$1178` from `$1179` to `$1183/$1185`.
 Those four writes commit atomically. The return resumes at `$1bf5`, where Eon
 stops before call `$1bf5->$114e`; that callee is the next opaque boundary.
+
+The `$114e` prefix is now hash-bound through the first far dereference. Its 15
+bytes hash to
+`00c5baf9b1d28d3216e6375b48f79ace14faac8b8037e6689703c6b510941d9d`.
+It restores DS/ES from CS, selects child destination `$10dc`, and loads the
+original far pointer at `$10e0`: `$0000:$0070`. Execution stops before the two
+`MOVSW` reads at `$115d`. The typed boundary requires two external words;
+Eon does not synthesize IVT contents or the later handler installation.
+An exact typed observation may now supply those two words. The 27-byte suffix
+hashes to
+`7744cad5e7d132e889a6b64095bd9a8c0d61726b46399e549c923ffa459603ff`.
+It copies the observed words to `CS:$10dc/$10de`, atomically installs far
+pointer `CS:$11d8` at `$0000:$0070`, writes byte one at `CS:$112c`, restores
+the saved registers, and returns to caller `$1bf8`. Execution stops before
+call `$1bf8->$12a0`; no interrupt invocation or timer behavior is inferred.
+The `$12a0` callee is now entered through its 13-byte prefix (SHA-256
+`31e40c32854737bd7eb5e63cfdf1da8d6a4b592793993f02ae1eef102f0d85b4`).
+It clears DF, selects destination `CS:$1266`, loads DS=0 and SI=`$0024`, and
+stops before two far `MOVSW` reads at `$12ad`. The next typed boundary names
+exactly two external words at `$0000:$0024`; no BIOS video vector is invented.
+After that observation, the 19-byte suffix (SHA-256
+`5f72f7b8f67574d774c5ba8e480cd8257accfab90651d94836d356edbe738861`)
+copies the words to `CS:$1266/$1268` and atomically installs `CS:$126a` at
+IVT cell `$0000:$0024`. The non-mode-1 caller's next 10 bytes (SHA-256
+`a111bf870ff60815e5d9f6a8c5d3a765335dcc8d77e1b0034b185b0872a3ec4d`)
+test the established mode byte and reach call `$1c02->$1ada`. Execution stops
+before that call. That second invocation now reuses the same hash-bound `$1ada`
+callee contract: function `$0004` through INT `$91`, followed by the `$0487`
+palette routine and its sixteen individually typed BIOS INT `$10` results.
+Its exact return re-applies the mode-2 `$b800` video segment when selected,
+takes caller jump `$1c05->$1c0a`, restores DS/ES from CS, and stops before
+call `$1c0e->$135e`. The separate mode-1 palette-copy boundary at `$0fc6` is
+unchanged.

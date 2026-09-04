@@ -1,4 +1,5 @@
 #include "game_text_localization.hpp"
+#include "data/sha256.hpp"
 
 #include <cassert>
 #include <filesystem>
@@ -16,6 +17,19 @@ constexpr std::string_view mill_com_sha256 =
 }
 
 int main() {
+    // Original DOS/Amiga/ST strings are byte sequences, not necessarily
+    // seven-bit ASCII. Provenance comparison must preserve high-bit source
+    // bytes regardless of whether plain `char` is signed on the host.
+    const std::vector<std::uint8_t> legacy_encoded_text{0x80U, 0xe5U};
+    const std::string legacy_original{
+        static_cast<char>(0x80U), static_cast<char>(0xe5U)};
+    const std::string legacy_sha = eon::to_hex(eon::sha256(legacy_encoded_text));
+    const eon::GameTextDefinition legacy_definition{
+        eon::Game::deuteros, eon::Platform::amiga, "test.legacy", "TEST.BIN",
+        legacy_sha, 0, legacy_encoded_text.size(), legacy_original,
+        "Legacy text", "und"};
+    assert(eon::verify_game_text_source(legacy_definition, legacy_encoded_text));
+
     const auto definitions = eon::game_text_definitions();
     assert(!definitions.empty());
     std::set<std::string> keys;
@@ -53,6 +67,52 @@ int main() {
     auto altered = source_leaves.at("MILL.COM");
     altered[definitions.front().source_offset] ^= 1U;
     assert(!eon::verify_game_text_source(definitions.front(), altered));
+
+    const eon::Translator source_english;
+    const auto source_welcome = eon::localize_game_text_at_source(
+        eon::Game::millennium, eon::Platform::dos, "MILL.COM",
+        source_leaves.at("MILL.COM"), definitions.front().source_offset,
+        definitions.front().source_size, "en", source_english);
+    assert(source_welcome.id == definitions.front().id);
+    assert(source_welcome.displayed_text == "Welcome to Millennium.");
+
+    const auto all_launcher_text = eon::localize_all_game_text_from_source(
+        eon::Game::millennium, eon::Platform::dos, "MILL.COM",
+        source_leaves.at("MILL.COM"), "en", source_english);
+    assert(all_launcher_text.size() == 10);
+    for (std::size_t index = 1; index < all_launcher_text.size(); ++index) {
+        assert(all_launcher_text[index - 1].source_offset
+            < all_launcher_text[index].source_offset);
+    }
+
+    const auto all_celestial_text = eon::localize_all_game_text_from_source(
+        eon::Game::millennium, eon::Platform::dos, "2200AD4.BIN",
+        source_leaves.at("2200AD4.BIN"), "sv",
+        eon::Translator::from_language("sv"));
+    assert(all_celestial_text.size() == 41);
+    assert(all_celestial_text.front().language == "sv");
+    assert(all_celestial_text.front().catalog_translation_used);
+
+    bool source_rejected = false;
+    try {
+        static_cast<void>(eon::localize_game_text_at_source(
+            eon::Game::millennium, eon::Platform::dos, "MILL.COM", altered,
+            definitions.front().source_offset, definitions.front().source_size,
+            "en", source_english));
+    } catch (const std::runtime_error&) {
+        source_rejected = true;
+    }
+    assert(source_rejected);
+
+    source_rejected = false;
+    try {
+        static_cast<void>(eon::localize_all_game_text_from_source(
+            eon::Game::millennium, eon::Platform::dos, "WRONG.BIN",
+            source_leaves.at("MILL.COM"), "en", source_english));
+    } catch (const std::runtime_error&) {
+        source_rejected = true;
+    }
+    assert(source_rejected);
 #endif
 
     const eon::Translator english;

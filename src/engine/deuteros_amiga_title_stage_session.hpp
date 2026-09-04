@@ -362,6 +362,14 @@ public:
     observe_post_command_second_dispatch_destination_words(const DeuterosAmigaObservedTitleSecondDispatchDestinationWords& o) {
         return service_batch_boundary_session_.observe_post_command_second_dispatch_destination_words(o);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandServiceRoutePrefixPlan>
+    advance_post_command_service_route_prefix() { return service_batch_boundary_session_.advance_post_command_service_route_prefix(); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandServiceFirstReturnPlan>
+    observe_post_command_service_first_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_command_service_first_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandServiceSecondReturnPlan>
+    observe_post_command_service_second_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_command_service_second_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandServiceThirdReturnPlan> observe_post_command_service_third_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_command_service_third_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedWordsPlan> observe_post_command_nested_words(const DeuterosAmigaObservedTitlePostCommandNestedWords& o) { return service_batch_boundary_session_.observe_post_command_nested_words(o); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

@@ -1,5 +1,26 @@
 # Project Eon P0 work queue
 
+The Millennium DOS non-mode-1 title path now observes both external vector
+pairs and atomically installs the exact timer and video hooks. Its verified
+caller continuation enters the repeated mode call `$1c02->$1ada`. Mode one
+remains independently stopped at `$0fc6` because that requested source exceeds
+verified `TITLE.LIB`. The repeated `$1ada` call now consumes a fresh typed
+INT `$91` result and sixteen fresh typed BIOS palette results, returns through
+the caller setup, and stops before `$1c0e->$135e`. The next DOS evidence job
+is recovering that callee without inventing setup or driver behaviour.
+
+The Millennium Atari config loop now owns the first taken DBF edge and its
+iteration-one setup through `$2b5de` (hash
+`9efa7511411f3ca6698746d8bac484420a14e67e35467be2909f3647b0612034`).
+Next work must verify the iteration-one indexed word and preserve D7 loop
+termination plus the saved MOVEM/BSR return chain.
+The three DBF iterations and deterministic epilogue are now native through
+RTS. The next exact boundary is the saved-register `MOVEM.L (A7)+` at
+`$2b562`; its external frame must be typed before caller execution continues.
+The typed frame now restores all 15 registers and returns through `$2aac8`.
+The caller-connected `$2aa68` prefix is native through XBIOS selector `$26`;
+the next exact boundary is `TRAP #14` at `$2aa72`.
+
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
 when its acceptance evidence is committed; a missing capture is a boundary,
@@ -225,9 +246,17 @@ remaining `$403f4` batch; do not infer its graphics/service behavior.
 The first `$20094` graphics return now advances to `$200b0`. Continue only
 with the exact `-$198` return using the same observed library base; do not
 invent its D0 byte or descriptor effect.
-The exact `-$198` return now advances the literal descriptor setup to
-`$200f4`. Continue only with the same-library `-$1a4` return; do not infer its
-copy result or display output.
+The formerly listed `$200f4` graphics boundary is crossed through its exact
+same-library `-$1a4` return, and the caller-connected chain now includes the
+tail, command path, and both `$41bb4` merges. From authoritative boundary
+`$4051e`, the next deterministic service prefix commits seven exact effects.
+Its typed `$20e6a -> $1fb9a` return now reloads the owned selector, adds
+`$00a0`; its typed `$20e7a -> $1ff08` return then selects immutable table
+longword `$127a3980` and commits it to `$1378e`. Its typed
+`$20e96 -> $22bca` return now enters `$20ba8`; ordered observations of
+`$13008/$202bc` resolve the first loop branch. The clear-carry route stops
+before `$20bd6 -> $41a68` (D0 `$0048`, D1 `$0010`); carry/zero stops at
+`$20bea`. Continue only with the selected exact branch/call return.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
