@@ -7,6 +7,10 @@ all bytes are executable code. Original media is never copied into this
 repository; commands below stream a member directly from the user's archive.
 
 The machine-readable companion [disassembly inventory](disassembly-inventory.json)
+is additionally cross-checked by the platform-neutral
+[complete-disassembly manifest](complete-disassembly-manifest.json). See the
+[complete disassembly preservation index](COMPLETE_DISASSEMBLY.md) for its
+strict release/image/range coverage contract and reproducible verifier.
 has one row for every recognised release. Version 2 additionally records
 hash-bound source spans, load addresses, and—where the mapping is known—
 absolute entries or explicit stage-/image-relative entry offsets, plus retained
@@ -29,6 +33,28 @@ segment's bounds. It reads only the four committed JSON ledgers; it does not
 open original media, generated reports, captures, or saves.
 
 ## External report identity verification
+
+### Locally available direct-media Millennium set
+
+`tools/reproduce_millennium_disassembly.py` renders the largest complete
+Millennium images available in the normal `~/.projecteon` layout without
+requiring historical aggregate ZIP containers. It finds the Amiga and Atari
+carriers by SHA-256 rather than filename and reuses the declared DOS directory
+set. A verified 2026-09-04 run produced three external reports: DOS English
+52,240 lines (`90d3633bf887f23563d444b43fcc9c94155d34a62203ddf29d485032730d0ce5`),
+Amiga resident span 77,467 lines
+(`ed9267d4c2238bb3f9c0ab374054d47a5cbb8a11a93814206d36337ab4382be0`),
+and Atari PRG TEXT+DATA 17,519 lines
+(`0e8143c317c9682743c867a7c5e61d29aa748735c4a302667f251d67a1be03b8`).
+These identities differ from aggregate-carrier reports only where the report
+header records a different provenance path; source-span hashes remain pinned.
+
+The local set does not contain the recognised Spanish DOS carrier or the
+aggregate release containers. `MILL22A.INF` is recognised but its current
+analyzer still requires the aggregate/nested carrier form, so its 7,506-byte
+candidate remains an explicit reproduction gap. Linear completeness means
+every selected source byte was rendered, not that code/data, reachability,
+relocation, operating-system returns, or runtime load addresses were proved.
 
 The complete linear candidate reports remain outside the repository because
 they mechanically render copyrighted executable bytes. Their committed SHA-256
@@ -79,6 +105,26 @@ python3 tools/reproduce_disassembly_reports.py \
   --deuteros-amiga-disk-archive '/home/user/.projecteon/Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).zip' \
   --deuteros-atari-archive /home/user/Downloads/Deuteros-The-Next-Millennium_Atari-ST_EN.zip
 ```
+
+For a Deuteros-only preservation pass using the directly recognised archives
+in the default data collection, run `tools/reproduce_deuteros_disassembly.py`.
+It freshly renders the complete three mapped Amiga loaded spans and the mapped
+Atari ST Replicants first stage, then writes an external `index.json` containing
+only report hashes, line counts, mapped-byte totals, classification, and exact
+remaining gaps. Listings and that derived index stay outside the repository:
+
+```sh
+mkdir /home/user/.cache/project-eon-tools/deuteros-full-disassembly
+python3 tools/reproduce_deuteros_disassembly.py \
+  --output-directory /home/user/.cache/project-eon-tools/deuteros-full-disassembly \
+  --amiga-archive '/home/user/.projecteon/Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).zip' \
+  --atari-replicants-archive '/home/user/.projecteon/Deuteros (1991)(Activision)(M3)(Disk 1 of 2)[cr Replicants].zip'
+```
+
+This is complete byte coverage of every currently proven Deuteros load map,
+not proof that every decoded byte is code and not complete recovery of every
+stage on every recognised media variant. Atari stages after the first 4.5 KiB
+and independently unmapped variant images remain explicit preservation gaps.
 
 ## External static control-flow sidecars
 
