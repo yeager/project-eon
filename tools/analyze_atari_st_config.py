@@ -75,8 +75,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--archive-sha256", required=True)
-    parser.add_argument("--nested-member", required=True)
-    parser.add_argument("--nested-sha256", required=True)
+    parser.add_argument("--nested-member")
+    parser.add_argument("--nested-sha256")
     parser.add_argument("--disk-member", required=True)
     parser.add_argument("--disk-sha256", required=True)
     parser.add_argument("--file-sha256", required=True)
@@ -85,7 +85,9 @@ def main() -> None:
     output = require_external_output(args.output)
     try:
         require_sha256(args.archive_sha256, "outer archive SHA-256")
-        require_sha256(args.nested_sha256, "nested archive SHA-256")
+        if (args.nested_member is None) != (args.nested_sha256 is None):
+            raise ValueError("--nested-member and --nested-sha256 must be supplied together")
+        if args.nested_sha256: require_sha256(args.nested_sha256, "nested archive SHA-256")
         require_sha256(args.disk_sha256, "disk SHA-256")
         require_sha256(args.file_sha256, "MILL22A.INF SHA-256")
         if not args.archive.is_file() or args.archive.is_symlink():
@@ -93,11 +95,11 @@ def main() -> None:
         if sha256_file(args.archive) != args.archive_sha256:
             raise ValueError("outer archive SHA-256 mismatch")
         with ZipFile(args.archive) as outer:
-            nested = outer.read(args.nested_member)
-        if hashlib.sha256(nested).hexdigest() != args.nested_sha256:
-            raise ValueError("nested archive SHA-256 mismatch")
-        with ZipFile(BytesIO(nested)) as inner:
-            disk = inner.read(args.disk_member)
+            if args.nested_member is None: disk = outer.read(args.disk_member)
+            else:
+                nested = outer.read(args.nested_member)
+                if hashlib.sha256(nested).hexdigest() != args.nested_sha256: raise ValueError("nested archive SHA-256 mismatch")
+                with ZipFile(BytesIO(nested)) as inner: disk = inner.read(args.disk_member)
     except (KeyError, OSError, ValueError) as error:
         raise SystemExit(f"unable to read exact nested Atari ST disk: {error}") from error
     config = fat12_member(disk, "MILL22A.INF")
@@ -107,9 +109,9 @@ def main() -> None:
         raise SystemExit("exact Atari ST disk or MILL22A.INF SHA-256 mismatch")
     report = [
         "# Hash-locked Millennium Atari ST MILL22A.INF linear candidate disassembly", "",
-        f"- Source: `{args.archive.name}!{args.nested_member}!{args.disk_member}:MILL22A.INF`",
+        f"- Source: `{args.archive.name}!" + (f"{args.nested_member}!" if args.nested_member else "") + f"{args.disk_member}:MILL22A.INF`",
         f"- Outer archive SHA-256: `{args.archive_sha256}`",
-        f"- Nested archive SHA-256: `{args.nested_sha256}`",
+        *([f"- Nested archive SHA-256: `{args.nested_sha256}`"] if args.nested_sha256 else []),
         f"- Disk SHA-256: `{disk_hash}`",
         f"- File SHA-256: `{config_hash}`",
         f"- File bytes: `{len(config)}`",

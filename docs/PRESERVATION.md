@@ -1947,6 +1947,13 @@ rotate; Project Eon models that operand width explicitly.
 
 That track-2 interval has SHA-256
 `2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
+The complete-disassembly inventory now records it as a separate executable
+image: disk offset `$4800`, length `$1200`, load address and entry `$70000`.
+The `$70000` value is therefore a runtime destination, not a disk offset. A
+fresh external byte-complete linear listing has 1,547 lines and SHA-256
+`59bbbb22f803004b69d62d23ce5a5a455dcd9b781c9551882d28a43712be6555`.
+This listing is candidate classification only; it does not prove that every
+byte is reachable code or provide any XBIOS result.
 The SDL Atari ST launch path now creates a bounded session for this exact
 Replicants Disk 1: it reads those two original raw ranges in memory, verifies
 both hashes and the first-stage checksum, then records the second-stage

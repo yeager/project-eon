@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -11,6 +12,19 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def _generate_candidates(releases: dict, inventory: dict) -> dict:
+    path = ROOT / "tools" / "generate_disassembly_candidate_inventory.py"
+    spec = importlib.util.spec_from_file_location("eon_disassembly_candidates", path)
+    if spec is None or spec.loader is None:
+        raise ManifestError("unable to load disassembly candidate generator")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        return module.generate(releases, inventory)
+    except (KeyError, ValueError) as error:
+        raise ManifestError(f"unable to derive scanner candidates: {error}") from error
 
 
 class ManifestError(ValueError):
@@ -71,7 +85,11 @@ def verify(manifest: dict, inventory: dict, releases: dict) -> dict:
     if set(manifest_by_release) != set(recognized) or set(inventory_by_release) != set(recognized):
         raise ManifestError("recognized release set is not enumerated exactly once")
 
-    image_count = range_count = byte_count = 0
+    generated_candidates = {
+        row["release_sha256"]: row["candidates"]
+        for row in _generate_candidates(releases, inventory)["releases"]
+    }
+    image_count = range_count = byte_count = mapped_candidates = unmapped_candidates = 0
     for release_hash, release in recognized.items():
         declared = manifest_by_release[release_hash]
         inv = inventory_by_release[release_hash]
@@ -88,6 +106,19 @@ def verify(manifest: dict, inventory: dict, releases: dict) -> dict:
             raise ManifestError(f"{release_hash} executable/code image set differs from inventory")
         if not images and not declared.get("unmapped_boundary"):
             raise ManifestError(f"{release_hash} has neither images nor an explicit unmapped boundary")
+        candidates = generated_candidates[release_hash]
+        generated_unmapped = sorted(row["profile_id"] for row in candidates
+                                    if row["status"] == "discovered-unmapped")
+        declared_unmapped = declared.get("discovered_unmapped_profile_ids")
+        if not isinstance(declared_unmapped, list) or sorted(declared_unmapped) != generated_unmapped:
+            raise ManifestError(f"{release_hash} discovered-unmapped candidate set differs from scanner ledgers")
+        for candidate in candidates:
+            if candidate["status"] == "mapped":
+                if not candidate["mapped_span_ids"] or not set(candidate["mapped_span_ids"]) <= set(manifest_images):
+                    raise ManifestError(f"{candidate['profile_id']} mapped candidate is detached from an image")
+                mapped_candidates += 1
+            else:
+                unmapped_candidates += 1
         for span_id, image in manifest_images.items():
             span = inventory_images[span_id]
             if image.get("source_sha256") != span.get("leaf_sha256") or not SHA256.fullmatch(str(image.get("source_sha256", ""))):
@@ -117,14 +148,17 @@ def verify(manifest: dict, inventory: dict, releases: dict) -> dict:
             range_count += len(declared_ranges)
             byte_count += sum(end - start for start, end in declared_ranges)
     return {"releases": len(recognized), "images": image_count,
-            "ranges": range_count, "bytes": byte_count}
+            "ranges": range_count, "bytes": byte_count,
+            "mapped_candidates": mapped_candidates,
+            "unmapped_candidates": unmapped_candidates}
 
 
 def render_index(manifest: dict, totals: dict) -> str:
     lines = ["# Complete disassembly preservation index", "",
              (f"Verified coverage: {totals['releases']} recognized releases, "
               f"{totals['images']} code images, {totals['ranges']} source ranges, "
-              f"{totals['bytes']} bytes."), "",
+              f"{totals['bytes']} bytes; {totals['mapped_candidates']} mapped and "
+              f"{totals['unmapped_candidates']} discovered-unmapped scanner candidates."), "",
              "Raw disassembly listings remain outside the repository.", ""]
     for release in manifest["releases"]:
         label = f"{release['game']} / {release['platform']} / {release['language']}"
@@ -135,6 +169,8 @@ def render_index(manifest: dict, totals: dict) -> str:
                 lines.append(f"- `{image['span_id']}` — {image['architecture']}, {image['address_basis']}")
         else:
             lines.append(f"- Unmapped preservation boundary: {release['unmapped_boundary']}")
+        for profile_id in release["discovered_unmapped_profile_ids"]:
+            lines.append(f"- Discovered but unmapped: `{profile_id}`")
         lines.append("")
     return "\n".join(lines)
 
