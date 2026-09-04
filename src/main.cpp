@@ -594,6 +594,7 @@ struct ModernRuntimeDiagnostics {
     std::string millennium_dos_static_dispatch;
     std::string millennium_dos_owned_function;
     std::string deuteros_amiga_title_dependency_chain;
+    std::string native_code_images;
     // This comes only from the launcher preflight object. It does not expose
     // a local path, decode an external asset, or imply the renderer loaded it.
     std::string modern_pack = "NOT SELECTED";
@@ -990,6 +991,7 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     const std::optional<eon::MillenniumDosNativeProcessCheckpoint>& millennium_process,
     const std::optional<eon::DeuterosAtariBootstrapCheckpoint>& atari_checkpoint,
     const std::optional<eon::DeuterosAmigaTitleDependencyChainCheckpoint>& deuteros_title_chain,
+    const eon::NativeCodeImageRegistryDiagnostics& code_images,
     const eon::Presentation presentation,
     const eon::DisplayPreferences& display, const std::string_view aspect_identifier) {
     const auto diagnostics = eon::runtime_diagnostics_for_release(launch.release);
@@ -1105,6 +1107,25 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
         if(owned_function->boundary.call_target) write_json_string(std::cout,hex(*owned_function->boundary.call_target)); else std::cout << "null";
         std::cout << "}}";
     } else std::cout << "null";
+    std::cout << ",\"native_code_images\":{\"mapped_descriptors\":"
+        << code_images.mapped_descriptor_count << ",\"excluded_images\":"
+        << code_images.excluded_image_count << ",\"active\":";
+    if (code_images.active) {
+        std::cout << "{\"image_id\":";
+        write_json_string(std::cout, code_images.active->image_id);
+        std::cout << ",\"range_id\":";
+        write_json_string(std::cout, code_images.active->range_id);
+        std::cout << ",\"address_basis\":";
+        write_json_string(std::cout,
+            eon::native_code_address_basis_label(code_images.active->address_basis));
+        std::cout << ",\"load_status\":";
+        write_json_string(std::cout,
+            eon::native_code_load_status_label(code_images.active->load_status));
+        std::cout << '}';
+    } else {
+        std::cout << "null";
+    }
+    std::cout << '}';
     std::cout << ",\"deuteros_amiga_title_dependency_chain\":";
     if (deuteros_title_chain) {
         const auto& chain = *deuteros_title_chain;
@@ -1499,7 +1520,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
             + (diagnostics.millennium_dos_owned_function.empty() ? ""
                 : " / " + diagnostics.millennium_dos_owned_function)
             + (diagnostics.deuteros_amiga_title_dependency_chain.empty() ? ""
-                : " / " + diagnostics.deuteros_amiga_title_dependency_chain)},
+                : " / " + diagnostics.deuteros_amiga_title_dependency_chain)
+            + (diagnostics.native_code_images.empty() ? ""
+                : " / " + diagnostics.native_code_images)},
         {"MODERN PACK", diagnostics.modern_pack},
         {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -4326,6 +4349,7 @@ int main(int argc, char** argv) {
                 runtime.millennium_dos_native_process_checkpoint(),
                 runtime.deuteros_atari_bootstrap_checkpoint(),
                 runtime.deuteros_amiga_title_dependency_chain_checkpoint(),
+                runtime.native_code_image_registry_diagnostics(),
                 request.presentation, request.display,
                 display_aspect_identifiers.at(request.display.aspect_ratio_index));
             return 0;
@@ -5195,6 +5219,21 @@ int main(int argc, char** argv) {
                 << " S4=" << (chain->fourth_service_local_plan ? "Y" : "N")
                 << " S5=" << (chain->fifth_service_local_plan ? "Y" : "N");
             diagnostics.deuteros_amiga_title_dependency_chain = summary.str();
+        }
+        {
+            const auto images = runtime.native_code_image_registry_diagnostics();
+            std::ostringstream summary;
+            summary << "CODE IMAGES=" << images.mapped_descriptor_count
+                << " / EXCLUDED=" << images.excluded_image_count;
+            if (images.active) {
+                summary << " / ACTIVE=" << images.active->image_id
+                    << ':' << images.active->range_id
+                    << " / " << eon::native_code_address_basis_label(images.active->address_basis)
+                    << " / " << eon::native_code_load_status_label(images.active->load_status);
+            } else {
+                summary << " / ACTIVE=NONE";
+            }
+            diagnostics.native_code_images = summary.str();
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");

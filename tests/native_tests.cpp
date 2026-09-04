@@ -11,6 +11,7 @@
 #include "engine/menu_runtime_launch.hpp"
 #include "engine/native_session_controller.hpp"
 #include "engine/runtime_host.hpp"
+#include "engine/native_code_image_diagnostics.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
@@ -1093,6 +1094,12 @@ int main() {
             && mode_two_checkpoint.entry->source_instruction==0x0c4b
             && mode_two_checkpoint.entry->target_address==0x11f7
             && !mode_two_checkpoint.returned);
+        assert(!mode_two.observe_return({40,0x12cb,0xd40d}).accepted);
+        assert(!mode_two.observe_return({41,0x12cb,0}).accepted);
+        assert(mode_two.observe_return({41,0x12cb,0xd40d}).accepted);
+        eon::MillenniumDosExternalTransferAdmission transformed_mode_two(eon::MillenniumDosExternalTransferKind::bdf_mode_two_jump);
+        assert(transformed_mode_two.observe_entry({50,0x0c4b,0x11f7}).accepted);
+        assert(transformed_mode_two.observe_return({51,0x129c,0xd40d}).accepted);
 
         eon::MillenniumDosExternalTransferAdmission other_mode(
             eon::MillenniumDosExternalTransferKind::bdf_other_mode_jump);
@@ -1102,6 +1109,31 @@ int main() {
         assert(!other_mode.observe_return({51,0x0caa,0xd40d}).accepted);
         assert(other_mode.checkpoint().entry
             && !other_mode.checkpoint().returned);
+    }
+    {
+        const auto empty = eon::native_code_image_registry_diagnostics(std::nullopt);
+        assert(empty.mapped_descriptor_count == 13);
+        assert(empty.excluded_image_count == 7);
+        assert(!empty.active);
+
+        eon::ResolvedLaunchRequest launch;
+        launch.release.game = eon::Game::millennium;
+        launch.release.platform = eon::Platform::dos;
+        launch.release.language = "en";
+        launch.release.sha256 =
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
+        const auto title = eon::native_code_image_registry_diagnostics(
+            eon::make_runtime_session_snapshot(launch, eon::RuntimeSessionKind::millennium_dos_title));
+        assert(title.active);
+        assert(title.active->image_id == "millennium-dos-titles-exe-linear");
+        assert(title.active->range_id == "millennium-dos-title-flow");
+        assert(title.active->address_basis == eon::NativeCodeAddressBasis::dos_com_linear_0x100);
+        assert(title.active->load_status == eon::NativeCodeLoadStatus::address_basis_declared);
+
+        launch.release.sha256.assign(64, '0');
+        const auto detached = eon::native_code_image_registry_diagnostics(
+            eon::make_runtime_session_snapshot(launch, eon::RuntimeSessionKind::millennium_dos_title));
+        assert(!detached.active);
     }
     {
         eon::ResolvedLaunchRequest launch;
@@ -6442,7 +6474,14 @@ int main() {
         assert(!active_trace_gate.millennium_dos_fifth_function_checkpoint());
         eon::RuntimeHost revoking_trace_host;
         assert(revoking_trace_host.launch_direct(controlled_dos_request, releases).accepted());
+        const auto active_code_image = revoking_trace_host.native_code_image_registry_diagnostics();
+        assert(active_code_image.active
+            && active_code_image.active->image_id == "millennium-dos-titles-exe-linear");
         revoking_trace_host.begin_source_revocation();
+        const auto revoking_code_image = revoking_trace_host.native_code_image_registry_diagnostics();
+        assert(revoking_code_image.mapped_descriptor_count == 13
+            && revoking_code_image.excluded_image_count == 7
+            && !revoking_code_image.active);
         const auto revoking_trace_admission =
             revoking_trace_host.admit_active_millennium_dos_gx_startup_reference_trace(runtime_trace);
         assert(!revoking_trace_admission.accepted
@@ -6533,6 +6572,7 @@ int main() {
         assert(!revoking_trace_host.observe_millennium_dos_bdf_poll_return({0x0c0a,0x0c0d,0,0}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_bdf_external_return({0x0be6,0xd40d,3}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_bdf_terminal_jump({0x0c4b,0x11f7,4}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_bdf_mode_two_external_return({0x12cb,0xd40d,5}).accepted);
         assert(!revoking_trace_host.millennium_dos_bdf_checkpoint());
         assert(!revoking_trace_host.observe_millennium_dos_ninth_function_word(
             {0x7339, 0xa19e, 0}).accepted);
@@ -10737,6 +10777,37 @@ int main() {
     assert(repeated_graphics->next_graphics_vector == -0x1a4);
     assert(repeated_graphics->next_graphics_return_address == 0x200f8);
     assert(repeated_graphics->stop_before_address == 0x200f4);
+    bool rejected_repeated_wrapper = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_repeated_wrapper_graphics_return(
+            {35, 0x12fec, 0x00abcdef, 0x200f4, -0x1a4, 0x200fa,
+                0x50607080, 0x2028}));
+    } catch (const std::runtime_error&) {
+        rejected_repeated_wrapper = true;
+    }
+    assert(rejected_repeated_wrapper);
+    const auto repeated_wrapper =
+        title_stage_session.observe_tail_repeated_wrapper_graphics_return(
+            {35, 0x12fec, 0x00abcdef, 0x200f4, -0x1a4, 0x200f8,
+                0x50607080, 0x2028});
+    assert(repeated_wrapper);
+    assert(repeated_wrapper->observed_return.result_d0 == 0x50607080);
+    assert(repeated_wrapper->observed_return.result_sr == 0x2028);
+    assert(repeated_wrapper->generation == 2);
+    assert(repeated_wrapper->wrapper_rts_address == 0x200f8);
+    assert(repeated_wrapper->tail_caller_resume_address == 0x2021a);
+    assert(repeated_wrapper->tail_rts_address == 0x2021c);
+    assert(repeated_wrapper->batch_third_return_address == 0x40406);
+    assert(repeated_wrapper->batch_fourth_call_address == 0x40406);
+    assert(repeated_wrapper->batch_fourth_call_target == 0x40698);
+    assert(repeated_wrapper->batch_fourth_return_address == 0x4040c);
+    assert(repeated_wrapper->batch_rts_address == 0x4040c);
+    assert(repeated_wrapper->batch_caller_resume_address == 0x404d4);
+    assert(repeated_wrapper->unresolved_read_address == 0x404da);
+    assert(repeated_wrapper->unresolved_read_source == 0x12ff4);
+    assert(repeated_wrapper->stop_before_address == 0x404da);
+    assert(!title_stage_session.observe_tail_repeated_wrapper_graphics_return(
+        {36, 0x12fec, 0x00abcdef, 0x200f4, -0x1a4, 0x200f8, 0, 0}));
     assert(!title_stage_session.observe_tail_repeated_graphics_return(
         {35, 0x12fec, 0x00abcdef, 0x201b6, -0x1aa, 0x201ba, 0, 0}));
     assert(!title_stage_session.observe_tail_repeated_selection_words(

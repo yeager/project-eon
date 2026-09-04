@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/native_session_controller.hpp"
+#include "engine/native_code_image_diagnostics.hpp"
 
 #include <cstdint>
 
@@ -59,6 +60,7 @@ public:
     [[nodiscard]] ReleaseRuntimeAdmission admission() const;
     [[nodiscard]] ReleaseRuntimeRejection rejection() const;
     [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
+    [[nodiscard]] NativeCodeImageRegistryDiagnostics native_code_image_registry_diagnostics() const;
 
     [[nodiscard]] std::optional<MillenniumDosPresentationSnapshot>
     millennium_dos_presentation() const;
@@ -149,6 +151,7 @@ public:
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_mode_two_byte(MillenniumDosBdfByteObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_mode_two_word(MillenniumDosBdfWordObservation);
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_mode_two_far_word(MillenniumDosBdfModeTwoFarWordObservation);
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_mode_two_far_byte(MillenniumDosBdfModeTwoFarByteObservation);
+    [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_mode_two_external_return(MillenniumDosBdfExternalReturnObservation);
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics> millennium_dos_owned_function_diagnostics() const;
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
