@@ -7,6 +7,7 @@
 #include "data/sha256.hpp"
 #include "data/fat12.hpp"
 #include "data/function_map.hpp"
+#include "data/native_code_image_admission.hpp"
 #include "data/millennium_dos_bitmap.hpp"
 #include "data/millennium_dos_gameplay_screen.hpp"
 #include "data/millennium_dos_lib.hpp"
@@ -132,16 +133,15 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     }
     if (millennium_dos && launch.release.game == Game::millennium
         && launch.release.platform == Platform::dos && launch.release.language == "en") {
-        constexpr std::string_view game_sha256 =
-            "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
-        const auto game = media->borrow(game_sha256);
-        if (!game) {
+        const auto game = admit_native_code_image(*media,
+            "millennium-dos-2200ad-exe-linear", "millennium-dos-game-flow");
+        if (!game.accepted()) {
             admission_ = ReleaseRuntimeAdmission::adapter_rejected;
             rejection_ = ReleaseRuntimeRejection::adapter_construction;
             return false;
         }
         auto prepared = MillenniumDosNativeProcessAdmission::startup(
-            launch.release.sha256, *game);
+            launch.release.sha256, game.view->bytes);
         const auto checkpoint = prepared.checkpoint();
         if (!checkpoint || !checkpoint->static_recovery_entry
             || checkpoint->recovery_entry != MillenniumDosNativeRecoveryEntry::startup
@@ -1091,8 +1091,9 @@ MillenniumDosBdfObservationResult ReleaseRuntimeCoordinator::observe_millennium_
 #define EON_BDF_MODE_TWO_FORWARD(name,type,body) MillenniumDosBdfObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosBdfObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_terminal_transfer_||!millennium_dos_bdf_mode_two_){r.error="No active $11f7 continuation";return r;}try{millennium_dos_bdf_mode_two_->body;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
 EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_byte,MillenniumDosBdfByteObservation,observe_runtime_byte(o.instruction_address,o.runtime_address,o.value))
 EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_word,MillenniumDosBdfWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value))
+EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_far_word,MillenniumDosBdfModeTwoFarWordObservation,observe_far_word(o.instruction_address,o.segment,o.offset,o.value))
 #undef EON_BDF_MODE_TWO_FORWARD
-std::optional<MillenniumDosBdfCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_bdf_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_service_||!millennium_dos_second_function_callback_transfer_)return std::nullopt;const auto&s=*millennium_dos_bdf_service_;std::optional<MillenniumDosBdfModeTwoCheckpoint>m;if(millennium_dos_bdf_mode_two_){const auto&x=*millennium_dos_bdf_mode_two_;m=MillenniumDosBdfModeTwoCheckpoint{x.state(),x.boundary(),x.far_effects()};}return MillenniumDosBdfCheckpoint{s.state(),s.boundary(),s.effects(),s.far_memory_effects(),millennium_dos_second_function_callback_transfer_->checkpoint(),millennium_dos_bdf_terminal_transfer_?std::optional{millennium_dos_bdf_terminal_transfer_->checkpoint()}:std::nullopt,m};}
+std::optional<MillenniumDosBdfCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_bdf_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_service_||!millennium_dos_second_function_callback_transfer_)return std::nullopt;const auto&s=*millennium_dos_bdf_service_;std::optional<MillenniumDosBdfModeTwoCheckpoint>m;if(millennium_dos_bdf_mode_two_){const auto&x=*millennium_dos_bdf_mode_two_;m=MillenniumDosBdfModeTwoCheckpoint{x.state(),x.boundary(),x.far_effects(),x.runtime_effects()};}return MillenniumDosBdfCheckpoint{s.state(),s.boundary(),s.effects(),s.far_memory_effects(),millennium_dos_second_function_callback_transfer_->checkpoint(),millennium_dos_bdf_terminal_transfer_?std::optional{millennium_dos_bdf_terminal_transfer_->checkpoint()}:std::nullopt,m};}
 
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
@@ -1631,6 +1632,11 @@ std::unique_ptr<DeuterosAmigaOpening> load_deuteros_amiga_runtime(const Verified
     constexpr auto clean_system_adf = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
     constexpr auto clean_data_adf = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a";
     try {
+        const auto main_stage = admit_native_code_image(media,
+            "deuteros-amiga-clean-loaded-spans", "deuteros-amiga-clean-main-stage");
+        const auto title_stage = admit_native_code_image(media,
+            "deuteros-amiga-clean-loaded-spans", "deuteros-amiga-clean-title-handoff");
+        if (!main_stage.accepted() || !title_stage.accepted()) return {};
         const auto system_image = media.extract(clean_system_adf);
         const auto data_image = media.extract(clean_data_adf);
         return system_image && data_image
@@ -1649,6 +1655,13 @@ std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(const
     if (release.game != Game::deuteros || release.platform != Platform::atari_st || release.language != "en") return {};
     constexpr auto disk = "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
     try {
+        const auto first_stage = admit_native_code_image(media,
+            "deuteros-atari-replicants-first-stage-linear",
+            "deuteros-atari-replicants-first-stage");
+        const auto second_stage = admit_native_code_image(media,
+            "deuteros-atari-replicants-second-stage-linear",
+            "deuteros-atari-replicants-second-stage");
+        if (!first_stage.accepted() || !second_stage.accepted()) return {};
         const auto image = media.extract(disk);
         return image ? std::make_unique<DeuterosAtariBootstrapSession>(std::move(*image)) : nullptr;
     } catch (...) { return {}; }

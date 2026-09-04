@@ -6908,6 +6908,12 @@ int main() {
         assert(mode_two.state()==eon::MillenniumDosBdfModeTwoState::returned&&mode_two.boundary().instruction_address==0x12cb&&mode_two.far_effects().size()==64);
         assert((mode_two.far_effects().front()==eon::MillenniumDosBdfModeTwoFarEffect{0x12af,0xa000,0x6100,0x4000}));
         assert(mode_two.far_effects()[4].offset==0x01a0&&mode_two.far_effects().back().value==0x403f);
+        eon::MillenniumDosBdfModeTwoSession nonzero_mode_two(*game_executable,0x6100);
+        nonzero_mode_two.observe_runtime_byte(0x11f7,0x07d8,1);
+        nonzero_mode_two.observe_runtime_word(0x1203,0x0107,0xa000);
+        for(std::uint16_t row=0;row<16;++row)for(std::uint16_t word=0;word<4;++word){const auto offset=nonzero_mode_two.boundary().runtime_address;nonzero_mode_two.observe_far_word(0x1218,0xa000,offset,std::uint16_t(0x5000+row*4+word));}
+        assert(nonzero_mode_two.state()==eon::MillenniumDosBdfModeTwoState::transform_boundary&&nonzero_mode_two.boundary().instruction_address==0x1237);
+        assert(nonzero_mode_two.runtime_effects().size()==64&&nonzero_mode_two.runtime_effects().front().runtime_address==0x07fa&&nonzero_mode_two.runtime_effects().back().runtime_address==0x0878&&nonzero_mode_two.runtime_effects().back().value==0x503f);
         eon::MillenniumDosExternalTransferAdmission busy_transfer(eon::MillenniumDosExternalTransferKind::f2_tail_active_return);
         assert(busy_transfer.observe_entry({40,0x7253,0x0bdf}).accepted);
         assert(busy_transfer.observe_return({41,busy_bdf.boundary().instruction_address,0xcafe}).accepted);
@@ -10588,18 +10594,18 @@ int main() {
     assert(tail_first_graphics->restored_a6_value == 0x1f372);
     assert(tail_first_graphics->destination_base == 0x1ffc8);
     assert(tail_first_graphics->source_address == 0x1f372);
-    assert(tail_first_graphics->copy_instruction_address == 0x201e6);
-    assert(tail_first_graphics->stop_before_address == 0x201e6);
+    assert(tail_first_graphics->copy_instruction_address == 0x201e4);
+    assert(tail_first_graphics->stop_before_address == 0x201e4);
     bool rejected_tail_words = false;
     try {
         static_cast<void>(title_stage_session.observe_tail_copy_words(
-            {30, 0x201e6, 0x1f374, {{1, 2, 3, 4}}}));
+            {30, 0x201e4, 0x1f374, {{1, 2, 3, 4}}}));
     } catch (const std::runtime_error&) {
         rejected_tail_words = true;
     }
     assert(rejected_tail_words);
     const auto tail_words = title_stage_session.observe_tail_copy_words(
-        {30, 0x201e6, 0x1f372, {{0x1111, 0x2222, 0x3333, 0x4444}}});
+        {30, 0x201e4, 0x1f372, {{0x1111, 0x2222, 0x3333, 0x4444}}});
     assert(tail_words);
     assert((tail_words->destination_addresses
         == std::array<std::uint32_t, 4>{{0x1ffca, 0x1ffcc, 0x1ffd0, 0x1ffd2}}));
@@ -10614,8 +10620,71 @@ int main() {
     assert(tail_words->unresolved_read_address == 0x20118);
     assert(tail_words->unresolved_read_source == 0x1ffc8);
     assert(tail_words->stop_before_address == 0x20118);
+    constexpr std::array<std::uint32_t, 8> tail_selection_sources{{
+        0x1ffc8, 0x1ee10, 0x1ffca, 0x1ffcc,
+        0x1ffce, 0x1ee12, 0x1ffd0, 0x1ffd2}};
+    bool rejected_tail_selection = false;
+    try {
+        auto wrong_sources = tail_selection_sources;
+        wrong_sources[1] = 0x1ee14;
+        static_cast<void>(title_stage_session.observe_tail_selection_words(
+            {31, 0x20118, wrong_sources,
+                {{0x20, 0xffff, 0x18, 0x40, 0x30, 1, 0x10, 0x30}}}));
+    } catch (const std::runtime_error&) {
+        rejected_tail_selection = true;
+    }
+    assert(rejected_tail_selection);
+    const auto tail_selection = title_stage_session.observe_tail_selection_words(
+        {31, 0x20118, tail_selection_sources,
+            {{0x20, 0xffff, 0x18, 0x40, 0x30, 1, 0x10, 0x30}}});
+    assert(tail_selection);
+    assert((tail_selection->selected_words
+        == std::array<std::uint16_t, 2>{{0x1f, 0x30}}));
+    assert((tail_selection->destination_addresses
+        == std::array<std::uint32_t, 2>{{0x1ffc8, 0x1ffce}}));
+    assert(tail_selection->graphics_d0 == 7);
+    assert(tail_selection->graphics_d1 == 0x2a);
+    assert(tail_selection->a0_value == 0x12e12);
+    assert(tail_selection->a1_value == 0x1ffda);
+    assert(tail_selection->library_base_source_address == 0x12fec);
+    assert(tail_selection->next_call_address == 0x201b6);
+    assert(tail_selection->next_vector == -0x1aa);
+    assert(tail_selection->next_return_address == 0x201ba);
+    assert(tail_selection->stop_before_address == 0x201b6);
+    bool rejected_tail_second_graphics = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_second_graphics_return(
+            {32, 0x12fec, 0x00abcdee, 0x201b6, -0x1aa, 0x201ba,
+                0x99aabbcc, 0x2020}));
+    } catch (const std::runtime_error&) {
+        rejected_tail_second_graphics = true;
+    }
+    assert(rejected_tail_second_graphics);
+    const auto tail_second_graphics =
+        title_stage_session.observe_tail_second_graphics_return(
+            {32, 0x12fec, 0x00abcdef, 0x201b6, -0x1aa, 0x201ba,
+                0x99aabbcc, 0x2020});
+    assert(tail_second_graphics);
+    assert(tail_second_graphics->observed_return.result_d0 == 0x99aabbcc);
+    assert(tail_second_graphics->observed_return.result_sr == 0x2020);
+    assert(tail_second_graphics->register_restore_address == 0x201ba);
+    assert(tail_second_graphics->wrapper_rts_address == 0x201be);
+    assert(tail_second_graphics->caller_resume_address == 0x20202);
+    assert((tail_second_graphics->literal_destination_addresses
+        == std::array<std::uint32_t, 2>{{0x1ee12, 0x1ee10}}));
+    assert((tail_second_graphics->literal_values
+        == std::array<std::uint16_t, 2>{{1, 1}}));
+    assert(tail_second_graphics->next_call_address == 0x20212);
+    assert(tail_second_graphics->next_call_target == 0x20118);
+    assert(tail_second_graphics->unresolved_read_address == 0x20118);
+    assert(tail_second_graphics->unresolved_read_source == 0x1ffc8);
+    assert(tail_second_graphics->stop_before_address == 0x20118);
+    assert(!title_stage_session.observe_tail_second_graphics_return(
+        {33, 0x12fec, 0x00abcdef, 0x201b6, -0x1aa, 0x201ba, 0, 0}));
+    assert(!title_stage_session.observe_tail_selection_words(
+        {32, 0x20118, tail_selection_sources, {{0, 0, 0, 0, 0, 0, 0, 0}}}));
     assert(!title_stage_session.observe_tail_copy_words(
-        {31, 0x201e6, 0x1f372, {{0, 0, 0, 0}}}));
+        {33, 0x201e4, 0x1f372, {{0, 0, 0, 0}}}));
     assert(!title_stage_session.observe_tail_first_graphics_return(
         {30, 0x12fec, 0x00abcdef, 0x20112, -0x1a4, 0x20116, 0, 0}));
     assert(!title_stage_session.observe_graphics_service_second_return(
