@@ -618,6 +618,50 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().memory_effects.size()==18941
         &&other_success.checkpoint().memory_effects.back().offset==0x010a
         &&other_success.checkpoint().memory_effects.back().value==0xb800);
+    other_success.execute_post_video_setup(80,0x1c0e,0x135e);
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_graphics_call_boundary
+        &&other_success.checkpoint().continuation_address==0x1c11
+        &&other_success.checkpoint().memory_effects.size()==18944
+        &&other_success.checkpoint().memory_effects[18941].offset==0x1341
+        &&other_success.checkpoint().memory_effects[18941].value==0
+        &&other_success.checkpoint().memory_effects[18942].offset==0x1343
+        &&other_success.checkpoint().memory_effects[18942].value==0x5000
+        &&other_success.checkpoint().memory_effects[18943].offset==0x134b
+        &&other_success.checkpoint().memory_effects[18943].value==0x2468);
+    bool detached_post_video_setup_rejected=false;
+    try {
+        other_success.execute_post_video_setup(81,0x1c0e,0x135f);
+    } catch(const std::runtime_error&) { detached_post_video_setup_rejected=true; }
+    assert(detached_post_video_setup_rejected
+        &&other_success.checkpoint().memory_effects.size()==18944);
+    auto detached_graphics=other_success;
+    bool detached_graphics_rejected=false;
+    try {
+        detached_graphics.execute_post_video_graphics_call(81,0x1c11,0x0ff4);
+    } catch(const std::runtime_error&) { detached_graphics_rejected=true; }
+    assert(detached_graphics_rejected
+        &&detached_graphics.checkpoint().memory_effects.size()==18944);
+    other_success.execute_post_video_graphics_call(81,0x1c11,0x0ff3);
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
+        &&other_success.checkpoint().continuation_address==0x0127
+        &&other_success.checkpoint().boundary.call_address==0x1000
+        &&other_success.checkpoint().boundary.function==0x0019
+        &&other_success.checkpoint().boundary.record_offset==0x0fe9
+        &&other_success.checkpoint().memory_effects.size()==18945
+        &&other_success.checkpoint().memory_effects.back().offset==0x0ff1
+        &&other_success.checkpoint().memory_effects.back().value==0x2468);
+    other_success.observe_private_interrupt_result({82,0x0127,0x0129,0xabcd,0x0246});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_followup_call_boundary
+        &&other_success.checkpoint().continuation_address==0x1c17
+        &&other_success.checkpoint().post_video_observed_ax==0xabcd
+        &&other_success.checkpoint().post_video_observed_flags==0x0246
+        &&other_success.checkpoint().observed_ax==0x02ff);
+    other_success.execute_post_video_followup(83,0x1c17,0x1725);
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
+        &&other_success.checkpoint().continuation_address==0x13aa
+        &&other_success.checkpoint().far_read_boundary.instruction_address==0x13aa
+        &&other_success.checkpoint().far_read_boundary.word_count==2
+        &&other_success.checkpoint().far_read_boundary.destination_offset==0x138c);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

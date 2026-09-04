@@ -352,3 +352,22 @@ Its exact return re-applies the mode-2 `$b800` video segment when selected,
 takes caller jump `$1c05->$1c0a`, restores DS/ES from CS, and stops before
 call `$1c0e->$135e`. The separate mode-1 palette-copy boundary at `$0fc6` is
 unchanged.
+The 42-byte `$135e` callee (file `+$125e`, SHA-256
+`c35f93db0d58443d76374684ed2c54ce78ddb7fc8e01ffa809026382450b4868`)
+selects the already-owned second DOS allocation for non-mode-1, stores its
+far pointer at `CS:$1341/$1343`, stores CS at `$134b`, restores DS, and
+returns. The `$0ff3` request prefix (16 bytes, SHA-256
+`d17cc200504c832c3062e1c6951c753a8819c0fd1255b7273c28b3fcf1f3e363`)
+atomically writes CS into request record `CS:$0fe9`, selects function `$0019`,
+and enters the common `$0122` wrapper. Execution stops at the typed INT `$91`
+result boundary `$0127`; no graphics/setup result is inferred. A fresh typed
+raw AX/FLAGS result now returns through `$0129` and `$1003`, while retaining
+the original startup result independently. The caller then loads AX=0 and
+stops before `$1c17->$1725`.
+The `$1725` caller prefix and `$1390` callee prefix are now separately
+hash-bound (`646ada76ab8f0b370cd3e1f3001cf2e21a5105bbcf650cf6239bf801853754dd`
+and `f6be40d902e1d36bd640df417e6a3b8e813b4fce0c7bbf7801a33ae44d60a897`).
+For AX=0, the verified entry count admits the route, the owned relocated
+directory and allocation pointers establish DS:SI and ES:DI, and execution
+stops before two external words are read at `$13aa`. The typed boundary names
+that exact far source; no descriptor contents are synthesized.

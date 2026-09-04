@@ -3181,7 +3181,7 @@ int main() {
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-post-command-service-prefix"
-            && entry.runtime_status == "native nested first-loop branch boundary";
+            && entry.runtime_status == "native selector-5c dispatch setup";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
@@ -4364,6 +4364,10 @@ int main() {
     assert(english_dos_runtime->sound_blaster_driver && english_dos_runtime->covox_driver);
     assert(english_dos_runtime->static_game_data->celestial_labels.size() == 41);
     assert(english_dos_runtime->static_game_data->celestial_labels[4].text == "Earth ");
+    assert(english_dos_runtime->admitted_celestial_text.size() == 41);
+    assert(english_dos_runtime->admitted_celestial_text[4].original_text == "Earth ");
+    assert(english_dos_runtime->admitted_celestial_text[4].id
+        == "millennium.dos.celestial.04-earth");
     assert(english_dos_runtime->static_data_evidence->pointer_count == 435);
     assert(english_dos_runtime->sound_blaster_driver->original_filename == "ssbl.drv");
     assert(english_dos_runtime->covox_driver->original_filename == "scvx.drv");
@@ -4381,6 +4385,10 @@ int main() {
         && !spanish_dos_runtime->title_flow && !spanish_dos_runtime->game_flow
         && !spanish_dos_runtime->initial_save);
     assert(spanish_dos_runtime->static_game_data->celestial_labels[4].text == "Tierra ");
+    assert(spanish_dos_runtime->admitted_celestial_text.size() == 41);
+    assert(spanish_dos_runtime->admitted_celestial_text[4].original_text == "Tierra ");
+    assert(spanish_dos_runtime->admitted_celestial_text[4].id
+        == english_dos_runtime->admitted_celestial_text[4].id);
     // The coordinator publishes an adapter only after the exact outer archive
     // has been rehashed and that adapter has fully parsed its own leaves.
     eon::ResolvedLaunchRequest admitted_dos_launch;
@@ -5139,6 +5147,30 @@ int main() {
             assert(xbios38_user && xbios38_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::xbios_selector_38_boundary
                 && xbios38_user->config_consumer.xbios_trap_address==0x2aa72
                 && xbios38_user->config_consumer.selector_38_pointer_argument==0x2aa42);
+            assert(!all_release_runtime.observe_millennium_atari_xbios_selector_38({1,17,0x2aa74,0x26,0}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_xbios_selector_38({1,17,0x2aa72,0x26,0x12345678}).accepted);
+            const auto jsr0c_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(jsr0c_user && jsr0c_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary
+                && jsr0c_user->config_consumer.next_jsr_target==0x2aa0c);
+            assert(all_release_runtime.execute_millennium_atari_jsr_2aa0c().accepted);
+            const auto gemdos61_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(gemdos61_user && gemdos61_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_61_boundary
+                && gemdos61_user->config_consumer.next_jsr_address==0x2aa0c
+                && gemdos61_user->config_consumer.next_jsr_target==0x2a5aa
+                && gemdos61_user->config_consumer.gemdos_trap_address==0x2a5b4
+                && gemdos61_user->config_consumer.gemdos_selector==0x3d
+                && gemdos61_user->config_consumer.gemdos_open_mode==2
+                && gemdos61_user->config_consumer.gemdos_filename_pointer==0x2a640);
+            assert(!all_release_runtime.execute_millennium_atari_jsr_2aa0c().accepted);
+            assert(!all_release_runtime.observe_millennium_atari_gemdos_selector_61({1,18,0x2a5b6,0x3d,7}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_gemdos_selector_61({1,18,0x2a5b4,0x3d,7}).accepted);
+            const auto fopen_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(fopen_user && fopen_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::jsr_2a5c2_boundary
+                && fopen_user->config_consumer.gemdos_61_result_d0==7
+                && fopen_user->config_consumer.gemdos_handle_store_address==0x2a5fa
+                && fopen_user->config_consumer.fopen_branch_target==0x2aa1c
+                && fopen_user->config_consumer.next_jsr_target==0x2a5c2);
+            assert(!all_release_runtime.observe_millennium_atari_gemdos_selector_61({1,19,0x2a5b4,0x3d,-1}).accepted);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -5222,6 +5254,9 @@ int main() {
             assert(!atari_host.execute_millennium_atari_loop_epilogue().accepted);
             assert(!atari_host.observe_millennium_atari_movem_frame({1,19,0x2b562,0x80000,{},0x2aac8}).accepted);
             assert(!atari_host.execute_millennium_atari_jsr_2aa68().accepted);
+            assert(!atari_host.observe_millennium_atari_xbios_selector_38({1,20,0x2aa72,0x26,0}).accepted);
+            assert(!atari_host.execute_millennium_atari_jsr_2aa0c().accepted);
+            assert(!atari_host.observe_millennium_atari_gemdos_selector_61({1,21,0x2a5b4,0x3d,-1}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5738,6 +5773,35 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_nested_words(bad_nested_words).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_command_nested_words(nested_words).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_nested_words(nested_words).accepted);
+            constexpr std::array<bool,8> nested_carries{{false,false,true,false,true,true,false,false}};
+            for(std::size_t iteration=0;iteration<nested_carries.size();++iteration){
+                const auto call=nested_carries[iteration]?0x20be4U:0x20bd6U;
+                const auto ret=nested_carries[iteration]?0x20beaU:0x20bdcU;
+                eon::DeuterosAmigaObservedLocalCallReturn nested_return{
+                    runtime_copy_sequence+31U+iteration,call,0x41a68,ret,
+                    static_cast<std::uint32_t>(iteration),0};
+                assert(opening_controller.observe_deuteros_amiga_title_post_command_nested_call_return(nested_return).accepted);
+                assert(opening_controller.advance_deuteros_amiga_title_post_command_nested_loop().accepted);
+            }
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_nested_loop().accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn continuation_return{
+                runtime_copy_sequence+40,0x20bf4,0x1f9b8,0x20bfa,0xabcdef01,0x0014};
+            auto bad_continuation_return=continuation_return;bad_continuation_return.call_address++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_continuation_return(bad_continuation_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_continuation_return(continuation_return).accepted);
+            eon::DeuterosAmigaObservedTitlePostCommandPointerChain pointer_chain{
+                runtime_copy_sequence+41,{{0x20c00,0x20c02,0x20c04}},
+                {{0x2151a,0x50000,0x51000}},{{0x50000,0x51000}},0x0020};
+            auto bad_pointer_chain=pointer_chain;bad_pointer_chain.source_addresses[1]++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_pointer_chain(bad_pointer_chain).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_pointer_chain(pointer_chain).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_pointer_chain(pointer_chain).accepted);
+            eon::DeuterosAmigaObservedTitlePostCommandDispatchDestination dispatch_destination{
+                runtime_copy_sequence+42,0x41c48,0x1f168,0x60000};
+            auto bad_dispatch_destination=dispatch_destination;bad_dispatch_destination.source_address++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_dispatch_destination(bad_dispatch_destination).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_dispatch_destination(dispatch_destination).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_dispatch_destination(dispatch_destination).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

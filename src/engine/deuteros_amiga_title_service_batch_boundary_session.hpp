@@ -925,6 +925,49 @@ struct DeuterosAmigaTitlePostCommandNestedWordsPlan {
     std::uint16_t counter_value=0,call_d0=0,call_d1=0;
     std::uint32_t call_address=0,call_target=0,stop_before_address=0;
 };
+struct DeuterosAmigaTitlePostCommandNestedCallReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint16_t restored_d7=0;
+    std::uint16_t loop_d6=0;
+    std::uint32_t loop_boundary_address=0;
+};
+struct DeuterosAmigaTitlePostCommandNestedLoopAdvancePlan {
+    std::uint16_t iteration=0,shifted_d7=0,decremented_d5=0,loop_d6=0;
+    bool carry_branch=false,writes_counter=false,completed=false;
+    std::uint32_t counter_destination=0;std::uint16_t counter_value=0;
+    std::uint16_t call_d0=0,call_d1=0;
+    std::uint32_t call_address=0,call_target=0,stop_before_address=0;
+};
+struct DeuterosAmigaTitlePostCommandContinuationReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t pointer_cell_address=0,pointer_cell_value=0;
+    std::uint32_t first_pointer_read_address=0,stop_before_address=0;
+};
+struct DeuterosAmigaObservedTitlePostCommandPointerChain {
+    std::uint64_t trace_sequence=0;
+    std::array<std::uint32_t,3> instruction_addresses{};
+    std::array<std::uint32_t,3> source_addresses{};
+    std::array<std::uint32_t,2> observed_pointer_values{};
+    std::uint16_t observed_word=0;
+};
+struct DeuterosAmigaTitlePostCommandPointerChainPlan {
+    DeuterosAmigaObservedTitlePostCommandPointerChain observation;
+    std::uint16_t descriptor_word=0;
+    std::uint32_t descriptor_destination=0;
+    std::uint16_t next_d0=0;
+    std::uint32_t next_call_address=0,next_call_target=0,stop_before_address=0;
+};
+struct DeuterosAmigaObservedTitlePostCommandDispatchDestination {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,source_address=0,observed_pointer=0;
+};
+struct DeuterosAmigaTitlePostCommandDispatchSetupPlan {
+    DeuterosAmigaObservedTitlePostCommandDispatchDestination observation;
+    std::uint16_t selector=0,descriptor=0;
+    std::uint32_t outer_entry_address=0,resource_pointer_cell=0,resource_offset=0,source_header=0;
+    std::uint16_t x_word=0,y_word=0,wrap_word=0,row_stride=0;
+    std::uint32_t destination=0,first_source_read=0,stop_before_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2429,6 +2472,9 @@ public:
         const bool carry=(o.observed_words[0]&1U)!=0;
         const auto decremented=static_cast<std::uint16_t>((o.observed_words[1]&0xff00U)|((o.observed_words[1]-1U)&0xffU));
         post_command_nested_words_=o;last_command_sequence_=o.trace_sequence;
+        nested_d7_=shifted;nested_d5_=decremented;nested_d6_=7;nested_iteration_=0;
+        nested_call_pending_=!(carry&&static_cast<std::uint8_t>(decremented)==0);
+        nested_call_address_=carry?0x20be4U:0x20bd6U;
         if(carry&&static_cast<std::uint8_t>(decremented)==0)
             return DeuterosAmigaTitlePostCommandNestedWordsPlan{o,shifted,decremented,true,false,0,0,
                 0,0,0,0,0x20bea};
@@ -2436,6 +2482,73 @@ public:
             0x202bc,decremented,static_cast<std::uint16_t>(carry?0x0008:0x0048),0x0010,
             carry?0x20be4U:0x20bd6U,post_command_service_route_.nested_branch_target,
             carry?0x20be4U:0x20bd6U};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedCallReturnPlan>
+    observe_post_command_nested_call_return(const DeuterosAmigaObservedLocalCallReturn& o){
+        if(!post_command_nested_words_||!nested_call_pending_)return std::nullopt;
+        const auto return_address=nested_call_address_==0x20bd6U?0x20bdcU:0x20beaU;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=nested_call_address_
+            ||o.call_target!=post_command_service_route_.nested_branch_target
+            ||o.return_address!=return_address)
+            throw std::runtime_error("Deuteros post-command nested call return does not match boundary");
+        nested_call_pending_=false;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostCommandNestedCallReturnPlan{o,nested_d7_,nested_d6_,0x20bea};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedLoopAdvancePlan>
+    advance_post_command_nested_loop(){
+        if(!post_command_nested_words_||nested_call_pending_||nested_loop_completed_)return std::nullopt;
+        if(nested_d6_==0){nested_d6_=0xffff;nested_loop_completed_=true;
+            return DeuterosAmigaTitlePostCommandNestedLoopAdvancePlan{8,nested_d7_,nested_d5_,nested_d6_,false,false,true,0,0,0x000f,0,0x20bf4,0x1f9b8,0x20bf4};}
+        --nested_d6_;++nested_iteration_;
+        const std::array<std::uint16_t,16> table{{0x0008,0x0010,0x0011,0x0310,0x001a,0x0020,0x0023,0x0320,0x002c,0x0030,0x0035,0x0330,0x003e,0x0040,0x0047,0x0340}};
+        const auto table_index=static_cast<std::size_t>(nested_iteration_)*2U;
+        const bool carry=(nested_d7_&1U)!=0;nested_d7_=static_cast<std::uint16_t>((nested_d7_&0xff00U)|((nested_d7_&0xffU)>>1U));
+        nested_d5_=static_cast<std::uint16_t>((nested_d5_&0xff00U)|((nested_d5_-1U)&0xffU));
+        const bool skip=carry&&static_cast<std::uint8_t>(nested_d5_)==0;
+        nested_call_pending_=!skip;nested_call_address_=carry?0x20be4U:0x20bd6U;
+        const bool writes=!carry&&static_cast<std::uint8_t>(nested_d5_)==0;
+        return DeuterosAmigaTitlePostCommandNestedLoopAdvancePlan{nested_iteration_,nested_d7_,nested_d5_,nested_d6_,carry,writes,false,
+            0x202bc,nested_d5_,static_cast<std::uint16_t>(carry?table[table_index]:0x4fU-nested_d6_),table[table_index+1U],
+            skip?0U:nested_call_address_,post_command_service_route_.nested_branch_target,skip?0x20beaU:nested_call_address_};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandContinuationReturnPlan>
+    observe_post_command_continuation_return(const DeuterosAmigaObservedLocalCallReturn& o){
+        if(!nested_loop_completed_||post_command_continuation_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x20bf4
+            ||o.call_target!=0x1f9b8||o.return_address!=0x20bfa)
+            throw std::runtime_error("Deuteros post-command continuation return does not match boundary");
+        post_command_continuation_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostCommandContinuationReturnPlan{o,0x222ae,0x2151a,0x2151a,0x20c00};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandPointerChainPlan>
+    observe_post_command_pointer_chain(const DeuterosAmigaObservedTitlePostCommandPointerChain& o){
+        if(!post_command_continuation_return_||post_command_pointer_chain_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_
+            ||o.instruction_addresses!=std::array<std::uint32_t,3>{{0x20c00,0x20c02,0x20c04}}
+            ||o.source_addresses[0]!=0x2151a
+            ||o.source_addresses[1]!=o.observed_pointer_values[0]
+            ||o.source_addresses[2]!=o.observed_pointer_values[1]
+            ||o.observed_pointer_values[0]==0||o.observed_pointer_values[1]==0)
+            throw std::runtime_error("Deuteros post-command pointer chain does not match boundary");
+        const auto low=static_cast<std::uint8_t>(o.observed_word);
+        const auto descriptor=static_cast<std::uint16_t>(low!=0&&(low&0x40U)==0?0x00b0:0x00bd);
+        post_command_pointer_chain_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostCommandPointerChainPlan{o,descriptor,0x417a2,0x005c,
+            0x20c26,0x41bb4,0x20c26};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDispatchSetupPlan>
+    observe_post_command_dispatch_destination(const DeuterosAmigaObservedTitlePostCommandDispatchDestination& o){
+        if(!post_command_pointer_chain_||post_command_dispatch_destination_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x41c48
+            ||o.source_address!=0x1f168||o.observed_pointer==0)
+            throw std::runtime_error("Deuteros post-command dispatch destination does not match boundary");
+        const auto low=static_cast<std::uint8_t>(post_command_pointer_chain_->observed_word);
+        const auto descriptor=static_cast<std::uint16_t>(low!=0&&(low&0x40U)==0?0x00b0:0x00bd);
+        const auto cell=static_cast<std::uint32_t>(0x41faaU+descriptor*4U);
+        const auto offset=descriptor==0x00b0?0x0003227cU:0x00034b2aU;
+        post_command_dispatch_destination_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostCommandDispatchSetupPlan{o,0x005c,descriptor,0x417a2,
+            cell,offset,0x422faU+offset,0,0x00b8,0x1f3e,0x0028,o.observed_pointer,0x41c72,0x41c72};
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
@@ -2624,6 +2737,12 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_command_service_second_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_command_service_third_return_;
     std::optional<DeuterosAmigaObservedTitlePostCommandNestedWords> post_command_nested_words_;
+    std::uint16_t nested_d7_=0,nested_d5_=0,nested_d6_=0,nested_iteration_=0;
+    bool nested_call_pending_=false,nested_loop_completed_=false;
+    std::uint32_t nested_call_address_=0;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> post_command_continuation_return_;
+    std::optional<DeuterosAmigaObservedTitlePostCommandPointerChain> post_command_pointer_chain_;
+    std::optional<DeuterosAmigaObservedTitlePostCommandDispatchDestination> post_command_dispatch_destination_;
     struct PendingCommandCall {
         std::uint32_t address;
         std::uint32_t target;

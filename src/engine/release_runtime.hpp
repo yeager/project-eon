@@ -1,6 +1,7 @@
 #pragma once
 
 #include "launcher.hpp"
+#include "game_text_localization.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_amiga_title_display_trace_session.hpp"
@@ -185,6 +186,10 @@ struct MillenniumDosRuntimeAssets {
     // or a claim that any label has reached a live simulation state.
     std::optional<MillenniumDosGameData> static_game_data;
     std::optional<MillenniumDosStaticDataEvidence> static_data_evidence;
+    // Authenticated copy-only localization capabilities created while the
+    // complete original leaf was available. No commercial leaf bytes survive
+    // in this presentation snapshot.
+    std::vector<AdmittedGameText> admitted_celestial_text;
     // Exact original VOC catalogue metadata. Its presence does not permit
     // playback: event mapping, driver ABI and timing remain unrecovered.
     std::optional<MillenniumDosVoiceBankEvidence> voice_bank;
@@ -758,6 +763,11 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_service_second_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_service_third_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_nested_words(DeuterosAmigaObservedTitlePostCommandNestedWords);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_nested_call_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_nested_loop();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_continuation_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_pointer_chain(DeuterosAmigaObservedTitlePostCommandPointerChain);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_dispatch_destination(DeuterosAmigaObservedTitlePostCommandDispatchDestination);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -804,6 +814,9 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_loop_epilogue();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_movem_frame(MillenniumAtariMovemFrameObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2aa68();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_38(MillenniumAtariXbiosSelector38Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2aa0c();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_61(MillenniumAtariGemdosSelector61Observation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

@@ -392,6 +392,12 @@ resolves all declared ranges in source order and fails atomically on a wrong
 leaf, invalid or overlapping range, or missing catalog entry. This is the
 shared contract for future object names, messages, status text, and game
 vocabulary in Original and Modern; a plausible string alone is not evidence.
+Runtime acquisition now converts the complete English or Spanish Millennium
+celestial table into 41 copy-only provenance tokens while the verified
+`2200AD4.BIN` leaf is available. Each token is revalidated against the compiled
+source map when localized, so a stale or forged snapshot cannot change an ID,
+range, source language, or canonical message. The runtime retains no complete
+commercial source leaf for this purpose.
 
 Project Eon deliberately distinguishes a preservation result from an
 enhancement. **Original** is the preservation contract: a hash-admitted,
@@ -1369,6 +1375,30 @@ Their exact 12-byte prefix is `2f3c0002aa423f3c00264e4e`, SHA-256
 `fd6e1ace58bbc4108fcc0b8a7f75103c04337c41d24b2c9de5907f9538aaf439`.
 It pushes pointer `$2aa42` and XBIOS selector `$26`, then stops before
 `TRAP #14` at `$2aa72`; no firmware result is inferred.
+A typed selector-`$26` D0 return advances through exact cleanup and RTS bytes
+(SHA-256 `59f7345ed980fd79117e7ad10db1a93c3872cafca3000afb7ef3f7eda5603adc`).
+The caller then sets D7 to `$2a640` and reaches absolute `JSR $2aa0c`; its
+12-byte span hashes to
+`7218804023c2ec3e694e19b581efeb17703f7bfe78d77b6da330354cc23a18f2`.
+The exact absolute JSR at `$2aa0c` (`4eb90002a5aa`) hashes to
+`25939d2a8a98420749b181f742081cc576f302cffd0bea5b8008765af3b5d9f0`.
+Its target `$2a5aa` pushes open mode 2, the proven D7 filename pointer
+`$2a640`, and GEMDOS selector `$3d`. That 12-byte prefix through `TRAP #1`
+(`3f3c00022f073f3c003d4e41`) hashes to
+`bdfb77219a19903ee730f3361af0958841aae3570ef3ed0d2ea60c3b56a3491e`.
+Execution stops at the trap instruction `$2a5b4`: no handle, filesystem
+access, return value, or post-trap control flow is inferred.
+A generation-owned typed observation may now supply the raw signed D0 return.
+The exact 12-byte cleanup/store/test/RTS continuation hashes to
+`dfe4c3bc4466d6d8772f3633cb125f64ea7a9114d3d0be45aca5be3daf28b30b`;
+it atomically stores D0.W at `$2a5fa` without treating it as a valid host
+handle. At `$2aa12`, nonnegative D0 takes BPL to `$2aa1c`, loads literal D0
+`$7d42` and D1 `$2c24a`, then stops before `JSR $2a5c2` at `$2aa28`. This
+22-byte branch path hashes to
+`e3c9dfa674089f687e0042be07645d2d57bf321a76d53b0276f86ba8316f06f4`.
+Negative D0 executes the original JMP to `$2a632`, whose `BRA.S $2a632`
+is an exact failure spin; the 12-byte branch/JMP/spin path hashes to
+`3a06cb0af877cc363d5ad25b670d680c77b4abcd00955b260c2139270b57426c`.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4306,6 +4336,27 @@ replayed as a second invocation. The deterministic return preserves the
 mode-2 `$b800` write when applicable, takes `$1c05->$1c0a`, restores DS/ES,
 and stops before `$1c0e->$135e`. That callee is the next opaque boundary.
 Mode 1 remains separately stopped at its verified `$0fc6` overread boundary.
+The `$135e..$1387` callee is now hash-bound as 42 bytes (file `+$125e`,
+SHA-256 `c35f93db0d58443d76374684ed2c54ce78ddb7fc8e01ffa809026382450b4868`).
+For the caller-connected non-mode-1 route it reads only the already-owned
+second allocation cell, atomically writes the selected far pointer to
+`CS:$1341/$1343` and CS to `$134b`, restores DS, and returns. The next exact
+call `$1c11->$0ff3` is now entered. Its exact 16-byte prefix (file `+$0ef3`,
+SHA-256 `d17cc200504c832c3062e1c6951c753a8819c0fd1255b7273c28b3fcf1f3e363`)
+writes CS into request record `CS:$0fe9`, loads function `$0019`, and calls
+the common private wrapper. The next exact boundary is the typed INT `$91`
+result at `$0127`; neither its raw return nor service semantics are invented.
+An explicit raw AX/FLAGS observation now completes both wrapper returns. It is
+stored separately from the startup INT `$91` result, and the deterministic
+caller loads AX zero before the next exact opaque call `$1c17->$1725`.
+That call now follows its 27-byte hash-bound prefix (SHA-256
+`646ada76ab8f0b370cd3e1f3001cf2e21a5105bbcf650cf6239bf801853754dd`)
+into `$1390`. Its 26-byte prefix (SHA-256
+`f6be40d902e1d36bd640df417e6a3b8e813b4fce0c7bbf7801a33ae44d60a897`)
+uses only the verified entry count and owned relocated directory/allocation
+pointers. Execution stops before the two `LODSW` source words at `$13aa`;
+the precise far source is exposed as a typed boundary and no descriptor bytes
+are invented.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6559,9 +6610,28 @@ iteration shifts the low byte of D7 and decrements the low byte of D5. Its
 carry and zero outcomes are recorded exactly; when the clear-carry decrement
 reaches zero, the resulting word is atomically written back to `$202bc` and
 execution stops before `$20bd6 -> $41a68` with D0 `$0048`, D1 `$0010`.
-The carry/zero skip instead stops at branch `$20bea`. Replay and source
-revocation reject observations without partial effects. No service, object,
-display, or gameplay meaning is inferred.
+The carry/zero skip instead reaches branch `$20bea` without a call. A bounded
+loop state machine now accepts an exact `$41a68` return whenever the selected
+iteration calls it, restores D7, performs the literal DBRA, and repeats using
+the next immutable pair in `$20a14..$20a33`. Carry/zero iterations skip the
+call locally; clear-carry zero decrements atomically update `$202bc`. After
+exactly eight iterations D6 becomes `$ffff`, `$20bf0` returns to `$20ea0`, and
+the local branch reaches `$20bf2`. An exact typed `$20bf4 -> $1f9b8` return
+at `$20bfa` retains opaque D0/SR. The following pointer chain begins from
+owned `$222ae == $2151a`; ordered typed reads supply the two genuinely mutable
+longword links and final word. Their addresses must form the exact chain used
+by `$20c00/$20c02/$20c04`. The final low byte selects descriptor `$00b0` only
+when nonzero with bit 6 clear, otherwise `$00bd`; it commits atomically to
+`$417a2`. D0 `$005c` selects that exact outer entry. Because `$00b0/$00bd`
+have no high bit, `$41bb4` takes the direct `$41c32` route; their immutable
+resource pointer cells are `$4226a/$4229e`, offsets `$0003227c/$00034b2a`,
+and source headers `$74576/$76e24`. The remaining descriptor fields are X
+zero, Y `$00b8`, destination zero, wrap `$1f3e`, and row stride `$0028`.
+Destination zero explicitly falls back to mutable cell `$1f168`, so one typed
+nonzero pointer observation is required at `$41c48`. Execution then stops
+before the selected header read at `$41c72`; no earlier high-path payload is
+silently substituted. Replay and revocation reject the boundary. No service,
+object, display, or gameplay meaning is inferred.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

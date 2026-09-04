@@ -195,6 +195,21 @@ target remain explicit preservation boundaries.
 
 No original bytes are written to disk, copied into a package, or committed.
 
+The caller-connected path now continues through absolute `JSR $2aa0c` to
+`$2a5aa`. The six-byte call hashes to
+`25939d2a8a98420749b181f742081cc576f302cffd0bea5b8008765af3b5d9f0`;
+the 12-byte callee prefix hashes to
+`bdfb77219a19903ee730f3361af0958841aae3570ef3ed0d2ea60c3b56a3491e`.
+It pushes mode 2, filename pointer `$2a640`, and GEMDOS selector `$3d`, then
+stops exactly at `TRAP #1` `$2a5b4`. No host file is opened and no return
+value is synthesized.
+A typed raw GEMDOS return can advance without host filesystem inference. The
+12-byte return body hashes to
+`dfe4c3bc4466d6d8772f3633cb125f64ea7a9114d3d0be45aca5be3daf28b30b`
+and atomically stores D0.W at `$2a5fa`. Its signed test either loads literal
+D0 `$7d42` and D1 `$2c24a` before the `$2aa28->$2a5c2` call boundary, or
+reaches the exact failure self-loop at `$2a632`. No host handle is created.
+
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash
 `74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6`,

@@ -281,6 +281,34 @@ int main(const int argc, const char* const argv[]) {
             && user_consumer.checkpoint().xbios_trap_address==0x2aa72
             && user_consumer.checkpoint().xbios_selector==0x26
             && user_consumer.checkpoint().selector_38_pointer_argument==0x2aa42);
+        assert(user_consumer.observe_xbios_selector_38({1,17,0x2aa72,0x26,0x12345678}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary
+            && user_consumer.checkpoint().caller_d7==0x2a640
+            && user_consumer.checkpoint().next_jsr_address==0x2aad4
+            && user_consumer.checkpoint().next_jsr_target==0x2aa0c);
+        assert(user_consumer.execute_jsr_2aa0c().accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_61_boundary
+            && user_consumer.checkpoint().next_jsr_address==0x2aa0c
+            && user_consumer.checkpoint().next_jsr_target==0x2a5aa
+            && user_consumer.checkpoint().gemdos_trap_address==0x2a5b4
+            && user_consumer.checkpoint().gemdos_selector==0x3d
+            && user_consumer.checkpoint().gemdos_open_mode==2
+            && user_consumer.checkpoint().gemdos_filename_pointer==0x2a640);
+        assert(!user_consumer.execute_jsr_2aa0c().accepted);
+        auto negative_fopen=user_consumer;
+        assert(user_consumer.observe_gemdos_selector_61({1,18,0x2a5b4,0x3d,7}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2a5c2_boundary
+            && user_consumer.checkpoint().gemdos_handle_store_address==0x2a5fa
+            && user_consumer.checkpoint().fopen_branch_target==0x2aa1c
+            && user_consumer.checkpoint().next_jsr_address==0x2aa28
+            && user_consumer.checkpoint().next_jsr_target==0x2a5c2);
+        assert(bsr_memory.apply(user_consumer.make_gemdos_selector_61_effect_batch("fopen-positive")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2a5fa})==0
+            && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2a5fb})==7);
+        assert(negative_fopen.observe_gemdos_selector_61({1,18,0x2a5b4,0x3d,-33}).accepted);
+        assert(negative_fopen.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin
+            && negative_fopen.checkpoint().fopen_branch_target==0x2a632);
+        assert(!negative_fopen.observe_gemdos_selector_61({1,19,0x2a5b4,0x3d,-1}).accepted);
         assert(!user_consumer.observe_status_register(
             {1, 2, 0x2aa88, 0, eon::MillenniumAtariObservedPrivilege::user}).accepted);
 

@@ -153,6 +153,21 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
     for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2b562U+static_cast<std::uint32_t>(i))!=movem_rts[i]||require_byte(memory,0x2aac8U+static_cast<std::uint32_t>(i))!=caller_jsr[i])throw std::runtime_error("Unexpected MOVEM caller continuation");
     constexpr std::array<std::uint8_t,12> aa68_prefix{0x2f,0x3c,0x00,0x02,0xaa,0x42,0x3f,0x3c,0x00,0x26,0x4e,0x4e};
     for(std::size_t i=0;i<aa68_prefix.size();++i)if(require_byte(memory,0x2aa68U+static_cast<std::uint32_t>(i))!=aa68_prefix[i])throw std::runtime_error("Unexpected $2aa68 prefix");
+    constexpr std::array<std::uint8_t,6> selector38_return{0x4e,0x4e,0x5c,0x8f,0x4e,0x75};
+    constexpr std::array<std::uint8_t,12> selector38_caller{0x2e,0x3c,0x00,0x02,0xa6,0x40,0x4e,0xb9,0x00,0x02,0xaa,0x0c};
+    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2aa72U+static_cast<std::uint32_t>(i))!=selector38_return[i])throw std::runtime_error("Unexpected selector-38 return");
+    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2aaceU+static_cast<std::uint32_t>(i))!=selector38_caller[i])throw std::runtime_error("Unexpected selector-38 caller");
+    constexpr std::array<std::uint8_t,6> jsr_2a5aa{0x4e,0xb9,0x00,0x02,0xa5,0xaa};
+    constexpr std::array<std::uint8_t,12> gemdos61{0x3f,0x3c,0x00,0x02,0x2f,0x07,0x3f,0x3c,0x00,0x3d,0x4e,0x41};
+    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2aa0cU+static_cast<std::uint32_t>(i))!=jsr_2a5aa[i])throw std::runtime_error("Unexpected $2aa0c caller");
+    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2a5aaU+static_cast<std::uint32_t>(i))!=gemdos61[i])throw std::runtime_error("Unexpected GEMDOS 61 prefix");
+    constexpr std::array<std::uint8_t,12> gemdos61_return{0x50,0x8f,0x33,0xc0,0x00,0x02,0xa5,0xfa,0x4a,0x80,0x4e,0x75};
+    constexpr std::array<std::uint8_t,12> fopen_branch{0x6a,0x00,0x00,0x08,0x4e,0xf9,0x00,0x02,0xa6,0x32,0x20,0x3c};
+    constexpr std::array<std::uint8_t,18> fopen_positive{0x20,0x3c,0x00,0x00,0x7d,0x42,0x22,0x3c,0x00,0x02,0xc2,0x4a,0x4e,0xb9,0x00,0x02,0xa5,0xc2};
+    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2a5b6U+static_cast<std::uint32_t>(i))!=gemdos61_return[i])throw std::runtime_error("Unexpected GEMDOS 61 return");
+    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2aa12U+static_cast<std::uint32_t>(i))!=fopen_branch[i])throw std::runtime_error("Unexpected Fopen caller branch");
+    for(std::size_t i=0;i<18;++i)if(require_byte(memory,0x2aa1cU+static_cast<std::uint32_t>(i))!=fopen_positive[i])throw std::runtime_error("Unexpected Fopen positive continuation");
+    if(require_byte(memory,0x2a632U)!=0x60||require_byte(memory,0x2a633U)!=0xfe)throw std::runtime_error("Unexpected Fopen failure spin");
     if (generation == 0 || gemdos.generation != generation
         || gemdos.state != MillenniumAtariReadOnlyGemdosState::config_jsr_boundary
         || gemdos.config_jsr_instruction_address != jsr_instruction
@@ -211,6 +226,10 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
     checkpoint_.movem_rts_sha256="7f09b538ef863cae65b4a16e1301251bde1fed37c1dba591dd4ec9f4b34106b1";
     checkpoint_.caller_jsr_2aa68_sha256="fd41f7c5a0cdb684768c3da230cb9ca56bac136abd2254b55090d6b1cf58da78";
     checkpoint_.jsr_2aa68_prefix_sha256="fd6e1ace58bbc4108fcc0b8a7f75103c04337c41d24b2c9de5907f9538aaf439";
+    checkpoint_.selector_38_return_sha256="59f7345ed980fd79117e7ad10db1a93c3872cafca3000afb7ef3f7eda5603adc";
+    checkpoint_.selector_38_caller_sha256="7218804023c2ec3e694e19b581efeb17703f7bfe78d77b6da330354cc23a18f2";
+    checkpoint_.caller_jsr_2a5aa_sha256="25939d2a8a98420749b181f742081cc576f302cffd0bea5b8008765af3b5d9f0";
+    checkpoint_.gemdos_61_prefix_sha256="bdfb77219a19903ee730f3361af0958841aae3570ef3ed0d2ea60c3b56a3491e";
     checkpoint_.local_control_transfers_executed = 2;
 }
 
@@ -633,6 +652,14 @@ if(checkpoint_.state!=MillenniumAtariConfigConsumerState::movem_restore_boundary
 if(o.generation!=checkpoint_.generation||o.sequence<=checkpoint_.last_sequence||o.instruction_address!=0x2b562||o.frame_address>0xffffffbfU||o.rts_return_address!=0x2aac8)return{false,"MOVEM frame mismatch"};
 checkpoint_.state=MillenniumAtariConfigConsumerState::jsr_2aa68_boundary;checkpoint_.last_sequence=o.sequence;checkpoint_.movem_frame_observed=true;checkpoint_.movem_frame_address=o.frame_address;checkpoint_.restored_registers=o.registers;checkpoint_.restored_stack_address=o.frame_address+64U;checkpoint_.rts_return_address=o.rts_return_address;checkpoint_.next_jsr_address=0x2aac8;checkpoint_.next_jsr_target=0x2aa68;checkpoint_.local_instruction_count+=3;return{true,{}};}
 MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_jsr_2aa68(){if(checkpoint_.state!=MillenniumAtariConfigConsumerState::jsr_2aa68_boundary)return{false,"Not at JSR $2aa68"};checkpoint_.state=MillenniumAtariConfigConsumerState::xbios_selector_38_boundary;checkpoint_.selector_38_pointer_argument=0x2aa42;checkpoint_.xbios_trap_address=0x2aa72;checkpoint_.xbios_selector=0x26;checkpoint_.local_instruction_count+=3;return{true,{}};}
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::observe_xbios_selector_38(const MillenniumAtariXbiosSelector38Observation&o){if(checkpoint_.state!=MillenniumAtariConfigConsumerState::xbios_selector_38_boundary)return{false,"Not at XBIOS selector 38"};if(o.generation!=checkpoint_.generation||o.sequence<=checkpoint_.last_sequence||o.trap_address!=0x2aa72||o.selector!=0x26)return{false,"Selector-38 observation mismatch"};checkpoint_.state=MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary;checkpoint_.last_sequence=o.sequence;checkpoint_.selector_38_result_observed=true;checkpoint_.selector_38_result_d0=o.result_d0;checkpoint_.selector_38_stack_cleanup_bytes=6;checkpoint_.caller_d7=0x2a640;checkpoint_.next_jsr_address=0x2aad4;checkpoint_.next_jsr_target=0x2aa0c;checkpoint_.local_instruction_count+=4;return{true,{}};}
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_jsr_2aa0c(){if(checkpoint_.state!=MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary)return{false,"Not at JSR $2aa0c"};checkpoint_.state=MillenniumAtariConfigConsumerState::gemdos_selector_61_boundary;checkpoint_.next_jsr_address=0x2aa0c;checkpoint_.next_jsr_target=0x2a5aa;checkpoint_.gemdos_trap_address=0x2a5b4;checkpoint_.gemdos_selector=0x3d;checkpoint_.gemdos_open_mode=2;checkpoint_.gemdos_filename_pointer=checkpoint_.caller_d7;checkpoint_.local_instruction_count+=5;return{true,{}};}
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::observe_gemdos_selector_61(const MillenniumAtariGemdosSelector61Observation&o){
+if(checkpoint_.state!=MillenniumAtariConfigConsumerState::gemdos_selector_61_boundary)return{false,"Not at GEMDOS selector 61"};
+if(o.generation!=checkpoint_.generation||o.sequence<=checkpoint_.last_sequence||o.trap_address!=0x2a5b4||o.selector!=0x3d)return{false,"GEMDOS selector-61 observation mismatch"};
+checkpoint_.last_sequence=o.sequence;checkpoint_.gemdos_61_result_observed=true;checkpoint_.gemdos_61_result_d0=o.result_d0;checkpoint_.gemdos_handle_store_address=0x2a5fa;checkpoint_.gemdos_stack_cleanup_bytes=6;checkpoint_.fopen_branch_address=0x2aa12;checkpoint_.gemdos_61_return_sha256="dfe4c3bc4466d6d8772f3633cb125f64ea7a9114d3d0be45aca5be3daf28b30b";checkpoint_.fopen_caller_branch_sha256="55dcd9fa27242e6bf6bc6f1f019a8fc086215fd0629c33a88a0a6f7e623517dc";
+if(o.result_d0<0){checkpoint_.state=MillenniumAtariConfigConsumerState::fopen_failure_spin;checkpoint_.fopen_branch_target=0x2a632;checkpoint_.fopen_caller_branch_sha256="3a06cb0af877cc363d5ad25b670d680c77b4abcd00955b260c2139270b57426c";checkpoint_.local_instruction_count+=7;}else{checkpoint_.state=MillenniumAtariConfigConsumerState::jsr_2a5c2_boundary;checkpoint_.fopen_branch_target=0x2aa1c;checkpoint_.fopen_positive_d0=0x7d42;checkpoint_.fopen_positive_d1=0x2c24a;checkpoint_.next_jsr_address=0x2aa28;checkpoint_.next_jsr_target=0x2a5c2;checkpoint_.fopen_caller_branch_sha256="e3c9dfa674089f687e0042be07645d2d57bf321a76d53b0276f86ba8316f06f4";checkpoint_.local_instruction_count+=7;}return{true,{}};}
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_gemdos_selector_61_effect_batch(std::string id)const{if((checkpoint_.state!=MillenniumAtariConfigConsumerState::jsr_2a5c2_boundary&&checkpoint_.state!=MillenniumAtariConfigConsumerState::fopen_failure_spin)||id.empty())throw std::runtime_error("GEMDOS selector-61 effect unavailable");return{std::move(id),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2a5fa},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,static_cast<std::uint16_t>(checkpoint_.gemdos_61_result_d0)}}};}
 
 MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::revoke(
     const std::uint64_t generation) {

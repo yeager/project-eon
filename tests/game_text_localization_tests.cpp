@@ -94,6 +94,27 @@ int main() {
     assert(all_celestial_text.front().catalog_translation_used);
 
     bool source_rejected = false;
+    const auto admitted_celestial_text = eon::admit_all_game_text_from_source(
+        eon::Game::millennium, eon::Platform::dos, "2200AD4.BIN",
+        source_leaves.at("2200AD4.BIN"));
+    assert(admitted_celestial_text.size() == 41);
+    const auto admitted_swedish = eon::localize_admitted_game_text(
+        eon::Game::millennium, eon::Platform::dos,
+        admitted_celestial_text.front(), "sv", eon::Translator::from_language("sv"));
+    assert(admitted_swedish.displayed_text == all_celestial_text.front().displayed_text);
+    auto forged_token = admitted_celestial_text.front();
+    forged_token.source_offset += 1;
+    source_rejected = false;
+    try {
+        static_cast<void>(eon::localize_admitted_game_text(
+            eon::Game::millennium, eon::Platform::dos, forged_token,
+            "en", source_english));
+    } catch (const std::runtime_error&) {
+        source_rejected = true;
+    }
+    assert(source_rejected);
+
+    source_rejected = false;
     try {
         static_cast<void>(eon::localize_game_text_at_source(
             eon::Game::millennium, eon::Platform::dos, "MILL.COM", altered,
