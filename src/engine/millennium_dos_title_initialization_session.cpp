@@ -1216,11 +1216,31 @@ void MillenniumDosTitleInitializationSession::observe_private_interrupt_result(
     const auto result_state=state_;
     if ((result_state
             != MillenniumDosTitleInitializationState::private_interrupt_result_boundary
-            &&result_state!=MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary)
+            &&result_state!=MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
+            &&result_state!=MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary)
         || observation.sequence != last_sequence_ + 1
         || observation.interrupt_address != 0x0127
         || observation.return_address != 0x0129) {
         throw std::runtime_error("Detached Millennium DOS title private-interrupt result");
+    }
+    if(result_state==MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary){
+        graphics_record_observed_ax_=observation.ax;
+        graphics_record_observed_flags_=observation.flags;
+        boundary_.result_observed=true;
+        // The wrapper epilogue $0129..$012e and helper RET at $1767 preserve
+        // the raw result. The caller then enters the exact $1004 prefix,
+        // which writes CS into the function-$001a request record.
+        effects_.insert(effects_.end(),{{0x1004,"AX",child_code_segment_},
+            {0x1006,"ES",child_code_segment_},{0x1008,"BX",0x0fdf},
+            {0x100e,"AX",0x001a}});
+        memory_effects_.push_back({0x100b,0x0fe7,
+            MillenniumDosTitleInitializationEffectWidth::word,child_code_segment_});
+        boundary_={0x1011,0x0122,0x0127,0x91,0x001a,
+            child_code_segment_,0x0fdf,false,false};
+        last_sequence_=observation.sequence;
+        continuation_address_=0x0127;
+        state_=MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary;
+        return;
     }
     if(result_state==MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary){
         post_video_observed_ax_=observation.ax;
@@ -1296,7 +1316,8 @@ MillenniumDosTitleInitializationSession::checkpoint() const {
         title_main_call_target_,dos_boundary_,dos_results_,dos_file_results_,
         dos_vector_results_,setup_bios_boundary_,setup_bios_results_,
         far_read_boundary_,far_word_observations_,far_single_word_observations_,far_byte_boundary_,far_byte_observations_,failure_address_,
-        continuation_address_,post_video_observed_ax_,post_video_observed_flags_};
+        continuation_address_,post_video_observed_ax_,post_video_observed_flags_,
+        graphics_record_observed_ax_,graphics_record_observed_flags_};
 }
 
 } // namespace eon

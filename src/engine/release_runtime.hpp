@@ -778,6 +778,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_descriptor_call_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_descriptor_loop();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_descriptor_byte(DeuterosAmigaObservedTitlePostCommandDescriptorByte);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination(DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -833,6 +834,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_fread_prefix(MillenniumAtariFreadPrefixObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2b2be();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_source_byte(MillenniumAtariGameInitSourceByteObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_zero_pair(MillenniumAtariGameInitZeroPairObservation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

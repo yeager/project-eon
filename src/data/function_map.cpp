@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 57> entries{{
+constexpr std::array<FunctionMapEntry, 59> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -35,8 +35,8 @@ constexpr std::array<FunctionMapEntry, 57> entries{{
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6",
      "MILENIUM.TOS+0x0104", "$2a5e8", "verified-static",
-     "subsequent source bytes and branch-target continuations remain unproven",
-     "native typed Fclose through first game-init byte dispatch", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
+     "normal-path counter branch and alternate branch-target continuations remain unproven",
+     "native typed Fclose through first normal-path payload pair", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
      "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7"},
     {"millennium-amiga-en-resident-independent-entry", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
      "millennium-amiga-shared-resident", Game::millennium, Platform::amiga, "en", "m68000",
@@ -71,6 +71,7 @@ constexpr std::array<FunctionMapEntry, 57> entries{{
     {"millennium-dos-en-title-graphics-request", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x0ef3", "$0ff3", "verified-static", "the callee at $1c17->$1725 remains unproven", "native observed private result", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-descriptor-setup", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x1290", "$1390", "verified-static", "the two relocated source words at $13aa remain unproven", "native far-read boundary", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-descriptor-pointer", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x12aa", "$13aa", "verified-static", "the private INT 91h function $0006 result remains unproven", "native descriptor request boundary", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
+    {"millennium-dos-en-title-post-descriptor-request", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x0f04", "$1004", "verified-static", "the private INT 91h function $001a result remains unproven", "native observed descriptor result", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-private-wrapper", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086",
      "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6",
@@ -301,6 +302,13 @@ constexpr std::array<FunctionMapEntry, 57> entries{{
      "ADF+0x7be18", "$20e18", "verified-static",
      "selector $004b dispatch remains a hash-bound descriptor boundary",
      "native selector-4b adjusted descriptor setup", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
+     "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
+    {"deuteros-amiga-en-title-adjusted-descriptor-dispatch", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+     "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
+     "8b535aadc3aaa48055ffaf3ce03339455ebcee3951e737ddedfb62d8b690b840",
+     "ADF+0x9c6b4 and ADF+0xd20a0", "$20c7a", "verified-static",
+     "the destination pointer requires a typed observation; decoded bytes are not a renderer surface",
+     "native complete adjusted descriptor decode", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
     {"deuteros-amiga-en-title-planar-zero-route", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",

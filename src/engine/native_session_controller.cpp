@@ -580,6 +580,7 @@ EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_selected_str
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_descriptor_call_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_descriptor_loop,(),())
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_descriptor_byte,(const DeuterosAmigaObservedTitlePostCommandDescriptorByte o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination,(const DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination o),(o))
 #undef EON_NATIVE_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -742,6 +743,7 @@ MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_fread_prefix(const MillenniumAtariFreadPrefixObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Fread prefix requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_fread_prefix(o);}
 MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_atari_jsr_2b2be(){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"JSR $2b2be requires Millennium Atari bootstrap"};return runtime_.execute_millennium_atari_jsr_2b2be();}
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_source_byte(const MillenniumAtariGameInitSourceByteObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Game-init source byte requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_source_byte(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_zero_pair(const MillenniumAtariGameInitZeroPairObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Game-init zero pair requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_zero_pair(o);}
 
 void NativeSessionController::begin_return_to_menu() {
     deuteros_amiga_opening_runner_.reset();

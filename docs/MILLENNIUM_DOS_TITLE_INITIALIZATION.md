@@ -401,3 +401,22 @@ The caller's next 39 bytes (SHA-256
 `d095399b2a968131f10112f1895b1449f6d1572052c032e48289218e5d07355b`)
 copy the proven dimensions into its request and reach private INT `$91`
 function `$0006`. Execution stops at result address `$0127`.
+
+## Descriptor request return
+
+The function-`$0006` return is admitted only as a fresh typed observation at
+the exact `$0127 -> $0129` boundary. Raw AX and FLAGS are retained without
+assigning either value graphics semantics. The six-byte common-wrapper
+epilogue at `$0129..$012e` hashes to
+`a6e3a351304f487a18bc22e460403bfcdb5e702831b037aa0a90a56bf3cf7baf`;
+the one-byte helper return at `$1767` hashes to
+`ae3f4619b0413d70d3004b9131c3752153074e45725be13b9a148978895e359e`.
+The caller then reaches `$1c1a -> $1004`.
+
+The exact 16-byte `$1004..$1013` prefix (file `+$0f04`, SHA-256
+`23f2112307ea2992920c08508de31bd2e689247c3444791c443823cab3c6438e`)
+loads `ES=CS`, selects request record `CS:$0fdf`, writes CS to its word at
+`$0fe7`, selects function `$001a`, and calls the common `$0122` wrapper at
+`$1011`. The runtime commits that single instruction-defined word atomically
+with the state transition and stops at the next typed INT `$91` result at
+`$0127`. The function-`$001a` result and service semantics remain unknown.
