@@ -139,7 +139,9 @@ custom-chip write boundary—do not substitute host hardware or claim display
 output from the bounded plan. Four exact custom-chip observations now advance
 the local callback-registration plan to `$1f04a`; the next increment requires
 an explicit return observation for its Exec vector `-$1ce` and must not infer
-the service or callback semantics.
+the service or callback semantics. That typed return is now admitted and the
+local RTS reaches `$404b6`; the next continuation must resolve or explicitly
+observe the `$206d4` boundary rather than assigning it invented behavior.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

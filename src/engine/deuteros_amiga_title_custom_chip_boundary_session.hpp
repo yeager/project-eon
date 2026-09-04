@@ -43,6 +43,25 @@ struct DeuterosAmigaTitleCallbackRegistrationLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedCallbackExecReturn {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t exec_base_source_address = 0;
+    std::uint32_t call_address = 0;
+    std::int16_t vector = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t result_d0 = 0;
+    std::uint16_t result_sr = 0;
+};
+
+struct DeuterosAmigaTitlePostCallbackRegistrationAdvance {
+    DeuterosAmigaObservedCallbackExecReturn observed_return;
+    std::uint32_t registration_rts_address = 0;
+    std::uint32_t caller_return_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_call_target = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleCustomChipBoundarySession {
 public:
     DeuterosAmigaTitleCustomChipBoundarySession(std::uint64_t preceding_trace_sequence,
@@ -54,6 +73,7 @@ public:
             || stage.initialization_custom_offsets != expected_offsets_
             || stage.initialization_custom_values != expected_values_
             || stage.initialization_internal_calls[3] != 0x1ef74
+            || stage.initialization_internal_calls[4] != 0x206d4
             || callback.registration_entry_address != 0x1ef74
             || callback.descriptor_address != 0x1ef48
             || callback.descriptor_callback_offset != 0x12
@@ -97,8 +117,24 @@ public:
             0x1f04a};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCallbackRegistrationAdvance>
+    observe_exec_return(const DeuterosAmigaObservedCallbackExecReturn& observation) {
+        if (!complete_ || observed_exec_return_) return std::nullopt;
+        if (observation.trace_sequence <= observations_.back().trace_sequence
+            || observation.exec_base_source_address != 4
+            || observation.call_address != 0x1f04e || observation.vector != -0x1ce
+            || observation.return_address != 0x1f052) {
+            throw std::runtime_error("Deuteros callback Exec return does not match boundary");
+        }
+        observed_exec_return_ = observation;
+        return DeuterosAmigaTitlePostCallbackRegistrationAdvance{
+            observation, 0x1f052, 0x404b6, 0x404b6, 0x206d4, 0x404b6};
+    }
+
     [[nodiscard]] std::size_t observed_write_count() const noexcept { return count_; }
     [[nodiscard]] bool complete() const noexcept { return complete_; }
+    [[nodiscard]] const std::optional<DeuterosAmigaObservedCallbackExecReturn>&
+    observed_exec_return() const noexcept { return observed_exec_return_; }
     [[nodiscard]] std::uint32_t stop_before_address() const noexcept {
         return complete_ ? 0x1f04a : std::array<std::uint32_t, 4>{
             0x40498, 0x4049e, 0x404a4, 0x404aa}[count_];
@@ -114,6 +150,7 @@ private:
     std::array<DeuterosAmigaObservedCustomChipWrite, 4> observations_{};
     std::size_t count_ = 0;
     bool complete_ = false;
+    std::optional<DeuterosAmigaObservedCallbackExecReturn> observed_exec_return_;
 };
 
 } // namespace eon
