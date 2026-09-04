@@ -3989,7 +3989,7 @@ still-unobserved driver-initialisation return boundary. That makes the first
 result or a false continuation into `TITLES.EXE`.
 
 The selected external-driver continuation is now a separate hash-admitted
-manual-recomp session. `MillenniumDosSoundDriverLoadSession` requires the
+native recomp session. `MillenniumDosSoundDriverLoadSession` requires the
 complete English `MILL.COM` identity and either exact `SSBL.DRV` or
 `SCVX.DRV` identity; character `1` may bind only SSBL and character `2` only
 SCVX. It records the caller's instruction-defined byte write at `$068a`
@@ -3999,7 +3999,17 @@ seek-to-end at `$02eb` with the same observed handle and exact leaf length,
 paragraph allocation at `$02fa`, rewind at `$0309`, complete read at `$0313`
 with the same handle, and close at `$0319`. Carry set, a changed handle,
 nonzero rewind position, a short read, or a length different from the
-hash-identified leaf is rejected.
+hash-identified leaf is rejected. In production,
+`MillenniumDosCompatibilityRunner` services only the deterministic file
+operations against that already authenticated immutable leaf. Its private
+handle is native engine state, not captured DOS evidence. The first tick
+performs open and exact-length discovery and stops at paragraph allocation.
+After an explicitly supplied nonzero allocation segment, the second tick
+rewinds, reads the complete leaf, commits the byte effects atomically, closes
+the private handle, and stops at the INT 95h vector boundary. Allocation,
+vector state, parent stack data, EXEC outcome, and child entry remain
+observations because they depend on process or DOS state that the leaf cannot
+prove.
 
 Only after the exact read result does the session expose byte effects for the
 original leaf at observed allocation segment offset zero. These are transient
@@ -4014,6 +4024,26 @@ at the literal title request `$0336`, `AX=$4b00`, `DX=$068f`, parameter block
 at which the production coordinator may construct the already hash-bound
 English title session. It is not an invented EXEC return, title frame, driver
 initialization callback, audio capability, or later game handoff.
+
+The next owned production boundary is `MillenniumDosTitleExecEntrySession`.
+It is constructed only after that exact `$0336` request and revalidates the
+complete supplied `MILL.COM` and `TITLES.EXE` identities. Advancing it requires
+an explicit child-process-entry record carrying the parent request tuple,
+child `IP=$0100`, a nonzero child code segment, a monotonic sequence and one
+of two visible provenance labels: an externally observed process entry or an
+explicit result from Eon's narrow DOS compatibility service. Merely requesting
+EXEC does not create this record and is never reported as EXEC success.
+
+The seven hash-bound bytes at `TITLES.EXE+$0000..+$0006` are
+`0e 1f 0e 07 e9 79 1a` (SHA-256
+`f68952a9bbb82fa876f35aa293b010e2fb0be9f2814c77d2f8604391716ccd07`):
+`PUSH CS; POP DS; PUSH CS; POP ES; JMP $1b80`. After the process-entry record,
+the native engine may execute only this exact call-free prefix, recording
+DS=CS, ES=CS and IP=`$1b80`. Only then does the release-owned state machine
+leave the no-input sound-driver boundary and expose the already recovered
+title session. Reset, release replacement and host revocation remove this
+checkpoint. This proves the title entry prefix, not DOS loader internals,
+driver initialization, private-interrupt results, a rendered frame or parity.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6013,6 +6043,30 @@ nonincrementing reads. The saved command-stream A4 is restored only after the
 second return, then execution resumes at `$1fa0a` with exactly one opcode byte
 consumed. D0/SR remain value-only evidence and the service's graphics effects
 remain outside this state machine.
+
+For direct opcode bytes `$20..$8f`, the zero/zero mode route through the
+hash-bound `$1fbe6` service is now engine-owned rather than admitted as one
+opaque return. The exact zero-route span `$1fc22..$1fc9b` has SHA-256
+`14bad66df34c5d4200afe7ba9cef8ac114afaf31d9be133d428c1af727c0fe89`.
+Typed observations must prove zero at `$1f98c` and `$1f98e`,
+then supply the five longword cells `$1f99c`, `$1f974`, `$1f96c`, `$1f970`
+and `$1f9a0`. The opcode selects eight glyph bytes from
+`[$1f99c] + (opcode-$20)*8`. For each glyph row, the original loop rereads
+four words from each of the two mask pointers; all 64 word reads and their
+repeated source addresses must be supplied in instruction order.
+
+The recovered byte effect is exact: for each of eight rows and four planes,
+`(low_byte([$1f970+plane*2]) & ~glyph) |
+(low_byte([$1f96c+plane*2]) & glyph)` is written at
+`[$1f974] + row*$28 + plane*$1f40`. Thus one admitted invocation exposes 32
+concrete original bitplane byte writes, preserving the 68000 byte-width
+operations and the four `$1f40` plane strides. After the loop, the observed
+`$1f9a0` longword is added to the original destination pointer and written
+back to `$1f974`; the service returns through `$1fc9a` and `$1fac6` to the
+next command byte. The generic call-return API rejects this opcode family,
+so a register-only return cannot bypass the recovered writes. Nonzero mode
+routes remain explicit evidence boundaries. No host renderer, glyph meaning,
+colour assignment, or unseen memory effect is inferred from these writes.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to

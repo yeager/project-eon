@@ -601,6 +601,33 @@ struct DeuterosAmigaTitleCommandHighCallReturnPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedTitleCommandPlanarWrite {
+    std::uint64_t trace_sequence = 0;
+    std::array<std::uint32_t, 2> mode_instruction_addresses{};
+    std::array<std::uint32_t, 2> mode_source_addresses{};
+    std::array<std::uint8_t, 2> observed_mode_values{};
+    std::array<std::uint32_t, 5> pointer_source_addresses{};
+    std::array<std::uint32_t, 5> observed_pointer_values{};
+    std::array<std::uint32_t, 8> glyph_source_addresses{};
+    std::array<std::uint8_t, 8> observed_glyph_values{};
+    std::array<std::uint32_t, 32> first_word_source_addresses{};
+    std::array<std::uint16_t, 32> observed_first_words{};
+    std::array<std::uint32_t, 32> second_word_source_addresses{};
+    std::array<std::uint16_t, 32> observed_second_words{};
+};
+
+struct DeuterosAmigaTitleCommandPlanarWritePlan {
+    DeuterosAmigaObservedTitleCommandPlanarWrite observation;
+    std::array<std::uint32_t, 32> destination_addresses{};
+    std::array<std::uint8_t, 32> destination_values{};
+    std::uint32_t destination_pointer_cell_address = 0;
+    std::uint32_t destination_pointer_value = 0;
+    std::uint32_t routine_return_address = 0;
+    std::uint32_t command_return_address = 0;
+    std::uint32_t next_stream_address = 0;
+    std::uint32_t next_opcode_read_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -1215,7 +1242,8 @@ public:
         }
         if (call_address != 0) {
             pending_command_call_ = PendingCommandCall{
-                call_address, call_target, call_address + (call_address == 0x1faaa ? 6U : 4U)};
+                call_address, call_target, call_address + (call_address == 0x1faaa ? 6U : 4U),
+                opcode};
         } else {
             command_halted_ = true;
         }
@@ -1229,6 +1257,16 @@ public:
     observe_command_call_return(
         const DeuterosAmigaObservedTitleCommandCallReturn& observation) {
         if (!pending_command_call_ || command_halted_) return std::nullopt;
+        // `$1fbe6` has observable, route-dependent memory effects. A plain
+        // register return must never bypass the recovered zero/zero route.
+        // Other mode combinations remain at an explicit evidence boundary.
+        if (pending_command_call_->address == 0x1fac2
+            && pending_command_call_->target == 0x1fbe6
+            && pending_command_call_->opcode >= 0x20
+            && pending_command_call_->opcode < 0x90) {
+            throw std::runtime_error(
+                "Deuteros planar command requires a typed dispatch-route observation");
+        }
         if (observation.trace_sequence <= last_command_sequence_
             || observation.call_address != pending_command_call_->address
             || observation.call_target != pending_command_call_->target
@@ -1422,6 +1460,63 @@ public:
             command_interpreter_.opcode_read_address};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPlanarWritePlan>
+    observe_command_planar_write(
+        const DeuterosAmigaObservedTitleCommandPlanarWrite& observation) {
+        if (!pending_command_call_ || pending_command_call_->address != 0x1fac2
+            || pending_command_call_->target != 0x1fbe6
+            || pending_command_call_->opcode < 0x20
+            || pending_command_call_->opcode >= 0x90) return std::nullopt;
+        constexpr std::array<std::uint32_t, 2> mode_instructions{{0x1fbe6, 0x1fc22}};
+        constexpr std::array<std::uint32_t, 2> mode_sources{{0x1f98c, 0x1f98e}};
+        constexpr std::array<std::uint32_t, 5> pointer_sources{{
+            0x1f99c, 0x1f974, 0x1f96c, 0x1f970, 0x1f9a0}};
+        if (observation.trace_sequence <= last_command_sequence_
+            || observation.mode_instruction_addresses != mode_instructions
+            || observation.mode_source_addresses != mode_sources
+            || observation.observed_mode_values != std::array<std::uint8_t, 2>{{0, 0}}
+            || observation.pointer_source_addresses != pointer_sources) {
+            throw std::runtime_error("Deuteros planar-write gates do not match boundary");
+        }
+        const auto glyph_base = observation.observed_pointer_values[0]
+            + static_cast<std::uint32_t>(pending_command_call_->opcode - 0x20U) * 8U;
+        const auto destination_base = observation.observed_pointer_values[1];
+        const auto first_words_base = observation.observed_pointer_values[3];
+        const auto second_words_base = observation.observed_pointer_values[2];
+        std::array<std::uint32_t, 32> destinations{};
+        std::array<std::uint8_t, 32> values{};
+        for (std::uint32_t row = 0; row < 8; ++row) {
+            if (observation.glyph_source_addresses[row] != glyph_base + row) {
+                throw std::runtime_error("Deuteros planar-write glyph order does not match boundary");
+            }
+            const auto glyph = observation.observed_glyph_values[row];
+            for (std::uint32_t plane = 0; plane < 4; ++plane) {
+                const auto index = row * 4U + plane;
+                const auto first_address = first_words_base + plane * 2U;
+                const auto second_address = second_words_base + plane * 2U;
+                if (observation.first_word_source_addresses[index] != first_address
+                    || observation.second_word_source_addresses[index] != second_address) {
+                    throw std::runtime_error("Deuteros planar-write word order does not match boundary");
+                }
+                const auto first_low = static_cast<std::uint8_t>(
+                    observation.observed_first_words[index] & 0xffU);
+                const auto second_low = static_cast<std::uint8_t>(
+                    observation.observed_second_words[index] & 0xffU);
+                values[index] = static_cast<std::uint8_t>(
+                    (first_low & static_cast<std::uint8_t>(~glyph))
+                    | (second_low & glyph));
+                destinations[index] = destination_base + row * 0x28U + plane * 0x1f40U;
+            }
+        }
+        last_command_sequence_ = observation.trace_sequence;
+        pending_command_call_.reset();
+        return DeuterosAmigaTitleCommandPlanarWritePlan{observation,
+            destinations, values, 0x1f974,
+            destination_base + observation.observed_pointer_values[4],
+            0x1fc9a, 0x1fac6, next_command_address_,
+            command_interpreter_.opcode_read_address};
+    }
+
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
         const DeuterosAmigaObservedTitleCommandOperandByte& observation) {
@@ -1582,6 +1677,7 @@ private:
         std::uint32_t address;
         std::uint32_t target;
         std::uint32_t return_address;
+        std::uint8_t opcode;
     };
     std::optional<PendingCommandCall> pending_command_call_;
     std::optional<DeuterosAmigaObservedTitleCommandTwoOperandMode>

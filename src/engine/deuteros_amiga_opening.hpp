@@ -103,6 +103,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandEightModePlan> observe_title_command_eight_mode(const DeuterosAmigaObservedTitleCommandEightMode& o) { return title_stage_session_ ? title_stage_session_->observe_command_eight_mode(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandEightScalePlan> observe_title_command_eight_scale(const DeuterosAmigaObservedTitleCommandEightScale& o) { return title_stage_session_ ? title_stage_session_->observe_command_eight_scale(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandCallReturnPlan> observe_title_command_call_return(const DeuterosAmigaObservedTitleCommandCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_command_call_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPlanarWritePlan> observe_title_command_planar_write(const DeuterosAmigaObservedTitleCommandPlanarWrite& o) { return title_stage_session_ ? title_stage_session_->observe_command_planar_write(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

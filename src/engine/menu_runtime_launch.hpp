@@ -52,6 +52,10 @@ public:
     millennium_dos_startup_input() const;
     [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
+    [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
+    [[nodiscard]] MillenniumDosTitleExecEntryObservationResult observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry);
+    [[nodiscard]] MillenniumDosTitleExecEntryObservationResult advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation);
+    [[nodiscard]] std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> millennium_dos_title_exec_entry_checkpoint() const;
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation);
@@ -199,6 +203,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_mode(DeuterosAmigaObservedTitleCommandEightMode);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_scale(DeuterosAmigaObservedTitleCommandEightScale);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_write(DeuterosAmigaObservedTitleCommandPlanarWrite);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission

@@ -12,6 +12,8 @@
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
+#include "engine/millennium_dos_compatibility_runner.hpp"
+#include "engine/millennium_dos_title_exec_entry_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_native_process_admission.hpp"
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
@@ -233,6 +235,21 @@ struct MillenniumDosSoundDriverLoadCheckpoint {
     std::uint16_t file_handle=0,load_segment=0;
     std::vector<MillenniumDosSoundDriverRuntimeWordEffect> runtime_word_effects;
     std::vector<MillenniumDosSoundDriverRuntimeByteEffect> runtime_byte_effects;
+};
+
+struct MillenniumDosTitleExecPrefixObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t prefix_address = 0;
+    std::uint16_t jump_address = 0;
+    std::uint16_t jump_destination = 0;
+};
+struct MillenniumDosTitleExecEntryObservationResult {
+    bool accepted = false;
+    std::string error;
+};
+struct MillenniumDosTitleExecEntryRuntimeCheckpoint {
+    std::uint64_t generation = 0;
+    MillenniumDosTitleExecEntryCheckpoint entry;
 };
 
 struct MillenniumDosTitleToGameCallReturnObservation {
@@ -597,6 +614,13 @@ public:
     millennium_dos_startup_input() const;
     [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
+    [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
+    [[nodiscard]] MillenniumDosTitleExecEntryObservationResult
+    observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry);
+    [[nodiscard]] MillenniumDosTitleExecEntryObservationResult
+    advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation);
+    [[nodiscard]] std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint>
+    millennium_dos_title_exec_entry_checkpoint() const;
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_call_return(
         MillenniumDosTitleToGameCallReturnObservation observation);
@@ -684,6 +708,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_mode(DeuterosAmigaObservedTitleCommandEightMode);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_scale(DeuterosAmigaObservedTitleCommandEightScale);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_write(DeuterosAmigaObservedTitleCommandPlanarWrite);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -863,6 +888,8 @@ private:
     std::optional<MillenniumDosSoundDriverLoadSession> millennium_dos_sound_driver_load_;
     std::uint64_t millennium_dos_sound_driver_load_generation_=0;
     std::uint64_t millennium_dos_sound_driver_load_last_sequence_=0;
+    std::optional<MillenniumDosCompatibilityRunner> millennium_dos_compatibility_runner_;
+    std::optional<MillenniumDosTitleExecEntrySession> millennium_dos_title_exec_entry_;
     std::optional<MillenniumDosTitleToGameSession> millennium_dos_title_to_game_;
     std::uint64_t millennium_dos_title_to_game_generation_ = 0;
     std::uint64_t millennium_dos_title_to_game_last_sequence_ = 0;

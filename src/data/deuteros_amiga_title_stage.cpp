@@ -2348,6 +2348,10 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         "a431f810a110c1640f0f99460a7685054406b0312260cdc400a52e62ee4da2ac";
     constexpr std::string_view high_table_hash =
         "876532af8a5aec1ac7f230c6ffaeec1d82ba3dec23feaa570ba2784924530149";
+    constexpr std::uint32_t planar_zero_route = 0x1fc22;
+    constexpr std::size_t planar_zero_route_length = 0x7a;
+    constexpr std::string_view planar_zero_route_hash =
+        "14bad66df34c5d4200afe7ba9cef8ac114afaf31d9be133d428c1af727c0fe89";
     const auto& stage = plan.title_stage;
     const auto bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto at = [&](const std::uint32_t address, const std::size_t size) {
@@ -2363,7 +2367,9 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         || to_hex(sha256(at(helpers[1], helper_length))) != helper_hashes[1]
         || to_hex(sha256(at(0x1fde4, 2))) != no_op_hash
         || to_hex(sha256(at(0x1fb00, 0x68))) != two_operand_hash
-        || to_hex(sha256(at(0x1c47a, 0x20))) != high_table_hash) {
+        || to_hex(sha256(at(0x1c47a, 0x20))) != high_table_hash
+        || to_hex(sha256(at(planar_zero_route, planar_zero_route_length)))
+            != planar_zero_route_hash) {
         throw std::runtime_error("Unsupported Deuteros command-interpreter profile");
     }
     for (std::size_t index = 0; index < returned_targets.size(); ++index) {
@@ -2382,7 +2388,9 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         {{std::string(returned_hashes[0]), std::string(returned_hashes[1]),
             std::string(returned_hashes[2]), std::string(returned_hashes[3])}},
         0x1fb00, 0x68, std::string(two_operand_hash),
-        0x1c47a, 0x20, std::string(high_table_hash)};
+        0x1c47a, 0x20, std::string(high_table_hash),
+        planar_zero_route, planar_zero_route_length,
+        std::string(planar_zero_route_hash)};
 }
 
 DeuterosAmigaTitlePostExecPointerRouteProfile

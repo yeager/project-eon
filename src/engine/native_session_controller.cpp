@@ -142,6 +142,10 @@ NativeSessionController::millennium_dos_startup_input() const {
 }
 MillenniumDosSoundDriverLoadObservationResult NativeSessionController::observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation o){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return {false,"Sound-driver load requires the active selected-driver boundary"};return runtime_.observe_millennium_dos_sound_driver_load(std::move(o));}
 std::optional<MillenniumDosSoundDriverLoadCheckpoint> NativeSessionController::millennium_dos_sound_driver_load_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return std::nullopt;return runtime_.millennium_dos_sound_driver_load_checkpoint();}
+std::optional<MillenniumDosCompatibilityRunnerCheckpoint> NativeSessionController::tick_millennium_dos_compatibility_runner(){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return std::nullopt;return runtime_.tick_millennium_dos_compatibility_runner();}
+MillenniumDosTitleExecEntryObservationResult NativeSessionController::observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry o){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return {false,"Title child entry requires the sound-driver boundary"};return runtime_.observe_millennium_dos_title_child_process_entry(o);}
+MillenniumDosTitleExecEntryObservationResult NativeSessionController::advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation o){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return {false,"Title entry prefix requires the child-process boundary"};auto result=runtime_.advance_millennium_dos_title_entry_prefix(o);if(result.accepted)synchronize_after_runtime_change();return result;}
+std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> NativeSessionController::millennium_dos_title_exec_entry_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary&&state_!=NativeSessionState::millennium_dos_title)return std::nullopt;return runtime_.millennium_dos_title_exec_entry_checkpoint();}
 
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_stack_word(o);}
@@ -538,6 +542,7 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_eight_pointer,(co
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_eight_mode,(const DeuterosAmigaObservedTitleCommandEightMode o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_eight_scale,(const DeuterosAmigaObservedTitleCommandEightScale o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_call_return,(const DeuterosAmigaObservedTitleCommandCallReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_write,(const DeuterosAmigaObservedTitleCommandPlanarWrite o),(o))
 #undef EON_NATIVE_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission

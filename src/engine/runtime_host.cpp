@@ -60,6 +60,10 @@ std::optional<MillenniumDosStartupInputSnapshot> RuntimeHost::millennium_dos_sta
 }
 MillenniumDosSoundDriverLoadObservationResult RuntimeHost::observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation o){if(revoking())return {false,"Sound-driver load rejected during revocation"};return NativeSessionController::observe_millennium_dos_sound_driver_load(std::move(o));}
 std::optional<MillenniumDosSoundDriverLoadCheckpoint> RuntimeHost::millennium_dos_sound_driver_load_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_sound_driver_load_checkpoint();}
+std::optional<MillenniumDosCompatibilityRunnerCheckpoint> RuntimeHost::tick_millennium_dos_compatibility_runner(){if(revoking())return std::nullopt;return NativeSessionController::tick_millennium_dos_compatibility_runner();}
+MillenniumDosTitleExecEntryObservationResult RuntimeHost::observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry o){if(revoking())return {false,"Title child entry rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_child_process_entry(o);}
+MillenniumDosTitleExecEntryObservationResult RuntimeHost::advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation o){if(revoking())return {false,"Title entry prefix rejected during revocation"};return NativeSessionController::advance_millennium_dos_title_entry_prefix(o);}
+std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> RuntimeHost::millennium_dos_title_exec_entry_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_title_exec_entry_checkpoint();}
 
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_stack_word(o);}
@@ -348,6 +352,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_eight_pointer,(cons
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_eight_mode,(const DeuterosAmigaObservedTitleCommandEightMode o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_eight_scale,(const DeuterosAmigaObservedTitleCommandEightScale o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_call_return,(const DeuterosAmigaObservedTitleCommandCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_write,(const DeuterosAmigaObservedTitleCommandPlanarWrite o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
