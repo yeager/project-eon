@@ -1,0 +1,181 @@
+#include "engine/millennium_dos_sixth_function_session.hpp"
+
+#include <stdexcept>
+
+namespace eon {
+
+MillenniumDosSixthFunctionSession::MillenniumDosSixthFunctionSession(
+    const std::span<const std::uint8_t> game_executable)
+    : trace_(parse_millennium_dos_game_flow(game_executable).sixth_function_key) {
+    if (trace_.handler_address != 0x7415
+        || trace_.initialization_guard_address != 0xa19e
+        || trace_.display_selector_call_address != 0xd0c9
+        || trace_.command_value != 0x0022 || trace_.first_call_address != 0x4d2c
+        || trace_.second_call_address != 0xc980
+        || trace_.saved_first_byte_address != 0x7412 || trace_.first_byte_address != 0x75a8
+        || trace_.saved_second_byte_address != 0x740f || trace_.second_byte_address != 0x75ae
+        || trace_.saved_word_address != 0x7410 || trace_.word_address != 0x75ac
+        || trace_.callback_word_address != 0x75a6 || trace_.callback_word_value != 0x3207
+        || trace_.wait_call_address != 0x09fa) {
+        throw std::runtime_error("Unsupported Millennium DOS sixth-function profile");
+    }
+}
+
+MillenniumDosSixthFunctionBoundary MillenniumDosSixthFunctionSession::boundary() const {
+    MillenniumDosSixthFunctionBoundary result;
+    switch (state_) {
+    case MillenniumDosSixthFunctionState::awaiting_initialization_guard:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
+        result.instruction_address = 0x7415;
+        result.runtime_address = trace_.initialization_guard_address;
+        break;
+    case MillenniumDosSixthFunctionState::awaiting_first_byte:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_byte;
+        result.instruction_address = 0x742b;
+        result.runtime_address = trace_.first_byte_address;
+        break;
+    case MillenniumDosSixthFunctionState::awaiting_second_byte:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_byte;
+        result.instruction_address = 0x7431;
+        result.runtime_address = trace_.second_byte_address;
+        break;
+    case MillenniumDosSixthFunctionState::awaiting_word:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
+        result.instruction_address = 0x7437;
+        result.runtime_address = trace_.word_address;
+        break;
+    case MillenniumDosSixthFunctionState::awaiting_wait_bl:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::register_bl;
+        result.instruction_address = 0x7450;
+        result.wait_iteration = wait_iteration_;
+        break;
+    case MillenniumDosSixthFunctionState::returned_by_guard:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::local_return;
+        result.instruction_address = 0x741c;
+        break;
+    case MillenniumDosSixthFunctionState::returned:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::local_return;
+        result.instruction_address = 0x7454;
+        break;
+    default:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::call_return;
+        result.instruction_address = call_address_;
+        result.call_target = call_target_;
+        result.known_ax = call_known_ax_;
+        result.wait_iteration = wait_iteration_;
+        break;
+    }
+    return result;
+}
+
+void MillenniumDosSixthFunctionSession::enter_call(
+    const MillenniumDosSixthFunctionState state, const std::uint16_t address,
+    const std::uint16_t target, const std::optional<std::uint16_t> known_ax) {
+    state_ = state;
+    call_address_ = address;
+    call_target_ = target;
+    call_known_ax_ = known_ax;
+}
+
+void MillenniumDosSixthFunctionSession::record_effect(
+    const std::uint16_t address, const std::uint8_t width,
+    const std::optional<std::uint16_t> previous, const std::uint16_t value) {
+    effects_.push_back({address, width, previous, value});
+}
+
+void MillenniumDosSixthFunctionSession::observe_runtime_word(
+    const std::uint16_t instruction_address, const std::uint16_t runtime_address,
+    const std::uint16_t value) {
+    const auto expected = boundary();
+    if (expected.kind != MillenniumDosSixthFunctionBoundaryKind::runtime_word
+        || expected.instruction_address != instruction_address
+        || expected.runtime_address != runtime_address) {
+        throw std::runtime_error("Millennium DOS sixth-function word observation is detached");
+    }
+    if (state_ == MillenniumDosSixthFunctionState::awaiting_initialization_guard) {
+        if (value != 0) state_ = MillenniumDosSixthFunctionState::returned_by_guard;
+        else enter_call(MillenniumDosSixthFunctionState::awaiting_display_call_return,
+            0x741f, trace_.display_selector_call_address, 0);
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::awaiting_word) {
+        record_effect(trace_.saved_word_address, 2, std::nullopt, value);
+        record_effect(trace_.first_byte_address, 1, *first_byte_, trace_.first_byte_value);
+        record_effect(trace_.second_byte_address, 1, *second_byte_, trace_.second_byte_value);
+        record_effect(trace_.callback_word_address, 2, std::nullopt, trace_.callback_word_value);
+        enter_call(MillenniumDosSixthFunctionState::awaiting_wait_call_return,
+            0x744d, trace_.wait_call_address);
+        return;
+    }
+    throw std::runtime_error("Unsupported Millennium DOS sixth-function word state");
+}
+
+void MillenniumDosSixthFunctionSession::observe_runtime_byte(
+    const std::uint16_t instruction_address, const std::uint16_t runtime_address,
+    const std::uint8_t value) {
+    const auto expected = boundary();
+    if (expected.kind != MillenniumDosSixthFunctionBoundaryKind::runtime_byte
+        || expected.instruction_address != instruction_address
+        || expected.runtime_address != runtime_address) {
+        throw std::runtime_error("Millennium DOS sixth-function byte observation is detached");
+    }
+    if (state_ == MillenniumDosSixthFunctionState::awaiting_first_byte) {
+        first_byte_ = value;
+        record_effect(trace_.saved_first_byte_address, 1, std::nullopt, value);
+        state_ = MillenniumDosSixthFunctionState::awaiting_second_byte;
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::awaiting_second_byte) {
+        second_byte_ = value;
+        record_effect(trace_.saved_second_byte_address, 1, std::nullopt, value);
+        state_ = MillenniumDosSixthFunctionState::awaiting_word;
+        return;
+    }
+    throw std::runtime_error("Unsupported Millennium DOS sixth-function byte state");
+}
+
+void MillenniumDosSixthFunctionSession::observe_call_return(
+    const std::uint16_t call_address, const std::uint16_t return_address) {
+    const auto expected = boundary();
+    if (expected.kind != MillenniumDosSixthFunctionBoundaryKind::call_return
+        || expected.instruction_address != call_address
+        || return_address != static_cast<std::uint16_t>(call_address + 3U)) {
+        throw std::runtime_error("Millennium DOS sixth-function return is detached from its call");
+    }
+    switch (state_) {
+    case MillenniumDosSixthFunctionState::awaiting_display_call_return:
+        enter_call(MillenniumDosSixthFunctionState::awaiting_command_call_return,
+            0x7425, trace_.first_call_address, trace_.command_value);
+        return;
+    case MillenniumDosSixthFunctionState::awaiting_command_call_return:
+        enter_call(MillenniumDosSixthFunctionState::awaiting_second_call_return,
+            0x7428, trace_.second_call_address);
+        return;
+    case MillenniumDosSixthFunctionState::awaiting_second_call_return:
+        state_ = MillenniumDosSixthFunctionState::awaiting_first_byte;
+        return;
+    case MillenniumDosSixthFunctionState::awaiting_wait_call_return:
+        state_ = MillenniumDosSixthFunctionState::awaiting_wait_bl;
+        return;
+    default:
+        throw std::runtime_error("Unsupported Millennium DOS sixth-function call state");
+    }
+}
+
+void MillenniumDosSixthFunctionSession::observe_bl(
+    const std::uint16_t shift_address, const std::uint8_t value) {
+    if (state_ != MillenniumDosSixthFunctionState::awaiting_wait_bl
+        || shift_address != 0x7450) {
+        throw std::runtime_error("Millennium DOS sixth-function BL observation is detached");
+    }
+    shifted_bl_values_.push_back(static_cast<std::uint8_t>(value >> 1U));
+    if ((value & 1U) != 0) {
+        ++wait_iteration_;
+        enter_call(MillenniumDosSixthFunctionState::awaiting_wait_call_return,
+            0x744d, trace_.wait_call_address);
+    } else {
+        state_ = MillenniumDosSixthFunctionState::returned;
+    }
+}
+
+} // namespace eon

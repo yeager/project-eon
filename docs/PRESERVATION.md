@@ -2787,6 +2787,16 @@ The 40 source bytes hash to
 not resolve `$12ff4`, write title-stage memory, open a library, or turn those
 palette words into an SDL title screen.
 
+The engine-owned `DeuterosAmigaTitleOpenLibraryBoundarySession` now makes the
+preceding transition explicit without implementing Amiga Exec. It admits only
+an observation newer than both exact Exec returns and matching entry `$1ed80`,
+name `$1ed02`, Exec-base source `$4`, call `$1ed8c`, vector `-$228`, and return
+`$1ed90`. D0 and SR are retained verbatim as value-only evidence. Observed
+`D0=0` stops at the original `$1edf6` self-loop; an observed nonzero D0 retains
+only the proven sparse-store destination `$12fec` and stops at caller return
+`$40472`, before `$1f172` consumes unresolved graphics/display state. No host
+library is opened and neither outcome is a title-display or parity claim.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -4140,6 +4150,24 @@ observation and hides the checkpoint. Because the normal launch path still
 cannot genuinely reach the GX predecessor, no test or runtime code fabricates
 a positive active transition; exact-media tests independently cover the
 owned `$7384` session and wrong-state/revocation gates cover the public path.
+
+The same terminal dispatcher has an independently typed seventh-function
+successor. It requires a separate observation binding `$d40a → $76f1`, table
+index `6`, and handler `$7521` while the live post-overlay checkpoint already
+reports that exact scaled-call boundary and index. The runtime never derives
+or fills in the handler address for the observer. The coordinator constructs
+`MillenniumDosSeventhFunctionSession` only through the existing exact-English
+media owner and accepts only its address-bound runtime-word, runtime-byte,
+call-return, and returned-BX observations. Its copy-only checkpoint contains
+the typed boundary, terminal/guard facts and reconstructed word effects.
+
+`MILLENNIUM DOS SEVENTH-FUNCTION HANDLER` is a no-capability state: no SDL
+input, frame, audio, device ABI, dispatch return, or gameplay meaning is
+granted. Reset order destroys the span borrower before its verified
+executable owner, and host revocation rejects observations and hides the
+checkpoint. The genuine active predecessor is still unavailable, so only the
+owned exact-media construction and negative public gates are tested; no
+positive active reachability is synthesized.
 
 The complementary DX-nonzero successor is independently bounded before its
 first mouse boundary. The static target `$d44b` loads `AL=$08` and its short
@@ -5601,3 +5629,14 @@ through `$1f258`. `DeuterosAmigaTitlePostExecTailFlagGateCopyCalleeProfile`
 hash-locks the callers and routine without supplying the gate value, reading
 or writing those cells, executing the transfer or delay loop, choosing its
 branch, or assuming a return.
+
+# Millennium DOS sixth-function runtime boundary
+
+The exact English `2200AD.EXE` sixth-table handler `$7415..$7454` is available
+through the native runtime only after the active post-overlay state machine has
+reached the authenticated `$d40a -> $76f1` dispatch boundary with scaled index
+5 and handler `$7415`. Typed observations and value-only checkpoints propagate
+through the coordinator, native controller, host, and launcher layers. Source
+revocation destroys the span-backed session before its admitted media owner and
+rejects subsequent observations. See `MILLENNIUM_DOS_SIXTH_FUNCTION.md` for the
+instruction-level evidence and excluded `$7455` restoration routine.

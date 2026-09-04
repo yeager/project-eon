@@ -130,6 +130,42 @@ RuntimeHost::millennium_dos_tenth_function_checkpoint() const {
     return NativeSessionController::millennium_dos_tenth_function_checkpoint();
 }
 
+#define EON_HOST_SEVENTH_PROXY(name, type) \
+MillenniumDosSeventhFunctionObservationResult RuntimeHost::name(const type observation) { \
+    if (revoking()) return {false, "Seventh-function observation rejected during source revocation"}; \
+    return NativeSessionController::name(observation); \
+}
+EON_HOST_SEVENTH_PROXY(observe_millennium_dos_seventh_function_dispatch, MillenniumDosSeventhFunctionDispatchObservation)
+EON_HOST_SEVENTH_PROXY(observe_millennium_dos_seventh_function_word, MillenniumDosSeventhFunctionWordObservation)
+EON_HOST_SEVENTH_PROXY(observe_millennium_dos_seventh_function_byte, MillenniumDosSeventhFunctionByteObservation)
+EON_HOST_SEVENTH_PROXY(observe_millennium_dos_seventh_function_call_return, MillenniumDosSeventhFunctionCallReturnObservation)
+EON_HOST_SEVENTH_PROXY(observe_millennium_dos_seventh_function_returned_bx, MillenniumDosSeventhFunctionReturnedBxObservation)
+#undef EON_HOST_SEVENTH_PROXY
+
+std::optional<MillenniumDosSeventhFunctionCheckpoint>
+RuntimeHost::millennium_dos_seventh_function_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_seventh_function_checkpoint();
+}
+
+#define EON_HOST_SIXTH_PROXY(name, type) \
+MillenniumDosSixthFunctionObservationResult RuntimeHost::name(const type observation) { \
+    if (revoking()) return {false, "Sixth-function observation rejected during source revocation"}; \
+    return NativeSessionController::name(observation); \
+}
+EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_dispatch, MillenniumDosSixthFunctionDispatchObservation)
+EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_word, MillenniumDosSixthFunctionWordObservation)
+EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_byte, MillenniumDosSixthFunctionByteObservation)
+EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_call_return, MillenniumDosSixthFunctionCallReturnObservation)
+EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_bl, MillenniumDosSixthFunctionBlObservation)
+#undef EON_HOST_SIXTH_PROXY
+
+std::optional<MillenniumDosSixthFunctionCheckpoint>
+RuntimeHost::millennium_dos_sixth_function_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_sixth_function_checkpoint();
+}
+
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {
     if (revoking()) return std::nullopt;

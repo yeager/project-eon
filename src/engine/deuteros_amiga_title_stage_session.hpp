@@ -5,6 +5,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "engine/deuteros_amiga_title_exec_boundary_session.hpp"
+#include "engine/deuteros_amiga_title_open_library_boundary_session.hpp"
 
 #include <span>
 #include <optional>
@@ -73,9 +74,17 @@ public:
         return exec_boundary_session_.checkpoint();
     }
     [[nodiscard]] std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint>
-    observe_exec_return(const DeuterosAmigaObservedExecReturn& observation) {
-        if (!local_prefix_executed_) return std::nullopt;
-        return exec_boundary_session_.observe_exec_return(observation);
+    observe_exec_return(const DeuterosAmigaObservedExecReturn& observation);
+    [[nodiscard]] const DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint*
+    open_library_boundary() const noexcept {
+        return open_library_boundary_session_
+            ? &open_library_boundary_session_->checkpoint() : nullptr;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint>
+    observe_open_library_return(
+        const DeuterosAmigaObservedOpenLibraryReturn& observation) {
+        if (!open_library_boundary_session_) return std::nullopt;
+        return open_library_boundary_session_->observe_return(observation);
     }
 
 private:
@@ -88,6 +97,8 @@ private:
     DeuterosAmigaTitleGraphicsSetupProfile graphics_setup_;
     DeuterosAmigaTitleDisplayClearProfile display_clear_;
     DeuterosAmigaTitleExecBoundarySession exec_boundary_session_;
+    std::optional<DeuterosAmigaTitleOpenLibraryBoundarySession>
+        open_library_boundary_session_;
     std::string original_sha256_;
     bool local_prefix_executed_ = false;
 };

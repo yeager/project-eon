@@ -27,6 +27,10 @@ enum class RuntimeSessionKind {
     // Explicit observations advanced the recovered post-overlay loop from
     // the second INT 91h return. It remains a no-capability typed boundary.
     millennium_dos_post_overlay_loop,
+    // Explicit scaled dispatch index 6 was observed resolving to $7521.
+    // The typed handler is still a no-capability preservation boundary.
+    millennium_dos_seventh_function,
+    millennium_dos_sixth_function,
     // The scaled dispatcher was explicitly observed resolving index 9 to the
     // exact English $7384 handler. The handler remains observation-driven and
     // grants no host presentation, audio, or input capability.

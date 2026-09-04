@@ -132,4 +132,16 @@ DeuterosAmigaTitleStageSession::execute_local_prefix() {
         exec_prelude_.stop_before_exec_base_read_address};
 }
 
+std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint>
+DeuterosAmigaTitleStageSession::observe_exec_return(
+    const DeuterosAmigaObservedExecReturn& observation) {
+    if (!local_prefix_executed_) return std::nullopt;
+    const auto advanced = exec_boundary_session_.observe_exec_return(observation);
+    if (advanced && advanced->state
+            == DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary) {
+        open_library_boundary_session_.emplace(*advanced, graphics_setup_);
+    }
+    return advanced;
+}
+
 } // namespace eon
