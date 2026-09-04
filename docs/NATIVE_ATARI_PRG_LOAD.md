@@ -229,8 +229,11 @@ zero-bit path, one bounded pair observation admits `$2c251..$2c252`, copies
 the bytes atomically to the owned A5 destination, advances A4/A5 and
 decrements D6 through the exact eight-byte prefix whose SHA-256 is
 `8b97786735b1f1be41f931a62098f2f1080b5067b2db2a9835125619ad3b7623`.
-Execution stops before the D6 branch at `$2b2f2`. Alternate paths still stop
-at `$2b376`/`$2b3b8` without admitting further bytes.
+The normal-path counter continuation `$2b2f2..$2b321` is hash-bound as
+`9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef`
+and natively dispatches the remaining run, row and four-plane counters back
+to the next pair/token boundary or to RTS. Alternate token paths still stop
+at `$2b338`, `$2b376`, or `$2b3b8` without admitting further bytes.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

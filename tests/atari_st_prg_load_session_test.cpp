@@ -326,6 +326,7 @@ int main(const int argc, const char* const argv[]) {
         assert(user_consumer.observe_gemdos_selector_62({1,20,0x2a5e6,0x3e,0}).accepted);
         assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fread_prefix_boundary
             && user_consumer.checkpoint().fread_prefix_a4==0x2c24c);
+        auto single_cell_planes=user_consumer;
         assert(!user_consumer.observe_fread_prefix({1,21,0x2c24a,0x1122,0x2c24e,0x3344}).accepted);
         assert(user_consumer.observe_fread_prefix({1,21,0x2c24c,0x1122,0x2c24e,0x3344}).accepted);
         assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2b2be_boundary
@@ -369,6 +370,31 @@ int main(const int argc, const char* const argv[]) {
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c251})==0x56
             && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,zero_destination})==0x56
             && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,zero_destination+1})==0x78);
+        assert(user_consumer.execute_game_init_zero_counter_branch().accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_zero_copy_boundary
+            && user_consumer.checkpoint().game_init_next_instruction==0x2b2ea
+            && user_consumer.checkpoint().game_init_d2==0x11
+            && user_consumer.checkpoint().game_init_source_address==0x2c253
+            && user_consumer.checkpoint().caller_a5==zero_destination+8
+            && user_consumer.checkpoint().game_init_zero_counter_continuation_sha256=="9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef");
+        assert(!user_consumer.execute_game_init_zero_counter_branch().accepted);
+        assert(single_cell_planes.observe_fread_prefix({1,21,0x2c24c,0x0001,0x2c24e,0x0001}).accepted);
+        assert(single_cell_planes.execute_jsr_2b2be().accepted);
+        std::uint64_t plane_sequence=22;
+        std::uint32_t plane_source=0x2c250;
+        for(std::uint32_t plane=1;plane<=4;++plane){
+            assert(single_cell_planes.observe_game_init_source_byte({1,plane_sequence++,0x2b2de,plane_source,0x01}).accepted);
+            assert(single_cell_planes.observe_game_init_zero_pair({1,plane_sequence++,0x2b2ea,plane_source+1U,0x12,plane_source+2U,0x34}).accepted);
+            assert(single_cell_planes.execute_game_init_zero_counter_branch().accepted);
+            plane_source+=3U;
+            if(plane<4)assert(single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_source_byte_boundary
+                && single_cell_planes.checkpoint().game_init_completed_planes==plane
+                && single_cell_planes.checkpoint().game_init_d6==1
+                && single_cell_planes.checkpoint().game_init_d7==1);
+        }
+        assert(single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_complete
+            && single_cell_planes.checkpoint().game_init_next_instruction==0x2b3c6
+            && single_cell_planes.checkpoint().game_init_completed_planes==4);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted
             && bit6_clear.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_bit6_clear_boundary
             && bit6_clear.checkpoint().game_init_next_instruction==0x2b3b8);

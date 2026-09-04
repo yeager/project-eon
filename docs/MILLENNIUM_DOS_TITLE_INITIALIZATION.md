@@ -419,4 +419,17 @@ loads `ES=CS`, selects request record `CS:$0fdf`, writes CS to its word at
 `$0fe7`, selects function `$001a`, and calls the common `$0122` wrapper at
 `$1011`. The runtime commits that single instruction-defined word atomically
 with the state transition and stops at the next typed INT `$91` result at
-`$0127`. The function-`$001a` result and service semantics remain unknown.
+`$0127`. The function-`$001a` service semantics remain unknown, so its return
+is admitted only as a typed raw observation: AX, FLAGS, and the complete
+ten-byte request record at `CS:$0fdf..$0fe8`. A short or detached record is
+rejected before any runtime byte changes.
+
+After the hash-bound common-wrapper epilogue, RETs at `$1014` and `$1c1d`
+enter `$1941`. Its first 34-byte loop prefix hashes to
+`8ae5339224f631de9dbf852ab43c5553849b37ef00289e0a34055e73a760357a`.
+It sets `CX=$25`, adds `$0170` to both hash-bound zero output offsets at
+`CS:$010c/$0110`, derives first record index one, and enters `$1390` with
+`AX=1`. The already verified `$1390..$13a9` descriptor prefix advances the
+relocated directory pointer by 12 bytes. Native execution stops before the
+next external two-word read at `$13aa`, now `TITLE.LIB+$000f`; neither those
+words nor graphics meaning are inferred.

@@ -801,6 +801,45 @@ int main(int argc, char** argv) {
     assert(duplicate_graphics_result_rejected
         &&other_success.checkpoint().last_sequence==90
         &&other_success.checkpoint().memory_effects.size()==18958);
+    auto incomplete_function_001a=other_success;
+    bool incomplete_function_001a_rejected=false;
+    try { incomplete_function_001a.observe_private_interrupt_result(
+        {91,0x0127,0x0129,0xbeef,0x0202,0x2468,0x0fdf,{0,0,0}}); }
+    catch(const std::runtime_error&) { incomplete_function_001a_rejected=true; }
+    assert(incomplete_function_001a_rejected
+        &&incomplete_function_001a.checkpoint().state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary
+        &&incomplete_function_001a.checkpoint().memory_effects.size()==18958);
+    const std::vector<std::uint8_t> observed_function_001a_record{
+        0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x68,0x24};
+    other_success.observe_private_interrupt_result(
+        {91,0x0127,0x0129,0xbeef,0x0202,0x2468,0x0fdf,
+            observed_function_001a_record});
+    const auto first_title_loop=other_success.checkpoint();
+    assert(first_title_loop.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
+        &&first_title_loop.last_sequence==91
+        &&first_title_loop.post_descriptor_observed_ax==0xbeef
+        &&first_title_loop.post_descriptor_observed_flags==0x0202
+        &&first_title_loop.post_descriptor_observed_record
+            ==observed_function_001a_record
+        &&first_title_loop.boundary.result_observed
+        &&first_title_loop.continuation_address==0x13aa
+        &&first_title_loop.far_read_boundary.instruction_address==0x13aa
+        &&first_title_loop.far_read_boundary.source_segment==0x3481
+        &&first_title_loop.far_read_boundary.source_offset==0x000f
+        &&first_title_loop.far_read_boundary.word_count==2
+        &&first_title_loop.far_read_boundary.destination_segment==0x2468
+        &&first_title_loop.far_read_boundary.destination_offset==0x138c
+        &&first_title_loop.memory_effects.size()==18970
+        &&first_title_loop.memory_effects[18958].offset==0x0fdf
+        &&first_title_loop.memory_effects[18958].value==0x10
+        &&first_title_loop.memory_effects[18967].offset==0x0fe8
+        &&first_title_loop.memory_effects[18967].value==0x24
+        &&first_title_loop.memory_effects[18968].offset==0x010c
+        &&first_title_loop.memory_effects[18968].value==0x0170
+        &&first_title_loop.memory_effects[18969].offset==0x0110
+        &&first_title_loop.memory_effects[18969].value==0x0170);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state
