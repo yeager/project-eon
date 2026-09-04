@@ -154,10 +154,33 @@ A typed selector-6 return similarly records otherwise-unused D0. The exact
 10 bytes `$2aabe..$2aac7` hash to
 `ba614a28f861921a263225ef85209b20dc2673ea3444cb556b88ca29b2b23163`.
 They clean six stack bytes and stop before absolute `JSR $2b55a` at `$2aac2`.
-The eight bytes previously inventoried at file `+$107c` would map to `$2b57c`
-under the exact `$2a500` load, not the called `$2b55a`. The typed callee
-observation is therefore rejected: the 22-byte mapping disagreement is a hard
-preservation boundary, and Eon does not execute those bytes at the wrong PC.
+The old file-`+$107c` candidate is correctly rejected because it maps to
+`$2b57c`. The genuine bytes at loaded `$2b55a` are instead
+`48e7fffe61000038`, SHA-256
+`b1b4328c9f54737553994259dac4dfb0247bf422414ed05a1c5c6166ec37ba62`:
+`MOVEM.L D0-D7/A0-A6,-(A7)` followed by `BSR.W $2b59a`. Eon executes this
+exact prefix and stops before the BSR callee at `$2b59a`.
+The genuine callee prefix `$2b59a..$2b5a9` is hash-bound by the first 16 bytes,
+SHA-256 `967cb0022c8e29e0bef0dae618b95750fff3afa255094f9356210f1c89686fa3`.
+BSR records return `$2b562`; `LEA -$4b6(PC),A3` yields `$2b0e8`, and
+`CLR.B $5d0(A3)` atomically clears `$2b6b8`. Execution stops before the
+D0-indexed `MOVE.B` at `$2b5a6`, since its source index is external state.
+The typed continuation records D0, the derived source address
+`$2bdfd + sign_extend(D0.W)`, and the byte observed there. The two exact
+MOVE.B instructions hash to
+`e87859079e18a266cc359d7e0be47667c5cfe79dbffa05daad80ee951fa777d7`
+and atomically copy that byte to `$2b6b0` and `$2b6b1`. The next local
+boundary is the A1 setup at `$2b5b2`.
+The next 48 genuine bytes hash to
+`4345389397550c90280802d10a3f03b3e181745bcb98f8c693a2c0980722a1ef`.
+They derive A1 `$2b61e`, D7 `2`, A0 `$2bdcc` then `$2bdfc`, atomically apply
+five byte initializers and two `$2bdcc` pointer stores, and stop before the
+next D0-indexed word read at `$2b5de`.
+The following A0.W-indexed source resolves to `$26ee4`. A typed word
+observation is checked against owned memory before the 20-byte tail (SHA-256
+`82379ace33d5464b74e03aa0669f8a1097498fd21ce3639c180ab5e21cac810b`)
+derives A0 `$56eee4`, atomically stores it at `$2b620`, increments D0.W,
+decrements D7 from 2 to 1, and takes DBF back to `$2b5b8`.
 The checkpoint is generation-owned and disappears
 with the same coordinator revocation as its PRG and Fread memory.
 
@@ -166,8 +189,7 @@ with the same coordinator revocation as its PRG and Fread memory.
 The materialized image and exact configuration occupy native runtime memory.
 With explicit SR, selector-2, selector-3, selector-4, and Line-A observations,
 both entry branches
-reach the opaque call `JSR $2b55a` at `$2aac2`. Its load mapping is the next
-boundary. TOS
+reach the D0-indexed write at `$2b5a6`. Its caller register is the next boundary. TOS
 basepage fields, other XBIOS results, Line-A state, input, timing, and every unclassified indirect
 target remain explicit preservation boundaries.
 

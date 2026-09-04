@@ -42,6 +42,10 @@ identical-looking string from another release or file from inheriting the
 wrong semantic key.
 The reviewable mirror is [`docs/game-text-map.json`](../docs/game-text-map.json);
 tests require it to match the compiled registry exactly.
+One semantic key may have multiple source rows when original editions use
+different text. The current English and Spanish DOS celestial tables therefore
+share catalog messages while retaining separate source language, full leaf
+hash, offsets, lengths, spelling, and padding.
 
 ## Unicode rendering
 

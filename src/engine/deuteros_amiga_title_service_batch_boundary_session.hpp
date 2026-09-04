@@ -806,6 +806,74 @@ struct DeuterosAmigaTitleFirstDispatchCallerTailPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedTitleFirstDispatchDestinationWords {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t first_instruction_address = 0;
+    std::vector<std::uint32_t> source_addresses;
+    std::vector<std::uint16_t> observed_words;
+};
+
+struct DeuterosAmigaTitleFirstDispatchMergePlan {
+    DeuterosAmigaObservedTitleFirstDispatchDestinationWords observation;
+    std::vector<std::uint32_t> destination_addresses;
+    std::vector<std::uint16_t> destination_values;
+    std::uint32_t executed_word_writes = 0;
+    std::uint32_t unique_word_writes = 0;
+    std::uint32_t routine_return_address = 0;
+    std::uint32_t caller_return_address = 0;
+    std::uint16_t next_d0_literal = 0;
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_call_target = 0;
+};
+
+struct DeuterosAmigaTitlePostCommandSecondDispatchPlan {
+    std::uint16_t caller_d0 = 0;
+    std::uint32_t outer_entry_address = 0;
+    std::uint32_t outer_table_base = 0;
+    std::uint16_t outer_descriptor_word = 0;
+    std::uint32_t fixed_descriptor_address = 0;
+    std::uint16_t nested_index = 0;
+    std::uint32_t nested_pointer_cell_address = 0;
+    std::uint32_t nested_pointer_offset = 0;
+    std::uint32_t compressed_source_address = 0;
+    std::uint32_t destination_address = 0;
+    std::uint32_t destination_wrap_address = 0;
+    std::uint32_t row_advance = 0;
+    std::uint16_t width = 0;
+    std::uint16_t height = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
+struct DeuterosAmigaTitleSecondDispatchDecodePlan {
+    std::vector<std::uint32_t> destination_addresses;
+    std::vector<std::uint8_t> destination_values;
+    std::uint32_t source_begin = 0;
+    std::uint32_t source_end = 0;
+    std::uint32_t packet_count = 0;
+    std::array<std::uint32_t,4> packet_family_counts{};
+    std::uint32_t decoded_pair_count = 0;
+    std::uint32_t caller_resume_address = 0;
+    std::string source_sha256;
+};
+
+struct DeuterosAmigaObservedTitleSecondDispatchDestinationWords {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t first_instruction_address = 0;
+    std::array<std::uint32_t,64> source_addresses{};
+    std::array<std::uint16_t,64> observed_words{};
+};
+
+struct DeuterosAmigaTitleSecondDispatchMergePlan {
+    DeuterosAmigaObservedTitleSecondDispatchDestinationWords observation;
+    std::vector<std::uint32_t> destination_addresses;
+    std::vector<std::uint16_t> destination_values;
+    std::uint32_t executed_word_writes = 0;
+    std::uint32_t unique_word_writes = 0;
+    std::uint32_t routine_return_address = 0;
+    std::uint32_t caller_return_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -932,6 +1000,50 @@ public:
         }
         if(source!=compressed.size()||first_dispatch_decode_values_.size()!=2176U)
             throw std::runtime_error("Deuteros compressed stream completion mismatch");
+
+        if (to_hex(sha256(at(0x416de,14)))
+                != "32638511c8219c7a132dcc35a59b40c2a1fa028e48c0d4c6891a383d08e79162"
+            || to_hex(sha256(at(0x422b2,4)))
+                != "acf20393858e975c2b8e9674523830117781a9c0b12ae6b40469418a95be9cf1"
+            || to_hex(sha256(at(0x78c72,7)))
+                != "4a7c8a66510bb9364ca1247c92f42dee95835bf0cabce6d474be90f0a09f4a16")
+            throw std::runtime_error("Unsupported Deuteros second post-command dispatch tables");
+        const auto second_compressed=at(0x78c76,229);
+        if(to_hex(sha256(second_compressed))
+                != "dabcb6ee4feb0022f3232bcab1ffccb6657448e8602c39ef248da996e57a5666")
+            throw std::runtime_error("Unsupported Deuteros second compressed stream");
+        source=0;plane_base=0x256dc;row_base=plane_base;destination=row_base;
+        groups=5;rows=16;planes=4;
+        auto emit_second=[&](std::uint8_t first,std::uint8_t second){
+            second_dispatch_decode_addresses_.push_back(destination);
+            second_dispatch_decode_values_.push_back(first);
+            second_dispatch_decode_addresses_.push_back(destination+1U);
+            second_dispatch_decode_values_.push_back(second);
+            destination+=2U;
+            if(--groups==0){
+                if(--rows==0){if(--planes==0)return;plane_base+=0x1a40U;row_base=plane_base;rows=16;}
+                else row_base+=0x38U;
+                destination=row_base;groups=5;
+            }
+        };
+        while(planes!=0){
+            if(source>=second_compressed.size())throw std::runtime_error("Truncated Deuteros second compressed stream");
+            const auto control=second_compressed[source++];const auto family=control>>6U;
+            ++second_dispatch_family_counts_[family];++second_dispatch_packet_count_;
+            std::uint32_t count=control&0x3fU;std::uint8_t first=0,second=0;
+            if(family==0){count=control==0?256U:control;for(std::uint32_t i=0;i<count&&planes;++i){
+                if(source+2U>second_compressed.size())throw std::runtime_error("Truncated Deuteros second literal packet");
+                first=second_compressed[source++];second=second_compressed[source++];emit_second(first,second);}continue;}
+            if(family==1){count=count==0?256U:count;if(source>=second_compressed.size())throw std::runtime_error("Truncated Deuteros second fill packet");first=second=second_compressed[source++];}
+            else {if(family==2){if(source>=second_compressed.size())throw std::runtime_error("Truncated Deuteros second extended count");count=(count<<8U)|second_compressed[source++];if(count==0)count=65536U;}
+                else if(count==0)count=256U;
+                if(source+2U>second_compressed.size())throw std::runtime_error("Truncated Deuteros second swapped packet");
+                second=second_compressed[source++];first=second_compressed[source++];}
+            for(std::uint32_t i=0;i<count&&planes;++i)emit_second(first,second);
+        }
+        if(source!=second_compressed.size()||second_dispatch_decode_values_.size()!=640U
+            ||second_dispatch_family_counts_!=std::array<std::uint32_t,4>{{33,32,1,0}})
+            throw std::runtime_error("Deuteros second compressed stream completion mismatch");
     }
 
     void enter(std::uint64_t preceding_sequence, std::uint32_t graphics_library_base) {
@@ -2087,6 +2199,113 @@ public:
             3,0x0b,addresses,words,combined,0x27f06,0x41ed8};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchMergePlan>
+    observe_post_command_first_dispatch_destination_words(
+        const DeuterosAmigaObservedTitleFirstDispatchDestinationWords& observation) {
+        if(!first_dispatch_caller_tail_advanced_||first_dispatch_merge_observed_)return std::nullopt;
+        std::vector<std::uint32_t> required;
+        required.reserve(960);
+        for(std::uint32_t outer=0;outer<3;++outer)for(std::uint32_t word=0;word<184;++word)
+            for(std::uint32_t plane=0;plane<4;++plane){
+                const auto address=0x27f06U+outer*0x38U+word*2U+plane*0x1a40U;
+                if(std::find(required.begin(),required.end(),address)==required.end())required.push_back(address);
+            }
+        if(observation.trace_sequence<=last_command_sequence_
+            ||observation.first_instruction_address!=0x41ed8
+            ||observation.source_addresses!=required
+            ||observation.observed_words.size()!=required.size())
+            throw std::runtime_error("Deuteros first merge destination observations do not match boundary");
+        auto values=observation.observed_words;
+        const auto decoded_word=[&](std::uint32_t address){
+            const auto it=std::lower_bound(first_dispatch_decode_addresses_.begin(),
+                first_dispatch_decode_addresses_.end(),address);
+            if(it==first_dispatch_decode_addresses_.end()||*it!=address)
+                throw std::runtime_error("Deuteros merge mask lies outside decoded bytes");
+            const auto index=static_cast<std::size_t>(it-first_dispatch_decode_addresses_.begin());
+            if(index+1>=first_dispatch_decode_values_.size()
+                ||first_dispatch_decode_addresses_[index+1]!=address+1U)
+                throw std::runtime_error("Deuteros merge mask word is truncated");
+            return static_cast<std::uint16_t>(
+                (static_cast<std::uint16_t>(first_dispatch_decode_values_[index]) << 8U)
+                | static_cast<std::uint16_t>(first_dispatch_decode_values_[index + 1U]));
+        };
+        for(std::uint32_t outer=0;outer<3;++outer)for(std::uint32_t word=0;word<184;++word){
+            std::array<std::uint16_t,4> masks{};std::uint16_t combined=0;
+            for(std::uint32_t plane=0;plane<4;++plane){masks[plane]=decoded_word(
+                0x256dcU+outer*0x38U+word*2U+plane*0x1a40U);combined|=masks[plane];}
+            for(std::uint32_t plane=0;plane<4;++plane){
+                const auto address=0x27f06U+outer*0x38U+word*2U+plane*0x1a40U;
+                const auto it=std::find(required.begin(),required.end(),address);
+                const auto index=static_cast<std::size_t>(it-required.begin());
+                values[index]=static_cast<std::uint16_t>((values[index]|combined)
+                    &(masks[plane]|static_cast<std::uint16_t>(~combined)));
+            }
+        }
+        first_dispatch_merge_observed_=true;last_command_sequence_=observation.trace_sequence;
+        return DeuterosAmigaTitleFirstDispatchMergePlan{observation,std::move(required),
+            std::move(values),2208,960,0x41f30,0x40514,0x4e,0x40518,0x41bb4};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandSecondDispatchPlan>
+    advance_post_command_second_dispatch() {
+        if(!first_dispatch_merge_observed_||second_dispatch_advanced_)return std::nullopt;
+        second_dispatch_advanced_=true;
+        // The outer lookup uses `$4129a`, but the high-bit path deliberately
+        // resets A5 to the fixed descriptor at `$4128e` before indexing `$c2`.
+        return DeuterosAmigaTitlePostCommandSecondDispatchPlan{0x4e,0x416de,0x4129a,
+            0x00c2,0x4128e,0x00c2,0x422b2,0x00036978,0x78c72,0x256dc,
+            0x2bfc0,0x38,0x14,0x8010,0x41c72};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondDispatchDecodePlan>
+    advance_post_command_second_dispatch_decode() {
+        if(!second_dispatch_advanced_||second_dispatch_decode_advanced_)return std::nullopt;
+        second_dispatch_decode_advanced_=true;
+        return DeuterosAmigaTitleSecondDispatchDecodePlan{second_dispatch_decode_addresses_,
+            second_dispatch_decode_values_,0x78c76,0x78d5a,second_dispatch_packet_count_,
+            second_dispatch_family_counts_,320,0x41be6,
+            "dabcb6ee4feb0022f3232bcab1ffccb6657448e8602c39ef248da996e57a5666"};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondDispatchMergePlan>
+    observe_post_command_second_dispatch_destination_words(
+        const DeuterosAmigaObservedTitleSecondDispatchDestinationWords& observation) {
+        if(!second_dispatch_decode_advanced_||second_dispatch_merge_observed_)return std::nullopt;
+        std::array<std::uint32_t,64> required{};std::size_t required_index=0;
+        for(std::uint32_t row=0;row<16;++row)for(std::uint32_t plane=0;plane<4;++plane)
+            required[required_index++]=0x256e6U+row*0x38U+plane*0x1a40U;
+        if(observation.trace_sequence<=last_command_sequence_
+            ||observation.first_instruction_address!=0x41ed8
+            ||observation.source_addresses!=required)
+            throw std::runtime_error("Deuteros second merge destination observations do not match boundary");
+        const auto decoded_word=[&](std::uint32_t address){
+            const auto it=std::lower_bound(second_dispatch_decode_addresses_.begin(),
+                second_dispatch_decode_addresses_.end(),address);
+            if(it==second_dispatch_decode_addresses_.end()||*it!=address)
+                throw std::runtime_error("Deuteros second merge mask lies outside decoded bytes");
+            const auto index=static_cast<std::size_t>(it-second_dispatch_decode_addresses_.begin());
+            return static_cast<std::uint16_t>(
+                static_cast<std::uint16_t>(second_dispatch_decode_values_[index])<<8U
+                |second_dispatch_decode_values_[index+1U]);
+        };
+        std::vector<std::uint32_t> addresses;std::vector<std::uint16_t> values;
+        addresses.reserve(320);values.reserve(320);required_index=0;
+        for(std::uint32_t row=0;row<16;++row)for(std::uint32_t word=0;word<5;++word){
+            std::array<std::uint16_t,4> masks{};std::uint16_t combined=0;
+            for(std::uint32_t plane=0;plane<4;++plane){masks[plane]=decoded_word(
+                0x256dcU+row*0x38U+word*2U+plane*0x1a40U);combined|=masks[plane];}
+            for(std::uint32_t plane=0;plane<4;++plane){
+                const auto address=0x256deU+row*0x38U+word*2U+plane*0x1a40U;
+                const auto prior=word==4?observation.observed_words[row*4U+plane]:decoded_word(address);
+                addresses.push_back(address);values.push_back(static_cast<std::uint16_t>(
+                    (prior|combined)&(masks[plane]|static_cast<std::uint16_t>(~combined))));
+            }
+        }
+        second_dispatch_merge_observed_=true;last_command_sequence_=observation.trace_sequence;
+        return DeuterosAmigaTitleSecondDispatchMergePlan{observation,std::move(addresses),
+            std::move(values),320,320,0x41f30,0x4051e,0x4051e};
+    }
+
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
         const DeuterosAmigaObservedTitleCommandOperandByte& observation) {
@@ -2255,10 +2474,18 @@ private:
     bool first_dispatch_packet_advanced_ = false;
     bool first_dispatch_decode_advanced_ = false;
     bool first_dispatch_caller_tail_advanced_ = false;
+    bool first_dispatch_merge_observed_ = false;
     std::vector<std::uint32_t> first_dispatch_decode_addresses_;
     std::vector<std::uint8_t> first_dispatch_decode_values_;
     std::uint32_t first_dispatch_packet_count_=0;
     std::array<std::uint32_t,4> first_dispatch_family_counts_{};
+    bool second_dispatch_advanced_ = false;
+    bool second_dispatch_decode_advanced_ = false;
+    bool second_dispatch_merge_observed_ = false;
+    std::vector<std::uint32_t> second_dispatch_decode_addresses_;
+    std::vector<std::uint8_t> second_dispatch_decode_values_;
+    std::uint32_t second_dispatch_packet_count_=0;
+    std::array<std::uint32_t,4> second_dispatch_family_counts_{};
     struct PendingCommandCall {
         std::uint32_t address;
         std::uint32_t target;

@@ -365,6 +365,18 @@ complete leaf SHA-256 is
 The genuine-media test reopens that installed leaf, verifies every range, and
 proves that a one-byte alteration revokes admission.
 
+The registry also covers all 41 bounded celestial labels already parsed from
+both DOS static-data editions. English `2200AD4.BIN` SHA-256
+`1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d`
+uses offsets 978 through 1299; Spanish `2200AD4.BIN` SHA-256
+`8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31`
+uses offsets 987 through 1306. Each edition retains its exact spelling and
+padding (for example `Earth ` versus `Tierra `) while both resolve to the same
+stable semantic key and selected presentation catalog. Thus the Spanish
+release is not translated by substituting English source data. Together with
+the ten launcher rows, the map has 92 source-bound definitions and 51 unique
+catalog messages.
+
 The source byte sequence remains owned by the hash-admitted parser or runtime
 snapshot and is returned in localization diagnostics unchanged. English uses
 the canonical English presentation. Every other selected language must contain
@@ -1294,9 +1306,37 @@ before `TRAP #14` at `$2aabe`. Selector 6 remains the external boundary.
 A typed selector-6 observation records its unused D0. The 10-byte continuation
 hash is `ba614a28f861921a263225ef85209b20dc2673ea3444cb556b88ca29b2b23163`;
 after six-byte stack cleanup, execution stops before `JSR $2b55a` at `$2aac2`.
-The separately inventoried eight bytes at file `+$107c` map to `$2b57c` under
-the exact `$2a500` load, not `$2b55a`. The runtime rejects the proposed callee
-observation and stops at the JSR until this 22-byte disagreement is resolved.
+The separately inventoried file-`+$107c` candidate maps to `$2b57c` and remains
+rejected. Direct inspection of the admitted memory at `$2b55a` instead yields
+`48e7fffe61000038`, hash
+`b1b4328c9f54737553994259dac4dfb0247bf422414ed05a1c5c6166ec37ba62`.
+The native path executes its MOVEM save and BSR control transfer, stopping at
+the newly exact external callee boundary `$2b59a`.
+The first 16 genuine callee bytes hash to
+`967cb0022c8e29e0bef0dae618b95750fff3afa255094f9356210f1c89686fa3`.
+Native execution preserves the BSR return `$2b562`, derives A3 `$2b0e8`, and
+atomically clears `$2b6b8`; it stops before the D0-indexed instruction at
+`$2b5a6`. No source index or register value is invented. A generation- and
+sequence-owned observation supplies D0 and the byte at derived address
+`$2bdfd + sign_extend(D0.W)`. Production verifies it against owned memory.
+The exact 12-byte instruction pair hashes to
+`e87859079e18a266cc359d7e0be47667c5cfe79dbffa05daad80ee951fa777d7`;
+both writes to `$2b6b0/$2b6b1` commit atomically. Contradictory, stale, and
+revoked observations change neither checkpoint nor memory.
+From `$2b5b2`, 48 hash-bound bytes
+(`4345389397550c90280802d10a3f03b3e181745bcb98f8c693a2c0980722a1ef`)
+perform the deterministic A1/A0/D7 setup and seven atomic initialization
+writes. Execution stops before the next D0-indexed word read at `$2b5de`.
+That read uses a typed D0/source-word observation at
+`$2bdfe + sign_extend(D0.W)`, checked against owned memory. The 18-byte block
+hashes to `6fae36f2f65050ca3ff99c8cb73f43a8c130dd4d252d4b7d38d0be9118eeba78`;
+two direct word stores commit atomically before the next indexed read at `$2b5ec`.
+That second read resolves through A3 plus A0.W to `$26ee4`. Production checks
+the typed source word against owned memory. The exact 20-byte tail hashes to
+`82379ace33d5464b74e03aa0669f8a1097498fd21ce3639c180ab5e21cac810b`;
+it derives A0 `$56eee4`, atomically stores it at `$2b620`, increments D0.W,
+decrements D7 to 1, and records the taken DBF target `$2b5b8`. Contradictions
+and revocation commit no checkpoint or memory changes.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4183,6 +4223,34 @@ invented for carry-set or zero-byte reads. After a loaded six-byte header, the
 exact relocation stores count `$0026` and the normalized directory pointer
 `base+$0481:$0003`. The loader/relocation code hash is
 `63d5b5a645879a0a79ed0a7c880051e98ddf62b91f07616c0a72d035ee9581cf`.
+Mode one additionally stores the proven `$0e59` pointer and clears
+`$014c..$044b`, then stops before `$0fc6`: its requested `$4865..$4b64`
+source extends beyond the verified TITLE.LIB leaf. No missing tail is
+synthesized and the later BIOS palette request remains unreached.
+For non-mode-1, the separately hash-bound epilogue returns to its proven
+`$1bec` caller and reaches call `$1bef -> $1aac`. Eon stops before that setup
+callee; it does not reuse or bypass the mode-one `$0fc6` overread boundary.
+The non-mode-1 setup prefix is now hash-bound through DOS get-vector request
+`AX=$3500` at `$10f4`. Its returned ES:BX and all later vector/BIOS effects
+remain external typed boundaries.
+The typed get-vector result now atomically preserves returned ES:BX in
+`$10e6:$10e4` and reaches set-vector service `$2500` with `DS:DX=CS:$1124`
+at `$1106`; no vector installation result is inferred.
+That set result is now retained raw but otherwise ignored exactly; execution
+continues only to the next get-vector request `AX=$3504` at `$110b`.
+Its typed ES:BX result is atomically preserved at `$10ea:$10e8`; the native
+path then stops at the matching `$2504` set-vector request at `$111d`.
+The ignored `$2504` result now returns through the owned `$1ab0->$10ec` call
+and reaches the first BIOS `$15` request with `AX=$011b`, `BL=$46`; no BIOS
+result or second request is inferred.
+The first BIOS return is now retained as raw AX/BX/FLAGS with explicit full
+known masks on both requests. Only literal AH/AL/BL replacement is executed;
+the path stops at the second BIOS request `AX=$011c` at `$1ac1`.
+Its raw result is now retained and the owned call returns to `$1bf2`, stopping
+before the next opaque setup callee `$11a7`; no callee effect is inferred.
+The hash-bound `$11a7` callee is now local: it atomically establishes the four
+cells `$118d/$1181/$1183/$1185` from proven literals and original image words,
+returns to `$1bf5`, and stops before the still-opaque `$114e` call.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6361,7 +6429,7 @@ frame, or renderer surface is claimed merely because decompression finished.
 
 After RTS `$41e40`, the nested `$41c32` call resumes at `$41be6`. The outer
 `$004d` entry supplies X word `$0003` and Y word `$00b8`; the caller derives
-destination `$27f06`, mask base `$256dc`, three outer iterations and eleven
+destination `$27f06`, mask base `$256dc`, three outer iterations and 184
 words per iteration. Its four first mask reads are already-owned decoded
 words at `$256dc`, `$2711c`, `$28b5c` and `$2a59c`. Eon validates their
 presence in the sparse decode and computes the exact combined mask, then
@@ -6373,6 +6441,42 @@ not yet owned. The caller-tail advance is replay-proof and session-scoped;
 revocation discards it with the title state. This preserves the precise
 read-before-write dependency of `$41eb0..$41f30` without treating zero-filled
 host storage as original display memory.
+
+The complete merge loop is now admitted through a narrowly typed observation
+of the 960 unique pre-existing destination words, in their exact first-read
+order. The original performs 2,208 word writes: three outer iterations,
+184 words per iteration, and four planes. Later writes to overlapping
+addresses consume the value computed by the preceding write rather than the
+initial observation. For each word, the four decoded plane masks are ORed and
+the selected plane is merged as `(old | combined) & (plane | ~combined)`.
+All 960 final big-endian word effects commit as one bounded atomic batch; an
+owned byte that contradicts the observation rejects the entire transition.
+Replay and source revocation likewise leave memory unchanged. The routine
+returns at `$41f30` through caller `$40514`, loads D0 `$004e`, and stops before
+the next opaque call `$40518 -> $41bb4`. The resulting sparse bytes remain
+runtime memory only: no complete framebuffer, palette, or renderer surface is
+claimed.
+
+The immediately following `$004e` call at `$40518 -> $41bb4` is now complete
+through the same return. Its outer-table entry at `$416de` is hash-bound and
+contains descriptor `$00c2`. Although the dispatcher initially loads outer
+table base `$4129a`, the high-bit branch resets A5 to the fixed descriptor at
+`$4128e`; `$4129a` is never reused as that descriptor. Index `$00c2` selects
+pointer cell `$422b2` (`$00036978`), whose `$422fa` base resolves the source
+header at `$78c72`. The entry, pointer cell, seven-byte `$0014/$8010` prefix,
+and 229-byte payload `$78c76..$78d5a` are independently SHA-256 bound.
+
+The high decoder exhausts that payload in 66 packets (33 literal, 32 fill,
+one extended swapped, no short swapped) and produces exactly 320 pairs at
+base `$256dc`, with wrap `$2bfc0` and row stride `$38`. The merge resumes with
+A0 `$256de` and A1 `$256dc` for 16 rows, five words and four planes. Only the
+last word of each row/plane is not already owned by the decode, so a typed
+observation supplies exactly 64 words at `$256e6 + row*$38 + plane*$1a40`.
+All 320 unique big-endian word writes commit atomically; contradictory owned
+bytes, malformed address order, replay, and revocation reject without partial
+effects. Execution returns through `$41f30` to `$4051e` and stops before the
+next caller effect. These sparse words still do not establish a framebuffer,
+palette, or parity claim.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

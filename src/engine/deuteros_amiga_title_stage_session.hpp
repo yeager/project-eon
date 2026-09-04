@@ -349,6 +349,19 @@ public:
     advance_post_command_first_dispatch_caller_tail() {
         return service_batch_boundary_session_.advance_post_command_first_dispatch_caller_tail();
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchMergePlan>
+    observe_post_command_first_dispatch_destination_words(
+        const DeuterosAmigaObservedTitleFirstDispatchDestinationWords& observation) {
+        return service_batch_boundary_session_.observe_post_command_first_dispatch_destination_words(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandSecondDispatchPlan>
+    advance_post_command_second_dispatch() { return service_batch_boundary_session_.advance_post_command_second_dispatch(); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondDispatchDecodePlan>
+    advance_post_command_second_dispatch_decode() { return service_batch_boundary_session_.advance_post_command_second_dispatch_decode(); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondDispatchMergePlan>
+    observe_post_command_second_dispatch_destination_words(const DeuterosAmigaObservedTitleSecondDispatchDestinationWords& o) {
+        return service_batch_boundary_session_.observe_post_command_second_dispatch_destination_words(o);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

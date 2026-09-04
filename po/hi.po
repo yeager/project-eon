@@ -39,6 +39,129 @@ msgstr "Sound Blaster"
 msgid "Covox Sound Master"
 msgstr "Covox Sound Master"
 
+msgid "Inner System"
+msgstr "आंतरिक मंडल"
+
+msgid "Sun"
+msgstr "सूर्य"
+
+msgid "Mercury"
+msgstr "बुध"
+
+msgid "Venus"
+msgstr "शुक्र"
+
+msgid "Earth"
+msgstr "पृथ्वी"
+
+msgid "Mars"
+msgstr "मंगल"
+
+msgid "Jupiter"
+msgstr "बृहस्पति"
+
+msgid "Saturn"
+msgstr "शनि"
+
+msgid "Uranus"
+msgstr "अरुण"
+
+msgid "Neptune"
+msgstr "वरुण"
+
+msgid "Pluto"
+msgstr "यम"
+
+msgid "Moon"
+msgstr "चंद्रमा"
+
+msgid "Phobos"
+msgstr "Phobos"
+
+msgid "Deimos"
+msgstr "Deimos"
+
+msgid "Amalthea"
+msgstr "Amalthea"
+
+msgid "Io"
+msgstr "Io"
+
+msgid "Europa"
+msgstr "Europa"
+
+msgid "Ganymede"
+msgstr "Ganymede"
+
+msgid "Callisto"
+msgstr "Callisto"
+
+msgid "Leda"
+msgstr "Leda"
+
+msgid "Himalia"
+msgstr "Himalia"
+
+msgid "Elara"
+msgstr "Elara"
+
+msgid "Pasiphae"
+msgstr "Pasiphae"
+
+msgid "Mimas"
+msgstr "Mimas"
+
+msgid "Enceladus"
+msgstr "Enceladus"
+
+msgid "Tethys"
+msgstr "Tethys"
+
+msgid "Dione"
+msgstr "Dione"
+
+msgid "Rhea"
+msgstr "Rhea"
+
+msgid "Titan"
+msgstr "Titan"
+
+msgid "Hyperion"
+msgstr "Hyperion"
+
+msgid "Iapetus"
+msgstr "Iapetus"
+
+msgid "Phoebe"
+msgstr "Phoebe"
+
+msgid "Miranda"
+msgstr "Miranda"
+
+msgid "Ariel"
+msgstr "Ariel"
+
+msgid "Umbriel"
+msgstr "Umbriel"
+
+msgid "Titania"
+msgstr "Titania"
+
+msgid "Oberon"
+msgstr "Oberon"
+
+msgid "Triton"
+msgstr "Triton"
+
+msgid "Nereid"
+msgstr "Nereid"
+
+msgid "Charon"
+msgstr "Charon"
+
+msgid "Asteroids"
+msgstr "क्षुद्रग्रह"
+
 msgid "OUTPUT RESOLUTION"
 msgstr "आउटपुट रिज़ॉल्यूशन"
 msgid "ASPECT RATIO"

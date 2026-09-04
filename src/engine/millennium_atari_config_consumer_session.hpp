@@ -20,6 +20,12 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     xbios_selector_21_boundary,
     xbios_selector_6_boundary,
     jsr_2b55a_boundary,
+    bsr_2b59a_boundary,
+    d0_indexed_write_boundary,
+    a1_setup_boundary,
+    d0_indexed_word_boundary,
+    a0_indexed_word_boundary,
+    loop_branch_boundary,
     revoked,
 };
 
@@ -83,6 +89,23 @@ struct MillenniumAtariBchgObservation {
     std::uint32_t a2 = 0;
     std::uint8_t byte_before = 0;
 };
+struct MillenniumAtariD0IndexedByteObservation {
+    std::uint64_t generation = 0;
+    std::uint64_t sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t d0 = 0;
+    std::uint32_t source_address = 0;
+    std::uint8_t source_byte = 0;
+};
+struct MillenniumAtariD0IndexedWordObservation {
+    std::uint64_t generation = 0;
+    std::uint64_t sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t d0 = 0;
+    std::uint32_t source_address = 0;
+    std::uint16_t source_word = 0;
+};
+using MillenniumAtariA0IndexedWordObservation = MillenniumAtariD0IndexedWordObservation;
 
 struct MillenniumAtariConfigHardwareWrite {
     std::size_t order = 0;
@@ -160,6 +183,36 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t next_jsr_address = 0;
     std::uint32_t next_jsr_target = 0;
     std::string selector_6_continuation_sha256;
+    std::string jsr_2b55a_prefix_sha256;
+    std::uint32_t bsr_instruction_address = 0;
+    std::uint32_t bsr_target = 0;
+    std::uint32_t bsr_return_address = 0;
+    std::uint32_t callee_a3 = 0;
+    std::uint32_t callee_clear_address = 0;
+    std::uint32_t indexed_instruction_address = 0;
+    std::string bsr_2b59a_prefix_sha256;
+    std::uint32_t indexed_source_base = 0;
+    std::uint32_t indexed_source_address = 0;
+    std::uint8_t indexed_source_byte = 0;
+    std::uint32_t indexed_first_destination = 0;
+    std::uint32_t indexed_second_destination = 0;
+    std::string indexed_write_sha256;
+    std::uint32_t setup_a1 = 0;
+    std::uint32_t setup_a0_first = 0;
+    std::uint32_t setup_a0_second = 0;
+    std::uint32_t setup_d7 = 0;
+    std::uint32_t indexed_word_instruction_address = 0;
+    std::string a1_setup_sha256;
+    std::uint32_t indexed_word_source_address = 0;
+    std::uint16_t indexed_word_value = 0;
+    std::uint32_t a0_indexed_instruction_address = 0;
+    std::string indexed_word_sha256;
+    std::uint16_t a0_indexed_word_value = 0;
+    std::uint32_t loop_a0_value = 0;
+    std::uint16_t loop_d0_value = 0;
+    std::uint16_t loop_d7_value = 0;
+    std::uint32_t loop_branch_target = 0;
+    std::string a0_indexed_tail_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -209,6 +262,20 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_bchg_2b55a(
         const MillenniumAtariBchgObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_bchg_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2b55a();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_bsr_2b59a();
+    [[nodiscard]] NativeRuntimeEffectBatch make_bsr_2b59a_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_d0_indexed_byte(
+        const MillenniumAtariD0IndexedByteObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_d0_indexed_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_a1_setup();
+    [[nodiscard]] NativeRuntimeEffectBatch make_a1_setup_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_d0_indexed_word(
+        const MillenniumAtariD0IndexedWordObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_d0_indexed_word_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_a0_indexed_word(
+        const MillenniumAtariA0IndexedWordObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_a0_indexed_tail_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:
