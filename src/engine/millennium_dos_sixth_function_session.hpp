@@ -1,0 +1,97 @@
+#pragma once
+
+#include "data/millennium_dos_game_flow.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <span>
+#include <vector>
+
+namespace eon {
+
+enum class MillenniumDosSixthFunctionState {
+    awaiting_initialization_guard,
+    awaiting_display_call_return,
+    awaiting_command_call_return,
+    awaiting_second_call_return,
+    awaiting_first_byte,
+    awaiting_second_byte,
+    awaiting_word,
+    awaiting_wait_call_return,
+    awaiting_wait_bl,
+    returned_by_guard,
+    returned,
+};
+
+enum class MillenniumDosSixthFunctionBoundaryKind {
+    runtime_word,
+    runtime_byte,
+    call_return,
+    register_bl,
+    local_return,
+};
+
+struct MillenniumDosSixthFunctionBoundary {
+    MillenniumDosSixthFunctionBoundaryKind kind =
+        MillenniumDosSixthFunctionBoundaryKind::runtime_word;
+    std::uint16_t instruction_address = 0;
+    std::optional<std::uint16_t> runtime_address;
+    std::optional<std::uint16_t> call_target;
+    std::optional<std::uint16_t> known_ax;
+    std::size_t wait_iteration = 0;
+    constexpr bool operator==(const MillenniumDosSixthFunctionBoundary&) const = default;
+};
+
+struct MillenniumDosSixthFunctionEffect {
+    std::uint16_t address = 0;
+    std::uint8_t width = 0;
+    std::optional<std::uint16_t> previous;
+    std::uint16_t value = 0;
+    constexpr bool operator==(const MillenniumDosSixthFunctionEffect&) const = default;
+};
+
+// Typed manual recompilation of the exact English $7415..$7454 handler.
+// It does not include the separately entered $7455 restoration routine.
+class MillenniumDosSixthFunctionSession {
+public:
+    explicit MillenniumDosSixthFunctionSession(
+        std::span<const std::uint8_t> game_executable);
+
+    [[nodiscard]] MillenniumDosSixthFunctionState state() const { return state_; }
+    [[nodiscard]] MillenniumDosSixthFunctionBoundary boundary() const;
+    [[nodiscard]] const std::vector<MillenniumDosSixthFunctionEffect>&
+    effects() const { return effects_; }
+    [[nodiscard]] const std::vector<std::uint8_t>& shifted_bl_values() const {
+        return shifted_bl_values_;
+    }
+
+    void observe_runtime_word(std::uint16_t instruction_address,
+        std::uint16_t runtime_address, std::uint16_t value);
+    void observe_runtime_byte(std::uint16_t instruction_address,
+        std::uint16_t runtime_address, std::uint8_t value);
+    void observe_call_return(std::uint16_t call_address,
+        std::uint16_t return_address);
+    void observe_bl(std::uint16_t shift_address, std::uint8_t value);
+
+private:
+    void enter_call(MillenniumDosSixthFunctionState state,
+        std::uint16_t address, std::uint16_t target,
+        std::optional<std::uint16_t> known_ax = std::nullopt);
+    void record_effect(std::uint16_t address, std::uint8_t width,
+        std::optional<std::uint16_t> previous, std::uint16_t value);
+
+    MillenniumDosSixthFunctionKeyTrace trace_;
+    MillenniumDosSixthFunctionState state_ =
+        MillenniumDosSixthFunctionState::awaiting_initialization_guard;
+    std::uint16_t call_address_ = 0;
+    std::uint16_t call_target_ = 0;
+    std::optional<std::uint16_t> call_known_ax_;
+    std::optional<std::uint8_t> first_byte_;
+    std::optional<std::uint8_t> second_byte_;
+    std::size_t wait_iteration_ = 0;
+    std::vector<MillenniumDosSixthFunctionEffect> effects_;
+    std::vector<std::uint8_t> shifted_bl_values_;
+};
+
+} // namespace eon

@@ -87,6 +87,18 @@ MillenniumDosNativeProcessAdmission::make_tenth_function_session() const {
     return MillenniumDosTenthFunctionSession(game_executable_);
 }
 
+MillenniumDosSeventhFunctionSession
+MillenniumDosNativeProcessAdmission::make_seventh_function_session() const {
+    require_admitted();
+    return MillenniumDosSeventhFunctionSession(game_executable_);
+}
+
+MillenniumDosSixthFunctionSession
+MillenniumDosNativeProcessAdmission::make_sixth_function_session() const {
+    require_admitted();
+    return MillenniumDosSixthFunctionSession(game_executable_);
+}
+
 void MillenniumDosNativeProcessAdmission::require_admitted() const {
     if (!admitted()) {
         throw std::runtime_error("Millennium DOS native process is not admitted");

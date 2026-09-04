@@ -112,6 +112,36 @@ LauncherRuntimeController::millennium_dos_tenth_function_checkpoint() const {
     return coordinator_.millennium_dos_tenth_function_checkpoint();
 }
 
+#define EON_LAUNCHER_SEVENTH_PROXY(name, type) \
+MillenniumDosSeventhFunctionObservationResult LauncherRuntimeController::name( \
+    const type observation) { return coordinator_.name(observation); }
+EON_LAUNCHER_SEVENTH_PROXY(observe_millennium_dos_seventh_function_dispatch, MillenniumDosSeventhFunctionDispatchObservation)
+EON_LAUNCHER_SEVENTH_PROXY(observe_millennium_dos_seventh_function_word, MillenniumDosSeventhFunctionWordObservation)
+EON_LAUNCHER_SEVENTH_PROXY(observe_millennium_dos_seventh_function_byte, MillenniumDosSeventhFunctionByteObservation)
+EON_LAUNCHER_SEVENTH_PROXY(observe_millennium_dos_seventh_function_call_return, MillenniumDosSeventhFunctionCallReturnObservation)
+EON_LAUNCHER_SEVENTH_PROXY(observe_millennium_dos_seventh_function_returned_bx, MillenniumDosSeventhFunctionReturnedBxObservation)
+#undef EON_LAUNCHER_SEVENTH_PROXY
+
+std::optional<MillenniumDosSeventhFunctionCheckpoint>
+LauncherRuntimeController::millennium_dos_seventh_function_checkpoint() const {
+    return coordinator_.millennium_dos_seventh_function_checkpoint();
+}
+
+#define EON_LAUNCHER_SIXTH_PROXY(name, type) \
+MillenniumDosSixthFunctionObservationResult LauncherRuntimeController::name( \
+    const type observation) { return coordinator_.name(observation); }
+EON_LAUNCHER_SIXTH_PROXY(observe_millennium_dos_sixth_function_dispatch, MillenniumDosSixthFunctionDispatchObservation)
+EON_LAUNCHER_SIXTH_PROXY(observe_millennium_dos_sixth_function_word, MillenniumDosSixthFunctionWordObservation)
+EON_LAUNCHER_SIXTH_PROXY(observe_millennium_dos_sixth_function_byte, MillenniumDosSixthFunctionByteObservation)
+EON_LAUNCHER_SIXTH_PROXY(observe_millennium_dos_sixth_function_call_return, MillenniumDosSixthFunctionCallReturnObservation)
+EON_LAUNCHER_SIXTH_PROXY(observe_millennium_dos_sixth_function_bl, MillenniumDosSixthFunctionBlObservation)
+#undef EON_LAUNCHER_SIXTH_PROXY
+
+std::optional<MillenniumDosSixthFunctionCheckpoint>
+LauncherRuntimeController::millennium_dos_sixth_function_checkpoint() const {
+    return coordinator_.millennium_dos_sixth_function_checkpoint();
+}
+
 std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
     return coordinator_.tick_deuteros_amiga_opening();
 }
