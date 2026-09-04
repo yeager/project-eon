@@ -137,21 +137,29 @@ def verify(manifest: dict, inventory: dict, releases: dict) -> dict:
             if not isinstance(decoder, dict) or decoder.get("name") != "capstone" or decoder.get("version") != ">=5,<6":
                 raise ManifestError(f"{span_id} decoder name/version is not pinned")
             basis = image.get("address_basis")
-            if basis not in {"dos-com-linear-0x100", "runtime-absolute", "image-relative-unrelocated"}:
+            if basis not in {"dos-com-linear-0x100", "runtime-absolute",
+                             "image-relative-unrelocated", "disk-relative"}:
                 raise ManifestError(f"{span_id} address basis is unsupported")
             if ((span.get("cpu") == "i8086" and basis != "dos-com-linear-0x100")
                     or (span.get("cpu") == "m68000" and basis == "dos-com-linear-0x100")):
                 raise ManifestError(f"{span_id} address basis differs from its architecture")
+            load_status = image.get("load_status", "address-basis-declared")
+            if load_status not in {"address-basis-declared", "unproven"}:
+                raise ManifestError(f"{span_id} load status is unsupported")
+            if basis == "disk-relative" and load_status != "unproven":
+                raise ManifestError(f"{span_id} disk-relative byte coverage must retain unproven load status")
             declared_ranges = _ranges(image.get("source_ranges"), span_id)
             covered_ranges = _ranges(span.get("segments"), span_id + " inventory coverage")
             if declared_ranges != covered_ranges:
                 raise ManifestError(f"{span_id} has a coverage gap or undeclared range")
             for segment in span["segments"]:
                 segment_basis = segment.get("address_space", "runtime")
-                if basis == "image-relative-unrelocated" and segment_basis != basis:
+                if basis in {"image-relative-unrelocated", "disk-relative"} and segment_basis != basis:
                     raise ManifestError(f"{span_id} address basis differs from its segment")
-                if basis != "image-relative-unrelocated" and segment_basis != "runtime":
+                if basis not in {"image-relative-unrelocated", "disk-relative"} and segment_basis != "runtime":
                     raise ManifestError(f"{span_id} address basis differs from its segment")
+                if basis == "disk-relative" and segment.get("entry_status") != "unproven":
+                    raise ManifestError(f"{span_id} disk-relative entry must remain unproven")
             image_count += 1
             range_count += len(declared_ranges)
             byte_count += sum(end - start for start, end in declared_ranges)
@@ -174,7 +182,9 @@ def render_index(manifest: dict, totals: dict) -> str:
         lines.append("")
         if release["images"]:
             for image in release["images"]:
-                lines.append(f"- `{image['span_id']}` — {image['architecture']}, {image['address_basis']}")
+                lines.append(f"- `{image['span_id']}` — {image['architecture']}, "
+                             f"{image['address_basis']}, load "
+                             f"{image.get('load_status', 'address-basis-declared')}")
         else:
             lines.append(f"- Unmapped preservation boundary: {release['unmapped_boundary']}")
         for candidate in release["discovered_unmapped_candidates"]:

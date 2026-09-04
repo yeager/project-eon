@@ -17,4 +17,6 @@ class Tests(unittest.TestCase):
   self.assertIn('millennium-atari-config.md',recipe)
   self.assertIn('file-image-relative, unrelocated',analyzer)
   self.assertIn('args.nested_member is None',analyzer)
+  self.assertIn('millennium-atari-boot.md',recipe)
+  self.assertIn('disk-relative',(root/'tools/disassemble_m68k_range.py').read_text())
 if __name__=='__main__':unittest.main()

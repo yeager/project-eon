@@ -96,7 +96,8 @@ class DisassemblyInventoryTests(unittest.TestCase):
                     self.assertGreater(segment["length"], 0)
                     self.assertGreaterEqual(segment["runtime_address"], 0)
                     address_space = segment.get("address_space", "runtime")
-                    self.assertIn(address_space, {"runtime", "image-relative-unrelocated"})
+                    self.assertIn(address_space, {"runtime", "image-relative-unrelocated",
+                                                  "disk-relative"})
                     entry_kinds = {"entry_address", "entry_offset", "entry_status"} & segment.keys()
                     self.assertEqual(len(entry_kinds), 1)
                     if "entry_address" in entry_kinds:
@@ -111,6 +112,8 @@ class DisassemblyInventoryTests(unittest.TestCase):
                             self.assertEqual(segment["runtime_address"], 0)
                     else:
                         self.assertEqual(segment["entry_status"], "unproven")
+                        if address_space == "disk-relative":
+                            self.assertRegex(segment["range_sha256"], r"^[0-9a-f]{64}$")
                     self.assertGreaterEqual(segment["source_offset"], previous_end)
                     previous_end = segment["source_offset"] + segment["length"]
 

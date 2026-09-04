@@ -107,6 +107,8 @@ def main() -> None:
     parser.add_argument("--offset", type=integer, required=True, help="Disk byte offset, e.g. 0x4ec00")
     parser.add_argument("--length", type=integer, required=True, help="Exact byte length")
     parser.add_argument("--address", type=integer, required=True, help="Proven runtime load address")
+    parser.add_argument("--address-basis", choices=("runtime-absolute", "disk-relative"),
+                        default="runtime-absolute")
     parser.add_argument("--sha256", required=True, help="Expected lower-case SHA-256 for this exact range")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
@@ -135,7 +137,8 @@ def main() -> None:
         f"- Source: `{source_description}`",
         f"- Disk SHA-256: `{hashlib.sha256(disk).hexdigest()}`",
         f"- Source range: disk `+0x{args.offset:x}` for `0x{args.length:x}` bytes",
-        f"- Runtime address: `0x{args.address:x}`",
+        (f"- Runtime address: `0x{args.address:x}`" if args.address_basis == "runtime-absolute"
+         else f"- Address space: disk-relative from `0x{args.address:x}`; runtime load and entry are unproven."),
         f"- Range SHA-256: `{digest}`",
         "- Scope: full byte-complete linear decode; code/data and reachability are unclassified.",
         "- Coverage: every source byte is rendered as an instruction or explicit `.byte`.",
