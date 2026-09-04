@@ -225,6 +225,24 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         reset(); admission_=ReleaseRuntimeAdmission::adapter_rejected;
         rejection_=ReleaseRuntimeRejection::child_session; return false;
     }
+    try {
+        if (millennium_atari) {
+            // Both batches are applied to the unpublished acquisition-local
+            // memory. A failure in either leaves no partial Atari generation
+            // reachable through the coordinator or RuntimeHost.
+            const auto image_applied = runtime_memory.apply(
+                make_atari_st_prg_load_effect_batch(
+                    millennium_atari->native_prg_image(), "millennium-atari-1-prg"));
+            if (!image_applied.accepted) throw std::runtime_error(image_applied.error);
+            const auto config_applied = runtime_memory.apply(
+                millennium_atari->read_only_gemdos().make_fread_effect_batch(
+                    "millennium-atari-1-config"));
+            if (!config_applied.accepted) throw std::runtime_error(config_applied.error);
+        }
+    } catch (...) {
+        reset(); admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::child_session; return false;
+    }
     millennium_dos_ = std::move(millennium_dos);
     millennium_dos_sound_selection_ = std::move(millennium_dos_sound_selection);
     millennium_dos_title_ = std::move(millennium_dos_title);
@@ -632,10 +650,7 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
                 auto checkpoint=millennium_dos_compatibility_runner_->checkpoint(
                     millennium_dos_sound_driver_load_->state(),
                     millennium_dos_sound_driver_load_->boundary());
-                if(millennium_dos_title_initialization_
-                    &&millennium_dos_title_initialization_->checkpoint().state
-                        ==MillenniumDosTitleInitializationState::
-                            private_interrupt_result_boundary) {
+                if(millennium_dos_title_initialization_) {
                     checkpoint.external_result_required=true;
                 }
                 millennium_dos_sound_driver_load_last_sequence_=
@@ -707,6 +722,42 @@ ReleaseRuntimeCoordinator::millennium_dos_title_exec_entry_checkpoint() const {
         millennium_dos_title_initialization_
             ?std::optional{millennium_dos_title_initialization_->checkpoint()}
             :std::nullopt};
+}
+
+MillenniumDosTitleInitializationObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result(
+    const MillenniumDosTitlePrivateInterruptResultObservation observation) {
+    MillenniumDosTitleInitializationObservationResult result;
+    if(!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title
+        ||!millennium_dos_title_initialization_||!native_runtime_memory_){
+        result.error="Title private-interrupt result requires the active native title boundary";
+        return result;
+    }
+    auto next=*millennium_dos_title_initialization_;
+    auto memory=*native_runtime_memory_;
+    try { next.observe_private_interrupt_result(observation); }
+    catch(const std::exception& e){result.error=e.what();return result;}
+    const auto checkpoint=next.checkpoint();
+    NativeRuntimeEffectBatch batch{
+        "millennium-dos-title-initialization-"
+            +std::to_string(millennium_dos_sound_driver_load_generation_)
+            +"-"+std::to_string(observation.sequence),true,{}};
+    batch.effects.reserve(checkpoint.memory_effects.size());
+    for(const auto& effect:checkpoint.memory_effects){
+        batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::dos_segmented,
+                checkpoint.child_code_segment,effect.offset},
+            effect.width==MillenniumDosTitleInitializationEffectWidth::byte
+                ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
+            NativeRuntimeByteOrder::little_endian,effect.value});
+    }
+    const auto applied=memory.apply(batch);
+    if(!applied.accepted){result.error=applied.error;return result;}
+    millennium_dos_title_initialization_=std::move(next);
+    *native_runtime_memory_=std::move(memory);
+    result.accepted=true;
+    return result;
 }
 
 namespace {
@@ -2417,6 +2468,8 @@ ReleaseRuntimeCoordinator::millennium_atari_bootstrap_presentation() const {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_atari_bootstrap
         || !millennium_atari_) return std::nullopt;
     return MillenniumAtariBootstrapPresentationSnapshot{
+        atari_st_prg_load_diagnostics(millennium_atari_->native_prg_image()),
+        millennium_atari_->read_only_gemdos().checkpoint(),
         millennium_atari_->bootstrap(), millennium_atari_->bss_entry(),
         millennium_atari_->bss_source(), millennium_atari_->target(),
         millennium_atari_->execution(), millennium_atari_->fopen_boundary(),

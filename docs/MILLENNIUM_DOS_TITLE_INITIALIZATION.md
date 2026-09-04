@@ -37,3 +37,26 @@ sequenced register effects, exact call/wrapper/interrupt addresses, record
 pointer, and explicit `result_observed=false` and
 `stack_storage_modeled=false` diagnostics. Reset and release revocation destroy
 the owned session.
+
+## Observed function-zero return
+
+The next 29 original bytes at file `+$1a98..+$1ab4` hash to
+`4ffa7a86b6e398183f251b7de848cefe76ed4e10fd9ddd95b5c8548539fb2704`.
+Eon accepts a result only as a monotonically sequenced observation at the
+exact `$0127` interrupt / `$0129` return pair. The observation retains raw AX
+and FLAGS without interpreting the driver's hardware mode.
+
+After the wrapper returns to `$1b98`, the exact local instructions produce
+four native runtime-memory effects in the child segment:
+
+- word `$1a9c := AX`;
+- byte `$1aaa := AH`;
+- byte `$0107 := AH`; and
+- word `$1aa0 := $da00`, the instruction-defined SP value.
+
+The subsequent `CMP AL,1` operates on the copied high byte. Value one selects
+the direct call at `$1bad` to `$1ac6`; every other byte selects the call at
+`$1bb2` to `$1ada`. The four writes commit atomically with the typed session.
+A wrong address, duplicate sequence, stale session, rejected memory batch, or
+revoked release changes neither state nor memory. Eon stops before the
+selected callee: its effects and return remain unobserved.

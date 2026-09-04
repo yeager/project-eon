@@ -1,6 +1,7 @@
 #pragma once
 
 #include "data/atari_st_prg.hpp"
+#include "engine/native_runtime_memory.hpp"
 
 #include <cstdint>
 #include <span>
@@ -34,9 +35,30 @@ struct AtariStPrgLoadCheckpoint {
     std::vector<AtariStPrgRelocationEffect> relocation_effects;
 };
 
+// Value-only metadata safe to copy across the renderer boundary. It excludes
+// all commercial executable bytes and the complete relocation-value list.
+struct AtariStPrgLoadDiagnostics {
+    std::uint32_t load_base = 0;
+    std::uint32_t entry_address = 0;
+    std::size_t image_byte_count = 0;
+    std::size_t relocation_count = 0;
+    std::string source_sha256;
+    std::string materialized_image_sha256;
+    AtariStPrgRelocationEffect first_relocation;
+    AtariStPrgRelocationEffect last_relocation;
+};
+
 [[nodiscard]] AtariStPrgLoadCheckpoint materialize_atari_st_prg_load(
     std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
     std::uint32_t load_base, std::uint32_t address_limit_exclusive = 0x01000000U);
+
+// Converts the complete admitted image into one atomic runtime-memory batch.
+// Callers apply it to a temporary NativeRuntimeMemory and publish that memory
+// only after apply() succeeds, so no partially loaded generation is visible.
+[[nodiscard]] NativeRuntimeEffectBatch make_atari_st_prg_load_effect_batch(
+    const AtariStPrgLoadCheckpoint& checkpoint, std::string id);
+[[nodiscard]] AtariStPrgLoadDiagnostics atari_st_prg_load_diagnostics(
+    const AtariStPrgLoadCheckpoint& checkpoint);
 
 class MillenniumAtariPrgLoadSession {
 public:

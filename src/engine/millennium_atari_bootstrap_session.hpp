@@ -3,7 +3,9 @@
 #include "data/atari_st_prg.hpp"
 #include "data/fat12.hpp"
 #include "engine/atari_st_prg_load_session.hpp"
+#include "engine/millennium_atari_read_only_gemdos_session.hpp"
 
+#include <optional>
 #include <span>
 
 namespace eon {
@@ -54,6 +56,9 @@ public:
     fread_mapped_config_prelude() const {
         return fread_mapped_config_prelude_;
     }
+    [[nodiscard]] const MillenniumAtariReadOnlyGemdosSession& read_only_gemdos() const {
+        return *read_only_gemdos_;
+    }
 
 private:
     MillenniumAtariPrgLoadSession prg_load_;
@@ -72,6 +77,7 @@ private:
     MillenniumAtariConfigEntry config_entry_;
     MillenniumAtariFreadConfigLoadAddressBoundary fread_config_load_address_boundary_;
     MillenniumAtariFreadMappedConfigPrelude fread_mapped_config_prelude_;
+    std::optional<MillenniumAtariReadOnlyGemdosSession> read_only_gemdos_;
 };
 
 } // namespace eon

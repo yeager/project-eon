@@ -4073,6 +4073,11 @@ It executes the exact `$1b80..$1b95` register setup and collapses the
 byte-verified `$0122` preservation wrapper into its known function-$00
 `INT $91` request. The owned checkpoint stops before the private interrupt
 returns and explicitly leaves the original stack storage unmodelled.
+An exact typed return at `$0129` can continue through the 29-byte
+`$1b98..$1bb4` local path. Raw AX/FLAGS are retained; the instruction-defined
+word/byte writes commit atomically to the compatibility child, and AH selects
+the `$1bad->$1ac6` or `$1bb2->$1ada` call boundary. Neither callee executes
+without separate evidence.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6118,6 +6123,17 @@ and zero alpha; their zero-filled storage is not asserted to be original
 black. Both the 64,000-byte validity map and RGBA buffer are revoked with the
 source session. Before display-trace admission, after revocation, or without
 one complete command, no surface is published.
+
+SDL consumes that snapshot through a dedicated streaming texture rather than
+reusing the opening texture. The texture uses alpha blending: valid pixels
+have alpha `$ff`, while every uninitialized pixel has alpha zero and reveals
+the launcher's ordinary background. In particular, Eon does not composite a
+sparse title patch over the last opening frame, clear unknown pixels to an
+assumed Amiga colour, or pass the partial surface to Modern reconstruction.
+The SDL cache key is the command generation plus native-memory checksum; the
+texture is destroyed before the source-owning runtime is revoked. The visible
+counter states the exact decoded-pixel coverage out of 64,000, so this
+presentation cannot be mistaken for a complete recovered title screen.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to

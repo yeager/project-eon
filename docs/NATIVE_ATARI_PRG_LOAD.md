@@ -36,16 +36,59 @@ not presented as the address selected by an original TOS machine. This is a
 native loader operation, not 68000 emulation and not a claim of instruction
 reachability.
 
+## Atomic runtime ownership
+
+The admitted image is converted to one ordered `NativeRuntimeEffectBatch` and
+applied to a temporary 24-bit `NativeRuntimeMemory`. A release acquisition
+publishes that memory only after the complete batch succeeds. The batch ID
+contains the Atari session generation; duplicate IDs, reordered effects,
+partial images, changed image digests, overflow, or an address outside the
+native map fail before publication. Returning to the launcher revokes the
+coordinator's whole memory object during `RuntimeHost`'s source-revocation
+interval, so no image or derived buffer survives into a later media identity.
+The UI-facing snapshot contains only sizes, digests, addresses, and the first
+and last relocation facts. It never copies the executable image or complete
+configuration payload across the renderer boundary.
+
+## Narrow read-only GEMDOS replacement
+
+The exact local bootstrap requests `Fopen("MILL22A.inf", 2)` and then prepares
+`Fread(handle, 0x20000, $2a500)`. Mode 2 is write-capable in original GEMDOS,
+but Project Eon never opens supplied media for writing. For this one proven
+chain, `MillenniumAtariReadOnlyGemdosSession` instead owns a private handle to
+an immutable FAT12 snapshot of the exact requested file:
+
+| Property | Native compatibility result |
+| --- | --- |
+| Requested file | `MILL22A.inf` |
+| Exact source SHA-256 | `74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6` |
+| Requested / returned bytes | 131,072 / 7,506 |
+| Destination | `$2a500` |
+| Source access | read-only FAT-chain snapshot |
+| Source mutation | never |
+| Terminal boundary | before the encoded `JSR $2a500` |
+
+The 7,506 bytes form a second atomic runtime-memory batch. Their destination
+overlaps the PRG's zeroed BSS by design; publication replaces precisely those
+bytes while retaining every other initialized byte. A stale generation cannot
+revoke the session, exact revocation clears its payload ownership, and a
+revoked session cannot create another Fread batch.
+
+The compatibility handle and successful byte count are Eon-owned native
+service results justified by the exact present FAT entry. They are not claimed
+as captured TOS register values. No general path lookup, create, write, seek,
+close, directory service, basepage, error mapping, or additional GEMDOS
+selector is implemented.
+
 ## Remaining boundary
 
-The materialized image makes the whole PRG available to future native
-translation, but execution still stops at the existing verified local
-bootstrap/GEMDOS boundary. The next high-impact Atari task is to connect the
-relocated entry and its proven copy effects to `NativeRuntimeMemory`, then
-replace the first `Fopen`/`Fread` dependency with a narrowly scoped,
-read-only compatibility service. TOS basepage fields, XBIOS results, Line-A
-state, input, timing, and every unclassified indirect target remain explicit
-preservation boundaries.
+The materialized image and exact configuration now occupy native runtime
+memory, but control execution stops before `JSR $2a500`. The next high-impact
+Atari task is to execute the already hash-identified mapped configuration
+prelude and its converged direct JSR while retaining its condition-code and
+Line-A dependencies. TOS basepage fields, XBIOS results, Line-A state, input,
+timing, and every unclassified indirect target remain explicit preservation
+boundaries.
 
 No original bytes are written to disk, copied into a package, or committed.
 The structural unit fixture checks loader arithmetic only; the canonical

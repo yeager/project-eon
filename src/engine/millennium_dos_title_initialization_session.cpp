@@ -13,6 +13,8 @@ constexpr auto startup_sha =
     "6bb7c15471e42155d44449cf6e814a538f3a0ee686126f7c2befa91cfb0d08d7";
 constexpr auto wrapper_request_sha =
     "f7dee937ac756b0aa6c9b287ba8dcf985d7a6fe539612de66cd4871184d85680";
+constexpr auto result_continuation_sha =
+    "4ffa7a86b6e398183f251b7de848cefe76ed4e10fd9ddd95b5c8548539fb2704";
 }
 
 MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession(
@@ -23,15 +25,53 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
     constexpr std::size_t startup_size = 24;
     constexpr std::size_t wrapper_offset = 0x22;
     constexpr std::size_t wrapper_request_size = 7;
+    constexpr std::size_t result_continuation_offset = 0x1a98;
+    constexpr std::size_t result_continuation_size = 29;
     if (titles_executable.size() != 7022
         || to_hex(sha256(titles_executable)) != titles_sha
         || child_code_segment == 0 || entry_sequence == 0
         || to_hex(sha256(titles_executable.subspan(startup_offset, startup_size)))
             != startup_sha
         || to_hex(sha256(titles_executable.subspan(
-               wrapper_offset, wrapper_request_size))) != wrapper_request_sha) {
+               wrapper_offset, wrapper_request_size))) != wrapper_request_sha
+        || to_hex(sha256(titles_executable.subspan(result_continuation_offset,
+               result_continuation_size))) != result_continuation_sha) {
         throw std::runtime_error("Unsupported Millennium DOS title initialization media");
     }
+}
+
+void MillenniumDosTitleInitializationSession::observe_private_interrupt_result(
+    const MillenniumDosTitlePrivateInterruptResultObservation& observation) {
+    if (state_
+            != MillenniumDosTitleInitializationState::private_interrupt_result_boundary
+        || observation.sequence != last_sequence_ + 1
+        || observation.interrupt_address != 0x0127
+        || observation.return_address != 0x0129) {
+        throw std::runtime_error("Detached Millennium DOS title private-interrupt result");
+    }
+    observed_ax_ = observation.ax;
+    observed_flags_ = observation.flags;
+    selected_mode_ = static_cast<std::uint8_t>(observation.ax >> 8U);
+    memory_effects_ = {
+        {0x1b98,0x1a9c,MillenniumDosTitleInitializationEffectWidth::word,
+            observation.ax},
+        {0x1b9e,0x1aaa,MillenniumDosTitleInitializationEffectWidth::byte,
+            selected_mode_},
+        {0x1ba2,0x0107,MillenniumDosTitleInitializationEffectWidth::byte,
+            selected_mode_},
+        {0x1ba5,0x1aa0,MillenniumDosTitleInitializationEffectWidth::word,
+            0xda00},
+    };
+    if (selected_mode_ == 1) {
+        selected_call_address_ = 0x1bad;
+        selected_call_target_ = 0x1ac6;
+    } else {
+        selected_call_address_ = 0x1bb2;
+        selected_call_target_ = 0x1ada;
+    }
+    boundary_.result_observed = true;
+    last_sequence_ = observation.sequence;
+    state_ = MillenniumDosTitleInitializationState::selected_local_call_boundary;
 }
 
 void MillenniumDosTitleInitializationSession::execute_exact_startup(
@@ -64,7 +104,9 @@ void MillenniumDosTitleInitializationSession::execute_exact_startup(
 
 MillenniumDosTitleInitializationCheckpoint
 MillenniumDosTitleInitializationSession::checkpoint() const {
-    return {state_, last_sequence_, child_code_segment_, effects_, boundary_};
+    return {state_,last_sequence_,child_code_segment_,effects_,memory_effects_,
+        boundary_,observed_ax_,observed_flags_,selected_mode_,
+        selected_call_address_,selected_call_target_};
 }
 
 } // namespace eon

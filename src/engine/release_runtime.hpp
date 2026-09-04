@@ -151,6 +151,8 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
 // issue GEMDOS/XBIOS calls, materialize a guest Fread result, or cross the
 // configuration-transfer boundary.
 struct MillenniumAtariBootstrapPresentationSnapshot {
+    AtariStPrgLoadDiagnostics native_prg_image;
+    MillenniumAtariReadOnlyGemdosCheckpoint read_only_gemdos;
     MillenniumAtariBootstrap bootstrap;
     MillenniumAtariBssEntry bss_entry;
     MillenniumAtariBssSource bss_source;
@@ -247,6 +249,10 @@ struct MillenniumDosTitleExecPrefixObservation {
     std::uint16_t jump_destination = 0;
 };
 struct MillenniumDosTitleExecEntryObservationResult {
+    bool accepted = false;
+    std::string error;
+};
+struct MillenniumDosTitleInitializationObservationResult {
     bool accepted = false;
     std::string error;
 };
@@ -626,6 +632,9 @@ public:
     advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation);
     [[nodiscard]] std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint>
     millennium_dos_title_exec_entry_checkpoint() const;
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult
+    observe_millennium_dos_title_private_interrupt_result(
+        MillenniumDosTitlePrivateInterruptResultObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_call_return(
         MillenniumDosTitleToGameCallReturnObservation observation);

@@ -4579,6 +4579,48 @@ int main() {
                 &&cell.location.segment==0xe33f
                 &&cell.location.offset>=0x0100&&cell.location.offset<0x1c6e;
         })==7022);
+    const auto before_title_result=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(admitted_dos_runtime.observe_millennium_dos_title_private_interrupt_result(
+        {15,0x0127,0x0129,0x0101,0x7202}).accepted);
+    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
+    assert(title_entry&&title_entry->title_initialization
+        &&title_entry->title_initialization->state
+            ==eon::MillenniumDosTitleInitializationState::selected_local_call_boundary
+        &&title_entry->title_initialization->last_sequence==15
+        &&title_entry->title_initialization->observed_ax==0x0101
+        &&title_entry->title_initialization->observed_flags==0x7202
+        &&title_entry->title_initialization->selected_mode==1
+        &&title_entry->title_initialization->selected_call_address==0x1bad
+        &&title_entry->title_initialization->selected_call_target==0x1ac6
+        &&title_entry->title_initialization->memory_effects.size()==4);
+    const auto after_title_result=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(before_title_result&&after_title_result
+        &&after_title_result->initialized_byte_count
+            ==before_title_result->initialized_byte_count
+        &&after_title_result->applied_batch_count
+            ==before_title_result->applied_batch_count+1
+        &&after_title_result->checksum!=before_title_result->checksum);
+    const auto title_result_memory=
+        admitted_dos_runtime.native_runtime_memory_checkpoint();
+    const auto has_title_byte=[&](const std::uint16_t offset,
+                                  const std::uint8_t value){
+        return std::ranges::any_of(title_result_memory->initialized_bytes,
+            [&](const auto& cell){return cell.location.address_space
+                    ==eon::NativeRuntimeAddressSpace::dos_segmented
+                &&cell.location.segment==0xe33f&&cell.location.offset==offset
+                &&cell.value==value;});
+    };
+    assert(title_result_memory&&has_title_byte(0x1a9c,0x01)
+        &&has_title_byte(0x1a9d,0x01)&&has_title_byte(0x1aaa,0x01)
+        &&has_title_byte(0x0107,0x01)&&has_title_byte(0x1aa0,0x00)
+        &&has_title_byte(0x1aa1,0xda));
+    const auto accepted_title_result_checksum=after_title_result->checksum;
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_private_interrupt_result(
+        {16,0x0127,0x0129,0,0}).accepted);
+    assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
+        ==accepted_title_result_checksum);
     assert(!admitted_dos_runtime.observe_millennium_dos_title_child_process_entry(
         {14,0x0336,0x4b00,0x068f,0x067a,0x0100,0xe33f,
             eon::MillenniumDosTitleExecEntryProvenance::observed_process_entry}).accepted);
@@ -4687,7 +4729,16 @@ int main() {
         } else if (release.game == eon::Game::millennium && release.platform == eon::Platform::atari_st) {
             const auto presentation = all_release_runtime.millennium_atari_bootstrap_presentation();
             assert(presentation && presentation->config.present
-                && presentation->fopen_boundary.fopen_filename == presentation->config.requested_filename);
+                && presentation->fopen_boundary.fopen_filename == presentation->config.requested_filename
+                && presentation->native_prg_image.image_byte_count == 130392
+                && presentation->native_prg_image.relocation_count == 227
+                && presentation->read_only_gemdos.generation == 1
+                && presentation->read_only_gemdos.fread_return_bytes == 7506
+                && presentation->read_only_gemdos.stop_before_jsr_address == 0x2a500);
+            const auto atari_memory = all_release_runtime.native_runtime_memory_diagnostics();
+            assert(atari_memory && atari_memory->applied_batch_count == 2
+                && atari_memory->initialized_byte_count
+                    == presentation->native_prg_image.image_byte_count);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -4703,7 +4754,11 @@ int main() {
                 && host_presentation->fopen_boundary.fopen_filename
                     == presentation->fopen_boundary.fopen_filename
                 && host_presentation->fread_frame_prefix.buffer_address
-                    == presentation->fread_frame_prefix.buffer_address);
+                    == presentation->fread_frame_prefix.buffer_address
+                && host_presentation->native_prg_image.materialized_image_sha256
+                    == presentation->native_prg_image.materialized_image_sha256
+                && host_presentation->read_only_gemdos.payload_sha256
+                    == presentation->read_only_gemdos.payload_sha256);
             atari_host.begin_source_revocation();
             assert(!atari_host.active() && !atari_host.session_snapshot()
                 && !atari_host.millennium_atari_bootstrap_presentation());
@@ -9325,6 +9380,15 @@ int main() {
     assert(atari_config.sha256 == "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6");
     const eon::MillenniumAtariBootstrapSession atari_session(
         atari_disk, atari_disk.read(*atari_executable));
+    assert(atari_session.native_prg_image().materialized_image_sha256
+        == "92eac35edb2b5db721dd5353cfc3260dfb5fb4120026b76788659aaa342f887c");
+    assert(atari_session.native_prg_image().image.size() == 130392
+        && atari_session.native_prg_image().relocation_effects.size() == 227);
+    assert(atari_session.read_only_gemdos().checkpoint().generation == 1
+        && atari_session.read_only_gemdos().checkpoint().source_opened_read_only
+        && !atari_session.read_only_gemdos().checkpoint().source_mutated
+        && atari_session.read_only_gemdos().checkpoint().fread_return_bytes == 7506
+        && atari_session.read_only_gemdos().checkpoint().stop_before_jsr_address == 0x2a500);
     {
         auto altered = *atari_image;
         altered.back() ^= 0x01;
