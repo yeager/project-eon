@@ -378,6 +378,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandSelectedStreamPlan> advance_post_command_selected_stream() { return service_batch_boundary_session_.advance_post_command_selected_stream(); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDescriptorCallPlan> observe_post_command_descriptor_call_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_command_descriptor_call_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDescriptorLoopPlan> advance_post_command_descriptor_loop() { return service_batch_boundary_session_.advance_post_command_descriptor_loop(); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDescriptorBytePlan> observe_post_command_descriptor_byte(const DeuterosAmigaObservedTitlePostCommandDescriptorByte& o) { return service_batch_boundary_session_.observe_post_command_descriptor_byte(o); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

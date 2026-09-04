@@ -346,6 +346,25 @@ int main(const int argc, const char* const argv[]) {
         assert(bsr_memory.apply(user_consumer.make_game_init_setup_effect_batch("game-init-setup")).accepted);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b2ba})==0x04
             && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b2bd})==0x44);
+        auto bit6_clear=user_consumer;
+        auto bit7_set=user_consumer;
+        auto bit6_only=user_consumer;
+        assert(!user_consumer.observe_game_init_source_byte({1,22,0x2b2e0,0x2c250,0x12}).accepted);
+        assert(user_consumer.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x12}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_zero_copy_boundary
+            && user_consumer.checkpoint().game_init_next_instruction==0x2b2ec
+            && user_consumer.checkpoint().game_init_source_address==0x2c251);
+        assert(bsr_memory.apply(user_consumer.make_game_init_source_byte_effect_batch("game-init-byte")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c250})==0x12);
+        assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted
+            && bit6_clear.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_bit6_clear_boundary
+            && bit6_clear.checkpoint().game_init_next_instruction==0x2b3b8);
+        assert(bit7_set.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0xc0}).accepted
+            && bit7_set.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_bit7_set_boundary
+            && bit7_set.checkpoint().game_init_next_instruction==0x2b376);
+        assert(bit6_only.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x40}).accepted
+            && bit6_only.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_second_source_boundary
+            && bit6_only.checkpoint().game_init_next_instruction==0x2b338);
         assert(!user_consumer.execute_jsr_2b2be().accepted);
         assert(negative_fopen.observe_gemdos_selector_61({1,18,0x2a5b4,0x3d,-33}).accepted);
         assert(negative_fopen.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin

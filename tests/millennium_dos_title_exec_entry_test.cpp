@@ -748,6 +748,25 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().memory_effects.size()==18952
         &&other_success.checkpoint().memory_effects.back().offset==0x1389
         &&other_success.checkpoint().memory_effects.back().value==0x24);
+    auto contradictory_second_byte=other_success;
+    bool contradictory_second_byte_rejected=false;
+    try { contradictory_second_byte.observe_far_byte({89,0x13f2,0x3000,0x000a,1}); }
+    catch(const std::runtime_error&) { contradictory_second_byte_rejected=true; }
+    assert(contradictory_second_byte_rejected
+        &&contradictory_second_byte.checkpoint().far_byte_observations.size()==1
+        &&contradictory_second_byte.checkpoint().memory_effects.size()==18952);
+    other_success.observe_far_byte({89,0x13f2,0x3000,0x000a,0});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
+        &&other_success.checkpoint().continuation_address==0x0127
+        &&other_success.checkpoint().far_byte_observations.size()==2
+        &&other_success.checkpoint().boundary.call_address==0x1764
+        &&other_success.checkpoint().boundary.function==6
+        &&other_success.checkpoint().boundary.record_offset==0x1349
+        &&other_success.checkpoint().memory_effects.size()==18957
+        &&other_success.checkpoint().memory_effects[18952].offset==0x1388
+        &&other_success.checkpoint().memory_effects[18953].offset==0x1351
+        &&other_success.checkpoint().memory_effects[18955].value==0x00c8
+        &&other_success.checkpoint().memory_effects[18956].value==0x0140);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

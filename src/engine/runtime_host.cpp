@@ -391,6 +391,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_dispatch_desti
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_selected_stream,(),())
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_descriptor_call_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_descriptor_loop,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_descriptor_byte,(const DeuterosAmigaObservedTitlePostCommandDescriptorByte o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -516,6 +517,7 @@ MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_gemdos
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_gemdos_selector_62(const MillenniumAtariGemdosSelector62Observation o){if(revoking())return{false,"GEMDOS selector 62 rejected during revocation"};return NativeSessionController::observe_millennium_atari_gemdos_selector_62(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_fread_prefix(const MillenniumAtariFreadPrefixObservation o){if(revoking())return{false,"Fread prefix rejected during revocation"};return NativeSessionController::observe_millennium_atari_fread_prefix(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_jsr_2b2be(){if(revoking())return{false,"JSR $2b2be rejected during revocation"};return NativeSessionController::execute_millennium_atari_jsr_2b2be();}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_source_byte(const MillenniumAtariGameInitSourceByteObservation o){if(revoking())return{false,"Game-init source byte rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_source_byte(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;

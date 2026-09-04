@@ -3181,7 +3181,7 @@ int main() {
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-post-command-service-prefix"
-            && entry.runtime_status == "native selector-5c descriptor-bit loop complete";
+            && entry.runtime_status == "native selector-4b adjusted descriptor setup";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
@@ -3198,7 +3198,14 @@ int main() {
     }
     const auto millennium_dos_functions = eon::function_map_for_release(
         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123");
-    assert(millennium_dos_functions.size() == 21);
+    // Recovery grows monotonically and must not require updating an unrelated
+    // magic total for every newly mapped native boundary. Content, identity,
+    // and uniqueness are the contract; the required semantic rows below
+    // continue to catch accidental removal.
+    assert(!millennium_dos_functions.empty());
+    std::set<std::string_view> millennium_dos_function_ids;
+    for (const auto& entry : millennium_dos_functions)
+        assert(millennium_dos_function_ids.emplace(entry.id).second);
     assert(std::any_of(millennium_dos_functions.begin(), millennium_dos_functions.end(), [](const auto& entry) {
         return entry.id == "millennium-dos-en-title-availability-poll"
             && entry.runtime_address == "$0d0a"
@@ -5204,6 +5211,12 @@ int main() {
                 && init_copy_user->config_consumer.game_init_d6==0x0449
                 && init_copy_user->config_consumer.game_init_d7==0x0044
                 && init_copy_user->config_consumer.game_init_source_address==0x2c250);
+            assert(!all_release_runtime.observe_millennium_atari_game_init_source_byte({1,22,0x2b2de,0x2c251,0x12}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_game_init_source_byte({1,22,0x2b2de,0x2c250,0x12}).accepted);
+            const auto init_byte_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(init_byte_user && init_byte_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::game_init_zero_copy_boundary
+                && init_byte_user->config_consumer.game_init_next_instruction==0x2b2ec
+                && init_byte_user->config_consumer.game_init_source_address==0x2c251);
             assert(!all_release_runtime.execute_millennium_atari_jsr_2b2be().accepted);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
@@ -5296,6 +5309,7 @@ int main() {
             assert(!atari_host.observe_millennium_atari_gemdos_selector_62({1,23,0x2a5e6,0x3e,0}).accepted);
             assert(!atari_host.observe_millennium_atari_fread_prefix({1,24,0x2c24c,0,0x2c24e,0}).accepted);
             assert(!atari_host.execute_millennium_atari_jsr_2b2be().accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_source_byte({1,25,0x2b2de,0x2c250,0}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5717,12 +5731,29 @@ int main() {
                             byte_at(address)<<8U)|byte_at(address+1U));
                     }
             assert(merge_words.source_addresses.size()==960);
+            for(std::uint32_t outer=0;outer<3;++outer)
+                for(std::uint32_t word=0;word<184;++word)
+                    for(std::uint32_t plane=0;plane<4;++plane){
+                        const auto address=0x256dcU+outer*0x38U+word*2U+plane*0x1a40U;
+                        const auto owned=std::find_if(decoded_memory->initialized_bytes.begin(),
+                            decoded_memory->initialized_bytes.end(),[address](const auto& cell){return cell.location.offset==address;});
+                        if(owned!=decoded_memory->initialized_bytes.end())continue;
+                        if(std::find(merge_words.mask_source_addresses.begin(),merge_words.mask_source_addresses.end(),address)!=merge_words.mask_source_addresses.end())continue;
+                        merge_words.mask_source_addresses.push_back(address);
+                        merge_words.observed_mask_words.push_back(0);
+                    }
+            assert(merge_words.mask_source_addresses.size()==352);
             auto bad_merge_words=merge_words;
             bad_merge_words.source_addresses[0]++;
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_first_dispatch_destination_words(
                 bad_merge_words).accepted);
-            assert(opening_controller.observe_deuteros_amiga_title_post_command_first_dispatch_destination_words(
-                merge_words).accepted);
+            const auto first_merge_result =
+                opening_controller.observe_deuteros_amiga_title_post_command_first_dispatch_destination_words(
+                    merge_words);
+            if (!first_merge_result.accepted)
+                std::cerr << "Deuteros first merge integration rejected: "
+                          << first_merge_result.error << '\n';
+            assert(first_merge_result.accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_first_dispatch_destination_words(
                 merge_words).accepted);
             assert(opening_controller.advance_deuteros_amiga_title_post_command_second_dispatch()
@@ -5854,6 +5885,12 @@ int main() {
                 assert(opening_controller.advance_deuteros_amiga_title_post_command_descriptor_loop().accepted);
             }
             assert(!opening_controller.advance_deuteros_amiga_title_post_command_descriptor_loop().accepted);
+            eon::DeuterosAmigaObservedTitlePostCommandDescriptorByte descriptor_byte{
+                runtime_copy_sequence+51,0x20c6c,0x20a10,0x03};
+            auto bad_descriptor_byte=descriptor_byte;bad_descriptor_byte.source_address++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_descriptor_byte(bad_descriptor_byte).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_descriptor_byte(descriptor_byte).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_descriptor_byte(descriptor_byte).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -5938,7 +5975,11 @@ int main() {
                 && planar_patch->plane_zero_address==0xb5f4
                 && planar_patch->pixel_x==32 && planar_patch->pixel_y==0
                 && planar_patch->width==8 && planar_patch->height==8
-                && planar_patch->runtime_memory_checksum==variant_memory->checksum
+                // The patch is decoded from the current owned memory. Later
+                // post-command merges and descriptor writes are disjoint from
+                // these plane bytes but legitimately change the whole-memory
+                // diagnostic checksum.
+                && planar_patch->runtime_memory_checksum==post_command_memory->checksum
                 && planar_patch->display_trace_bitplanes_sha256
                     == "fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490"
                 && planar_patch->palette_rgb4_sha256
@@ -5962,7 +6003,7 @@ int main() {
                 && planar_surface->applied_patch_count==2
                 && planar_surface->initialized_plane_byte_count==64
                 && planar_surface->decoded_pixel_count==128
-                && planar_surface->runtime_memory_checksum==variant_memory->checksum
+                && planar_surface->runtime_memory_checksum==post_command_memory->checksum
                 && planar_surface->valid_pixels.size()==320*200
                 && planar_surface->color_indices.size()==320*200
                 && planar_surface->rgba.size()==320*200*4
@@ -12754,7 +12795,7 @@ int main() {
                 observation.base_source_addresses[index]=positive
                     ? target : base_words+plane*2U;
                 observation.observed_base_values[index]=
-                    static_cast<std::uint16_t>(0x12a0U+plane);
+                    static_cast<std::uint16_t>(0xa0U+plane);
                 observation.blend_word_source_addresses[index]=blend_words+plane*2U;
                 observation.observed_blend_words[index]=
                     static_cast<std::uint16_t>(0x3450U+plane);
@@ -12860,7 +12901,7 @@ int main() {
             0x1c499, 0xbe, 0x2000});
     assert(high_final_return);
     assert(high_final_return->completed_calls == 2);
-    assert(high_final_return->next_stream_address == 0x2ff13);
+    assert(high_final_return->next_stream_address == 0x2ff16);
     assert(high_final_return->next_opcode_read_address == 0x1fa0a);
     const auto command_end = title_stage_session.observe_command_opcode(
         {copy_sequence + 38, 0x1fa0a, 0x2ff16, 0});

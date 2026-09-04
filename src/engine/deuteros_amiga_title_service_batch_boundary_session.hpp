@@ -661,8 +661,11 @@ struct DeuterosAmigaTitleCommandPlanarVariantWritePlan {
     std::array<std::uint8_t, 32> destination_values{};
     std::uint32_t destination_pointer_cell_address = 0;
     std::uint32_t destination_pointer_value = 0;
-    std::uint32_t row_stride = 0;
-    std::uint32_t plane_stride = 0;
+        // The positive-clear route uses literal advances $28/$1f40.  The
+        // sibling routes replace these with their ordered pointer-cell
+        // observations below.
+        std::uint32_t row_stride = 0x28;
+        std::uint32_t plane_stride = 0x1f40;
     bool recovered_title_surface_layout = false;
     std::uint32_t routine_return_address = 0;
     std::uint32_t command_return_address = 0;
@@ -811,6 +814,8 @@ struct DeuterosAmigaObservedTitleFirstDispatchDestinationWords {
     std::uint32_t first_instruction_address = 0;
     std::vector<std::uint32_t> source_addresses;
     std::vector<std::uint16_t> observed_words;
+    std::vector<std::uint32_t> mask_source_addresses;
+    std::vector<std::uint16_t> observed_mask_words;
 };
 
 struct DeuterosAmigaTitleFirstDispatchMergePlan {
@@ -990,6 +995,16 @@ struct DeuterosAmigaTitlePostCommandDescriptorLoopPlan {
     std::uint32_t call_address=0,call_target=0,descriptor_destination=0;
     std::uint16_t descriptor_value=0;
     std::uint32_t stop_before_address=0;
+};
+struct DeuterosAmigaObservedTitlePostCommandDescriptorByte {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,source_address=0;
+    std::uint8_t observed_value=0;
+};
+struct DeuterosAmigaTitlePostCommandDescriptorBytePlan {
+    DeuterosAmigaObservedTitlePostCommandDescriptorByte observation;
+    std::uint16_t base_descriptor=0,result_descriptor=0,selector=0;
+    std::uint32_t descriptor_destination=0,call_address=0,call_target=0,stop_before_address=0;
 };
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
@@ -2172,7 +2187,14 @@ public:
                     || observation.blend_word_source_addresses[index]
                         != blend_words + plane * 2U
                     || (positive && observation.observed_base_values[index] > 0xffU)) {
-                    throw std::runtime_error("Deuteros planar variant source order does not match boundary");
+                    throw std::runtime_error("Deuteros planar variant source order does not match boundary at element "
+                        + std::to_string(index) + " (base $"
+                        + std::to_string(observation.base_source_addresses[index])
+                        + "/$" + std::to_string(expected_base) + ", blend $"
+                        + std::to_string(observation.blend_word_source_addresses[index])
+                        + "/$" + std::to_string(blend_words + plane * 2U)
+                        + ", observed base "
+                        + std::to_string(observation.observed_base_values[index]) + ")");
                 }
                 const auto base = static_cast<std::uint8_t>(
                     observation.observed_base_values[index] & 0xffU);
@@ -2391,12 +2413,22 @@ public:
             ||observation.source_addresses!=required
             ||observation.observed_words.size()!=required.size())
             throw std::runtime_error("Deuteros first merge destination observations do not match boundary");
+        std::vector<std::uint32_t> mask_gaps;
+        for(std::uint32_t outer=0;outer<3;++outer)for(std::uint32_t word=0;word<184;++word)
+            for(std::uint32_t plane=0;plane<4;++plane){const auto address=0x256dcU+outer*0x38U+word*2U+plane*0x1a40U;
+                if(std::binary_search(first_dispatch_decode_addresses_.begin(),first_dispatch_decode_addresses_.end(),address))continue;
+                if(std::find(mask_gaps.begin(),mask_gaps.end(),address)==mask_gaps.end())mask_gaps.push_back(address);}
+        if(observation.mask_source_addresses!=mask_gaps
+            ||observation.observed_mask_words.size()!=mask_gaps.size())
+            throw std::runtime_error("Deuteros first merge mask-gap observations do not match boundary");
         auto values=observation.observed_words;
         const auto decoded_word=[&](std::uint32_t address){
             const auto it=std::lower_bound(first_dispatch_decode_addresses_.begin(),
                 first_dispatch_decode_addresses_.end(),address);
-            if(it==first_dispatch_decode_addresses_.end()||*it!=address)
-                throw std::runtime_error("Deuteros merge mask lies outside decoded bytes");
+            if(it==first_dispatch_decode_addresses_.end()||*it!=address){
+                const auto gap=std::find(mask_gaps.begin(),mask_gaps.end(),address);
+                if(gap==mask_gaps.end())throw std::runtime_error("Deuteros merge mask lies outside typed bytes");
+                return observation.observed_mask_words[static_cast<std::size_t>(gap-mask_gaps.begin())];}
             const auto index=static_cast<std::size_t>(it-first_dispatch_decode_addresses_.begin());
             if(index+1>=first_dispatch_decode_values_.size()
                 ||first_dispatch_decode_addresses_[index+1]!=address+1U)
@@ -2679,6 +2711,17 @@ public:
         return DeuterosAmigaTitlePostCommandDescriptorLoopPlan{true,descriptor_loop_iteration_,0,
             descriptor_loop_d5_,0,0,0,0,0x416b4,0x00bd,0x20c6c};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDescriptorBytePlan>
+    observe_post_command_descriptor_byte(const DeuterosAmigaObservedTitlePostCommandDescriptorByte& o){
+        if(!descriptor_loop_completed_||post_command_descriptor_byte_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x20c6c
+            ||o.source_address!=0x20a10)
+            throw std::runtime_error("Deuteros post-command descriptor byte does not match boundary");
+        const auto result=static_cast<std::uint16_t>((0x00bdU+o.observed_value)&0x00ffU);
+        post_command_descriptor_byte_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostCommandDescriptorBytePlan{o,0x00bd,result,0x004b,
+            0x416b4,0x20c7a,0x41bb4,0x20c7a};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -2880,6 +2923,7 @@ private:
     std::uint16_t descriptor_loop_d5_=0,descriptor_loop_d6_=0,descriptor_loop_iteration_=0;
     bool descriptor_call_pending_=false,descriptor_loop_completed_=false;
     std::optional<DeuterosAmigaObservedLocalCallReturn> descriptor_call_return_;
+    std::optional<DeuterosAmigaObservedTitlePostCommandDescriptorByte> post_command_descriptor_byte_;
     struct PendingCommandCall {
         std::uint32_t address;
         std::uint32_t target;

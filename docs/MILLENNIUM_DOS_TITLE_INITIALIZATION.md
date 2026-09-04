@@ -395,3 +395,9 @@ The dedicated byte observation verifies genuine `TITLE.LIB+$0007` value
 `ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`)
 increment it and atomically store `$24` at `CS:$1389`. Execution stops before
 the next external byte at `$13f2`, source `$3000:$000a`.
+That byte is genuine `$00`. The 20-byte branch suffix hashes to
+`172d30853354efec879699618dd36f3fbda28ddd07d8ea66bc2a23ace6ee6753`.
+The caller's next 39 bytes (SHA-256
+`d095399b2a968131f10112f1895b1449f6d1572052c032e48289218e5d07355b`)
+copy the proven dimensions into its request and reach private INT `$91`
+function `$0006`. Execution stops at result address `$0127`.
