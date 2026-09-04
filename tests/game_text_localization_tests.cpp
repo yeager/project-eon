@@ -102,6 +102,50 @@ int main() {
         eon::Game::millennium, eon::Platform::dos,
         admitted_celestial_text.front(), "sv", eon::Translator::from_language("sv"));
     assert(admitted_swedish.displayed_text == all_celestial_text.front().displayed_text);
+    // Runtime tables use one presentation-mode-independent route. Calling it
+    // for the same admitted source and locale therefore produces identical
+    // Original and Modern text without either path retaining media bytes.
+    const auto original_table = eon::localize_admitted_game_text_table(
+        eon::Game::millennium, eon::Platform::dos, admitted_celestial_text,
+        "sv", eon::Translator::from_language("sv"));
+    const auto modern_table = eon::localize_admitted_game_text_table(
+        eon::Game::millennium, eon::Platform::dos, admitted_celestial_text,
+        "sv", eon::Translator::from_language("sv"));
+    assert(original_table.size() == 41);
+    assert(original_table.front().displayed_text == modern_table.front().displayed_text);
+    assert(original_table.back().displayed_text == modern_table.back().displayed_text);
+    auto reordered_table = admitted_celestial_text;
+    std::swap(reordered_table[0], reordered_table[1]);
+    source_rejected = false;
+    try {
+        static_cast<void>(eon::localize_admitted_game_text_table(
+            eon::Game::millennium, eon::Platform::dos, reordered_table,
+            "sv", eon::Translator::from_language("sv")));
+    } catch (const std::runtime_error&) {
+        source_rejected = true;
+    }
+    assert(source_rejected);
+    source_rejected = false;
+    try {
+        static_cast<void>(eon::localize_admitted_game_text_table(
+            eon::Game::millennium, eon::Platform::dos, {}, "en", source_english));
+    } catch (const std::runtime_error&) {
+        source_rejected = true;
+    }
+    assert(source_rejected);
+    auto mixed_table = admitted_celestial_text;
+    mixed_table.push_back(eon::admit_all_game_text_from_source(
+        eon::Game::millennium, eon::Platform::dos, "MILL.COM",
+        source_leaves.at("MILL.COM")).front());
+    source_rejected = false;
+    try {
+        static_cast<void>(eon::localize_admitted_game_text_table(
+            eon::Game::millennium, eon::Platform::dos, mixed_table,
+            "en", source_english));
+    } catch (const std::runtime_error&) {
+        source_rejected = true;
+    }
+    assert(source_rejected);
     const auto admitted_by_id = eon::localize_admitted_game_text_by_id(
         eon::Game::millennium, eon::Platform::dos, admitted_celestial_text,
         admitted_celestial_text.front().id, "sv", eon::Translator::from_language("sv"));
