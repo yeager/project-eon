@@ -164,6 +164,16 @@ public:
         return service_batch_boundary_session_.observe_graphics_service_third_return(
             observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailFirstGraphicsLocalPlan>
+    observe_tail_first_graphics_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        return service_batch_boundary_session_.observe_tail_first_graphics_return(
+            observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailCopyLocalPlan>
+    observe_tail_copy_words(const DeuterosAmigaObservedTailCopyWords& observation) {
+        return service_batch_boundary_session_.observe_tail_copy_words(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

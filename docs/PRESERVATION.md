@@ -5641,6 +5641,19 @@ from `$12fec`. Execution stops before its next graphics.library vector
 `-$1a4` at `$20112`; Eon records neither pointer-cell contents nor a graphics
 effect or rendered output.
 
+The next session edge accepts a typed return from that exact `$20112`
+`-$1a4` call only when it uses the same observed library base and follows the
+preceding return sequence. D0 and SR remain value-only evidence. The wrapper
+RTS resumes at `$201da`, restoring the instruction-saved A6 value `$1f372`.
+The following code derives destination A0 `$1ffc8`, but its four source words
+are runtime memory reads at `$1f372..$1f379`; Eon therefore requires a second
+typed observation at instruction `$201e6`. It then records only the literal
+copy layout to `$1ffca/$1ffcc/$1ffd0/$1ffd2` and the two encoded `$ffff`
+writes to `$1ee12/$1ee10`. The next BSR at `$201fe` enters `$20118`, whose
+first instruction reads runtime word `$1ffc8`; execution stops there without
+inventing that value, choosing its branches, or invoking the later `-$1aa`
+graphics vector.
+
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
 `b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its
@@ -5926,3 +5939,18 @@ width, value, and instruction address are retained in typed checkpoint effects.
 No framebuffer meaning, display mode, or pixel semantics is inferred.  The
 admitted executable remains SHA-256
 `427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`.
+### Millennium DOS BDF mode-two `$11f7` zero branch
+
+After the existing one-way `$0c4b -> $11f7` transfer is explicitly admitted,
+the runtime now requires the caller-observed entry `DI`; it never supplies a
+default video offset. The exact executable hash
+`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`
+binds the continuation. At `$11f7` it observes `CS:$07d8`. For the zero branch,
+`$129d` observes the segment word at `CS:$0107`, then `$12af` consumes exactly
+64 consecutive words from `CS:$07fa..$0879` and records the corresponding
+`ES:DI` word effects. Four words form each of 16 rows. The next row applies the
+literal `+0x2000`; when bit 15 becomes set it applies
+`(value & 0x7fff) + 0x00a0`. The state ends at the proven RET `$12cb`.
+The nonzero branch stops at `$1203`; its far reads and later read/modify/write
+loop remain unowned. No framebuffer, plane, pixel, or display meaning is
+inferred from these addresses.

@@ -14,6 +14,7 @@
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "data/zip_archive.hpp"
+#include "data/native_code_image_admission.hpp"
 #include "data/amiga_adf.hpp"
 #include "data/atari_st_prg.hpp"
 #include "data/atari_st_stx.hpp"
@@ -1029,6 +1030,26 @@ void assert_modern_asset_pack_admission() {
 } // namespace
 
 int main() {
+    {
+        const auto images=eon::native_code_image_manifest();
+        assert(images.size()==13);
+        const auto game=std::find_if(images.begin(),images.end(),[](const auto& image){
+            return image.image_id=="millennium-dos-2200ad-exe-linear";
+        });
+        assert(game!=images.end());
+        assert(game->range_id=="millennium-dos-game-flow"&&game->source_offset==0
+            &&game->length==54391
+            &&game->load_status==eon::NativeCodeLoadStatus::address_basis_declared);
+        const auto boot=std::find_if(images.begin(),images.end(),[](const auto& image){
+            return image.image_id=="millennium-atari-equinox-direct-boot-disk-relative-linear";
+        });
+        assert(boot!=images.end());
+        assert(boot->address_basis==eon::NativeCodeAddressBasis::disk_relative
+            &&boot->load_status==eon::NativeCodeLoadStatus::unproven);
+        assert(std::none_of(images.begin(),images.end(),[](const auto& image){
+            return image.range_id=="millennium-atari-equinox-direct-prg-chain";
+        }));
+    }
     {
         eon::MillenniumDosExternalTransferAdmission f9(
             eon::MillenniumDosExternalTransferKind::f9_long_return);
@@ -6881,6 +6902,12 @@ int main() {
         for(std::uint16_t row=0;row<15;++row)for(std::uint16_t word=0;word<4;++word)zero_bdf.observe_runtime_word(0x0c9b,std::uint16_t(0x07fa+(row*4+word)*2),std::uint16_t(row*4+word));
         assert(zero_bdf.state()==eon::MillenniumDosBdfServiceState::returned_by_copy&&zero_bdf.boundary().instruction_address==0x0ca9&&zero_bdf.far_memory_effects().size()==60&&zero_bdf.far_memory_effects().back().segment==0xa000);
         eon::MillenniumDosBdfServiceSession busy_bdf(*game_executable);busy_bdf.observe_runtime_byte(0x0bdf,0x07d8,1);assert(busy_bdf.state()==eon::MillenniumDosBdfServiceState::returned_by_active);
+        eon::MillenniumDosBdfModeTwoSession mode_two(*game_executable,0x6100);
+        mode_two.observe_runtime_byte(0x11f7,0x07d8,0);mode_two.observe_runtime_word(0x129d,0x0107,0xa000);
+        for(std::uint16_t n=0;n<64;++n)mode_two.observe_runtime_word(0x12af,std::uint16_t(0x07fa+n*2),std::uint16_t(0x4000+n));
+        assert(mode_two.state()==eon::MillenniumDosBdfModeTwoState::returned&&mode_two.boundary().instruction_address==0x12cb&&mode_two.far_effects().size()==64);
+        assert((mode_two.far_effects().front()==eon::MillenniumDosBdfModeTwoFarEffect{0x12af,0xa000,0x6100,0x4000}));
+        assert(mode_two.far_effects()[4].offset==0x01a0&&mode_two.far_effects().back().value==0x403f);
         eon::MillenniumDosExternalTransferAdmission busy_transfer(eon::MillenniumDosExternalTransferKind::f2_tail_active_return);
         assert(busy_transfer.observe_entry({40,0x7253,0x0bdf}).accepted);
         assert(busy_transfer.observe_return({41,busy_bdf.boundary().instruction_address,0xcafe}).accepted);
@@ -10540,6 +10567,57 @@ int main() {
     assert(third_graphics_service->stop_before_address == 0x20112);
     assert(!title_stage_session.observe_graphics_service_third_return(
         {29, 0x12fec, 0x00abcdef, 0x200f4, -0x1a4, 0x200f8, 0, 0}));
+    bool rejected_tail_first_graphics = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_first_graphics_return(
+            {29, 0x12fec, 0x00abcdee, 0x20112, -0x1a4, 0x20116,
+                0x55667788, 0x2010}));
+    } catch (const std::runtime_error&) {
+        rejected_tail_first_graphics = true;
+    }
+    assert(rejected_tail_first_graphics);
+    const auto tail_first_graphics =
+        title_stage_session.observe_tail_first_graphics_return(
+            {29, 0x12fec, 0x00abcdef, 0x20112, -0x1a4, 0x20116,
+                0x55667788, 0x2010});
+    assert(tail_first_graphics);
+    assert(tail_first_graphics->observed_return.result_d0 == 0x55667788);
+    assert(tail_first_graphics->observed_return.result_sr == 0x2010);
+    assert(tail_first_graphics->wrapper_rts_address == 0x20116);
+    assert(tail_first_graphics->caller_resume_address == 0x201da);
+    assert(tail_first_graphics->restored_a6_value == 0x1f372);
+    assert(tail_first_graphics->destination_base == 0x1ffc8);
+    assert(tail_first_graphics->source_address == 0x1f372);
+    assert(tail_first_graphics->copy_instruction_address == 0x201e6);
+    assert(tail_first_graphics->stop_before_address == 0x201e6);
+    bool rejected_tail_words = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_copy_words(
+            {30, 0x201e6, 0x1f374, {{1, 2, 3, 4}}}));
+    } catch (const std::runtime_error&) {
+        rejected_tail_words = true;
+    }
+    assert(rejected_tail_words);
+    const auto tail_words = title_stage_session.observe_tail_copy_words(
+        {30, 0x201e6, 0x1f372, {{0x1111, 0x2222, 0x3333, 0x4444}}});
+    assert(tail_words);
+    assert((tail_words->destination_addresses
+        == std::array<std::uint32_t, 4>{{0x1ffca, 0x1ffcc, 0x1ffd0, 0x1ffd2}}));
+    assert((tail_words->destination_values
+        == std::array<std::uint16_t, 4>{{0x1111, 0x2222, 0x3333, 0x4444}}));
+    assert((tail_words->literal_destination_addresses
+        == std::array<std::uint32_t, 2>{{0x1ee12, 0x1ee10}}));
+    assert((tail_words->literal_values
+        == std::array<std::uint16_t, 2>{{0xffff, 0xffff}}));
+    assert(tail_words->next_call_address == 0x201fe);
+    assert(tail_words->next_call_target == 0x20118);
+    assert(tail_words->unresolved_read_address == 0x20118);
+    assert(tail_words->unresolved_read_source == 0x1ffc8);
+    assert(tail_words->stop_before_address == 0x20118);
+    assert(!title_stage_session.observe_tail_copy_words(
+        {31, 0x201e6, 0x1f372, {{0, 0, 0, 0}}}));
+    assert(!title_stage_session.observe_tail_first_graphics_return(
+        {30, 0x12fec, 0x00abcdef, 0x20112, -0x1a4, 0x20116, 0, 0}));
     assert(!title_stage_session.observe_graphics_service_second_return(
         {29, 0x12fec, 0x00abcdef, 0x200b0, -0x198, 0x200b4, 0, 0}));
     assert(!title_stage_session.observe_graphics_service_first_return(
