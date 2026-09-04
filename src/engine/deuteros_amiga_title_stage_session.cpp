@@ -139,7 +139,8 @@ DeuterosAmigaTitleStageSession::observe_exec_return(
     const auto advanced = exec_boundary_session_.observe_exec_return(observation);
     if (advanced && advanced->state
             == DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary) {
-        open_library_boundary_session_.emplace(*advanced, graphics_setup_, profile_);
+        open_library_boundary_session_.emplace(
+            *advanced, graphics_setup_, profile_, display_clear_);
     }
     return advanced;
 }
