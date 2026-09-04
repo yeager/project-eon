@@ -255,6 +255,45 @@ struct DeuterosAmigaTitleTailExecReturnLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedLocalCallReturn {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t call_address = 0;
+    std::uint32_t call_target = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t result_d0 = 0;
+    std::uint16_t result_sr = 0;
+};
+
+struct DeuterosAmigaTitleLoadServiceLocalPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t d7_value = 0;
+    std::uint32_t d1_value = 0;
+    std::uint32_t d0_value = 0;
+    std::uint32_t selector_read_address = 0;
+    std::uint32_t selector_source_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
+enum class DeuterosAmigaTitleLoadServiceOutcome { zero_retry_boundary, one_exit, copy_boundary };
+
+struct DeuterosAmigaObservedLoadSelector {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint16_t observed_value = 0;
+};
+
+struct DeuterosAmigaTitleLoadServiceSelectorPlan {
+    DeuterosAmigaObservedLoadSelector observation;
+    DeuterosAmigaTitleLoadServiceOutcome outcome =
+        DeuterosAmigaTitleLoadServiceOutcome::zero_retry_boundary;
+    std::uint32_t copy_source_address = 0;
+    std::uint32_t copy_destination_address = 0;
+    std::uint32_t copy_longword_count = 0;
+    std::uint32_t next_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -278,6 +317,7 @@ public:
         fourth_service_ = parse_deuteros_amiga_title_post_exec_fourth_service_profile(
             disk, plan);
         tail_return_ = parse_deuteros_amiga_title_post_exec_tail_return_profile(disk, plan);
+        load_service_ = parse_deuteros_amiga_title_post_exec_load_service_profile(disk, plan);
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
             || to_hex(sha256(at(0x20510, 38)))
@@ -638,6 +678,48 @@ public:
             0x404f0, 0x389e2, 0x404f0};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceLocalPlan>
+    observe_load_service_return(const DeuterosAmigaObservedLocalCallReturn& observation) {
+        if (!observed_tail_exec_return_ || observed_load_service_return_) return std::nullopt;
+        if (observation.trace_sequence <= observed_tail_exec_return_->trace_sequence
+            || observation.call_address != load_service_.nested_call_address
+            || observation.call_target != load_service_.nested_call_target
+            || observation.return_address != load_service_.nested_return_address) {
+            throw std::runtime_error("Deuteros load-service return does not match boundary");
+        }
+        observed_load_service_return_ = observation;
+        return DeuterosAmigaTitleLoadServiceLocalPlan{observation,
+            load_service_.d7_value, load_service_.d1_value, load_service_.d0_value,
+            0x389fa, load_service_.selector_word_address, 0x389fa};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceSelectorPlan>
+    observe_load_selector(const DeuterosAmigaObservedLoadSelector& observation) {
+        if (!observed_load_service_return_ || observed_load_selector_) return std::nullopt;
+        if (observation.trace_sequence <= observed_load_service_return_->trace_sequence
+            || observation.instruction_address != 0x389fa
+            || observation.source_address != load_service_.selector_word_address) {
+            throw std::runtime_error("Deuteros load selector does not match boundary");
+        }
+        observed_load_selector_ = observation;
+        const auto selector = static_cast<std::uint8_t>(observation.observed_value & 0xffU);
+        if (selector == 0) {
+            return DeuterosAmigaTitleLoadServiceSelectorPlan{observation,
+                DeuterosAmigaTitleLoadServiceOutcome::zero_retry_boundary,
+                0, 0, 0, 0x389a6, 0x389aa};
+        }
+        if (selector == 1) {
+            return DeuterosAmigaTitleLoadServiceSelectorPlan{observation,
+                DeuterosAmigaTitleLoadServiceOutcome::one_exit,
+                0, 0, 0, 0x404f6, 0x404f8};
+        }
+        const auto source = selector == 2 ? 0x26cc0U : 0x29540U;
+        return DeuterosAmigaTitleLoadServiceSelectorPlan{observation,
+            DeuterosAmigaTitleLoadServiceOutcome::copy_boundary,
+            source, load_service_.copy_destination, load_service_.copy_longword_count,
+            0x38a28, 0x38a28};
+    }
+
 private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
@@ -651,6 +733,7 @@ private:
     DeuterosAmigaTitlePostExecTailFourthCalleeProfile tail_fourth_callee_;
     DeuterosAmigaTitlePostExecFourthServiceProfile fourth_service_;
     DeuterosAmigaTitlePostExecTailReturnProfile tail_return_;
+    DeuterosAmigaTitlePostExecLoadServiceProfile load_service_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_graphics_service_first_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
@@ -672,6 +755,8 @@ private:
         observed_tail_repeated_wrapper_graphics_;
     std::optional<DeuterosAmigaObservedTailSourceTable> observed_tail_source_table_;
     std::optional<DeuterosAmigaObservedTailExecReturn> observed_tail_exec_return_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> observed_load_service_return_;
+    std::optional<DeuterosAmigaObservedLoadSelector> observed_load_selector_;
 };
 
 } // namespace eon
