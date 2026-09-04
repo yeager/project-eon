@@ -411,6 +411,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_4069a_return,
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_join_byte,(const DeuterosAmigaObservedTitlePostAdjustedJoinByte o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_1f9a4_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_1fe88_return,(const DeuterosAmigaObservedTitlePostAdjusted1fe88Return o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_final_gate,(const DeuterosAmigaObservedTitlePostAdjustedFinalGate o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -557,6 +558,7 @@ MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_i
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_post_config_fopen(const MillenniumAtariGemdosSelector61Observation o){if(revoking())return{false,"Post-config Fopen rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_post_config_fopen(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_post_config_fread(const MillenniumAtariGemdosSelector63Observation o){if(revoking())return{false,"Post-config Fread rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_post_config_fread(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_post_config_fclose(const MillenniumAtariGemdosSelector62Observation o){if(revoking())return{false,"Post-config Fclose rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_post_config_fclose(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_post_config_rts(const MillenniumAtariGameInitSecondConfigRtsObservation o){if(revoking())return{false,"Post-config RTS rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_post_config_rts(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;

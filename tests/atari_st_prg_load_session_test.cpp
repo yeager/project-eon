@@ -585,6 +585,13 @@ int main(const int argc, const char* const argv[]) {
             && post_config_effects.effects[1].location.offset==0x11dfc
             && post_config_effects.effects[0].value==0x361436a7
             && post_config_effects.effects[1].value==0x361436a7);
+        assert(!single_cell_planes.observe_game_init_post_config_rts({1,124,0x770b8,0x00fd0000,0x123456}).accepted);
+        assert(!single_cell_planes.observe_game_init_post_config_rts({1,124,0x770ba,0x00fd0000,0x123457}).accepted);
+        assert(!single_cell_planes.observe_game_init_post_config_rts({1,124,0x770ba,0x00fd0000,0x1000000}).accepted);
+        assert(single_cell_planes.observe_game_init_post_config_rts({1,124,0x770ba,0x00fd0000,0x123456}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_post_config_complete
+            && single_cell_planes.checkpoint().game_init_post_config_rts_stack_address==0x00fd0000
+            && single_cell_planes.checkpoint().game_init_post_config_rts_return_address==0x123456);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

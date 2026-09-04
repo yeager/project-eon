@@ -1584,8 +1584,11 @@ cleanup and branch reach `$770a2`, write original constant `$361436a7` to
 `$2ab2c` and `$11dfc` atomically, and stop at local RTS `$770ba`. The
 concatenated executed span hashes to
 `aa177208872c4125af13601feb4566003e5fb01c851c44f8b7f4904fb5f52b52`;
-the skipped embedded strings are not executed and the RTS destination remains
-external.
+the skipped embedded strings are not executed. The bootstrap entered this
+staged target with `JMP $77000`, not a call, so no return destination exists in
+the admitted instruction stream. Eon accepts the terminal RTS destination only
+as a typed even 24-bit address, retains it, and stops without inventing a
+caller continuation.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4634,6 +4637,12 @@ mode-two count exactly, applies wrapping `DX` subtraction and ordered output
 writes atomically, then stops at `$1488` or the next typed `$1428` input.
 This expands deterministic execution only; stream and output bytes still have
 no claimed compression, palette, pixel, or graphics semantics.
+Completion also owns the exact `$1488..$149e` mode dispatch, 23-byte SHA-256
+`7967c8650f118732cc5c884ea6d332a8dbe6dc060e5736088e7b5d0f1fb081ad`.
+It restores the already admitted descriptor pointer and follows mode one,
+mode two, or the other-mode prefix to typed reads at `$14a9`, `$1647`, or
+`$14f0`, respectively. The genuine first-record source is `$5050:$0003`;
+its raw byte remains external and has no inferred header or graphics meaning.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7110,9 +7119,16 @@ caller span at ADF `$9b5d0` hashes to
 That helper removes the stacked return PC and interprets the embedded bytes
 at `$405d6..$405dd`, so its typed return must be `$405de`, not the ordinary
 JSR fall-through `$405d6`. The caller then reads typed word `$22a0` and
-requires `$405e4->$1fe88` to return at `$405ea`; execution stops before
-`$405f0->$1fe6c`. Helper effects and the word's meaning remain opaque, and no
-caller memory effect occurs in this bounded continuation.
+requires `$405e4->$1fe88` to return at `$405ea`. The following 72-byte caller
+span at ADF `$9b5ea` hashes to
+`520c189626cdbcca3d175837cc8e5a3ee95887ef002d75d0d371aef8ae9f41e7`.
+It requires typed returns for `$405f0->$1fe6c`, `$405fc->$1fe6c`, and
+`$40608->$1fe7a`, paired with typed words `$1ffc8`, `$1ffce`, and `$22d34`.
+The final gate reads `$1ffc8`; only zero reads `$1ffce`, and only a low byte
+at least `$b4` reads `$1ffd4`. A nonzero first word, a smaller second byte, or
+an even third byte joins at `$40638`; an odd third byte reaches the external
+tail jump `$4062c->$37f56`. Helper effects and word meanings remain opaque;
+this bounded caller block has no memory writes.
 SR remain opaque. The transition is replay-safe, revoked with its owning
 session, and assigns no rendering or gameplay meaning.
 

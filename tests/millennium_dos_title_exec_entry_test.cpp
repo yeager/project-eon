@@ -1043,6 +1043,8 @@ int main(int argc, char** argv) {
     assert(high_escape_output.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary);
     assert(high_escape_output.continuation_address==0x1428);
+    assert(high_escape_output.far_byte_boundary.instruction_address==0x1428);
+    assert(high_escape_output.far_byte_boundary.source_segment==0x5050);
     assert(high_escape_output.far_byte_boundary.source_offset==0x0023);
     assert(high_escape_output.memory_effects.back().offset==0x0172);
     assert(high_escape_output.memory_effects.back().value==0x4e);
@@ -1075,7 +1077,7 @@ int main(int argc, char** argv) {
     mode_two_extension.observe_far_word({100,0x144a,0x5050,0x0020,0x0ff0});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_escape_word_boundary);
-    mode_two_extension.observe_far_word({101,0x1452,0x5050,0x0021,0x1230});
+    mode_two_extension.observe_far_word({101,0x1452,0x5050,0x0021,0x0550});
     const auto mode_two_second_extension=mode_two_extension.checkpoint();
     assert(mode_two_second_extension.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary);
@@ -1085,19 +1087,28 @@ int main(int argc, char** argv) {
     const auto detached_mode_two_effect_count=detached_mode_two_second_extension.checkpoint().memory_effects.size();
     bool detached_mode_two_second_extension_rejected=false;
     try { detached_mode_two_second_extension.observe_far_word(
-        {102,0x1458,0x5050,0x0023,0x0010}); }
+        {102,0x1458,0x5050,0x0023,0x04d0}); }
     catch(const std::runtime_error&) { detached_mode_two_second_extension_rejected=true; }
     assert(detached_mode_two_second_extension_rejected
         &&detached_mode_two_second_extension.checkpoint().last_sequence==101
         &&detached_mode_two_second_extension.checkpoint().memory_effects.size()==detached_mode_two_effect_count);
-    mode_two_extension.observe_far_word({102,0x1458,0x5050,0x0022,0x0010});
+    mode_two_extension.observe_far_word({102,0x1458,0x5050,0x0022,0x04d0});
     const auto extended_mode_two_run=mode_two_extension.checkpoint();
     assert(extended_mode_two_run.state
-        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary);
-    assert(extended_mode_two_run.continuation_address==0x1428);
-    assert(extended_mode_two_run.far_byte_boundary.source_offset==0x0023);
-    assert(extended_mode_two_run.memory_effects.size()==detached_mode_two_effect_count+0x2303);
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_byte_boundary);
+    assert(extended_mode_two_run.continuation_address==0x1647);
+    assert(extended_mode_two_run.far_byte_boundary.source_segment==0x5050);
+    assert(extended_mode_two_run.far_byte_boundary.source_offset==0x0003);
+    assert(extended_mode_two_run.memory_effects.size()==detached_mode_two_effect_count+0x554f);
     assert(extended_mode_two_run.memory_effects.back().value==0x7a);
+    auto detached_post_record_header=mode_two_extension;
+    const auto post_record_effect_count=detached_post_record_header.checkpoint().memory_effects.size();
+    bool detached_post_record_header_rejected=false;
+    try { detached_post_record_header.observe_far_byte({103,0x1647,0x5050,0x0004,0x05}); }
+    catch(const std::runtime_error&) { detached_post_record_header_rejected=true; }
+    assert(detached_post_record_header_rejected
+        &&detached_post_record_header.checkpoint().last_sequence==102
+        &&detached_post_record_header.checkpoint().memory_effects.size()==post_record_effect_count);
     mode_two_dispatch.observe_far_word({100,0x144a,0x5050,0x0020,0x0030});
     const auto mode_two_run=mode_two_dispatch.checkpoint();
     assert(mode_two_run.state
