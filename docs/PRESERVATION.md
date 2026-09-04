@@ -1536,8 +1536,13 @@ file `+0x604`, runtime `$2ab04..$2ab0f`, hashes to
 It loads D7 with the corrected second configuration filename pointer `$2a634`
 and calls the already bounded `$2aa0c` helper. That helper deterministically
 reaches the existing GEMDOS selector `$3d` boundary with open mode 2 and D7
-as its filename pointer. No open result, file content, or filesystem effect is
-inferred.
+as its filename pointer. A dedicated second-config observation accepts the
+raw signed D0 return only in that caller context and atomically stores its low
+word at `$2a5fa`. The exact shared helper then dispatches a negative return to
+the proven `$2a632` failure spin. A nonnegative return loads D0 `$7d42` and D1
+`$2c24a` and reaches the existing `$2a5c2` Fread helper boundary. Reusing that
+path is justified by the identical `$2aa0c` call target; no open operation,
+file content, handle validity, or filesystem effect is inferred.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4593,6 +4598,20 @@ All other values return to the caller, advance the loop output offsets to
 `$02e0`, select record index two, and stop at the typed `$13aa` two-word read
 from relocated `TITLE.LIB+$001b`. Detached observations fail before state
 changes. No record-field, encoding, rendering, or pixel semantics are claimed.
+The `$1419` payload observation is now native through the exact 15-byte prefix
+ending at `$1427` (SHA-256
+`912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b`).
+It atomically writes the raw byte to current output `CS:$0170`, preserves the
+instruction-defined register changes, and decrements the owned raw word from
+`CS:$138a`. A nonzero remainder stops at typed byte `$1428`, source
+`$5050:$0020`; a zero remainder stops at internal dispatch `$1488`. No codec,
+pixel, or graphics semantics are inferred.
+The alternate branch's genuine `TITLE.LIB+$001b` words are `$c800/$4000`.
+They pass the existing exact `$13aa..$13cc` pointer transformation, normalize
+to `$3c80:$0000`, and are atomically stored at `CS:$138c/$138e`. Execution
+stops at the typed `$13cd` runtime-word boundary, source `$3c80:$0018`.
+The complete `TITLE.LIB` remains read-only and hash-addressed; contradictory
+typed descriptor words fail before any state or memory effect is committed.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6978,6 +6997,14 @@ typed return to `$4053e` may continue. A typed long read from `$12fe4` is then
 shifted right three bits and its low word is atomically stored at `$1f42a`.
 Execution stops before external call `$4054c->$37180`; D0/SR from `$20cfe`
 remain opaque and no rendering or gameplay meaning is assigned.
+After a typed `$4054c->$37180` return to `$40552`, the exact 20-byte caller
+span `$40552..$40565` / ADF `$9b552..$9b565` hashes to
+`a208f64d43c08c1363f67586f924a5a7ae8143a8b40e691097ef3c29503666c3`.
+A typed longword at `$1378e` is copied atomically to `$1c26c`; a typed word at
+`$4040e` then follows the exact comparison and branch. Value five stops at
+external `$40566->$36a8c`; every other word stops at `$4056e->$1fb9a`.
+The service result and both selected callees remain opaque, and neither route
+is assigned rendering or gameplay semantics.
 assigned, and execution does not continue beyond that caller address.
 
 The renderer-facing consequence remains bounded by known pixels rather than

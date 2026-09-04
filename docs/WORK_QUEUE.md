@@ -40,9 +40,11 @@ product/store sequence is native.
 The third typed runtime word from `$5050:$0017`, the byte from `$5050:$0004`,
 and their exact arithmetic/store sequences are native. The typed byte at
 `$13f2`, source `$5050:$0007`, and both deterministic branch continuations
-are also native. Continue the one/two branch at `$1419`, source
-`$5050:$001f`, or the other-value branch at `$13aa`, relocated
-`TITLE.LIB+$001b`; do not assign graphics semantics to these fields.
+are also native. The one/two branch owns its first payload byte and exact
+prefix through `$1427`; continue at `$1428`, source `$5050:$0020`. The
+other-value branch owns the genuine second descriptor and normalization;
+continue at `$13cd`, source `$3c80:$0018`. Do not assign graphics or codec
+semantics to these fields.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -94,8 +96,12 @@ native. Continue with a typed RTS destination and the largest deterministic
 caller continuation. The exact `$2ab04` return is now typed; its caller loads
 the corrected D7 pointer `$2a634`, enters the reused `$2aa0c` helper, and stops
 at the second configuration file's GEMDOS selector-`$3d` boundary. Continue
-with that typed Fopen result and its bounded success/failure caller path. Do
-not infer filesystem, firmware, or wall-clock effects from static bytes.
+with that typed Fopen result and its bounded success/failure caller path. Both
+are now native: negative returns reach `$2a632`, while nonnegative returns
+atomically retain the handle and reach the existing `$2a5c2` Fread boundary.
+Continue with the second-config Fread/Fclose results and prove its caller
+return separately from the first configuration path. Do not infer filesystem,
+firmware, or wall-clock effects from static bytes.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -356,8 +362,10 @@ call now consumes two ordered runtime words, all eight typed `$41a68`
 returns, exact counter effects and DBF iterations, then returns through
 `$20bf0` to known caller address `$40536`. The caller now loads literal A0
 `$20cfe`, admits its typed return, reads typed long `$12fe4`, shifts it right
-three bits, and atomically stores the low word at `$1f42a`. Continue from the
-external `$4054c->$37180` call; do not
+three bits, and atomically stores the low word at `$1f42a`. A typed return from
+`$4054c->$37180` now admits the exact longword copy `$1378e->$1c26c` and a
+typed `$4040e` mode selects `$40566->$36a8c` or `$4056e->$1fb9a`. Continue
+from that selected external call; do not
 treat the sparse decoded memory as a renderer surface.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

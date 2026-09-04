@@ -390,6 +390,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedLoopAdvancePlan> advance_post_adjusted_repeated_nested_loop() { return service_batch_boundary_session_.advance_post_adjusted_repeated_nested_loop(); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedCallerIndirectPlan> advance_post_adjusted_caller_indirect() { return service_batch_boundary_session_.advance_post_adjusted_caller_indirect(); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedIndirectReturnPlan> observe_post_adjusted_caller_indirect_return(const DeuterosAmigaObservedTitlePostAdjustedIndirectReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_caller_indirect_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted37180ReturnPlan> observe_post_adjusted_caller_37180_return(const DeuterosAmigaObservedTitlePostAdjusted37180Return& o) { return service_batch_boundary_session_.observe_post_adjusted_caller_37180_return(o); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

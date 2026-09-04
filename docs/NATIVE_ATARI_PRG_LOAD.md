@@ -253,9 +253,12 @@ atomically, and require a fresh typed selector-6 return. The final D7 fallthroug
 owns the terminal selector-6 return and reaches local RTS `$2b4c6`. A typed
 stack observation admits the exact return `$2ab04`. Its hash-bound caller
 loads D7 `$2a634`, calls the reused
-`$2aa0c` helper, and reaches its existing GEMDOS selector-`$3d` boundary.
-Eon does not infer any XBIOS, GEMDOS, display, or wall-clock timing semantics
-from the raw results.
+`$2aa0c` helper, and reaches its existing GEMDOS selector-`$3d` boundary. A
+dedicated typed result now atomically records the raw handle word. Its negative
+branch reaches `$2a632`; its nonnegative branch reaches the bounded Fread
+helper with the exact `$7d42`/`$2c24a` arguments. Eon does not infer any
+XBIOS, GEMDOS, filesystem, display, or wall-clock timing semantics from the
+raw results.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

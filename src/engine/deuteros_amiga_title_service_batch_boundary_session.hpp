@@ -1082,6 +1082,8 @@ struct DeuterosAmigaTitlePostAdjustedIndirectReturnPlan {
     std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
     std::string continuation_sha256;
 };
+struct DeuterosAmigaObservedTitlePostAdjusted37180Return { std::uint64_t trace_sequence=0; std::uint32_t call_address=0,call_target=0,return_address=0,source_address=0,source_long=0,mode_address=0; std::uint16_t mode_word=0,opaque_sr=0; std::uint32_t opaque_d0=0; };
+struct DeuterosAmigaTitlePostAdjusted37180ReturnPlan { DeuterosAmigaObservedTitlePostAdjusted37180Return observation; std::uint32_t destination_address=0,destination_long=0,branch_address=0,selected_call_address=0,selected_call_target=0,selected_return_address=0; bool mode_is_five=false; std::string continuation_sha256; };
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3013,6 +3015,18 @@ public:
             static_cast<std::uint16_t>(shifted),0x4054c,0x37180,0x40552,
             "58b17754e42e00bee2c320083fbe09c0fe79b0bda626b71f98fc043598033752"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted37180ReturnPlan>
+    observe_post_adjusted_caller_37180_return(const DeuterosAmigaObservedTitlePostAdjusted37180Return&o){
+        if(!post_adjusted_indirect_return_||post_adjusted_37180_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x4054c||o.call_target!=0x37180
+            ||o.return_address!=0x40552||o.source_address!=0x1378e||o.mode_address!=0x4040e)
+            throw std::runtime_error("Deuteros $37180 return does not match caller boundary");
+        post_adjusted_37180_return_=o;last_command_sequence_=o.trace_sequence;
+        const bool five=o.mode_word==5;
+        return DeuterosAmigaTitlePostAdjusted37180ReturnPlan{o,0x1c26c,o.source_long,0x40564,
+            five?0x40566U:0x4056eU,five?0x36a8cU:0x1fb9aU,five?0x4056cU:0x40574U,five,
+            "a208f64d43c08c1363f67586f924a5a7ae8143a8b40e691097ef3c29503666c3"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3227,6 +3241,7 @@ private:
     std::uint32_t repeated_call_address_=0;
     bool post_adjusted_caller_indirect_advanced_=false;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedIndirectReturn> post_adjusted_indirect_return_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjusted37180Return> post_adjusted_37180_return_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};
