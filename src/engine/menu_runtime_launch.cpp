@@ -142,6 +142,22 @@ LauncherRuntimeController::millennium_dos_sixth_function_checkpoint() const {
     return coordinator_.millennium_dos_sixth_function_checkpoint();
 }
 
+#define EON_LAUNCHER_EIGHTH_PROXY(name, type) \
+MillenniumDosEighthFunctionObservationResult LauncherRuntimeController::name( \
+    const type observation) { return coordinator_.name(observation); }
+EON_LAUNCHER_EIGHTH_PROXY(observe_millennium_dos_eighth_function_dispatch,
+    MillenniumDosEighthFunctionDispatchObservation)
+EON_LAUNCHER_EIGHTH_PROXY(observe_millennium_dos_eighth_function_call_return,
+    MillenniumDosEighthFunctionCallReturnObservation)
+EON_LAUNCHER_EIGHTH_PROXY(observe_millennium_dos_eighth_function_bl,
+    MillenniumDosEighthFunctionBlObservation)
+#undef EON_LAUNCHER_EIGHTH_PROXY
+
+std::optional<MillenniumDosEighthFunctionCheckpoint>
+LauncherRuntimeController::millennium_dos_eighth_function_checkpoint() const {
+    return coordinator_.millennium_dos_eighth_function_checkpoint();
+}
+
 std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
     return coordinator_.tick_deuteros_amiga_opening();
 }

@@ -166,6 +166,25 @@ RuntimeHost::millennium_dos_sixth_function_checkpoint() const {
     return NativeSessionController::millennium_dos_sixth_function_checkpoint();
 }
 
+#define EON_HOST_EIGHTH_PROXY(name, type) \
+MillenniumDosEighthFunctionObservationResult RuntimeHost::name(const type observation) { \
+    if (revoking()) return {false, "Eighth-function observation rejected during source revocation"}; \
+    return NativeSessionController::name(observation); \
+}
+EON_HOST_EIGHTH_PROXY(observe_millennium_dos_eighth_function_dispatch,
+    MillenniumDosEighthFunctionDispatchObservation)
+EON_HOST_EIGHTH_PROXY(observe_millennium_dos_eighth_function_call_return,
+    MillenniumDosEighthFunctionCallReturnObservation)
+EON_HOST_EIGHTH_PROXY(observe_millennium_dos_eighth_function_bl,
+    MillenniumDosEighthFunctionBlObservation)
+#undef EON_HOST_EIGHTH_PROXY
+
+std::optional<MillenniumDosEighthFunctionCheckpoint>
+RuntimeHost::millennium_dos_eighth_function_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_eighth_function_checkpoint();
+}
+
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {
     if (revoking()) return std::nullopt;

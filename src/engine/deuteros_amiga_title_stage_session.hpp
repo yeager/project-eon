@@ -86,6 +86,11 @@ public:
         if (!open_library_boundary_session_) return std::nullopt;
         return open_library_boundary_session_->observe_return(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostOpenLibraryLocalAdvance>
+    advance_post_open_library_local_path() {
+        if (!open_library_boundary_session_) return std::nullopt;
+        return open_library_boundary_session_->advance_nonzero_local_path();
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

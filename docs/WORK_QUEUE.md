@@ -130,11 +130,11 @@ candidate provenance and the retained negative observation.
 
 ## Operating rule
 
-The Deuteros title chain now has a dedicated fail-closed OpenLibrary return
-boundary after its two admitted Exec returns. The next large coding increment
-must begin at `$40472` and requires genuine evidence for the graphics/display
-state consumed by `$1f172`; do not substitute a host library, framebuffer, or
-invented `$12ff4` value.
+The Deuteros title chain now advances from its dedicated fail-closed
+OpenLibrary return boundary through the proven nonzero local call chain and
+stops at `$1eda6`. The next large coding increment requires genuine evidence
+for the external display-base value read from `$12ff4`; do not substitute a
+host library, framebuffer, or invented value.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

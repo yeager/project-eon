@@ -20,6 +20,8 @@ std::string_view native_session_state_label(const NativeSessionState state) {
         return "MILLENNIUM DOS SEVENTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_sixth_function:
         return "MILLENNIUM DOS SIXTH-FUNCTION HANDLER";
+    case NativeSessionState::millennium_dos_eighth_function:
+        return "MILLENNIUM DOS EIGHTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_tenth_function:
         return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
@@ -56,6 +58,8 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
         return NativeSessionState::millennium_dos_seventh_function;
     case RuntimeSessionKind::millennium_dos_sixth_function:
         return NativeSessionState::millennium_dos_sixth_function;
+    case RuntimeSessionKind::millennium_dos_eighth_function:
+        return NativeSessionState::millennium_dos_eighth_function;
     case RuntimeSessionKind::millennium_dos_tenth_function:
         return NativeSessionState::millennium_dos_tenth_function;
     case RuntimeSessionKind::millennium_amiga_bootstrap: return NativeSessionState::millennium_amiga_bootstrap;
@@ -278,6 +282,34 @@ std::optional<MillenniumDosSixthFunctionCheckpoint>
 NativeSessionController::millennium_dos_sixth_function_checkpoint() const {
     if (state_ != NativeSessionState::millennium_dos_sixth_function) return std::nullopt;
     return runtime_.millennium_dos_sixth_function_checkpoint();
+}
+
+MillenniumDosEighthFunctionObservationResult
+NativeSessionController::observe_millennium_dos_eighth_function_dispatch(
+    const MillenniumDosEighthFunctionDispatchObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_post_overlay_loop)
+        return {false, "Eighth-function dispatch requires the post-overlay loop"};
+    const auto result = runtime_.observe_millennium_dos_eighth_function_dispatch(observation);
+    synchronize_after_runtime_change();
+    return result;
+}
+#define EON_NATIVE_EIGHTH_PROXY(name, type) \
+MillenniumDosEighthFunctionObservationResult NativeSessionController::name( \
+    const type observation) { \
+    if (state_ != NativeSessionState::millennium_dos_eighth_function) \
+        return {false, "Observation requires the eighth-function session"}; \
+    return runtime_.name(observation); \
+}
+EON_NATIVE_EIGHTH_PROXY(observe_millennium_dos_eighth_function_call_return,
+    MillenniumDosEighthFunctionCallReturnObservation)
+EON_NATIVE_EIGHTH_PROXY(observe_millennium_dos_eighth_function_bl,
+    MillenniumDosEighthFunctionBlObservation)
+#undef EON_NATIVE_EIGHTH_PROXY
+
+std::optional<MillenniumDosEighthFunctionCheckpoint>
+NativeSessionController::millennium_dos_eighth_function_checkpoint() const {
+    if (state_ != NativeSessionState::millennium_dos_eighth_function) return std::nullopt;
+    return runtime_.millennium_dos_eighth_function_checkpoint();
 }
 
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {
