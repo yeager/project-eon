@@ -176,8 +176,8 @@ The next 48 genuine bytes hash to
 They derive A1 `$2b61e`, D7 `2`, A0 `$2bdcc` then `$2bdfc`, atomically apply
 five byte initializers and two `$2bdcc` pointer stores, and stop before the
 next D0-indexed word read at `$2b5de`.
-The following A0.W-indexed source resolves to `$26ee4`. A typed word
-observation is checked against owned memory before the 20-byte tail (SHA-256
+The following A3/D0.W-indexed source resolves to `$2be08` on the first pass.
+A typed word observation is checked against owned memory before the 20-byte tail (SHA-256
 `82379ace33d5464b74e03aa0669f8a1097498fd21ce3639c180ab5e21cac810b`)
 derives A0 `$56eee4`, atomically stores it at `$2b620`, increments D0.W,
 decrements D7 from 2 to 1, and takes DBF back to `$2b5b8`.
@@ -188,10 +188,12 @@ with the same coordinator revocation as its PRG and Fread memory.
 
 The materialized image and exact configuration occupy native runtime memory.
 With explicit SR, selector-2, selector-3, selector-4, and Line-A observations,
-both entry branches
-reach the D0-indexed write at `$2b5a6`. Its caller register is the next boundary. TOS
-basepage fields, other XBIOS results, Line-A state, input, timing, and every unclassified indirect
-target remain explicit preservation boundaries.
+both entry branches and the complete three-iteration indexed table loop are
+native under typed source bytes and words. Later D0.W values and source
+addresses are carried deterministically from the preceding original word and
+`ADDQ`, rather than supplied again. TOS basepage fields, other XBIOS results,
+Line-A state, input, timing, and every unclassified indirect target remain
+explicit preservation boundaries.
 
 No original bytes are written to disk, copied into a package, or committed.
 

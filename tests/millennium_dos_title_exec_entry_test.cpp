@@ -1109,6 +1109,33 @@ int main(int argc, char** argv) {
     assert(detached_post_record_header_rejected
         &&detached_post_record_header.checkpoint().last_sequence==102
         &&detached_post_record_header.checkpoint().memory_effects.size()==post_record_effect_count);
+    mode_two_extension.observe_far_byte({103,0x1647,0x5050,0x0003,0x48});
+    assert(mode_two_extension.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_second_byte_boundary);
+    assert(mode_two_extension.checkpoint().continuation_address==0x1653);
+    assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x0004);
+    mode_two_extension.observe_far_byte({104,0x1653,0x5050,0x0004,0x00});
+    assert(mode_two_extension.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_word_boundary);
+    assert(mode_two_extension.checkpoint().continuation_address==0x1657);
+    assert(mode_two_extension.checkpoint().far_read_boundary.source_offset==0x001d);
+    auto detached_mode_two_header_word=mode_two_extension;
+    const auto mode_two_header_effect_count=detached_mode_two_header_word.checkpoint().memory_effects.size();
+    bool detached_mode_two_header_word_rejected=false;
+    try { detached_mode_two_header_word.observe_far_word({105,0x1657,0x5050,0x001c,0x4000}); }
+    catch(const std::runtime_error&) { detached_mode_two_header_word_rejected=true; }
+    assert(detached_mode_two_header_word_rejected
+        &&detached_mode_two_header_word.checkpoint().last_sequence==104
+        &&detached_mode_two_header_word.checkpoint().memory_effects.size()==mode_two_header_effect_count);
+    mode_two_extension.observe_far_word({105,0x1657,0x5050,0x001d,0x4000});
+    const auto mode_two_source=mode_two_extension.checkpoint();
+    assert(mode_two_source.state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary);
+    assert(mode_two_source.continuation_address==0x16b3);
+    assert(mode_two_source.far_byte_boundary.instruction_address==0x16b3);
+    assert(mode_two_source.far_byte_boundary.source_offset==0x0170);
+    assert(mode_two_source.memory_effects[mode_two_header_effect_count].offset==0x14df);
+    assert(mode_two_source.memory_effects[mode_two_header_effect_count].value==0x4020);
     mode_two_dispatch.observe_far_word({100,0x144a,0x5050,0x0020,0x0030});
     const auto mode_two_run=mode_two_dispatch.checkpoint();
     assert(mode_two_run.state

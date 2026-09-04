@@ -550,6 +550,16 @@ first source byte at `$14a9`, `$14f0`, or `$1647`. For the genuine first
 descriptor that typed address is `$5050:$0003`. No header, palette, lookup,
 or rendering interpretation is assigned to the byte.
 
+The mode-two branch now consumes the three genuine first-descriptor values at
+`$1647/$5050:$0003` (`$48`), `$1653/$5050:$0004` (`$00`), and
+`$1657/$5050:$001d` (`$4000`). The exact 108-byte `$1647..$16b2` span has
+SHA-256 `9ba1e245431578fbac9c3386bea9a102be68fe6700ca057ff5d9af3f819427fd`.
+It applies only instruction-defined address arithmetic, stores the resulting
+raw pointer at `CS:$14df`, clears the admitted destination words atomically,
+and stops before `$16b3` reads the next byte through the already admitted
+source pointer. No header fields, lookup table, pixels, or palette semantics
+are inferred.
+
 The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
 bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
 the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution

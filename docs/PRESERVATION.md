@@ -1368,8 +1368,11 @@ That read uses a typed D0/source-word observation at
 `$2bdfe + sign_extend(D0.W)`, checked against owned memory. The 18-byte block
 hashes to `6fae36f2f65050ca3ff99c8cb73f43a8c130dd4d252d4b7d38d0be9118eeba78`;
 two direct word stores commit atomically before the next indexed read at `$2b5ec`.
-That second read resolves through A3 plus A0.W to `$26ee4`. Production checks
-the typed source word against owned memory. The exact 20-byte tail hashes to
+That second read resolves through A3 plus the word just loaded into D0. The
+first pass reaches `$2be08`; subsequent D0.W values and indexed addresses are
+derived from the preceding observed word plus the exact `ADDQ.W #2,D0`.
+Production rejects a fresh or contradictory D0 on later iterations and checks
+each typed source word against owned memory. The exact 20-byte tail hashes to
 `82379ace33d5464b74e03aa0669f8a1097498fd21ce3639c180ab5e21cac810b`;
 it derives A0 `$56eee4`, atomically stores it at `$2b620`, increments D0.W,
 decrements D7 to 1, and records the taken DBF target `$2b5b8`. Contradictions
@@ -1378,8 +1381,8 @@ resumes at `$2b5b8`; its 42-byte loop-setup span hashes to
 `9efa7511411f3ca6698746d8bac484420a14e67e35467be2909f3647b0612034`.
 With A1 advanced to `$2b64e`, seven initialization writes commit atomically,
 then execution returns to the D0-indexed word boundary `$2b5de`.
-The remaining two iterations reuse the same typed source contracts with
-genuine word `$0d24` at `$2be00` and `$0000` at `$26ee4`. A1 advances through
+The remaining two iterations reuse the same typed source contracts; their
+second indexed reads both resolve to `$2be0c` from carried D0.W state. A1 advances through
 `$2b64e` and `$2b67e`; D7 becomes zero and then `$ffff`, so the final DBF
 falls through to `$2b600`. Its 28-byte epilogue hashes to
 `51ea54e46ad38380435c7a367889825fce566b4f33036fb5dd38846dafdf4ab7`.
@@ -4643,6 +4646,13 @@ It restores the already admitted descriptor pointer and follows mode one,
 mode two, or the other-mode prefix to typed reads at `$14a9`, `$1647`, or
 `$14f0`, respectively. The genuine first-record source is `$5050:$0003`;
 its raw byte remains external and has no inferred header or graphics meaning.
+For mode two, genuine `TITLE.LIB` supplies ordered raw values `$48`, `$00`,
+and `$4000` at `$5050:$0003`, `$0004`, and `$001d`. Exact
+`$1647..$16b2` SHA-256
+`9ba1e245431578fbac9c3386bea9a102be68fe6700ca057ff5d9af3f819427fd`
+owns their branch/address arithmetic, `CS:$14df/$14e1` pointer stores, and
+atomic destination clearing. Execution stops at typed `$16b3`; neither the
+three inputs nor subsequent source bytes have inferred graphics semantics.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7129,6 +7139,16 @@ at least `$b4` reads `$1ffd4`. A nonzero first word, a smaller second byte, or
 an even third byte joins at `$40638`; an odd third byte reaches the external
 tail jump `$4062c->$37f56`. Helper effects and word meanings remain opaque;
 this bounded caller block has no memory writes.
+
+The joined `$40638` path begins with external `$1f238`, typed to return at
+`$4063e`. Its exact 42-byte prefix at ADF `$9b638` hashes to
+`3346989d04ad8b866f13f74c083f43976ba44ec83aab04ce0ef47fd66662fac4`.
+A return whose D0 low byte is not `$43` follows the exact branch back to
+`$40574`. For `$43`, a typed word at `$1bf36` is XORed with `$0101` and stored
+atomically; zero selects literal `$00f0`, nonzero selects `$0f00`. The path
+then stops before repeated external `$40662->$1f238` at return `$40668`.
+The helper result beyond its typed D0/SR and the hardware colour meaning are
+not inferred; no custom-chip write is committed at this boundary.
 SR remain opaque. The transition is replay-safe, revoked with its owning
 session, and assigns no rendering or gameplay meaning.
 

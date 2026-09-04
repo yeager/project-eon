@@ -13,6 +13,13 @@ WORKFLOW = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "bui
 
 
 class CiDependencyPinTests(unittest.TestCase):
+    def test_only_latest_main_revision_occupies_the_platform_matrix(self) -> None:
+        """A scarce queued runner must not serialize obsolete main builds."""
+        self.assertIn("concurrency:", WORKFLOW)
+        self.assertIn("group: ${{ github.workflow }}-${{ github.ref }}", WORKFLOW)
+        self.assertIn("cancel-in-progress: true", WORKFLOW)
+        self.assertNotIn("cancel-in-progress: false", WORKFLOW)
+
     def test_source_dependencies_use_immutable_object_ids(self) -> None:
         expected = {
             "SDL3_REF": "147a8ee32dbf9ac02f3794964490687b6bbda1bc",

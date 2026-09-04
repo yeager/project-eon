@@ -45,7 +45,9 @@ prefix through `$1427`; the complete hash-bound `$1437..$1487` escape, run,
 lookup, high/low-half, and extended mode-two output loop is now native with
 atomic writes. The `$1488` post-record mode dispatch is native and stops at
 typed first-header bytes `$14a9`, `$14f0`, or `$1647`; continue from those
-genuine ordered runtime observations.
+genuine ordered runtime observations. Mode two now owns its genuine `$1647`,
+`$1653`, and `$1657` inputs and exact setup through typed source byte `$16b3`;
+continue there without assigning lookup or pixel semantics.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.
@@ -393,7 +395,10 @@ after its exact inline byte stream at `$405de`, followed by typed word `$22a0`
 and `$405e4->$1fe88` return. Three more typed service returns and their exact
 conditional word reads recover the caller through `$4062c`: rejected
 conditions join at `$40638`, while the selected tail stops at external jump
-`$37f56`.
+`$37f56`. At `$40638`, the first `$1f238` return is typed. A non-`$43` low
+byte loops to `$40574`; `$43` atomically XORs word `$1bf36` with `$0101`,
+selects exact colour word `$00f0` or `$0f00`, and stops before repeated
+external `$40662->$1f238`.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
