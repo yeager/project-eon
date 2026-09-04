@@ -11,6 +11,7 @@
 #include "engine/menu_runtime_launch.hpp"
 #include "engine/native_session_controller.hpp"
 #include "engine/runtime_host.hpp"
+#include "engine/bounded_memory_transfer.hpp"
 #include "engine/native_code_image_diagnostics.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -104,6 +105,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <stdexcept>
 #include <set>
@@ -1114,11 +1116,64 @@ int main() {
             eon::MillenniumDosExternalTransferKind::bdf_other_mode_jump);
         assert(other_mode_four_zero.observe_entry({60,0x0c4e,0x0caa}).accepted);
         assert(!other_mode_four_zero.observe_return({60,0x0e53,0xd40d}).accepted);
-        assert(!other_mode_four_zero.observe_return({61,0x0e28,0xd40d}).accepted);
+        assert(!other_mode_four_zero.observe_return({61,0x0e27,0xd40d}).accepted);
         assert(!other_mode_four_zero.observe_return({61,0x0e53,0}).accepted);
         assert(other_mode_four_zero.observe_return({61,0x0e53,0xbeef}).accepted);
         assert(other_mode_four_zero.checkpoint().returned
             && other_mode_four_zero.checkpoint().returned->returned_to==0xbeef);
+        eon::MillenniumDosExternalTransferAdmission other_mode_four_nonzero(
+            eon::MillenniumDosExternalTransferKind::bdf_other_mode_jump);
+        assert(other_mode_four_nonzero.observe_entry({70,0x0c4e,0x0caa}).accepted);
+        assert(other_mode_four_nonzero.observe_return({71,0x0e28,0xcafe}).accepted);
+    }
+    {
+        constexpr eon::BoundedMemoryTransferContract copy_contract{
+            0x38a28, 0x26cc0, 0x1c482, 4, 4, 0xa20, 256,
+            eon::MemoryTransferElementWidth::longword, 0x1000000};
+        eon::BoundedMemoryTransferSession transfer(copy_contract);
+        assert(!transfer.observe_chunk({1,0x38a28,1,0x26cc4,0x1c486,{1}}).accepted);
+        assert(!transfer.observe_chunk({1,0x38a29,0,0x26cc0,0x1c482,{1}}).accepted);
+        assert(!transfer.observe_chunk({1,0x38a28,0,0x26cc4,0x1c482,{1}}).accepted);
+        std::size_t index = 0;
+        std::uint64_t sequence = 1;
+        while (index < copy_contract.element_count) {
+            const auto count = std::min<std::size_t>(copy_contract.maximum_chunk_elements,
+                copy_contract.element_count - index);
+            std::vector<std::uint32_t> values(count);
+            for (std::size_t offset = 0; offset < count; ++offset) {
+                values[offset] = static_cast<std::uint32_t>(index + offset);
+            }
+            assert(transfer.observe_chunk({sequence++,0x38a28,index,
+                copy_contract.source_base + index * 4,
+                copy_contract.destination_base + index * 4,std::move(values)}).accepted);
+            if (index == 0) {
+                assert(!transfer.observe_chunk({sequence,0x38a28,0,
+                    copy_contract.source_base,copy_contract.destination_base,{0}}).accepted);
+            }
+            index += count;
+        }
+        const auto complete = transfer.checkpoint();
+        assert(complete.complete && complete.next_index == 0xa20
+            && complete.effects.size() == 0xa20);
+        assert((complete.effects.front()==eon::BoundedMemoryTransferEffect{
+            0,0x26cc0,0x1c482,0}));
+        assert(complete.effects.back().source_address == 0x2953c
+            && complete.effects.back().destination_address == 0x1ecfe);
+        assert(!transfer.observe_chunk({sequence,0x38a28,index,0,0,{1}}).accepted);
+
+        bool overflow_rejected = false;
+        try {
+            static_cast<void>(eon::BoundedMemoryTransferSession({
+                1,std::numeric_limits<std::uint64_t>::max()-1,0,4,4,2,1,
+                eon::MemoryTransferElementWidth::longword,0}));
+        } catch (const std::invalid_argument&) {
+            overflow_rejected = true;
+        }
+        assert(overflow_rejected);
+        eon::BoundedMemoryTransferSession byte_transfer({
+            0x10,0x100,0x200,1,1,1,1,eon::MemoryTransferElementWidth::byte,0x1000});
+        assert(!byte_transfer.observe_chunk({1,0x10,0,0x100,0x200,{0x100}}).accepted);
+        assert(byte_transfer.observe_chunk({1,0x10,0,0x100,0x200,{0xff}}).accepted);
     }
     {
         const auto empty = eon::native_code_image_registry_diagnostics(std::nullopt);
@@ -6987,7 +7042,13 @@ int main() {
         assert(other_four.state()==eon::MillenniumDosBdfOtherModeState::returned&&other_four.boundary().instruction_address==0x0e53);
         assert(other_four.far_effects().size()==64&&other_four.far_byte_effects().size()==64&&other_four.far_effects()[16].offset==0x6200&&other_four.far_byte_effects().front().offset==0x6202);
         assert(other_four.port_effects().size()==4&&other_four.port_effects().back().value==8);
-        eon::MillenniumDosBdfOtherModeSession other_four_nonzero(*game_executable,4,0x6200);other_four_nonzero.observe_runtime_byte(0x0d68,0x07d8,1);assert(other_four_nonzero.state()==eon::MillenniumDosBdfOtherModeState::mode_four_nonzero_boundary&&other_four_nonzero.boundary().instruction_address==0x0d74);
+        eon::MillenniumDosBdfOtherModeSession other_four_nonzero(*game_executable,4,0x6200);other_four_nonzero.observe_runtime_byte(0x0d68,0x07d8,1);other_four_nonzero.observe_runtime_word(0x0d74,0x0107,0xa000);
+        for(std::uint16_t plane=0;plane<4;++plane)for(std::uint16_t row=0;row<16;++row){const auto offset=other_four_nonzero.boundary().runtime_address;other_four_nonzero.observe_far_word(0x0d8e,0xa000,offset,std::uint16_t(0x7100+plane*16+row));other_four_nonzero.observe_far_byte(0x0d8f,0xa000,std::uint16_t(offset+2),std::uint8_t(row));}
+        assert(other_four_nonzero.runtime_effects().size()==64&&other_four_nonzero.runtime_byte_effects().size()==64&&other_four_nonzero.boundary().instruction_address==0x0da5);
+        other_four_nonzero.observe_runtime_word(0x0da5,0x07da,0);
+        for(std::uint16_t plane=0;plane<4;++plane)for(std::uint16_t row=0;row<16;++row){other_four_nonzero.observe_runtime_word(0x0dd1,std::uint16_t(0x09c2+row*2),0xf0f0);const auto offset=other_four_nonzero.boundary().runtime_address;other_four_nonzero.observe_far_word(0x0dec,0xa000,offset,0xffff);other_four_nonzero.observe_far_byte(0x0def,0xa000,std::uint16_t(offset+2),0xff);other_four_nonzero.observe_runtime_word(0x0df3,std::uint16_t(0x09a2+row*2),0x0f0f);}
+        assert(other_four_nonzero.state()==eon::MillenniumDosBdfOtherModeState::returned&&other_four_nonzero.boundary().instruction_address==0x0e28);
+        assert(other_four_nonzero.far_effects().size()==128&&other_four_nonzero.far_effects().back().instruction_address==0x0e0a&&other_four_nonzero.far_effects().back().value==0xffff);
         eon::MillenniumDosExternalTransferAdmission busy_transfer(eon::MillenniumDosExternalTransferKind::f2_tail_active_return);
         assert(busy_transfer.observe_entry({40,0x7253,0x0bdf}).accepted);
         assert(busy_transfer.observe_return({41,busy_bdf.boundary().instruction_address,0xcafe}).accepted);
@@ -10917,6 +10978,45 @@ int main() {
     assert(load_selector->copy_longword_count == 0xa20);
     assert(load_selector->next_address == 0x38a28);
     assert(load_selector->stop_before_address == 0x38a28);
+    bool rejected_copy_chunk = false;
+    try {
+        static_cast<void>(title_stage_session.observe_load_copy_chunk(
+            {40, 0x38a28, 0x29544, 0x1c482, 0, {0x01020304}}));
+    } catch (const std::runtime_error&) {
+        rejected_copy_chunk = true;
+    }
+    assert(rejected_copy_chunk);
+    std::uint32_t copied = 0;
+    std::uint64_t copy_sequence = 40;
+    std::optional<eon::DeuterosAmigaTitleLoadCopyChunkPlan> final_copy_chunk;
+    while (copied < 0xa20) {
+        const auto count = std::min<std::uint32_t>(256, 0xa20 - copied);
+        std::vector<std::uint32_t> values;
+        values.reserve(count);
+        for (std::uint32_t index = 0; index < count; ++index) {
+            values.push_back(0x80000000U + copied + index);
+        }
+        final_copy_chunk = title_stage_session.observe_load_copy_chunk(
+            {copy_sequence++, 0x38a28, 0x29540 + copied * 4U,
+                0x1c482 + copied * 4U, copied, values});
+        assert(final_copy_chunk);
+        assert(final_copy_chunk->destination_addresses.front() == 0x1c482 + copied * 4U);
+        assert(final_copy_chunk->destination_values == values);
+        copied += count;
+        assert(final_copy_chunk->completed_longwords == copied);
+        assert(final_copy_chunk->remaining_longwords == 0xa20 - copied);
+    }
+    assert(final_copy_chunk && final_copy_chunk->copy_complete);
+    assert(final_copy_chunk->next_source_address == 0x2bdc0);
+    assert(final_copy_chunk->next_destination_address == 0x1ed02);
+    assert(final_copy_chunk->loop_instruction_address == 0x38a28);
+    assert(final_copy_chunk->local_rts_address == 0x38a2e);
+    assert(final_copy_chunk->caller_resume_address == 0x404f6);
+    assert(final_copy_chunk->next_call_address == 0x404f8);
+    assert(final_copy_chunk->next_call_target == 0x1fb9a);
+    assert(final_copy_chunk->stop_before_address == 0x404f8);
+    assert(!title_stage_session.observe_load_copy_chunk(
+        {copy_sequence, 0x38a28, 0x2bdc0, 0x1ed02, 0xa20, {0}}));
     assert(!title_stage_session.observe_load_selector(
         {40, 0x389fa, 0x12fd8, 1}));
     assert(!title_stage_session.observe_load_service_return(

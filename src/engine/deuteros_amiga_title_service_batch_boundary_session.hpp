@@ -3,10 +3,12 @@
 #include "data/amiga_adf.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/sha256.hpp"
+#include "engine/bounded_memory_transfer.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
+#include <vector>
 
 namespace eon {
 
@@ -291,6 +293,32 @@ struct DeuterosAmigaTitleLoadServiceSelectorPlan {
     std::uint32_t copy_destination_address = 0;
     std::uint32_t copy_longword_count = 0;
     std::uint32_t next_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
+struct DeuterosAmigaObservedLoadCopyChunk {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t destination_address = 0;
+    std::uint32_t first_longword_index = 0;
+    std::vector<std::uint32_t> observed_longwords;
+};
+
+struct DeuterosAmigaTitleLoadCopyChunkPlan {
+    DeuterosAmigaObservedLoadCopyChunk observation;
+    std::vector<std::uint32_t> destination_addresses;
+    std::vector<std::uint32_t> destination_values;
+    std::uint32_t completed_longwords = 0;
+    std::uint32_t remaining_longwords = 0;
+    std::uint32_t next_source_address = 0;
+    std::uint32_t next_destination_address = 0;
+    bool copy_complete = false;
+    std::uint32_t loop_instruction_address = 0;
+    std::uint32_t local_rts_address = 0;
+    std::uint32_t caller_resume_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_call_target = 0;
     std::uint32_t stop_before_address = 0;
 };
 
@@ -714,10 +742,51 @@ public:
                 0, 0, 0, 0x404f6, 0x404f8};
         }
         const auto source = selector == 2 ? 0x26cc0U : 0x29540U;
+        load_copy_transfer_.emplace(BoundedMemoryTransferContract{
+            0x38a28, source, load_service_.copy_destination, 4, 4,
+            load_service_.copy_longword_count, 256,
+            MemoryTransferElementWidth::longword, 0x1000000});
         return DeuterosAmigaTitleLoadServiceSelectorPlan{observation,
             DeuterosAmigaTitleLoadServiceOutcome::copy_boundary,
             source, load_service_.copy_destination, load_service_.copy_longword_count,
             0x38a28, 0x38a28};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadCopyChunkPlan>
+    observe_load_copy_chunk(const DeuterosAmigaObservedLoadCopyChunk& observation) {
+        if (!load_copy_transfer_) {
+            return std::nullopt;
+        }
+        if (load_copy_transfer_->checkpoint().next_index == 0
+            && observation.trace_sequence <= observed_load_selector_->trace_sequence) {
+            throw std::runtime_error("Deuteros load copy precedes its selector generation");
+        }
+        const auto count = static_cast<std::uint32_t>(observation.observed_longwords.size());
+        const auto admitted = load_copy_transfer_->observe_chunk({observation.trace_sequence,
+            observation.instruction_address, observation.first_longword_index,
+            observation.source_address, observation.destination_address,
+            observation.observed_longwords});
+        if (!admitted.accepted) {
+            if (load_copy_transfer_->checkpoint().complete) return std::nullopt;
+            throw std::runtime_error("Deuteros load copy chunk does not match boundary: "
+                + admitted.error);
+        }
+        const auto checkpoint = load_copy_transfer_->checkpoint();
+        std::vector<std::uint32_t> destinations;
+        destinations.reserve(count);
+        for (std::uint32_t index = 0; index < count; ++index) {
+            destinations.push_back(observation.destination_address + index * 4U);
+        }
+        const auto completed = static_cast<std::uint32_t>(checkpoint.next_index);
+        const auto remaining = load_service_.copy_longword_count - completed;
+        const bool complete = checkpoint.complete;
+        return DeuterosAmigaTitleLoadCopyChunkPlan{observation, std::move(destinations),
+            observation.observed_longwords, completed, remaining,
+            static_cast<std::uint32_t>(checkpoint.contract.source_base + completed * 4U),
+            static_cast<std::uint32_t>(checkpoint.contract.destination_base + completed * 4U),
+            complete, 0x38a28, complete ? 0x38a2eU : 0U,
+            complete ? 0x404f6U : 0U, complete ? 0x404f8U : 0U,
+            complete ? 0x1fb9aU : 0U, complete ? 0x404f8U : 0x38a28U};
     }
 
 private:
@@ -757,6 +826,7 @@ private:
     std::optional<DeuterosAmigaObservedTailExecReturn> observed_tail_exec_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> observed_load_service_return_;
     std::optional<DeuterosAmigaObservedLoadSelector> observed_load_selector_;
+    std::optional<BoundedMemoryTransferSession> load_copy_transfer_;
 };
 
 } // namespace eon
