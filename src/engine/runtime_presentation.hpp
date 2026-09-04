@@ -23,6 +23,7 @@ enum class RuntimePresentationKind {
     millennium_dos_post_overlay_loop,
     millennium_dos_seventh_function,
     millennium_dos_sixth_function,
+    millennium_dos_eighth_function,
     millennium_dos_tenth_function,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,

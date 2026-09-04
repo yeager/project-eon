@@ -2,8 +2,10 @@
 
 #include "engine/millennium_dos_native_process.hpp"
 #include "engine/millennium_dos_post_overlay_loop_session.hpp"
+#include "engine/millennium_dos_function_dispatch_admission.hpp"
 #include "engine/millennium_dos_seventh_function_session.hpp"
 #include "engine/millennium_dos_sixth_function_session.hpp"
+#include "engine/millennium_dos_eighth_function_session.hpp"
 #include "engine/millennium_dos_tenth_function_session.hpp"
 
 #include <cstdint>
@@ -70,6 +72,10 @@ public:
     [[nodiscard]] MillenniumDosTenthFunctionSession make_tenth_function_session() const;
     [[nodiscard]] MillenniumDosSeventhFunctionSession make_seventh_function_session() const;
     [[nodiscard]] MillenniumDosSixthFunctionSession make_sixth_function_session() const;
+    [[nodiscard]] MillenniumDosFunctionDispatchAdmission admit_function_dispatch(
+        const MillenniumDosPostOverlayLoopSession& loop,
+        MillenniumDosFunctionDispatchObservation observation) const;
+    [[nodiscard]] MillenniumDosEighthFunctionSession make_eighth_function_session() const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
     void observe_runtime_byte(std::uint16_t instruction_address,

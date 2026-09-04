@@ -222,6 +222,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_tenth_function_.reset();
     millennium_dos_seventh_function_.reset();
     millennium_dos_sixth_function_.reset();
+    millennium_dos_eighth_function_.reset();
     millennium_dos_gx_startup_.reset();
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
@@ -569,18 +570,12 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_tenth_function_dispatch(
         result.error = "Tenth-function dispatch requires the active post-overlay loop";
         return result;
     }
-    const auto boundary = millennium_dos_post_overlay_loop_->boundary();
-    if (millennium_dos_post_overlay_loop_->state()
-            != MillenniumDosPostOverlayLoopState::dispatch_call_boundary
-        || boundary.kind != MillenniumDosPostOverlayLoopBoundaryKind::dispatch_call
-        || boundary.instruction_address != 0xd40a
-        || boundary.call_target != std::optional<std::uint16_t>{0x76f1}
-        || millennium_dos_post_overlay_loop_->function_key_index()
-            != std::optional<std::size_t>{9}
-        || observation.scaled_call_address != boundary.instruction_address
-        || observation.dispatcher_address != *boundary.call_target
-        || observation.function_key_index != *millennium_dos_post_overlay_loop_->function_key_index()
-        || observation.handler_address != 0x7384) {
+    const auto dispatch = millennium_dos_native_process_->admit_function_dispatch(
+        *millennium_dos_post_overlay_loop_, {observation.scaled_call_address,
+            observation.dispatcher_address, observation.function_key_index,
+            observation.handler_address});
+    if (observation.function_key_index != 9 || observation.handler_address != 0x7384
+        || !dispatch.accepted) {
         result.error = "Tenth-function handler observation is detached from scaled dispatch index 9";
         return result;
     }
@@ -657,18 +652,12 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_seventh_function_dispatch(
         result.error = "Seventh-function dispatch requires the active post-overlay loop";
         return result;
     }
-    const auto boundary = millennium_dos_post_overlay_loop_->boundary();
-    if (millennium_dos_post_overlay_loop_->state()
-            != MillenniumDosPostOverlayLoopState::dispatch_call_boundary
-        || boundary.kind != MillenniumDosPostOverlayLoopBoundaryKind::dispatch_call
-        || boundary.instruction_address != 0xd40a
-        || boundary.call_target != std::optional<std::uint16_t>{0x76f1}
-        || millennium_dos_post_overlay_loop_->function_key_index()
-            != std::optional<std::size_t>{6}
-        || observation.scaled_call_address != boundary.instruction_address
-        || observation.dispatcher_address != *boundary.call_target
-        || observation.function_key_index != *millennium_dos_post_overlay_loop_->function_key_index()
-        || observation.handler_address != 0x7521) {
+    const auto dispatch = millennium_dos_native_process_->admit_function_dispatch(
+        *millennium_dos_post_overlay_loop_, {observation.scaled_call_address,
+            observation.dispatcher_address, observation.function_key_index,
+            observation.handler_address});
+    if (observation.function_key_index != 6 || observation.handler_address != 0x7521
+        || !dispatch.accepted) {
         result.error = "Seventh-function handler observation is detached from scaled dispatch index 6";
         return result;
     }
@@ -740,18 +729,12 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sixth_function_dispatch(
         result.error = "Sixth-function dispatch requires the active post-overlay loop";
         return result;
     }
-    const auto boundary = millennium_dos_post_overlay_loop_->boundary();
-    if (millennium_dos_post_overlay_loop_->state()
-            != MillenniumDosPostOverlayLoopState::dispatch_call_boundary
-        || boundary.kind != MillenniumDosPostOverlayLoopBoundaryKind::dispatch_call
-        || boundary.instruction_address != 0xd40a
-        || boundary.call_target != std::optional<std::uint16_t>{0x76f1}
-        || millennium_dos_post_overlay_loop_->function_key_index()
-            != std::optional<std::size_t>{5}
-        || observation.scaled_call_address != boundary.instruction_address
-        || observation.dispatcher_address != *boundary.call_target
-        || observation.function_key_index != *millennium_dos_post_overlay_loop_->function_key_index()
-        || observation.handler_address != 0x7415) {
+    const auto dispatch = millennium_dos_native_process_->admit_function_dispatch(
+        *millennium_dos_post_overlay_loop_, {observation.scaled_call_address,
+            observation.dispatcher_address, observation.function_key_index,
+            observation.handler_address});
+    if (observation.function_key_index != 5 || observation.handler_address != 0x7415
+        || !dispatch.accepted) {
         result.error = "Sixth-function handler observation is detached from scaled dispatch index 5";
         return result;
     }
@@ -810,6 +793,73 @@ ReleaseRuntimeCoordinator::millennium_dos_sixth_function_checkpoint() const {
         || !millennium_dos_sixth_function_) return std::nullopt;
     const auto& session = *millennium_dos_sixth_function_;
     return MillenniumDosSixthFunctionCheckpoint{session.state(), session.boundary(),
+        session.effects(), session.shifted_bl_values()};
+}
+
+MillenniumDosEighthFunctionObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_eighth_function_dispatch(
+    const MillenniumDosEighthFunctionDispatchObservation observation) {
+    MillenniumDosEighthFunctionObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_post_overlay_loop
+        || !millennium_dos_post_overlay_loop_ || !millennium_dos_native_process_) {
+        result.error = "Eighth-function dispatch requires the active post-overlay loop";
+        return result;
+    }
+    const auto dispatch = millennium_dos_native_process_->admit_function_dispatch(
+        *millennium_dos_post_overlay_loop_, {observation.scaled_call_address,
+            observation.dispatcher_address, observation.function_key_index,
+            observation.handler_address});
+    if (observation.function_key_index != 7 || observation.handler_address != 0x7306
+        || !dispatch.accepted) {
+        result.error = "Eighth-function handler observation is detached from scaled dispatch index 7";
+        return result;
+    }
+    try {
+        millennium_dos_eighth_function_.emplace(
+            millennium_dos_native_process_->make_eighth_function_session());
+        session_snapshot_ = make_runtime_session_snapshot(
+            *active_, RuntimeSessionKind::millennium_dos_eighth_function);
+        result.accepted = true;
+    } catch (const std::exception& exception) {
+        result.error = std::string("Eighth-function dispatch rejected: ") + exception.what();
+    }
+    return result;
+}
+
+#define EON_EIGHTH_FORWARD(method_name, observation_type, expression, label) \
+MillenniumDosEighthFunctionObservationResult ReleaseRuntimeCoordinator::method_name( \
+    const observation_type observation) { \
+    MillenniumDosEighthFunctionObservationResult result; \
+    if (!session_snapshot_ \
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_eighth_function \
+        || !millennium_dos_eighth_function_) { \
+        result.error = label " requires the active eighth-function session"; \
+        return result; \
+    } \
+    try { millennium_dos_eighth_function_->expression; result.accepted = true; } \
+    catch (const std::exception& exception) { \
+        result.error = std::string(label " rejected: ") + exception.what(); \
+    } \
+    return result; \
+}
+EON_EIGHTH_FORWARD(observe_millennium_dos_eighth_function_call_return,
+    MillenniumDosEighthFunctionCallReturnObservation,
+    observe_call_return(observation.call_address, observation.return_address),
+    "Eighth-function call return")
+EON_EIGHTH_FORWARD(observe_millennium_dos_eighth_function_bl,
+    MillenniumDosEighthFunctionBlObservation,
+    observe_bl(observation.shift_address, observation.value),
+    "Eighth-function BL observation")
+#undef EON_EIGHTH_FORWARD
+
+std::optional<MillenniumDosEighthFunctionCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_eighth_function_checkpoint() const {
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_eighth_function
+        || !millennium_dos_eighth_function_) return std::nullopt;
+    const auto& session = *millennium_dos_eighth_function_;
+    return MillenniumDosEighthFunctionCheckpoint{session.state(), session.boundary(),
         session.effects(), session.shifted_bl_values()};
 }
 

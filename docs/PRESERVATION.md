@@ -20,6 +20,15 @@ content identities are authoritative.
 6. This repository contains code, documentation, hashes, and newly created
    menu artwork—not commercial game assets.
 
+### Millennium DOS eighth-function runtime boundary
+
+The English eighth-table handler has an independently admitted continuation
+for `$7306..$7319`. It can only be created from the authenticated post-overlay
+`$d40a -> $76f1` boundary with scaled index 7 and exact handler `$7306`. Its
+`$731a` preflight and `$09fa` helper remain explicit call/return boundaries;
+the runtime does not turn separately recovered static preflight evaluators
+into invented call results. See `MILLENNIUM_DOS_EIGHTH_FUNCTION.md`.
+
 ### External replay checkpoints
 
 Canonical frame, audio, state, and physical-input checkpoint bytes remain
@@ -2796,6 +2805,15 @@ name `$1ed02`, Exec-base source `$4`, call `$1ed8c`, vector `-$228`, and return
 only the proven sparse-store destination `$12fec` and stops at caller return
 `$40472`, before `$1f172` consumes unresolved graphics/display state. No host
 library is opened and neither outcome is a title-display or parity claim.
+
+For a nonzero admitted return, the same session can now advance through the
+remaining caller-connected local instructions. It retains the observed D0
+store at `$12fec`, records the original one-word increment operation at
+`$1ed70` without inventing its prior or resulting value, returns to `$40472`,
+and follows the exact direct calls `$40472 -> $1f172 -> $1eda6`. Execution then
+stops before `$1eda6` reads the unresolved external display-base cell `$12ff4`.
+No palette copy, derived framebuffer pointer, display clear, or graphics ABI
+call is performed by this continuation.
 
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small

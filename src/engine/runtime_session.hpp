@@ -31,6 +31,7 @@ enum class RuntimeSessionKind {
     // The typed handler is still a no-capability preservation boundary.
     millennium_dos_seventh_function,
     millennium_dos_sixth_function,
+    millennium_dos_eighth_function,
     // The scaled dispatcher was explicitly observed resolving index 9 to the
     // exact English $7384 handler. The handler remains observation-driven and
     // grants no host presentation, audio, or input capability.

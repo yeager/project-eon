@@ -17,6 +17,8 @@ std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
         return "MILLENNIUM DOS SEVENTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_sixth_function:
         return "MILLENNIUM DOS SIXTH-FUNCTION HANDLER";
+    case RuntimeSessionKind::millennium_dos_eighth_function:
+        return "MILLENNIUM DOS EIGHTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_tenth_function:
         return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
@@ -51,6 +53,7 @@ RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind
     case RuntimeSessionKind::millennium_dos_post_overlay_loop:
     case RuntimeSessionKind::millennium_dos_seventh_function:
     case RuntimeSessionKind::millennium_dos_sixth_function:
+    case RuntimeSessionKind::millennium_dos_eighth_function:
     case RuntimeSessionKind::millennium_dos_tenth_function:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
@@ -110,6 +113,7 @@ bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
     case RuntimeSessionKind::millennium_dos_post_overlay_loop:
     case RuntimeSessionKind::millennium_dos_seventh_function:
     case RuntimeSessionKind::millennium_dos_sixth_function:
+    case RuntimeSessionKind::millennium_dos_eighth_function:
     case RuntimeSessionKind::millennium_dos_tenth_function:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
@@ -146,6 +150,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
     case RuntimeSessionKind::millennium_dos_post_overlay_loop:
     case RuntimeSessionKind::millennium_dos_seventh_function:
     case RuntimeSessionKind::millennium_dos_sixth_function:
+    case RuntimeSessionKind::millennium_dos_eighth_function:
     case RuntimeSessionKind::millennium_dos_tenth_function:
         // Neither original transition has a recovered return/ABI contract.
         // Preserve its terminal observation without forwarding another host
