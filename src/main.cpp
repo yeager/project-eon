@@ -984,6 +984,7 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     const eon::ReleaseRuntimeAdmission admission, const eon::ReleaseRuntimeRejection rejection,
     const std::optional<eon::RuntimeSessionSnapshot>& session,
     const std::optional<eon::MillenniumDosStaticDispatchDiagnostics>& millennium_dispatch,
+    const std::optional<eon::MillenniumDosNativeProcessCheckpoint>& millennium_process,
     const std::optional<eon::DeuterosAtariBootstrapCheckpoint>& atari_checkpoint,
     const eon::Presentation presentation,
     const eon::DisplayPreferences& display, const std::string_view aspect_identifier) {
@@ -1016,6 +1017,30 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
             << (session->capabilities.audio_observations ? "true" : "false")
             << ",\"admitted_input\":"
             << (session->capabilities.admitted_input ? "true" : "false") << "}}";
+    } else {
+        std::cout << "null";
+    }
+    // Prepared from the active coordinator's independently rehashed English
+    // DOS leaf. This is a static recovery entry, not a live-PC or reachability
+    // claim, and the host has no operation that can advance it.
+    std::cout << ",\"millennium_dos_native_process\":";
+    if (millennium_process) {
+        const auto hex = [](const auto value) {
+            std::ostringstream output;
+            output << '$' << std::hex << value;
+            return output.str();
+        };
+        std::cout << "{\"static_recovery_entry\":true,\"recovery_entry\":\"startup\""
+            << ",\"state\":\"startup-first-private-interrupt\",\"boundary\":{\"kind\":\"private-interrupt\",\"address\":";
+        write_json_string(std::cout, hex(millennium_process->boundary.address));
+        std::cout << ",\"interrupt\":"
+            << (millennium_process->boundary.interrupt
+                    ? std::to_string(*millennium_process->boundary.interrupt) : "null")
+            << "},\"release_sha256\":";
+        write_json_string(std::cout, millennium_process->release_sha256);
+        std::cout << ",\"game_executable_sha256\":";
+        write_json_string(std::cout, millennium_process->game_executable_sha256);
+        std::cout << '}';
     } else {
         std::cout << "null";
     }
@@ -4255,6 +4280,7 @@ int main(int argc, char** argv) {
         if (request.runtime_diagnostics_json) {
             report_runtime_diagnostics_json(*active_launch(), runtime.admission(), runtime.rejection(),
                 runtime.session_snapshot(), runtime.millennium_dos_static_dispatch_diagnostics(),
+                runtime.millennium_dos_native_process_checkpoint(),
                 runtime.deuteros_atari_bootstrap_checkpoint(),
                 request.presentation, request.display,
                 display_aspect_identifiers.at(request.display.aspect_ratio_index));

@@ -78,6 +78,11 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
         // written through the verified bootstrap return cell.  Do not treat a
         // coincidentally equal resource operand from another bundle path as a
         // title stage.
+        title_bootstrap_session_.emplace(disk_, load_plan_, title_handoff_route_);
+        while (title_bootstrap_session_->advance()) {}
+        if (!title_bootstrap_session_->complete()) {
+            throw std::runtime_error("Deuteros title bootstrap did not reach its entry dispatch");
+        }
         title_stage_session_.emplace(disk_, load_plan_, title_handoff_route_.bootstrap_profile_value);
         static_cast<void>(title_stage_session_->execute_local_prefix());
         events.title_handoff = true;

@@ -58,6 +58,12 @@ RuntimeHost::millennium_dos_static_dispatch_diagnostics() const {
     return NativeSessionController::millennium_dos_static_dispatch_diagnostics();
 }
 
+std::optional<MillenniumDosNativeProcessCheckpoint>
+RuntimeHost::millennium_dos_native_process_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_native_process_checkpoint();
+}
+
 MillenniumDosGxActiveTraceAdmission
 RuntimeHost::admit_active_millennium_dos_gx_startup_reference_trace(
     const ReferenceTrace& trace) {

@@ -109,6 +109,13 @@ NativeSessionController::millennium_dos_static_dispatch_diagnostics() const {
     return runtime_.millennium_dos_static_dispatch_diagnostics();
 }
 
+std::optional<MillenniumDosNativeProcessCheckpoint>
+NativeSessionController::millennium_dos_native_process_checkpoint() const {
+    if (state_ == NativeSessionState::menu || state_ == NativeSessionState::admission_rejected
+        || state_ == NativeSessionState::returning_to_menu) return std::nullopt;
+    return runtime_.millennium_dos_native_process_checkpoint();
+}
+
 MillenniumDosGxActiveTraceAdmission
 NativeSessionController::admit_active_millennium_dos_gx_startup_reference_trace(
     const ReferenceTrace& trace) {

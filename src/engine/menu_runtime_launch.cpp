@@ -51,6 +51,11 @@ LauncherRuntimeController::millennium_dos_static_dispatch_diagnostics() const {
     return coordinator_.millennium_dos_static_dispatch_diagnostics();
 }
 
+std::optional<MillenniumDosNativeProcessCheckpoint>
+LauncherRuntimeController::millennium_dos_native_process_checkpoint() const {
+    return coordinator_.millennium_dos_native_process_checkpoint();
+}
+
 MillenniumDosGxActiveTraceAdmission
 LauncherRuntimeController::admit_active_millennium_dos_gx_startup_reference_trace(
     const ReferenceTrace& trace) {
