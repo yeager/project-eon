@@ -1110,6 +1110,15 @@ int main() {
         assert(other_mode.checkpoint().entry
             && !other_mode.checkpoint().returned);
         assert(other_mode.observe_return({51,0x0d67,0xd40d}).accepted);
+        eon::MillenniumDosExternalTransferAdmission other_mode_four_zero(
+            eon::MillenniumDosExternalTransferKind::bdf_other_mode_jump);
+        assert(other_mode_four_zero.observe_entry({60,0x0c4e,0x0caa}).accepted);
+        assert(!other_mode_four_zero.observe_return({60,0x0e53,0xd40d}).accepted);
+        assert(!other_mode_four_zero.observe_return({61,0x0e28,0xd40d}).accepted);
+        assert(!other_mode_four_zero.observe_return({61,0x0e53,0}).accepted);
+        assert(other_mode_four_zero.observe_return({61,0x0e53,0xbeef}).accepted);
+        assert(other_mode_four_zero.checkpoint().returned
+            && other_mode_four_zero.checkpoint().returned->returned_to==0xbeef);
     }
     {
         const auto empty = eon::native_code_image_registry_diagnostics(std::nullopt);
@@ -6972,7 +6981,13 @@ int main() {
         assert(other_zero.far_effects().size()==64&&(other_zero.far_effects().front()==eon::MillenniumDosBdfOtherModeFarEffect{0x0d56,0xa000,0x6200,0x6000})&&other_zero.far_effects()[16].offset==0x6200);
         assert(other_zero.port_effects().size()==4&&other_zero.port_effects().back().value==8);
         eon::MillenniumDosBdfOtherModeSession other_four(*game_executable,4,0x6200);
-        assert(other_four.state()==eon::MillenniumDosBdfOtherModeState::mode_four_jump&&(other_four.boundary()==eon::MillenniumDosBdfOtherModeBoundary{0x0caf,0x0d68}));
+        assert(other_four.state()==eon::MillenniumDosBdfOtherModeState::awaiting_mode_four_toggle&&(other_four.boundary()==eon::MillenniumDosBdfOtherModeBoundary{0x0d68,0x07d8}));
+        other_four.observe_runtime_byte(0x0d68,0x07d8,0);other_four.observe_runtime_word(0x0e29,0x0107,0xa000);
+        for(std::uint16_t n=0;n<64;++n){other_four.observe_runtime_word(0x0e41,std::uint16_t(0x07fa+n*3),std::uint16_t(0x7000+n));other_four.observe_runtime_byte(0x0e42,std::uint16_t(0x07fc+n*3),std::uint8_t(n));}
+        assert(other_four.state()==eon::MillenniumDosBdfOtherModeState::returned&&other_four.boundary().instruction_address==0x0e53);
+        assert(other_four.far_effects().size()==64&&other_four.far_byte_effects().size()==64&&other_four.far_effects()[16].offset==0x6200&&other_four.far_byte_effects().front().offset==0x6202);
+        assert(other_four.port_effects().size()==4&&other_four.port_effects().back().value==8);
+        eon::MillenniumDosBdfOtherModeSession other_four_nonzero(*game_executable,4,0x6200);other_four_nonzero.observe_runtime_byte(0x0d68,0x07d8,1);assert(other_four_nonzero.state()==eon::MillenniumDosBdfOtherModeState::mode_four_nonzero_boundary&&other_four_nonzero.boundary().instruction_address==0x0d74);
         eon::MillenniumDosExternalTransferAdmission busy_transfer(eon::MillenniumDosExternalTransferKind::f2_tail_active_return);
         assert(busy_transfer.observe_entry({40,0x7253,0x0bdf}).accepted);
         assert(busy_transfer.observe_return({41,busy_bdf.boundary().instruction_address,0xcafe}).accepted);
@@ -10865,6 +10880,47 @@ int main() {
     assert(tail_exec->next_call_address == 0x404f0);
     assert(tail_exec->next_call_target == 0x389e2);
     assert(tail_exec->stop_before_address == 0x404f0);
+    bool rejected_load_service = false;
+    try {
+        static_cast<void>(title_stage_session.observe_load_service_return(
+            {38, 0x389f4, 0x208c2, 0x389fa, 0x12345678, 0x2040}));
+    } catch (const std::runtime_error&) {
+        rejected_load_service = true;
+    }
+    assert(rejected_load_service);
+    const auto load_service = title_stage_session.observe_load_service_return(
+        {38, 0x389f4, 0x208c0, 0x389fa, 0x12345678, 0x2040});
+    assert(load_service);
+    assert(load_service->observation.result_d0 == 0x12345678);
+    assert(load_service->observation.result_sr == 0x2040);
+    assert(load_service->d7_value == 0x13400);
+    assert(load_service->d1_value == 0x26cc0);
+    assert(load_service->d0_value == 0x5800);
+    assert(load_service->selector_read_address == 0x389fa);
+    assert(load_service->selector_source_address == 0x12fd8);
+    assert(load_service->stop_before_address == 0x389fa);
+    bool rejected_load_selector = false;
+    try {
+        static_cast<void>(title_stage_session.observe_load_selector(
+            {39, 0x389fa, 0x12fda, 3}));
+    } catch (const std::runtime_error&) {
+        rejected_load_selector = true;
+    }
+    assert(rejected_load_selector);
+    const auto load_selector = title_stage_session.observe_load_selector(
+        {39, 0x389fa, 0x12fd8, 3});
+    assert(load_selector);
+    assert(load_selector->outcome
+        == eon::DeuterosAmigaTitleLoadServiceOutcome::copy_boundary);
+    assert(load_selector->copy_source_address == 0x29540);
+    assert(load_selector->copy_destination_address == 0x1c482);
+    assert(load_selector->copy_longword_count == 0xa20);
+    assert(load_selector->next_address == 0x38a28);
+    assert(load_selector->stop_before_address == 0x38a28);
+    assert(!title_stage_session.observe_load_selector(
+        {40, 0x389fa, 0x12fd8, 1}));
+    assert(!title_stage_session.observe_load_service_return(
+        {39, 0x389f4, 0x208c0, 0x389fa, 0, 0}));
     assert(!title_stage_session.observe_tail_exec_return(
         {38, 4, 0x00fedcba, 0x204f4, -0xa8, 0x204f8, 0, 0}));
     assert(!title_stage_session.observe_tail_source_table(
@@ -11540,6 +11596,25 @@ int main() {
         == std::array<std::uint32_t, 2>{{0x37ef2, 0x37ef6}}));
     assert(post_exec_tail_return.local_service_call_address == 0x404ea);
     assert(post_exec_tail_return.local_service_address == 0x204c8);
+    const auto post_exec_load_service =
+        eon::parse_deuteros_amiga_title_post_exec_load_service_profile(
+            system_disk, load_plan);
+    assert(post_exec_load_service.caller_address == 0x404f0);
+    assert(post_exec_load_service.entry_address == 0x389e2);
+    assert(post_exec_load_service.d7_value == 0x13400);
+    assert(post_exec_load_service.d1_value == 0x26cc0);
+    assert(post_exec_load_service.d0_value == 0x5800);
+    assert(post_exec_load_service.nested_call_address == 0x389f4);
+    assert(post_exec_load_service.nested_call_target == 0x208c0);
+    assert(post_exec_load_service.nested_return_address == 0x389fa);
+    assert(post_exec_load_service.selector_word_address == 0x12fd8);
+    assert(post_exec_load_service.return_address == 0x38a04);
+    assert(post_exec_load_service.copy_destination == 0x1c482);
+    assert(post_exec_load_service.copy_longword_count == 0xa20);
+    assert(post_exec_load_service.caller_sha256
+        == "1385698c6c854ab133e3e7cd75417c90025916dd0a1dd303347dce0636114bea");
+    assert(post_exec_load_service.routine_sha256
+        == "4400342704c0c26b934dec5db314e8853b0963d6757432f3aad275cab965811d");
     assert(post_exec_tail_return.service_a1_literal == 0x204aa);
     assert((post_exec_tail_return.service_a1_offsets
         == std::array<std::uint16_t, 4>{{0x0008, 0x0009, 0x000e, 0x0012}}));

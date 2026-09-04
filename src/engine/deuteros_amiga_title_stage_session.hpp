@@ -211,6 +211,14 @@ public:
     observe_tail_exec_return(const DeuterosAmigaObservedTailExecReturn& observation) {
         return service_batch_boundary_session_.observe_tail_exec_return(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceLocalPlan>
+    observe_load_service_return(const DeuterosAmigaObservedLocalCallReturn& observation) {
+        return service_batch_boundary_session_.observe_load_service_return(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceSelectorPlan>
+    observe_load_selector(const DeuterosAmigaObservedLoadSelector& observation) {
+        return service_batch_boundary_session_.observe_load_selector(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

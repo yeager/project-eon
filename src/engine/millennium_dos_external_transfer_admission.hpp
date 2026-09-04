@@ -53,7 +53,8 @@ millennium_dos_external_transfer_contract(const MillenniumDosExternalTransferKin
     case MillenniumDosExternalTransferKind::f2_tail_jump: return {kind,0x7253,0x0bdf,std::nullopt,{}};
     case MillenniumDosExternalTransferKind::f2_tail_active_return: return {kind,0x7253,0x0bdf,0x0be6,{}};
     case MillenniumDosExternalTransferKind::bdf_mode_two_jump: return {kind,0x0c4b,0x11f7,0x12cb,0x129c};
-    case MillenniumDosExternalTransferKind::bdf_other_mode_jump: return {kind,0x0c4e,0x0caa,0x0d67,{}};
+    case MillenniumDosExternalTransferKind::bdf_other_mode_jump:
+        return {kind,0x0c4e,0x0caa,0x0d67,0x0e53};
     }
     return {kind,0,0,std::nullopt,{}};
 }

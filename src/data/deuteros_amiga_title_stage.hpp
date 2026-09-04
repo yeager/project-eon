@@ -579,6 +579,27 @@ struct DeuterosAmigaTitlePostExecTailReturnProfile {
 parse_deuteros_amiga_title_post_exec_tail_return_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+struct DeuterosAmigaTitlePostExecLoadServiceProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t d7_value = 0;
+    std::uint32_t d1_value = 0;
+    std::uint32_t d0_value = 0;
+    std::uint32_t nested_call_address = 0;
+    std::uint32_t nested_call_target = 0;
+    std::uint32_t nested_return_address = 0;
+    std::uint32_t selector_word_address = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t copy_destination = 0;
+    std::uint32_t copy_longword_count = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostExecLoadServiceProfile
+parse_deuteros_amiga_title_post_exec_load_service_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // This is the original caller continuation beginning immediately after the
 // post-Exec tail wrapper's RTS.  It is reachable only if the wrapper's final
 // Exec vector returns.  The profile records direct/indirect call operands and

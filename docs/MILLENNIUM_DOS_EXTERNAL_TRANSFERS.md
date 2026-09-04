@@ -35,10 +35,16 @@ destination, service effect, or subsequent caller behavior is inferred.
 The BDF service has two further terminal external jumps. Mode `$02` reaches
 the exact `$0c4b -> $11f7` edge; every other nonzero mode reaches
 `$0c4e -> $0caa`. Each edge has its own contract and requires an explicit
-nonzero sequence-bearing entry observation matching both addresses. Static
-evidence does not establish a return instruction for either target, so both
-contracts are deliberately one-way and reject every return observation. The
-BDF checkpoint exposes only a value copy of the admitted edge. Reset destroys
-that admission, while source revocation rejects new observations and hides
-the checkpoint. Neither target gains input, rendering, audio, or inferred
-caller-continuation capabilities.
+nonzero sequence-bearing entry observation matching both addresses. The
+mode-two target has proven terminal RET sites at `$12cb` and `$129c`. The
+other-mode zero-copy path has RET `$0d67`, while the separately recovered
+`DL == 4` zero path has RET `$0e53`. A later return observation must name one
+of the terminal sites belonging to its entered transfer and supply a nonzero
+destination. The destination is retained verbatim; it is never synthesized
+as a caller-resume address. `$0e28` remains unowned because its corresponding
+nonzero branch has not crossed the local recovery boundary.
+
+The BDF checkpoint exposes only value copies of the admitted edge and any
+explicit return. Reset destroys that admission, while source revocation
+rejects new observations and hides the checkpoint. Neither target gains
+input, rendering, audio, or inferred caller-continuation capabilities.

@@ -5707,6 +5707,24 @@ and SR values. Those results remain value-only evidence. The local RTS at
 `$389e2`; the session stops before entering it because its result and effects
 are not established by this boundary.
 
+The next call site `$404f0..$404f5` hashes to
+`1385698c6c854ab133e3e7cd75417c90025916dd0a1dd303347dce0636114bea`
+and targets `$389e2`. The complete 78-byte local routine through RTS `$38a2e`
+hashes to
+`4400342704c0c26b934dec5db314e8853b0963d6757432f3aad275cab965811d`.
+Its prefix computes D7 `$13400`, supplies D1 `$26cc0` and D0 `$5800`, then
+calls `$208c0` at `$389f4`. The active session requires an explicit typed
+return from that exact local edge and retains returned D0/SR without assigning
+semantics. It then requires the runtime word at `$12fd8` read by `$389fa`.
+
+Only the low byte selects the proven tail. Zero reaches the retry/display
+boundary at `$389aa`; one executes RTS `$38a04`, returns to `$404f6`, and
+stops before call `$404f8`; two selects copy source `$26cc0`; all other byte
+values select `$29540`. Both copy variants target `$1c482` for `$0a20`
+longwords and stop before the first runtime source read at `$38a28`. Eon does
+not fabricate the 10,368 source bytes, execute the copy, or infer what the
+selector or copied region represents.
+
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
 `b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its
@@ -6043,3 +6061,12 @@ between groups exactly as the push/pop sequence specifies. The session ends
 at RET `$0d67`, whose external-return contract requires a later sequence and
 explicit destination. The `$0cbe` nonzero branch remains an explicit boundary;
 no display-plane meaning is inferred from the ports or addresses.
+
+The `DL == 4` continuation is now advanced through its stronger zero-toggle
+path. It observes `CS:$07d8` at `$0d68`; nonzero stops explicitly at `$0d74`.
+Zero observes the segment at `$0e29` and then consumes 64 three-byte records
+from `CS:$07fa..$08b9`: a word at `$0e41` followed by a byte at `$0e42`.
+The exact writes use entry `DI + row * $50` and the following byte, with `DI`
+restored for each of four groups. Port `$03c5` again receives 1, 2, 4, and 8.
+The local path terminates at RET `$0e53`; return ownership uses the original
+`$0c4e -> $0caa` transfer and does not invent a caller destination.
