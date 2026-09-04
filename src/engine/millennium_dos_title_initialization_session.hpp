@@ -59,6 +59,7 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_private_interrupt_result_boundary,
     post_descriptor_first_loop_far_read_boundary,
     post_descriptor_first_loop_record_word_read_boundary,
+    post_descriptor_first_loop_second_word_read_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };

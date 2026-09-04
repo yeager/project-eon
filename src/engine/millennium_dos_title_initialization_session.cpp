@@ -1040,15 +1040,27 @@ void MillenniumDosTitleInitializationSession::observe_far_word(
     const auto boundary_state=state_;
     if((boundary_state!=MillenniumDosTitleInitializationState::graphics_record_word_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary
-            &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_third_word_read_boundary)
+            &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_third_word_read_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary)
         ||observation.sequence!=last_sequence_+1
         ||observation.instruction_address!=far_read_boundary_.instruction_address
         ||observation.source_segment!=far_read_boundary_.source_segment
         ||observation.source_offset!=far_read_boundary_.source_offset
-        ||observation.word!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_word_read_boundary?0x0140
-            :boundary_state==MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary?0x00c8:0x0000))
+        ||(boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
+            &&observation.word!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_word_read_boundary?0x0140
+                :boundary_state==MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary?0x00c8:0x0000)))
         throw std::runtime_error("Detached Millennium DOS record word");
     far_single_word_observations_.push_back(observation);
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary){
+        effects_.push_back({0x13cd,"AX",observation.word});
+        far_read_boundary_={0x13d0,observation.source_segment,
+            static_cast<std::uint16_t>(observation.source_offset-2),1,
+            child_code_segment_,0x1357};
+        last_sequence_=observation.sequence;
+        continuation_address_=0x13d0;
+        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_word_read_boundary;
+        return;
+    }
     if(boundary_state==MillenniumDosTitleInitializationState::graphics_record_third_word_read_boundary){
         memory_effects_.push_back({0x13e5,0x138a,
             MillenniumDosTitleInitializationEffectWidth::word,0xfa00});

@@ -443,3 +443,12 @@ owned destination base `$3000`. It atomically stores that far pointer at
 source `$5050:$001b`. The pointed-to runtime word is not present in the
 original archive as an independently addressable media byte and is therefore
 not inferred.
+
+That `$5050:$001b` word is now accepted only through the existing typed
+single-word facade at exact instruction `$13cd`. Its raw value is retained
+without width, pixel, or other graphics semantics. The three-byte instruction
+span `8b 44 18` hashes to
+`30cefd61e3cc968dfe7b7f54ed07251f1fe9ec99fb33bad8b4ae24ce67b80704`.
+It loads AX and advances directly to the next external word at `$13d0`,
+source `$5050:$0019`. No runtime-memory value is inferred or copied back into
+original media.

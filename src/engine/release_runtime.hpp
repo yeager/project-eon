@@ -624,6 +624,7 @@ public:
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return active_; }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return admission_; }
     [[nodiscard]] ReleaseRuntimeRejection rejection() const { return rejection_; }
+    [[nodiscard]] const std::string& rejection_detail() const { return rejection_detail_; }
     // A populated snapshot is proof that one exact adapter was constructed
     // after rehashing. It contains no source path or original bytes and is
     // cleared together with the adapter on every reset/rejection.
@@ -781,6 +782,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination(DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_caller_pointer(DeuterosAmigaObservedTitlePostAdjustedCallerPointer);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_object_gate(DeuterosAmigaObservedTitlePostAdjustedObjectGate);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_first_helper_return(DeuterosAmigaObservedLocalCallReturn);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -841,6 +843,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_replicated_byte(MillenniumAtariGameInitReplicatedByteObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_swapped_pair(MillenniumAtariGameInitSwappedPairObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_extended_run(MillenniumAtariGameInitExtendedRunObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_return();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_palette_copy_prefix();
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based
@@ -1070,6 +1074,7 @@ private:
     std::optional<RuntimeSessionSnapshot> session_snapshot_;
     ReleaseRuntimeAdmission admission_ = ReleaseRuntimeAdmission::unselected;
     ReleaseRuntimeRejection rejection_ = ReleaseRuntimeRejection::none;
+    std::string rejection_detail_;
 };
 
 // The one common final launch gate for CLI and card-menu candidates. It

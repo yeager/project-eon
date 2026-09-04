@@ -238,6 +238,11 @@ swapped-pair `$2b376..$2b3b7` to `dbf80460...a9b9`, and the extended 14-bit
 run prefix `$2b3b8..$2b3c5` to `72fa6338...b0c5`. Each requires exactly its
 consumed payload bytes as a generation-owned typed observation and commits
 all derived destination words atomically.
+After the token engine returns, the exact caller continuation reaches
+`JSR $2b448`. Its native deterministic prefix clears eight longwords and
+copies the hash-bound 96-byte source at `$2a66c` to `$2b3c8` atomically.
+Execution now stops before palette arithmetic at `$2b486`; XBIOS selector 6
+remains an external boundary.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

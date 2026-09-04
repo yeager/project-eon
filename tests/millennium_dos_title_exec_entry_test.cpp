@@ -869,6 +869,29 @@ int main(int argc, char** argv) {
         &&first_title_record.memory_effects[18970].value==0x0003
         &&first_title_record.memory_effects[18971].offset==0x138e
         &&first_title_record.memory_effects[18971].value==0x5050);
+    auto detached_first_title_record=other_success;
+    bool detached_first_title_record_rejected=false;
+    try { detached_first_title_record.observe_far_word(
+        {93,0x13cd,0x5050,0x001a,0xa55a}); }
+    catch(const std::runtime_error&) { detached_first_title_record_rejected=true; }
+    assert(detached_first_title_record_rejected
+        &&detached_first_title_record.checkpoint().last_sequence==92
+        &&detached_first_title_record.checkpoint().far_single_word_observations.size()==3
+        &&detached_first_title_record.checkpoint().memory_effects.size()==18972);
+    other_success.observe_far_word({93,0x13cd,0x5050,0x001b,0xa55a});
+    const auto first_title_second_word=other_success.checkpoint();
+    assert(first_title_second_word.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_word_read_boundary
+        &&first_title_second_word.last_sequence==93
+        &&first_title_second_word.continuation_address==0x13d0
+        &&first_title_second_word.far_single_word_observations.size()==4
+        &&first_title_second_word.far_single_word_observations.back().word==0xa55a
+        &&first_title_second_word.far_read_boundary.instruction_address==0x13d0
+        &&first_title_second_word.far_read_boundary.source_segment==0x5050
+        &&first_title_second_word.far_read_boundary.source_offset==0x0019
+        &&first_title_second_word.far_read_boundary.word_count==1
+        &&first_title_second_word.far_read_boundary.destination_offset==0x1357
+        &&first_title_second_word.memory_effects.size()==18972);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

@@ -1044,6 +1044,13 @@ struct DeuterosAmigaTitlePostAdjustedObjectGatePlan {
     std::uint32_t call_address=0,call_target=0,return_address=0;
     std::string path_sha256,table_prefix_sha256;
 };
+struct DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t table_address=0;
+    std::uint16_t second_d0=0,second_d1=0;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+    std::string continuation_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2855,6 +2862,17 @@ public:
             "ee46bb6621a91b5c5055ed0c93b775b7015f12807b939d6f78a8203f558b3195",
             "f366ff0abe5ea96505ad1c30bf834e5da3753159f02fc6892bc39d0f5c1dbc3c"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan>
+    observe_post_adjusted_first_helper_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!post_adjusted_object_gate_||post_adjusted_first_helper_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x20ca8
+            ||o.call_target!=0x41ad2||o.return_address!=0x20cae)
+            throw std::runtime_error("Deuteros post-adjusted first helper return does not match boundary");
+        post_adjusted_first_helper_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan{o,0x20a70,0x0017,0x03a8,
+            0x20cb2,0x41ad2,0x20cb8,
+            "405d4903b7cc8571505f6ed5c89f6f2a7d5fc9ed28d249f73d314932a8758db8"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3060,6 +3078,7 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination> adjusted_dispatch_destination_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedCallerPointer> post_adjusted_caller_pointer_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedObjectGate> post_adjusted_object_gate_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_first_helper_return_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};
