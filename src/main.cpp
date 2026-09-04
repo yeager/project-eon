@@ -671,23 +671,13 @@ void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
-const eon::AdmittedGameText& admitted_game_text_for_original(
-    const std::span<const eon::AdmittedGameText> admitted,
-    const std::string_view original_text) {
-    const auto match = std::ranges::find(admitted, original_text,
-        &eon::AdmittedGameText::original_text);
-    if (match == admitted.end())
-        throw std::runtime_error("Rendered game text lacks an admitted source token");
-    return *match;
-}
-
 void draw_admitted_game_text(SDL_Renderer* renderer, const float x, const float y,
     const eon::Game game, const eon::Platform platform,
     const std::span<const eon::AdmittedGameText> admitted,
     const std::string_view language, const std::string_view original_text) {
     if (!active_translator) throw std::runtime_error("Game text renderer has no active catalog");
-    const auto localized = eon::localize_admitted_game_text(game, platform,
-        admitted_game_text_for_original(admitted, original_text), language, *active_translator);
+    const auto localized = eon::localize_admitted_game_text_by_original(
+        game, platform, admitted, original_text, language, *active_translator);
     if (active_text_renderer
         && active_text_renderer->draw(x, y, localized.displayed_text)) return;
     SDL_RenderDebugText(renderer, x, y, localized.displayed_text.c_str());

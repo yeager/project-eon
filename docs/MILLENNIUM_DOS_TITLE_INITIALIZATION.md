@@ -390,3 +390,8 @@ That genuine word is `$0000`. The 7-byte subtraction/store span hashes to
 `0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`,
 keeps `$fa00`, atomically stores it at `CS:$138a`, and stops before the first
 external byte read at `$13e9`, source `$3000:$0007`.
+The dedicated byte observation verifies genuine `TITLE.LIB+$0007` value
+`$23`. Exact bytes `$13e9..$13f1` (SHA-256
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`)
+increment it and atomically store `$24` at `CS:$1389`. Execution stops before
+the next external byte at `$13f2`, source `$3000:$000a`.

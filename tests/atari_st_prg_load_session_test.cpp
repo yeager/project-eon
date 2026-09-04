@@ -337,6 +337,16 @@ int main(const int argc, const char* const argv[]) {
         assert(bsr_memory.apply(user_consumer.make_fread_prefix_effect_batch("fread-prefix")).accepted);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c24c})==0x11
             && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c24f})==0x44);
+        assert(user_consumer.execute_jsr_2b2be().accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_source_byte_boundary
+            && user_consumer.checkpoint().game_init_a3==0x2b2ba
+            && user_consumer.checkpoint().game_init_d6==0x0449
+            && user_consumer.checkpoint().game_init_d7==0x0044
+            && user_consumer.checkpoint().game_init_source_address==0x2c250);
+        assert(bsr_memory.apply(user_consumer.make_game_init_setup_effect_batch("game-init-setup")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b2ba})==0x04
+            && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b2bd})==0x44);
+        assert(!user_consumer.execute_jsr_2b2be().accepted);
         assert(negative_fopen.observe_gemdos_selector_61({1,18,0x2a5b4,0x3d,-33}).accepted);
         assert(negative_fopen.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin
             && negative_fopen.checkpoint().fopen_branch_target==0x2a632);

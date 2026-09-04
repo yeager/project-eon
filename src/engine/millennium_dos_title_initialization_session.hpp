@@ -54,6 +54,7 @@ enum class MillenniumDosTitleInitializationState {
     graphics_record_second_word_read_boundary,
     graphics_record_third_word_read_boundary,
     graphics_record_byte_read_boundary,
+    graphics_record_second_byte_read_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };
@@ -221,6 +222,13 @@ struct MillenniumDosTitleFarByteBoundary {
     std::uint16_t source_offset=0;
     std::uint16_t destination_offset=0;
 };
+struct MillenniumDosTitleFarByteObservation {
+    std::uint64_t sequence=0;
+    std::uint16_t instruction_address=0;
+    std::uint16_t source_segment=0;
+    std::uint16_t source_offset=0;
+    std::uint8_t byte=0;
+};
 
 struct MillenniumDosTitleDosBoundary {
     std::uint16_t interrupt_address = 0;
@@ -298,6 +306,7 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations;
     std::vector<MillenniumDosTitleFarWordObservation> far_single_word_observations;
     MillenniumDosTitleFarByteBoundary far_byte_boundary;
+    std::vector<MillenniumDosTitleFarByteObservation> far_byte_observations;
     std::uint16_t failure_address = 0;
     std::uint16_t continuation_address = 0;
     std::uint16_t post_video_observed_ax = 0;
@@ -351,6 +360,7 @@ public:
         std::uint16_t call_address, std::uint16_t call_target);
     void observe_far_words(const MillenniumDosTitleFarWordsObservation&);
     void observe_far_word(const MillenniumDosTitleFarWordObservation&);
+    void observe_far_byte(const MillenniumDosTitleFarByteObservation&);
     void execute_video_hook_setup(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
     void execute_post_video_mode_call(std::uint64_t sequence,
@@ -407,6 +417,7 @@ private:
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations_;
     std::vector<MillenniumDosTitleFarWordObservation> far_single_word_observations_;
     MillenniumDosTitleFarByteBoundary far_byte_boundary_;
+    std::vector<MillenniumDosTitleFarByteObservation> far_byte_observations_;
     std::uint16_t post_video_observed_ax_ = 0;
     std::uint16_t post_video_observed_flags_ = 0;
 };

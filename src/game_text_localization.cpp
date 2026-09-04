@@ -420,4 +420,42 @@ LocalizedGameText localize_admitted_game_text(const Game game, const Platform pl
     throw std::runtime_error("Invalid admitted game-text provenance token");
 }
 
+namespace {
+
+template <typename Projection>
+LocalizedGameText localize_unique_admitted_game_text(const Game game,
+    const Platform platform, const std::span<const AdmittedGameText> admitted,
+    const std::string_view key, const std::string_view selected_language,
+    const Translator& translator, Projection projection) {
+    const AdmittedGameText* match = nullptr;
+    for (const auto& token : admitted) {
+        if (projection(token) != key) continue;
+        if (match) throw std::runtime_error("Ambiguous admitted game-text lookup");
+        match = &token;
+    }
+    if (!match) throw std::runtime_error("Rendered game text lacks an admitted source token");
+    return localize_admitted_game_text(
+        game, platform, *match, selected_language, translator);
+}
+
+} // namespace
+
+LocalizedGameText localize_admitted_game_text_by_id(const Game game,
+    const Platform platform, const std::span<const AdmittedGameText> admitted,
+    const std::string_view id, const std::string_view selected_language,
+    const Translator& translator) {
+    return localize_unique_admitted_game_text(game, platform, admitted, id,
+        selected_language, translator,
+        [](const AdmittedGameText& token) -> std::string_view { return token.id; });
+}
+
+LocalizedGameText localize_admitted_game_text_by_original(const Game game,
+    const Platform platform, const std::span<const AdmittedGameText> admitted,
+    const std::string_view original_text, const std::string_view selected_language,
+    const Translator& translator) {
+    return localize_unique_admitted_game_text(game, platform, admitted, original_text,
+        selected_language, translator,
+        [](const AdmittedGameText& token) -> std::string_view { return token.original_text; });
+}
+
 } // namespace eon

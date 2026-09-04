@@ -221,6 +221,9 @@ After a typed raw Fclose return, a four-byte observation covers only the two
 buffer words immediately consumed at `$2c24c` and `$2c24e`. They commit
 atomically, become D6/D7, and execution stops before `$2aaec->$2b2be`; no
 unconsumed buffer bytes are materialized.
+The correctly mapped `$2b2be` callee executes 32 deterministic setup bytes,
+commits its D6/D7 words atomically, and stops before the source-byte read at
+`$2b2de`. The older file-`+0xde0` candidate is not executed.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

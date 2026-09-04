@@ -3181,7 +3181,7 @@ int main() {
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-post-command-service-prefix"
-            && entry.runtime_status == "native selector-5c complete selected stream decode";
+            && entry.runtime_status == "native selector-5c descriptor-bit loop complete";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
@@ -5197,6 +5197,14 @@ int main() {
                 && game_init_user->config_consumer.fread_prefix_d6==0x1122
                 && game_init_user->config_consumer.fread_prefix_d7==0x3344
                 && game_init_user->config_consumer.next_jsr_target==0x2b2be);
+            assert(all_release_runtime.execute_millennium_atari_jsr_2b2be().accepted);
+            const auto init_copy_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(init_copy_user && init_copy_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::game_init_source_byte_boundary
+                && init_copy_user->config_consumer.game_init_a3==0x2b2ba
+                && init_copy_user->config_consumer.game_init_d6==0x0449
+                && init_copy_user->config_consumer.game_init_d7==0x0044
+                && init_copy_user->config_consumer.game_init_source_address==0x2c250);
+            assert(!all_release_runtime.execute_millennium_atari_jsr_2b2be().accepted);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -5287,6 +5295,7 @@ int main() {
             assert(!atari_host.observe_millennium_atari_gemdos_selector_63({1,22,0x2a5d0,0x3f,0}).accepted);
             assert(!atari_host.observe_millennium_atari_gemdos_selector_62({1,23,0x2a5e6,0x3e,0}).accepted);
             assert(!atari_host.observe_millennium_atari_fread_prefix({1,24,0x2c24c,0,0x2c24e,0}).accepted);
+            assert(!atari_host.execute_millennium_atari_jsr_2b2be().accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5834,6 +5843,17 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_dispatch_destination(dispatch_destination).accepted);
             assert(opening_controller.advance_deuteros_amiga_title_post_command_selected_stream().accepted);
             assert(!opening_controller.advance_deuteros_amiga_title_post_command_selected_stream().accepted);
+            for(std::uint32_t call_index=0;call_index<8;++call_index){
+                eon::DeuterosAmigaObservedLocalCallReturn descriptor_return{
+                    runtime_copy_sequence+43U+call_index,0x20c4c,0x41ad2,0x20c52,
+                    call_index,static_cast<std::uint16_t>(call_index)};
+                if(call_index==0){auto bad=descriptor_return;bad.call_target++;
+                    assert(!opening_controller.observe_deuteros_amiga_title_post_command_descriptor_call_return(bad).accepted);}
+                assert(opening_controller.observe_deuteros_amiga_title_post_command_descriptor_call_return(descriptor_return).accepted);
+                assert(!opening_controller.observe_deuteros_amiga_title_post_command_descriptor_call_return(descriptor_return).accepted);
+                assert(opening_controller.advance_deuteros_amiga_title_post_command_descriptor_loop().accepted);
+            }
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_descriptor_loop().accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -5844,6 +5864,10 @@ int main() {
             assert(std::any_of(post_command_memory->initialized_bytes.begin(),
                 post_command_memory->initialized_bytes.end(),[](const auto& byte){
                     return byte.location.offset==0x60000 && byte.value==0;
+                }));
+            assert(std::any_of(post_command_memory->initialized_bytes.begin(),
+                post_command_memory->initialized_bytes.end(),[](const auto& byte){
+                    return byte.location.offset==0x416b4 && byte.value==0;
                 }));
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))

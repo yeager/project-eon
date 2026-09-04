@@ -102,4 +102,18 @@ struct AdmittedGameText {
     Game game, Platform platform, const AdmittedGameText& admitted,
     std::string_view selected_language, const Translator& translator);
 
+// Runtime presentation normally holds a table of copy-only admission tokens,
+// not the source leaf. Resolve either a stable semantic ID or the exact
+// recovered source spelling while still revalidating the selected token
+// against the compiled map. Zero or multiple matches fail closed.
+[[nodiscard]] LocalizedGameText localize_admitted_game_text_by_id(
+    Game game, Platform platform, std::span<const AdmittedGameText> admitted,
+    std::string_view id, std::string_view selected_language,
+    const Translator& translator);
+
+[[nodiscard]] LocalizedGameText localize_admitted_game_text_by_original(
+    Game game, Platform platform, std::span<const AdmittedGameText> admitted,
+    std::string_view original_text, std::string_view selected_language,
+    const Translator& translator);
+
 } // namespace eon

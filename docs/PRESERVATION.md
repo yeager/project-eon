@@ -1432,6 +1432,12 @@ owned selector-3 pointer as A5. The 16-byte consumer/call span hashes to
 `06aca8d014e4064f17c8dba3c9b19ed705214dcb63cc41b0b3d9f8da7a2cd782`.
 Execution stops before `JSR $2b2be` at `$2aaec`; no remaining buffer is
 invented or admitted.
+The loaded `$2b2be` target begins at file `+0xdbe`, not the older candidate at
+`+0xde0`. Its 32-byte deterministic setup hashes to
+`73fd6f3a91efb666e74c8022cd546f20457e599c36268691b0a27f43b22dc2bd`.
+It derives A3 `$2b2ba`, transforms D6/D7, stores both words atomically, copies
+the owned A5 into A6/A0, sets D5 to 4 and clears D2. Execution stops before
+`MOVE.B (A4)+,D0` at `$2b2de`, source `$2c250`.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -1479,15 +1485,15 @@ with `0x4e75`. These are exact original machine-code facts only. Project Eon
 does not invoke the trap, infer a selector meaning, choose a Line-A/XBIOS or
 firmware implementation, or synthesize a result or configuration state.
 
-The direct entry-block target `0x2b2be` is also now bounded at file `+0xde0`.
+The older static candidate formerly mapped to `0x2b2be` is bounded at file `+0xde0`.
 Its initial original words are `0x1400 0x0200 0x00c0 0x6600 0x003a`; the
 conditional branch's exact destination is `0x2b300` (file `+0xe22`), where
 the original bytes begin `0x0802 0x0006 0x6700 0x0090`. Project Eon preserves
 the two D0-dependent gates and their literal branch shape only. It does not
-choose a D0 value, execute either path, or infer a hardware, firmware, or game
-state consequence.
+choose a D0 value, execute either path, infer a consequence, or admit this
+34-byte-shifted candidate as the loaded runtime target.
 
-Its complete local routine is now hash-locked through `RTS` at `$2b3a4`:
+That candidate's complete local routine is hash-locked through its `RTS`:
 `$2b2be..$2b3a5`, file `+0xde0..+0xec7`, 232 bytes, SHA-256
 `85c58759b0cb2f067734fb006aa543fc74926422187506914c823ceaaf9c6cd8`.
 Every path remains local original code, but its branches/copies depend on
@@ -4409,6 +4415,11 @@ The word is now admitted as genuine `$0000`. Exact bytes `$13e2..$13e8`
 (SHA-256 `0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`)
 atomically store adjusted product `$fa00` at `CS:$138a`. The new typed external
 byte boundary is `$13e9`, source `$3000:$0007`; no byte value is inferred.
+The new byte-observation facade provenance-checks genuine value `$23` before
+the 9-byte span (SHA-256
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`)
+increments and atomically stores `$24` at `CS:$1389`. The next exact boundary
+is external byte `$3000:$000a` at `$13f2`.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6702,6 +6713,15 @@ observation is needed; the writes commit as one atomic effect batch. `$41be6`
 returns to `$20c2c`, loads D5 from the descriptor and D6=`$000b`, and stops
 before the first reachable opaque `$20c4c->$41ad2` graphics helper (immediate
 for `$00b0`, after one carry skip for `$00bd`).
+
+The following caller loop is now bounded by the immutable 24-word table at
+`$20a3c..$20a6b`. It shifts the selected descriptor once per iteration and
+uses DBRA D6 from `$000b` through zero; D6 values four and five are explicit
+no-call cases. `$00b0` therefore admits eight typed `$20c4c->$41ad2` returns
+(D6 11, 10, 9, 8, 3, 2, 1, 0), while `$00bd` admits five (10, 3, 2, 1, 0).
+Opaque D0/SR are retained at every return but never used to invent helper
+effects. Loop completion deterministically stores `$00bd` at `$416b4` as one
+atomic word and stops before mutable byte read `$20c6c` from `$20a10`.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently
