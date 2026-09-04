@@ -640,3 +640,21 @@ msgstr "EXCLUDED"
 
 msgid "ACTIVE"
 msgstr "ACTIVE"
+
+msgid "General hardware failure."
+msgstr "General hardware failure."
+
+msgid "Please insert Deuteros"
+msgstr "Please insert Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "DATA disk into drive DFO"
+
+msgid "Press any key when ready."
+msgstr "Press any key when ready."
+
+msgid "Yes, please"
+msgstr "Yes, please"
+
+msgid "No, thanks"
+msgstr "No, thanks"

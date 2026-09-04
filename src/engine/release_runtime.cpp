@@ -3212,6 +3212,66 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_post_adjusted_rts_frame(
     return r;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_post_adjusted_repeated_nested_words(
+    const DeuterosAmigaObservedTitlePostCommandNestedWords o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!native_runtime_memory_
+        ||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros repeated local-service words require active title session";return r;}
+    try{auto preview=*deuteros_amiga_->title_stage_session();
+        const auto plan=preview.observe_post_adjusted_repeated_nested_words(o);
+        if(!plan){r.error="Deuteros repeated local-service words did not match boundary";return r;}
+        auto memory=*native_runtime_memory_;
+        if(plan->writes_counter){NativeRuntimeEffectBatch batch{
+            "deuteros-amiga-title-repeated-local-service-counter",true,
+            {{1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->counter_destination},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,
+                plan->counter_value}}};
+            const auto applied=memory.apply(batch);
+            if(!applied.accepted){r.error=applied.error;return r;}}
+        if(!deuteros_amiga_->observe_title_post_adjusted_repeated_nested_words(o)){
+            r.error="Deuteros repeated local-service words disappeared before commit";return r;}
+        *native_runtime_memory_=std::move(memory);r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}return r;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_post_adjusted_repeated_nested_call_return(
+    const DeuterosAmigaObservedLocalCallReturn o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros repeated local-service return requires active title session";return r;}
+    try{auto preview=*deuteros_amiga_->title_stage_session();
+        if(!preview.observe_post_adjusted_repeated_nested_call_return(o)){
+            r.error="Deuteros repeated local-service return did not match boundary";return r;}
+        if(!deuteros_amiga_->observe_title_post_adjusted_repeated_nested_call_return(o)){
+            r.error="Deuteros repeated local-service return disappeared before commit";return r;}
+        r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}return r;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop(){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!native_runtime_memory_
+        ||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros repeated local-service loop requires active title session";return r;}
+    try{auto preview=*deuteros_amiga_->title_stage_session();
+        const auto plan=preview.advance_post_adjusted_repeated_nested_loop();
+        if(!plan){r.error="Deuteros repeated local-service loop did not match boundary";return r;}
+        auto memory=*native_runtime_memory_;
+        if(plan->writes_counter){NativeRuntimeEffectBatch batch{
+            "deuteros-amiga-title-repeated-local-service-loop-counter-"
+                +std::to_string(plan->iteration),true,
+            {{1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->counter_destination},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,
+                plan->counter_value}}};
+            const auto applied=memory.apply(batch);
+            if(!applied.accepted){r.error=applied.error;return r;}}
+        if(!deuteros_amiga_->advance_title_post_adjusted_repeated_nested_loop()){
+            r.error="Deuteros repeated local-service loop disappeared before commit";return r;}
+        *native_runtime_memory_=std::move(memory);r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}return r;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
     DeuterosAmigaTitleDependencyObservationResult result;
@@ -3653,6 +3713,7 @@ MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::execute_millenniu
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::execute_millennium_atari_game_init_palette_copy_prefix(){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Palette-copy prefix requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.execute_game_init_palette_copy_prefix();if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_game_init_palette_copy_effect_batch("millennium-atari-palette-copy-prefix"));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_game_init_palette_words(const MillenniumAtariGameInitPaletteWordsObservation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Palette arithmetic requires active Millennium Atari consumer"};for(std::size_t i=0;i<o.destination_words.size();++i){const auto address=o.destination_address+static_cast<std::uint32_t>(i*2U);const auto hi=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address});const auto lo=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+1U});if(!hi||!lo||static_cast<std::uint16_t>((*hi<<8U)|*lo)!=o.destination_words[i])return{false,"Palette-word observation contradicts native memory"};}auto next=*millennium_atari_config_consumer_;auto result=next.observe_game_init_palette_words(o);if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_game_init_palette_arithmetic_effect_batch("millennium-atari-palette-arithmetic-"+std::to_string(o.sequence)));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_game_init_palette_xbios_selector_6(const MillenniumAtariGameInitPaletteXbios6Observation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_)return{false,"Palette XBIOS selector-6 result requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_game_init_palette_xbios_selector_6(o);if(result.accepted)*millennium_atari_config_consumer_=std::move(next);return result;}
+MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_game_init_palette_recurrence(const MillenniumAtariGameInitPaletteRecurrenceObservation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Recurrent palette pass requires active Millennium Atari consumer"};for(std::size_t i=0;i<o.source_bytes.size();++i){const auto value=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,o.source_address+static_cast<std::uint32_t>(i)});if(!value||*value!=o.source_bytes[i])return{false,"Recurrent palette source contradicts native memory"};}for(std::size_t i=0;i<o.destination_words.size();++i){const auto address=o.destination_address+static_cast<std::uint32_t>(i*2U);const auto hi=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address});const auto lo=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+1U});if(!hi||!lo||static_cast<std::uint16_t>((*hi<<8U)|*lo)!=o.destination_words[i])return{false,"Recurrent palette words contradict native memory"};}auto next=*millennium_atari_config_consumer_;auto result=next.observe_game_init_palette_recurrence(o);if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_game_init_palette_arithmetic_effect_batch("millennium-atari-palette-recurrence-"+std::to_string(o.sequence)));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {

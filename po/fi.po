@@ -639,3 +639,21 @@ msgstr "POISSULJETTU"
 
 msgid "ACTIVE"
 msgstr "AKTIIVINEN"
+
+msgid "General hardware failure."
+msgstr "Yleinen laitteistovirhe."
+
+msgid "Please insert Deuteros"
+msgstr "Aseta Deuteros levykeasemaan"
+
+msgid "DATA disk into drive DFO"
+msgstr "Aseta DATA-levyke asemaan DFO"
+
+msgid "Press any key when ready."
+msgstr "Paina mitä tahansa näppäintä, kun olet valmis."
+
+msgid "Yes, please"
+msgstr "Kyllä, kiitos"
+
+msgid "No, thanks"
+msgstr "Ei, kiitos"

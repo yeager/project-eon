@@ -385,6 +385,9 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan> observe_post_adjusted_first_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_first_helper_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan> observe_post_adjusted_second_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_second_helper_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRtsFramePlan> observe_post_adjusted_rts_frame(const DeuterosAmigaObservedTitlePostAdjustedRtsFrame& o) { return service_batch_boundary_session_.observe_post_adjusted_rts_frame(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedWordsPlan> observe_post_adjusted_repeated_nested_words(const DeuterosAmigaObservedTitlePostCommandNestedWords& o) { return service_batch_boundary_session_.observe_post_adjusted_repeated_nested_words(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedCallReturnPlan> observe_post_adjusted_repeated_nested_call_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_repeated_nested_call_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedLoopAdvancePlan> advance_post_adjusted_repeated_nested_loop() { return service_batch_boundary_session_.advance_post_adjusted_repeated_nested_loop(); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

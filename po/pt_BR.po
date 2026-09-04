@@ -679,3 +679,21 @@ msgstr "LIMITE DA APRESENTAÇÃO RECUPERADA"
 
 msgid "BOOTSTRAP BOUNDARY"
 msgstr "LIMITE DE INICIALIZAÇÃO"
+
+msgid "General hardware failure."
+msgstr "Falha geral de hardware."
+
+msgid "Please insert Deuteros"
+msgstr "Insira Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Insira o disco DATA na unidade DFO"
+
+msgid "Press any key when ready."
+msgstr "Pressione qualquer tecla quando estiver pronto."
+
+msgid "Yes, please"
+msgstr "Sim, por favor"
+
+msgid "No, thanks"
+msgstr "Não, obrigado"

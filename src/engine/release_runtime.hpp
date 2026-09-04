@@ -785,6 +785,9 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_first_helper_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_second_helper_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_rts_frame(DeuterosAmigaObservedTitlePostAdjustedRtsFrame);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_repeated_nested_words(DeuterosAmigaObservedTitlePostCommandNestedWords);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_repeated_nested_call_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop();
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -849,6 +852,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_palette_copy_prefix();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_words(MillenniumAtariGameInitPaletteWordsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_xbios_selector_6(MillenniumAtariGameInitPaletteXbios6Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_recurrence(MillenniumAtariGameInitPaletteRecurrenceObservation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

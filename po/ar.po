@@ -628,3 +628,21 @@ msgstr "مستبعد"
 
 msgid "ACTIVE"
 msgstr "نشط"
+
+msgid "General hardware failure."
+msgstr "عطل عام في الأجهزة."
+
+msgid "Please insert Deuteros"
+msgstr "يرجى إدخال Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "أدخل قرص DATA في محرك الأقراص DFO"
+
+msgid "Press any key when ready."
+msgstr "اضغط أي مفتاح عندما تكون جاهزًا."
+
+msgid "Yes, please"
+msgstr "نعم، من فضلك"
+
+msgid "No, thanks"
+msgstr "لا، شكرًا"

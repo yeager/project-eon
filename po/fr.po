@@ -640,3 +640,21 @@ msgstr "EXCLUES"
 
 msgid "ACTIVE"
 msgstr "ACTIF"
+
+msgid "General hardware failure."
+msgstr "Défaillance matérielle générale."
+
+msgid "Please insert Deuteros"
+msgstr "Veuillez insérer Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Insérez la disquette DATA dans le lecteur DFO"
+
+msgid "Press any key when ready."
+msgstr "Appuyez sur une touche quand vous êtes prêt."
+
+msgid "Yes, please"
+msgstr "Oui, merci"
+
+msgid "No, thanks"
+msgstr "Non, merci"

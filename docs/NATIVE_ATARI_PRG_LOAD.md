@@ -247,8 +247,12 @@ updates, and commits its 48 byte plus 16 word effects atomically. Execution
 stops at `TRAP #14` `$2b4ac`, with XBIOS selector 6 and palette pointer
 `$2b428` retained. A typed raw D0 return now admits the exact stack cleanup
 and 20,000-iteration D0 delay loop. The following `DBF` changes D7 from 6 to
-5 and reaches `$2b44c`; Eon stops before recurrent palette processing and
-does not infer any XBIOS, display, or timing semantics from the raw result.
+5 and reaches the corrected loaded address `$2b46e`. Six further passes use
+typed current source bytes and destination words, commit each complete pass
+atomically, and require a fresh typed selector-6 return. The final D7 fallthrough
+owns the terminal selector-6 return and local RTS at `$2b4c6`; only the caller
+destination remains external. Eon does not infer any XBIOS, display, or
+wall-clock timing semantics from the raw results.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

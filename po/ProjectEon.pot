@@ -881,3 +881,27 @@ msgstr ""
 
 msgid "ACTIVE"
 msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "General hardware failure."
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Please insert Deuteros"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "DATA disk into drive DFO"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Press any key when ready."
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Yes, please"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "No, thanks"
+msgstr ""

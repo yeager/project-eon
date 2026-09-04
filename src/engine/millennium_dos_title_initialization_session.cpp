@@ -1148,14 +1148,29 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
     const MillenniumDosTitleFarByteObservation& observation){
     const auto boundary_state=state_;
     if((boundary_state!=MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary
-            &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_second_byte_read_boundary)
+            &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_second_byte_read_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary)
         ||observation.sequence!=last_sequence_+1
         ||observation.instruction_address!=far_byte_boundary_.instruction_address
         ||observation.source_segment!=far_byte_boundary_.source_segment
         ||observation.source_offset!=far_byte_boundary_.source_offset
-        ||observation.byte!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary?0x23:0x00))
+        ||(boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
+            &&observation.byte!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary?0x23:0x00)))
         throw std::runtime_error("Detached Millennium DOS record byte");
     far_byte_observations_.push_back(observation);
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary){
+        const auto incremented=static_cast<std::uint8_t>(observation.byte+1U);
+        effects_.insert(effects_.end(),{{0x13e9,"AL",observation.byte},
+            {0x13ec,"AL",incremented}});
+        memory_effects_.push_back({0x13ee,0x1389,
+            MillenniumDosTitleInitializationEffectWidth::byte,incremented});
+        far_byte_boundary_={0x13f2,observation.source_segment,
+            static_cast<std::uint16_t>(observation.source_offset+3),0x1388};
+        last_sequence_=observation.sequence;
+        continuation_address_=0x13f2;
+        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary;
+        return;
+    }
     if(boundary_state==MillenniumDosTitleInitializationState::graphics_record_second_byte_read_boundary){
         memory_effects_.insert(memory_effects_.end(),{
             {0x13f5,0x1388,MillenniumDosTitleInitializationEffectWidth::byte,0},

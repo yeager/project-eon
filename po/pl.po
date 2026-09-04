@@ -678,3 +678,21 @@ msgstr "WYKLUCZONE"
 
 msgid "ACTIVE"
 msgstr "AKTYWNY"
+
+msgid "General hardware failure."
+msgstr "Ogólna awaria sprzętu."
+
+msgid "Please insert Deuteros"
+msgstr "Włóż Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Włóż dysk DATA do stacji DFO"
+
+msgid "Press any key when ready."
+msgstr "Naciśnij dowolny klawisz, gdy będziesz gotowy."
+
+msgid "Yes, please"
+msgstr "Tak, proszę"
+
+msgid "No, thanks"
+msgstr "Nie, dziękuję"

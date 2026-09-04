@@ -667,3 +667,21 @@ msgstr "제외됨"
 
 msgid "ACTIVE"
 msgstr "활성"
+
+msgid "General hardware failure."
+msgstr "일반 하드웨어 오류."
+
+msgid "Please insert Deuteros"
+msgstr "Deuteros를 넣으십시오"
+
+msgid "DATA disk into drive DFO"
+msgstr "DATA 디스크를 DFO 드라이브에 넣으십시오"
+
+msgid "Press any key when ready."
+msgstr "준비되면 아무 키나 누르십시오."
+
+msgid "Yes, please"
+msgstr "예"
+
+msgid "No, thanks"
+msgstr "아니요"
