@@ -1497,7 +1497,16 @@ source, stores each low sum byte back at the first byte of its pair, and adds
 carry weights `$0100`, `$0010`, and `$0001` to that group's destination word.
 Eon commits the 48 byte writes and 16 word writes atomically. Execution then
 stops at `TRAP #14` `$2b4ac`, with selector 6 and pointer `$2b428` retained;
-the XBIOS result and all later timing behaviour remain external boundaries.
+the XBIOS result is accepted only as a generation-owned typed D0 observation
+and is not assigned palette, display, or timing semantics. After that return,
+the exact 16 bytes at file `+0xfae`, loaded runtime `$2b4ae..$2b4bd`, hash to
+`9e3fd4aeca606c5560b204d12a20a77de12552ded7fa64a0677cca56c4676bf1`.
+They clean six stack bytes, overwrite D0 with `$00004e20`, execute exactly
+20,000 `SUBQ.L`/`BNE.S` delay iterations, then decrement D7 from 6 to 5 and
+take the first outer `DBF` edge to `$2b44c`. This transition changes only
+typed register/control state, so it has no runtime-memory effect batch to
+commit. Execution stops before the recurrent palette setup: its use of the
+already-mutated source and destination bytes remains a separate boundary.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4531,6 +4540,12 @@ atomically stores both observed words at `CS:$1357/$1359` and the low unsigned
 product at `CS:$133b`; AX/DX retain the exact low/high product pair. The next
 boundary is `$13e2`, source `$5050:$0017`. No dimension, pixel, or rendering
 semantics are inferred from either input or their product.
+The third runtime word at `$5050:$0017` is now accepted only as the exact
+ordered `$13e2` observation. The seven-byte subtraction/store span has
+SHA-256 `0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`.
+It atomically stores the wrapping low-word subtraction result at `CS:$138a`
+and stops before `$13e9` reads byte `$5050:$0004`. Neither operand, result,
+nor next byte receives inferred graphics semantics.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6888,6 +6903,14 @@ effects. The exact second-call-plus-local-RTS span `$20cb2..$20cb9` hashes to
 Execution stops at RTS `$20cb8`: its stack-supplied destination and caller
 continuation are not inferred, and the sparse descriptor bytes remain only
 recovered runtime state.
+A typed stack-frame observation now admits exactly the longword return
+address `$40530` and commits it atomically at the observed A7 frame. This is
+the instruction following the already hash-bound `$4052a->$20e18` call; no
+arbitrary caller destination is accepted. The exact six-byte caller prefix at
+`$40530` hashes to
+`8a7c8b9593ae8d101806072aafa8cc8aa91a34dd4802e67af4fd16f3dc56c362`
+and stops before its repeated `$40530->$20ba8` local service call. Its return,
+effects, and any display meaning remain external boundaries.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

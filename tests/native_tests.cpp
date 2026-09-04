@@ -5364,6 +5364,8 @@ int main() {
             assert(!atari_host.execute_millennium_atari_game_init_palette_copy_prefix().accepted);
             assert(!atari_host.observe_millennium_atari_game_init_palette_words(
                 {1,29,0x2b486,0x2b3c8,0x2b428,{}}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_palette_xbios_selector_6(
+                {1,30,0x2b4ac,6,0}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5991,6 +5993,15 @@ int main() {
                 second_object_helper).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_second_helper_return(
                 second_object_helper).accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedRtsFrame adjusted_rts{
+                runtime_copy_sequence+57,0x20cb8,0x63000,0x40530};
+            auto bad_adjusted_rts=adjusted_rts;bad_adjusted_rts.return_address+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_rts_frame(
+                bad_adjusted_rts).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_rts_frame(
+                adjusted_rts).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_rts_frame(
+                adjusted_rts).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

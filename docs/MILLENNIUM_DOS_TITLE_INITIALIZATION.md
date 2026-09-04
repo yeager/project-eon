@@ -461,3 +461,11 @@ the original unsigned 16-by-16 multiplication, and atomically store the low
 product word at `CS:$133b`. AX and DX retain the low and high product words.
 Execution stops before `$13e2` reads the next raw word at `$5050:$0017`.
 Names such as width or height are not asserted by this evidence.
+
+The `$5050:$0017` word is now admitted as the third raw record observation.
+Exact bytes `$13e2..$13e8` (SHA-256
+`0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`)
+subtract it from the low product and atomically store the wrapping 16-bit
+result at `CS:$138a`. Execution stops before byte read `$13e9`, source
+`$5050:$0004`. The raw word and adjusted result carry no inferred field,
+size, or graphics meaning.

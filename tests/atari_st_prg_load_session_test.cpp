@@ -433,6 +433,20 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().game_init_palette_result_words[0]==expected_first_word);
         assert(palette_memory.apply(single_cell_planes.make_game_init_palette_arithmetic_effect_batch("palette-arithmetic")).accepted
             && palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b3c8})==single_cell_planes.checkpoint().game_init_palette_result_bytes[0]);
+        assert(!single_cell_planes.observe_game_init_palette_xbios_selector_6({1,100,0x2b4ae,6,0x12345678}).accepted);
+        assert(single_cell_planes.observe_game_init_palette_xbios_selector_6({1,100,0x2b4ac,6,0x12345678}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_outer_recurrence_boundary
+            && single_cell_planes.checkpoint().game_init_palette_xbios_result_observed
+            && single_cell_planes.checkpoint().game_init_palette_xbios_result_d0==0x12345678
+            && single_cell_planes.checkpoint().game_init_palette_xbios_stack_cleanup_bytes==6
+            && single_cell_planes.checkpoint().game_init_palette_post_xbios_sha256=="9e3fd4aeca606c5560b204d12a20a77de12552ded7fa64a0677cca56c4676bf1"
+            && single_cell_planes.checkpoint().game_init_palette_delay_initial_d0==0x4e20
+            && single_cell_planes.checkpoint().game_init_palette_delay_iterations==0x4e20
+            && single_cell_planes.checkpoint().game_init_palette_delay_final_d0==0
+            && single_cell_planes.checkpoint().game_init_d7==5
+            && single_cell_planes.checkpoint().game_init_palette_outer_backedge_address==0x2b44c
+            && single_cell_planes.checkpoint().game_init_next_instruction==0x2b44c);
+        assert(!single_cell_planes.observe_game_init_palette_xbios_selector_6({1,101,0x2b4ac,6,0}).accepted);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

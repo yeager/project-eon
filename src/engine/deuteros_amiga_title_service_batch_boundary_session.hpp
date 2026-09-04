@@ -1056,6 +1056,15 @@ struct DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan {
     std::uint32_t local_rts_address=0,stop_before_address=0;
     std::string call_and_rts_sha256;
 };
+struct DeuterosAmigaObservedTitlePostAdjustedRtsFrame {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,frame_address=0,return_address=0;
+};
+struct DeuterosAmigaTitlePostAdjustedRtsFramePlan {
+    DeuterosAmigaObservedTitlePostAdjustedRtsFrame observation;
+    std::uint32_t caller_call_address=0,caller_call_target=0,caller_return_address=0;
+    std::string caller_prefix_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2888,6 +2897,16 @@ public:
         return DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan{o,0x20cb8,0x20cb8,
             "889c758fbfd514bc3633787bc2736b39a95aa712af79d4dc8f119eee6bbb65ab"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRtsFramePlan>
+    observe_post_adjusted_rts_frame(const DeuterosAmigaObservedTitlePostAdjustedRtsFrame&o){
+        if(!post_adjusted_second_helper_return_||post_adjusted_rts_frame_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x20cb8
+            ||o.frame_address>0xfffffffbU||o.return_address!=0x40530)
+            throw std::runtime_error("Deuteros post-adjusted RTS frame does not match caller provenance");
+        post_adjusted_rts_frame_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjustedRtsFramePlan{o,0x40530,0x20ba8,0x40536,
+            "8a7c8b9593ae8d101806072aafa8cc8aa91a34dd4802e67af4fd16f3dc56c362"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3095,6 +3114,7 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostAdjustedObjectGate> post_adjusted_object_gate_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_first_helper_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_second_helper_return_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedRtsFrame> post_adjusted_rts_frame_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

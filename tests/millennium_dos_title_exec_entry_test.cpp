@@ -922,6 +922,32 @@ int main(int argc, char** argv) {
         &&first_title_third_word.memory_effects[18973].value==0xa55a
         &&first_title_third_word.memory_effects[18974].offset==0x133b
         &&first_title_third_word.memory_effects[18974].value==0x55a0);
+    auto detached_first_title_third_word=other_success;
+    bool detached_first_title_third_word_rejected=false;
+    try { detached_first_title_third_word.observe_far_word(
+        {95,0x13e2,0x5050,0x0016,0x0050}); }
+    catch(const std::runtime_error&) {
+        detached_first_title_third_word_rejected=true;
+    }
+    assert(detached_first_title_third_word_rejected
+        &&detached_first_title_third_word.checkpoint().last_sequence==94
+        &&detached_first_title_third_word.checkpoint().memory_effects.size()==18975);
+    other_success.observe_far_word({95,0x13e2,0x5050,0x0017,0x0050});
+    const auto first_title_byte=other_success.checkpoint();
+    assert(first_title_byte.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
+        &&first_title_byte.last_sequence==95
+        &&first_title_byte.continuation_address==0x13e9
+        &&first_title_byte.far_single_word_observations.size()==6
+        &&first_title_byte.far_single_word_observations.back().word==0x0050
+        &&first_title_byte.far_byte_boundary.instruction_address==0x13e9
+        &&first_title_byte.far_byte_boundary.source_segment==0x5050
+        &&first_title_byte.far_byte_boundary.source_offset==0x0004
+        &&first_title_byte.far_byte_boundary.destination_offset==0x1389
+        &&first_title_byte.memory_effects.size()==18976
+        &&first_title_byte.memory_effects.back().instruction_address==0x13e5
+        &&first_title_byte.memory_effects.back().offset==0x138a
+        &&first_title_byte.memory_effects.back().value==0x5550);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state
