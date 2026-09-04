@@ -600,6 +600,30 @@ struct DeuterosAmigaTitlePostExecLoadServiceProfile {
 parse_deuteros_amiga_title_post_exec_load_service_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// The literal D0=1 call at $404f8 enters a local table dispatcher.  The table
+// base, selected signed word and command stream are runtime data, so this
+// profile records the exact local instructions only and stops before the
+// first command-byte read in the nested parser.
+struct DeuterosAmigaTitlePostLoadDispatchProfile {
+    std::uint32_t caller_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t index_value = 0;
+    std::uint32_t table_base_cell_address = 0;
+    std::uint32_t table_word_instruction_address = 0;
+    std::uint32_t nested_call_address = 0;
+    std::uint32_t nested_call_target = 0;
+    std::uint32_t parser_mode_byte_address = 0;
+    std::uint8_t parser_mode_byte_value = 0;
+    std::uint32_t first_command_read_address = 0;
+    std::string caller_sha256;
+    std::string routine_sha256;
+    std::string parser_prefix_sha256;
+};
+
+[[nodiscard]] DeuterosAmigaTitlePostLoadDispatchProfile
+parse_deuteros_amiga_title_post_load_dispatch_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // This is the original caller continuation beginning immediately after the
 // post-Exec tail wrapper's RTS.  It is reachable only if the wrapper's final
 // Exec vector returns.  The profile records direct/indirect call operands and

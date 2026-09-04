@@ -111,6 +111,7 @@ add_executable(project-eon
     src/presentation/modern_presentation_pipeline.cpp
     src/engine/deuteros_amiga_opening.cpp
     src/engine/bounded_memory_transfer.cpp
+    src/engine/native_runtime_memory.cpp
     src/engine/deuteros_amiga_opening_runner.cpp
     src/engine/deuteros_amiga_title_bootstrap_session.cpp
     src/engine/deuteros_amiga_title_exec_boundary_session.cpp
@@ -387,6 +388,12 @@ if(BUILD_TESTING)
     add_test(NAME native-data-detection COMMAND eon-native-tests)
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+    add_executable(eon-native-runtime-memory-tests
+        tests/native_runtime_memory_tests.cpp
+        src/engine/bounded_memory_transfer.cpp
+        src/engine/native_runtime_memory.cpp)
+    target_include_directories(eon-native-runtime-memory-tests PRIVATE src)
+    add_test(NAME native-runtime-memory COMMAND eon-native-runtime-memory-tests)
     add_test(NAME cli-default-data-read-only
         COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_default_data_test.py"

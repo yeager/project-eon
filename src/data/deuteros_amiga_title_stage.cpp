@@ -2271,6 +2271,54 @@ parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(
         0x4069a, 0x1bf36, stop_before_address, std::string(profile_hash)};
 }
 
+DeuterosAmigaTitlePostLoadDispatchProfile
+parse_deuteros_amiga_title_post_load_dispatch_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t caller_address = 0x404f6;
+    constexpr std::uint32_t entry_address = 0x1fb9a;
+    constexpr std::uint32_t parser_address = 0x1fa00;
+    constexpr std::array<std::uint8_t, 8> caller{{
+        0x70, 0x01, 0x4e, 0xb9, 0x00, 0x01, 0xfb, 0x9a}};
+    constexpr std::array<std::uint8_t, 24> routine{{
+        0x28, 0x79, 0x00, 0x01, 0xf9, 0x7c, 0x2f, 0x00,
+        0xd0, 0x40, 0x30, 0x34, 0x00, 0x00, 0xd8, 0xc0,
+        0x61, 0x00, 0xfe, 0x54, 0x20, 0x1f, 0x4e, 0x75}};
+    constexpr std::array<std::uint8_t, 10> parser_prefix{{
+        0x42, 0x39, 0x00, 0x01, 0xf9, 0x8c, 0x4e, 0x71, 0x70, 0x00}};
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view caller_hash =
+        "596e3b08acbe94bbe512d87ca7aeb9e8eb686af82c891c5a0e4dd1c4fcdbe3c3";
+    constexpr std::string_view routine_hash =
+        "173ecec3e880b6b6d9022567622548e25629dd23d671f6f8f9e46fe700edcbbb";
+    constexpr std::string_view parser_hash =
+        "2605ca4af737e72accc1c6dc91bf640aac370f6037da3ec284ba440377a6b4cf";
+    const auto& stage = plan.title_stage;
+    const auto bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto span_at = [&](const std::uint32_t address, const std::size_t size) {
+        if (address < stage.destination || address - stage.destination > stage.length
+            || size > stage.length - (address - stage.destination)) {
+            throw std::runtime_error("Deuteros post-load dispatch lies outside original stage");
+        }
+        return bytes.subspan(address - stage.destination, size);
+    };
+    const auto caller_bytes = span_at(caller_address, caller.size());
+    const auto routine_bytes = span_at(entry_address, routine.size());
+    const auto parser_bytes = span_at(parser_address, parser_prefix.size());
+    if (to_hex(sha256(bytes)) != stage_hash
+        || !std::equal(caller.begin(), caller.end(), caller_bytes.begin())
+        || !std::equal(routine.begin(), routine.end(), routine_bytes.begin())
+        || !std::equal(parser_prefix.begin(), parser_prefix.end(), parser_bytes.begin())
+        || to_hex(sha256(caller_bytes)) != caller_hash
+        || to_hex(sha256(routine_bytes)) != routine_hash
+        || to_hex(sha256(parser_bytes)) != parser_hash) {
+        throw std::runtime_error("Unsupported Deuteros post-load dispatch profile");
+    }
+    return {caller_address, entry_address, 1, 0x1f97c, 0x1fba4,
+        0x1fbaa, parser_address, 0x1f98c, 0, 0x1fa0a,
+        std::string(caller_hash), std::string(routine_hash), std::string(parser_hash)};
+}
+
 DeuterosAmigaTitlePostExecPointerRouteProfile
 parse_deuteros_amiga_title_post_exec_pointer_route_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {

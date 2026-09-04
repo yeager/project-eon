@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -20,9 +22,8 @@ struct MillenniumDosExternalTransferContract {
     MillenniumDosExternalTransferKind kind;
     std::uint16_t source_instruction;
     std::uint16_t target_address;
-    std::optional<std::uint16_t> terminal_return_instruction;
-    std::optional<std::uint16_t> alternate_terminal_return_instruction;
-    std::optional<std::uint16_t> second_alternate_terminal_return_instruction;
+    std::array<std::uint16_t,4> terminal_return_instructions{};
+    std::size_t terminal_return_count = 0;
 };
 
 struct MillenniumDosExternalTransferEntryObservation {
@@ -48,16 +49,16 @@ struct MillenniumDosExternalTransferResult { bool accepted=false; std::string er
 [[nodiscard]] constexpr MillenniumDosExternalTransferContract
 millennium_dos_external_transfer_contract(const MillenniumDosExternalTransferKind kind) {
     switch (kind) {
-    case MillenniumDosExternalTransferKind::f9_short_return: return {kind,0x7381,0x73cc,0x73e6,{},{}};
-    case MillenniumDosExternalTransferKind::f9_long_return: return {kind,0x7381,0x73cc,0x740e,{},{}};
-    case MillenniumDosExternalTransferKind::f2_reset_wrap_return: return {kind,0x7228,0x702c,0x7040,{},{}};
-    case MillenniumDosExternalTransferKind::f2_tail_jump: return {kind,0x7253,0x0bdf,std::nullopt,{}, {}};
-    case MillenniumDosExternalTransferKind::f2_tail_active_return: return {kind,0x7253,0x0bdf,0x0be6,{},{}};
-    case MillenniumDosExternalTransferKind::bdf_mode_two_jump: return {kind,0x0c4b,0x11f7,0x12cb,0x129c,{}};
+    case MillenniumDosExternalTransferKind::f9_short_return: return {kind,0x7381,0x73cc,{0x73e6},1};
+    case MillenniumDosExternalTransferKind::f9_long_return: return {kind,0x7381,0x73cc,{0x740e},1};
+    case MillenniumDosExternalTransferKind::f2_reset_wrap_return: return {kind,0x7228,0x702c,{0x7040},1};
+    case MillenniumDosExternalTransferKind::f2_tail_jump: return {kind,0x7253,0x0bdf,{},0};
+    case MillenniumDosExternalTransferKind::f2_tail_active_return: return {kind,0x7253,0x0bdf,{0x0be6},1};
+    case MillenniumDosExternalTransferKind::bdf_mode_two_jump: return {kind,0x0c4b,0x11f7,{0x12cb,0x129c},2};
     case MillenniumDosExternalTransferKind::bdf_other_mode_jump:
-        return {kind,0x0c4e,0x0caa,0x0d67,0x0e53,0x0e28};
+        return {kind,0x0c4e,0x0caa,{0x0d67,0x0e53,0x0e28,0x0d3d},4};
     }
-    return {kind,0,0,std::nullopt,{}, {}};
+    return {kind,0,0,{},0};
 }
 
 class MillenniumDosExternalTransferAdmission {
@@ -76,18 +77,21 @@ public:
     [[nodiscard]] MillenniumDosExternalTransferResult observe_return(
         const MillenniumDosExternalTransferReturnObservation& observation) {
         if (!checkpoint_.entry || checkpoint_.returned
-            || !checkpoint_.contract.terminal_return_instruction
+            || checkpoint_.contract.terminal_return_count==0
             || observation.sequence<=checkpoint_.entry->sequence
-            || (observation.return_instruction!=*checkpoint_.contract.terminal_return_instruction
-                && observation.return_instruction!=checkpoint_.contract.alternate_terminal_return_instruction
-                && observation.return_instruction
-                    != checkpoint_.contract.second_alternate_terminal_return_instruction)
+            || !matches_terminal_return(observation.return_instruction)
             || observation.returned_to==0)
             return {false,"External transfer return does not match its entered contract"};
         checkpoint_.returned=observation; return {true,{}};
     }
     [[nodiscard]] MillenniumDosExternalTransferCheckpoint checkpoint() const { return checkpoint_; }
 private:
+    [[nodiscard]] bool matches_terminal_return(const std::uint16_t instruction) const {
+        for (std::size_t index=0;index<checkpoint_.contract.terminal_return_count;++index) {
+            if (checkpoint_.contract.terminal_return_instructions[index]==instruction) return true;
+        }
+        return false;
+    }
     MillenniumDosExternalTransferCheckpoint checkpoint_;
 };
 
