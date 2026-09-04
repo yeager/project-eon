@@ -4121,6 +4121,26 @@ current public launch path still cannot reach the preceding GX state until
 the driver/title handoff and genuine GX trace exist, so this code is not a
 claim that `$d39d` is presently reachable.
 
+The terminal scaled-dispatch boundary now has one narrower typed successor.
+`MILLENNIUM DOS TENTH-FUNCTION HANDLER` can be created only while the live
+loop is stopped at `$d40a → $76f1`, its recovered index is exactly `9`, and a
+separate observation binds that same call address, dispatcher address and
+index to handler entry `$7384`. The coordinator does not read the static
+table on the observer's behalf, auto-resolve an index, or infer that the call
+returned. The successor accepts only address-bound runtime-word,
+runtime-byte, call-return, zero-flag and BL observations already defined by
+`MillenniumDosTenthFunctionSession`; its checkpoint copies only state,
+boundary, loop counts and reconstructed byte effects.
+
+This successor also has no presentation, audio or input capability. Its
+span is constructed by the same exact-English-media admission that owns the
+post-overlay loop, and member/reset order destroys both borrowers before the
+verified backing bytes. Runtime-host source revocation rejects every typed
+observation and hides the checkpoint. Because the normal launch path still
+cannot genuinely reach the GX predecessor, no test or runtime code fabricates
+a positive active transition; exact-media tests independently cover the
+owned `$7384` session and wrong-state/revocation gates cover the public path.
+
 The complementary DX-nonzero successor is independently bounded before its
 first mouse boundary. The static target `$d44b` loads `AL=$08` and its short
 jump at `$d44d` lands at `$d41b`, deliberately skipping the adjacent `$d419`
@@ -5265,11 +5285,22 @@ local prefix executes, `DeuterosAmigaTitleExecBoundarySession` advances once
 to `awaiting_exec_base_read` and records `$40456` as its terminal program
 counter. It independently validates the complete 28-byte hard-ABI span and
 retains the calls at `$4045a/-$96` and `$40468/-$9c` as deferred requirements;
-the latter also retains the intervening literal `D0=$7fff0`. There is
-intentionally no method to supply address `$4`, acknowledge either call, or
-invent either return. Thus this typed continuation improves lifecycle and
-diagnostics while executing exactly zero instructions beyond the last value
-proved by the original bytes.
+the latter also retains the intervening literal `D0=$7fff0`. Without a
+separately admitted observation, the session cannot supply address `$4`,
+advance either call, or invent either return. Thus this typed continuation
+improves lifecycle and diagnostics while executing exactly zero instructions
+beyond the last value proved by the original bytes.
+
+The same boundary now has a narrow ingestion API for a future independently
+admitted genuine trace. Each value-only return must name source address `$4`,
+the exact next call PC/vector/return PC, and a strictly increasing trace
+sequence. The first accepted record advances only to the second Exec-base read
+at `$40464`; the second advances to `$4046c`, immediately before the unresolved
+`$1ed80` setup/library route. D0 and SR are retained verbatim without labels or
+side effects. Missing, duplicate, reversed or address-mismatched records leave
+the boundary incomplete. This API does not itself validate a capture, supply
+an Exec base, call either vector, interpret privilege state, or admit display,
+audio, input or gameplay behavior.
 
 The wider hard-ABI span `$40450..$4046b` is 28 bytes at ADF `+0x9b450`
 (SHA-256 `24f5fb4f5019bf450f8b6931fe1c77747461704b139bbe14ec079b1008af1f49`).

@@ -219,6 +219,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    millennium_dos_tenth_function_.reset();
     millennium_dos_gx_startup_.reset();
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
@@ -554,6 +555,94 @@ ReleaseRuntimeCoordinator::millennium_dos_post_overlay_loop_checkpoint() const {
         loop.state(), loop.boundary(), loop.completed_call_return_count(),
         loop.action_poll_count(), loop.observed_private_interrupt_ax(),
         loop.observed_action(), loop.function_key_index(), loop.runtime_effects()};
+}
+
+MillenniumDosTenthFunctionObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_tenth_function_dispatch(
+    const MillenniumDosTenthFunctionDispatchObservation observation) {
+    MillenniumDosTenthFunctionObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_post_overlay_loop
+        || !millennium_dos_post_overlay_loop_ || !millennium_dos_native_process_) {
+        result.error = "Tenth-function dispatch requires the active post-overlay loop";
+        return result;
+    }
+    const auto boundary = millennium_dos_post_overlay_loop_->boundary();
+    if (millennium_dos_post_overlay_loop_->state()
+            != MillenniumDosPostOverlayLoopState::dispatch_call_boundary
+        || boundary.kind != MillenniumDosPostOverlayLoopBoundaryKind::dispatch_call
+        || boundary.instruction_address != 0xd40a
+        || boundary.call_target != std::optional<std::uint16_t>{0x76f1}
+        || millennium_dos_post_overlay_loop_->function_key_index()
+            != std::optional<std::size_t>{9}
+        || observation.scaled_call_address != boundary.instruction_address
+        || observation.dispatcher_address != *boundary.call_target
+        || observation.function_key_index != *millennium_dos_post_overlay_loop_->function_key_index()
+        || observation.handler_address != 0x7384) {
+        result.error = "Tenth-function handler observation is detached from scaled dispatch index 9";
+        return result;
+    }
+    try {
+        millennium_dos_tenth_function_.emplace(
+            millennium_dos_native_process_->make_tenth_function_session());
+        session_snapshot_ = make_runtime_session_snapshot(
+            *active_, RuntimeSessionKind::millennium_dos_tenth_function);
+        result.accepted = true;
+    } catch (const std::exception& exception) {
+        result.error = std::string("Tenth-function dispatch rejected: ") + exception.what();
+    }
+    return result;
+}
+
+#define EON_TENTH_FORWARD(method_name, observation_type, call_expression, label) \
+MillenniumDosTenthFunctionObservationResult ReleaseRuntimeCoordinator::method_name( \
+    const observation_type observation) { \
+    MillenniumDosTenthFunctionObservationResult result; \
+    if (!session_snapshot_ \
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_tenth_function \
+        || !millennium_dos_tenth_function_) { \
+        result.error = label " requires the active tenth-function session"; \
+        return result; \
+    } \
+    try { \
+        millennium_dos_tenth_function_->call_expression; \
+        result.accepted = true; \
+    } catch (const std::exception& exception) { \
+        result.error = std::string(label " rejected: ") + exception.what(); \
+    } \
+    return result; \
+}
+
+EON_TENTH_FORWARD(observe_millennium_dos_tenth_function_word,
+    MillenniumDosTenthFunctionWordObservation,
+    observe_runtime_word(observation.instruction_address, observation.runtime_address,
+        observation.value), "Tenth-function word observation")
+EON_TENTH_FORWARD(observe_millennium_dos_tenth_function_byte,
+    MillenniumDosTenthFunctionByteObservation,
+    observe_runtime_byte(observation.instruction_address, observation.runtime_address,
+        observation.value), "Tenth-function byte observation")
+EON_TENTH_FORWARD(observe_millennium_dos_tenth_function_call_return,
+    MillenniumDosTenthFunctionCallReturnObservation,
+    observe_call_return(observation.call_address, observation.return_address),
+    "Tenth-function call return")
+EON_TENTH_FORWARD(observe_millennium_dos_tenth_function_zero_flag,
+    MillenniumDosTenthFunctionZeroFlagObservation,
+    observe_zero_flag(observation.branch_address, observation.set),
+    "Tenth-function zero flag")
+EON_TENTH_FORWARD(observe_millennium_dos_tenth_function_bl,
+    MillenniumDosTenthFunctionBlObservation,
+    observe_bl(observation.shift_address, observation.value),
+    "Tenth-function BL observation")
+#undef EON_TENTH_FORWARD
+
+std::optional<MillenniumDosTenthFunctionCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_tenth_function_checkpoint() const {
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_tenth_function
+        || !millennium_dos_tenth_function_) return std::nullopt;
+    const auto& session = *millennium_dos_tenth_function_;
+    return MillenniumDosTenthFunctionCheckpoint{session.state(), session.boundary(),
+        session.limit_loop_count(), session.wait_loop_count(), session.runtime_effects()};
 }
 
 RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(

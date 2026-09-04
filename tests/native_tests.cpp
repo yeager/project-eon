@@ -66,6 +66,7 @@
 #include "engine/millennium_dos_native_process_admission.hpp"
 #include "engine/millennium_dos_post_overlay_loop_session.hpp"
 #include "engine/millennium_dos_tenth_function_session.hpp"
+#include "engine/millennium_dos_seventh_function_session.hpp"
 #include "engine/millennium_dos_gx_startup_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -1035,6 +1036,8 @@ int main() {
             eon::NativeSessionState::millennium_dos_gx_startup_boundary},
         std::pair{eon::RuntimeSessionKind::millennium_dos_post_overlay_loop,
             eon::NativeSessionState::millennium_dos_post_overlay_loop},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_tenth_function,
+            eon::NativeSessionState::millennium_dos_tenth_function},
         std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
             eon::NativeSessionState::millennium_amiga_bootstrap},
         std::pair{eon::RuntimeSessionKind::millennium_atari_bootstrap,
@@ -1062,6 +1065,8 @@ int main() {
             eon::RuntimePresentationKind::millennium_dos_gx_startup_boundary},
         std::pair{eon::RuntimeSessionKind::millennium_dos_post_overlay_loop,
             eon::RuntimePresentationKind::millennium_dos_post_overlay_loop},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_tenth_function,
+            eon::RuntimePresentationKind::millennium_dos_tenth_function},
         std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
             eon::RuntimePresentationKind::millennium_amiga_bootstrap},
         std::pair{eon::RuntimeSessionKind::millennium_atari_bootstrap,
@@ -5780,6 +5785,12 @@ int main() {
                 == eon::MillenniumDosPostOverlayLoopState::awaiting_call_return
             && admitted_loop.observed_private_interrupt_ax()
                 == std::optional<std::uint16_t>{0x1234});
+        auto admitted_tenth = admitted.make_tenth_function_session();
+        assert(admitted_tenth.state()
+                == eon::MillenniumDosTenthFunctionState::awaiting_initialization_guard
+            && admitted_tenth.boundary().instruction_address == 0x7384
+            && admitted_tenth.boundary().runtime_address
+                == std::optional<std::uint16_t>{0xa19e});
         admitted.observe_private_interrupt_return(0x0129, 0);
         admitted.observe_runtime_byte(0xd349, 0xda05, 3);
         admitted.observe_native_call_return(0xd373, 0xd376);
@@ -5888,6 +5899,61 @@ int main() {
         bool rejected = false;
         try {
             static_cast<void>(eon::MillenniumDosTenthFunctionSession(altered_game));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        eon::MillenniumDosSeventhFunctionSession guarded(*game_executable);
+        guarded.observe_runtime_word(0x7521, 0xa19e, 1);
+        assert(guarded.returned() && guarded.returned_by_guard()
+            && guarded.runtime_effects().empty());
+
+        eon::MillenniumDosSeventhFunctionSession session(*game_executable);
+        std::vector<eon::MillenniumDosSeventhFunctionBoundary> calls;
+        while (!session.returned()) {
+            const auto boundary = session.boundary();
+            switch (boundary.kind) {
+            case eon::MillenniumDosSeventhFunctionBoundaryKind::runtime_word: {
+                std::uint16_t value = 0;
+                if (boundary.runtime_address == 0x05ca) value = 0x1111;
+                else if (boundary.runtime_address == 0xda18) value = 0x2222;
+                else if (boundary.runtime_address == 0xda27) value = 0x3333;
+                else if (boundary.runtime_address == 0xda35) value = 0x4444;
+                else if (boundary.runtime_address == 0xda37) value = 0xabcd;
+                session.observe_runtime_word(
+                    boundary.instruction_address, *boundary.runtime_address, value);
+                break;
+            }
+            case eon::MillenniumDosSeventhFunctionBoundaryKind::runtime_byte:
+                session.observe_runtime_byte(boundary.instruction_address,
+                    *boundary.runtime_address,
+                    boundary.runtime_address == 0xda17 ? 2 : 3);
+                break;
+            case eon::MillenniumDosSeventhFunctionBoundaryKind::call_return:
+                calls.push_back(boundary);
+                session.observe_call_return(boundary.instruction_address,
+                    static_cast<std::uint16_t>(boundary.instruction_address + 3U));
+                break;
+            case eon::MillenniumDosSeventhFunctionBoundaryKind::returned_register_bx:
+                session.observe_returned_bx(boundary.instruction_address, 0x5555);
+                break;
+            case eon::MillenniumDosSeventhFunctionBoundaryKind::local_return:
+                assert(false);
+            }
+        }
+        assert(calls.size() == 18 && calls[3].known_ax == 0x01a4
+            && calls[3].known_bx == 0x1111 && calls[14].known_ax == 0x00ab);
+        assert((session.runtime_effects()
+            == std::vector<eon::MillenniumDosSeventhFunctionWordEffect>{
+                {0x05ca, 0x1111, 0x5555}}));
+
+        auto altered_game = *game_executable;
+        altered_game[0x7521 - 0x100] ^= 1;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::MillenniumDosSeventhFunctionSession(altered_game));
         } catch (const std::runtime_error&) {
             rejected = true;
         }
@@ -6041,6 +6107,9 @@ int main() {
             {0xd3ba, 0}).accepted);
         assert(!active_trace_gate.observe_millennium_dos_post_overlay_runtime_byte(
             {0xd3be, 0x07f9, 0}).accepted);
+        assert(!active_trace_gate.observe_millennium_dos_tenth_function_dispatch(
+            {0xd40a, 0x76f1, 9, 0x7384}).accepted);
+        assert(!active_trace_gate.millennium_dos_tenth_function_checkpoint());
         eon::RuntimeHost revoking_trace_host;
         assert(revoking_trace_host.launch_direct(controlled_dos_request, releases).accepted());
         revoking_trace_host.begin_source_revocation();
@@ -6053,6 +6122,11 @@ int main() {
         assert(!revoking_trace_host.observe_millennium_dos_post_overlay_private_interrupt_return(
             {0x0129, 0}).accepted);
         assert(!revoking_trace_host.millennium_dos_post_overlay_loop_checkpoint());
+        assert(!revoking_trace_host.observe_millennium_dos_tenth_function_dispatch(
+            {0xd40a, 0x76f1, 9, 0x7384}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_tenth_function_word(
+            {0x7384, 0xa19e, 0}).accepted);
+        assert(!revoking_trace_host.millennium_dos_tenth_function_checkpoint());
         revoking_trace_host.finish_source_revocation();
         assert(revoking_trace_host.is_menu());
         {
@@ -9450,6 +9524,48 @@ int main() {
         && title_exec_boundary.deferred_calls[1].vector == -0x9c
         && title_exec_boundary.deferred_calls[1].return_address == 0x4046c
         && title_exec_boundary.deferred_calls[1].preceding_d0_literal == 0x7fff0);
+    // Grammar-only return values exercise ordering and value retention. They
+    // are not a capture fixture, an Exec implementation, or title state.
+    bool rejected_out_of_order_exec_return = false;
+    try {
+        static_cast<void>(title_stage_session.observe_exec_return({
+            1, 4, 0x40468, -0x9c, 0x4046c, 0, 0x2000}));
+    } catch (const std::runtime_error&) {
+        rejected_out_of_order_exec_return = true;
+    }
+    assert(rejected_out_of_order_exec_return);
+    assert(title_stage_session.exec_boundary().state
+        == eon::DeuterosAmigaTitleExecBoundaryState::awaiting_exec_base_read);
+    const auto first_exec_return = title_stage_session.observe_exec_return({
+        10, 4, 0x4045a, -0x96, 0x4045e, 0, 0x2000});
+    assert(first_exec_return
+        && first_exec_return->state
+            == eon::DeuterosAmigaTitleExecBoundaryState::awaiting_second_exec_return
+        && first_exec_return->stop_before_address == 0x40464
+        && first_exec_return->observed_returns[0]
+        && first_exec_return->observed_returns[0]->trace_sequence == 10
+        && first_exec_return->observed_returns[0]->result_d0 == 0
+        && first_exec_return->observed_returns[0]->result_sr == 0x2000
+        && !first_exec_return->observed_returns[1]);
+    bool rejected_reordered_exec_return = false;
+    try {
+        static_cast<void>(title_stage_session.observe_exec_return({
+            9, 4, 0x40468, -0x9c, 0x4046c, 0, 0x2000}));
+    } catch (const std::runtime_error&) {
+        rejected_reordered_exec_return = true;
+    }
+    assert(rejected_reordered_exec_return);
+    const auto second_exec_return = title_stage_session.observe_exec_return({
+        11, 4, 0x40468, -0x9c, 0x4046c, 0, 0x2000});
+    assert(second_exec_return
+        && second_exec_return->state
+            == eon::DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary
+        && second_exec_return->stop_before_address == 0x4046c
+        && second_exec_return->observed_returns[1]
+        && second_exec_return->observed_returns[1]->trace_sequence == 11
+        && second_exec_return->observed_returns[1]->result_sr == 0x2000);
+    assert(!title_stage_session.observe_exec_return({
+        12, 4, 0x40468, -0x9c, 0x4046c, 0, 0x2000}));
     assert(!title_stage_session.execute_local_prefix());
     {
         eon::DeuterosAmigaTitleExecBoundarySession wrong_stack_boundary(

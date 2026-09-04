@@ -96,6 +96,22 @@ LauncherRuntimeController::millennium_dos_post_overlay_loop_checkpoint() const {
     return coordinator_.millennium_dos_post_overlay_loop_checkpoint();
 }
 
+#define EON_LAUNCHER_TENTH_PROXY(name, type) \
+MillenniumDosTenthFunctionObservationResult LauncherRuntimeController::name( \
+    const type observation) { return coordinator_.name(observation); }
+EON_LAUNCHER_TENTH_PROXY(observe_millennium_dos_tenth_function_dispatch, MillenniumDosTenthFunctionDispatchObservation)
+EON_LAUNCHER_TENTH_PROXY(observe_millennium_dos_tenth_function_word, MillenniumDosTenthFunctionWordObservation)
+EON_LAUNCHER_TENTH_PROXY(observe_millennium_dos_tenth_function_byte, MillenniumDosTenthFunctionByteObservation)
+EON_LAUNCHER_TENTH_PROXY(observe_millennium_dos_tenth_function_call_return, MillenniumDosTenthFunctionCallReturnObservation)
+EON_LAUNCHER_TENTH_PROXY(observe_millennium_dos_tenth_function_zero_flag, MillenniumDosTenthFunctionZeroFlagObservation)
+EON_LAUNCHER_TENTH_PROXY(observe_millennium_dos_tenth_function_bl, MillenniumDosTenthFunctionBlObservation)
+#undef EON_LAUNCHER_TENTH_PROXY
+
+std::optional<MillenniumDosTenthFunctionCheckpoint>
+LauncherRuntimeController::millennium_dos_tenth_function_checkpoint() const {
+    return coordinator_.millennium_dos_tenth_function_checkpoint();
+}
+
 std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
     return coordinator_.tick_deuteros_amiga_opening();
 }

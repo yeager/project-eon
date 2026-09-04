@@ -72,6 +72,11 @@ public:
     [[nodiscard]] const DeuterosAmigaTitleExecBoundaryCheckpoint& exec_boundary() const noexcept {
         return exec_boundary_session_.checkpoint();
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint>
+    observe_exec_return(const DeuterosAmigaObservedExecReturn& observation) {
+        if (!local_prefix_executed_) return std::nullopt;
+        return exec_boundary_session_.observe_exec_return(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

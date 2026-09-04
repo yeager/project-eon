@@ -79,4 +79,42 @@ DeuterosAmigaTitleExecBoundarySession::enter_after_local_prefix(
     return checkpoint_;
 }
 
+std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint>
+DeuterosAmigaTitleExecBoundarySession::observe_exec_return(
+    const DeuterosAmigaObservedExecReturn& observation) {
+    std::size_t index = 0;
+    if (checkpoint_.state == DeuterosAmigaTitleExecBoundaryState::awaiting_exec_base_read) {
+        index = 0;
+    } else if (checkpoint_.state
+        == DeuterosAmigaTitleExecBoundaryState::awaiting_second_exec_return) {
+        index = 1;
+    } else {
+        return std::nullopt;
+    }
+    const auto& expected = checkpoint_.deferred_calls[index];
+    if (observation.trace_sequence == 0
+        || (index != 0 && (!checkpoint_.observed_returns[0]
+            || observation.trace_sequence
+                <= checkpoint_.observed_returns[0]->trace_sequence))
+        || observation.exec_base_source_address != expected.exec_base_source_address
+        || observation.call_address != expected.call_address
+        || observation.vector != expected.vector
+        || observation.return_address != expected.return_address) {
+        throw std::runtime_error("Deuteros title Exec return does not match the next boundary");
+    }
+    checkpoint_.observed_returns[index] = observation;
+    if (index == 0) {
+        // The intervening MOVE.L literal is wholly local, but the second
+        // Exec-base read/call still requires its own genuine observation.
+        checkpoint_.stop_before_address = expected.return_address + 6U;
+        checkpoint_.state =
+            DeuterosAmigaTitleExecBoundaryState::awaiting_second_exec_return;
+    } else {
+        checkpoint_.stop_before_address = expected.return_address;
+        checkpoint_.state =
+            DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary;
+    }
+    return checkpoint_;
+}
+
 } // namespace eon
