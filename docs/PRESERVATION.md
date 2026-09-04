@@ -5670,6 +5670,17 @@ follows BSR `$20212` back to `$20118`. The repeated first read from `$1ffc8`
 is the next genuine runtime boundary; Eon does not reuse the previous value,
 choose a new branch, or infer any graphics result.
 
+That repeated `$20118` entry is now a distinct lifecycle step. It requires a
+fresh observation of the same eight addressed words and re-evaluates both
+selection blocks; no result from the first pass is silently reused. A fresh
+same-library return is then required for its `-$1aa` call at `$201b6`. The
+exact local return restores registers, executes RTS, and resumes at `$20216`,
+whose BSR enters the separately hash-locked wrapper `$200dc`. The wrapper
+again supplies A0 `$12e12`, A1 `$1ffda`, pointer cell `$2008e`, and library
+base cell `$12fec`, then reaches `-$1a4` at `$200f4`. The session stops there:
+the repeated call has its own return observation and cannot borrow the earlier
+`$200f4` result.
+
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
 `b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its
@@ -5971,7 +5982,13 @@ For the nonzero branch, `$1203` explicitly observes the same segment cell and
 the runtime then accepts exactly 64 `DS:SI` word observations at `$1218`.
 Their segment, offset and value are retained, while the instruction-defined
 copies are recorded consecutively at `CS:$07fa..$0879`. Source offsets use the
-same four-word rows and plane/wrap calculation as the zero path. The state
-stops at `$1237`, before the `$1245..$1296` read/modify/write loop; that loop's
-masking effects remain unowned. No framebuffer, plane, pixel, or display
-meaning is inferred from these addresses.
+same four-word rows and plane/wrap calculation as the zero path. At `$123a`
+the runtime explicitly observes `CS:$07da` and retains only its instruction-
+defined low bit. For each of 16 rows, `$1251` and `$1256` observe the words at
+`CS:$0982+2*row` and `CS:$0962+2*row`; their byte swaps and the conditional
+single-bit rotates are reproduced exactly. Eight explicit `ES:DI` byte reads
+per row are then transformed only by the four proven shift/carry mask steps at
+`$1266..$127c`, and their `$127e` writes are retained as typed byte effects.
+`DI` advances eight bytes and applies the same plane/wrap calculation before
+the next row. The state ends at the proven RET `$129c`. No framebuffer, plane,
+pixel, colour, or display meaning is inferred from these addresses.

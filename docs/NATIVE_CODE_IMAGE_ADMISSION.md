@@ -34,3 +34,10 @@ constructs the existing adapter. These changes do not alter presentation or
 execution. Adapters that require a complete mutable parsing context retain
 their prior private disk ownership; the admitted views are temporary
 provenance gates and never outlive `VerifiedReleaseMedia`.
+
+`native-code-image-exclusions.json` closes the registry audit: every complete
+manifest image must occur either in the compiled descriptor registry or in
+that explicit exclusion ledger, never neither or both. Current exclusions
+are extracted Atari and Spanish DOS members whose parser candidate remains a
+whole-disk container. Their listings remain preservation evidence, but no
+exact same-leaf parser range exists for runtime admission.
