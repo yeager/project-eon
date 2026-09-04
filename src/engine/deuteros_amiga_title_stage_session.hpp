@@ -383,6 +383,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedCallerPointerPlan> observe_post_adjusted_caller_pointer(const DeuterosAmigaObservedTitlePostAdjustedCallerPointer& o) { return service_batch_boundary_session_.observe_post_adjusted_caller_pointer(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedObjectGatePlan> observe_post_adjusted_object_gate(const DeuterosAmigaObservedTitlePostAdjustedObjectGate& o) { return service_batch_boundary_session_.observe_post_adjusted_object_gate(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan> observe_post_adjusted_first_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_first_helper_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan> observe_post_adjusted_second_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_second_helper_return(o); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

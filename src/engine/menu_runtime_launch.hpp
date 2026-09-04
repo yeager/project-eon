@@ -245,6 +245,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_caller_pointer(DeuterosAmigaObservedTitlePostAdjustedCallerPointer);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_object_gate(DeuterosAmigaObservedTitlePostAdjustedObjectGate);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_first_helper_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_second_helper_return(DeuterosAmigaObservedLocalCallReturn);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -303,6 +304,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_extended_run(MillenniumAtariGameInitExtendedRunObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_return();
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_palette_copy_prefix();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_words(MillenniumAtariGameInitPaletteWordsObservation);
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return coordinator_.active(); }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return coordinator_.admission(); }
     [[nodiscard]] ReleaseRuntimeRejection rejection() const { return coordinator_.rejection(); }

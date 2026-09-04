@@ -1051,6 +1051,11 @@ struct DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan {
     std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
     std::string continuation_sha256;
 };
+struct DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t local_rts_address=0,stop_before_address=0;
+    std::string call_and_rts_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2873,6 +2878,16 @@ public:
             0x20cb2,0x41ad2,0x20cb8,
             "405d4903b7cc8571505f6ed5c89f6f2a7d5fc9ed28d249f73d314932a8758db8"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan>
+    observe_post_adjusted_second_helper_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!post_adjusted_first_helper_return_||post_adjusted_second_helper_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x20cb2
+            ||o.call_target!=0x41ad2||o.return_address!=0x20cb8)
+            throw std::runtime_error("Deuteros post-adjusted second helper return does not match boundary");
+        post_adjusted_second_helper_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan{o,0x20cb8,0x20cb8,
+            "889c758fbfd514bc3633787bc2736b39a95aa712af79d4dc8f119eee6bbb65ab"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3079,6 +3094,7 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostAdjustedCallerPointer> post_adjusted_caller_pointer_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedObjectGate> post_adjusted_object_gate_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_first_helper_return_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_second_helper_return_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

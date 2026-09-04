@@ -452,3 +452,12 @@ span `8b 44 18` hashes to
 It loads AX and advances directly to the next external word at `$13d0`,
 source `$5050:$0019`. No runtime-memory value is inferred or copied back into
 original media.
+
+The `$5050:$0019` word is likewise an ordered raw observation. Exact bytes
+`$13d0..$13e1` (SHA-256
+`787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
+store it and the preceding `$5050:$001b` word at `CS:$1357/$1359`, perform
+the original unsigned 16-by-16 multiplication, and atomically store the low
+product word at `CS:$133b`. AX and DX retain the low and high product words.
+Execution stops before `$13e2` reads the next raw word at `$5050:$0017`.
+Names such as width or height are not asserted by this evidence.
