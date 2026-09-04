@@ -4099,6 +4099,28 @@ executable, raw span and wrapped CALL targets. It does not supply AL or the
 guard byte, select a table item, dereference native state, assume any branch
 or call return, or attach an action to a host effect.
 
+`MillenniumDosPostOverlayLoopSession` manually recompiles only these two
+hash-locked spans. The active release coordinator may construct it solely
+from `MILLENNIUM DOS GX STARTUP BOUNDARY`, after receiving an explicit return
+observation for that boundary's second `INT 91h` at `$0129`. Its selected mode
+byte is the separately recorded `$d388` observation retained by the admitted
+GX trace; AX is retained only in the new return observation and is not given
+host meaning. The loop then accepts address-bound call returns, AL values at
+the exact encoded tests, and runtime bytes at the exact encoded loads. It
+publishes a copy-only checkpoint containing its current typed boundary,
+counts, observed action byte, optional table index, and deterministic local
+byte effects.
+
+This successor is the no-capability runtime state `MILLENNIUM DOS
+POST-OVERLAY LOOP`. It has no SDL input mapping, renderer, audio, device ABI,
+handler execution, or automatic advancement. Wrong-state, wrong-address, and
+out-of-order observations fail without creating the successor. Its span is
+backed by the coordinator-owned, hash-verified English executable admission;
+the loop is destroyed before that owner on reset or source revocation. The
+current public launch path still cannot reach the preceding GX state until
+the driver/title handoff and genuine GX trace exist, so this code is not a
+claim that `$d39d` is presently reachable.
+
 The complementary DX-nonzero successor is independently bounded before its
 first mouse boundary. The static target `$d44b` loads `AL=$08` and its short
 jump at `$d44d` lands at `$d41b`, deliberately skipping the adjacent `$d419`
@@ -5237,6 +5259,17 @@ at `$40450` (ADF `+$9b450`, six bytes, SHA-256
 allocate stack memory, invoke Exec, or cross into graphics/custom hardware.
 The following 16-byte Exec boundary hash is
 `f0c847a4d443e26fc08f6c6864afeca3b33da514f8708f76f2f05314a4c88067`.
+
+That stop is now engine-owned rather than implied by a boolean. After the
+local prefix executes, `DeuterosAmigaTitleExecBoundarySession` advances once
+to `awaiting_exec_base_read` and records `$40456` as its terminal program
+counter. It independently validates the complete 28-byte hard-ABI span and
+retains the calls at `$4045a/-$96` and `$40468/-$9c` as deferred requirements;
+the latter also retains the intervening literal `D0=$7fff0`. There is
+intentionally no method to supply address `$4`, acknowledge either call, or
+invent either return. Thus this typed continuation improves lifecycle and
+diagnostics while executing exactly zero instructions beyond the last value
+proved by the original bytes.
 
 The wider hard-ABI span `$40450..$4046b` is 28 bytes at ADF `+0x9b450`
 (SHA-256 `24f5fb4f5019bf450f8b6931fe1c77747461704b139bbe14ec079b1008af1f49`).

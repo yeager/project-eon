@@ -14,6 +14,8 @@ std::string_view native_session_state_label(const NativeSessionState state) {
         return "MILLENNIUM DOS TITLE HANDOFF BOUNDARY";
     case NativeSessionState::millennium_dos_gx_startup_boundary:
         return "MILLENNIUM DOS GX STARTUP BOUNDARY";
+    case NativeSessionState::millennium_dos_post_overlay_loop:
+        return "MILLENNIUM DOS POST-OVERLAY LOOP";
     case NativeSessionState::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
     case NativeSessionState::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case NativeSessionState::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
@@ -42,6 +44,8 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
         return NativeSessionState::millennium_dos_title_handoff_boundary;
     case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
         return NativeSessionState::millennium_dos_gx_startup_boundary;
+    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
+        return NativeSessionState::millennium_dos_post_overlay_loop;
     case RuntimeSessionKind::millennium_amiga_bootstrap: return NativeSessionState::millennium_amiga_bootstrap;
     case RuntimeSessionKind::millennium_atari_bootstrap: return NativeSessionState::millennium_atari_bootstrap;
     case RuntimeSessionKind::deuteros_amiga_opening: return NativeSessionState::deuteros_amiga_opening;
@@ -131,6 +135,51 @@ std::optional<MillenniumDosGxStartupCheckpoint>
 NativeSessionController::millennium_dos_gx_startup_checkpoint() const {
     if (state_ != NativeSessionState::millennium_dos_gx_startup_boundary) return std::nullopt;
     return runtime_.millennium_dos_gx_startup_checkpoint();
+}
+
+MillenniumDosPostOverlayObservationResult
+NativeSessionController::observe_millennium_dos_post_overlay_private_interrupt_return(
+    const MillenniumDosPostOverlayPrivateInterruptReturnObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_gx_startup_boundary) {
+        return {false, "Post-overlay INT 91h return requires the GX startup boundary"};
+    }
+    const auto result = runtime_.observe_millennium_dos_post_overlay_private_interrupt_return(
+        observation);
+    synchronize_after_runtime_change();
+    return result;
+}
+
+MillenniumDosPostOverlayObservationResult
+NativeSessionController::observe_millennium_dos_post_overlay_call_return(
+    const MillenniumDosPostOverlayCallReturnObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_post_overlay_loop) {
+        return {false, "Call return requires the post-overlay loop"};
+    }
+    return runtime_.observe_millennium_dos_post_overlay_call_return(observation);
+}
+
+MillenniumDosPostOverlayObservationResult
+NativeSessionController::observe_millennium_dos_post_overlay_al(
+    const MillenniumDosPostOverlayAlObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_post_overlay_loop) {
+        return {false, "AL observation requires the post-overlay loop"};
+    }
+    return runtime_.observe_millennium_dos_post_overlay_al(observation);
+}
+
+MillenniumDosPostOverlayObservationResult
+NativeSessionController::observe_millennium_dos_post_overlay_runtime_byte(
+    const MillenniumDosPostOverlayRuntimeByteObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_post_overlay_loop) {
+        return {false, "Runtime-byte observation requires the post-overlay loop"};
+    }
+    return runtime_.observe_millennium_dos_post_overlay_runtime_byte(observation);
+}
+
+std::optional<MillenniumDosPostOverlayLoopCheckpoint>
+NativeSessionController::millennium_dos_post_overlay_loop_checkpoint() const {
+    if (state_ != NativeSessionState::millennium_dos_post_overlay_loop) return std::nullopt;
+    return runtime_.millennium_dos_post_overlay_loop_checkpoint();
 }
 
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {

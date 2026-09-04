@@ -62,6 +62,9 @@ public:
         return completed_call_return_count_;
     }
     [[nodiscard]] std::size_t action_poll_count() const { return action_poll_count_; }
+    [[nodiscard]] std::optional<std::uint16_t> observed_private_interrupt_ax() const {
+        return observed_private_interrupt_ax_;
+    }
     [[nodiscard]] std::optional<std::uint8_t> observed_action() const {
         return observed_action_;
     }
@@ -92,6 +95,7 @@ private:
     std::size_t call_ordinal_ = 0;
     std::size_t completed_call_return_count_ = 0;
     std::size_t action_poll_count_ = 0;
+    std::optional<std::uint16_t> observed_private_interrupt_ax_;
     std::optional<std::uint8_t> observed_action_;
     std::optional<std::size_t> function_key_index_;
     std::optional<std::uint16_t> dispatch_call_address_;

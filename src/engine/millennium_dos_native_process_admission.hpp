@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/millennium_dos_native_process.hpp"
+#include "engine/millennium_dos_post_overlay_loop_session.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -59,6 +60,10 @@ public:
     [[nodiscard]] bool admitted() const { return process_ != nullptr && error_.empty(); }
     [[nodiscard]] const std::string& error() const { return error_; }
     [[nodiscard]] std::optional<MillenniumDosNativeProcessCheckpoint> checkpoint() const;
+    // Constructs a span-based continuation whose lifetime must remain nested
+    // within this admission. The exact backing bytes never cross the API.
+    [[nodiscard]] MillenniumDosPostOverlayLoopSession make_post_overlay_loop_session(
+        std::uint8_t selected_mode_byte) const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
     void observe_runtime_byte(std::uint16_t instruction_address,

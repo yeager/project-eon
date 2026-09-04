@@ -77,6 +77,40 @@ RuntimeHost::millennium_dos_gx_startup_checkpoint() const {
     return NativeSessionController::millennium_dos_gx_startup_checkpoint();
 }
 
+MillenniumDosPostOverlayObservationResult
+RuntimeHost::observe_millennium_dos_post_overlay_private_interrupt_return(
+    const MillenniumDosPostOverlayPrivateInterruptReturnObservation observation) {
+    if (revoking()) return {false, "Post-overlay observation rejected during source revocation"};
+    return NativeSessionController::observe_millennium_dos_post_overlay_private_interrupt_return(
+        observation);
+}
+
+MillenniumDosPostOverlayObservationResult
+RuntimeHost::observe_millennium_dos_post_overlay_call_return(
+    const MillenniumDosPostOverlayCallReturnObservation observation) {
+    if (revoking()) return {false, "Post-overlay observation rejected during source revocation"};
+    return NativeSessionController::observe_millennium_dos_post_overlay_call_return(observation);
+}
+
+MillenniumDosPostOverlayObservationResult RuntimeHost::observe_millennium_dos_post_overlay_al(
+    const MillenniumDosPostOverlayAlObservation observation) {
+    if (revoking()) return {false, "Post-overlay observation rejected during source revocation"};
+    return NativeSessionController::observe_millennium_dos_post_overlay_al(observation);
+}
+
+MillenniumDosPostOverlayObservationResult
+RuntimeHost::observe_millennium_dos_post_overlay_runtime_byte(
+    const MillenniumDosPostOverlayRuntimeByteObservation observation) {
+    if (revoking()) return {false, "Post-overlay observation rejected during source revocation"};
+    return NativeSessionController::observe_millennium_dos_post_overlay_runtime_byte(observation);
+}
+
+std::optional<MillenniumDosPostOverlayLoopCheckpoint>
+RuntimeHost::millennium_dos_post_overlay_loop_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_post_overlay_loop_checkpoint();
+}
+
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {
     if (revoking()) return std::nullopt;

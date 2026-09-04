@@ -58,6 +58,19 @@ public:
     admit_active_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace);
     [[nodiscard]] std::optional<MillenniumDosGxStartupCheckpoint>
     millennium_dos_gx_startup_checkpoint() const;
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_private_interrupt_return(
+        MillenniumDosPostOverlayPrivateInterruptReturnObservation observation);
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_call_return(
+        MillenniumDosPostOverlayCallReturnObservation observation);
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_al(MillenniumDosPostOverlayAlObservation observation);
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_runtime_byte(
+        MillenniumDosPostOverlayRuntimeByteObservation observation);
+    [[nodiscard]] std::optional<MillenniumDosPostOverlayLoopCheckpoint>
+    millennium_dos_post_overlay_loop_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);

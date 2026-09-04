@@ -10,7 +10,14 @@ namespace eon {
 DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t incoming_profile)
-    : disk_(&disk), stage_(plan.title_stage), profile_(parse_deuteros_amiga_title_stage(disk, plan)) {
+    : disk_(&disk), stage_(plan.title_stage), profile_(parse_deuteros_amiga_title_stage(disk, plan)),
+      entry_prefix_(execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile)),
+      entry_prefix_state_(materialize_deuteros_amiga_title_entry_prefix_state(
+          disk, plan, incoming_profile)),
+      exec_prelude_(execute_deuteros_amiga_title_exec_prelude(disk, plan, incoming_profile)),
+      graphics_setup_(parse_deuteros_amiga_title_graphics_setup_profile(disk, plan)),
+      display_clear_(parse_deuteros_amiga_title_display_clear_profile(disk, plan)),
+      exec_boundary_session_(disk, plan, exec_prelude_, profile_) {
     if (stage_.length == 0 || stage_.disk_offset > AmigaAdf::standard_size
         || stage_.length > AmigaAdf::standard_size - stage_.disk_offset
         || stage_.entry_address < stage_.destination
@@ -25,16 +32,10 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     }
     // Keep the caller-proven bootstrap profile joined to the exact loaded
     // stage. The helper models only local writes and stops before Exec.
-    entry_prefix_ = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
-    entry_prefix_state_ = materialize_deuteros_amiga_title_entry_prefix_state(
-        disk, plan, incoming_profile);
-    exec_prelude_ = execute_deuteros_amiga_title_exec_prelude(disk, plan, incoming_profile);
     // Validate the two immediately following caller-connected local helpers
     // as part of admitting this live title-stage boundary.  They describe
     // original bytes and operands only: neither helper is executed and no
     // display memory is allocated from their externally supplied pointer.
-    graphics_setup_ = parse_deuteros_amiga_title_graphics_setup_profile(disk, plan);
-    display_clear_ = parse_deuteros_amiga_title_display_clear_profile(disk, plan);
     if (entry_prefix_state_.incoming_profile != entry_prefix_.incoming_profile
         || entry_prefix_state_.stop_before_exec_address != entry_prefix_.stop_before_exec_address
         || entry_prefix_state_.writes[0].address != entry_prefix_.mode_word_address
@@ -120,6 +121,13 @@ std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
 DeuterosAmigaTitleStageSession::execute_local_prefix() {
     if (local_prefix_executed_) return std::nullopt;
     local_prefix_executed_ = true;
+    const auto exec_boundary = exec_boundary_session_.enter_after_local_prefix(
+        exec_prelude_.stack_pointer_value);
+    if (!exec_boundary
+        || exec_boundary->state
+            != DeuterosAmigaTitleExecBoundaryState::awaiting_exec_base_read) {
+        throw std::runtime_error("Deuteros title Exec boundary did not advance");
+    }
     return LocalPrefixAdvance{entry_prefix_state_.writes, exec_prelude_.stack_pointer_value,
         exec_prelude_.stop_before_exec_base_read_address};
 }
