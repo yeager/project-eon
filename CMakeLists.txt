@@ -145,6 +145,7 @@ add_executable(project-eon
     src/engine/millennium_dos_second_function_session.cpp
     src/engine/millennium_dos_second_function_callback_session.cpp
     src/engine/millennium_dos_bdf_service_session.cpp
+    src/engine/millennium_dos_bdf_mode_two_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp
@@ -198,6 +199,7 @@ add_executable(project-eon
     src/data/recovery_map.cpp
     src/data/runtime_diagnostics.cpp
     src/data/release_manifest.cpp
+    src/data/native_code_image_admission.cpp
     src/data/static_control_flow.cpp
     src/data/startup_boundary.cpp
     src/data/sha256.cpp

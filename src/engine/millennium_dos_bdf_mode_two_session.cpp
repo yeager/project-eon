@@ -1,0 +1,10 @@
+#include "engine/millennium_dos_bdf_mode_two_session.hpp"
+#include "data/sha256.hpp"
+#include <stdexcept>
+namespace eon{
+MillenniumDosBdfModeTwoSession::MillenniumDosBdfModeTwoSession(std::span<const std::uint8_t>b,std::uint16_t entry_di):di_(entry_di){if(to_hex(sha256(b))!="427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57")throw std::runtime_error("Unsupported Millennium DOS $11f7 profile");}
+std::uint16_t MillenniumDosBdfModeTwoSession::next_plane(std::uint16_t v){v=std::uint16_t(v+0x2000);return(v&0x8000)?std::uint16_t((v&0x7fff)+0x00a0):v;}
+MillenniumDosBdfModeTwoBoundary MillenniumDosBdfModeTwoSession::boundary()const{switch(state_){case MillenniumDosBdfModeTwoState::awaiting_toggle:return{0x11f7,0x07d8};case MillenniumDosBdfModeTwoState::awaiting_segment:return{0x129d,0x0107};case MillenniumDosBdfModeTwoState::awaiting_source_word:return{0x12af,source_};case MillenniumDosBdfModeTwoState::nonzero_boundary:return{0x1203,di_};case MillenniumDosBdfModeTwoState::returned:return{0x12cb,0};}throw std::runtime_error("Invalid $11f7 state");}
+void MillenniumDosBdfModeTwoSession::observe_runtime_byte(std::uint16_t i,std::uint16_t a,std::uint8_t v){if(state_!=MillenniumDosBdfModeTwoState::awaiting_toggle||i!=0x11f7||a!=0x07d8)throw std::runtime_error("Detached $11f7 byte");state_=v?MillenniumDosBdfModeTwoState::nonzero_boundary:MillenniumDosBdfModeTwoState::awaiting_segment;}
+void MillenniumDosBdfModeTwoSession::observe_runtime_word(std::uint16_t i,std::uint16_t a,std::uint16_t v){if(state_==MillenniumDosBdfModeTwoState::awaiting_segment){if(i!=0x129d||a!=0x0107)throw std::runtime_error("Detached $11f7 segment");segment_=v;state_=MillenniumDosBdfModeTwoState::awaiting_source_word;return;}if(state_!=MillenniumDosBdfModeTwoState::awaiting_source_word||i!=0x12af||a!=source_)throw std::runtime_error("Detached $11f7 source word");effects_.push_back({0x12af,segment_,di_,v});source_=std::uint16_t(source_+2);di_=std::uint16_t(di_+2);if(++word_==4){word_=0;di_=next_plane(std::uint16_t(di_-8));if(++row_==16)state_=MillenniumDosBdfModeTwoState::returned;}}
+}
