@@ -1,6 +1,5 @@
 import hashlib
 from pathlib import Path
-import tempfile
 import unittest
 from types import SimpleNamespace
 from zipfile import ZIP_STORED, ZipFile
@@ -10,6 +9,7 @@ from tools.analyze_dos import (disassemble_linear, parse_member_hashes,
                                require_external_output as require_dos_external_output)
 from tools.analyze_m68k import read_source, render_instructions, require_external_output
 from tools.reproduce_disassembly_reports import ReproductionError, require_output_directory
+from eon_test_paths import temporary_directory
 
 
 class CompleteLinearDisassemblyTests(unittest.TestCase):
@@ -29,9 +29,7 @@ class CompleteLinearDisassemblyTests(unittest.TestCase):
         )
 
     def test_m68k_direct_zip_source_requires_all_declared_hashes(self):
-        cache = Path("/home/yeager/.cache/project-eon-tools/tests")
-        cache.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(dir=cache) as temporary:
+        with temporary_directory() as temporary:
             archive = Path(temporary) / "clean.zip"
             adf = b"\0" * 32
             with ZipFile(archive, "w", compression=ZIP_STORED) as output:
@@ -73,9 +71,7 @@ class CompleteLinearDisassemblyTests(unittest.TestCase):
             require_dos_external_output(Path("/tmp/project-eon-dos-report.md"))
 
     def test_direct_member_read_rehashes_the_opened_regular_file_and_rejects_symlinks(self):
-        cache = Path("/home/yeager/.cache/project-eon-tools/tests")
-        cache.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(dir=cache) as temporary:
+        with temporary_directory() as temporary:
             root = Path(temporary)
             payload = b"original-direct-media"
             regular = root / "MILL.COM"
@@ -95,9 +91,7 @@ class CompleteLinearDisassemblyTests(unittest.TestCase):
             require_output_directory(root)
         with self.assertRaises(ReproductionError):
             require_output_directory(Path("/tmp"))
-        cache = Path("/home/yeager/.cache/project-eon-tools/tests")
-        cache.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(dir=cache) as temporary:
+        with temporary_directory() as temporary:
             output = Path(temporary) / "reports"
             output.mkdir()
             self.assertEqual(require_output_directory(output), output.resolve())

@@ -46,8 +46,8 @@ void rejects(Function&& function) {
 
 int main(const int argc, const char* const argv[]) {
     if (argc == 2 && std::string_view(argv[1]) == "--stdin-exact-disk") {
-        const std::vector<std::uint8_t> disk_bytes(
-            std::istreambuf_iterator<char>(std::cin), std::istreambuf_iterator<char>());
+        const std::vector<std::uint8_t> disk_bytes{
+            std::istreambuf_iterator<char>(std::cin), std::istreambuf_iterator<char>()};
         assert(eon::to_hex(eon::sha256(disk_bytes))
             == "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7");
         const eon::Fat12Disk disk(disk_bytes);
