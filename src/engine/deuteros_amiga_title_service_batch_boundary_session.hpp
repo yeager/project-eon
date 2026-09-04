@@ -195,6 +195,23 @@ struct DeuterosAmigaTitleTailRepeatedGraphicsLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaTitleTailRepeatedWrapperReturnPlan {
+    DeuterosAmigaObservedGraphicsVectorReturn observed_return;
+    std::uint32_t generation = 0;
+    std::uint32_t wrapper_rts_address = 0;
+    std::uint32_t tail_caller_resume_address = 0;
+    std::uint32_t tail_rts_address = 0;
+    std::uint32_t batch_third_return_address = 0;
+    std::uint32_t batch_fourth_call_address = 0;
+    std::uint32_t batch_fourth_call_target = 0;
+    std::uint32_t batch_fourth_return_address = 0;
+    std::uint32_t batch_rts_address = 0;
+    std::uint32_t batch_caller_resume_address = 0;
+    std::uint32_t unresolved_read_address = 0;
+    std::uint32_t unresolved_read_source = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -215,6 +232,9 @@ public:
             parse_deuteros_amiga_title_post_exec_tail_second_callee_profile(disk, plan);
         tail_fourth_callee_ =
             parse_deuteros_amiga_title_post_exec_tail_fourth_callee_profile(disk, plan);
+        fourth_service_ = parse_deuteros_amiga_title_post_exec_fourth_service_profile(
+            disk, plan);
+        tail_return_ = parse_deuteros_amiga_title_post_exec_tail_return_profile(disk, plan);
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
             || to_hex(sha256(at(0x20510, 38)))
@@ -507,6 +527,32 @@ public:
             tail_fourth_callee_.vector_return_address, 0x200f4};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailRepeatedWrapperReturnPlan>
+    observe_tail_repeated_wrapper_graphics_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        if (!observed_tail_repeated_graphics_ || observed_tail_repeated_wrapper_graphics_) {
+            return std::nullopt;
+        }
+        if (observation.trace_sequence <= observed_tail_repeated_graphics_->trace_sequence
+            || observation.library_base_source_address
+                != tail_fourth_callee_.graphics_library_base_address
+            || observation.observed_library_base != graphics_library_base_
+            || observation.call_address != 0x200f4
+            || observation.vector != tail_fourth_callee_.graphics_library_vector
+            || observation.return_address != tail_fourth_callee_.vector_return_address) {
+            throw std::runtime_error("Deuteros repeated wrapper graphics return does not match boundary");
+        }
+        observed_tail_repeated_wrapper_graphics_ = observation;
+        return DeuterosAmigaTitleTailRepeatedWrapperReturnPlan{observation, 2,
+            tail_fourth_callee_.vector_return_address,
+            tail_fourth_callee_.caller_continuation_address,
+            tail_dispatch_.return_address - 2U, third_service_.caller_address + 6U,
+            fourth_service_.caller_address, fourth_service_.callee_address,
+            fourth_service_.caller_return_address, fourth_service_.caller_return_address,
+            tail_return_.continuation_address, 0x404da,
+            tail_return_.source_table_address, 0x404da};
+    }
+
 private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
@@ -518,6 +564,8 @@ private:
     DeuterosAmigaTitlePostExecTailFirstCalleeProfile tail_first_callee_;
     DeuterosAmigaTitlePostExecTailSecondCalleeProfile tail_second_callee_;
     DeuterosAmigaTitlePostExecTailFourthCalleeProfile tail_fourth_callee_;
+    DeuterosAmigaTitlePostExecFourthServiceProfile fourth_service_;
+    DeuterosAmigaTitlePostExecTailReturnProfile tail_return_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_graphics_service_first_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
@@ -535,6 +583,8 @@ private:
         observed_tail_repeated_selection_words_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_tail_repeated_graphics_;
+    std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
+        observed_tail_repeated_wrapper_graphics_;
 };
 
 } // namespace eon

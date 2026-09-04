@@ -21,6 +21,7 @@ struct MillenniumDosExternalTransferContract {
     std::uint16_t source_instruction;
     std::uint16_t target_address;
     std::optional<std::uint16_t> terminal_return_instruction;
+    std::optional<std::uint16_t> alternate_terminal_return_instruction;
 };
 
 struct MillenniumDosExternalTransferEntryObservation {
@@ -46,15 +47,15 @@ struct MillenniumDosExternalTransferResult { bool accepted=false; std::string er
 [[nodiscard]] constexpr MillenniumDosExternalTransferContract
 millennium_dos_external_transfer_contract(const MillenniumDosExternalTransferKind kind) {
     switch (kind) {
-    case MillenniumDosExternalTransferKind::f9_short_return: return {kind,0x7381,0x73cc,0x73e6};
-    case MillenniumDosExternalTransferKind::f9_long_return: return {kind,0x7381,0x73cc,0x740e};
-    case MillenniumDosExternalTransferKind::f2_reset_wrap_return: return {kind,0x7228,0x702c,0x7040};
-    case MillenniumDosExternalTransferKind::f2_tail_jump: return {kind,0x7253,0x0bdf,std::nullopt};
-    case MillenniumDosExternalTransferKind::f2_tail_active_return: return {kind,0x7253,0x0bdf,0x0be6};
-    case MillenniumDosExternalTransferKind::bdf_mode_two_jump: return {kind,0x0c4b,0x11f7,std::nullopt};
-    case MillenniumDosExternalTransferKind::bdf_other_mode_jump: return {kind,0x0c4e,0x0caa,std::nullopt};
+    case MillenniumDosExternalTransferKind::f9_short_return: return {kind,0x7381,0x73cc,0x73e6,{}};
+    case MillenniumDosExternalTransferKind::f9_long_return: return {kind,0x7381,0x73cc,0x740e,{}};
+    case MillenniumDosExternalTransferKind::f2_reset_wrap_return: return {kind,0x7228,0x702c,0x7040,{}};
+    case MillenniumDosExternalTransferKind::f2_tail_jump: return {kind,0x7253,0x0bdf,std::nullopt,{}};
+    case MillenniumDosExternalTransferKind::f2_tail_active_return: return {kind,0x7253,0x0bdf,0x0be6,{}};
+    case MillenniumDosExternalTransferKind::bdf_mode_two_jump: return {kind,0x0c4b,0x11f7,0x12cb,0x129c};
+    case MillenniumDosExternalTransferKind::bdf_other_mode_jump: return {kind,0x0c4e,0x0caa,std::nullopt,{}};
     }
-    return {kind,0,0,std::nullopt};
+    return {kind,0,0,std::nullopt,{}};
 }
 
 class MillenniumDosExternalTransferAdmission {
@@ -75,7 +76,8 @@ public:
         if (!checkpoint_.entry || checkpoint_.returned
             || !checkpoint_.contract.terminal_return_instruction
             || observation.sequence<=checkpoint_.entry->sequence
-            || observation.return_instruction!=*checkpoint_.contract.terminal_return_instruction
+            || (observation.return_instruction!=*checkpoint_.contract.terminal_return_instruction
+                && observation.return_instruction!=checkpoint_.contract.alternate_terminal_return_instruction)
             || observation.returned_to==0)
             return {false,"External transfer return does not match its entered contract"};
         checkpoint_.returned=observation; return {true,{}};

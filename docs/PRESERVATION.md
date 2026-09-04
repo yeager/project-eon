@@ -5681,6 +5681,17 @@ base cell `$12fec`, then reaches `-$1a4` at `$200f4`. The session stops there:
 the repeated call has its own return observation and cannot borrow the earlier
 `$200f4` result.
 
+The repeated wrapper return is generation two of the `$200f4` boundary. It is
+accepted only after the second `$201b6` return and with a strictly newer trace
+sequence, so neither `$200f4` observation from the earlier service path can be
+reused. After retaining D0 and SR as value-only evidence, the session follows
+RTS `$200f8` to `$2021a`, restores the saved A0 without assigning its value,
+and executes tail RTS `$2021c`. The original call stack returns to batch edge
+`$40406`, whose exact local target `$40698` immediately returns to batch RTS
+`$4040c`; that RTS resumes at `$404d4`. The continuation loads source-table
+address `$12ff4`, then stops before the first runtime longword read at
+`$404da`. No table contents, Exec result, or later service effect is supplied.
+
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
 `b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its
@@ -5992,3 +6003,13 @@ per row are then transformed only by the four proven shift/carry mask steps at
 `DI` advances eight bytes and applies the same plane/wrap calculation before
 the next row. The state ends at the proven RET `$129c`. No framebuffer, plane,
 pixel, colour, or display meaning is inferred from these addresses.
+
+Both mode-two exits are now caller-connected only as observed external-return
+events. The transfer admitted at `$0c4b -> $11f7` accepts `$12cb` for the zero
+path or `$129c` for the transformed path only after the corresponding native
+session has reached that exact RET. The return event must have a sequence
+strictly later than its entry and a non-zero, explicitly supplied destination.
+The destination is retained in the transfer checkpoint. No static evidence
+currently proves which caller instruction receives these RETs, so accepting
+the event does not resume or synthesize any caller state. Revocation clears
+the session and transfer together, making late return observations invalid.

@@ -41,3 +41,18 @@ that explicit exclusion ledger, never neither or both. Current exclusions
 are extracted Atari and Spanish DOS members whose parser candidate remains a
 whole-disk container. Their listings remain preservation evidence, but no
 exact same-leaf parser range exists for runtime admission.
+
+## Runtime diagnostics
+
+The CLI runtime-diagnostics document and the F10 developer panel expose a
+copy-only registry summary. It contains the number of mapped descriptors and
+explicit exclusions. When one active native session maps unambiguously to one
+descriptor, it also contains only that descriptor's image ID, range ID,
+address basis, and load status. The binding is exact-release and typed-session
+specific; ambiguous sessions report no active image instead of choosing one.
+
+This surface intentionally omits paths, release/source hashes, archive-member
+names, original bytes, and byte spans. `RuntimeHost` also drops the active
+binding throughout source revocation, while retaining the static registry
+counts. The summary is diagnostic only and cannot admit a code image, advance
+a session, or grant input, rendering, or audio capabilities.

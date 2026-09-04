@@ -410,6 +410,16 @@ def main() -> int:
                 "game_executable_sha256":
                     "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57",
             }
+            or runtime_diagnostics_payload.get("native_code_images") != {
+                "mapped_descriptors": 13,
+                "excluded_images": 7,
+                "active": {
+                    "image_id": "millennium-dos-titles-exe-linear",
+                    "range_id": "millennium-dos-title-flow",
+                    "address_basis": "dos-com-linear-0x100",
+                    "load_status": "address-basis-declared",
+                },
+            }
             or runtime_diagnostics_payload.get("atari_bootstrap_checkpoint") is not None
             or runtime_diagnostics_payload.get("deuteros_amiga_title_dependency_chain") is not None
             or recovery.get("coverage") != launch_check_payload["coverage"]

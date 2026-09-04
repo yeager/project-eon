@@ -42,6 +42,13 @@ std::optional<RuntimeSessionSnapshot> RuntimeHost::session_snapshot() const {
     return NativeSessionController::session_snapshot();
 }
 
+NativeCodeImageRegistryDiagnostics RuntimeHost::native_code_image_registry_diagnostics() const {
+    // Registry counts remain safe during revocation, but the active binding
+    // must disappear before any coordinator-owned media can be released.
+    return eon::native_code_image_registry_diagnostics(
+        revoking() ? std::nullopt : NativeSessionController::session_snapshot());
+}
+
 std::optional<MillenniumDosPresentationSnapshot> RuntimeHost::millennium_dos_presentation() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_dos_presentation();
@@ -244,6 +251,7 @@ EON_HOST_BDF(observe_millennium_dos_bdf_mode_two_byte,MillenniumDosBdfByteObserv
 EON_HOST_BDF(observe_millennium_dos_bdf_mode_two_word,MillenniumDosBdfWordObservation)
 EON_HOST_BDF(observe_millennium_dos_bdf_mode_two_far_word,MillenniumDosBdfModeTwoFarWordObservation)
 EON_HOST_BDF(observe_millennium_dos_bdf_mode_two_far_byte,MillenniumDosBdfModeTwoFarByteObservation)
+EON_HOST_BDF(observe_millennium_dos_bdf_mode_two_external_return,MillenniumDosBdfExternalReturnObservation)
 #undef EON_HOST_BDF
 std::optional<MillenniumDosBdfCheckpoint>RuntimeHost::millennium_dos_bdf_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_bdf_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>

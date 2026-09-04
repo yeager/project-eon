@@ -18,5 +18,9 @@ class NativeCodeImageRegistryCoverageTests(unittest.TestCase):
         self.assertTrue(all(row["reason"]=="container-only-candidate" for row in rows))
         self.assertFalse(descriptor_ids&excluded_ids)
         self.assertEqual(descriptor_ids|excluded_ids,manifest_ids)
+        diagnostics=(ROOT/"src/engine/native_code_image_diagnostics.cpp").read_text()
+        declared_count=re.search(r"constexpr std::size_t excluded_image_count = (\d+);",diagnostics)
+        self.assertIsNotNone(declared_count)
+        self.assertEqual(int(declared_count.group(1)),len(rows))
 
 if __name__=="__main__": unittest.main()
