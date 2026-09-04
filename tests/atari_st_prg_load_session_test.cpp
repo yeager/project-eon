@@ -398,12 +398,36 @@ int main(const int argc, const char* const argv[]) {
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted
             && bit6_clear.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_bit6_clear_boundary
             && bit6_clear.checkpoint().game_init_next_instruction==0x2b3b8);
-        assert(bit7_set.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0xc0}).accepted
+        assert(bit7_set.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0xc2}).accepted
             && bit7_set.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_bit7_set_boundary
             && bit7_set.checkpoint().game_init_next_instruction==0x2b376);
-        assert(bit6_only.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x40}).accepted
+        assert(bit6_only.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x42}).accepted
             && bit6_only.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_second_source_boundary
             && bit6_only.checkpoint().game_init_next_instruction==0x2b338);
+        const auto alternate_destination=bit6_only.checkpoint().caller_a5;
+        const eon::MillenniumAtariGameInitAlternateWrite expected_replicated_first{alternate_destination,0xabab};
+        const eon::MillenniumAtariGameInitAlternateWrite expected_replicated_second{alternate_destination+8U,0xabab};
+        assert(!bit6_only.observe_game_init_replicated_byte({1,23,0x2b33a,0x2c251,0xab}).accepted);
+        assert(bit6_only.observe_game_init_replicated_byte({1,23,0x2b338,0x2c251,0xab}).accepted
+            && bit6_only.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_source_byte_boundary
+            && bit6_only.checkpoint().game_init_source_address==0x2c252
+            && bit6_only.checkpoint().game_init_alternate_writes.size()==2
+            && bit6_only.checkpoint().game_init_alternate_writes[0]==expected_replicated_first
+            && bit6_only.checkpoint().game_init_alternate_writes[1]==expected_replicated_second
+            && bit6_only.checkpoint().game_init_alternate_run_sha256=="6429d7b0634cff176ec01486b3f4e05bd648e3de11a67edd151f8345724b6701");
+        auto alternate_memory=bsr_memory;
+        assert(alternate_memory.apply(bit6_only.make_game_init_alternate_effect_batch("replicated-run")).accepted
+            && alternate_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,alternate_destination})==0xab
+            && alternate_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,alternate_destination+8U})==0xab);
+        assert(bit7_set.observe_game_init_swapped_pair({1,23,0x2b37a,0x2c251,0x12,0x2c252,0x34}).accepted
+            && bit7_set.checkpoint().game_init_alternate_writes.size()==2
+            && bit7_set.checkpoint().game_init_alternate_writes.front().value==0x3412
+            && bit7_set.checkpoint().game_init_source_address==0x2c253
+            && bit7_set.checkpoint().game_init_alternate_run_sha256=="dbf80460ade3c9cc5fba8b4a62937920cc9e131052d3a48bfc8b0981e150a9b9");
+        assert(bit6_clear.observe_game_init_extended_run({1,23,0x2b3c0,0x2c251,0x02,0x2c252,0x56,0x2c253,0x78}).accepted
+            && bit6_clear.checkpoint().game_init_alternate_writes.size()==2
+            && bit6_clear.checkpoint().game_init_alternate_writes.front().value==0x7856
+            && bit6_clear.checkpoint().game_init_source_address==0x2c254);
         assert(!user_consumer.execute_jsr_2b2be().accepted);
         assert(negative_fopen.observe_gemdos_selector_61({1,18,0x2a5b4,0x3d,-33}).accepted);
         assert(negative_fopen.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin

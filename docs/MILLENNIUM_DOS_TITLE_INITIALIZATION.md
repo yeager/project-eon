@@ -433,3 +433,13 @@ It sets `CX=$25`, adds `$0170` to both hash-bound zero output offsets at
 relocated directory pointer by 12 bytes. Native execution stops before the
 next external two-word read at `$13aa`, now `TITLE.LIB+$000f`; neither those
 words nor graphics meaning are inferred.
+
+The genuine words at that source are `$0503/$1f02`. Contradictory typed input
+is rejected before mutation. The same verified `$13aa..$13cc` pointer suffix
+normalizes the first word to offset `$0003`, uses the low byte `$02` of the
+second word as a paragraph contribution, and produces `$5050:$0003` from the
+owned destination base `$3000`. It atomically stores that far pointer at
+`CS:$138c/$138e` and stops before the next external word read at `$13cd`,
+source `$5050:$001b`. The pointed-to runtime word is not present in the
+original archive as an independently addressable media byte and is therefore
+not inferred.

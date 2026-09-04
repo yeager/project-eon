@@ -1031,6 +1031,19 @@ struct DeuterosAmigaTitlePostAdjustedCallerPointerPlan {
     std::uint32_t branch_address=0,branch_target=0,next_instruction=0;
     std::string prefix_sha256;
 };
+struct DeuterosAmigaObservedTitlePostAdjustedObjectGate {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0;
+    std::uint32_t first_source_address=0; std::uint8_t first_value=0;
+    std::uint32_t second_source_address=0; std::uint8_t second_value=0;
+};
+struct DeuterosAmigaTitlePostAdjustedObjectGatePlan {
+    DeuterosAmigaObservedTitlePostAdjustedObjectGate observation;
+    std::uint32_t table_address=0;
+    std::uint16_t first_d0=0,first_d1=0;
+    std::uint32_t call_address=0,call_target=0,return_address=0;
+    std::string path_sha256,table_prefix_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2827,6 +2840,21 @@ public:
             zero?0x20cb8U:0x20c88U,
             "457462f38e994a97b0d37b21cbead532d6bfdb685fc3a8c8784cea654422357d"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedObjectGatePlan>
+    observe_post_adjusted_object_gate(const DeuterosAmigaObservedTitlePostAdjustedObjectGate&o){
+        if(!post_adjusted_caller_pointer_||post_adjusted_caller_pointer_->observed_pointer==0
+            ||post_adjusted_object_gate_)return std::nullopt;
+        const auto pointer=post_adjusted_caller_pointer_->observed_pointer;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x20c8a
+            ||o.first_source_address!=pointer+0xeeU||o.second_source_address!=pointer+0xf0U
+            ||o.first_value<8U||o.second_value==0U||o.second_value>=3U)
+            throw std::runtime_error("Deuteros post-adjusted object gate does not match qualifying path");
+        post_adjusted_object_gate_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjustedObjectGatePlan{o,0x20a6c,0x0009,0x0398,
+            0x20ca8,0x41ad2,0x20cae,
+            "ee46bb6621a91b5c5055ed0c93b775b7015f12807b939d6f78a8203f558b3195",
+            "f366ff0abe5ea96505ad1c30bf834e5da3753159f02fc6892bc39d0f5c1dbc3c"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3031,6 +3059,7 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostCommandDescriptorByte> post_command_descriptor_byte_;
     std::optional<DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination> adjusted_dispatch_destination_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedCallerPointer> post_adjusted_caller_pointer_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedObjectGate> post_adjusted_object_gate_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

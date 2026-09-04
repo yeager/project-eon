@@ -1458,8 +1458,25 @@ Eon now executes its normal-path D6 run dispatch, D7 row dispatch, four-plane
 D5 dispatch, A0/A5/A6 address updates and D2 run countdown. It returns to the
 typed pair boundary, the next typed token boundary, or the proven RTS at
 `$2b3c6` according to those owned counters. No new source byte is admitted by
-that deterministic transition. The bit-6 and bit-7 payload continuations at
-`$2b338`, `$2b376`, and `$2b3b8` remain explicit boundaries.
+that deterministic transition.
+
+The other three token forms are now native under typed source observations.
+Bit 6 alone uses the low six bits as a run length, reads one byte and repeats
+it into both bytes of every destination word. Its exact 68-byte path at file
+`+0xe32`, runtime `$2b332..$2b375`, hashes to
+`6429d7b0634cff176ec01486b3f4e05bd648e3de11a67edd151f8345724b6701`.
+Bit 7 plus bit 6 uses the low six bits as the run length and writes the two
+typed source bytes in reversed order; its exact 66-byte path at file
+`+0xe76`, runtime `$2b376..$2b3b7`, hashes to
+`dbf80460ade3c9cc5fba8b4a62937920cc9e131052d3a48bfc8b0981e150a9b9`.
+Bit 6 clear with bit 7 set forms a 14-bit run length from the token's low six
+bits and one typed count byte, then joins that same reversed-pair path. Its
+exact 14-byte prefix at file `+0xeb8`, runtime `$2b3b8..$2b3c5`, hashes to
+`72fa63385edc5122cd3fe1c4031d0a0089a187d498c04ff1f8be912f4462b0c5`.
+Each admission atomically retains only its consumed source bytes and the
+statically derived destination words. The common counter engine bounds output
+at the next token or routine RTS; no display or renderer interpretation is
+assigned to the decoded words.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4470,6 +4487,14 @@ selects descriptor index one, and re-enters the already verified `$1390`
 decoder prefix. The largest static continuation ends at `$13aa` before two
 external words at relocated `TITLE.LIB+$000f`. This is a typed preservation
 boundary, not a rendering or descriptor-value claim.
+The genuine `TITLE.LIB+$000f` words are `$0503/$1f02`. The existing exact
+`$13aa..$13cc` pointer suffix (SHA-256
+`e8b21803c3739aac65b59a9919f03c97d0d55daf7fd2a35e7567973765724921`)
+normalizes them against owned destination segment `$3000` to
+`$5050:$0003`, then atomically stores the pointer at `CS:$138c/$138e`.
+Execution now stops before `$13cd` reads its word at `$5050:$001b`.
+Contradictory descriptor words leave both state and runtime memory unchanged;
+no content, record, or graphics meaning is assigned to the next runtime word.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6805,9 +6830,17 @@ hashes to
 `457462f38e994a97b0d37b21cbead532d6bfdb685fc3a8c8784cea654422357d`.
 A typed longword observation at mutable cell `$19d1e` is committed atomically.
 Zero reaches the local RTS at `$20cb8`; nonzero becomes A0 and stops before
-the byte comparison at `$20c8a`. Eon does not infer object bytes `$ee`/`$f0`,
-the two possible `$41ad2` helper effects, or any visual meaning from the
-preceding sparse descriptor output.
+the byte comparison at `$20c8a`.
+On the qualifying nonzero route, one atomic typed observation supplies only
+object bytes A0+`$ee` and A0+`$f0`. Values at least 8 and 1..2 respectively
+cross the exact 30-byte compare/branch/table-load path at `$20c8a..$20ca7`,
+SHA-256
+`ee46bb6621a91b5c5055ed0c93b775b7015f12807b939d6f78a8203f558b3195`.
+The immutable table prefix `$20a6c..$20a73` hashes to
+`f366ff0abe5ea96505ad1c30bf834e5da3753159f02fc6892bc39d0f5c1dbc3c`
+and supplies D0 `$0009`, D1 `$0398`. Execution stops before the first
+`$20ca8->$41ad2` helper. Eon does not infer either helper result, the second
+call, object meaning, or any visual meaning from sparse descriptor output.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

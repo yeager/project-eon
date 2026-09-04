@@ -123,6 +123,28 @@ struct MillenniumAtariGameInitZeroPairObservation {
     std::uint32_t first_source_address=0; std::uint8_t first_source_byte=0;
     std::uint32_t second_source_address=0; std::uint8_t second_source_byte=0;
 };
+struct MillenniumAtariGameInitReplicatedByteObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t instruction_address=0; std::uint32_t source_address=0;
+    std::uint8_t source_byte=0;
+};
+struct MillenniumAtariGameInitSwappedPairObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t instruction_address=0;
+    std::uint32_t first_source_address=0; std::uint8_t first_source_byte=0;
+    std::uint32_t second_source_address=0; std::uint8_t second_source_byte=0;
+};
+struct MillenniumAtariGameInitExtendedRunObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t instruction_address=0;
+    std::uint32_t count_source_address=0; std::uint8_t count_low_byte=0;
+    std::uint32_t first_value_address=0; std::uint8_t first_value_byte=0;
+    std::uint32_t second_value_address=0; std::uint8_t second_value_byte=0;
+};
+struct MillenniumAtariGameInitAlternateWrite {
+    std::uint32_t address=0; std::uint16_t value=0;
+    constexpr bool operator==(const MillenniumAtariGameInitAlternateWrite&) const = default;
+};
 
 struct MillenniumAtariBchgObservation {
     std::uint64_t generation = 0;
@@ -337,6 +359,10 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::string game_init_zero_pair_prefix_sha256;
     std::string game_init_zero_counter_continuation_sha256;
     std::uint32_t game_init_completed_planes=0;
+    std::string game_init_alternate_run_sha256;
+    std::vector<std::uint32_t> game_init_alternate_source_addresses;
+    std::vector<std::uint8_t> game_init_alternate_source_bytes;
+    std::vector<MillenniumAtariGameInitAlternateWrite> game_init_alternate_writes;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -429,9 +455,17 @@ public:
         const MillenniumAtariGameInitZeroPairObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_zero_pair_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_zero_counter_branch();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_replicated_byte(
+        const MillenniumAtariGameInitReplicatedByteObservation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_swapped_pair(
+        const MillenniumAtariGameInitSwappedPairObservation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_extended_run(
+        const MillenniumAtariGameInitExtendedRunObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_alternate_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:
+    void execute_game_init_alternate_run(std::uint16_t value, std::uint32_t source_advance_after_run);
     MillenniumAtariConfigConsumerCheckpoint checkpoint_;
 };
 

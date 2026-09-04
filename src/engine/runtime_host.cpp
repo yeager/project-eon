@@ -394,6 +394,7 @@ EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_descriptor_loo
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_descriptor_byte,(const DeuterosAmigaObservedTitlePostCommandDescriptorByte o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination,(const DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_caller_pointer,(const DeuterosAmigaObservedTitlePostAdjustedCallerPointer o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_object_gate,(const DeuterosAmigaObservedTitlePostAdjustedObjectGate o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -522,6 +523,9 @@ MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_jsr_2b
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_source_byte(const MillenniumAtariGameInitSourceByteObservation o){if(revoking())return{false,"Game-init source byte rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_source_byte(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_zero_pair(const MillenniumAtariGameInitZeroPairObservation o){if(revoking())return{false,"Game-init zero pair rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_zero_pair(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_game_init_zero_counter_branch(){if(revoking())return{false,"Game-init zero counter branch rejected during revocation"};return NativeSessionController::execute_millennium_atari_game_init_zero_counter_branch();}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_replicated_byte(const MillenniumAtariGameInitReplicatedByteObservation o){if(revoking())return{false,"Replicated-byte run rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_replicated_byte(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_swapped_pair(const MillenniumAtariGameInitSwappedPairObservation o){if(revoking())return{false,"Swapped-pair run rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_swapped_pair(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_extended_run(const MillenniumAtariGameInitExtendedRunObservation o){if(revoking())return{false,"Extended run rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_extended_run(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;
