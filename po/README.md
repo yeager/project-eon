@@ -46,6 +46,10 @@ One semantic key may have multiple source rows when original editions use
 different text. The current English and Spanish DOS celestial tables therefore
 share catalog messages while retaining separate source language, full leaf
 hash, offsets, lengths, spelling, and padding.
+New parsers should use `localize_game_text_at_source` for one exact range or
+the atomic `localize_all_game_text_from_source` batch API for a complete table.
+Both authenticate the source leaf before localization, preventing item names
+and other game vocabulary from silently falling back across releases.
 
 ## Unicode rendering
 

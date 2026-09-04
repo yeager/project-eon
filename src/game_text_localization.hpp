@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace eon {
 
@@ -55,6 +56,25 @@ struct LocalizedGameText {
 [[nodiscard]] LocalizedGameText localize_game_text(
     Game game, Platform platform, std::string_view source_sha256,
     std::string_view original_text,
+    std::string_view selected_language, const Translator& translator);
+
+// Resolves an exact range from an immutable original leaf. The whole leaf is
+// rehashed before lookup, so callers cannot present bytes from another release
+// under a trusted hash. This is the preferred API for newly recovered item
+// names, messages, status text, and every other player-visible text table.
+[[nodiscard]] LocalizedGameText localize_game_text_at_source(
+    Game game, Platform platform, std::string_view source_leaf,
+    std::span<const std::uint8_t> source_bytes, std::size_t source_offset,
+    std::size_t source_size, std::string_view selected_language,
+    const Translator& translator);
+
+// Admits and localizes every declared range belonging to one exact source
+// leaf in source order. It fails atomically if the leaf identity, any range,
+// or any selected catalog entry is invalid; partial player-facing text must
+// never escape into either Original or Modern presentation.
+[[nodiscard]] std::vector<LocalizedGameText> localize_all_game_text_from_source(
+    Game game, Platform platform, std::string_view source_leaf,
+    std::span<const std::uint8_t> source_bytes,
     std::string_view selected_language, const Translator& translator);
 
 } // namespace eon

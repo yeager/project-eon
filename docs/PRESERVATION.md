@@ -385,6 +385,14 @@ rather than silently displaying English or text from another release. The PO
 catalogs therefore alter presentation only: they never write game media,
 runtime state, original saves, or reconstructed pixel assets.
 
+Newly recovered player-visible tables use the source-range localization API.
+It rehashes the complete immutable leaf and requires the declared leaf name,
+game, platform, exact offset, and size before returning text. Its batch form
+resolves all declared ranges in source order and fails atomically on a wrong
+leaf, invalid or overlapping range, or missing catalog entry. This is the
+shared contract for future object names, messages, status text, and game
+vocabulary in Original and Modern; a plausible string alone is not evidence.
+
 Project Eon deliberately distinguishes a preservation result from an
 enhancement. **Original** is the preservation contract: a hash-admitted,
 recovered baseline is rendered and played without host-side feature
@@ -1336,7 +1344,31 @@ the typed source word against owned memory. The exact 20-byte tail hashes to
 `82379ace33d5464b74e03aa0669f8a1097498fd21ce3639c180ab5e21cac810b`;
 it derives A0 `$56eee4`, atomically stores it at `$2b620`, increments D0.W,
 decrements D7 to 1, and records the taken DBF target `$2b5b8`. Contradictions
-and revocation commit no checkpoint or memory changes.
+and revocation commit no checkpoint or memory changes. The taken DBF edge
+resumes at `$2b5b8`; its 42-byte loop-setup span hashes to
+`9efa7511411f3ca6698746d8bac484420a14e67e35467be2909f3647b0612034`.
+With A1 advanced to `$2b64e`, seven initialization writes commit atomically,
+then execution returns to the D0-indexed word boundary `$2b5de`.
+The remaining two iterations reuse the same typed source contracts with
+genuine word `$0d24` at `$2be00` and `$0000` at `$26ee4`. A1 advances through
+`$2b64e` and `$2b67e`; D7 becomes zero and then `$ffff`, so the final DBF
+falls through to `$2b600`. Its 28-byte epilogue hashes to
+`51ea54e46ad38380435c7a367889825fce566b4f33036fb5dd38846dafdf4ab7`.
+Six direct initialization effects commit atomically, RTS returns to `$2b562`,
+and execution stops before the saved `MOVEM.L (A7)+` restore frame.
+That frame is one typed observation containing all 15 longwords in mask
+`$7fff` order, its A7 address, and the required caller return `$2aac8`.
+The exact MOVEM/RTS bytes hash to
+`7f09b538ef863cae65b4a16e1301251bde1fed37c1dba591dd4ec9f4b34106b1`.
+Restoration and RTS commit as one checkpoint transition; A7 advances by 64
+bytes including the return longword. The caller's six-byte absolute JSR hashes
+to `fd41f7c5a0cdb684768c3da230cb9ca56bac136abd2254b55090d6b1cf58da78`.
+Execution stops before its target `$2aa68`.
+The admitted bytes at `$2aa68` are not the older 22-byte-shifted candidate.
+Their exact 12-byte prefix is `2f3c0002aa423f3c00264e4e`, SHA-256
+`fd6e1ace58bbc4108fcc0b8a7f75103c04337c41d24b2c9de5907f9538aaf439`.
+It pushes pointer `$2aa42` and XBIOS selector `$26`, then stops before
+`TRAP #14` at `$2aa72`; no firmware result is inferred.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4251,6 +4283,29 @@ before the next opaque setup callee `$11a7`; no callee effect is inferred.
 The hash-bound `$11a7` callee is now local: it atomically establishes the four
 cells `$118d/$1181/$1183/$1185` from proven literals and original image words,
 returns to `$1bf5`, and stops before the still-opaque `$114e` call.
+The `$114e` prefix now reaches a typed far-read boundary at `$115d`: two words
+from `$0000:$0070` would be copied to `CS:$10dc`. No IVT contents, vector
+replacement, or handler installation is invented.
+After an explicit two-word observation, the exact suffix atomically preserves
+those words at `$10dc/$10de`, installs `CS:$11d8` at IVT cell `$0000:$0070`,
+sets `$112c`, and returns to `$1bf8`. The next `$12a0` call remains opaque.
+That call now reaches its independent two-word far-read boundary at `$12ad`,
+source `$0000:$0024`, destination `CS:$1266`. No vector words or replacement
+are synthesized.
+Once those words are explicitly observed, the exact `$12ad..$12bf` suffix
+(file `TITLES.EXE+$11ad`, 19 bytes, SHA-256
+`5f72f7b8f67574d774c5ba8e480cd8257accfab90651d94836d356edbe738861`)
+copies them into `CS:$1266/$1268` and atomically replaces IVT cell
+`$0000:$0024` with `CS:$126a`. The exact non-mode-1 caller prefix
+`$1bfb..$1c04` (file `+$1afb`, SHA-256
+`a111bf870ff60815e5d9f6a8c5d3a765335dcc8d77e1b0034b185b0872a3ec4d`)
+then selects call `$1c02->$1ada`. The call is entered using the already
+hash-bound `$1ada` contract. A fresh typed INT `$91` result and sixteen fresh
+typed BIOS INT `$10` results are required; earlier observations cannot be
+replayed as a second invocation. The deterministic return preserves the
+mode-2 `$b800` write when applicable, takes `$1c05->$1c0a`, restores DS/ES,
+and stops before `$1c0e->$135e`. That callee is the next opaque boundary.
+Mode 1 remains separately stopped at its verified `$0fc6` overread boundary.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6477,6 +6532,36 @@ bytes, malformed address order, replay, and revocation reject without partial
 effects. Execution returns through `$41f30` to `$4051e` and stops before the
 next caller effect. These sparse words still do not establish a framebuffer,
 palette, or parity claim.
+
+The next caller effect at `$4051e` is now owned through the first opaque call
+inside `$20e18`. The caller atomically writes longword `$0002151a` to
+`$222ae`, clears D0, and enters the hash-bound service. With D0 exactly zero,
+the deterministic prefix writes word zero to `$13006`, pointer literals
+`$13050/$13008/$13024` to `$13052/$1301a/$13036`, reads the genuine static
+word at `$19646` (zero for this hash-addressed release) into `$13126`, and
+writes pointer `$1303a` to `$1304c`. All seven effects commit in one atomic,
+replay-proof batch. The prefix then loads D0 `$00f9` and stops before JSR
+`$20e6a -> $1fb9a`; that callee's result and side effects remain opaque.
+An exact typed return observation now retains its D0 and SR without assigning
+meaning to either. It must identify call `$20e6a`, target `$1fb9a`, return
+`$20e70`, and a strictly later sequence. The deterministic continuation then
+reloads word zero from owned `$13006`, adds literal `$00a0`, and reaches D0
+`$00a0` at the next stop-before boundary `$20e7a -> $1ff08`. The opaque
+callee's observed registers do not leak into this overwritten D0. An exact
+typed return from that second call now preserves its D0/SR at `$20e80`.
+The continuation again reloads owned `$13006` (zero), scales it by four, and
+selects genuine immutable longword `$127a3980` from table `$13792`. That value
+commits atomically to `$1378e`. An exact typed `$20e96 -> $22bca` return at
+`$20e9c` retains its opaque D0/SR, then enters local `$20ba8`. Two ordered word
+observations cover the genuinely mutable sources selected through owned
+pointer `$1301a`: `(A0)` at `$13008` and counter `$202bc`. The first loop
+iteration shifts the low byte of D7 and decrements the low byte of D5. Its
+carry and zero outcomes are recorded exactly; when the clear-carry decrement
+reaches zero, the resulting word is atomically written back to `$202bc` and
+execution stops before `$20bd6 -> $41a68` with D0 `$0048`, D1 `$0010`.
+The carry/zero skip instead stops at branch `$20bea`. Replay and source
+revocation reject observations without partial effects. No service, object,
+display, or gameplay meaning is inferred.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently
