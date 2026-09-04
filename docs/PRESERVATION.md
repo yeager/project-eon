@@ -2964,6 +2964,14 @@ at `$1f37a` before its first unresolved nested call to `$20094`. The observed
 word is not assigned a timer, device, or gameplay meaning, and `$20094` is not
 entered or presumed to return.
 
+The existing hash-locked `$20094..$200f9` profile now has an active first ABI
+boundary. It admits only a return newer than the `$20276` observation and
+matching library-base cell `$12fec`, the exact previously observed OpenLibrary
+value, call `$2009c`, vector `-$19e`, and return `$200a0`. D0/SR remain raw
+evidence. The following local instructions set D0 to `$ffffffff`, load
+descriptor A0 `$1ffda`, and reload the same library-base cell. Execution stops
+at `$200b0` before vector `-$198`; no graphics service effect is inferred.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -5841,6 +5849,14 @@ unchanged `$07d8` read, records only the literal XOR toggle, then stops at call
 stores to `$07da`/`$07dc` are recorded and the next `$da05` read becomes
 visible. ES memory, poll results, mode, rendering, and the callback caller's
 return address remain evidence boundaries.
+
+From `$0c19`, the service retains the observed poll CX and reproduces only the
+literal shift selection encoded for raw `$da05` values 3 and 4 before exposing
+call `$04ef` at `$0c34` with its exact AX input. After an explicit return and a
+second `$da05` observation, value 2 stops at jump `$11f7`, values other than 1
+stop at jump `$0caa`, and value 1 observes `$07d8` before stopping at either
+far-memory boundary `$0c6d` or `$0c8b`. Eon does not dereference ES:DI, infer
+the `$04ef` result, identify the modes, or enter either jump target.
 
 The exact English `2200AD.EXE` sixth-table handler `$7415..$7454` is available
 through the native runtime only after the active post-overlay state machine has

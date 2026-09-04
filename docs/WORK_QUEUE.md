@@ -165,6 +165,9 @@ do not infer the word or claim the graphics vector copied pixels.
 The explicit `$20276` word now completes `$20510` and reaches `$1f37a`.
 Recover or explicitly bridge nested target `$20094` before advancing the
 remaining `$403f4` batch; do not infer its graphics/service behavior.
+The first `$20094` graphics return now advances to `$200b0`. Continue only
+with the exact `-$198` return using the same observed library base; do not
+invent its D0 byte or descriptor effect.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
