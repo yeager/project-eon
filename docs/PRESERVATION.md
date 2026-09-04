@@ -4122,6 +4122,40 @@ but nothing calls it automatically: reaching this routine still depends on
 the preceding private-interrupt paths returning, and no BIOS or SDL palette
 effect is presumed.
 
+#### Typed Millennium DOS native-process boundary
+
+`MillenniumDosNativeProcess` is the first shared, manually recompiled process
+boundary for the supplied English `2200AD.EXE`. It is not an x86 interpreter:
+it composes only the existing hash-validated startup and GX evaluators, records
+their deterministic little-endian writes in private maps, and yields a typed
+boundary before every unresolved interrupt, runtime-byte read, overlay call,
+or local call. Every observation names the exact instruction or interrupt
+address at which it was obtained. An out-of-order observation, a mismatched
+address, an altered executable, or an altered GX overlay fails closed.
+
+The process has two deliberately independent construction points. `startup()`
+begins at the verified flat-image entry `$d2b0`, stops first at `INT 91h` site
+`$0129`, and can advance through the selector-specific second `INT 91h` only
+when both AX returns are supplied explicitly. The selector-one path then stops
+at the local return `$0455`; the other recovered path stops at BIOS `INT 10h`
+site `$0476`. Only literal writes emitted by the authenticated evaluator become
+private runtime bytes.
+
+`post_gx_loader()` separately begins at the already documented post-loader
+`$0129` boundary. It can accept the explicit private-INT return, `$da05` read at
+`$d349`, GX adapter return `$d373 -> $d376`, six individually ordered near-call
+returns at `$d376..$d385`, and the second `$da05` read at `$d388`. It then stops
+again at `$0129`. The call-free GX writes are retained only in a private overlay
+map. This second factory is a recovery entry, not a transition from `startup()`:
+no title handoff, DOS EXEC result, GX load result, call return, input, frame,
+audio, or gameplay reachability is inferred.
+
+The process holds non-owning read-only spans and is not constructed by the
+release runtime, SDL launcher, CLI launch path, or input router. It therefore
+does not broaden the current runtime capability manifest. A later coordinator
+integration must first retain the verified-media owner for the spans' complete
+lifetime and admit the missing transition using genuine hash-bound evidence.
+
 #### Main-loop action dispatch
 
 The supplied English `2200AD.EXE` (54,391 bytes, SHA-256

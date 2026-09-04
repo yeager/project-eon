@@ -124,6 +124,7 @@ add_executable(project-eon
     src/engine/millennium_dos_sound_selection_session.cpp
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_game_session.cpp
+    src/engine/millennium_dos_native_process.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp
