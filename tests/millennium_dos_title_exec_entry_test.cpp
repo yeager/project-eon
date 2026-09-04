@@ -1,4 +1,6 @@
 #include "engine/millennium_dos_title_exec_entry_session.hpp"
+#include "engine/millennium_dos_title_child_compatibility_service.hpp"
+#include "engine/millennium_dos_paragraph_arena.hpp"
 
 #include <cassert>
 #include <filesystem>
@@ -61,4 +63,24 @@ int main(int argc, char** argv) {
             eon::MillenniumDosTitleExecEntryProvenance::observed_process_entry});
     } catch (const std::runtime_error&) { rejected = true; }
     assert(rejected);
+
+    eon::MillenniumDosParagraphArena arena(1);
+    const auto allocation=arena.allocate(
+        eon::MillenniumDosTitleChildCompatibilityService::required_paragraphs());
+    assert(allocation.allocation&&allocation.allocation->segment==0xe100
+        &&allocation.allocation->paragraph_count==455);
+    eon::MillenniumDosTitleChildCompatibilityService child(
+        titles,*allocation.allocation);
+    const auto child_checkpoint=child.checkpoint();
+    assert(child_checkpoint.exact_leaf_admitted
+        &&child_checkpoint.admitted_image_byte_count==titles.size()
+        &&child_checkpoint.image_load_offset==0x0100
+        &&!child_checkpoint.psp_modeled
+        &&!child_checkpoint.environment_modeled
+        &&!child_checkpoint.parent_exec_return_observed);
+    assert(child.image_effects().size()==titles.size()
+        &&child.image_effects().front().offset==0x0100
+        &&child.image_effects().front().value==titles.front()
+        &&child.image_effects().back().offset==0x1c6d
+        &&child.image_effects().back().value==titles.back());
 }

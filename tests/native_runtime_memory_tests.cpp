@@ -1,7 +1,9 @@
 #include "engine/native_runtime_memory.hpp"
+#include "engine/deuteros_amiga_title_planar_patch.hpp"
 #include "engine/millennium_dos_external_transfer_admission.hpp"
 #include "engine/release_runtime.hpp"
 
+#include <array>
 #include <cassert>
 #include <cstdint>
 
@@ -65,6 +67,49 @@ int main() {
     assert(memory.read_byte({eon::NativeRuntimeAddressSpace::dos_segmented,0xa000,0x6101})==0x12);
     bdf.terminal_transfer->returned.reset();
     assert(!eon::make_millennium_dos_bdf_effect_batch(bdf,"not-returned"));
+
+    // Exact title-display geometry from the admitted Deuteros v4/v5 trace.
+    // The RGB values are the first 16 original RGB4 words at `$1ed24`,
+    // expanded nibble-for-nibble rather than replaced with a host palette.
+    constexpr std::array<eon::RgbColor,16> title_palette{{
+        {0x00,0x00,0x00},{0x99,0xaa,0x77},{0x77,0x88,0x55},{0x55,0x66,0x33},
+        {0x33,0x33,0x00},{0xaa,0x00,0x00},{0xcc,0x22,0x00},{0x66,0x00,0x00},
+        {0x00,0x22,0x88},{0x00,0xcc,0xff},{0x00,0x88,0x00},{0x88,0x66,0x00},
+        {0xff,0xff,0x00},{0xff,0x00,0x00},{0x88,0x00,0x00},{0xff,0xff,0xff},
+    }};
+    eon::NativeRuntimeEffectBatch patch_batch{"deuteros-planar-patch",true,{}};
+    constexpr std::uint32_t patch_base=0xb782;
+    for(std::uint32_t row=0;row<8;++row){
+        const auto glyph=static_cast<std::uint8_t>(row*0x11U);
+        for(std::uint32_t plane=0;plane<4;++plane){
+            const auto first=static_cast<std::uint8_t>(0xa0U+plane);
+            const auto second=static_cast<std::uint8_t>(0x50U+plane);
+            const auto value=static_cast<std::uint8_t>(
+                (first&static_cast<std::uint8_t>(~glyph))|(second&glyph));
+            patch_batch.effects.push_back({patch_batch.effects.size()+1,
+                {eon::NativeRuntimeAddressSpace::linear,std::nullopt,
+                    patch_base+row*0x28U+plane*0x1f40U},
+                eon::MemoryTransferElementWidth::byte,
+                eon::NativeRuntimeByteOrder::big_endian,value});
+        }
+    }
+    eon::NativeRuntimeMemory patch_memory;
+    assert(patch_memory.apply(patch_batch).accepted);
+    const auto patch=eon::decode_deuteros_amiga_title_planar_patch(
+        patch_memory.checkpoint(),patch_base,6,title_palette);
+    assert(patch && patch->pixel_x==16 && patch->pixel_y==10
+        && patch->color_indices[0]==15 && patch->color_indices[1]==0
+        && patch->color_indices[6]==12 && patch->color_indices[7]==10
+        && patch->rgba[0]==0xff && patch->rgba[1]==0xff
+        && patch->rgba[2]==0xff && patch->rgba[3]==0xff
+        && patch->rgba[4]==0 && patch->rgba[5]==0
+        && patch->rgba[6]==0 && patch->rgba[7]==0xff);
+    auto incomplete_patch_memory=patch_memory.checkpoint();
+    incomplete_patch_memory.initialized_bytes.pop_back();
+    assert(!eon::decode_deuteros_amiga_title_planar_patch(
+        incomplete_patch_memory,patch_base,6,title_palette));
+    assert(!eon::decode_deuteros_amiga_title_planar_patch(
+        patch_memory.checkpoint(),0x60000,6,title_palette));
 
     const auto diagnostics=memory.diagnostics();
     assert(diagnostics.initialized_byte_count==10 && diagnostics.applied_batch_count==2);

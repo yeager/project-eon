@@ -142,7 +142,7 @@ NativeSessionController::millennium_dos_startup_input() const {
 }
 MillenniumDosSoundDriverLoadObservationResult NativeSessionController::observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation o){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return {false,"Sound-driver load requires the active selected-driver boundary"};return runtime_.observe_millennium_dos_sound_driver_load(std::move(o));}
 std::optional<MillenniumDosSoundDriverLoadCheckpoint> NativeSessionController::millennium_dos_sound_driver_load_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return std::nullopt;return runtime_.millennium_dos_sound_driver_load_checkpoint();}
-std::optional<MillenniumDosCompatibilityRunnerCheckpoint> NativeSessionController::tick_millennium_dos_compatibility_runner(){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return std::nullopt;return runtime_.tick_millennium_dos_compatibility_runner();}
+std::optional<MillenniumDosCompatibilityRunnerCheckpoint> NativeSessionController::tick_millennium_dos_compatibility_runner(){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return std::nullopt;auto result=runtime_.tick_millennium_dos_compatibility_runner();synchronize_after_runtime_change();return result;}
 MillenniumDosTitleExecEntryObservationResult NativeSessionController::observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry o){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return {false,"Title child entry requires the sound-driver boundary"};return runtime_.observe_millennium_dos_title_child_process_entry(o);}
 MillenniumDosTitleExecEntryObservationResult NativeSessionController::advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation o){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return {false,"Title entry prefix requires the child-process boundary"};auto result=runtime_.advance_millennium_dos_title_entry_prefix(o);if(result.accepted)synchronize_after_runtime_change();return result;}
 std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> NativeSessionController::millennium_dos_title_exec_entry_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary&&state_!=NativeSessionState::millennium_dos_title)return std::nullopt;return runtime_.millennium_dos_title_exec_entry_checkpoint();}
@@ -562,6 +562,14 @@ NativeSessionController::deuteros_amiga_title_display_trace_checkpoint() const {
         return std::nullopt;
     }
     return runtime_.deuteros_amiga_title_display_trace_checkpoint();
+}
+
+std::optional<DeuterosAmigaTitlePlanarPatchSnapshot>
+NativeSessionController::deuteros_amiga_title_planar_patch() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_display_trace_boundary) {
+        return std::nullopt;
+    }
+    return runtime_.deuteros_amiga_title_planar_patch();
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>

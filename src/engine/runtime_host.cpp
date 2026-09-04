@@ -264,6 +264,7 @@ EON_HOST_F2_CALLBACK(observe_millennium_dos_second_function_callback_external_re
 #undef EON_HOST_F2_CALLBACK
 std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> RuntimeHost::millennium_dos_second_function_callback_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_second_function_callback_checkpoint();}
 std::optional<NativeRuntimeMemoryCheckpoint> RuntimeHost::native_runtime_memory_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::native_runtime_memory_checkpoint();}
+std::optional<DeuterosAmigaTitlePlanarPatchSnapshot> RuntimeHost::deuteros_amiga_title_planar_patch()const{if(revoking())return std::nullopt;return NativeSessionController::deuteros_amiga_title_planar_patch();}
 std::optional<NativeRuntimeMemoryDiagnostics> RuntimeHost::native_runtime_memory_diagnostics()const{if(revoking())return std::nullopt;return NativeSessionController::native_runtime_memory_diagnostics();}
 #define EON_HOST_BDF(name,type) MillenniumDosBdfObservationResult RuntimeHost::name(type o){if(revoking())return{false,"$0bdf observation rejected during source revocation"};return NativeSessionController::name(o);}
 EON_HOST_BDF(observe_millennium_dos_bdf_byte,MillenniumDosBdfByteObservation) EON_HOST_BDF(observe_millennium_dos_bdf_word,MillenniumDosBdfWordObservation) EON_HOST_BDF(observe_millennium_dos_bdf_poll_return,MillenniumDosBdfPollReturnObservation)

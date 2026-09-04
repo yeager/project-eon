@@ -4002,14 +4002,17 @@ nonzero rewind position, a short read, or a length different from the
 hash-identified leaf is rejected. In production,
 `MillenniumDosCompatibilityRunner` services only the deterministic file
 operations against that already authenticated immutable leaf. Its private
-handle is native engine state, not captured DOS evidence. The first tick
-performs open and exact-length discovery and stops at paragraph allocation.
-After an explicitly supplied nonzero allocation segment, the second tick
-rewinds, reads the complete leaf, commits the byte effects atomically, closes
-the private handle, and stops at the INT 95h vector boundary. Allocation,
-vector state, parent stack data, EXEC outcome, and child entry remain
-observations because they depend on process or DOS state that the leaf cannot
-prove.
+handle is native engine state, not captured DOS evidence. Its bounded native
+paragraph arena allocates the exact rounded-up leaf size without overlap and
+labels the resulting segment as compatibility provenance; the segment is an
+Eon address-space key, never a claimed DOS capture. One tick performs open,
+exact-length discovery, arena allocation, rewind, complete read, atomic byte
+commit, and close, then stops at the INT 95h vector boundary. Arena exhaustion,
+zero/overflowing requests, and detached sequences fail without partial state.
+Vector state, parent stack data, EXEC outcome, and child entry remain
+observations because they depend on process or DOS state that the immutable
+leaf cannot prove. Reset destroys the generation-owned arena, and revocation
+prevents its state or allocator from being reached.
 
 Only after the exact read result does the session expose byte effects for the
 original leaf at observed allocation segment offset zero. These are transient
@@ -4044,6 +4047,25 @@ leave the no-input sound-driver boundary and expose the already recovered
 title session. Reset, release replacement and host revocation remove this
 checkpoint. This proves the title entry prefix, not DOS loader internals,
 driver initialization, private-interrupt results, a rendered frame or parity.
+
+For the admitted English release, the compatibility runner can now produce
+that record without an emulator after the exact EXEC request. Its shared
+paragraph arena has already reserved the selected driver image. It reserves
+another 455 paragraphs for offsets `$0000..$1c6f`; the original 7,022-byte
+`TITLES.EXE` leaf is copied unchanged only to child offsets
+`$0100..$1c6d`. The first 16 paragraphs remain uninitialised: reserving their
+addresses prevents overlap but does **not** invent a PSP. The allocation's
+`native_compatibility_arena` provenance, generation and allocation ID remain
+in diagnostics. Allocation, image admission, compatibility child entry and
+the exact seven-byte prefix are committed atomically with native runtime
+memory; failure leaves the preceding EXEC-request boundary intact.
+
+This service intentionally has no PSP fields, environment block, command
+tail, inherited handles, DOS memory-control blocks, relocation behavior or
+parent return result. Diagnostics expose `psp_modeled=false`,
+`environment_modeled=false` and `parent_exec_return_observed=false` instead
+of filling those gaps. The child segment is a deterministic Eon address-space
+key, not a claimed historical DOS allocation address.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6067,6 +6089,17 @@ next command byte. The generic call-return API rejects this opcode family,
 so a register-only return cannot bypass the recovered writes. Nonzero mode
 routes remain explicit evidence boundaries. No host renderer, glyph meaning,
 colour assignment, or unseen memory effect is inferred from these writes.
+
+The renderer-facing consequence is deliberately narrower than a title
+frame. After the existing v4/v5 trace independently admits four contiguous
+320x200 planes (`$b5f0`, `$d530`, `$f470`, `$113b0`), `$28` bytes per row and
+the palette at `$1ed24`, Eon may decode the most recent 32-byte command result
+as one immutable 8x8 Original patch. Every index is reconstructed by reading
+the four applied plane bytes back from native runtime memory, most-significant
+bit first, and every RGBA value comes from the original RGB4 palette. No
+uninitialized surrounding pixel is exposed as black or transparent, and a
+trace boundary without a fully initialized in-layout patch exposes no
+surface.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to

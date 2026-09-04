@@ -1038,6 +1038,31 @@ void assert_modern_asset_pack_admission() {
 
 int main() {
     {
+        eon::MillenniumDosParagraphArena arena(7,0x0100,0x0110);
+        assert(!arena.allocate(0).allocation);
+        assert(!arena.allocate(0x10000).allocation);
+        const auto first=arena.allocate(4);
+        const auto second=arena.allocate(12);
+        assert(first.allocation && first.allocation->generation==7
+            && first.allocation->allocation_id==1
+            && first.allocation->segment==0x0100
+            && first.allocation->paragraph_count==4);
+        assert(second.allocation && second.allocation->allocation_id==2
+            && second.allocation->segment==0x0104
+            && second.allocation->paragraph_count==12);
+        const auto exhausted=arena.allocate(1);
+        assert(!exhausted.allocation && !exhausted.error.empty());
+        const auto checkpoint=arena.checkpoint();
+        assert(checkpoint.generation==7 && checkpoint.next_segment==0x0110
+            && checkpoint.allocations.size()==2
+            && static_cast<std::uint32_t>(checkpoint.allocations[0].segment)
+                +checkpoint.allocations[0].paragraph_count
+                <=checkpoint.allocations[1].segment);
+        const eon::MillenniumDosParagraphArena next_generation(8,0x0100,0x0110);
+        assert(next_generation.checkpoint().generation==8
+            && next_generation.checkpoint().allocations.empty());
+    }
+    {
         const auto images=eon::native_code_image_manifest();
         assert(images.size()==13);
         const auto game=std::find_if(images.begin(),images.end(),[](const auto& image){
@@ -4452,27 +4477,24 @@ int main() {
         && sound_load_checkpoint->driver_kind==eon::MillenniumDosSoundDriverKind::sound_blaster);
     auto compatibility_stop=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
     assert(compatibility_stop && compatibility_stop->generation==1
-        && compatibility_stop->last_sequence==3
+        && compatibility_stop->last_sequence==7
         && compatibility_stop->code_segment==0x2222
         && compatibility_stop->external_result_required
         && !compatibility_stop->title_exec_requested
-        && compatibility_stop->boundary.instruction_address==0x02fa
-        && compatibility_stop->compatibility_file_handle==0xe001
-        && compatibility_stop->automatic_operation_count==2
-        && compatibility_stop->error.empty());
-    // Open and exact length are native immutable-leaf facts. A detached host
-    // open result cannot replace the compatibility service's private handle.
-    assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(
-        eon::MillenniumDosSoundDriverOpenObservation{4,0x02d2,false,7}).accepted);
-    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverAllocationObservation{4,0x02fa,false,0x3456}).accepted);
-    const auto before_driver_read=admitted_dos_runtime.native_runtime_memory_diagnostics();
-    assert(before_driver_read && before_driver_read->initialized_byte_count==1
-        && before_driver_read->applied_batch_count==1);
-    compatibility_stop=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
-    assert(compatibility_stop && compatibility_stop->last_sequence==7
         && compatibility_stop->boundary.instruction_address==0x0239
-        && compatibility_stop->automatic_operation_count==5
-        && compatibility_stop->error.empty());
+        && compatibility_stop->compatibility_file_handle==0xe001
+        && compatibility_stop->automatic_operation_count==6
+        && compatibility_stop->error.empty()
+        && compatibility_stop->paragraph_arena.generation==1
+        && compatibility_stop->paragraph_arena.allocations.size()==1
+        && compatibility_stop->paragraph_arena.allocations[0].segment==0xe100
+        && compatibility_stop->paragraph_arena.allocations[0].paragraph_count==575
+        && compatibility_stop->paragraph_arena.allocations[0].provenance
+            ==eon::MillenniumDosParagraphProvenance::native_compatibility_arena);
+    // Open, exact length and native destination storage are compatibility
+    // service facts. Detached DOS results cannot replace those internal keys.
+    assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(
+        eon::MillenniumDosSoundDriverAllocationObservation{8,0x02fa,false,0x3456}).accepted);
     const auto after_driver_read=admitted_dos_runtime.native_runtime_memory_diagnostics();
     assert(after_driver_read && after_driver_read->initialized_byte_count==9195
         && after_driver_read->applied_batch_count==2);
@@ -4487,36 +4509,40 @@ int main() {
         && sound_load_checkpoint->state==eon::MillenniumDosSoundDriverLoadState::title_exec_requested
         && sound_load_checkpoint->admitted_driver_byte_count==9194
         && sound_load_checkpoint->runtime_word_effects.size()==4);
+    const auto before_title_child=admitted_dos_runtime.native_runtime_memory_diagnostics();
     compatibility_stop=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
-    assert(compatibility_stop && compatibility_stop->last_sequence==10
+    assert(compatibility_stop && compatibility_stop->last_sequence==13
         && !compatibility_stop->external_result_required
-        && compatibility_stop->title_exec_requested);
+        && compatibility_stop->title_exec_requested
+        && compatibility_stop->automatic_operation_count==9
+        && compatibility_stop->paragraph_arena.allocations.size()==2
+        && compatibility_stop->paragraph_arena.allocations[1].segment==0xe33f
+        && compatibility_stop->paragraph_arena.allocations[1].paragraph_count==455);
     const auto requested_title=admitted_dos_runtime.millennium_dos_startup_input();
     assert(requested_title && requested_title->title_active
         && !requested_title->title_handed_off);
     auto title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
     assert(title_entry && title_entry->generation==1
         && title_entry->entry.state
-            ==eon::MillenniumDosTitleExecEntryState::awaiting_child_process_entry
-        && title_entry->entry.last_sequence==0);
-    assert(!admitted_dos_runtime.advance_millennium_dos_title_entry_prefix(
-        {11,0x0100,0x0104,0x1b80}).accepted);
-    assert(admitted_dos_runtime.observe_millennium_dos_title_child_process_entry(
-        {11,0x0336,0x4b00,0x068f,0x067a,0x0100,0x3333,
-            eon::MillenniumDosTitleExecEntryProvenance::eon_dos_compatibility_service}).accepted);
-    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
-    assert(title_entry
-        &&title_entry->entry.state==eon::MillenniumDosTitleExecEntryState::entry_prefix_boundary
-        &&title_entry->entry.last_sequence==11
-        &&title_entry->entry.child_code_segment==0x3333
+            ==eon::MillenniumDosTitleExecEntryState::title_entry_boundary
+        && title_entry->entry.last_sequence==13
+        && title_entry->entry.child_code_segment==0xe33f
         &&title_entry->entry.provenance
-            ==eon::MillenniumDosTitleExecEntryProvenance::eon_dos_compatibility_service);
-    assert(admitted_dos_runtime.advance_millennium_dos_title_entry_prefix(
-        {12,0x0100,0x0104,0x1b80}).accepted);
+            ==eon::MillenniumDosTitleExecEntryProvenance::eon_dos_compatibility_service
+        &&title_entry->compatibility_child
+        &&title_entry->compatibility_child->allocation.segment==0xe33f
+        &&title_entry->compatibility_child->allocation.paragraph_count==455
+        &&title_entry->compatibility_child->admitted_image_byte_count==7022
+        &&title_entry->compatibility_child->image_load_offset==0x0100
+        &&title_entry->compatibility_child->entry_ip==0x0100
+        &&title_entry->compatibility_child->recovered_prefix_destination==0x1b80
+        &&title_entry->compatibility_child->exact_leaf_admitted
+        &&!title_entry->compatibility_child->psp_modeled
+        &&!title_entry->compatibility_child->environment_modeled
+        &&!title_entry->compatibility_child->parent_exec_return_observed);
     assert(admitted_dos_runtime.session_snapshot()
         &&admitted_dos_runtime.session_snapshot()->kind
             ==eon::RuntimeSessionKind::millennium_dos_title);
-    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
     assert(title_entry
         &&title_entry->entry.state==eon::MillenniumDosTitleExecEntryState::title_entry_boundary
         &&title_entry->entry.register_effects.size()==3
@@ -4526,6 +4552,22 @@ int main() {
         &&title_entry->entry.register_effects[1].value==0x3333
         &&title_entry->entry.register_effects[2].register_name=="IP"
         &&title_entry->entry.register_effects[2].value==0x1b80);
+    const auto after_title_child=admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(before_title_child&&after_title_child
+        &&after_title_child->initialized_byte_count
+            ==before_title_child->initialized_byte_count+7022
+        &&after_title_child->applied_batch_count
+            ==before_title_child->applied_batch_count+1);
+    const auto title_memory=admitted_dos_runtime.native_runtime_memory_checkpoint();
+    assert(title_memory
+        &&std::ranges::count_if(title_memory->initialized_bytes,[](const auto& cell){
+            return cell.location.address_space==eon::NativeRuntimeAddressSpace::dos_segmented
+                &&cell.location.segment==0xe33f
+                &&cell.location.offset>=0x0100&&cell.location.offset<0x1c6e;
+        })==7022);
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_child_process_entry(
+        {14,0x0336,0x4b00,0x068f,0x067a,0x0100,0xe33f,
+            eon::MillenniumDosTitleExecEntryProvenance::observed_process_entry}).accepted);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
         == eon::RuntimeInputDisposition::ignored);
     admitted_dos_runtime.reset();
@@ -4892,7 +4934,7 @@ int main() {
             runtime_planar.mode_source_addresses={{0x1f98c,0x1f98e}};
             runtime_planar.observed_mode_values={{0,0}};
             runtime_planar.pointer_source_addresses={{0x1f99c,0x1f974,0x1f96c,0x1f970,0x1f9a0}};
-            runtime_planar.observed_pointer_values={{0x50000,0x60000,0x70000,0x80000,0x28}};
+            runtime_planar.observed_pointer_values={{0x50000,0xb782,0x70000,0x80000,0x28}};
             for(std::uint32_t row=0;row<8;++row){
                 runtime_planar.glyph_source_addresses[row]=0x50000+row;
                 runtime_planar.observed_glyph_values[row]=static_cast<std::uint8_t>(row*0x11U);
@@ -4926,13 +4968,14 @@ int main() {
                 return found==planar_memory->initialized_bytes.end()
                     ? std::nullopt : std::optional<std::uint8_t>{found->value};
             };
-            assert(memory_byte_at(0x60000)==0xa0);
-            assert(memory_byte_at(0x61f40)==0xa1);
-            assert(memory_byte_at(0x60028)==0xb0);
+            assert(memory_byte_at(0xb782)==0xa0);
+            assert(memory_byte_at(0xd6c2)==0xa1);
+            assert(memory_byte_at(0xb7aa)==0xb0);
             assert(memory_byte_at(0x1f974)==0x00
-                && memory_byte_at(0x1f975)==0x06
-                && memory_byte_at(0x1f976)==0x00
-                && memory_byte_at(0x1f977)==0x28);
+                && memory_byte_at(0x1f975)==0x00
+                && memory_byte_at(0x1f976)==0xb7
+                && memory_byte_at(0x1f977)==0xaa);
+            assert(!opening_controller.deuteros_amiga_title_planar_patch());
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
                 {runtime_copy_sequence+15,0x1fa0a,0x2ff08,0}).accepted);
             assert(opening_controller.observe_input(
@@ -4998,6 +5041,27 @@ int main() {
                 && trace_checkpoint->bridge_event_count == 18
                 && trace_checkpoint->artifacts.empty()
                 && trace_checkpoint->event_sha256 == title_trace.event_sha256);
+            const auto planar_patch =
+                opening_controller.deuteros_amiga_title_planar_patch();
+            assert(planar_patch && planar_patch->command_generation==6
+                && planar_patch->plane_zero_address==0xb782
+                && planar_patch->pixel_x==16 && planar_patch->pixel_y==10
+                && planar_patch->width==8 && planar_patch->height==8
+                && planar_patch->runtime_memory_checksum==planar_memory->checksum
+                && planar_patch->display_trace_bitplanes_sha256
+                    == "fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490"
+                && planar_patch->palette_rgb4_sha256
+                    == "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55");
+            assert((std::array<std::uint8_t,8>{{15,0,15,0,0,0,12,10}}
+                == std::array<std::uint8_t,8>{{
+                    planar_patch->color_indices[0],planar_patch->color_indices[1],
+                    planar_patch->color_indices[2],planar_patch->color_indices[3],
+                    planar_patch->color_indices[4],planar_patch->color_indices[5],
+                    planar_patch->color_indices[6],planar_patch->color_indices[7]}}));
+            assert(planar_patch->rgba[0]==0xff && planar_patch->rgba[1]==0xff
+                && planar_patch->rgba[2]==0xff && planar_patch->rgba[3]==0xff
+                && planar_patch->rgba[4]==0 && planar_patch->rgba[5]==0
+                && planar_patch->rgba[6]==0 && planar_patch->rgba[7]==0xff);
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
@@ -5013,11 +5077,13 @@ int main() {
             std::filesystem::remove(title_trace_path);
             opening_controller.begin_return_to_menu();
             assert(!opening_controller.deuteros_amiga_title_display_trace_checkpoint());
+            assert(!opening_controller.deuteros_amiga_title_planar_patch());
             assert(!opening_controller.deuteros_amiga_opening_scheduler_active()
                 && opening_controller.advance_deuteros_amiga_opening_scheduler(10'020).events.empty());
             opening_controller.finish_return_to_menu();
             assert(opening_controller.state() == eon::NativeSessionState::menu);
             assert(!opening_controller.native_runtime_memory_checkpoint());
+            assert(!opening_controller.deuteros_amiga_title_planar_patch());
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
@@ -5102,6 +5168,7 @@ int main() {
             && !revocation_host.deuteros_amiga_title_dependency_chain_checkpoint()
             && !revocation_host.native_runtime_memory_checkpoint()
             && !revocation_host.native_runtime_memory_diagnostics()
+            && !revocation_host.deuteros_amiga_title_planar_patch()
             && !revocation_host.deuteros_atari_bootstrap_checkpoint()
             && !revocation_host.deuteros_atari_bootstrap_presentation()
             && !revocation_host.millennium_amiga_bootstrap_presentation()
