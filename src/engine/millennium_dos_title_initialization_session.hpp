@@ -57,6 +57,7 @@ enum class MillenniumDosTitleInitializationState {
     graphics_record_second_byte_read_boundary,
     graphics_record_private_interrupt_result_boundary,
     post_descriptor_private_interrupt_result_boundary,
+    post_descriptor_first_loop_far_read_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };
@@ -69,6 +70,12 @@ struct MillenniumDosTitlePrivateInterruptResultObservation {
     std::uint16_t return_address = 0;
     std::uint16_t ax = 0;
     std::uint16_t flags = 0;
+    // Function $001a is admitted with the raw ten-byte request record that
+    // occupies CS:$0fdf..$0fe8. Other private-ABI observations leave this
+    // provenance empty.
+    std::uint16_t record_segment = 0;
+    std::uint16_t record_offset = 0;
+    std::vector<std::uint8_t> record_bytes;
 };
 
 struct MillenniumDosTitleSelectedCalleeResultObservation {
@@ -315,6 +322,9 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t post_video_observed_flags = 0;
     std::uint16_t graphics_record_observed_ax = 0;
     std::uint16_t graphics_record_observed_flags = 0;
+    std::uint16_t post_descriptor_observed_ax = 0;
+    std::uint16_t post_descriptor_observed_flags = 0;
+    std::vector<std::uint8_t> post_descriptor_observed_record;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -426,6 +436,9 @@ private:
     std::uint16_t post_video_observed_flags_ = 0;
     std::uint16_t graphics_record_observed_ax_ = 0;
     std::uint16_t graphics_record_observed_flags_ = 0;
+    std::uint16_t post_descriptor_observed_ax_ = 0;
+    std::uint16_t post_descriptor_observed_flags_ = 0;
+    std::vector<std::uint8_t> post_descriptor_observed_record_;
 };
 
 } // namespace eon

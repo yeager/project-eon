@@ -1450,9 +1450,16 @@ bytes at `$2c251..$2c252`. The exact eight-byte pair-copy/A5-advance/D6-
 decrement prefix at `$2b2ea..$2b2f1` hashes to
 `8b97786735b1f1be41f931a62098f2f1080b5067b2db2a9835125619ad3b7623`.
 Eon atomically retains those source bytes and copies them to the owned A5
-destination, advances A4 by two and A5 by eight, and decrements D6. Execution
-stops before the D6 branch at `$2b2f2`; its outcome, later loop counters, and
-all alternate branch-target effects remain unclaimed.
+destination, advances A4 by two and A5 by eight, and decrements D6. The exact
+48-byte counter continuation at file `+0xdf2`, runtime
+`$2b2f2..$2b321`, hashes to
+`9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef`.
+Eon now executes its normal-path D6 run dispatch, D7 row dispatch, four-plane
+D5 dispatch, A0/A5/A6 address updates and D2 run countdown. It returns to the
+typed pair boundary, the next typed token boundary, or the proven RTS at
+`$2b3c6` according to those owned counters. No new source byte is admitted by
+that deterministic transition. The bit-6 and bit-7 payload continuations at
+`$2b338`, `$2b376`, and `$2b3b8` remain explicit boundaries.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4451,6 +4458,18 @@ The exact `$1004..$1013` callee prefix (file `+$0f04`, SHA-256
 atomically writes CS to request word `CS:$0fe7`, selects record `CS:$0fdf`
 and function `$001a`, and reaches the common private INT `$91` at `$0127`.
 The next raw result is not inferred.
+That function-`$001a` result is now a strict typed input containing raw AX,
+FLAGS, and all ten bytes observed at `CS:$0fdf..$0fe8`. The coordinator
+applies those bytes atomically; no field or service meaning is assigned. The
+hash-bound wrapper epilogue `$0129..$012e` has SHA-256
+`a6e3a351304f487a18bc22e460403bfcdb5e702831b037aa0a90a56bf3cf7baf`,
+and the caller's first `$1941..$1962` loop prefix has SHA-256
+`8ae5339224f631de9dbf852ab43c5553849b37ef00289e0a34055e73a760357a`.
+That loop atomically advances both original zero output offsets to `$0170`,
+selects descriptor index one, and re-enters the already verified `$1390`
+decoder prefix. The largest static continuation ends at `$13aa` before two
+external words at relocated `TITLE.LIB+$000f`. This is a typed preservation
+boundary, not a rendering or descriptor-value claim.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6780,6 +6799,15 @@ Only the dynamic zero-pointer fallback read at `$41c48` is externally typed;
 the complete decode commits atomically and returns to `$20c80`. These sparse
 runtime writes are recovered execution state, not a renderer-surface or
 visual-parity claim.
+
+At `$20c80`, the caller's exact eight-byte pointer-load and zero-branch prefix
+hashes to
+`457462f38e994a97b0d37b21cbead532d6bfdb685fc3a8c8784cea654422357d`.
+A typed longword observation at mutable cell `$19d1e` is committed atomically.
+Zero reaches the local RTS at `$20cb8`; nonzero becomes A0 and stops before
+the byte comparison at `$20c8a`. Eon does not infer object bytes `$ee`/`$f0`,
+the two possible `$41ad2` helper effects, or any visual meaning from the
+preceding sparse descriptor output.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

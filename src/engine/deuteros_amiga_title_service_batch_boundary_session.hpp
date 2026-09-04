@@ -1021,6 +1021,16 @@ struct DeuterosAmigaTitlePostCommandAdjustedDispatchPlan {
     std::uint32_t return_address=0,stop_before_address=0;
     std::string descriptor_suffix_sha256,header_sha256,payload_sha256;
 };
+struct DeuterosAmigaObservedTitlePostAdjustedCallerPointer {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,source_address=0,observed_pointer=0;
+};
+struct DeuterosAmigaTitlePostAdjustedCallerPointerPlan {
+    DeuterosAmigaObservedTitlePostAdjustedCallerPointer observation;
+    bool pointer_is_zero=false;
+    std::uint32_t branch_address=0,branch_target=0,next_instruction=0;
+    std::string prefix_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2805,6 +2815,18 @@ public:
             "fbaaa7db8117a83718be8cea03749e455893d2e0feb5e72c74d1158749bc7095",
             "8b535aadc3aaa48055ffaf3ce03339455ebcee3951e737ddedfb62d8b690b840"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedCallerPointerPlan>
+    observe_post_adjusted_caller_pointer(const DeuterosAmigaObservedTitlePostAdjustedCallerPointer&o){
+        if(!adjusted_dispatch_destination_||post_adjusted_caller_pointer_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x20c80
+            ||o.source_address!=0x19d1e||o.observed_pointer>0xfffffeffU)
+            throw std::runtime_error("Deuteros post-adjusted caller pointer does not match boundary");
+        post_adjusted_caller_pointer_=o;last_command_sequence_=o.trace_sequence;
+        const auto zero=o.observed_pointer==0;
+        return DeuterosAmigaTitlePostAdjustedCallerPointerPlan{o,zero,0x20c86,0x20cb8,
+            zero?0x20cb8U:0x20c88U,
+            "457462f38e994a97b0d37b21cbead532d6bfdb685fc3a8c8784cea654422357d"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3008,6 +3030,7 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> descriptor_call_return_;
     std::optional<DeuterosAmigaObservedTitlePostCommandDescriptorByte> post_command_descriptor_byte_;
     std::optional<DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination> adjusted_dispatch_destination_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedCallerPointer> post_adjusted_caller_pointer_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

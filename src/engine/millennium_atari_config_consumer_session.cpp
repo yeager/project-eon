@@ -188,6 +188,15 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
     constexpr std::array<std::uint8_t,16> game_init_nonzero_dispatch{0x08,0x02,0x00,0x06,0x67,0x00,0x00,0x90,0x08,0x02,0x00,0x07,0x66,0x00,0x00,0x46};
     for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2b2deU+static_cast<std::uint32_t>(i))!=game_init_source_dispatch[i])throw std::runtime_error("Unexpected game-init source dispatch");
     for(std::size_t i=0;i<16;++i)if(require_byte(memory,0x2b322U+static_cast<std::uint32_t>(i))!=game_init_nonzero_dispatch[i])throw std::runtime_error("Unexpected game-init nonzero dispatch");
+    constexpr std::array<std::uint8_t,48> game_init_zero_counter_continuation{
+        0x66,0x00,0x00,0x28,0x53,0x47,0x66,0x00,0x00,0x18,0x53,0x45,
+        0x67,0x00,0x00,0xc6,0x54,0x88,0x2c,0x48,0x3c,0x13,0x3e,0x2b,
+        0x00,0x02,0x2a,0x4e,0x60,0x00,0x00,0x0c,0x3c,0x13,0xdd,0xfc,
+        0x00,0x00,0x00,0xa0,0x2a,0x4e,0x53,0x02,0x66,0xca,0x60,0xba,
+    };
+    for(std::size_t i=0;i<game_init_zero_counter_continuation.size();++i)
+        if(require_byte(memory,0x2b2f2U+static_cast<std::uint32_t>(i))!=game_init_zero_counter_continuation[i])
+            throw std::runtime_error("Unexpected game-init zero-counter continuation");
     if (generation == 0 || gemdos.generation != generation
         || gemdos.state != MillenniumAtariReadOnlyGemdosState::config_jsr_boundary
         || gemdos.config_jsr_instruction_address != jsr_instruction
@@ -694,6 +703,30 @@ if(checkpoint_.state!=MillenniumAtariConfigConsumerState::game_init_zero_copy_bo
 if(o.generation!=checkpoint_.generation||o.sequence<=checkpoint_.last_sequence||o.instruction_address!=0x2b2ea||o.first_source_address!=checkpoint_.game_init_source_address||o.second_source_address!=checkpoint_.game_init_source_address+1U)return{false,"Game-init zero-pair observation mismatch"};
 checkpoint_.state=MillenniumAtariConfigConsumerState::game_init_zero_counter_branch_boundary;checkpoint_.last_sequence=o.sequence;checkpoint_.game_init_zero_pair_observed=true;checkpoint_.game_init_zero_first_byte=o.first_source_byte;checkpoint_.game_init_zero_second_byte=o.second_source_byte;checkpoint_.game_init_zero_destination_address=checkpoint_.caller_a5;checkpoint_.game_init_source_address+=2U;checkpoint_.caller_a5+=8U;checkpoint_.game_init_d6=static_cast<std::uint16_t>(checkpoint_.game_init_d6-1U);checkpoint_.game_init_next_instruction=0x2b2f2;checkpoint_.game_init_zero_pair_prefix_sha256="8b97786735b1f1be41f931a62098f2f1080b5067b2db2a9835125619ad3b7623";checkpoint_.local_instruction_count+=3;return{true,{}};}
 NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_game_init_zero_pair_effect_batch(std::string id)const{if(checkpoint_.state!=MillenniumAtariConfigConsumerState::game_init_zero_counter_branch_boundary||!checkpoint_.game_init_zero_pair_observed||id.empty())throw std::runtime_error("Game-init zero-pair effect unavailable");return{std::move(id),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,checkpoint_.game_init_source_address-2U},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,checkpoint_.game_init_zero_first_byte},{2,{NativeRuntimeAddressSpace::linear,std::nullopt,checkpoint_.game_init_source_address-1U},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,checkpoint_.game_init_zero_second_byte},{3,{NativeRuntimeAddressSpace::linear,std::nullopt,checkpoint_.game_init_zero_destination_address},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,checkpoint_.game_init_zero_first_byte},{4,{NativeRuntimeAddressSpace::linear,std::nullopt,checkpoint_.game_init_zero_destination_address+1U},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,checkpoint_.game_init_zero_second_byte}}};}
+
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_game_init_zero_counter_branch(){
+    if(checkpoint_.state!=MillenniumAtariConfigConsumerState::game_init_zero_counter_branch_boundary)return{false,"Not at game-init zero counter branch"};
+    checkpoint_.game_init_zero_counter_continuation_sha256="9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef";
+    ++checkpoint_.local_instruction_count;
+    if(checkpoint_.game_init_d6==0){
+        checkpoint_.game_init_d7=static_cast<std::uint16_t>(checkpoint_.game_init_d7-1U); checkpoint_.local_instruction_count+=2;
+        if(checkpoint_.game_init_d7!=0){
+            checkpoint_.game_init_d6=static_cast<std::uint16_t>((checkpoint_.fread_prefix_d6-1U)>>2U)+1U;
+            checkpoint_.game_init_a6+=0xa0U; checkpoint_.caller_a5=checkpoint_.game_init_a6; checkpoint_.local_instruction_count+=3;
+        }else{
+            checkpoint_.game_init_d5=static_cast<std::uint16_t>(checkpoint_.game_init_d5-1U); checkpoint_.local_instruction_count+=2;
+            if(checkpoint_.game_init_d5==0){checkpoint_.state=MillenniumAtariConfigConsumerState::game_init_complete;checkpoint_.game_init_next_instruction=0x2b3c6;checkpoint_.game_init_completed_planes=4;return{true,{}};}
+            checkpoint_.game_init_a0+=2U;checkpoint_.game_init_a6=checkpoint_.game_init_a0;
+            checkpoint_.game_init_d6=static_cast<std::uint16_t>((checkpoint_.fread_prefix_d6-1U)>>2U)+1U;
+            checkpoint_.game_init_d7=static_cast<std::uint16_t>(checkpoint_.fread_prefix_d7&0x00ffU);
+            checkpoint_.caller_a5=checkpoint_.game_init_a6; checkpoint_.game_init_completed_planes=4U-checkpoint_.game_init_d5; checkpoint_.local_instruction_count+=6;
+        }
+    }
+    checkpoint_.game_init_d2=static_cast<std::uint16_t>((checkpoint_.game_init_d2&0xff00U)|static_cast<std::uint8_t>(checkpoint_.game_init_d2-1U));checkpoint_.local_instruction_count+=2;
+    if(static_cast<std::uint8_t>(checkpoint_.game_init_d2)!=0){checkpoint_.state=MillenniumAtariConfigConsumerState::game_init_zero_copy_boundary;checkpoint_.game_init_next_instruction=0x2b2ea;}
+    else{checkpoint_.state=MillenniumAtariConfigConsumerState::game_init_source_byte_boundary;checkpoint_.game_init_next_instruction=0x2b2de;++checkpoint_.local_instruction_count;}
+    return{true,{}};
+}
 
 MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::revoke(
     const std::uint64_t generation) {

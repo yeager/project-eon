@@ -5229,6 +5229,13 @@ int main() {
                 && zero_pair_user->config_consumer.game_init_next_instruction==0x2b2f2
                 && zero_pair_user->config_consumer.game_init_source_address==0x2c253
                 && zero_pair_user->config_consumer.game_init_zero_destination_address==zero_destination);
+            assert(all_release_runtime.execute_millennium_atari_game_init_zero_counter_branch().accepted);
+            const auto zero_counter_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(zero_counter_user && zero_counter_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::game_init_zero_copy_boundary
+                && zero_counter_user->config_consumer.game_init_next_instruction==0x2b2ea
+                && zero_counter_user->config_consumer.game_init_d2==0x11
+                && zero_counter_user->config_consumer.game_init_zero_counter_continuation_sha256=="9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef");
+            assert(!all_release_runtime.execute_millennium_atari_game_init_zero_counter_branch().accepted);
             assert(!all_release_runtime.execute_millennium_atari_jsr_2b2be().accepted);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
@@ -5913,6 +5920,15 @@ int main() {
                 adjusted_destination).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination(
                 adjusted_destination).accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedCallerPointer caller_pointer{
+                runtime_copy_sequence+53,0x20c80,0x19d1e,0x62000};
+            auto bad_caller_pointer=caller_pointer;bad_caller_pointer.source_address++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_pointer(
+                bad_caller_pointer).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_pointer(
+                caller_pointer).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_pointer(
+                caller_pointer).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -5931,6 +5947,10 @@ int main() {
             assert(std::any_of(post_command_memory->initialized_bytes.begin(),
                 post_command_memory->initialized_bytes.end(),[](const auto& byte){
                     return byte.location.offset==0x6199d && byte.value==0x07;
+                }));
+            assert(std::any_of(post_command_memory->initialized_bytes.begin(),
+                post_command_memory->initialized_bytes.end(),[](const auto& byte){
+                    return byte.location.offset==0x19d20 && byte.value==0x20;
                 }));
             assert(std::any_of(post_command_memory->initialized_bytes.begin(),
                 post_command_memory->initialized_bytes.end(),[](const auto& byte){

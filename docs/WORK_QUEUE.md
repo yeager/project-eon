@@ -29,7 +29,11 @@ typed byte boundary `$13e9`, source `$3000:$0007`.
 The genuine `$23` byte is now admitted through all production facades and its
 incremented `$24` is committed. Continue at `$13f2`, source `$3000:$000a`.
 The genuine zero byte and complete local return/request build are now native.
-Continue with raw INT `$91` function `$0006` result at `$0127`.
+The raw function-`$0006` result resumes into function `$001a`; its raw AX,
+FLAGS, and ten-byte `CS:$0fdf` record are now admitted atomically. The first
+`$1941` title-loop iteration advances both output pointers and stops at the
+typed two-word `$13aa` read from relocated `TITLE.LIB+$000f`. Recover those
+genuine words next; do not infer descriptor or rendering semantics.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -61,9 +65,11 @@ are now typed and native. The next exact boundary is `JSR $2b2be` at `$2aaec`.
 The correctly mapped `$2b2be` setup is now native through its atomic D6/D7
 stores. The next boundary is `MOVE.B (A4)+,D0` at `$2b2de`, source `$2c250`.
 That first source byte and all four exact dispatch outcomes are now native.
-The normal path now owns the typed pair at `$2c251..$2c252` and stops before
-the D6 branch at `$2b2f2`; alternate paths stop at
-`$2b338`, `$2b376`, or `$2b3b8`.
+The normal path now owns the typed pair at `$2c251..$2c252` and executes the
+hash-bound D6/D7/D5 run, row and plane continuation at `$2b2f2..$2b321`.
+It stops only when the next pair/token needs source bytes or at the routine
+RTS. The alternate token paths at `$2b338`, `$2b376`, and `$2b3b8` are the
+next large Atari recovery jobs.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -314,7 +320,9 @@ addition atomically adjusts `$416b4`, and D0 becomes `$004b`. Continue at
 observed byte; do not reuse the unadjusted `$00bd` stream implicitly.
 The genuine `$03` observation now selects a separately hash-bound `$00c0`
 descriptor and completes its 68-by-168 decode as 22,848 atomic byte writes
-after one typed destination-pointer read. Continue at caller `$20c80`; do not
+after one typed destination-pointer read. Caller `$20c80` now owns the typed
+`$19d1e` pointer and exact zero branch. Continue at the nonzero object's
+`$20c8a` byte comparison; do not
 treat the sparse decoded memory as a renderer surface.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

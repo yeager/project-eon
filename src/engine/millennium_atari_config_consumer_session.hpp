@@ -41,6 +41,7 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_source_byte_boundary,
     game_init_zero_copy_boundary,
     game_init_zero_counter_branch_boundary,
+    game_init_complete,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -334,6 +335,8 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint8_t game_init_zero_second_byte=0;
     std::uint32_t game_init_zero_destination_address=0;
     std::string game_init_zero_pair_prefix_sha256;
+    std::string game_init_zero_counter_continuation_sha256;
+    std::uint32_t game_init_completed_planes=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -425,6 +428,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_zero_pair(
         const MillenniumAtariGameInitZeroPairObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_zero_pair_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_zero_counter_branch();
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:
