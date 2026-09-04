@@ -53,6 +53,9 @@ and other game vocabulary from silently falling back across releases.
 Runtime snapshots retain only revalidated copy-only tokens. Renderers resolve
 those tokens rather than trusting bare original strings after the media leaf
 has been released; Original and Modern use the same token resolver.
+The shared resolver supports stable-ID lookup for recovered game logic and
+exact-original lookup for byte-oriented parsers. Missing and ambiguous token
+lookups both fail closed, so duplicate spellings must be disambiguated by ID.
 
 ## Unicode rendering
 

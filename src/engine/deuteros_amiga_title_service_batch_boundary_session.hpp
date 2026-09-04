@@ -980,6 +980,17 @@ struct DeuterosAmigaTitlePostCommandSelectedStreamPlan {
     std::uint32_t stop_before_address=0;
     std::string payload_sha256;
 };
+struct DeuterosAmigaTitlePostCommandDescriptorCallPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint16_t iteration=0,remaining_d6=0,shifted_d5=0;
+};
+struct DeuterosAmigaTitlePostCommandDescriptorLoopPlan {
+    bool completed=false;
+    std::uint16_t iteration=0,remaining_d6=0,shifted_d5=0,d0=0,d1=0;
+    std::uint32_t call_address=0,call_target=0,descriptor_destination=0;
+    std::uint16_t descriptor_value=0;
+    std::uint32_t stop_before_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2627,6 +2638,12 @@ public:
         auto addresses=is_b0?selected_b0_addresses_:selected_bd_addresses_;
         for(auto& address:addresses)address+=post_command_dispatch_destination_->observed_pointer;
         post_command_selected_stream_advanced_=true;
+        descriptor_loop_d5_=descriptor;descriptor_loop_d6_=0x000b;descriptor_loop_iteration_=0;
+        // Enter the loop through its first reachable call. `$00bd` has carry
+        // set on iteration zero, so it deterministically skips to iteration one.
+        descriptor_loop_d5_>>=1U;
+        if(descriptor==0x00bd){--descriptor_loop_d6_;++descriptor_loop_iteration_;descriptor_loop_d5_>>=1U;}
+        descriptor_call_pending_=true;
         return DeuterosAmigaTitlePostCommandSelectedStreamPlan{descriptor,0x000c,
             static_cast<std::uint16_t>(is_b0?0x0010:0x8010),
             is_b0?0x74576U:0x76e24U,is_b0?0x7457aU:0x76e28U,
@@ -2637,6 +2654,30 @@ public:
             is_b0?768U:192U,0x41be6,0x20c2c,descriptor,0x000b,0x20c4c,
             is_b0?"67251004cede98024d69fff3b1bac02f7df956aca5422086f00a88825ad1366c":
                 "8dca78516efa8b24c5a195cd4427fe196b4e15759c00882aa1a229ae99edd173"};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDescriptorCallPlan>
+    observe_post_command_descriptor_call_return(const DeuterosAmigaObservedLocalCallReturn& o){
+        if(!descriptor_call_pending_||descriptor_call_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x20c4c
+            ||o.call_target!=0x41ad2||o.return_address!=0x20c52)
+            throw std::runtime_error("Deuteros descriptor-loop call return does not match boundary");
+        descriptor_call_pending_=false;descriptor_call_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostCommandDescriptorCallPlan{o,descriptor_loop_iteration_,
+            descriptor_loop_d6_,descriptor_loop_d5_};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDescriptorLoopPlan>
+    advance_post_command_descriptor_loop(){
+        if(!descriptor_call_return_||descriptor_call_pending_||descriptor_loop_completed_)return std::nullopt;
+        descriptor_call_return_.reset();
+        constexpr std::array<std::uint16_t,24> table{{0x0000,0x0058,0x0002,0x0358,0x0003,0x0068,0x0004,0x0368,0x0005,0x0078,0x0007,0x0378,0x0006,0x0088,0x0001,0x0388,0x0003,0x0098,0x0008,0x0398,0x0026,0x00a8,0x0002,0x03a8}};
+        while(descriptor_loop_d6_!=0){--descriptor_loop_d6_;++descriptor_loop_iteration_;
+            const auto carry=(descriptor_loop_d5_&1U)!=0;descriptor_loop_d5_>>=1U;
+            if(!carry&&descriptor_loop_d6_!=4U&&descriptor_loop_d6_!=5U){descriptor_call_pending_=true;
+                return DeuterosAmigaTitlePostCommandDescriptorLoopPlan{false,descriptor_loop_iteration_,descriptor_loop_d6_,descriptor_loop_d5_,0x26,table[descriptor_loop_iteration_*2U+1U],0x20c4c,0x41ad2,0,0,0x20c4c};}
+        }
+        descriptor_loop_completed_=true;
+        return DeuterosAmigaTitlePostCommandDescriptorLoopPlan{true,descriptor_loop_iteration_,0,
+            descriptor_loop_d5_,0,0,0,0,0x416b4,0x00bd,0x20c6c};
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
@@ -2836,6 +2877,9 @@ private:
     std::vector<std::uint8_t> selected_b0_values_,selected_bd_values_;
     std::uint32_t selected_b0_packet_count_=0,selected_bd_packet_count_=0;
     std::array<std::uint32_t,4> selected_b0_family_counts_{},selected_bd_family_counts_{};
+    std::uint16_t descriptor_loop_d5_=0,descriptor_loop_d6_=0,descriptor_loop_iteration_=0;
+    bool descriptor_call_pending_=false,descriptor_loop_completed_=false;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> descriptor_call_return_;
     struct PendingCommandCall {
         std::uint32_t address;
         std::uint32_t target;

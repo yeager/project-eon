@@ -38,6 +38,7 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     gemdos_selector_62_boundary,
     fread_prefix_boundary,
     jsr_2b2be_boundary,
+    game_init_source_byte_boundary,
     revoked,
 };
 
@@ -298,6 +299,15 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint16_t fread_prefix_d7=0;
     std::uint32_t caller_a5=0;
     std::string fread_caller_prefix_sha256;
+    std::uint32_t game_init_a3=0;
+    std::uint16_t game_init_d6=0;
+    std::uint16_t game_init_d7=0;
+    std::uint32_t game_init_a0=0;
+    std::uint32_t game_init_a6=0;
+    std::uint16_t game_init_d5=0;
+    std::uint16_t game_init_d2=0;
+    std::uint32_t game_init_source_address=0;
+    std::string game_init_dispatch_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -381,6 +391,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_fread_prefix(
         const MillenniumAtariFreadPrefixObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_fread_prefix_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2b2be();
+    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_setup_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

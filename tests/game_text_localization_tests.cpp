@@ -102,6 +102,26 @@ int main() {
         eon::Game::millennium, eon::Platform::dos,
         admitted_celestial_text.front(), "sv", eon::Translator::from_language("sv"));
     assert(admitted_swedish.displayed_text == all_celestial_text.front().displayed_text);
+    const auto admitted_by_id = eon::localize_admitted_game_text_by_id(
+        eon::Game::millennium, eon::Platform::dos, admitted_celestial_text,
+        admitted_celestial_text.front().id, "sv", eon::Translator::from_language("sv"));
+    const auto admitted_by_original = eon::localize_admitted_game_text_by_original(
+        eon::Game::millennium, eon::Platform::dos, admitted_celestial_text,
+        admitted_celestial_text.front().original_text, "sv",
+        eon::Translator::from_language("sv"));
+    assert(admitted_by_id.id == admitted_swedish.id);
+    assert(admitted_by_original.displayed_text == admitted_swedish.displayed_text);
+    auto ambiguous_tokens = admitted_celestial_text;
+    ambiguous_tokens.push_back(admitted_celestial_text.front());
+    source_rejected = false;
+    try {
+        static_cast<void>(eon::localize_admitted_game_text_by_original(
+            eon::Game::millennium, eon::Platform::dos, ambiguous_tokens,
+            admitted_celestial_text.front().original_text, "en", source_english));
+    } catch (const std::runtime_error&) {
+        source_rejected = true;
+    }
+    assert(source_rejected);
     auto forged_token = admitted_celestial_text.front();
     forged_token.source_offset += 1;
     source_rejected = false;
