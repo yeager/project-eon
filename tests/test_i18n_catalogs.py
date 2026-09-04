@@ -62,6 +62,15 @@ GAME_TEXT_PRODUCT_NAMES = {
     "Sound Blaster", "Covox Sound Master",
     "1 = Sound Blaster", "2 = Covox Sound Master",
 }
+CELESTIAL_PROPER_NAMES = {
+    "Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn",
+    "Uranus", "Neptune", "Pluto", "Moon", "Phobos", "Deimos",
+    "Amalthea", "Io", "Europa", "Ganymede",
+    "Callisto", "Leda", "Himalia", "Elara", "Pasiphae", "Mimas",
+    "Enceladus", "Tethys", "Dione", "Rhea", "Titan", "Hyperion",
+    "Iapetus", "Phoebe", "Miranda", "Ariel", "Umbriel", "Titania",
+    "Oberon", "Triton", "Nereid", "Charon",
+}
 for _language in INTENTIONALLY_IDENTICAL_TRANSLATIONS:
     INTENTIONALLY_IDENTICAL_TRANSLATIONS[_language] |= GAME_TEXT_PRODUCT_NAMES
 
@@ -125,19 +134,48 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(document["schema"], 1)
         pattern = re.compile(
             r'GameTextDefinition\{Game::(\w+), Platform::(\w+),\s*'
-            r'"([^"]+)", "([^"]+)", "([0-9a-f]{64})", (\d+), (\d+), '
-            r'"([^"]+)",\s*"([^"]+)"\}')
+            r'"([^"]+)", "([^"]+)", "([0-9a-f]{64})",\s*(\d+),\s*(\d+),\s*'
+            r'"([^"]+)",\s*"([^"]+)"(?:,\s*"([^"]+)")?\}')
         compiled = []
         for match in pattern.finditer(GAME_TEXT_SOURCE):
-            game, platform, key, leaf, digest, offset, size, original, message = match.groups()
-            compiled.append({
+            game, platform, key, leaf, digest, offset, size, original, message, source_language = match.groups()
+            entry = {
                 "id": key, "game": game, "platform": platform,
                 "source_leaf": leaf, "source_sha256": digest,
                 "source_offset": int(offset), "source_size": int(size),
                 "original_text": original, "catalog_msgid": message,
-            })
+            }
+            if source_language:
+                entry["source_language"] = source_language
+            compiled.append(entry)
         self.assertTrue(compiled)
         self.assertEqual(document["entries"], compiled)
+
+    def test_game_text_map_covers_both_original_celestial_tables(self) -> None:
+        document = json.loads((ROOT / "docs" / "game-text-map.json").read_text(encoding="utf-8"))
+        entries = document["entries"]
+        self.assertEqual(len(entries), 92)
+        self.assertEqual(len({entry["catalog_msgid"] for entry in entries}), 51)
+        celestial = [entry for entry in entries if ".celestial." in entry["id"]]
+        self.assertEqual(len(celestial), 82)
+        by_language = {
+            language: [entry for entry in celestial
+                       if entry.get("source_language", document["default_source_language"])
+                       == language]
+            for language in ("en", "es")
+        }
+        self.assertEqual([len(by_language[language]) for language in ("en", "es")], [41, 41])
+        self.assertEqual(
+            {entry["id"] for entry in by_language["en"]},
+            {entry["id"] for entry in by_language["es"]},
+        )
+        for language, rows in by_language.items():
+            with self.subTest(language=language):
+                ordered = sorted(rows, key=lambda entry: entry["source_offset"])
+                self.assertTrue(all(
+                    left["source_offset"] + left["source_size"] < right["source_offset"]
+                    for left, right in zip(ordered, ordered[1:])
+                ))
 
     def test_exactly_twenty_shipped_catalogs(self) -> None:
         self.assertEqual({path.stem for path in PO.glob("*.po")}, CATALOGS)
@@ -317,7 +355,7 @@ class CatalogTests(unittest.TestCase):
                 catalog = po_messages(PO / f"{language}.po")
                 identical = {message_id for message_id, translation in catalog.items()
                              if message_id and message_id == translation}
-                self.assertEqual(identical, allowed)
+                self.assertEqual(identical - CELESTIAL_PROPER_NAMES, allowed)
 
     def test_catalog_headers_and_keys_are_structurally_unambiguous(self) -> None:
         for language in sorted(CATALOGS):

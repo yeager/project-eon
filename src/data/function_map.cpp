@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 47> entries{{
+constexpr std::array<FunctionMapEntry, 48> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -259,8 +259,15 @@ constexpr std::array<FunctionMapEntry, 47> entries{{
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
      "fba4dff4da954290d970f5ec129220c179a2ef73f010def6512401380b8640cc",
      "ADF+0x9cbb4", "$41bb4", "verified-static",
-     "decoded bytes remain sparse runtime memory and are not yet a proven renderer surface",
-     "native complete first decompression", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
+     "preexisting destination words require observation and decoded output is not yet a renderer surface",
+     "native complete first merge loop", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
+     "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
+    {"deuteros-amiga-en-title-second-paired-dispatch", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+     "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
+     "dabcb6ee4feb0022f3232bcab1ffccb6657448e8602c39ef248da996e57a5666",
+     "ADF runtime $78c76..$78d5a", "$41bb4", "verified-static",
+     "64 final destination words require typed observation; execution stops before the next caller effect",
+     "native complete second merge loop", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
     {"deuteros-amiga-en-title-planar-zero-route", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",

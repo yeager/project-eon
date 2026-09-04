@@ -204,6 +204,53 @@ int main(const int argc, const char* const argv[]) {
             && jsr_boundary.next_jsr_target == 0x2b55a);
         assert(!user_consumer.observe_bchg_2b55a(
             {1, 8, 0x2b55a, 1, 0x2a500, 0x4e}).accepted);
+        assert(user_consumer.execute_jsr_2b55a().accepted);
+        assert(user_consumer.checkpoint().state
+                == eon::MillenniumAtariConfigConsumerState::bsr_2b59a_boundary
+            && user_consumer.checkpoint().bsr_instruction_address == 0x2b55e
+            && user_consumer.checkpoint().bsr_target == 0x2b59a);
+        assert(user_consumer.execute_bsr_2b59a().accepted);
+        assert(user_consumer.checkpoint().state
+                == eon::MillenniumAtariConfigConsumerState::d0_indexed_write_boundary
+            && user_consumer.checkpoint().bsr_return_address == 0x2b562
+            && user_consumer.checkpoint().callee_a3 == 0x2b0e8
+            && user_consumer.checkpoint().callee_clear_address == 0x2b6b8
+            && user_consumer.checkpoint().indexed_instruction_address == 0x2b5a6);
+        auto bsr_memory = memory;
+        assert(bsr_memory.apply(user_consumer.make_bsr_2b59a_effect_batch("bsr")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2b6b8}) == 0);
+        const auto indexed_source = *memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2bdfd});
+        assert(user_consumer.observe_d0_indexed_byte(
+            {1, 9, 0x2b5a6, 0, 0x2bdfd, indexed_source}).accepted);
+        assert(bsr_memory.apply(user_consumer.make_d0_indexed_effect_batch("indexed")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2b6b0}) == indexed_source);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2b6b1}) == indexed_source);
+        assert(user_consumer.execute_a1_setup().accepted);
+        assert(user_consumer.checkpoint().state
+                == eon::MillenniumAtariConfigConsumerState::d0_indexed_word_boundary
+            && user_consumer.checkpoint().setup_a1 == 0x2b61e
+            && user_consumer.checkpoint().indexed_word_instruction_address == 0x2b5de);
+        assert(bsr_memory.apply(user_consumer.make_a1_setup_effect_batch("a1")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b639})==1);
+        const auto word_hi=*memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2bdfe});
+        const auto word_lo=*memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2bdff});
+        const auto indexed_word=static_cast<std::uint16_t>((word_hi<<8U)|word_lo);
+        assert(user_consumer.observe_d0_indexed_word({1,10,0x2b5de,0,0x2bdfe,indexed_word}).accepted);
+        assert(bsr_memory.apply(user_consumer.make_d0_indexed_word_effect_batch("word")).accepted);
+        assert(user_consumer.checkpoint().a0_indexed_instruction_address==0x2b5ec);
+        assert(user_consumer.observe_a0_indexed_word({1,11,0x2b5ec,0,0x26ee4,0}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::loop_branch_boundary
+            && user_consumer.checkpoint().loop_a0_value==0x56eee4
+            && user_consumer.checkpoint().loop_d0_value==2
+            && user_consumer.checkpoint().loop_d7_value==1
+            && user_consumer.checkpoint().loop_branch_target==0x2b5b8);
+        assert(bsr_memory.apply(user_consumer.make_a0_indexed_tail_effect_batch("tail")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b620})==0x00);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b623})==0xe4);
         assert(!user_consumer.observe_status_register(
             {1, 2, 0x2aa88, 0, eon::MillenniumAtariObservedPrivilege::user}).accepted);
 

@@ -49,6 +49,170 @@ msgstr ""
 msgid "Covox Sound Master"
 msgstr ""
 
+#: src/game_text_localization.cpp
+msgid "Inner System"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Sun"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Mercury"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Venus"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Earth"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Mars"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Jupiter"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Saturn"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Uranus"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Neptune"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Pluto"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Moon"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Phobos"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Deimos"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Amalthea"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Io"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Europa"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Ganymede"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Callisto"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Leda"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Himalia"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Elara"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Pasiphae"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Mimas"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Enceladus"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Tethys"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Dione"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Rhea"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Titan"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Hyperion"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Iapetus"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Phoebe"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Miranda"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Ariel"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Umbriel"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Titania"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Oberon"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Triton"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Nereid"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Charon"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Asteroids"
+msgstr ""
+
 #: src/main.cpp
 msgid "GRAPHICS PRESET"
 msgstr ""

@@ -22,8 +22,9 @@ struct GameTextDefinition {
     std::string_view source_sha256;
     std::size_t source_offset = 0;
     std::size_t source_size = 0;
-    std::string_view original_english;
+    std::string_view original_text;
     std::string_view canonical_english;
+    std::string_view source_language = "en";
 };
 
 struct LocalizedGameText {
@@ -34,6 +35,7 @@ struct LocalizedGameText {
     std::string source_sha256;
     std::size_t source_offset = 0;
     std::size_t source_size = 0;
+    std::string source_language;
     bool original_bytes_preserved = true;
     bool catalog_translation_used = false;
 };

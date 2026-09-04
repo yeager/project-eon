@@ -256,3 +256,66 @@ other modes stop at the local return `$0f6a`. The loader and relocation span
 `63d5b5a645879a0a79ed0a7c880051e98ddf62b91f07616c0a72d035ee9581cf`.
 All buffer writes and relocation cells commit as atomic runtime-memory batches;
 source revocation or any bound failure leaves the prior checkpoint unchanged.
+
+## Mode-one post-relocation boundary
+
+Mode one continues locally from `$0f6b`. The genuine directory record at
+`TITLE.LIB+$4813` produces far pointer `base:$0006`, which is stored at
+`$0e59`, and the original clears 768 child bytes at `$014c..$044b`. It then
+derives source offset `$4865` and reaches `REP MOVSW` at `$0fc6` requesting
+another 768 bytes. That range extends beyond the 18,907-byte verified leaf, so
+Eon stops at `$0fc6` instead of inventing the DOS buffer tail. The other mode
+follows the exact 14-byte epilogue through `RET $0f6a` (SHA-256
+`66c5cf6c6a51f92ec93650c960546e562bd382e96d85f93ab15df8b5a82982b0`).
+That return is owned by the still-active `$1bec -> $0e5f` call, so execution
+resumes at `$1bef` and stops before call `$1bef -> $1aac` (call-byte SHA-256
+`802c3d3da0e9eebe7f5ccfaac938d6c4eba76d4dc6ffb190ef9d719d0a0c4044`).
+The `$1aac` title/driver setup remains opaque. No BIOS or private ABI result is
+claimed, and the mode-one `$0fc6` boundary is unchanged.
+
+The non-mode-1 path now enters `$1aac`: it restores DS/ES from CS and calls
+`$10ec`. That callee's exact ten-byte prefix (SHA-256
+`a00fdf978777b8b563efc5c4d39f3e3fbafea0ef764f134c6ee308d9927b6e73`)
+clears DF, loads `AX=$3500`, and reaches DOS `INT $21` at `$10f4`. Eon stops
+before the get-vector result; vector BX/ES, later interrupt replacement and
+the two BIOS calls remain unobserved. Mode one still stops only at `$0fc6`.
+An exact typed `$10f4->$10f6` result retains raw AX, BX, ES and FLAGS. The
+18-byte continuation (SHA-256
+`2b274ecea07db05da2e4f091e648ba5bbec8132d34d60668d47fd57681ae854b`)
+stores BX at `$10e4`, ES at `$10e6`, loads DS=CS, AX=`$2500` and
+DX=`$1124`, then stops at the DOS set-vector request `$1106`.
+The `$1106->$1108` result is retained verbatim even though the original does
+not inspect it. The next five bytes (SHA-256
+`918d021be641065df0e5519ec984e3d556fb7300e6db321a79cc6b591a54c933`)
+load `AX=$3504` and stop at DOS get-vector `$110b`; no additional memory batch
+is fabricated for the ignored set result.
+The typed `$110b->$110d` result retains its raw AX/FLAGS and old vector
+ES:BX. The exact 18-byte continuation (SHA-256
+`b78f3be0ba4b6067faaf00309ac1bf821468fae7ef2ec46e43c575de8f95860e`)
+stores BX at `$10e8`, ES at `$10ea`, and reaches set-vector request
+`AX=$2504`, `DS:DX=CS:$1124` at `$111d`.
+The `$111d->$111f` set result is retained raw and ignored. The five-byte
+callee epilogue restores the saved registers and returns to `$1ab3`; its hash
+is `f32140aa070695a63e56de66fdcdb32c78b2d378318715dc2d8da83a349f0787`.
+The next eight bytes load `AH=1`, `AL=$1b`, and `BL=$46` (retaining observed
+BH), then stop at BIOS `INT $15` `$1ab9`. Its hash is
+`5531aa8efe777cde6344e051bee61deb3e45e685e91c345006caf34bf306b0a7`.
+The BIOS result and the second `$1c` request remain external.
+The first result now has its own typed AX/BX/FLAGS record. Its request boundary
+publishes full known masks because AX is literal and BH comes from the prior
+raw DOS result while BL is overwritten with `$46`. After observing the BIOS
+return, `$1abb..$1ac1` overwrites AH/AL with `$01/$1c`, overwrites BL with
+`$46`, retains the newly observed BH, and stops at the second `INT $15` at
+`$1ac1`. No meaning is assigned to either BIOS function.
+The second `$1ac1->$1ac3` result is likewise retained as raw AX/BX/FLAGS and
+otherwise ignored. The single-byte `RET` returns to the proven caller at
+`$1bf2`, where Eon stops before call `$1bf2->$11a7`. The RET hash is
+`ae3f4619b0413d70d3004b9131c3752153074e45725be13b9a148978895e359e`;
+the next call hash is
+`8e9933fc8751a312d2c247e94987439ae91db1d7e288c14190035b2d6c3da1c8`.
+That `$11a7` callee is now admitted through its local RET. Its 49 bytes hash
+to `9c04e42a78762c9c76a807afa61b40ffc12e61e5aa5408fa11a252bdb81dba54`.
+It clears `$118d`, copies the proven zero word at `$1187` to `$1181`, and
+copies the immutable words `$0444/$1178` from `$1179` to `$1183/$1185`.
+Those four writes commit atomically. The return resumes at `$1bf5`, where Eon
+stops before call `$1bf5->$114e`; that callee is the next opaque boundary.

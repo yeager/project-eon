@@ -20,12 +20,12 @@ nine bounded reads into observed allocated segments, closes it, applies the
 recovered header relocation fields, and stops at `$0f6b` for mode 1 or
 `$0f6a` for other modes. Raw DOS returns and failure paths remain explicit.
 
-The clean Deuteros Amiga title path now executes the first `$41bb4` paired
-dispatcher from genuine ADF bytes. Its high-height decoder consumes all 130
-packets and atomically materializes 2,176 bytes across the four recovered
-planes. The caller tail reaches `$41ed8` and stops before reading the unknown
-existing destination word at `$27f06`; decoded sparse memory is not yet a
-renderer or parity claim.
+The clean Deuteros Amiga title path now executes both caller-connected
+`$41bb4` paired dispatches from genuine ADF bytes. The second `$004e` route
+uses the proven fixed `$4128e` descriptor, consumes its complete 229-byte
+payload, observes only the 64 genuinely preexisting final row/plane words,
+and atomically completes all 320 merge writes through `$4051e`. Decoded sparse
+memory is not yet a renderer or parity claim.
 
 The Millennium Atari Equinox path now crosses XBIOS selectors 2, 3, 4, Line-A,
 selector `$15`, and selector 6 through typed observations and deterministic
@@ -34,11 +34,12 @@ sequence maps to `$2b57c` under the exact admitted `$2a500` load, so Eon now
 rejects that 22-byte-shifted candidate instead of executing it.
 
 Player-visible game-text presentation now has a declarative, source-parity
-tested map with complete leaf SHA-256, offset, and length. The first ten
-English DOS launcher strings are verified directly against installed genuine
-media and localized through every shipped PO catalog in both presentation
-modes. This is infrastructure and current-string coverage, not a claim that
-unrecovered game text has already been extracted.
+tested map with complete leaf SHA-256, offset, and length. It covers ten
+English DOS launcher strings plus all 41 celestial labels from both the exact
+English and Spanish static-data leaves: 92 source-bound definitions and 51
+catalog messages. Every message is present in all shipped PO catalogs for both
+presentation modes. This is infrastructure and current-string coverage, not a
+claim that unrecovered game text has already been extracted.
 
 The mechanical disassembly inventory is complete for all eight declared
 releases: 19 code images, 21 admitted ranges, and 1,124,867 source bytes are

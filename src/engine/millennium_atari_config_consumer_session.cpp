@@ -104,6 +104,46 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
             throw std::runtime_error("Unexpected Millennium Atari selector-6 continuation bytes");
         }
     }
+    constexpr std::array<std::uint8_t, 8> jsr_prefix{
+        0x48, 0xe7, 0xff, 0xfe, 0x61, 0x00, 0x00, 0x38,
+    };
+    for (std::size_t index = 0; index < jsr_prefix.size(); ++index) {
+        if (require_byte(memory, 0x2b55aU + static_cast<std::uint32_t>(index))
+            != jsr_prefix[index]) throw std::runtime_error("Unexpected $2b55a prefix");
+    }
+    constexpr std::array<std::uint8_t, 16> bsr_prefix{
+        0x47, 0xfa, 0xfb, 0x4a, 0x42, 0x2b, 0x05, 0xd0,
+        0x41, 0xfa, 0x08, 0x56, 0x17, 0x70, 0x00, 0x01,
+    };
+    for (std::size_t index = 0; index < bsr_prefix.size(); ++index) {
+        if (require_byte(memory, 0x2b59aU + static_cast<std::uint32_t>(index))
+            != bsr_prefix[index]) throw std::runtime_error("Unexpected $2b59a prefix");
+    }
+    constexpr std::array<std::uint8_t, 12> indexed_writes{
+        0x17, 0x70, 0x00, 0x01, 0x05, 0xc8,
+        0x17, 0x7a, 0x01, 0x00, 0x05, 0xc9,
+    };
+    for (std::size_t index = 0; index < indexed_writes.size(); ++index) {
+        if (require_byte(memory, 0x2b5a6U + static_cast<std::uint32_t>(index))
+            != indexed_writes[index]) throw std::runtime_error("Unexpected indexed writes");
+    }
+    constexpr std::array<std::uint8_t, 48> a1_setup{
+        0x43,0xfa,0x00,0x68,0x7e,0x02,0x13,0x7c,0x00,0x01,0x00,0x1b,
+        0x42,0x29,0x00,0x00,0x42,0x29,0x00,0x2c,0x51,0xe9,0x00,0x2d,
+        0x51,0xe9,0x00,0x2e,0x41,0xfa,0x07,0xfa,0x23,0x48,0x00,0x10,
+        0x23,0x48,0x00,0x14,0x41,0xfa,0x08,0x1e,0x30,0x70,0x00,0x02,
+    };
+    for (std::size_t index = 0; index < a1_setup.size(); ++index) {
+        if (require_byte(memory, 0x2b5b2U + static_cast<std::uint32_t>(index))
+            != a1_setup[index]) throw std::runtime_error("Unexpected A1 setup bytes");
+    }
+    constexpr std::array<std::uint8_t, 18> indexed_word{
+        0x30,0x70,0x00,0x02,0x33,0x48,0x00,0x06,0x33,0x7c,0x00,0x02,
+        0x00,0x0a,0x30,0x73,0x80,0x00,
+    };
+    for(std::size_t i=0;i<indexed_word.size();++i) if(require_byte(memory,0x2b5deU+static_cast<std::uint32_t>(i))!=indexed_word[i]) throw std::runtime_error("Unexpected indexed word bytes");
+    constexpr std::array<std::uint8_t,20> tail{0x30,0x73,0x80,0x00,0xd1,0xcb,0x23,0x48,0x00,0x02,0xd2,0xfc,0x00,0x30,0x54,0x40,0x51,0xcf,0xff,0xba};
+    for(std::size_t i=0;i<tail.size();++i)if(require_byte(memory,0x2b5ecU+static_cast<std::uint32_t>(i))!=tail[i])throw std::runtime_error("Unexpected indexed tail");
     if (generation == 0 || gemdos.generation != generation
         || gemdos.state != MillenniumAtariReadOnlyGemdosState::config_jsr_boundary
         || gemdos.config_jsr_instruction_address != jsr_instruction
@@ -147,6 +187,16 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
         "de3f0996c3b76c20c1e83a686f9a97f7a5ad8f9575a03d8f01b7f4cadf45a233";
     checkpoint_.selector_6_continuation_sha256 =
         "ba614a28f861921a263225ef85209b20dc2673ea3444cb556b88ca29b2b23163";
+    checkpoint_.jsr_2b55a_prefix_sha256 =
+        "b1b4328c9f54737553994259dac4dfb0247bf422414ed05a1c5c6166ec37ba62";
+    checkpoint_.bsr_2b59a_prefix_sha256 =
+        "967cb0022c8e29e0bef0dae618b95750fff3afa255094f9356210f1c89686fa3";
+    checkpoint_.indexed_write_sha256 =
+        "e87859079e18a266cc359d7e0be47667c5cfe79dbffa05daad80ee951fa777d7";
+    checkpoint_.a1_setup_sha256 =
+        "4345389397550c90280802d10a3f03b3e181745bcb98f8c693a2c0980722a1ef";
+    checkpoint_.indexed_word_sha256="6fae36f2f65050ca3ff99c8cb73f43a8c130dd4d252d4b7d38d0be9118eeba78";
+    checkpoint_.a0_indexed_tail_sha256="82379ace33d5464b74e03aa0669f8a1097498fd21ce3639c180ab5e21cac810b";
     checkpoint_.local_control_transfers_executed = 2;
 }
 
@@ -456,6 +506,102 @@ NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_bchg_effect_
     throw std::runtime_error(
         "Millennium Atari JSR $2b55a has no admitted memory effect");
 }
+
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_jsr_2b55a() {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::jsr_2b55a_boundary) {
+        return {false, "Millennium Atari consumer is not at JSR $2b55a"};
+    }
+    checkpoint_.state = MillenniumAtariConfigConsumerState::bsr_2b59a_boundary;
+    checkpoint_.bsr_instruction_address = 0x2b55e;
+    checkpoint_.bsr_target = 0x2b59a;
+    checkpoint_.local_instruction_count += 2;
+    return {true, {}};
+}
+
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_bsr_2b59a() {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::bsr_2b59a_boundary) {
+        return {false, "Millennium Atari consumer is not at BSR $2b59a"};
+    }
+    checkpoint_.state = MillenniumAtariConfigConsumerState::d0_indexed_write_boundary;
+    checkpoint_.bsr_return_address = 0x2b562;
+    checkpoint_.callee_a3 = 0x2b0e8;
+    checkpoint_.callee_clear_address = 0x2b6b8;
+    checkpoint_.indexed_instruction_address = 0x2b5a6;
+    checkpoint_.local_instruction_count += 3; // BSR, LEA, CLR.B
+    return {true, {}};
+}
+
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_bsr_2b59a_effect_batch(
+    std::string id) const {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::d0_indexed_write_boundary
+        || id.empty()) throw std::runtime_error("Millennium Atari $2b59a effect is not admitted");
+    return {std::move(id), true, {{1,
+        {NativeRuntimeAddressSpace::linear, std::nullopt, checkpoint_.callee_clear_address},
+        MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, 0}}};
+}
+
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::observe_d0_indexed_byte(
+    const MillenniumAtariD0IndexedByteObservation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::d0_indexed_write_boundary) return {false, "Not at D0-indexed write"};
+    const auto displacement = static_cast<std::int16_t>(observation.d0 & 0xffffU);
+    const auto expected = static_cast<std::uint32_t>(0x2bdfdLL + displacement);
+    if (observation.generation != checkpoint_.generation || observation.sequence <= checkpoint_.last_sequence
+        || observation.instruction_address != 0x2b5a6 || observation.source_address != expected) return {false, "D0-indexed observation mismatch"};
+    checkpoint_.state = MillenniumAtariConfigConsumerState::a1_setup_boundary;
+    checkpoint_.last_sequence = observation.sequence;
+    checkpoint_.indexed_source_base = 0x2bdfc;
+    checkpoint_.indexed_source_address = expected;
+    checkpoint_.indexed_source_byte = observation.source_byte;
+    checkpoint_.indexed_first_destination = 0x2b6b0;
+    checkpoint_.indexed_second_destination = 0x2b6b1;
+    checkpoint_.indexed_instruction_address = 0x2b5b2;
+    checkpoint_.local_instruction_count += 2;
+    return {true, {}};
+}
+
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_d0_indexed_effect_batch(std::string id) const {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::a1_setup_boundary || id.empty()) throw std::runtime_error("Indexed effect unavailable");
+    return {std::move(id), true, {
+        {1, {NativeRuntimeAddressSpace::linear, std::nullopt, checkpoint_.indexed_first_destination}, MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, checkpoint_.indexed_source_byte},
+        {2, {NativeRuntimeAddressSpace::linear, std::nullopt, checkpoint_.indexed_second_destination}, MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, checkpoint_.indexed_source_byte}}};
+}
+
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_a1_setup() {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::a1_setup_boundary) return {false, "Not at A1 setup"};
+    checkpoint_.state = MillenniumAtariConfigConsumerState::d0_indexed_word_boundary;
+    checkpoint_.setup_a1 = 0x2b61e;
+    checkpoint_.setup_a0_first = 0x2bdcc;
+    checkpoint_.setup_a0_second = 0x2bdfc;
+    checkpoint_.setup_d7 = 2;
+    checkpoint_.indexed_word_instruction_address = 0x2b5de;
+    checkpoint_.local_instruction_count += 11;
+    return {true, {}};
+}
+
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_a1_setup_effect_batch(std::string id) const {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::d0_indexed_word_boundary || id.empty()) throw std::runtime_error("A1 setup effect unavailable");
+    return {std::move(id), true, {
+        {1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b639},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,1},
+        {2,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b61e},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,0},
+        {3,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b64a},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,0},
+        {4,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b64b},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,0},
+        {5,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b64c},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,0},
+        {6,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b62e},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,0x2bdcc},
+        {7,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b632},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,0x2bdcc}}};
+}
+
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::observe_d0_indexed_word(const MillenniumAtariD0IndexedWordObservation& o){
+    if(checkpoint_.state!=MillenniumAtariConfigConsumerState::d0_indexed_word_boundary)return{false,"Not at D0-indexed word"};
+    const auto disp=static_cast<std::int16_t>(o.d0&0xffffU); const auto expected=static_cast<std::uint32_t>(0x2bdfeLL+disp);
+    if(o.generation!=checkpoint_.generation||o.sequence<=checkpoint_.last_sequence||o.instruction_address!=0x2b5de||o.source_address!=expected)return{false,"D0-indexed word mismatch"};
+    checkpoint_.state=MillenniumAtariConfigConsumerState::a0_indexed_word_boundary;checkpoint_.last_sequence=o.sequence;checkpoint_.indexed_word_source_address=expected;checkpoint_.indexed_word_value=o.source_word;checkpoint_.a0_indexed_instruction_address=0x2b5ec;checkpoint_.local_instruction_count+=3;return{true,{}};
+}
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_d0_indexed_word_effect_batch(std::string id)const{
+    if(checkpoint_.state!=MillenniumAtariConfigConsumerState::a0_indexed_word_boundary||id.empty())throw std::runtime_error("Indexed word effect unavailable");
+    return{std::move(id),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b624},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,0xbdfc},{2,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b628},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,2}}};
+}
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::observe_a0_indexed_word(const MillenniumAtariA0IndexedWordObservation&o){if(checkpoint_.state!=MillenniumAtariConfigConsumerState::a0_indexed_word_boundary)return{false,"Not at A0-indexed word"};if(o.generation!=checkpoint_.generation||o.sequence<=checkpoint_.last_sequence||o.instruction_address!=0x2b5ec||o.source_address!=0x26ee4)return{false,"A0-indexed word mismatch"};checkpoint_.state=MillenniumAtariConfigConsumerState::loop_branch_boundary;checkpoint_.last_sequence=o.sequence;checkpoint_.a0_indexed_word_value=o.source_word;checkpoint_.loop_a0_value=0x56eee4;checkpoint_.loop_d0_value=static_cast<std::uint16_t>(o.source_word+2U);checkpoint_.loop_d7_value=1;checkpoint_.loop_branch_target=0x2b5b8;checkpoint_.local_instruction_count+=6;return{true,{}};}
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_a0_indexed_tail_effect_batch(std::string id)const{if(checkpoint_.state!=MillenniumAtariConfigConsumerState::loop_branch_boundary||id.empty())throw std::runtime_error("Tail effect unavailable");return{std::move(id),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2b620},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,checkpoint_.loop_a0_value}}};}
 
 MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::revoke(
     const std::uint64_t generation) {

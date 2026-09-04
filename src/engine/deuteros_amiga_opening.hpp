@@ -113,6 +113,10 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchPacketPlan> advance_title_post_command_first_dispatch_packet() { return title_stage_session_ ? title_stage_session_->advance_post_command_first_dispatch_packet() : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchDecodePlan> advance_title_post_command_first_dispatch_decode() { return title_stage_session_ ? title_stage_session_->advance_post_command_first_dispatch_decode() : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchCallerTailPlan> advance_title_post_command_first_dispatch_caller_tail() { return title_stage_session_ ? title_stage_session_->advance_post_command_first_dispatch_caller_tail() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchMergePlan> observe_title_post_command_first_dispatch_destination_words(const DeuterosAmigaObservedTitleFirstDispatchDestinationWords& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_first_dispatch_destination_words(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandSecondDispatchPlan> advance_title_post_command_second_dispatch() { return title_stage_session_ ? title_stage_session_->advance_post_command_second_dispatch() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondDispatchDecodePlan> advance_title_post_command_second_dispatch_decode() { return title_stage_session_ ? title_stage_session_->advance_post_command_second_dispatch_decode() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondDispatchMergePlan> observe_title_post_command_second_dispatch_destination_words(const DeuterosAmigaObservedTitleSecondDispatchDestinationWords& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_second_dispatch_destination_words(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

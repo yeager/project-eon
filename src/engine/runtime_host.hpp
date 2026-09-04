@@ -77,6 +77,8 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_bios_result(MillenniumDosTitleBiosResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_dos_memory_result(MillenniumDosTitleDosResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_dos_file_result(MillenniumDosTitleDosFileResultObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_dos_vector_result(MillenniumDosTitleDosVectorResultObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_setup_bios_result(MillenniumDosTitleSetupBiosResultObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation);
@@ -231,6 +233,10 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch_packet();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch_decode();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_first_dispatch_destination_words(DeuterosAmigaObservedTitleFirstDispatchDestinationWords);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_second_dispatch();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_second_dispatch_decode();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_second_dispatch_destination_words(DeuterosAmigaObservedTitleSecondDispatchDestinationWords);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -263,6 +269,12 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_21(MillenniumAtariXbiosSelector21Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_6(MillenniumAtariXbiosSelector6Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_bchg_2b55a(MillenniumAtariBchgObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2b55a();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_bsr_2b59a();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_d0_indexed_byte(MillenniumAtariD0IndexedByteObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_a1_setup();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_d0_indexed_word(MillenniumAtariD0IndexedWordObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_a0_indexed_word(MillenniumAtariA0IndexedWordObservation);
 
     // Begin before SDL destroys any source-derived object.  A monotonically
     // increasing generation lets a front end reject stale render/audio work
