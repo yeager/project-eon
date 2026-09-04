@@ -245,6 +245,26 @@ ReleaseRuntimeCoordinator::millennium_dos_static_dispatch_diagnostics() const {
     // so diagnostic consumers cannot mistake an unbounded byte range for an
     // executable game-control mapping.
     if (flow.function_key_count != 10) return std::nullopt;
+    constexpr std::string_view release_sha256 =
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
+    constexpr std::array<std::string_view, 10> handler_ids{{
+        "millennium-dos-en-f1-handler", "millennium-dos-en-f2-handler",
+        "millennium-dos-en-f3-handler", "millennium-dos-en-f4-handler",
+        "millennium-dos-en-f5-handler", "millennium-dos-en-f6-handler",
+        "millennium-dos-en-f7-handler", "millennium-dos-en-f8-prefix",
+        "millennium-dos-en-f9-handler", "millennium-dos-en-f10-handler",
+    }};
+    const std::array<std::uint16_t, 10> handler_addresses{{
+        flow.first_function_key.handler_address, flow.second_function_key.handler_address,
+        flow.third_function_key.handler_address, flow.fourth_function_key.handler_address,
+        flow.fifth_function_key.handler_address, flow.sixth_function_key.handler_address,
+        flow.seventh_function_key.handler_address, flow.eighth_function_key.handler_address,
+        flow.ninth_function_key.handler_address, flow.tenth_function_key.handler_address,
+    }};
+    for (std::size_t index = 0; index < handler_ids.size(); ++index) {
+        const auto mapped = function_map_runtime_address_for(release_sha256, handler_ids[index]);
+        if (!mapped || *mapped != handler_addresses[index]) return std::nullopt;
+    }
     return MillenniumDosStaticDispatchDiagnostics{
         .action_poll_address = flow.action_poll_address,
         .first_action = flow.function_key_first_action,
@@ -252,12 +272,7 @@ ReleaseRuntimeCoordinator::millennium_dos_static_dispatch_diagnostics() const {
         .table_address = flow.function_key_table_address,
         .table_stride = flow.function_key_table_stride,
         .dispatch_address = flow.function_key_dispatch_address,
-        .handler_addresses = {flow.first_function_key.handler_address,
-            flow.second_function_key.handler_address, flow.third_function_key.handler_address,
-            flow.fourth_function_key.handler_address, flow.fifth_function_key.handler_address,
-            flow.sixth_function_key.handler_address, flow.seventh_function_key.handler_address,
-            flow.eighth_function_key.handler_address, flow.ninth_function_key.handler_address,
-            flow.tenth_function_key.handler_address},
+        .handler_addresses = handler_addresses,
     };
 }
 
