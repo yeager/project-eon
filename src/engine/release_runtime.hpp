@@ -501,6 +501,12 @@ struct MillenniumDosSharedHelperExternalReturnObservation{std::uint16_t return_i
 struct MillenniumDosSharedHelperObservationResult{bool accepted=false;std::string error;};
 struct MillenniumDosSharedHelperCheckpoint{MillenniumDosSharedHelperState state;MillenniumDosSharedHelperBoundary boundary;std::vector<MillenniumDosSharedHelperEffect>effects;std::uint16_t selected_offset=0;MillenniumDosSharedHelperEntryObservation entry;std::optional<MillenniumDosSharedHelperExternalReturnObservation>returned;std::optional<MillenniumDosSharedHelperExternalReturnObservation>parent_return;};
 struct MillenniumDosSpecialActionHelperEntryObservation{std::uint16_t dispatch_call=0,dispatch_target=0,runtime_address=0;std::uint8_t runtime_value=0;std::uint16_t helper_call=0,helper_target=0,caller_ax=0;std::uint64_t sequence=0;};
+struct MillenniumDosGxAdapterEntryObservation{std::uint16_t dispatch_call=0,dispatch_target=0,runtime_address=0;std::uint8_t runtime_value=0;std::uint16_t helper_call=0,helper_target=0,caller_ax=0,code_segment=0;std::uint64_t sequence=0;};
+struct MillenniumDosGxAdapterWordObservation{std::uint16_t instruction_address=0,runtime_address=0,value=0;std::uint64_t sequence=0;};
+struct MillenniumDosGxAdapterTransferObservation{std::uint16_t instruction_address=0,segment=0,offset=0;std::uint64_t sequence=0;};
+struct MillenniumDosGxAdapterReturnObservation{std::uint16_t instruction_address=0,segment=0,offset=0;std::uint64_t sequence=0;};
+struct MillenniumDosGxAdapterObservationResult{bool accepted=false;std::string error;};
+struct MillenniumDosGxAdapterCheckpoint{MillenniumDosGxOverlayAdapterState state;MillenniumDosGxOverlayAdapterBoundary boundary;MillenniumDosGxAdapterEntryObservation entry;std::optional<MillenniumDosGxAdapterWordObservation>segment;std::optional<MillenniumDosGxAdapterTransferObservation>transfer;std::optional<MillenniumDosGxAdapterReturnObservation>overlay_return;std::optional<MillenniumDosGxAdapterReturnObservation>adapter_return;std::optional<MillenniumDosGxAdapterReturnObservation>parent_return;};
 struct MillenniumDosBdfByteObservation{std::uint16_t instruction_address=0,runtime_address=0;std::uint8_t value=0;};struct MillenniumDosBdfWordObservation{std::uint16_t instruction_address=0,runtime_address=0,value=0;};struct MillenniumDosBdfFarByteObservation{std::uint16_t instruction_address=0,segment=0,offset=0;std::uint8_t value=0;};struct MillenniumDosBdfModeTwoFarWordObservation{std::uint16_t instruction_address=0,segment=0,offset=0,value=0;};struct MillenniumDosBdfModeTwoFarByteObservation{std::uint16_t instruction_address=0,segment=0,offset=0;std::uint8_t value=0;};struct MillenniumDosBdfPollReturnObservation{std::uint16_t call_address=0,return_address=0,cx=0,dx=0;};struct MillenniumDosBdfMappingReturnObservation{std::uint16_t call_address=0,return_address=0,ax=0;};struct MillenniumDosBdfExternalReturnObservation{std::uint16_t return_instruction=0,returned_to=0;std::uint64_t sequence=0;};struct MillenniumDosBdfTerminalJumpObservation{std::uint16_t instruction_address=0,target_address=0;std::uint64_t sequence=0;std::optional<std::uint16_t>entry_di;std::optional<std::uint8_t>entry_dl;};struct MillenniumDosBdfObservationResult{bool accepted=false;std::string error;};struct MillenniumDosBdfModeTwoCheckpoint{MillenniumDosBdfModeTwoState state;MillenniumDosBdfModeTwoBoundary boundary;std::vector<MillenniumDosBdfModeTwoFarEffect>far_effects;std::vector<MillenniumDosBdfModeTwoFarByteEffect>far_byte_effects;std::vector<MillenniumDosBdfModeTwoRuntimeEffect>runtime_effects;};struct MillenniumDosBdfOtherModeCheckpoint{MillenniumDosBdfOtherModeState state;MillenniumDosBdfOtherModeBoundary boundary;std::vector<MillenniumDosBdfOtherModeFarEffect>far_effects;std::vector<MillenniumDosBdfOtherModeFarByteEffect>far_byte_effects;std::vector<MillenniumDosBdfOtherModePortEffect>port_effects;std::vector<MillenniumDosBdfOtherModeRuntimeEffect>runtime_effects;std::vector<MillenniumDosBdfOtherModeRuntimeByteEffect>runtime_byte_effects;};struct MillenniumDosBdfCheckpoint{MillenniumDosBdfServiceState state=MillenniumDosBdfServiceState::awaiting_active_byte;MillenniumDosBdfServiceBoundary boundary;std::vector<MillenniumDosBdfServiceEffect>effects;std::vector<MillenniumDosBdfFarMemoryEffect>far_memory_effects;MillenniumDosExternalTransferCheckpoint transfer;std::optional<MillenniumDosExternalTransferCheckpoint> terminal_transfer;std::optional<MillenniumDosBdfModeTwoCheckpoint>mode_two;std::optional<MillenniumDosBdfOtherModeCheckpoint>other_mode;};
 
 // Owns the one immutable original-media identity that a runtime is permitted
@@ -585,6 +591,16 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_service_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_selector(DeuterosAmigaObservedLoadSelector);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_copy_chunk(DeuterosAmigaObservedLoadCopyChunk);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_dispatch_table_base(DeuterosAmigaObservedLoadDispatchTableBase);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_dispatch_table_word(DeuterosAmigaObservedLoadDispatchTableWord);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_opcode(DeuterosAmigaObservedTitleCommandOpcode);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_operand_byte(DeuterosAmigaObservedTitleCommandOperandByte);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_pointer_long(DeuterosAmigaObservedTitleCommandPointerLong);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_pointer(DeuterosAmigaObservedTitleCommandEightPointer);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_mode(DeuterosAmigaObservedTitleCommandEightMode);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_scale(DeuterosAmigaObservedTitleCommandEightScale);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
+
 
     // Active-session transition for a complete, already validated v4/v5
     // trace. The owned result is metadata only and grants no host capability.
@@ -736,6 +752,13 @@ public:
     [[nodiscard]] std::optional<MillenniumDosSharedHelperCheckpoint> millennium_dos_shared_helper_checkpoint()const;
     [[nodiscard]] MillenniumDosSharedHelperObservationResult observe_millennium_dos_special_action_helper_entry(MillenniumDosSpecialActionHelperEntryObservation);
     [[nodiscard]] MillenniumDosSharedHelperObservationResult observe_millennium_dos_special_action_external_return(MillenniumDosSharedHelperExternalReturnObservation);
+    [[nodiscard]] MillenniumDosGxAdapterObservationResult observe_millennium_dos_second_special_action_adapter_entry(MillenniumDosGxAdapterEntryObservation);
+    [[nodiscard]] MillenniumDosGxAdapterObservationResult observe_millennium_dos_gx_adapter_segment(MillenniumDosGxAdapterWordObservation);
+    [[nodiscard]] MillenniumDosGxAdapterObservationResult observe_millennium_dos_gx_adapter_transfer(MillenniumDosGxAdapterTransferObservation);
+    [[nodiscard]] MillenniumDosGxAdapterObservationResult observe_millennium_dos_gx_adapter_overlay_return(MillenniumDosGxAdapterReturnObservation);
+    [[nodiscard]] MillenniumDosGxAdapterObservationResult observe_millennium_dos_gx_adapter_return(MillenniumDosGxAdapterReturnObservation);
+    [[nodiscard]] MillenniumDosGxAdapterObservationResult observe_millennium_dos_second_special_action_return(MillenniumDosGxAdapterReturnObservation);
+    [[nodiscard]] std::optional<MillenniumDosGxAdapterCheckpoint> millennium_dos_gx_adapter_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics>
     millennium_dos_owned_function_diagnostics() const;
 
@@ -771,6 +794,13 @@ private:
     std::optional<MillenniumDosSharedHelperExternalReturnObservation> millennium_dos_shared_helper_return_;
     std::optional<MillenniumDosGameSession> millennium_dos_special_action_;
     std::optional<MillenniumDosSharedHelperExternalReturnObservation> millennium_dos_special_action_return_;
+    std::optional<MillenniumDosGxOverlayAdapterSession> millennium_dos_gx_adapter_;
+    std::optional<MillenniumDosGxAdapterEntryObservation> millennium_dos_gx_adapter_entry_;
+    std::optional<MillenniumDosGxAdapterWordObservation> millennium_dos_gx_adapter_segment_;
+    std::optional<MillenniumDosGxAdapterTransferObservation> millennium_dos_gx_adapter_transfer_;
+    std::optional<MillenniumDosGxAdapterReturnObservation> millennium_dos_gx_overlay_return_;
+    std::optional<MillenniumDosGxAdapterReturnObservation> millennium_dos_gx_adapter_return_;
+    std::optional<MillenniumDosGxAdapterReturnObservation> millennium_dos_second_special_action_return_;
     std::optional<NativeRuntimeMemory> native_runtime_memory_;
     std::optional<MillenniumDosTenthFunctionSession> millennium_dos_tenth_function_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
@@ -783,6 +813,7 @@ private:
     std::optional<DeuterosAmigaTitleFifthServiceLocalPlan> deuteros_amiga_title_fifth_service_plan_;
     std::optional<BoundedMemoryTransferSession> deuteros_amiga_title_load_copy_;
     std::uint64_t deuteros_amiga_title_load_copy_generation_ = 0;
+    std::uint64_t deuteros_amiga_title_command_generation_ = 0;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula_;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;

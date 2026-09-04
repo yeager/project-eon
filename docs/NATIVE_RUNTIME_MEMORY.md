@@ -63,3 +63,14 @@ host revocation suppresses both observations and checkpoints.
 There is deliberately no API accepting a detached Deuteros checkpoint. The
 only route into runtime RAM begins with the already admitted release-owned
 title session and traverses every preceding state-machine boundary.
+
+The same owned route continues through the post-copy dispatch-table reads and
+the typed command interpreter. The dispatch byte and the proven opcode 7,
+10, 11, and 8 write plans become big-endian runtime-memory batches only after
+their required operand/pointer/mode/scale observations succeed. Each accepted
+opcode starts a monotonically numbered command generation; at most one write
+batch can use that generation. Commands that only advance control flow create
+no fabricated memory effect. Exact call returns are forwarded to the local
+interpreter but likewise produce no write unless its typed plan contains one.
+Malformed, duplicate, out-of-order, post-halt, and revocation observations
+fail closed without changing the published memory checkpoint.

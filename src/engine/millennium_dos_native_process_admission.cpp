@@ -129,6 +129,13 @@ MillenniumDosBdfModeTwoSession MillenniumDosNativeProcessAdmission::make_bdf_mod
 MillenniumDosBdfOtherModeSession MillenniumDosNativeProcessAdmission::make_bdf_other_mode_session(const std::uint8_t entry_dl,const std::uint16_t entry_di) const { require_admitted(); return MillenniumDosBdfOtherModeSession(game_executable_,entry_dl,entry_di); }
 MillenniumDosSharedHelperSession MillenniumDosNativeProcessAdmission::make_shared_helper_session(const std::uint16_t caller_ax) const { require_admitted(); return MillenniumDosSharedHelperSession(game_executable_,caller_ax); }
 MillenniumDosGameSession MillenniumDosNativeProcessAdmission::make_game_session() const { require_admitted(); return MillenniumDosGameSession(parse_millennium_dos_game_flow(game_executable_),game_executable_); }
+MillenniumDosGxOverlayAdapterSession MillenniumDosNativeProcessAdmission::make_gx_overlay_adapter_session(
+    const std::uint16_t caller_ax, const std::uint16_t caller_return,
+    const std::uint16_t code_segment) const {
+    require_admitted();
+    return MillenniumDosGxOverlayAdapterSession(
+        game_executable_, caller_ax, caller_return, code_segment);
+}
 
 void MillenniumDosNativeProcessAdmission::require_admitted() const {
     if (!admitted()) {

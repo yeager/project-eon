@@ -150,6 +150,7 @@ add_executable(project-eon
     src/engine/millennium_dos_bdf_mode_two_session.cpp
     src/engine/millennium_dos_bdf_other_mode_session.cpp
     src/engine/millennium_dos_shared_helper_session.cpp
+    src/engine/millennium_dos_gx_overlay_adapter_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp

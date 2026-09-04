@@ -4707,6 +4707,25 @@ matches action `$0c` and calls `$d570`. The seven bytes at `$d570` (file
 load `AX=$000d` and stop at `CALL $6c52`. No native byte is written before
 that call; the evaluator neither invokes it nor assumes its return.
 
+The action-`$0c` route can now own the independently authenticated GX adapter
+without manufacturing the missing runtime values. Admission requires the live
+post-overlay dispatch boundary `$d3f4 -> $d570`, an explicit zero observation
+at `$da3a`, the exact `$d573 -> $6c52` call, explicit `AX=$000d`, an explicit
+nonzero code segment, and monotonically increasing observation sequence. The
+typed adapter then observes the word read at `$6c60` from `$0118`, the exact
+far transfer at `$6c68` to that observed segment and offset zero, and the
+overlay's actual `RETF` at offset `$0014` back to `CS:$6c69`. It finally
+requires `$6c72 -> $d576` and the handler's `$d576 -> $d3f7` return before the
+post-overlay poll owner resumes. The adapter span remains the already recorded
+33 bytes at file `+$6b52`, SHA-256
+`b34e5abf8ecd790fce3e7a032d7a7fcacc073d03909e98fd33f9503113e3ad87`;
+construction is additionally gated by the complete English `2200AD.EXE`
+identity. Checkpoints contain only addresses, observed scalar values, state,
+and sequence records. They contain no original bytes or inferred overlay
+result. Reset, source revocation, and replacement admission destroy the parent
+and adapter sessions together. The runtime still cannot enter this route from
+SDL until the existing title-to-post-overlay evidence boundary is closed.
+
 The ninth table record (raw F9 / `$43`) is `30 36 09 1b 38 08 39 73`, with
 handler entry `$7339`. It returns when native runtime word `$a19e` is nonzero.
 Its admitted path clears AX and calls `$d0c9`, clears `$da30`, loads `AL=$02`,
@@ -5829,6 +5848,21 @@ Returned registers remain value-only evidence and no unobserved callee memory
 or presentation effect is synthesized. Opcode `$16` instead stops before its
 first nested stream read at `$1fb0c`; values at least `$90` stop before their
 first table read at `$1fada`.
+
+Those four return-admitted targets are themselves bound to the clean title
+stage, not trusted merely because a caller names them. Their exact spans and
+SHA-256 values are: `$1fde6..$1fe0d` (40 bytes,
+`3b063fa7f0f401beabd986787d4eb36e828b6eea37f474f0a4d04f70374ba2d3`),
+`$1fe3c..$1fe53` (24 bytes,
+`59c2d528a565a523205ce7506fa7e1c7ba8c26a2e6a7246c28ee5b7607f8837e`),
+`$402ac..$40355` (170 bytes,
+`7cfbdbe94faf764157dbe22bc9003fc4362a5657a7d7b7c34b0413d4391783be`),
+and `$1fbe6..$1fde3` (510 bytes,
+`66dd6a4297fdfd52c1b81b7bd00f3f54611597bf31551939cf0f40bf9fd8d13e`).
+These hashes prove the local dispatch/call topology and return instructions;
+they do not turn nested calls, runtime reads, or writes inside those spans
+into engine-owned effects. A fresh explicit outer return remains mandatory
+for every invocation, preventing stale return reuse across command bytes.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to

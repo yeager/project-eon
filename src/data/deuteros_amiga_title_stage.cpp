@@ -2335,6 +2335,15 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         "f488d16abd19300d49deeb62d7d4227c0bdbb1b0d40b7bc305383414f1d195d3"}};
     constexpr std::string_view no_op_hash =
         "1ceeabf0c6a5a30bad12cdac0e3ab015a7188a42e6aebb556aad00bb9cd693ad";
+    constexpr std::array<std::uint32_t, 4> returned_targets{{
+        0x1fde6, 0x1fe3c, 0x402ac, 0x1fbe6}};
+    constexpr std::array<std::uint32_t, 4> returned_lengths{{
+        0x28, 0x18, 0xaa, 0x1fe}};
+    constexpr std::array<std::string_view, 4> returned_hashes{{
+        "3b063fa7f0f401beabd986787d4eb36e828b6eea37f474f0a4d04f70374ba2d3",
+        "59c2d528a565a523205ce7506fa7e1c7ba8c26a2e6a7246c28ee5b7607f8837e",
+        "7cfbdbe94faf764157dbe22bc9003fc4362a5657a7d7b7c34b0413d4391783be",
+        "66dd6a4297fdfd52c1b81b7bd00f3f54611597bf31551939cf0f40bf9fd8d13e"}};
     const auto& stage = plan.title_stage;
     const auto bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto at = [&](const std::uint32_t address, const std::size_t size) {
@@ -2351,13 +2360,21 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         || to_hex(sha256(at(0x1fde4, 2))) != no_op_hash) {
         throw std::runtime_error("Unsupported Deuteros command-interpreter profile");
     }
+    for (std::size_t index = 0; index < returned_targets.size(); ++index) {
+        if (to_hex(sha256(at(returned_targets[index], returned_lengths[index])))
+            != returned_hashes[index]) {
+            throw std::runtime_error("Unsupported Deuteros command call-target profile");
+        }
+    }
     return {entry, 0x1fa0a, 0x1fa26, 0x1f974, 0x1f978,
         {{0x00, 0x07, 0x10, 0x11}}, helpers, {{0x1f96c, 0x1f970}}, 0x1f8ec,
         {{0x1fb00, 0x1fde6, 0x1fe3c, 0x402ac, 0x1fde4, 0x1fbe6}},
         std::string(interpreter_hash),
         {{std::string(helper_hashes[0]), std::string(helper_hashes[1])}},
         0x1fab4, 0x1fde4,
-        std::string(no_op_hash)};
+        std::string(no_op_hash), returned_targets, returned_lengths,
+        {{std::string(returned_hashes[0]), std::string(returned_hashes[1]),
+            std::string(returned_hashes[2]), std::string(returned_hashes[3])}}};
 }
 
 DeuterosAmigaTitlePostExecPointerRouteProfile
