@@ -24,6 +24,12 @@ PRESERVATION = (ROOT / "docs" / "PRESERVATION.md").read_text(encoding="utf-8")
 
 
 class RuntimeLayoutTests(unittest.TestCase):
+    def test_python_tests_use_the_cross_platform_external_scratch_helper(self) -> None:
+        tests_root = ROOT / "tests"
+        developer_home = "/" + "home" + "/" + "yeager"
+        for source in tests_root.glob("test_*.py"):
+            self.assertNotIn(developer_home, source.read_text(encoding="utf-8"), source.name)
+
     def test_default_data_locations_are_read_only_lookup_contracts(self) -> None:
         self.assertIn('absolute_executable.parent_path() / "data"', LAUNCHER)
         self.assertIn('std::filesystem::path(home) / ".projecteon"', LAUNCHER)

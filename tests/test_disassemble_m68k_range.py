@@ -1,10 +1,10 @@
 import hashlib
 from pathlib import Path
-import tempfile
 import unittest
 from zipfile import ZIP_STORED, ZipFile
 
 from tools.disassemble_m68k_range import disassemble, read_exact_member, require_external_output
+from eon_test_paths import temporary_directory
 
 
 class M68kRangeDisassemblyTests(unittest.TestCase):
@@ -23,9 +23,7 @@ class M68kRangeDisassemblyTests(unittest.TestCase):
         )
 
     def test_direct_zip_member_requires_outer_and_disk_hashes(self):
-        cache = Path("/home/yeager/.cache/project-eon-tools/tests")
-        cache.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(dir=cache) as temporary:
+        with temporary_directory() as temporary:
             archive = Path(temporary) / "direct.zip"
             disk = b"\x4e\x75\x00\x00"
             with ZipFile(archive, "w", compression=ZIP_STORED) as output:
