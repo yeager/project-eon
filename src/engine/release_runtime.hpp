@@ -4,6 +4,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_amiga_title_display_trace_session.hpp"
+#include "engine/deuteros_amiga_title_planar_patch.hpp"
 #include "engine/runtime_session.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -14,6 +15,7 @@
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
 #include "engine/millennium_dos_compatibility_runner.hpp"
 #include "engine/millennium_dos_title_exec_entry_session.hpp"
+#include "engine/millennium_dos_title_child_compatibility_service.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_native_process_admission.hpp"
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
@@ -250,6 +252,7 @@ struct MillenniumDosTitleExecEntryObservationResult {
 struct MillenniumDosTitleExecEntryRuntimeCheckpoint {
     std::uint64_t generation = 0;
     MillenniumDosTitleExecEntryCheckpoint entry;
+    std::optional<MillenniumDosTitleChildCompatibilityCheckpoint> compatibility_child;
 };
 
 struct MillenniumDosTitleToGameCallReturnObservation {
@@ -717,6 +720,8 @@ public:
     admit_active_deuteros_amiga_title_display_trace(const ReferenceTrace& trace);
     [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>
     deuteros_amiga_title_display_trace_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePlanarPatchSnapshot>
+    deuteros_amiga_title_planar_patch() const;
     // Query only: this reports static, hash-gated Atari bootstrap facts. It
     // neither selects a runtime state nor invokes an Atari service.
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
@@ -890,6 +895,8 @@ private:
     std::uint64_t millennium_dos_sound_driver_load_last_sequence_=0;
     std::optional<MillenniumDosCompatibilityRunner> millennium_dos_compatibility_runner_;
     std::optional<MillenniumDosTitleExecEntrySession> millennium_dos_title_exec_entry_;
+    std::optional<MillenniumDosTitleChildCompatibilityService>
+        millennium_dos_title_child_compatibility_;
     std::optional<MillenniumDosTitleToGameSession> millennium_dos_title_to_game_;
     std::uint64_t millennium_dos_title_to_game_generation_ = 0;
     std::uint64_t millennium_dos_title_to_game_last_sequence_ = 0;
@@ -944,6 +951,8 @@ private:
     std::optional<BoundedMemoryTransferSession> deuteros_amiga_title_load_copy_;
     std::uint64_t deuteros_amiga_title_load_copy_generation_ = 0;
     std::uint64_t deuteros_amiga_title_command_generation_ = 0;
+    std::optional<std::uint32_t> deuteros_amiga_title_planar_base_;
+    std::uint64_t deuteros_amiga_title_planar_generation_ = 0;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula_;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;

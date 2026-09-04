@@ -85,6 +85,15 @@ therefore leaves both the command boundary and memory checksum unchanged.
 Reset destroys the memory; host source revocation hides it and rejects later
 planar observations.
 
+Once the separately admitted title-display trace proves the exact four-plane
+320x200 layout and the original title stage supplies its hash-bound RGB4
+palette, the runtime may expose an immutable 8x8 Original patch. It reads all
+32 contributing bytes back from `NativeRuntimeMemory`; it does not reuse the
+observation payload or manufacture the remaining frame. Plane zero begins at
+`$b5f0`, rows are `$28` bytes, and planes are `$1f40` bytes apart. Missing
+bytes, a destination outside plane zero, a bottom-edge crossing, absent trace
+admission, reset, or source revocation suppresses the patch entirely.
+
 The direct English Defjam ADF also owns the recovered Millennium bootstrap
 relocator. Admission is restricted to the release whose bootstrap range has
 its own complete-disassembly image and runtime address basis; the nested
@@ -118,14 +127,29 @@ destroy or hide the loader and its generation state.
 
 `MillenniumDosCompatibilityRunner` is the production native file service for
 this chain. Its process context contains the explicitly observed nonzero CS,
-generation, and one engine-private handle for the already admitted immutable
-driver leaf. The private handle is an Eon implementation detail, not a claim
-about the handle DOS assigned in an original run. A tick opens that leaf and
-derives its exact length, then stops before paragraph allocation because the
-destination segment is process state. After an explicit successful allocation
-result, the next tick rewinds, performs the exact full read, applies all driver
-bytes as one atomic runtime-memory batch, closes the private handle, and stops
-before interrupt-vector installation. It cannot fabricate an allocation
-segment, interrupt-vector state, parent stack word, EXEC result, or program
-entry. Exact sequencing includes both native service operations and explicit
-observations. Reset and source revocation discard or hide its checkpoint.
+generation, one engine-private handle for the already admitted immutable
+driver leaf, and a generation-owned native paragraph arena. The private handle
+and arena segments are Eon implementation details, not claims about values DOS
+assigned in an original run. A tick opens the leaf, derives its exact length,
+allocates the required `(byte_count+15)/16` paragraphs from the bounded arena,
+rewinds, performs the exact full read, applies all driver bytes as one atomic
+runtime-memory batch, closes the private handle, and stops before
+interrupt-vector installation. The arena uses monotonically non-overlapping
+allocations, rejects zero/overflowing sizes and exhaustion, and reports every
+allocation with explicit native-compatibility provenance. It cannot fabricate
+interrupt-vector state, parent stack words, EXEC results, or program entry.
+The production coordinator rejects external open, seek, allocation, read, and
+close observations once this service owns the chain; callers cannot replace
+its internal handle or arena segment with a value presented as original DOS
+evidence.
+Exact sequencing includes both native service operations and explicit
+observations. Reset destroys the arena generation; source revocation hides its
+checkpoint and prevents ticks.
+
+After the exact English `TITLES.EXE` request, the same arena reserves a second,
+non-overlapping 455-paragraph child range. One atomic batch loads all 7,022
+hash-admitted title bytes at child offsets `$0100..$1c6d`; offsets below
+`$0100` remain absent. The child segment is compatibility provenance rather
+than an observed DOS address. In particular, absent bytes are not zero-filled
+and are not treated as a PSP or environment, and applying the batch does not
+invent a successful parent EXEC return.

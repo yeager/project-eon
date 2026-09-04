@@ -116,6 +116,7 @@ add_executable(project-eon
     src/engine/deuteros_amiga_title_bootstrap_session.cpp
     src/engine/deuteros_amiga_title_exec_boundary_session.cpp
     src/engine/deuteros_amiga_title_display_trace_session.cpp
+    src/engine/deuteros_amiga_title_planar_patch.cpp
     src/engine/menu_runtime_launch.cpp
     src/engine/native_session_controller.cpp
     src/engine/runtime_host.cpp
@@ -128,8 +129,10 @@ add_executable(project-eon
     src/engine/deuteros_atari_bootstrap_session.cpp
     src/engine/millennium_dos_sound_selection_session.cpp
     src/engine/millennium_dos_sound_driver_load_session.cpp
+    src/engine/millennium_dos_paragraph_arena.cpp
     src/engine/millennium_dos_compatibility_runner.cpp
     src/engine/millennium_dos_title_exec_entry_session.cpp
+    src/engine/millennium_dos_title_child_compatibility_service.cpp
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_title_to_game_session.cpp
     src/engine/millennium_dos_game_session.cpp
@@ -398,6 +401,7 @@ if(BUILD_TESTING)
     add_executable(eon-native-runtime-memory-tests
         tests/native_runtime_memory_tests.cpp
         src/engine/bounded_memory_transfer.cpp
+        src/engine/deuteros_amiga_title_planar_patch.cpp
         src/engine/native_runtime_memory.cpp)
     target_include_directories(eon-native-runtime-memory-tests PRIVATE src)
     add_test(NAME native-runtime-memory COMMAND eon-native-runtime-memory-tests)
@@ -438,6 +442,8 @@ if(BUILD_TESTING)
         add_executable(eon-millennium-dos-title-exec-entry-test
             tests/millennium_dos_title_exec_entry_test.cpp
             src/engine/millennium_dos_title_exec_entry_session.cpp
+            src/engine/millennium_dos_title_child_compatibility_service.cpp
+            src/engine/millennium_dos_paragraph_arena.cpp
             src/data/sha256.cpp)
         target_include_directories(eon-millennium-dos-title-exec-entry-test PRIVATE src)
         if(MSVC)
