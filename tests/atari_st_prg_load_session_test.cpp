@@ -444,9 +444,32 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().game_init_palette_delay_iterations==0x4e20
             && single_cell_planes.checkpoint().game_init_palette_delay_final_d0==0
             && single_cell_planes.checkpoint().game_init_d7==5
-            && single_cell_planes.checkpoint().game_init_palette_outer_backedge_address==0x2b44c
-            && single_cell_planes.checkpoint().game_init_next_instruction==0x2b44c);
+            && single_cell_planes.checkpoint().game_init_palette_outer_backedge_address==0x2b46e
+            && single_cell_planes.checkpoint().game_init_next_instruction==0x2b46e);
         assert(!single_cell_planes.observe_game_init_palette_xbios_selector_6({1,101,0x2b4ac,6,0}).accepted);
+        for(std::uint64_t pass=0;pass<6;++pass){
+            eon::MillenniumAtariGameInitPaletteRecurrenceObservation recurrence{
+                1,101U+pass*2U,0x2b46e,0x2b3c8,0x2b428,{},{}};
+            for(std::size_t i=0;i<recurrence.source_bytes.size();++i){const auto value=palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b3c8U+static_cast<std::uint32_t>(i)});assert(value);recurrence.source_bytes[i]=*value;}
+            for(std::size_t i=0;i<recurrence.destination_words.size();++i){const auto hi=palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b428U+static_cast<std::uint32_t>(i*2U)});const auto lo=palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b429U+static_cast<std::uint32_t>(i*2U)});assert(hi&&lo);recurrence.destination_words[i]=static_cast<std::uint16_t>((*hi<<8U)|*lo);}
+            auto bad_recurrence=recurrence;bad_recurrence.instruction_address=0x2b470;
+            assert(!single_cell_planes.observe_game_init_palette_recurrence(bad_recurrence).accepted);
+            assert(single_cell_planes.observe_game_init_palette_recurrence(recurrence).accepted
+                && single_cell_planes.checkpoint().game_init_palette_recurrence_sha256=="a50d1864336da9b76c9594f94b2eb736108d738d0aefc6443a91c8e8fdd7088b"
+                && single_cell_planes.checkpoint().game_init_palette_completed_passes==pass+2U);
+            assert(palette_memory.apply(single_cell_planes.make_game_init_palette_arithmetic_effect_batch(
+                "palette-recurrence-"+std::to_string(pass))).accepted);
+            assert(single_cell_planes.observe_game_init_palette_xbios_selector_6(
+                {1,102U+pass*2U,0x2b4ac,6,static_cast<std::uint32_t>(0x90000000U+pass)}).accepted);
+        }
+        assert(single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_terminal_xbios_selector_6_boundary
+            && single_cell_planes.checkpoint().game_init_d7==0xffff
+            && single_cell_planes.checkpoint().game_init_palette_terminal_trap_address==0x2b4c2);
+        assert(single_cell_planes.observe_game_init_palette_xbios_selector_6({1,113,0x2b4c2,6,0x76543210}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_rts_boundary
+            && single_cell_planes.checkpoint().game_init_palette_terminal_result_d0==0x76543210
+            && single_cell_planes.checkpoint().game_init_palette_terminal_sha256=="876ea72e7f61e2604ffa34d0fae7a6c1b3f880aa43e88006af18e1f67677c967"
+            && single_cell_planes.checkpoint().game_init_palette_rts_address==0x2b4c6);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

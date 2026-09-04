@@ -628,3 +628,21 @@ msgstr "除外"
 
 msgid "ACTIVE"
 msgstr "有効"
+
+msgid "General hardware failure."
+msgstr "一般的なハードウェア障害。"
+
+msgid "Please insert Deuteros"
+msgstr "Deuteros を挿入してください"
+
+msgid "DATA disk into drive DFO"
+msgstr "DATA ディスクをドライブ DFO に挿入してください"
+
+msgid "Press any key when ready."
+msgstr "準備ができたら何かキーを押してください。"
+
+msgid "Yes, please"
+msgstr "はい"
+
+msgid "No, thanks"
+msgstr "いいえ"

@@ -667,3 +667,21 @@ msgstr "已排除"
 
 msgid "ACTIVE"
 msgstr "活动"
+
+msgid "General hardware failure."
+msgstr "一般硬件故障。"
+
+msgid "Please insert Deuteros"
+msgstr "请插入 Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "将 DATA 磁盘插入 DFO 驱动器"
+
+msgid "Press any key when ready."
+msgstr "准备好后按任意键。"
+
+msgid "Yes, please"
+msgstr "是，请继续"
+
+msgid "No, thanks"
+msgstr "不，谢谢"

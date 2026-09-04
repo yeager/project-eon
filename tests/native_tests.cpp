@@ -5366,6 +5366,8 @@ int main() {
                 {1,29,0x2b486,0x2b3c8,0x2b428,{}}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_palette_xbios_selector_6(
                 {1,30,0x2b4ac,6,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_palette_recurrence(
+                {1,31,0x2b46e,0x2b3c8,0x2b428,{},{}}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -6002,6 +6004,38 @@ int main() {
                 adjusted_rts).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_rts_frame(
                 adjusted_rts).accepted);
+            eon::DeuterosAmigaObservedTitlePostCommandNestedWords repeated_nested_words{
+                runtime_copy_sequence+58,{{0x20bae,0x20bb6}},
+                {{0x13008,0x202bc}},{{0x1234,0x0001}}};
+            auto bad_repeated_nested_words=repeated_nested_words;
+            bad_repeated_nested_words.instruction_addresses[0]+=2;
+            const auto before_repeated_service=
+                opening_controller.native_runtime_memory_diagnostics();
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_nested_words(
+                bad_repeated_nested_words).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_nested_words(
+                repeated_nested_words).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_nested_words(
+                repeated_nested_words).accepted);
+            const auto after_repeated_words=
+                opening_controller.native_runtime_memory_diagnostics();
+            assert(before_repeated_service&&after_repeated_words
+                &&after_repeated_words->applied_batch_count
+                    ==before_repeated_service->applied_batch_count+1);
+            for(std::size_t iteration=0;iteration<nested_carries.size();++iteration){
+                const auto call=nested_carries[iteration]?0x20be4U:0x20bd6U;
+                const auto ret=nested_carries[iteration]?0x20beaU:0x20bdcU;
+                eon::DeuterosAmigaObservedLocalCallReturn repeated_return{
+                    runtime_copy_sequence+59U+iteration,call,0x41a68,ret,
+                    static_cast<std::uint32_t>(0x100U+iteration),0x0010};
+                if(iteration==0){auto bad=repeated_return;bad.return_address+=2;
+                    assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_nested_call_return(
+                        bad).accepted);}
+                assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_nested_call_return(
+                    repeated_return).accepted);
+                assert(opening_controller.advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop().accepted);
+            }
+            assert(!opening_controller.advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop().accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -14933,6 +14967,15 @@ int main() {
     assert(first_bitmap_catalog.records[1].decoded_pixels_sha256
         == "fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3");
     eon::DeuterosAmigaOpening live_opening(*amiga_disk1, *amiga_disk2);
+    assert(live_opening.admitted_game_text().size() == 6);
+    const auto localized_deuteros_prompts = eon::localize_admitted_game_text_table(
+        eon::Game::deuteros, eon::Platform::amiga,
+        live_opening.admitted_game_text(), "sv", eon::Translator::from_language("sv"));
+    assert(localized_deuteros_prompts.size() == 6);
+    assert(localized_deuteros_prompts.front().id
+        == "deuteros.amiga.prompt.hardware-failure");
+    assert(localized_deuteros_prompts.front().displayed_text
+        == "Allmänt maskinvarufel.");
     {
         auto altered_system_adf = *amiga_disk1;
         // The tail is outside the opening's first decoded bundles. The live

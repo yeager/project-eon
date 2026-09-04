@@ -469,3 +469,11 @@ subtract it from the low product and atomically store the wrapping 16-bit
 result at `CS:$138a`. Execution stops before byte read `$13e9`, source
 `$5050:$0004`. The raw word and adjusted result carry no inferred field,
 size, or graphics meaning.
+
+The byte at `$5050:$0004` is now admitted as a raw typed observation. Exact
+bytes `$13e9..$13f1` (SHA-256
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`)
+apply the original wrapping byte increment and atomically store the result at
+`CS:$1389`. Execution stops before `$13f2` reads the next raw byte at
+`$5050:$0007`. Neither byte receives inferred mode, palette, or graphics
+semantics.

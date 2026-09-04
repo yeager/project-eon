@@ -678,3 +678,21 @@ msgstr "EKSKLUDERT"
 
 msgid "ACTIVE"
 msgstr "AKTIV"
+
+msgid "General hardware failure."
+msgstr "Generell maskinvarefeil."
+
+msgid "Please insert Deuteros"
+msgstr "Sett inn Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Sett DATA-disken i stasjon DFO"
+
+msgid "Press any key when ready."
+msgstr "Trykk en tast når du er klar."
+
+msgid "Yes, please"
+msgstr "Ja, takk"
+
+msgid "No, thanks"
+msgstr "Nei, takk"

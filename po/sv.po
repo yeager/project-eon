@@ -679,3 +679,21 @@ msgstr "ÅTERSTÄLLD PRESENTATIONSGRÄNS"
 
 msgid "BOOTSTRAP BOUNDARY"
 msgstr "STARTGRÄNS"
+
+msgid "General hardware failure."
+msgstr "Allmänt maskinvarufel."
+
+msgid "Please insert Deuteros"
+msgstr "Sätt in Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Sätt DATA-disken i enhet DFO"
+
+msgid "Press any key when ready."
+msgstr "Tryck på valfri tangent när du är klar."
+
+msgid "Yes, please"
+msgstr "Ja, tack"
+
+msgid "No, thanks"
+msgstr "Nej, tack"

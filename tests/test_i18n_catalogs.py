@@ -154,8 +154,8 @@ class CatalogTests(unittest.TestCase):
     def test_game_text_map_covers_both_original_celestial_tables(self) -> None:
         document = json.loads((ROOT / "docs" / "game-text-map.json").read_text(encoding="utf-8"))
         entries = document["entries"]
-        self.assertEqual(len(entries), 92)
-        self.assertEqual(len({entry["catalog_msgid"] for entry in entries}), 51)
+        self.assertEqual(len(entries), 98)
+        self.assertEqual(len({entry["catalog_msgid"] for entry in entries}), 57)
         celestial = [entry for entry in entries if ".celestial." in entry["id"]]
         self.assertEqual(len(celestial), 82)
         by_language = {

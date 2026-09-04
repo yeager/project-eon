@@ -44,6 +44,10 @@ DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf,
     std::vector<std::uint8_t> data_adf)
     : disk_(require_clean_deuteros_amiga_system_adf(std::move(system_adf))),
       data_disk_(require_clean_deuteros_amiga_data_adf(std::move(data_adf))),
+      admitted_game_text_(admit_all_game_text_from_source(
+          Game::deuteros, Platform::amiga,
+          "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).adf",
+          disk_.bytes(0, AmigaAdf::standard_size))),
       load_plan_(parse_deuteros_amiga_load_plan(disk_)),
       title_handoff_route_(parse_deuteros_amiga_title_handoff_route(disk_, load_plan_)),
       transferred_bundle_(require_opening_transfer(disk_, load_plan_)),

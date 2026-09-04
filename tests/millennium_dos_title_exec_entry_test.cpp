@@ -948,6 +948,30 @@ int main(int argc, char** argv) {
         &&first_title_byte.memory_effects.back().instruction_address==0x13e5
         &&first_title_byte.memory_effects.back().offset==0x138a
         &&first_title_byte.memory_effects.back().value==0x5550);
+    auto detached_first_title_byte=other_success;
+    bool detached_first_title_byte_rejected=false;
+    try { detached_first_title_byte.observe_far_byte(
+        {96,0x13e9,0x5050,0x0005,0xfe}); }
+    catch(const std::runtime_error&) { detached_first_title_byte_rejected=true; }
+    assert(detached_first_title_byte_rejected
+        &&detached_first_title_byte.checkpoint().last_sequence==95
+        &&detached_first_title_byte.checkpoint().memory_effects.size()==18976);
+    other_success.observe_far_byte({96,0x13e9,0x5050,0x0004,0xfe});
+    const auto first_title_second_byte=other_success.checkpoint();
+    assert(first_title_second_byte.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary
+        &&first_title_second_byte.last_sequence==96
+        &&first_title_second_byte.continuation_address==0x13f2
+        &&first_title_second_byte.far_byte_observations.size()==3
+        &&first_title_second_byte.far_byte_observations.back().byte==0xfe
+        &&first_title_second_byte.far_byte_boundary.instruction_address==0x13f2
+        &&first_title_second_byte.far_byte_boundary.source_segment==0x5050
+        &&first_title_second_byte.far_byte_boundary.source_offset==0x0007
+        &&first_title_second_byte.far_byte_boundary.destination_offset==0x1388
+        &&first_title_second_byte.memory_effects.size()==18977
+        &&first_title_second_byte.memory_effects.back().instruction_address==0x13ee
+        &&first_title_second_byte.memory_effects.back().offset==0x1389
+        &&first_title_second_byte.memory_effects.back().value==0x00ff);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

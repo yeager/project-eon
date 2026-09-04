@@ -639,3 +639,21 @@ msgstr "ΕΞΑΙΡΕΘΗΚΑΝ"
 
 msgid "ACTIVE"
 msgstr "ΕΝΕΡΓΟ"
+
+msgid "General hardware failure."
+msgstr "Γενική βλάβη υλικού."
+
+msgid "Please insert Deuteros"
+msgstr "Εισαγάγετε το Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Εισαγάγετε τον δίσκο DATA στη μονάδα DFO"
+
+msgid "Press any key when ready."
+msgstr "Πατήστε οποιοδήποτε πλήκτρο όταν είστε έτοιμοι."
+
+msgid "Yes, please"
+msgstr "Ναι, παρακαλώ"
+
+msgid "No, thanks"
+msgstr "Όχι, ευχαριστώ"

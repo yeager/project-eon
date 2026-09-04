@@ -678,3 +678,21 @@ msgstr "UITGESLOTEN"
 
 msgid "ACTIVE"
 msgstr "ACTIEF"
+
+msgid "General hardware failure."
+msgstr "Algemene hardwarefout."
+
+msgid "Please insert Deuteros"
+msgstr "Plaats Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Plaats de DATA-diskette in station DFO"
+
+msgid "Press any key when ready."
+msgstr "Druk op een toets wanneer je klaar bent."
+
+msgid "Yes, please"
+msgstr "Ja, graag"
+
+msgid "No, thanks"
+msgstr "Nee, bedankt"

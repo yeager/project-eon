@@ -951,6 +951,17 @@ retained unchanged, but neither its record framing nor a code reference from
 the input dispatcher to this block has been demonstrated.  Project Eon
 therefore does not expose `L`/`S` as reconstructed gameplay controls.
 
+Six unambiguous prompt literals within that block now have stable presentation
+keys: the hardware-failure message and the five-part data-disk confirmation
+prompt at ADF `$78c71`, `$78c93`, `$78caa`, `$78ccd`, `$78ce7`, and `$78cf3`.
+Admission rehashes the complete clean system ADF
+`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`
+and verifies every exact range before retaining copy-only tokens in the native
+Deuteros Amiga session. Original and Modern resolve those same tokens through
+all shipped PO catalogues. This does not establish record framing, expose a
+disk-swap or confirmation control, or assign semantics to the adjacent
+`LOAD`/`SAVE` fragments.
+
 The Millennium Atari ST Disk 1 physical dump has a separate raw text
 span at `$12420..$1258f` (368 bytes, SHA-256
 `6330b762858bb4b1fb0bc17f4f577eca3b1e8de4c078fd3fc01192bcd05a89f7`).  It
@@ -1503,10 +1514,21 @@ the exact 16 bytes at file `+0xfae`, loaded runtime `$2b4ae..$2b4bd`, hash to
 `9e3fd4aeca606c5560b204d12a20a77de12552ded7fa64a0677cca56c4676bf1`.
 They clean six stack bytes, overwrite D0 with `$00004e20`, execute exactly
 20,000 `SUBQ.L`/`BNE.S` delay iterations, then decrement D7 from 6 to 5 and
-take the first outer `DBF` edge to `$2b44c`. This transition changes only
+take the first outer `DBF` edge to the corrected loaded address `$2b46e`.
+This transition changes only
 typed register/control state, so it has no runtime-memory effect batch to
-commit. Execution stops before the recurrent palette setup: its use of the
-already-mutated source and destination bytes remains a separate boundary.
+commit. Each of the six recurrent passes now admits the current 96 source
+bytes and 16 destination words as one typed observation, checked against
+native memory by the production facade. The exact recurrent setup, arithmetic,
+and trap span `$2b46e..$2b4ad` hashes to
+`a50d1864336da9b76c9594f94b2eb736108d738d0aefc6443a91c8e8fdd7088b`;
+each pass atomically commits its 48 byte and 16 word effects, then requires a
+new typed selector-6 return before its delay and D7 transition. After pass
+seven, D7 becomes `$ffff` and falls through to the terminal selector-6 trap
+at `$2b4c2`. Its exact ten-byte path at file `+0xfbe` hashes to
+`876ea72e7f61e2604ffa34d0fae7a6c1b3f880aa43e88006af18e1f67677c967`.
+A final typed raw return owns the six-byte cleanup and local RTS at `$2b4c6`.
+The stack-supplied caller destination remains external.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4546,6 +4568,12 @@ SHA-256 `0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`.
 It atomically stores the wrapping low-word subtraction result at `CS:$138a`
 and stops before `$13e9` reads byte `$5050:$0004`. Neither operand, result,
 nor next byte receives inferred graphics semantics.
+The raw byte at `$5050:$0004` is now accepted through the ordered typed-byte
+facades. Exact bytes `$13e9..$13f1` have SHA-256
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`;
+they apply the instruction-defined wrapping increment and atomically store it
+at `CS:$1389`. The next boundary is `$13f2`, source `$5050:$0007`. No field,
+mode, palette, or pixel meaning is assigned.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6911,6 +6939,20 @@ arbitrary caller destination is accepted. The exact six-byte caller prefix at
 `8a7c8b9593ae8d101806072aafa8cc8aa91a34dd4802e67af4fd16f3dc56c362`
 and stops before its repeated `$40530->$20ba8` local service call. Its return,
 effects, and any display meaning remain external boundaries.
+That repeated call is now native through its complete hash-bound local body.
+The six-byte caller instruction supplies return address `$40536`; no second
+stack destination is inferred. The service reuses the exact 74-byte
+`$20ba8..$20bf1` span (SHA-256
+`25dcfad3d1b9298771e33cab73a4de86cd8ff9c27d7fdef787be5ef750f7035b`).
+One ordered typed observation reads words `$13008/$202bc` at
+`$20bae/$20bb6`. The original low-byte shifts, decrements, carry tests,
+counter write, immutable D0/D1 table operands, and D6=`$0007` DBF geometry
+then drive exactly eight iterations. Each reached `$20bd6` or `$20be4` call
+requires its own typed `$41a68` return; raw D0/SR are retained without helper
+effects. Counter changes at `$202bc` are applied atomically before session
+commit. After the eighth iteration, local RTS `$20bf0` returns to the
+caller-owned `$40536`. No service, counter, table, or display semantics are
+assigned, and execution does not continue beyond that caller address.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

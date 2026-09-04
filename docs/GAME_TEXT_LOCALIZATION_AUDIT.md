@@ -24,13 +24,15 @@ contain a non-empty PO entry; English uses the canonical English message.
 
 ## Current audited coverage
 
-The compiled registry and `docs/game-text-map.json` currently admit 92 exact
-ranges from genuine Millennium DOS media: ten English sound-selection strings
-and two 41-name celestial tables from the English and Spanish releases. All 51
-canonical messages are present in every shipped PO catalogue.
+The compiled registry and `docs/game-text-map.json` currently admit 98 exact
+ranges from genuine media. Millennium DOS contributes ten English
+sound-selection strings and two 41-name celestial tables from the English and
+Spanish releases. The clean Deuteros Amiga system ADF contributes six
+unambiguous prompt literals from `$78c71..$78cfc`. All 57 canonical messages
+are present in every shipped PO catalogue.
 
-No Deuteros text and no Millennium Amiga or Atari ST text has yet crossed this
-admission boundary. Their recovered graphics and native execution scaffolding
+No Millennium Amiga or Atari ST text, and no Deuteros Atari ST text, has yet
+crossed this admission boundary. Their recovered graphics and native execution scaffolding
 must not be described as localized game prose. As each visible table is
 recovered, the same change must add exact source identity/ranges, stable keys,
 all catalogue translations, runtime admission, and tests. Until then, a

@@ -667,3 +667,21 @@ msgstr "ВИКЛЮЧЕНО"
 
 msgid "ACTIVE"
 msgstr "АКТИВНИЙ"
+
+msgid "General hardware failure."
+msgstr "Загальний збій обладнання."
+
+msgid "Please insert Deuteros"
+msgstr "Вставте Deuteros"
+
+msgid "DATA disk into drive DFO"
+msgstr "Вставте диск DATA у дисковод DFO"
+
+msgid "Press any key when ready."
+msgstr "Коли будете готові, натисніть будь-яку клавішу."
+
+msgid "Yes, please"
+msgstr "Так, будь ласка"
+
+msgid "No, thanks"
+msgstr "Ні, дякую"

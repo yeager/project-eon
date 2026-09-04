@@ -9,6 +9,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "engine/deuteros_amiga_title_stage_session.hpp"
 #include "engine/deuteros_amiga_title_bootstrap_session.hpp"
+#include "game_text_localization.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -58,6 +59,11 @@ public:
         return title_handoff_route_;
     }
     [[nodiscard]] const DeuterosAmigaSoundBank& sound_bank() const { return sound_bank_; }
+    // Copy-only, hash-bound tokens for the recovered system prompt table.
+    // Presentation mode never enters this source-to-catalogue boundary.
+    [[nodiscard]] std::span<const AdmittedGameText> admitted_game_text() const {
+        return admitted_game_text_;
+    }
     [[nodiscard]] const std::optional<DeuterosAmigaAlternateRendererTrace>& alternate_renderer_trace() const {
         return alternate_renderer_trace_;
     }
@@ -137,12 +143,16 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan> observe_title_post_adjusted_first_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_first_helper_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan> observe_title_post_adjusted_second_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_second_helper_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRtsFramePlan> observe_title_post_adjusted_rts_frame(const DeuterosAmigaObservedTitlePostAdjustedRtsFrame& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_rts_frame(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedWordsPlan> observe_title_post_adjusted_repeated_nested_words(const DeuterosAmigaObservedTitlePostCommandNestedWords& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_repeated_nested_words(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedCallReturnPlan> observe_title_post_adjusted_repeated_nested_call_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_repeated_nested_call_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandNestedLoopAdvancePlan> advance_title_post_adjusted_repeated_nested_loop() { return title_stage_session_ ? title_stage_session_->advance_post_adjusted_repeated_nested_loop() : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 
 private:
     AmigaAdf disk_;
     AmigaAdf data_disk_;
+    std::vector<AdmittedGameText> admitted_game_text_;
     DeuterosAmigaLoadPlan load_plan_;
     DeuterosAmigaTitleHandoffRoute title_handoff_route_;
     DeuterosAmigaMainResourceTransfer transferred_bundle_;

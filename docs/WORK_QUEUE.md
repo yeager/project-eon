@@ -38,8 +38,9 @@ typed two-word `$13aa` read from relocated `TITLE.LIB+$000f`. The genuine
 are now admitted through all single-word facades. Their exact unsigned
 product/store sequence is native.
 The third typed runtime word from `$5050:$0017` and its exact wrapping
-subtraction/store are now native. Continue at `$13e9` with the typed byte from
-`$5050:$0004`; do not assign dimension or rendering semantics to these fields.
+subtraction/store are now native. The typed byte from `$5050:$0004` and its
+exact wrapping increment/store are also native. Continue at `$13f2` with the
+typed byte from `$5050:$0007`; do not assign graphics semantics to these fields.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -84,10 +85,12 @@ loop is now native with typed existing destination words and atomic byte/word
 effects through `TRAP #14` `$2b4ac`. Continue with a typed XBIOS selector-6
 return and the largest deterministic portion of the following timing loop.
 That raw return, stack cleanup, 20,000-iteration D0 delay and first D7 `DBF`
-edge are now native through the recurrence boundary at `$2b44c`. Continue by
-generalizing the palette pass over its already-mutated source/destination
-state, then own the remaining D7 iterations and terminal selector-6/RTS path.
-Do not infer firmware results or wall-clock timing from static bytes.
+edge are now native through the corrected recurrence boundary at `$2b46e`.
+All six recurrent palette passes, their typed selector-6 returns, delay loops,
+D7 transitions, terminal selector-6 return, and local RTS `$2b4c6` are now
+native. Continue with a typed RTS destination and the largest deterministic
+caller continuation. Do not infer firmware results or wall-clock timing from
+static bytes.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -342,10 +345,11 @@ after one typed destination-pointer read. Caller `$20c80` now owns the typed
 `$19d1e` pointer and exact zero branch. The qualifying nonzero object gate
 now owns typed `$ee`/`$f0` bytes and immutable table loads through the first
 `$20ca8->$41ad2` call. Both helper returns and the second table pair are now
-owned through local RTS `$20cb8` without assigning helper effects. Continue
-with an observed RTS destination. The typed stack frame now selects only
-caller `$40530` and stops before its repeated `$20ba8` local-service call;
-continue with that exact return. Do not
+owned through local RTS `$20cb8` without assigning helper effects. The typed
+stack frame selects only caller `$40530`; its repeated `$20ba8` local-service
+call now consumes two ordered runtime words, all eight typed `$41a68`
+returns, exact counter effects and DBF iterations, then returns through
+`$20bf0` to known caller address `$40536`. Continue from `$40536`; do not
 treat the sparse decoded memory as a renderer surface.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

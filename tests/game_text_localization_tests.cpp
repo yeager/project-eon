@@ -36,7 +36,9 @@ int main() {
     for (const auto& definition : definitions) {
         assert(!definition.id.empty());
         assert(definition.source_leaf == "MILL.COM"
-            || definition.source_leaf == "2200AD4.BIN");
+            || definition.source_leaf == "2200AD4.BIN"
+            || definition.source_leaf
+                == "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).adf");
         assert(definition.source_sha256.size() == 64);
         assert(definition.source_size == definition.original_text.size());
         assert(!definition.original_text.empty());
@@ -52,7 +54,9 @@ int main() {
         // This configured installed directory is the exact English DOS set.
         // Spanish source ranges are exercised when the archive corpus is
         // supplied to the broader native tests; never substitute this leaf.
-        if (definition.source_language != "en") continue;
+        if (definition.source_language != "en"
+            || definition.game != eon::Game::millennium
+            || definition.platform != eon::Platform::dos) continue;
         auto& source_bytes = source_leaves[std::string(definition.source_leaf)];
         if (source_bytes.empty()) {
             const auto source_path = std::filesystem::path(EON_DIRECT_DATA_DIR)

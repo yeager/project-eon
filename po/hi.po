@@ -628,3 +628,21 @@ msgstr "बहिष्कृत"
 
 msgid "ACTIVE"
 msgstr "सक्रिय"
+
+msgid "General hardware failure."
+msgstr "सामान्य हार्डवेयर विफलता।"
+
+msgid "Please insert Deuteros"
+msgstr "कृपया Deuteros डालें"
+
+msgid "DATA disk into drive DFO"
+msgstr "DATA डिस्क को DFO ड्राइव में डालें"
+
+msgid "Press any key when ready."
+msgstr "तैयार होने पर कोई भी कुंजी दबाएँ।"
+
+msgid "Yes, please"
+msgstr "हाँ, कृपया"
+
+msgid "No, thanks"
+msgstr "नहीं, धन्यवाद"

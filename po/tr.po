@@ -678,3 +678,21 @@ msgstr "HARİÇ TUTULAN"
 
 msgid "ACTIVE"
 msgstr "ETKİN"
+
+msgid "General hardware failure."
+msgstr "Genel donanım arızası."
+
+msgid "Please insert Deuteros"
+msgstr "Lütfen Deuteros'u takın"
+
+msgid "DATA disk into drive DFO"
+msgstr "DATA diskini DFO sürücüsüne takın"
+
+msgid "Press any key when ready."
+msgstr "Hazır olduğunuzda herhangi bir tuşa basın."
+
+msgid "Yes, please"
+msgstr "Evet, lütfen"
+
+msgid "No, thanks"
+msgstr "Hayır, teşekkürler"
