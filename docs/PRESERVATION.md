@@ -5736,7 +5736,23 @@ destination addresses. The shared bounded-memory-transfer owner retains the
 admitted effects for checkpoint/diagnostic replay, never source bytes that
 were not explicitly observed.
 After exactly `$a20` longwords, DBRA falls through to RTS `$38a2e`, returning
-to `$404f6`; the session stops before the next call `$404f8 -> $1fb9a`.
+to `$404f6`. Selector one reaches that same address without the copy. The
+shared continuation `$404f6..$404fd` (SHA-256
+`596e3b08acbe94bbe512d87ca7aeb9e8eb686af82c891c5a0e4dd1c4fcdbe3c3`)
+loads literal D0=1 and calls `$1fb9a`.
+
+The complete 24-byte dispatcher `$1fb9a..$1fbb1` hashes to
+`173ecec3e880b6b6d9022567622548e25629dd23d671f6f8f9e46fe700edcbbb`.
+It reads a runtime table base from `$1f97c`, selects the signed word at
+`base+2`, adds that offset to the base and calls `$1fa00` with the resulting
+command-stream pointer in A4. The active session requires both reads as
+separate typed, monotonically ordered observations; it neither invents the
+base nor the table word. The nested parser's exact ten-byte prefix hashes to
+`2605ca4af737e72accc1c6dc91bf640aac370f6037da3ec284ba440377a6b4cf`,
+clears byte `$1f98c`, executes NOP and clears D0. Eon exposes that one literal
+byte effect and stops before the first runtime command-byte read at `$1fa0a`.
+It does not interpret the command stream, infer presentation, or claim the
+outer call returned.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
@@ -6096,3 +6112,13 @@ observations are ANDed at `$0dec/$0def`. `$0df3` observes the merge word at
 records the OR results at `$0e0a/$0e0d`. Far offsets advance by `$50` per row
 and reset per group. Exact `$03c5/$03cf` selection effects are retained. No
 meaning is assigned to these buffers, ports, masks, or output groups.
+
+The remaining non-`DL == 4`, nonzero-toggle branch is owned through RET
+`$0d3d`. `$0cbe` observes the segment, and `$0cd8` consumes four groups of 16
+far words into `CS:$07fa..$0879`, retaining the four `$03cf` selector writes.
+After explicit `$0cee` observation of `CS:$07da & 7`, each of four groups and
+16 rows observes its mask word at `CS:$0982+2*row`, rotates it by the proven
+count, observes and ANDs the far word at `$0d1e`, then observes, rotates, and
+ORs the pattern word from `CS:$0962+2*row` at `$0d21/$0d24`. Far offsets use
+the exact `$28` row stride and reset per group; `$03c5/$03cf` effects are
+retained. No memory or port semantics are inferred.

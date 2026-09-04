@@ -6,6 +6,7 @@
 #include "engine/bounded_memory_transfer.hpp"
 
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -322,6 +323,41 @@ struct DeuterosAmigaTitleLoadCopyChunkPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedLoadDispatchTableBase {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t observed_value = 0;
+};
+
+struct DeuterosAmigaTitleLoadDispatchTableBasePlan {
+    DeuterosAmigaObservedLoadDispatchTableBase observation;
+    std::uint32_t caller_address = 0;
+    std::uint32_t call_address = 0;
+    std::uint32_t call_target = 0;
+    std::uint32_t index_value = 0;
+    std::uint32_t table_word_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
+struct DeuterosAmigaObservedLoadDispatchTableWord {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint16_t observed_value = 0;
+};
+
+struct DeuterosAmigaTitleLoadDispatchLocalPlan {
+    DeuterosAmigaObservedLoadDispatchTableWord observation;
+    std::int16_t signed_offset = 0;
+    std::uint32_t command_stream_address = 0;
+    std::uint32_t nested_call_address = 0;
+    std::uint32_t nested_call_target = 0;
+    std::uint32_t byte_write_address = 0;
+    std::uint8_t byte_write_value = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -346,6 +382,7 @@ public:
             disk, plan);
         tail_return_ = parse_deuteros_amiga_title_post_exec_tail_return_profile(disk, plan);
         load_service_ = parse_deuteros_amiga_title_post_exec_load_service_profile(disk, plan);
+        load_dispatch_ = parse_deuteros_amiga_title_post_load_dispatch_profile(disk, plan);
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
             || to_hex(sha256(at(0x20510, 38)))
@@ -789,6 +826,66 @@ public:
             complete ? 0x1fb9aU : 0U, complete ? 0x404f8U : 0x38a28U};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDispatchTableBasePlan>
+    observe_load_dispatch_table_base(
+        const DeuterosAmigaObservedLoadDispatchTableBase& observation) {
+        if (!observed_load_selector_ || observed_load_dispatch_table_base_) {
+            return std::nullopt;
+        }
+        const auto selector = static_cast<std::uint8_t>(
+            observed_load_selector_->observed_value & 0xffU);
+        const bool ready = selector == 1
+            || (load_copy_transfer_ && load_copy_transfer_->checkpoint().complete);
+        const auto preceding_sequence = selector == 1
+            ? observed_load_selector_->trace_sequence
+            : load_copy_transfer_->checkpoint().last_sequence;
+        if (!ready) return std::nullopt;
+        if (observation.trace_sequence <= preceding_sequence
+            || observation.instruction_address != load_dispatch_.entry_address
+            || observation.source_address != load_dispatch_.table_base_cell_address) {
+            throw std::runtime_error("Deuteros load-dispatch table base does not match boundary");
+        }
+        if (observation.observed_value > std::numeric_limits<std::uint32_t>::max()
+                - load_dispatch_.index_value * 2U) {
+            throw std::runtime_error("Deuteros load-dispatch table address overflows");
+        }
+        observed_load_dispatch_table_base_ = observation;
+        return DeuterosAmigaTitleLoadDispatchTableBasePlan{observation,
+            load_dispatch_.caller_address, load_dispatch_.caller_address + 2U,
+            load_dispatch_.entry_address, load_dispatch_.index_value,
+            observation.observed_value + load_dispatch_.index_value * 2U,
+            load_dispatch_.table_word_instruction_address};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDispatchLocalPlan>
+    observe_load_dispatch_table_word(
+        const DeuterosAmigaObservedLoadDispatchTableWord& observation) {
+        if (!observed_load_dispatch_table_base_ || observed_load_dispatch_table_word_) {
+            return std::nullopt;
+        }
+        const auto expected_source = observed_load_dispatch_table_base_->observed_value
+            + load_dispatch_.index_value * 2U;
+        if (observation.trace_sequence
+                <= observed_load_dispatch_table_base_->trace_sequence
+            || observation.instruction_address
+                != load_dispatch_.table_word_instruction_address
+            || observation.source_address != expected_source) {
+            throw std::runtime_error("Deuteros load-dispatch table word does not match boundary");
+        }
+        const auto offset = static_cast<std::int16_t>(observation.observed_value);
+        const auto target = static_cast<std::int64_t>(
+            observed_load_dispatch_table_base_->observed_value) + offset;
+        if (target < 0
+            || target > std::numeric_limits<std::uint32_t>::max()) {
+            throw std::runtime_error("Deuteros load-dispatch command address overflows");
+        }
+        observed_load_dispatch_table_word_ = observation;
+        return DeuterosAmigaTitleLoadDispatchLocalPlan{observation, offset,
+            static_cast<std::uint32_t>(target), load_dispatch_.nested_call_address,
+            load_dispatch_.nested_call_target, load_dispatch_.parser_mode_byte_address,
+            load_dispatch_.parser_mode_byte_value, load_dispatch_.first_command_read_address};
+    }
+
 private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
@@ -803,6 +900,7 @@ private:
     DeuterosAmigaTitlePostExecFourthServiceProfile fourth_service_;
     DeuterosAmigaTitlePostExecTailReturnProfile tail_return_;
     DeuterosAmigaTitlePostExecLoadServiceProfile load_service_;
+    DeuterosAmigaTitlePostLoadDispatchProfile load_dispatch_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_graphics_service_first_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
@@ -827,6 +925,10 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> observed_load_service_return_;
     std::optional<DeuterosAmigaObservedLoadSelector> observed_load_selector_;
     std::optional<BoundedMemoryTransferSession> load_copy_transfer_;
+    std::optional<DeuterosAmigaObservedLoadDispatchTableBase>
+        observed_load_dispatch_table_base_;
+    std::optional<DeuterosAmigaObservedLoadDispatchTableWord>
+        observed_load_dispatch_table_word_;
 };
 
 } // namespace eon
