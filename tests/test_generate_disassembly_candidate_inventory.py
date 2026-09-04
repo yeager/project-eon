@@ -21,6 +21,20 @@ class GenerateDisassemblyCandidateInventoryTests(unittest.TestCase):
                       for candidate in release["candidates"]]
         self.assertEqual(sum(row["status"] == "mapped" for row in candidates), 13)
         self.assertEqual(sum(row["status"] == "discovered-unmapped" for row in candidates), 7)
+        self.assertEqual(generated["schema"], "project-eon.disassembly-candidates/v3")
+        for release in generated["releases"]:
+            self.assertTrue(all(key in release for key in
+                                ("release_sha256", "game", "platform", "language")))
+            for candidate in release["candidates"]:
+                self.assertEqual(candidate["game"], release["game"])
+                self.assertEqual(candidate["platform"], release["platform"])
+                self.assertEqual(candidate["language"], release["language"])
+                self.assertIn(candidate["classification"],
+                              ("code-candidate-unclassified",))
+                self.assertIn(candidate["coverage_claim"],
+                              ("byte-range-mapped", "container-members-only",
+                               "discovered-range-only"))
+                self.assertTrue(candidate["evidence"])
         killer = next(row for row in candidates
                       if row["profile_id"] == "deuteros-atari-killer-boot")
         self.assertEqual(killer["status"], "mapped")
@@ -38,11 +52,19 @@ class GenerateDisassemblyCandidateInventoryTests(unittest.TestCase):
         self.assertTrue(container["member_span_ids"])
         self.assertFalse(container["mapped_span_ids"])
         self.assertEqual(container["load_status"], "unproven")
+        self.assertEqual(container["address_basis"], "unproven")
+        self.assertEqual(container["coverage_claim"], "container-members-only")
+        self.assertEqual(container["evidence"],
+                         "container-profile-with-hash-bound-member-images-only")
         atari_boot = next(row for row in candidates
                           if row["profile_id"] == "millennium-atari-equinox-direct-bootstrap")
         self.assertEqual(atari_boot["status"], "mapped")
         self.assertEqual(atari_boot["code_candidate_kind"], "boot")
         self.assertEqual(atari_boot["load_status"], "unproven")
+        spanish_boot = next(row for row in candidates
+                            if row["profile_id"] == "millennium-dos-spanish-startup")
+        self.assertEqual(spanish_boot["coverage_claim"], "discovered-range-only")
+        self.assertEqual(spanish_boot["address_basis"], "unproven")
 
     def test_cross_release_profile_is_rejected(self) -> None:
         releases = {"parser_profiles": [{"id": "candidate", "release_sha256": "a",

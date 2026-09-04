@@ -5,6 +5,7 @@
 #include "data/sha256.hpp"
 #include "engine/bounded_memory_transfer.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -478,6 +479,48 @@ struct DeuterosAmigaObservedTitleCommandCallReturn {
 
 struct DeuterosAmigaTitleCommandCallReturnPlan {
     DeuterosAmigaObservedTitleCommandCallReturn observation;
+    std::uint32_t next_stream_address = 0;
+    std::uint32_t next_opcode_read_address = 0;
+};
+
+struct DeuterosAmigaObservedTitleCommandTwoOperandMode {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint8_t observed_value = 0;
+};
+
+struct DeuterosAmigaTitleCommandTwoOperandModePlan {
+    DeuterosAmigaObservedTitleCommandTwoOperandMode observation;
+    std::array<std::uint32_t, 2> operand_source_addresses{};
+    std::uint32_t first_operand_instruction_address = 0;
+};
+
+struct DeuterosAmigaObservedTitleCommandTwoOperands {
+    std::uint64_t trace_sequence = 0;
+    std::array<std::uint32_t, 2> instruction_addresses{};
+    std::array<std::uint32_t, 2> source_addresses{};
+    std::array<std::uint8_t, 2> observed_values{};
+};
+
+struct DeuterosAmigaTitleCommandTwoOperandsPlan {
+    DeuterosAmigaObservedTitleCommandTwoOperands observation;
+    std::uint32_t runtime_instruction_address = 0;
+    std::uint32_t runtime_source_address = 0;
+    std::uint32_t next_stream_address = 0;
+};
+
+struct DeuterosAmigaObservedTitleCommandTwoOperandRuntimeLong {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t observed_value = 0;
+};
+
+struct DeuterosAmigaTitleCommandTwoOperandLocalPlan {
+    DeuterosAmigaObservedTitleCommandTwoOperandRuntimeLong observation;
+    std::uint32_t destination_address = 0;
+    std::uint32_t destination_value = 0;
     std::uint32_t next_stream_address = 0;
     std::uint32_t next_opcode_read_address = 0;
 };
@@ -1026,6 +1069,9 @@ public:
             || observation.source_address != next_command_address_) {
             throw std::runtime_error("Deuteros command opcode does not match boundary");
         }
+        if (next_command_address_ == std::numeric_limits<std::uint32_t>::max()) {
+            throw std::runtime_error("Deuteros command stream address overflows");
+        }
         last_command_sequence_ = observation.trace_sequence;
         ++next_command_address_;
         const auto opcode = observation.observed_value;
@@ -1058,7 +1104,13 @@ public:
         std::uint32_t call_address = 0;
         std::uint32_t call_target = 0;
         std::uint32_t boundary = 0;
-        if (opcode == 0x16) { boundary = 0x1fb0c; }
+        if (opcode == 0x16) {
+            pending_command_opcode_ = opcode;
+            return DeuterosAmigaTitleCommandOpcodePlan{observation,
+                DeuterosAmigaTitleCommandOpcodeOutcome::unresolved_boundary,
+                next_command_address_, 0x1fb00, 0x1fa1c,
+                command_interpreter_.two_operand_target, 0, 0, 0, 0x1fb00};
+        }
         else if (opcode == 0x1a) { call_address = 0x1fa46; call_target = 0x1fde6; }
         else if (opcode == 0x12) { call_address = 0x1fa52; call_target = 0x1fe3c; }
         else if (opcode == 0x04) { call_address = 0x1faaa; call_target = 0x402ac; }
@@ -1099,6 +1151,81 @@ public:
         pending_command_call_.reset();
         return DeuterosAmigaTitleCommandCallReturnPlan{observation,
             next_command_address_, command_interpreter_.opcode_read_address};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandTwoOperandModePlan>
+    observe_command_two_operand_mode(
+        const DeuterosAmigaObservedTitleCommandTwoOperandMode& observation) {
+        if (!pending_command_opcode_ || *pending_command_opcode_ != 0x16
+            || command_two_operand_mode_) return std::nullopt;
+        if (observation.trace_sequence <= last_command_sequence_
+            || observation.instruction_address != 0x1fb00
+            || observation.source_address != 0x1f98e) {
+            throw std::runtime_error("Deuteros two-operand mode does not match boundary");
+        }
+        if (next_command_address_ == std::numeric_limits<std::uint32_t>::max()) {
+            throw std::runtime_error("Deuteros two-operand stream address overflows");
+        }
+        last_command_sequence_ = observation.trace_sequence;
+        command_two_operand_mode_ = observation;
+        return DeuterosAmigaTitleCommandTwoOperandModePlan{observation,
+            {{next_command_address_, next_command_address_ + 1U}}, 0x1fb0c};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandTwoOperandsPlan>
+    observe_command_two_operands(
+        const DeuterosAmigaObservedTitleCommandTwoOperands& observation) {
+        if (!command_two_operand_mode_ || command_two_operands_) return std::nullopt;
+        if (observation.trace_sequence <= last_command_sequence_
+            || observation.instruction_addresses
+                != std::array<std::uint32_t, 2>{{0x1fb0c, 0x1fb10}}
+            || observation.source_addresses
+                != std::array<std::uint32_t, 2>{{next_command_address_,
+                    next_command_address_ + 1U}}) {
+            throw std::runtime_error("Deuteros two command operands do not match boundary");
+        }
+        last_command_sequence_ = observation.trace_sequence;
+        next_command_address_ += 2U;
+        command_two_operands_ = observation;
+        const bool alternate = command_two_operand_mode_->observed_value != 0;
+        return DeuterosAmigaTitleCommandTwoOperandsPlan{observation,
+            alternate ? 0x1fb46U : 0x1fb28U,
+            alternate ? 0x1f994U : 0x1f168U, next_command_address_};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandTwoOperandLocalPlan>
+    observe_command_two_operand_runtime_long(
+        const DeuterosAmigaObservedTitleCommandTwoOperandRuntimeLong& observation) {
+        if (!command_two_operand_mode_ || !command_two_operands_) return std::nullopt;
+        const bool alternate = command_two_operand_mode_->observed_value != 0;
+        const auto instruction = alternate ? 0x1fb46U : 0x1fb28U;
+        const auto source = alternate ? 0x1f994U : 0x1f168U;
+        if (observation.trace_sequence <= last_command_sequence_
+            || observation.instruction_address != instruction
+            || observation.source_address != source) {
+            throw std::runtime_error("Deuteros two-operand runtime long does not match boundary");
+        }
+        const auto first = command_two_operands_->observed_values[0];
+        const auto second = command_two_operands_->observed_values[1];
+        std::uint32_t value = 0;
+        if (!alternate) {
+            const auto clamped = std::min<std::uint32_t>(second, 0x30U);
+            const auto delta = clamped * 4U * 0x28U + first;
+            value = (observation.observed_value & 0xffff0000U)
+                | ((observation.observed_value + delta) & 0xffffU);
+        } else {
+            auto delta = static_cast<std::uint32_t>(second) * 4U
+                * static_cast<std::uint32_t>(observation.observed_value & 0xffffU);
+            delta = (delta & 0xffff0000U) | ((delta + first) & 0xffffU);
+            value = 0x256c0U + delta;
+        }
+        last_command_sequence_ = observation.trace_sequence;
+        pending_command_opcode_.reset();
+        command_two_operand_mode_.reset();
+        command_two_operands_.reset();
+        return DeuterosAmigaTitleCommandTwoOperandLocalPlan{observation,
+            0x1f974, value, next_command_address_,
+            command_interpreter_.opcode_read_address};
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
@@ -1263,6 +1390,10 @@ private:
         std::uint32_t return_address;
     };
     std::optional<PendingCommandCall> pending_command_call_;
+    std::optional<DeuterosAmigaObservedTitleCommandTwoOperandMode>
+        command_two_operand_mode_;
+    std::optional<DeuterosAmigaObservedTitleCommandTwoOperands>
+        command_two_operands_;
 };
 
 } // namespace eon

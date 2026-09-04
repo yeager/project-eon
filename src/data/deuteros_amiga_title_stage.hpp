@@ -646,6 +646,9 @@ struct DeuterosAmigaTitleCommandInterpreterProfile {
     std::array<std::uint32_t, 4> returned_call_targets{};
     std::array<std::uint32_t, 4> returned_call_lengths{};
     std::array<std::string, 4> returned_call_sha256{};
+    std::uint32_t two_operand_target = 0;
+    std::uint32_t two_operand_length = 0;
+    std::string two_operand_sha256;
 };
 
 [[nodiscard]] DeuterosAmigaTitleCommandInterpreterProfile

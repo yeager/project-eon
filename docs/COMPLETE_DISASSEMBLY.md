@@ -26,6 +26,13 @@ release in the complete manifest, so a
 missing load map cannot disappear merely because no listing was produced.
 This status is not a new code/data or reachability classification.
 
+The generated v3 candidate diagnostic carries the release identity
+(`game`/`platform`/`language` and release hash), exact source-image hash and
+interval, related mapped image IDs, address basis, structural candidate kind,
+conservative code/data classification, coverage claim, and evidence level.
+Consequently a container member can be byte-complete without upgrading its
+carrier or runtime load map.
+
 A candidate is mapped only when ranges carrying the same source SHA-256 cover
 its complete source interval. An embedded file therefore never maps its
 whole-disk carrier. Such a carrier is reported as
@@ -61,6 +68,30 @@ by `tools/verify_disassembly_reports.py`.
   unrelocated; the configuration entry is still unproved.
 
 ## Explicit boundaries
+
+The seven current unmapped candidates are intentional and independently
+auditable:
+
+- Spanish DOS startup: its 512-byte disk prefix is discovered, but neither a
+  boot execution address nor transfer of control is proven.
+- Spanish DOS title boundary: the whole FAT12 disk is only a container; its
+  three extracted executable members are mapped separately.
+- Nested Defjam Amiga bootstrap: the exact 1,024-byte range is known, but the
+  nested carrier lacks its own reproducible report identity/load admission;
+  the direct-ADF report is not silently reused.
+- Nested Equinox Atari boot: exact boot bytes are discovered, but the nested
+  carrier has no independently bound disk-relative report/load proof.
+- Nested Equinox Atari PRG chain: the disk is a container whose PRG/config
+  members are separately image-relative; that does not map the disk.
+- Direct Equinox Atari PRG chain: same container/member distinction for the
+  directly supplied disk.
+- Direct Equinox Atari config chain: a second parser ledger over that whole
+  disk records discovery of the config member, not a whole-disk load map.
+
+None is safe to connect to runtime: the strongest byte-identical candidates
+still lack carrier-specific report identity or an executable load/entry
+relation. Reusing a sibling release's report would create the false
+“complete” claim this ledger is designed to prevent.
 
 Only independently mapped executable/code images are enumerated as images.
 Discovered parser candidates remain explicitly listed as unmapped. Other Amiga

@@ -2344,6 +2344,8 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         "59c2d528a565a523205ce7506fa7e1c7ba8c26a2e6a7246c28ee5b7607f8837e",
         "7cfbdbe94faf764157dbe22bc9003fc4362a5657a7d7b7c34b0413d4391783be",
         "66dd6a4297fdfd52c1b81b7bd00f3f54611597bf31551939cf0f40bf9fd8d13e"}};
+    constexpr std::string_view two_operand_hash =
+        "a431f810a110c1640f0f99460a7685054406b0312260cdc400a52e62ee4da2ac";
     const auto& stage = plan.title_stage;
     const auto bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto at = [&](const std::uint32_t address, const std::size_t size) {
@@ -2357,7 +2359,8 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         || to_hex(sha256(at(entry, length))) != interpreter_hash
         || to_hex(sha256(at(helpers[0], helper_length))) != helper_hashes[0]
         || to_hex(sha256(at(helpers[1], helper_length))) != helper_hashes[1]
-        || to_hex(sha256(at(0x1fde4, 2))) != no_op_hash) {
+        || to_hex(sha256(at(0x1fde4, 2))) != no_op_hash
+        || to_hex(sha256(at(0x1fb00, 0x68))) != two_operand_hash) {
         throw std::runtime_error("Unsupported Deuteros command-interpreter profile");
     }
     for (std::size_t index = 0; index < returned_targets.size(); ++index) {
@@ -2374,7 +2377,8 @@ parse_deuteros_amiga_title_command_interpreter_profile(
         0x1fab4, 0x1fde4,
         std::string(no_op_hash), returned_targets, returned_lengths,
         {{std::string(returned_hashes[0]), std::string(returned_hashes[1]),
-            std::string(returned_hashes[2]), std::string(returned_hashes[3])}}};
+            std::string(returned_hashes[2]), std::string(returned_hashes[3])}},
+        0x1fb00, 0x68, std::string(two_operand_hash)};
 }
 
 DeuterosAmigaTitlePostExecPointerRouteProfile

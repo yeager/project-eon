@@ -85,10 +85,13 @@ def verify(manifest: dict, inventory: dict, releases: dict) -> dict:
     if set(manifest_by_release) != set(recognized) or set(inventory_by_release) != set(recognized):
         raise ManifestError("recognized release set is not enumerated exactly once")
 
-    generated_candidates = {
-        row["release_sha256"]: row["candidates"]
-        for row in _generate_candidates(releases, inventory)["releases"]
-    }
+    generated_rows = _generate_candidates(releases, inventory)["releases"]
+    generated_candidates = {row["release_sha256"]: row["candidates"]
+                            for row in generated_rows}
+    for row in generated_rows:
+        identity = recognized[row["release_sha256"]]
+        if any(row.get(key) != identity.get(key) for key in ("game", "platform", "language")):
+            raise ManifestError(f"{row['release_sha256']} candidate release identity differs")
     image_count = range_count = byte_count = mapped_candidates = unmapped_candidates = 0
     for release_hash, release in recognized.items():
         declared = manifest_by_release[release_hash]
@@ -107,14 +110,16 @@ def verify(manifest: dict, inventory: dict, releases: dict) -> dict:
         if not images and not declared.get("unmapped_boundary"):
             raise ManifestError(f"{release_hash} has neither images nor an explicit unmapped boundary")
         candidates = generated_candidates[release_hash]
-        generated_unmapped = sorted((row["profile_id"], row["code_candidate_kind"])
+        unmapped_keys = ("profile_id", "code_candidate_kind", "classification",
+                         "address_basis", "coverage_claim", "evidence")
+        generated_unmapped = sorted(tuple(row[key] for key in unmapped_keys)
                                     for row in candidates
                                     if row["status"] == "discovered-unmapped")
         declared_unmapped_rows = declared.get("discovered_unmapped_candidates")
         if not isinstance(declared_unmapped_rows, list):
             raise ManifestError(f"{release_hash} has no discovered-unmapped candidate ledger")
         try:
-            declared_unmapped = sorted((row["profile_id"], row["code_candidate_kind"])
+            declared_unmapped = sorted(tuple(row[key] for key in unmapped_keys)
                                        for row in declared_unmapped_rows)
         except (KeyError, TypeError) as error:
             raise ManifestError(f"{release_hash} has an invalid discovered-unmapped candidate") from error
@@ -189,7 +194,9 @@ def render_index(manifest: dict, totals: dict) -> str:
             lines.append(f"- Unmapped preservation boundary: {release['unmapped_boundary']}")
         for candidate in release["discovered_unmapped_candidates"]:
             lines.append(f"- Discovered but unmapped: `{candidate['profile_id']}` "
-                         f"({candidate['code_candidate_kind']})")
+                         f"— {candidate['code_candidate_kind']}, {candidate['classification']}, "
+                         f"address {candidate['address_basis']}, claim "
+                         f"{candidate['coverage_claim']}; evidence: {candidate['evidence']}")
         lines.append("")
     return "\n".join(lines)
 
