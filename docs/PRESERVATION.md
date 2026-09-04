@@ -2956,6 +2956,14 @@ Only the three literal writes before its runtime read are exposed. Execution
 stops at `$2052a` before reading unresolved word `$20276`; no graphics copy or
 runtime word value is fabricated.
 
+The `$2052a` boundary now admits only a strictly later 16-bit observation from
+exact source `$20276`. That value is retained unchanged for the original
+`$2027c` destination; the hash-proven routine then reaches RTS `$20534`.
+The enclosing batch advances through direct call `$40400 -> $1f37a` and stops
+at `$1f37a` before its first unresolved nested call to `$20094`. The observed
+word is not assigned a timer, device, or gameplay meaning, and `$20094` is not
+entered or presumed to return.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -5823,6 +5831,16 @@ executed or assigned a result. The normal tail jump `$7253 -> $0bdf` remains
 an external handoff: `$0bdf` is a shared runtime-branched routine and its
 eventual return target belongs to the unobserved callback caller. Eon does not
 claim that it returns to the post-overlay loop.
+
+The normal F2 callback tail admits the shared `$0bdf` routine only after a
+sequence-bearing external-transfer observation exactly matching `$7253 ->
+$0bdf`. The exact-identity service observes `$07d8`; its nonzero path stops at
+RET `$0be6`. The zero path observes words `$0107` and `$07d6`, plus a second
+unchanged `$07d8` read, records only the literal XOR toggle, then stops at call
+`$09fa`. Its explicit return observation must supply CX/DX before the literal
+stores to `$07da`/`$07dc` are recorded and the next `$da05` read becomes
+visible. ES memory, poll results, mode, rendering, and the callback caller's
+return address remain evidence boundaries.
 
 The exact English `2200AD.EXE` sixth-table handler `$7415..$7454` is available
 through the native runtime only after the active post-overlay state machine has

@@ -14,3 +14,13 @@ has no return contract and consequently rejects every return observation.
 Checkpoints are value-only and contain no executable bytes, call effects,
 input, or gameplay meaning. Owners must discard them on reset and hide them
 during source revocation.
+
+The F2 callback runtime now owns the reset-wrapper admission. Its jump-entry
+API requires a nonzero sequence and the exact `$7228 -> $702c` edge before
+the existing five explicit call-return observations may advance. At the
+resulting `$7040` local RET, a separate API records the exact return
+instruction, a later sequence, and the externally observed nonzero caller
+destination. The callback checkpoint returns a copy of this transfer state;
+reset destroys it and host revocation rejects both entry and return. The
+runtime does not guess the caller destination or treat the normal one-way
+`$7253 -> $0bdf` tail jump as returning.

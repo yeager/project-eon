@@ -79,6 +79,7 @@
 #include "engine/millennium_dos_first_function_session.hpp"
 #include "engine/millennium_dos_second_function_session.hpp"
 #include "engine/millennium_dos_second_function_callback_session.hpp"
+#include "engine/millennium_dos_bdf_service_session.hpp"
 #include "engine/millennium_dos_gx_startup_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -6476,8 +6477,13 @@ int main() {
         assert(!revoking_trace_host.observe_millennium_dos_second_function_callback_runtime_word({0x7237,0x27c6,0}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_second_function_callback_call_return({0x723b,0x723e}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_second_function_callback_bl({0x7244,0}).accepted);
-        assert(!revoking_trace_host.observe_millennium_dos_second_function_callback_jump_entry({0x7228,0x702c}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_second_function_callback_jump_entry({0x7228,0x702c,1}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_second_function_callback_external_return({0x7040,0xd40d,2}).accepted);
         assert(!revoking_trace_host.millennium_dos_second_function_callback_checkpoint());
+        assert(!revoking_trace_host.observe_millennium_dos_bdf_byte({0x0bdf,0x07d8,0}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_bdf_word({0x0bed,0x0107,0}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_bdf_poll_return({0x0c0a,0x0c0d,0,0}).accepted);
+        assert(!revoking_trace_host.millennium_dos_bdf_checkpoint());
         assert(!revoking_trace_host.observe_millennium_dos_ninth_function_word(
             {0x7339, 0xa19e, 0}).accepted);
         assert(!revoking_trace_host.millennium_dos_ninth_function_checkpoint());
@@ -6830,9 +6836,16 @@ int main() {
         assert(callback.effects().back().runtime_address==0xda1e);
         callback.observe_call_return(0x7250,0x7253);
         assert(callback.state()==eon::MillenniumDosSecondFunctionCallbackState::external_tail_jump);
+        eon::MillenniumDosBdfServiceSession bdf(*game_executable);
+        bdf.observe_runtime_byte(0x0bdf,0x07d8,0);bdf.observe_runtime_word(0x0bed,0x0107,0x1234);bdf.observe_runtime_word(0x0bf2,0x07d6,0x5678);bdf.observe_runtime_byte(0x0bf6,0x07d8,0);bdf.observe_poll_return(0x0c0a,0x0c0d,0x1111,0x2222);
+        assert(bdf.state()==eon::MillenniumDosBdfServiceState::awaiting_mode_byte&&bdf.effects().size()==3&&bdf.effects()[1].runtime_address==0x07da&&bdf.effects()[2].value==0x2222);
+        eon::MillenniumDosBdfServiceSession busy_bdf(*game_executable);busy_bdf.observe_runtime_byte(0x0bdf,0x07d8,1);assert(busy_bdf.state()==eon::MillenniumDosBdfServiceState::returned_by_active);
         eon::MillenniumDosSecondFunctionCallbackSession reset_callback(*game_executable);
         reset_callback.observe_runtime_byte(0x7221,0x6e93,0xff);
         assert(reset_callback.boundary().target==0x702c);
+        eon::MillenniumDosExternalTransferAdmission reset_transfer(
+            eon::MillenniumDosExternalTransferKind::f2_reset_wrap_return);
+        assert(reset_transfer.observe_entry({30,0x7228,0x702c}).accepted);
         reset_callback.observe_external_jump_entry(0x7228,0x702c);
         reset_callback.observe_call_return(0x702c,0x702f);
         reset_callback.observe_call_return(0x702f,0x7032);
@@ -6840,6 +6853,8 @@ int main() {
         reset_callback.observe_call_return(0x7035,0x7038);
         reset_callback.observe_call_return(0x7038,0x703b);
         assert(reset_callback.state()==eon::MillenniumDosSecondFunctionCallbackState::reset_returned);
+        assert(reset_transfer.observe_return({31,0x7040,0xbeef}).accepted);
+        assert(reset_transfer.checkpoint().returned->returned_to==0xbeef);
         assert(reset_callback.effects().size()==1&&reset_callback.effects()[0].instruction_address==0x703b&&reset_callback.effects()[0].runtime_address==0xda1e);
         auto altered_callback=*game_executable;altered_callback[0x7221-0x100]^=1U;
         rejected=false;
@@ -10371,6 +10386,29 @@ int main() {
     assert(batch_graphics->unresolved_read_address == 0x2052a);
     assert(batch_graphics->unresolved_read_source == 0x20276);
     assert(batch_graphics->stop_before_address == 0x2052a);
+    bool rejected_service_word_source = false;
+    try {
+        static_cast<void>(title_stage_session.observe_service_batch_runtime_word(
+            {25, 0x2052a, 0x20278, 0x3456}));
+    } catch (const std::runtime_error&) {
+        rejected_service_word_source = true;
+    }
+    assert(rejected_service_word_source);
+    const auto service_word = title_stage_session.observe_service_batch_runtime_word(
+        {25, 0x2052a, 0x20276, 0x3456});
+    assert(service_word);
+    assert(service_word->observation.trace_sequence == 25);
+    assert(service_word->observation.observed_value == 0x3456);
+    assert(service_word->destination_address == 0x2027c);
+    assert(service_word->destination_value == 0x3456);
+    assert(service_word->routine_rts_address == 0x20534);
+    assert(service_word->batch_next_call_address == 0x40400);
+    assert(service_word->batch_next_call_target == 0x1f37a);
+    assert(service_word->nested_call_address == 0x1f37a);
+    assert(service_word->nested_call_target == 0x20094);
+    assert(service_word->stop_before_address == 0x1f37a);
+    assert(!title_stage_session.observe_service_batch_runtime_word(
+        {26, 0x2052a, 0x20276, 0}));
     assert(!title_stage_session.observe_service_batch_graphics_return(
         {25, 0x12fec, 0x00abcdef, 0x403e0, -0xc0, 0x403e4, 0, 0}));
     assert(!title_stage_session.advance_controller_pointer_seed());
