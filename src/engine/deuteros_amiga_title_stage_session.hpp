@@ -133,6 +133,10 @@ public:
         const DeuterosAmigaObservedServiceSetupExecReturn& observation) {
         return service_setup_boundary_session_.observe_fifth_exec_return(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleControllerPointerSeedPlan>
+    advance_controller_pointer_seed() {
+        return service_setup_boundary_session_.advance_controller_pointer_seed();
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

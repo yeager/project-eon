@@ -44,3 +44,10 @@ loop boundary `$2073a`; zero exposes the bounded local descriptor updates and
 stops at `$20776` before a new `-$162` call. The copy-only checkpoint retains
 this third plan and its exact stop without performing either branch's writes
 or crossing the next Exec boundary.
+
+For the zero third-service outcome only, typed forwarding continues through
+the second `-$162` return at `$2077a->$2077e` and final `-$1bc` return at
+`$207a0->$207a4`. Each step is ordered, single-use, active-title-only, and
+stored as a value-only local plan. The final checkpoint exposes only its named
+outcome and `$404bc` stop; CLI JSON and F10 report presence flags and the stop
+address, never observed D0/SR values or descriptor/media contents.

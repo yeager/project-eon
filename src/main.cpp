@@ -1116,6 +1116,8 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
             << ",\"first_service_return\":" << (chain.service_setup_local_plan ? "true" : "false")
             << ",\"second_service_return\":" << (chain.second_service_local_plan ? "true" : "false")
             << ",\"third_service_return\":" << (chain.third_service_local_plan ? "true" : "false")
+            << ",\"fourth_service_return\":" << (chain.fourth_service_local_plan ? "true" : "false")
+            << ",\"fifth_service_return\":" << (chain.fifth_service_local_plan ? "true" : "false")
             << ",\"stop_before\":";
         write_json_string(std::cout, address(chain.stop_before_address));
         std::cout << '}';
@@ -5189,7 +5191,9 @@ int main(int argc, char** argv) {
                 << " CALLBACK=" << (chain->callback_exec_return_observed ? "Y" : "N")
                 << " S1=" << (chain->service_setup_local_plan ? "Y" : "N")
                 << " S2=" << (chain->second_service_local_plan ? "Y" : "N")
-                << " S3=" << (chain->third_service_local_plan ? "Y" : "N");
+                << " S3=" << (chain->third_service_local_plan ? "Y" : "N")
+                << " S4=" << (chain->fourth_service_local_plan ? "Y" : "N")
+                << " S5=" << (chain->fifth_service_local_plan ? "Y" : "N");
             diagnostics.deuteros_amiga_title_dependency_chain = summary.str();
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"

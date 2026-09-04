@@ -241,6 +241,8 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_atari_.reset();
     deuteros_amiga_paula_.reset();
     deuteros_amiga_title_display_trace_.reset();
+    deuteros_amiga_title_fifth_service_plan_.reset();
+    deuteros_amiga_title_fourth_service_plan_.reset();
     deuteros_amiga_title_third_service_plan_.reset();
     deuteros_amiga_title_second_service_plan_.reset();
     deuteros_amiga_title_service_setup_plan_.reset();
@@ -1065,6 +1067,7 @@ EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_runtime_
 EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_runtime_word,MillenniumDosSecondFunctionCallbackRuntimeWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value))
 EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_call_return,MillenniumDosSecondFunctionCallbackCallReturnObservation,observe_call_return(o.call_address,o.return_address))
 EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_bl,MillenniumDosSecondFunctionCallbackBlObservation,observe_bl(o.instruction_address,o.value))
+EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_jump_entry,MillenniumDosSecondFunctionCallbackJumpEntryObservation,observe_external_jump_entry(o.instruction_address,o.target_address))
 #undef EON_F2_CALLBACK_FORWARD
 std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_second_function_callback_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_second_function_callback_)return std::nullopt;const auto&s=*millennium_dos_second_function_callback_;return MillenniumDosSecondFunctionCallbackCheckpoint{s.state(),s.boundary(),s.effects()};}
 
@@ -1096,6 +1099,7 @@ ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
         if(boundary.kind==MillenniumDosSecondFunctionCallbackBoundaryKind::runtime_byte)kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_byte;
         else if(boundary.kind==MillenniumDosSecondFunctionCallbackBoundaryKind::runtime_word)kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_word;
         else if(boundary.kind==MillenniumDosSecondFunctionCallbackBoundaryKind::call_return)kind=MillenniumDosOwnedFunctionBoundaryKind::call_return;
+        else if(boundary.kind==MillenniumDosSecondFunctionCallbackBoundaryKind::local_return)kind=MillenniumDosOwnedFunctionBoundaryKind::local_return;
         input.boundary.kind=kind;input.boundary.instruction_address=boundary.instruction_address;input.boundary.runtime_address=boundary.runtime_address;if(boundary.target)input.boundary.call_target=*boundary.target;break;
     }
     case RuntimeSessionKind::millennium_dos_second_function: {
@@ -1363,7 +1367,11 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_dependency_chain_checkpoint() co
     result.service_setup_local_plan = deuteros_amiga_title_service_setup_plan_;
     result.second_service_local_plan = deuteros_amiga_title_second_service_plan_;
     result.third_service_local_plan = deuteros_amiga_title_third_service_plan_;
-    if (result.third_service_local_plan) {
+    result.fourth_service_local_plan = deuteros_amiga_title_fourth_service_plan_;
+    result.fifth_service_local_plan = deuteros_amiga_title_fifth_service_plan_;
+    if (result.fifth_service_local_plan) result.stop_before_address=result.fifth_service_local_plan->stop_before_address;
+    else if (result.fourth_service_local_plan) result.stop_before_address=result.fourth_service_local_plan->stop_before_address;
+    else if (result.third_service_local_plan) {
         result.stop_before_address = result.third_service_local_plan->stop_before_address;
     } else if (result.second_service_local_plan) {
         result.stop_before_address = result.second_service_local_plan->stop_before_address;
@@ -1444,6 +1452,12 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_third_service_exec_retur
     } catch (const std::exception& e) { result.error = std::string("Deuteros third-service observation rejected: ") + e.what(); }
     return result;
 }
+
+#define EON_DEUTEROS_LATE_SERVICE(method, prior, stored, opening_method, label) \
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::method(const DeuterosAmigaObservedServiceSetupExecReturn observation){DeuterosAmigaTitleDependencyObservationResult result;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage||!deuteros_amiga_||!prior||stored){result.error="Deuteros " label " observation requires its active preceding boundary";return result;}try{auto plan=deuteros_amiga_->opening_method(observation);if(!plan){result.error="Deuteros " label " observation did not match the next owned boundary";return result;}stored=std::move(*plan);result.accepted=true;}catch(const std::exception&e){result.error=std::string("Deuteros " label " observation rejected: ")+e.what();}return result;}
+EON_DEUTEROS_LATE_SERVICE(observe_deuteros_amiga_title_fourth_service_exec_return,deuteros_amiga_title_third_service_plan_,deuteros_amiga_title_fourth_service_plan_,observe_title_fourth_service_exec_return,"fourth-service")
+EON_DEUTEROS_LATE_SERVICE(observe_deuteros_amiga_title_fifth_service_exec_return,deuteros_amiga_title_fourth_service_plan_,deuteros_amiga_title_fifth_service_plan_,observe_title_fifth_service_exec_return,"fifth-service")
+#undef EON_DEUTEROS_LATE_SERVICE
 
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(

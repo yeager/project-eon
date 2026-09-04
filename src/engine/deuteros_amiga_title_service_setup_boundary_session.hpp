@@ -117,6 +117,22 @@ struct DeuterosAmigaTitleFifthServiceLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaTitleControllerPointerSeedPlan {
+    std::uint32_t helper_entry_address = 0;
+    std::uint32_t pointer_source_address = 0;
+    std::uint32_t pointer_value = 0;
+    std::uint32_t pointer_destination_address = 0;
+    std::uint32_t helper_rts_address = 0;
+    std::uint32_t caller_d1_value = 0;
+    std::uint32_t seed_call_address = 0;
+    std::uint32_t seed_call_target = 0;
+    std::uint32_t seed_value = 0;
+    std::uint32_t seed_destination_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_call_target = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceSetupBoundarySession {
 public:
     DeuterosAmigaTitleServiceSetupBoundarySession(
@@ -130,6 +146,10 @@ public:
         }
         const auto bytes = disk.bytes(plan.title_stage.disk_offset
             + address - plan.title_stage.destination, length);
+        const auto pointer_helper = disk.bytes(plan.title_stage.disk_offset
+            + 0x206be - plan.title_stage.destination, 22);
+        const auto stage = parse_deuteros_amiga_title_stage(disk, plan);
+        pointer_seed_ = parse_deuteros_amiga_title_post_exec_pointer_seed_profile(disk, plan);
         if (to_hex(sha256(bytes.first(14)))
                 != "a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001"
             || to_hex(sha256(bytes.subspan(14, 38)))
@@ -150,6 +170,10 @@ public:
                 != "0a982fb16e92100a04d3528d727297363de61d99ac61f8a193c4ee6c55ac4888"
             || to_hex(sha256(bytes.subspan(208, 40)))
                 != "cdf3332e5b071d102231d45ecf0b05a87728df49a7f08ff27ffc2e92f055e416"
+            || to_hex(sha256(pointer_helper))
+                != "cdcda125af5c05d4d88e7d486f15f50bd87c4641a38e9c8a4e29a9394152317a"
+            || stage.initialization_internal_calls[5] != 0x206be
+            || stage.initialization_internal_calls[6] != 0x403e6
             || bytes[0] != 0x22 || bytes[1] != 0x7c
             || bytes[6] != 0x2c || bytes[7] != 0x78 || bytes[9] != 0x04
             || bytes[10] != 0x4e || bytes[11] != 0xae
@@ -237,6 +261,17 @@ public:
             0x207ca, 0x404bc, 0x404bc, 0x206be, 0x404bc};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleControllerPointerSeedPlan>
+    advance_controller_pointer_seed() {
+        if (!observed_fifth_ || controller_pointer_seed_advanced_) return std::nullopt;
+        controller_pointer_seed_advanced_ = true;
+        return DeuterosAmigaTitleControllerPointerSeedPlan{
+            0x206be, 0x20698, 0x205e4, 0x206a0, 0x206d2,
+            pointer_seed_.caller_d1_literal, pointer_seed_.call_site_address,
+            pointer_seed_.callee_address, pointer_seed_.literal_value,
+            pointer_seed_.destination_address, 0x404ce, 0x403f4, 0x404ce};
+    }
+
     void enter(std::uint64_t preceding_sequence) {
         if (armed_ || preceding_sequence == 0) {
             throw std::runtime_error("Invalid Deuteros service setup entry");
@@ -268,6 +303,8 @@ private:
     std::optional<DeuterosAmigaObservedServiceSetupExecReturn> observed_third_;
     std::optional<DeuterosAmigaObservedServiceSetupExecReturn> observed_fourth_;
     std::optional<DeuterosAmigaObservedServiceSetupExecReturn> observed_fifth_;
+    DeuterosAmigaTitlePostExecPointerSeedProfile pointer_seed_;
+    bool controller_pointer_seed_advanced_ = false;
 };
 
 } // namespace eon
