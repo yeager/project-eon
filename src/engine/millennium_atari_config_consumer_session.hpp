@@ -169,6 +169,11 @@ struct MillenniumAtariGameInitPaletteRecurrenceObservation {
     std::array<std::uint8_t,96> source_bytes{};
     std::array<std::uint16_t,16> destination_words{};
 };
+struct MillenniumAtariGameInitPaletteRtsObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t instruction_address=0;
+    std::uint32_t stack_address=0; std::uint32_t return_address=0;
+};
 
 struct MillenniumAtariBchgObservation {
     std::uint64_t generation = 0;
@@ -413,6 +418,9 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_palette_terminal_result_d0=0;
     std::string game_init_palette_terminal_sha256;
     std::uint32_t game_init_palette_rts_address=0;
+    std::uint32_t game_init_palette_rts_stack_address=0;
+    std::uint32_t game_init_palette_rts_return_address=0;
+    std::string game_init_palette_caller_continuation_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -522,6 +530,8 @@ public:
         const MillenniumAtariGameInitPaletteXbios6Observation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_recurrence(
         const MillenniumAtariGameInitPaletteRecurrenceObservation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_rts(
+        const MillenniumAtariGameInitPaletteRtsObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

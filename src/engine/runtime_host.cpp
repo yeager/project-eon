@@ -401,6 +401,8 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_rts_frame,(co
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_repeated_nested_words,(const DeuterosAmigaObservedTitlePostCommandNestedWords o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_repeated_nested_call_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop,(),())
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_adjusted_caller_indirect,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_caller_indirect_return,(const DeuterosAmigaObservedTitlePostAdjustedIndirectReturn o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -537,6 +539,7 @@ MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_game_i
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_words(const MillenniumAtariGameInitPaletteWordsObservation o){if(revoking())return{false,"Palette arithmetic rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_words(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_xbios_selector_6(const MillenniumAtariGameInitPaletteXbios6Observation o){if(revoking())return{false,"Palette XBIOS selector-6 result rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_xbios_selector_6(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_recurrence(const MillenniumAtariGameInitPaletteRecurrenceObservation o){if(revoking())return{false,"Recurrent palette pass rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_recurrence(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_rts(const MillenniumAtariGameInitPaletteRtsObservation o){if(revoking())return{false,"Palette RTS rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_rts(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;

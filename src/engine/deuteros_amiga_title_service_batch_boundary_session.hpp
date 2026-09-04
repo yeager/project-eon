@@ -1065,6 +1065,23 @@ struct DeuterosAmigaTitlePostAdjustedRtsFramePlan {
     std::uint32_t caller_call_address=0,caller_call_target=0,caller_return_address=0;
     std::string caller_prefix_sha256;
 };
+struct DeuterosAmigaTitlePostAdjustedCallerIndirectPlan {
+    std::uint32_t entry_address=0,pointer_literal=0,call_address=0,call_target=0,return_address=0;
+    std::string prefix_sha256;
+};
+struct DeuterosAmigaObservedTitlePostAdjustedIndirectReturn {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t call_address=0,call_target=0,return_address=0;
+    std::uint32_t source_address=0,source_long=0,opaque_d0=0;
+    std::uint16_t opaque_sr=0;
+};
+struct DeuterosAmigaTitlePostAdjustedIndirectReturnPlan {
+    DeuterosAmigaObservedTitlePostAdjustedIndirectReturn observation;
+    std::uint32_t shifted_source=0,destination_address=0;
+    std::uint16_t destination_word=0;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+    std::string continuation_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -2975,6 +2992,27 @@ public:
             post_command_service_route_.nested_branch_target,
             skip?0x20beaU:repeated_call_address_};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedCallerIndirectPlan>
+    advance_post_adjusted_caller_indirect(){
+        if(!repeated_loop_completed_||post_adjusted_caller_indirect_advanced_)return std::nullopt;
+        post_adjusted_caller_indirect_advanced_=true;
+        return DeuterosAmigaTitlePostAdjustedCallerIndirectPlan{0x40536,0x20cfe,0x4053c,
+            0x20cfe,0x4053e,"58b17754e42e00bee2c320083fbe09c0fe79b0bda626b71f98fc043598033752"};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedIndirectReturnPlan>
+    observe_post_adjusted_caller_indirect_return(
+        const DeuterosAmigaObservedTitlePostAdjustedIndirectReturn&o){
+        if(!post_adjusted_caller_indirect_advanced_||post_adjusted_indirect_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x4053c
+            ||o.call_target!=0x20cfe||o.return_address!=0x4053e
+            ||o.source_address!=0x12fe4)
+            throw std::runtime_error("Deuteros post-adjusted indirect return does not match boundary");
+        post_adjusted_indirect_return_=o;last_command_sequence_=o.trace_sequence;
+        const auto shifted=o.source_long>>3U;
+        return DeuterosAmigaTitlePostAdjustedIndirectReturnPlan{o,shifted,0x1f42a,
+            static_cast<std::uint16_t>(shifted),0x4054c,0x37180,0x40552,
+            "58b17754e42e00bee2c320083fbe09c0fe79b0bda626b71f98fc043598033752"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3187,6 +3225,8 @@ private:
     std::uint16_t repeated_d7_=0,repeated_d5_=0,repeated_d6_=0,repeated_iteration_=0;
     bool repeated_call_pending_=false,repeated_loop_completed_=false;
     std::uint32_t repeated_call_address_=0;
+    bool post_adjusted_caller_indirect_advanced_=false;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedIndirectReturn> post_adjusted_indirect_return_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

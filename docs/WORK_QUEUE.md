@@ -37,10 +37,12 @@ typed two-word `$13aa` read from relocated `TITLE.LIB+$000f`. The genuine
 `$5050:$0003`. The raw runtime words at `$5050:$001b` and `$5050:$0019`
 are now admitted through all single-word facades. Their exact unsigned
 product/store sequence is native.
-The third typed runtime word from `$5050:$0017` and its exact wrapping
-subtraction/store are now native. The typed byte from `$5050:$0004` and its
-exact wrapping increment/store are also native. Continue at `$13f2` with the
-typed byte from `$5050:$0007`; do not assign graphics semantics to these fields.
+The third typed runtime word from `$5050:$0017`, the byte from `$5050:$0004`,
+and their exact arithmetic/store sequences are native. The typed byte at
+`$13f2`, source `$5050:$0007`, and both deterministic branch continuations
+are also native. Continue the one/two branch at `$1419`, source
+`$5050:$001f`, or the other-value branch at `$13aa`, relocated
+`TITLE.LIB+$001b`; do not assign graphics semantics to these fields.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -89,8 +91,11 @@ edge are now native through the corrected recurrence boundary at `$2b46e`.
 All six recurrent palette passes, their typed selector-6 returns, delay loops,
 D7 transitions, terminal selector-6 return, and local RTS `$2b4c6` are now
 native. Continue with a typed RTS destination and the largest deterministic
-caller continuation. Do not infer firmware results or wall-clock timing from
-static bytes.
+caller continuation. The exact `$2ab04` return is now typed; its caller loads
+the corrected D7 pointer `$2a634`, enters the reused `$2aa0c` helper, and stops
+at the second configuration file's GEMDOS selector-`$3d` boundary. Continue
+with that typed Fopen result and its bounded success/failure caller path. Do
+not infer filesystem, firmware, or wall-clock effects from static bytes.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -349,7 +354,10 @@ owned through local RTS `$20cb8` without assigning helper effects. The typed
 stack frame selects only caller `$40530`; its repeated `$20ba8` local-service
 call now consumes two ordered runtime words, all eight typed `$41a68`
 returns, exact counter effects and DBF iterations, then returns through
-`$20bf0` to known caller address `$40536`. Continue from `$40536`; do not
+`$20bf0` to known caller address `$40536`. The caller now loads literal A0
+`$20cfe`, admits its typed return, reads typed long `$12fe4`, shifts it right
+three bits, and atomically stores the low word at `$1f42a`. Continue from the
+external `$4054c->$37180` call; do not
 treat the sparse decoded memory as a renderer surface.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

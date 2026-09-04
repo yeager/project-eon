@@ -972,6 +972,49 @@ int main(int argc, char** argv) {
         &&first_title_second_byte.memory_effects.back().instruction_address==0x13ee
         &&first_title_second_byte.memory_effects.back().offset==0x1389
         &&first_title_second_byte.memory_effects.back().value==0x00ff);
+    auto encoded_first_title_record=other_success;
+    encoded_first_title_record.observe_far_byte({97,0x13f2,0x5050,0x0007,0x01});
+    const auto encoded_payload=encoded_first_title_record.checkpoint();
+    assert(encoded_payload.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_payload_byte_boundary
+        &&encoded_payload.last_sequence==97
+        &&encoded_payload.continuation_address==0x1419
+        &&encoded_payload.far_byte_observations.size()==4
+        &&encoded_payload.far_byte_observations.back().byte==1
+        &&encoded_payload.far_byte_boundary.instruction_address==0x1419
+        &&encoded_payload.far_byte_boundary.source_segment==0x5050
+        &&encoded_payload.far_byte_boundary.source_offset==0x001f
+        &&encoded_payload.memory_effects.size()==18978
+        &&encoded_payload.memory_effects.back().offset==0x1388
+        &&encoded_payload.memory_effects.back().value==1);
+    auto detached_first_title_second_byte=other_success;
+    bool detached_first_title_second_byte_rejected=false;
+    try { detached_first_title_second_byte.observe_far_byte(
+        {97,0x13f2,0x5050,0x0008,0x03}); }
+    catch(const std::runtime_error&) { detached_first_title_second_byte_rejected=true; }
+    assert(detached_first_title_second_byte_rejected
+        &&detached_first_title_second_byte.checkpoint().last_sequence==96
+        &&detached_first_title_second_byte.checkpoint().memory_effects.size()==18977);
+    other_success.observe_far_byte({97,0x13f2,0x5050,0x0007,0x03});
+    const auto second_title_loop=other_success.checkpoint();
+    assert(second_title_loop.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_far_read_boundary
+        &&second_title_loop.last_sequence==97
+        &&second_title_loop.continuation_address==0x13aa
+        &&second_title_loop.far_byte_observations.size()==4
+        &&second_title_loop.far_byte_observations.back().byte==3
+        &&second_title_loop.far_read_boundary.instruction_address==0x13aa
+        &&second_title_loop.far_read_boundary.source_segment==0x3481
+        &&second_title_loop.far_read_boundary.source_offset==0x001b
+        &&second_title_loop.far_read_boundary.word_count==2
+        &&second_title_loop.far_read_boundary.destination_offset==0x138c
+        &&second_title_loop.memory_effects.size()==18980
+        &&second_title_loop.memory_effects[18977].offset==0x1388
+        &&second_title_loop.memory_effects[18977].value==3
+        &&second_title_loop.memory_effects[18978].offset==0x010c
+        &&second_title_loop.memory_effects[18978].value==0x02e0
+        &&second_title_loop.memory_effects[18979].offset==0x0110
+        &&second_title_loop.memory_effects[18979].value==0x02e0);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state
