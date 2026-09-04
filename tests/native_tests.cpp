@@ -64,6 +64,7 @@
 #include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_native_process.hpp"
 #include "engine/millennium_dos_native_process_admission.hpp"
+#include "engine/millennium_dos_post_overlay_loop_session.hpp"
 #include "engine/millennium_dos_gx_startup_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -3988,6 +3989,16 @@ int main() {
     assert(admitted_dos_runtime.acquire(admitted_dos_launch));
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "READY");
     assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos_presentation());
+    const auto prepared_native_process =
+        admitted_dos_runtime.millennium_dos_native_process_checkpoint();
+    assert(prepared_native_process && prepared_native_process->static_recovery_entry
+        && prepared_native_process->recovery_entry
+            == eon::MillenniumDosNativeRecoveryEntry::startup
+        && prepared_native_process->state
+            == eon::MillenniumDosNativeProcessState::startup_first_private_interrupt
+        && prepared_native_process->boundary.address == 0x0129
+        && prepared_native_process->boundary.interrupt
+            == std::optional<std::uint8_t>{0x91});
     const auto dos_static_dispatch = admitted_dos_runtime.millennium_dos_static_dispatch_diagnostics();
     const std::array<std::uint16_t, 10> expected_dos_handlers{0x6f9a, 0x71ca, 0x6faa, 0x72f9,
         0x7597, 0x7415, 0x7521, 0x7306, 0x7339, 0x7384};
@@ -4079,7 +4090,8 @@ int main() {
     admitted_dos_runtime.reset();
     assert(!admitted_dos_runtime.active() && !admitted_dos_runtime.millennium_dos_presentation()
         && !admitted_dos_runtime.session_snapshot()
-        && !admitted_dos_runtime.millennium_dos_static_dispatch_diagnostics());
+        && !admitted_dos_runtime.millennium_dos_static_dispatch_diagnostics()
+        && !admitted_dos_runtime.millennium_dos_native_process_checkpoint());
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
     // The Spanish release has no recovered sound-driver route. Its one
     // availability observation must instead become the explicit TITLES.EXE
@@ -5770,6 +5782,53 @@ int main() {
         auto altered = eon::MillenniumDosNativeProcessAdmission::post_gx_loader(
             english_release_sha256, *game_executable, altered_gx);
         assert(!altered.admitted() && !altered.checkpoint());
+    }
+    {
+        const auto return_current_call = [](eon::MillenniumDosPostOverlayLoopSession& session) {
+            const auto boundary = session.boundary();
+            assert(boundary.kind
+                == eon::MillenniumDosPostOverlayLoopBoundaryKind::call_return);
+            session.observe_call_return(boundary.instruction_address,
+                static_cast<std::uint16_t>(boundary.instruction_address + 3U));
+        };
+        eon::MillenniumDosPostOverlayLoopSession session(*game_executable, 1);
+        session.observe_private_interrupt_return(0x0129, 0);
+        for (std::size_t call = 0; call < 7; ++call) return_current_call(session);
+        assert(session.state() == eon::MillenniumDosPostOverlayLoopState::awaiting_first_al);
+        session.observe_al(0xd3ba, 0);
+        session.observe_runtime_byte(0xd3be, 0x07f9, 0);
+        for (std::size_t call = 7; call < 15; ++call) return_current_call(session);
+        assert(session.completed_call_return_count() == 15
+            && session.state()
+                == eon::MillenniumDosPostOverlayLoopState::awaiting_action_al);
+        assert((session.runtime_effects().at(1)
+            == eon::MillenniumDosPostOverlayRuntimeByteEffect{0x07f9, 0, 1}));
+        session.observe_al(0xd3de, 0);
+        for (std::size_t call = 11; call < 15; ++call) return_current_call(session);
+        session.observe_al(0xd3de, 0x3b);
+        session.observe_runtime_byte(0xd3e8, 0xda3a, 0);
+        assert(session.state()
+            == eon::MillenniumDosPostOverlayLoopState::dispatch_call_boundary);
+        assert(session.boundary().instruction_address == 0xd40a
+            && session.boundary().call_target == std::optional<std::uint16_t>{0x76f1}
+            && session.function_key_index() == std::optional<std::size_t>{0}
+            && session.action_poll_count() == 2);
+
+        eon::MillenniumDosPostOverlayLoopSession palette_boundary(*game_executable, 2);
+        palette_boundary.observe_private_interrupt_return(0x0129, 0);
+        assert(palette_boundary.state()
+                == eon::MillenniumDosPostOverlayLoopState::palette_bios_interrupt_boundary
+            && palette_boundary.boundary().instruction_address == 0x0476);
+        auto altered_game = *game_executable;
+        altered_game[0xd39d - 0x100] ^= 1;
+        bool rejected = false;
+        try {
+            static_cast<void>(
+                eon::MillenniumDosPostOverlayLoopSession(altered_game, 1));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
     }
     eon::MillenniumDosGxStartupSession gx_session(*game_executable, *gx_overlay);
     assert(gx_session.state() == eon::MillenniumDosGxStartupSessionState::awaiting_private_return);
@@ -9226,6 +9285,37 @@ int main() {
     assert(title_handoff_route.resource_runtime_address == 0x3355c);
     assert(title_handoff_route.bootstrap_profile_return_cell == 0x12ffc);
     assert(title_handoff_route.bootstrap_profile_value == 1);
+    eon::DeuterosAmigaTitleBootstrapSession title_bootstrap(
+        system_disk, load_plan, title_handoff_route);
+    assert(title_bootstrap.checkpoint().state
+        == eon::DeuterosAmigaTitleBootstrapState::profile_return_observed);
+    assert(title_bootstrap.advance()
+        && title_bootstrap.checkpoint().state
+            == eon::DeuterosAmigaTitleBootstrapState::profile_selected);
+    assert(title_bootstrap.advance()
+        && title_bootstrap.checkpoint().state
+            == eon::DeuterosAmigaTitleBootstrapState::stage_transfer_validated);
+    assert(title_bootstrap.checkpoint().stage_sha256
+        == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
+    assert(title_bootstrap.advance() && title_bootstrap.complete());
+    assert(title_bootstrap.checkpoint().profile_table_address == 0x12a36
+        && title_bootstrap.checkpoint().profile_routine_address == 0x12b30
+        && title_bootstrap.checkpoint().stage_disk_offset == 0x6e000
+        && title_bootstrap.checkpoint().stage_destination == 0x13000
+        && title_bootstrap.checkpoint().entry_address == 0x40426);
+    assert(!title_bootstrap.advance());
+    {
+        auto wrong_route = title_handoff_route;
+        wrong_route.bootstrap_profile_value = 2;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::DeuterosAmigaTitleBootstrapSession(
+                system_disk, load_plan, wrong_route));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     assert(title_handoff_route.command_sha256
         == "9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41");
     // Profile one is a raw title/game stage, not an archive to unpack.  Its
@@ -11285,6 +11375,10 @@ int main() {
         }
     }
     assert(live_input_alternate == 0x0b38);
+    assert(live_input_opening.title_bootstrap_session()
+        && live_input_opening.title_bootstrap_session()->complete()
+        && live_input_opening.title_bootstrap_session()->checkpoint().stage_sha256
+            == "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03");
     const auto& live_title_stage = live_input_opening.title_stage_session();
     assert(live_title_stage);
     assert(live_title_stage->stage().entry_address == 0x40426);

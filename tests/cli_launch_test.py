@@ -396,6 +396,20 @@ def main() -> int:
                          "$7415", "$7521", "$7306", "$7339", "$7384"], start=1)
                 ],
             }
+            or runtime_diagnostics_payload.get("millennium_dos_native_process") != {
+                "static_recovery_entry": True,
+                "recovery_entry": "startup",
+                "state": "startup-first-private-interrupt",
+                "boundary": {
+                    "kind": "private-interrupt",
+                    "address": "$129",
+                    "interrupt": 145,
+                },
+                "release_sha256":
+                    "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+                "game_executable_sha256":
+                    "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57",
+            }
             or runtime_diagnostics_payload.get("atari_bootstrap_checkpoint") is not None
             or recovery.get("coverage") != launch_check_payload["coverage"]
             or recovery.get("trace_admission") != "not-loaded"

@@ -2415,6 +2415,17 @@ one-way local-prefix advance and stops before the original `MOVEA.L $4.W,A6`
 Exec-base read at `$40456`; no Amiga address space, Exec base, vector call,
 or title display is fabricated.
 
+The caller-connected bootstrap transfer immediately before that prefix is now
+an explicit native state machine as well. Starting from the exact `$12ffc = 1`
+return produced by the recovered `$0f` opening command, it validates profile
+table `$12a36`, profile-one routine `$12b30`, its original destination/length/
+track constants, the complete stage SHA-256, and the stage's absolute `JMP
+$40426`. These synchronous advances record a read-only transfer checkpoint;
+they do not allocate Amiga RAM, perform host disk I/O, add timing, or execute
+an unknown service. Only after the entry dispatch is validated does the live
+opening construct the existing title-stage session, which still stops before
+the unresolved Exec-base read.
+
 The first auxiliary pointer is a palette bank. The interpreter's command 4
 multiplies its operand by 32 and copies 16 words from this bank to each active
 display list. The words are standard 12-bit Amiga RGB4. Bundle 0, palette 1 is
@@ -4156,9 +4167,12 @@ independently hashing the exact English release leaves, retaining private
 in-memory backing, destroying the process before that backing, and exposing
 only a copy-only static recovery checkpoint plus typed observations. Move and
 reset lifetimes and altered GX bytes are tested against genuine supplied
-media. The owner is not yet constructed by the release runtime, SDL launcher,
-CLI launch path, or input router, so it does not broaden the current runtime
-capability manifest or claim the missing title/driver transition.
+media. The release coordinator now prepares only the `startup()` owner while
+admitting the exact English DOS archive and exposes its initial `$0129`
+private-INT checkpoint through copy-only runtime diagnostics. No host API can
+advance it, and reset/source revocation destroys it before the verified media
+owner. This diagnostic preparation does not change the live title session,
+broaden its capability manifest, or claim the missing title/driver transition.
 
 #### Main-loop action dispatch
 

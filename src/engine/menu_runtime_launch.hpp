@@ -52,6 +52,8 @@ public:
     millennium_dos_startup_input() const;
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
+    [[nodiscard]] std::optional<MillenniumDosNativeProcessCheckpoint>
+    millennium_dos_native_process_checkpoint() const;
     [[nodiscard]] MillenniumDosGxActiveTraceAdmission
     admit_active_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace);
     [[nodiscard]] std::optional<MillenniumDosGxStartupCheckpoint>

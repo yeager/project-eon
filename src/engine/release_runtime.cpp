@@ -99,6 +99,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     std::optional<MillenniumDosRuntimeAssets> millennium_dos;
     std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection;
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title;
+    std::optional<MillenniumDosNativeProcessAdmission> millennium_dos_native_process;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
@@ -128,6 +129,32 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         // kind helper must not silently broaden this release's boundary.
         session_snapshot->boundary = capability->initial_boundary;
         session_snapshot->capabilities = capability->initial_capabilities;
+    }
+    if (millennium_dos && launch.release.game == Game::millennium
+        && launch.release.platform == Platform::dos && launch.release.language == "en") {
+        constexpr std::string_view game_sha256 =
+            "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+        const auto game = media->borrow(game_sha256);
+        if (!game) {
+            admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+            rejection_ = ReleaseRuntimeRejection::adapter_construction;
+            return false;
+        }
+        auto prepared = MillenniumDosNativeProcessAdmission::startup(
+            launch.release.sha256, *game);
+        const auto checkpoint = prepared.checkpoint();
+        if (!checkpoint || !checkpoint->static_recovery_entry
+            || checkpoint->recovery_entry != MillenniumDosNativeRecoveryEntry::startup
+            || checkpoint->state
+                != MillenniumDosNativeProcessState::startup_first_private_interrupt
+            || checkpoint->boundary.kind != MillenniumDosNativeBoundaryKind::private_interrupt
+            || checkpoint->boundary.address != 0x0129
+            || checkpoint->boundary.interrupt != std::optional<std::uint8_t>{0x91}) {
+            admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+            rejection_ = ReleaseRuntimeRejection::adapter_construction;
+            return false;
+        }
+        millennium_dos_native_process.emplace(std::move(prepared));
     }
     if (!session_snapshot || (!millennium_dos && !millennium_amiga && !millennium_atari
         && !deuteros_amiga && !deuteros_atari)) {
@@ -178,6 +205,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     millennium_dos_ = std::move(millennium_dos);
     millennium_dos_sound_selection_ = std::move(millennium_dos_sound_selection);
     millennium_dos_title_ = std::move(millennium_dos_title);
+    millennium_dos_native_process_ = std::move(millennium_dos_native_process);
     millennium_amiga_ = std::move(millennium_amiga);
     millennium_atari_ = std::move(millennium_atari);
     deuteros_amiga_ = std::move(deuteros_amiga);
@@ -192,6 +220,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 
 void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_gx_startup_.reset();
+    millennium_dos_native_process_.reset();
     millennium_dos_sound_selection_.reset();
     millennium_dos_title_.reset();
     millennium_dos_.reset();
@@ -285,6 +314,24 @@ ReleaseRuntimeCoordinator::millennium_dos_static_dispatch_diagnostics() const {
         .handler_addresses = handler_addresses,
         .handlers = std::move(handlers),
     };
+}
+
+std::optional<MillenniumDosNativeProcessCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_native_process_checkpoint() const {
+    if (admission_ != ReleaseRuntimeAdmission::active || !active_ || !session_snapshot_
+        || active_->release.game != Game::millennium
+        || active_->release.platform != Platform::dos || active_->release.language != "en"
+        || active_->release.sha256
+            != "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123"
+        || !millennium_dos_native_process_) return std::nullopt;
+    const auto checkpoint = millennium_dos_native_process_->checkpoint();
+    if (!checkpoint || !checkpoint->static_recovery_entry
+        || checkpoint->recovery_entry != MillenniumDosNativeRecoveryEntry::startup
+        || checkpoint->state
+            != MillenniumDosNativeProcessState::startup_first_private_interrupt) {
+        return std::nullopt;
+    }
+    return checkpoint;
 }
 
 MillenniumDosGxStartupTraceAdmission

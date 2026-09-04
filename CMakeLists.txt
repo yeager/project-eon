@@ -111,6 +111,7 @@ add_executable(project-eon
     src/presentation/modern_presentation_pipeline.cpp
     src/engine/deuteros_amiga_opening.cpp
     src/engine/deuteros_amiga_opening_runner.cpp
+    src/engine/deuteros_amiga_title_bootstrap_session.cpp
     src/engine/deuteros_amiga_title_display_trace_session.cpp
     src/engine/menu_runtime_launch.cpp
     src/engine/native_session_controller.cpp
@@ -127,6 +128,7 @@ add_executable(project-eon
     src/engine/millennium_dos_game_session.cpp
     src/engine/millennium_dos_native_process.cpp
     src/engine/millennium_dos_native_process_admission.cpp
+    src/engine/millennium_dos_post_overlay_loop_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp

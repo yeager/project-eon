@@ -11,6 +11,7 @@
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
+#include "engine/millennium_dos_native_process_admission.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
@@ -239,6 +240,10 @@ public:
     // exact Millennium DOS title adapter and is revoked with that adapter.
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
+    // Prepared static recovery entry for the exact active English DOS media.
+    // This never advances the live session or accepts boundary observations.
+    [[nodiscard]] std::optional<MillenniumDosNativeProcessCheckpoint>
+    millennium_dos_native_process_checkpoint() const;
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
     // Advances exactly one recovered Deuteros Amiga opening tick using the
     // coordinator-owned held observation. All non-opening sessions return no
@@ -297,6 +302,7 @@ private:
     std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection_;
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title_;
     std::optional<MillenniumDosGxStartupTraceAdmission> millennium_dos_gx_startup_;
+    std::optional<MillenniumDosNativeProcessAdmission> millennium_dos_native_process_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
