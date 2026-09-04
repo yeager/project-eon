@@ -111,6 +111,73 @@ int main() {
     assert(!eon::decode_deuteros_amiga_title_planar_patch(
         patch_memory.checkpoint(),0x60000,6,title_palette));
 
+    // The native presentation backing retains every admitted patch rather
+    // than exposing only the most recent glyph. Missing pixels remain
+    // invalid/transparent, and a malformed next patch is atomic.
+    std::array<std::uint32_t,32> first_addresses{};
+    std::array<std::uint8_t,32> first_values{};
+    for(std::size_t index=0;index<first_addresses.size();++index){
+        first_addresses[index]=static_cast<std::uint32_t>(
+            patch_batch.effects[index].location.offset);
+        first_values[index]=static_cast<std::uint8_t>(patch_batch.effects[index].value);
+    }
+    eon::DeuterosAmigaTitlePlanarSurface surface;
+    assert(surface.apply(first_addresses,first_values,6).accepted);
+    auto surface_snapshot=surface.snapshot(title_palette,patch_memory.checkpoint().checksum);
+    const auto first_pixel=static_cast<std::size_t>(10*320+16);
+    assert(surface_snapshot && surface_snapshot->width==320
+        && surface_snapshot->height==200
+        && surface_snapshot->last_command_generation==6
+        && surface_snapshot->applied_patch_count==1
+        && surface_snapshot->initialized_plane_byte_count==32
+        && surface_snapshot->decoded_pixel_count==64
+        && surface_snapshot->valid_pixels.size()==320*200
+        && surface_snapshot->color_indices.size()==320*200
+        && surface_snapshot->rgba.size()==320*200*4
+        && surface_snapshot->valid_pixels[first_pixel]==1
+        && surface_snapshot->color_indices[first_pixel]==15
+        && surface_snapshot->rgba[first_pixel*4+3]==0xff
+        && surface_snapshot->valid_pixels[0]==0
+        && surface_snapshot->rgba[3]==0);
+
+    auto malformed_addresses=first_addresses;
+    malformed_addresses[17]++;
+    assert(!surface.apply(malformed_addresses,first_values,7).accepted);
+    assert(surface.snapshot(title_palette,1)->applied_patch_count==1
+        && surface.snapshot(title_palette,1)->last_command_generation==6);
+
+    std::array<std::uint32_t,32> second_addresses{};
+    std::array<std::uint8_t,32> second_values{};
+    constexpr std::uint32_t second_base=0xb5f0+4;
+    for(std::uint32_t row=0;row<8;++row){
+        for(std::uint32_t plane=0;plane<4;++plane){
+            const auto index=row*4U+plane;
+            second_addresses[index]=second_base+row*0x28U+plane*0x1f40U;
+            second_values[index]=plane==0?0xff:0;
+        }
+    }
+    assert(surface.apply(second_addresses,second_values,8).accepted);
+    surface_snapshot=surface.snapshot(title_palette,0x1234);
+    assert(surface_snapshot && surface_snapshot->applied_patch_count==2
+        && surface_snapshot->last_command_generation==8
+        && surface_snapshot->initialized_plane_byte_count==64
+        && surface_snapshot->decoded_pixel_count==128
+        && surface_snapshot->runtime_memory_checksum==0x1234
+        && surface_snapshot->valid_pixels[32]==1
+        && surface_snapshot->color_indices[32]==1
+        && surface_snapshot->rgba[32*4]==0x99
+        && surface_snapshot->rgba[32*4+1]==0xaa
+        && surface_snapshot->rgba[32*4+2]==0x77
+        && surface_snapshot->rgba[32*4+3]==0xff);
+    std::array<std::uint8_t,32> overwritten_values{};
+    assert(surface.apply(first_addresses,overwritten_values,9).accepted);
+    surface_snapshot=surface.snapshot(title_palette,0x5678);
+    assert(surface_snapshot && surface_snapshot->applied_patch_count==3
+        && surface_snapshot->initialized_plane_byte_count==64
+        && surface_snapshot->decoded_pixel_count==128
+        && surface_snapshot->color_indices[first_pixel]==0
+        && surface_snapshot->rgba[first_pixel*4+3]==0xff);
+
     const auto diagnostics=memory.diagnostics();
     assert(diagnostics.initialized_byte_count==10 && diagnostics.applied_batch_count==2);
     return 0;

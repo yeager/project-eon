@@ -4511,10 +4511,10 @@ int main() {
         && sound_load_checkpoint->runtime_word_effects.size()==4);
     const auto before_title_child=admitted_dos_runtime.native_runtime_memory_diagnostics();
     compatibility_stop=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
-    assert(compatibility_stop && compatibility_stop->last_sequence==13
-        && !compatibility_stop->external_result_required
+    assert(compatibility_stop && compatibility_stop->last_sequence==14
+        && compatibility_stop->external_result_required
         && compatibility_stop->title_exec_requested
-        && compatibility_stop->automatic_operation_count==9
+        && compatibility_stop->automatic_operation_count==10
         && compatibility_stop->paragraph_arena.allocations.size()==2
         && compatibility_stop->paragraph_arena.allocations[1].segment==0xe33f
         && compatibility_stop->paragraph_arena.allocations[1].paragraph_count==455);
@@ -4539,7 +4539,21 @@ int main() {
         &&title_entry->compatibility_child->exact_leaf_admitted
         &&!title_entry->compatibility_child->psp_modeled
         &&!title_entry->compatibility_child->environment_modeled
-        &&!title_entry->compatibility_child->parent_exec_return_observed);
+        &&!title_entry->compatibility_child->parent_exec_return_observed
+        &&title_entry->title_initialization
+        &&title_entry->title_initialization->state
+            ==eon::MillenniumDosTitleInitializationState::private_interrupt_result_boundary
+        &&title_entry->title_initialization->last_sequence==14
+        &&title_entry->title_initialization->child_code_segment==0xe33f
+        &&title_entry->title_initialization->boundary.call_address==0x1b95
+        &&title_entry->title_initialization->boundary.wrapper_address==0x0122
+        &&title_entry->title_initialization->boundary.interrupt_address==0x0127
+        &&title_entry->title_initialization->boundary.interrupt==0x91
+        &&title_entry->title_initialization->boundary.function==0
+        &&title_entry->title_initialization->boundary.record_segment==0xe33f
+        &&title_entry->title_initialization->boundary.record_offset==0x1ac4
+        &&!title_entry->title_initialization->boundary.result_observed
+        &&!title_entry->title_initialization->boundary.stack_storage_modeled);
     assert(admitted_dos_runtime.session_snapshot()
         &&admitted_dos_runtime.session_snapshot()->kind
             ==eon::RuntimeSessionKind::millennium_dos_title);
@@ -4547,9 +4561,9 @@ int main() {
         &&title_entry->entry.state==eon::MillenniumDosTitleExecEntryState::title_entry_boundary
         &&title_entry->entry.register_effects.size()==3
         &&title_entry->entry.register_effects[0].register_name=="DS"
-        &&title_entry->entry.register_effects[0].value==0x3333
+        &&title_entry->entry.register_effects[0].value==0xe33f
         &&title_entry->entry.register_effects[1].register_name=="ES"
-        &&title_entry->entry.register_effects[1].value==0x3333
+        &&title_entry->entry.register_effects[1].value==0xe33f
         &&title_entry->entry.register_effects[2].register_name=="IP"
         &&title_entry->entry.register_effects[2].value==0x1b80);
     const auto after_title_child=admitted_dos_runtime.native_runtime_memory_diagnostics();
@@ -4952,6 +4966,12 @@ int main() {
                 overlapping_planar).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum
                 == command_memory->checksum);
+            auto offscreen_planar=runtime_planar;
+            offscreen_planar.observed_pointer_values[1]=0x60000;
+            assert(!opening_controller.observe_deuteros_amiga_title_command_planar_write(
+                offscreen_planar).accepted);
+            assert(opening_controller.native_runtime_memory_diagnostics()->checksum
+                == command_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_planar_write(
                 runtime_planar).accepted);
             const auto planar_memory=opening_controller.native_runtime_memory_checkpoint();
@@ -4976,6 +4996,7 @@ int main() {
                 && memory_byte_at(0x1f976)==0xb7
                 && memory_byte_at(0x1f977)==0xaa);
             assert(!opening_controller.deuteros_amiga_title_planar_patch());
+            assert(!opening_controller.deuteros_amiga_title_planar_surface());
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
                 {runtime_copy_sequence+15,0x1fa0a,0x2ff08,0}).accepted);
             assert(opening_controller.observe_input(
@@ -5062,6 +5083,24 @@ int main() {
                 && planar_patch->rgba[2]==0xff && planar_patch->rgba[3]==0xff
                 && planar_patch->rgba[4]==0 && planar_patch->rgba[5]==0
                 && planar_patch->rgba[6]==0 && planar_patch->rgba[7]==0xff);
+            const auto planar_surface =
+                opening_controller.deuteros_amiga_title_planar_surface();
+            const auto planar_surface_pixel = static_cast<std::size_t>(10*320+16);
+            assert(planar_surface && planar_surface->width==320
+                && planar_surface->height==200
+                && planar_surface->last_command_generation==6
+                && planar_surface->applied_patch_count==1
+                && planar_surface->initialized_plane_byte_count==32
+                && planar_surface->decoded_pixel_count==64
+                && planar_surface->runtime_memory_checksum==planar_memory->checksum
+                && planar_surface->valid_pixels.size()==320*200
+                && planar_surface->color_indices.size()==320*200
+                && planar_surface->rgba.size()==320*200*4
+                && planar_surface->valid_pixels[planar_surface_pixel]==1
+                && planar_surface->color_indices[planar_surface_pixel]==15
+                && planar_surface->rgba[planar_surface_pixel*4+3]==0xff
+                && planar_surface->valid_pixels[0]==0
+                && planar_surface->rgba[3]==0);
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
@@ -5078,12 +5117,14 @@ int main() {
             opening_controller.begin_return_to_menu();
             assert(!opening_controller.deuteros_amiga_title_display_trace_checkpoint());
             assert(!opening_controller.deuteros_amiga_title_planar_patch());
+            assert(!opening_controller.deuteros_amiga_title_planar_surface());
             assert(!opening_controller.deuteros_amiga_opening_scheduler_active()
                 && opening_controller.advance_deuteros_amiga_opening_scheduler(10'020).events.empty());
             opening_controller.finish_return_to_menu();
             assert(opening_controller.state() == eon::NativeSessionState::menu);
             assert(!opening_controller.native_runtime_memory_checkpoint());
             assert(!opening_controller.deuteros_amiga_title_planar_patch());
+            assert(!opening_controller.deuteros_amiga_title_planar_surface());
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::atari_st) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation

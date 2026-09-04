@@ -258,6 +258,7 @@ void ReleaseRuntimeCoordinator::reset() {
     deuteros_amiga_title_command_generation_ = 0;
     deuteros_amiga_title_planar_base_.reset();
     deuteros_amiga_title_planar_generation_ = 0;
+    deuteros_amiga_title_planar_surface_.reset();
     millennium_dos_handler_completion_.reset();
     millennium_dos_tenth_function_.reset();
     millennium_dos_seventh_function_.reset();
@@ -295,6 +296,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_compatibility_runner_.reset();
     millennium_dos_title_exec_entry_.reset();
     millennium_dos_title_child_compatibility_.reset();
+    millennium_dos_title_initialization_.reset();
     millennium_dos_sound_driver_load_generation_ = 0;
     millennium_dos_sound_driver_load_last_sequence_ = 0;
     millennium_dos_sound_selection_.reset();
@@ -611,21 +613,34 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
                     entry.execute_exact_entry_prefix(prefix_sequence,
                         0x0100,0x0104,0x1b80);
                     runner.record_automatic_operation();
+                    MillenniumDosTitleInitializationSession initialization(
+                        *titles,allocated.allocation->segment,prefix_sequence);
+                    const auto initialization_sequence=runner.next_sequence();
+                    initialization.execute_exact_startup(initialization_sequence,
+                        0x1b80,0x1b95,0x0122,0x91);
+                    runner.record_automatic_operation();
                     millennium_dos_title_exec_entry_=std::move(entry);
                     millennium_dos_title_child_compatibility_.emplace(std::move(child));
+                    millennium_dos_title_initialization_.emplace(
+                        std::move(initialization));
                     session_snapshot_=make_runtime_session_snapshot(
                         *active_,RuntimeSessionKind::millennium_dos_title);
                 }
                 millennium_dos_sound_driver_load_=std::move(next);
                 millennium_dos_compatibility_runner_=std::move(runner);
                 *native_runtime_memory_=std::move(memory);
-                millennium_dos_sound_driver_load_last_sequence_=
-                    millennium_dos_compatibility_runner_->checkpoint(
-                        millennium_dos_sound_driver_load_->state(),
-                        millennium_dos_sound_driver_load_->boundary()).last_sequence;
-                return millennium_dos_compatibility_runner_->checkpoint(
+                auto checkpoint=millennium_dos_compatibility_runner_->checkpoint(
                     millennium_dos_sound_driver_load_->state(),
                     millennium_dos_sound_driver_load_->boundary());
+                if(millennium_dos_title_initialization_
+                    &&millennium_dos_title_initialization_->checkpoint().state
+                        ==MillenniumDosTitleInitializationState::
+                            private_interrupt_result_boundary) {
+                    checkpoint.external_result_required=true;
+                }
+                millennium_dos_sound_driver_load_last_sequence_=
+                    checkpoint.last_sequence;
+                return checkpoint;
             }
         }
     } catch(const std::exception& e) {
@@ -688,6 +703,9 @@ ReleaseRuntimeCoordinator::millennium_dos_title_exec_entry_checkpoint() const {
         millennium_dos_title_exec_entry_->checkpoint(),
         millennium_dos_title_child_compatibility_
             ?std::optional{millennium_dos_title_child_compatibility_->checkpoint()}
+            :std::nullopt,
+        millennium_dos_title_initialization_
+            ?std::optional{millennium_dos_title_initialization_->checkpoint()}
             :std::nullopt};
 }
 
@@ -2208,6 +2226,15 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_planar_write(
             result.error = "Runtime-memory application rejected: " + applied.error;
             return result;
         }
+        auto next_surface = deuteros_amiga_title_planar_surface_.value_or(
+            DeuterosAmigaTitlePlanarSurface{});
+        const auto surface_applied = next_surface.apply(plan->destination_addresses,
+            plan->destination_values, deuteros_amiga_title_command_generation_);
+        if (!surface_applied.accepted) {
+            result.error = "Native planar-surface application rejected: "
+                + surface_applied.error;
+            return result;
+        }
         // The same observation was fully validated without touching live
         // state. Committing it now is deterministic and allocation-free.
         if (!deuteros_amiga_->observe_title_command_planar_write(observation)) {
@@ -2215,6 +2242,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_planar_write(
             return result;
         }
         *native_runtime_memory_ = std::move(next_memory);
+        deuteros_amiga_title_planar_surface_ = std::move(next_surface);
         deuteros_amiga_title_planar_base_ = plan->observation.observed_pointer_values[1];
         deuteros_amiga_title_planar_generation_ =
             deuteros_amiga_title_command_generation_;
@@ -2300,6 +2328,29 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_planar_patch() const {
     return decode_deuteros_amiga_title_planar_patch(
         native_runtime_memory_->checkpoint(), *deuteros_amiga_title_planar_base_,
         deuteros_amiga_title_planar_generation_, palette);
+}
+
+std::optional<DeuterosAmigaTitlePlanarSurfaceSnapshot>
+ReleaseRuntimeCoordinator::deuteros_amiga_title_planar_surface() const {
+    if (!session_snapshot_
+        || session_snapshot_->kind
+            != RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary
+        || !deuteros_amiga_title_display_trace_ || !deuteros_amiga_
+        || !deuteros_amiga_->title_stage_session() || !native_runtime_memory_
+        || !deuteros_amiga_title_planar_surface_) {
+        return std::nullopt;
+    }
+    const auto& trace = deuteros_amiga_title_display_trace_->checkpoint();
+    if (trace.display_layout_count != 1 || trace.bitplane_layout_count != 1
+        || trace.palette_checkpoint_count != 1 || trace.frame_checkpoint_count != 1) {
+        return std::nullopt;
+    }
+    const auto palette20 =
+        deuteros_amiga_->title_stage_session()->graphics_setup_palette_evidence();
+    std::array<RgbColor, 16> palette{};
+    std::copy_n(palette20.begin(), palette.size(), palette.begin());
+    return deuteros_amiga_title_planar_surface_->snapshot(
+        palette, native_runtime_memory_->checkpoint().checksum);
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>

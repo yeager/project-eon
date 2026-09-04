@@ -1,5 +1,6 @@
 #include "engine/millennium_dos_title_exec_entry_session.hpp"
 #include "engine/millennium_dos_title_child_compatibility_service.hpp"
+#include "engine/millennium_dos_title_initialization_session.hpp"
 #include "engine/millennium_dos_paragraph_arena.hpp"
 
 #include <cassert>
@@ -83,4 +84,35 @@ int main(int argc, char** argv) {
         &&child.image_effects().front().value==titles.front()
         &&child.image_effects().back().offset==0x1c6d
         &&child.image_effects().back().value==titles.back());
+
+    eon::MillenniumDosTitleInitializationSession initialization(
+        titles,0x2468,2);
+    initialization.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
+    const auto initialized=initialization.checkpoint();
+    assert(initialized.state
+        ==eon::MillenniumDosTitleInitializationState::private_interrupt_result_boundary
+        &&initialized.last_sequence==3
+        &&initialized.child_code_segment==0x2468
+        &&initialized.register_effects.size()==9
+        &&initialized.register_effects[3].instruction_address==0x1b86
+        &&initialized.register_effects[3].value==0x2468
+        &&initialized.register_effects[5].instruction_address==0x1b8b
+        &&initialized.register_effects[5].value==0xda00
+        &&initialized.register_effects.back().instruction_address==0x1b92
+        &&initialized.register_effects.back().value==0x1ac4
+        &&initialized.boundary.call_address==0x1b95
+        &&initialized.boundary.wrapper_address==0x0122
+        &&initialized.boundary.interrupt_address==0x0127
+        &&initialized.boundary.interrupt==0x91
+        &&initialized.boundary.function==0
+        &&initialized.boundary.record_segment==0x2468
+        &&initialized.boundary.record_offset==0x1ac4
+        &&!initialized.boundary.result_observed
+        &&!initialized.boundary.stack_storage_modeled);
+    bool detached_initialization_rejected=false;
+    try {
+        eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
+        detached.execute_exact_startup(4,0x1b80,0x1b95,0x0122,0x91);
+    } catch(const std::runtime_error&) { detached_initialization_rejected=true; }
+    assert(detached_initialization_rejected);
 }

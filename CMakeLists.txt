@@ -133,6 +133,7 @@ add_executable(project-eon
     src/engine/millennium_dos_compatibility_runner.cpp
     src/engine/millennium_dos_title_exec_entry_session.cpp
     src/engine/millennium_dos_title_child_compatibility_service.cpp
+    src/engine/millennium_dos_title_initialization_session.cpp
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_title_to_game_session.cpp
     src/engine/millennium_dos_game_session.cpp
@@ -162,6 +163,7 @@ add_executable(project-eon
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp
     src/engine/millennium_atari_bootstrap_session.cpp
+    src/engine/atari_st_prg_load_session.cpp
     src/engine/millennium_amiga_bootstrap_session.cpp
     src/engine/millennium_amiga_bootstrap_relocator_session.cpp
     src/data/amiga_adf.cpp
@@ -405,6 +407,19 @@ if(BUILD_TESTING)
         src/engine/native_runtime_memory.cpp)
     target_include_directories(eon-native-runtime-memory-tests PRIVATE src)
     add_test(NAME native-runtime-memory COMMAND eon-native-runtime-memory-tests)
+    add_executable(eon-atari-st-prg-load-session-test
+        tests/atari_st_prg_load_session_test.cpp
+        src/engine/atari_st_prg_load_session.cpp
+        src/data/atari_st_prg.cpp
+        src/data/fat12.cpp
+        src/data/sha256.cpp)
+    target_include_directories(eon-atari-st-prg-load-session-test PRIVATE src)
+    if(MSVC)
+        target_compile_options(eon-atari-st-prg-load-session-test PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(eon-atari-st-prg-load-session-test PRIVATE -UNDEBUG)
+    endif()
+    add_test(NAME atari-st-prg-native-load COMMAND eon-atari-st-prg-load-session-test)
     add_test(NAME cli-default-data-read-only
         COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_default_data_test.py"
@@ -443,6 +458,7 @@ if(BUILD_TESTING)
             tests/millennium_dos_title_exec_entry_test.cpp
             src/engine/millennium_dos_title_exec_entry_session.cpp
             src/engine/millennium_dos_title_child_compatibility_service.cpp
+            src/engine/millennium_dos_title_initialization_session.cpp
             src/engine/millennium_dos_paragraph_arena.cpp
             src/data/sha256.cpp)
         target_include_directories(eon-millennium-dos-title-exec-entry-test PRIVATE src)

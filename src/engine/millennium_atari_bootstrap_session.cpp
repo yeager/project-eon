@@ -7,7 +7,8 @@
 namespace eon {
 
 MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
-    const Fat12Disk& disk, const std::span<const std::uint8_t> program) {
+    const Fat12Disk& disk, const std::span<const std::uint8_t> program)
+    : prg_load_(program) {
     constexpr std::string_view equinox_disk_sha256 =
         "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7";
     constexpr std::string_view equinox_program_sha256 =

@@ -79,4 +79,103 @@ decode_deuteros_amiga_title_planar_patch(
     return result;
 }
 
+DeuterosAmigaTitlePlanarSurface::ApplyResult
+DeuterosAmigaTitlePlanarSurface::apply(
+    const std::span<const std::uint32_t, 32> destination_addresses,
+    const std::span<const std::uint8_t, 32> destination_values,
+    const std::uint64_t command_generation) {
+    if (command_generation == 0 || command_generation <= last_command_generation_) {
+        return {false, "Planar surface command generation is stale"};
+    }
+    const auto base = destination_addresses.front();
+    if (base < display_plane_zero || base - display_plane_zero >= plane_stride) {
+        return {false, "Planar surface destination is outside plane zero"};
+    }
+    const auto base_offset = base - display_plane_zero;
+    const auto row = base_offset / bytes_per_row;
+    if (row > height_lines - 8U) {
+        return {false, "Planar surface patch crosses the recovered display height"};
+    }
+    std::array<std::size_t, 32> offsets{};
+    for (std::uint32_t patch_row = 0; patch_row < 8U; ++patch_row) {
+        for (std::uint32_t plane = 0; plane < 4U; ++plane) {
+            const auto index = patch_row * 4U + plane;
+            const auto expected = base + patch_row * bytes_per_row + plane * plane_stride;
+            if (destination_addresses[index] != expected) {
+                return {false, "Planar surface effect order does not match the recovered layout"};
+            }
+            offsets[index] = static_cast<std::size_t>(expected - display_plane_zero);
+            if (offsets[index] >= plane_bytes_.size()) {
+                return {false, "Planar surface effect exceeds the recovered layout"};
+            }
+        }
+    }
+
+    // Validation above is complete, so this commit cannot partially fail.
+    for (std::size_t index = 0; index < offsets.size(); ++index) {
+        const auto offset = offsets[index];
+        plane_bytes_[offset] = destination_values[index];
+        if (!initialized_[offset]) {
+            initialized_[offset] = 1;
+            ++initialized_plane_byte_count_;
+        }
+    }
+    last_command_generation_ = command_generation;
+    ++applied_patch_count_;
+    return {true, {}};
+}
+
+std::optional<DeuterosAmigaTitlePlanarSurfaceSnapshot>
+DeuterosAmigaTitlePlanarSurface::snapshot(
+    const std::span<const RgbColor, 16> palette,
+    const std::uint64_t runtime_memory_checksum) const {
+    if (applied_patch_count_ == 0 || last_command_generation_ == 0) return std::nullopt;
+
+    DeuterosAmigaTitlePlanarSurfaceSnapshot result;
+    result.last_command_generation = last_command_generation_;
+    result.applied_patch_count = applied_patch_count_;
+    result.initialized_plane_byte_count = initialized_plane_byte_count_;
+    result.runtime_memory_checksum = runtime_memory_checksum;
+    result.display_trace_bitplanes_sha256 = std::string(display_trace_bitplanes_sha256);
+    result.palette_rgb4_sha256 = std::string(palette_sha256);
+    constexpr std::size_t pixel_count = bytes_per_row * 8U * height_lines;
+    result.valid_pixels.assign(pixel_count, 0);
+    result.color_indices.assign(pixel_count, 0);
+    result.rgba.assign(pixel_count * 4U, 0);
+
+    for (std::uint32_t y = 0; y < height_lines; ++y) {
+        for (std::uint32_t x_byte = 0; x_byte < bytes_per_row; ++x_byte) {
+            const auto byte_offset = static_cast<std::size_t>(y * bytes_per_row + x_byte);
+            std::array<std::uint8_t, 4> planes{};
+            bool complete = true;
+            for (std::uint32_t plane = 0; plane < planes.size(); ++plane) {
+                const auto offset = byte_offset + plane * plane_stride;
+                if (!initialized_[offset]) {
+                    complete = false;
+                    break;
+                }
+                planes[plane] = plane_bytes_[offset];
+            }
+            if (!complete) continue;
+            for (std::uint32_t bit = 0; bit < 8U; ++bit) {
+                std::uint8_t color = 0;
+                for (std::uint32_t plane = 0; plane < planes.size(); ++plane) {
+                    color = static_cast<std::uint8_t>(color
+                        | (((planes[plane] >> (7U - bit)) & 1U) << plane));
+                }
+                const auto pixel = static_cast<std::size_t>(
+                    y * bytes_per_row * 8U + x_byte * 8U + bit);
+                result.valid_pixels[pixel] = 1;
+                result.color_indices[pixel] = color;
+                result.rgba[pixel * 4U] = palette[color].red;
+                result.rgba[pixel * 4U + 1U] = palette[color].green;
+                result.rgba[pixel * 4U + 2U] = palette[color].blue;
+                result.rgba[pixel * 4U + 3U] = 0xff;
+                ++result.decoded_pixel_count;
+            }
+        }
+    }
+    return result;
+}
+
 } // namespace eon
