@@ -74,6 +74,13 @@ MillenniumDosNativeProcessAdmission::checkpoint() const {
     };
 }
 
+MillenniumDosPostOverlayLoopSession
+MillenniumDosNativeProcessAdmission::make_post_overlay_loop_session(
+    const std::uint8_t selected_mode_byte) const {
+    require_admitted();
+    return MillenniumDosPostOverlayLoopSession(game_executable_, selected_mode_byte);
+}
+
 void MillenniumDosNativeProcessAdmission::require_admitted() const {
     if (!admitted()) {
         throw std::runtime_error("Millennium DOS native process is not admitted");

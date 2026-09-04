@@ -24,6 +24,9 @@ enum class RuntimeSessionKind {
     // startup suffix through its second private-INT boundary. No interrupt,
     // local callee, device result, input, frame, or game state is modeled.
     millennium_dos_gx_startup_boundary,
+    // Explicit observations advanced the recovered post-overlay loop from
+    // the second INT 91h return. It remains a no-capability typed boundary.
+    millennium_dos_post_overlay_loop,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,
     deuteros_amiga_opening,

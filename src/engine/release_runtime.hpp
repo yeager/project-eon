@@ -215,6 +215,44 @@ struct MillenniumDosGxActiveTraceAdmission {
     std::string error;
 };
 
+struct MillenniumDosPostOverlayPrivateInterruptReturnObservation {
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t ax = 0;
+};
+
+struct MillenniumDosPostOverlayCallReturnObservation {
+    std::uint16_t call_address = 0;
+    std::uint16_t return_address = 0;
+};
+
+struct MillenniumDosPostOverlayAlObservation {
+    std::uint16_t test_address = 0;
+    std::uint8_t value = 0;
+};
+
+struct MillenniumDosPostOverlayRuntimeByteObservation {
+    std::uint16_t load_address = 0;
+    std::uint16_t runtime_address = 0;
+    std::uint8_t value = 0;
+};
+
+struct MillenniumDosPostOverlayObservationResult {
+    bool accepted = false;
+    std::string error;
+};
+
+struct MillenniumDosPostOverlayLoopCheckpoint {
+    MillenniumDosPostOverlayLoopState state =
+        MillenniumDosPostOverlayLoopState::awaiting_private_interrupt_return;
+    MillenniumDosPostOverlayLoopBoundary boundary;
+    std::size_t completed_call_return_count = 0;
+    std::size_t action_poll_count = 0;
+    std::optional<std::uint16_t> observed_private_interrupt_ax;
+    std::optional<std::uint8_t> observed_action;
+    std::optional<std::size_t> function_key_index;
+    std::vector<MillenniumDosPostOverlayRuntimeByteEffect> runtime_effects;
+};
+
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
 // outside this class; this is the common source boundary for every platform
@@ -295,6 +333,19 @@ public:
     admit_active_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace);
     [[nodiscard]] std::optional<MillenniumDosGxStartupCheckpoint>
     millennium_dos_gx_startup_checkpoint() const;
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_private_interrupt_return(
+        MillenniumDosPostOverlayPrivateInterruptReturnObservation observation);
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_call_return(
+        MillenniumDosPostOverlayCallReturnObservation observation);
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_al(MillenniumDosPostOverlayAlObservation observation);
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult
+    observe_millennium_dos_post_overlay_runtime_byte(
+        MillenniumDosPostOverlayRuntimeByteObservation observation);
+    [[nodiscard]] std::optional<MillenniumDosPostOverlayLoopCheckpoint>
+    millennium_dos_post_overlay_loop_checkpoint() const;
 
 private:
     std::optional<ResolvedLaunchRequest> active_;
@@ -303,6 +354,9 @@ private:
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title_;
     std::optional<MillenniumDosGxStartupTraceAdmission> millennium_dos_gx_startup_;
     std::optional<MillenniumDosNativeProcessAdmission> millennium_dos_native_process_;
+    // This span-based session is destroyed before its preceding admission,
+    // whose exact verified game buffer is its sole backing owner.
+    std::optional<MillenniumDosPostOverlayLoopSession> millennium_dos_post_overlay_loop_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

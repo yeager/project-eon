@@ -4,6 +4,7 @@
 #include "data/deuteros_amiga_bundle.hpp"
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
+#include "engine/deuteros_amiga_title_exec_boundary_session.hpp"
 
 #include <span>
 #include <optional>
@@ -68,6 +69,9 @@ public:
     };
     [[nodiscard]] std::optional<LocalPrefixAdvance> execute_local_prefix();
     [[nodiscard]] bool local_prefix_executed() const noexcept { return local_prefix_executed_; }
+    [[nodiscard]] const DeuterosAmigaTitleExecBoundaryCheckpoint& exec_boundary() const noexcept {
+        return exec_boundary_session_.checkpoint();
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;
@@ -78,6 +82,7 @@ private:
     DeuterosAmigaTitleExecPrelude exec_prelude_;
     DeuterosAmigaTitleGraphicsSetupProfile graphics_setup_;
     DeuterosAmigaTitleDisplayClearProfile display_clear_;
+    DeuterosAmigaTitleExecBoundarySession exec_boundary_session_;
     std::string original_sha256_;
     bool local_prefix_executed_ = false;
 };

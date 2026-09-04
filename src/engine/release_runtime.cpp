@@ -220,6 +220,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 
 void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_gx_startup_.reset();
+    millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
     millennium_dos_sound_selection_.reset();
     millennium_dos_title_.reset();
@@ -447,6 +448,112 @@ ReleaseRuntimeCoordinator::millennium_dos_gx_startup_checkpoint() const {
     return MillenniumDosGxStartupCheckpoint{
         session.state(), session.observed_post_overlay_call_return_count(),
         overlay->boundary_address, continuation->boundary_address, overlay->overlay_writes};
+}
+
+MillenniumDosPostOverlayObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_post_overlay_private_interrupt_return(
+    const MillenniumDosPostOverlayPrivateInterruptReturnObservation observation) {
+    MillenniumDosPostOverlayObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_gx_startup_boundary
+        || !millennium_dos_gx_startup_ || !millennium_dos_gx_startup_->session
+        || !millennium_dos_native_process_) {
+        result.error = "Post-overlay INT 91h return requires the active GX startup boundary";
+        return result;
+    }
+    const auto& gx_session = *millennium_dos_gx_startup_->session;
+    const auto& continuation = gx_session.post_overlay_evaluation();
+    if (!continuation || continuation->outcome
+            != MillenniumDosPostOverlayContinuationOutcome::private_interrupt_boundary
+        || continuation->boundary_address != observation.interrupt_address
+        || !continuation->observed_mode_byte) {
+        result.error = "Post-overlay INT 91h return is detached from the admitted GX boundary";
+        return result;
+    }
+    try {
+        auto loop = millennium_dos_native_process_->make_post_overlay_loop_session(
+            *continuation->observed_mode_byte);
+        loop.observe_private_interrupt_return(observation.interrupt_address, observation.ax);
+        millennium_dos_post_overlay_loop_.emplace(std::move(loop));
+        session_snapshot_ = make_runtime_session_snapshot(
+            *active_, RuntimeSessionKind::millennium_dos_post_overlay_loop);
+        result.accepted = true;
+    } catch (const std::exception& exception) {
+        result.error = std::string("Post-overlay INT 91h return rejected: ") + exception.what();
+    }
+    return result;
+}
+
+MillenniumDosPostOverlayObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_post_overlay_call_return(
+    const MillenniumDosPostOverlayCallReturnObservation observation) {
+    MillenniumDosPostOverlayObservationResult result;
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_post_overlay_loop
+        || !millennium_dos_post_overlay_loop_) {
+        result.error = "Call return requires the active post-overlay loop";
+        return result;
+    }
+    try {
+        millennium_dos_post_overlay_loop_->observe_call_return(
+            observation.call_address, observation.return_address);
+        result.accepted = true;
+    } catch (const std::exception& exception) {
+        result.error = std::string("Post-overlay call return rejected: ") + exception.what();
+    }
+    return result;
+}
+
+MillenniumDosPostOverlayObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_post_overlay_al(
+    const MillenniumDosPostOverlayAlObservation observation) {
+    MillenniumDosPostOverlayObservationResult result;
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_post_overlay_loop
+        || !millennium_dos_post_overlay_loop_) {
+        result.error = "AL observation requires the active post-overlay loop";
+        return result;
+    }
+    try {
+        millennium_dos_post_overlay_loop_->observe_al(observation.test_address, observation.value);
+        result.accepted = true;
+    } catch (const std::exception& exception) {
+        result.error = std::string("Post-overlay AL observation rejected: ") + exception.what();
+    }
+    return result;
+}
+
+MillenniumDosPostOverlayObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_post_overlay_runtime_byte(
+    const MillenniumDosPostOverlayRuntimeByteObservation observation) {
+    MillenniumDosPostOverlayObservationResult result;
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_post_overlay_loop
+        || !millennium_dos_post_overlay_loop_) {
+        result.error = "Runtime-byte observation requires the active post-overlay loop";
+        return result;
+    }
+    try {
+        millennium_dos_post_overlay_loop_->observe_runtime_byte(
+            observation.load_address, observation.runtime_address, observation.value);
+        result.accepted = true;
+    } catch (const std::exception& exception) {
+        result.error = std::string("Post-overlay runtime-byte observation rejected: ")
+            + exception.what();
+    }
+    return result;
+}
+
+std::optional<MillenniumDosPostOverlayLoopCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_post_overlay_loop_checkpoint() const {
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_post_overlay_loop
+        || !millennium_dos_post_overlay_loop_) return std::nullopt;
+    const auto& loop = *millennium_dos_post_overlay_loop_;
+    return MillenniumDosPostOverlayLoopCheckpoint{
+        loop.state(), loop.boundary(), loop.completed_call_return_count(),
+        loop.action_poll_count(), loop.observed_private_interrupt_ax(),
+        loop.observed_action(), loop.function_key_index(), loop.runtime_effects()};
 }
 
 RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(

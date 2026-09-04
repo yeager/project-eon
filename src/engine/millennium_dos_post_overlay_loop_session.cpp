@@ -76,11 +76,12 @@ void MillenniumDosPostOverlayLoopSession::enter_call(const std::size_t ordinal) 
 }
 
 void MillenniumDosPostOverlayLoopSession::observe_private_interrupt_return(
-    const std::uint16_t interrupt_address, const std::uint16_t) {
+    const std::uint16_t interrupt_address, const std::uint16_t ax) {
     if (state_ != MillenniumDosPostOverlayLoopState::awaiting_private_interrupt_return
         || interrupt_address != private_interrupt_site) {
         throw std::runtime_error("Millennium DOS post-overlay private return is detached");
     }
+    observed_private_interrupt_ax_ = ax;
     if (selected_mode_byte_ != 1) {
         // The non-equal callee enters the separately verified palette loop.
         // It cannot reach $d39d until all BIOS behavior is observed.

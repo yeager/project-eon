@@ -20,6 +20,7 @@ enum class RuntimePresentationKind {
     millennium_dos_sound_driver_boundary,
     millennium_dos_title_handoff_boundary,
     millennium_dos_gx_startup_boundary,
+    millennium_dos_post_overlay_loop,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,
     deuteros_amiga_opening,

@@ -14,6 +14,8 @@ std::optional<RuntimePresentationKind> presentation_kind_for(const RuntimeSessio
         return RuntimePresentationKind::millennium_dos_title_handoff_boundary;
     case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
         return RuntimePresentationKind::millennium_dos_gx_startup_boundary;
+    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
+        return RuntimePresentationKind::millennium_dos_post_overlay_loop;
     case RuntimeSessionKind::millennium_amiga_bootstrap:
         return RuntimePresentationKind::millennium_amiga_bootstrap;
     case RuntimeSessionKind::millennium_atari_bootstrap:
@@ -47,6 +49,8 @@ std::string_view runtime_presentation_kind_label(const RuntimePresentationKind k
         return "MILLENNIUM DOS TITLE HANDOFF BOUNDARY";
     case RuntimePresentationKind::millennium_dos_gx_startup_boundary:
         return "MILLENNIUM DOS GX STARTUP BOUNDARY";
+    case RuntimePresentationKind::millennium_dos_post_overlay_loop:
+        return "MILLENNIUM DOS POST-OVERLAY LOOP";
     case RuntimePresentationKind::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
     case RuntimePresentationKind::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case RuntimePresentationKind::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";

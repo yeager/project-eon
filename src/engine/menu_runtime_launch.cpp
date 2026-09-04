@@ -67,6 +67,35 @@ LauncherRuntimeController::millennium_dos_gx_startup_checkpoint() const {
     return coordinator_.millennium_dos_gx_startup_checkpoint();
 }
 
+MillenniumDosPostOverlayObservationResult
+LauncherRuntimeController::observe_millennium_dos_post_overlay_private_interrupt_return(
+    const MillenniumDosPostOverlayPrivateInterruptReturnObservation observation) {
+    return coordinator_.observe_millennium_dos_post_overlay_private_interrupt_return(observation);
+}
+
+MillenniumDosPostOverlayObservationResult
+LauncherRuntimeController::observe_millennium_dos_post_overlay_call_return(
+    const MillenniumDosPostOverlayCallReturnObservation observation) {
+    return coordinator_.observe_millennium_dos_post_overlay_call_return(observation);
+}
+
+MillenniumDosPostOverlayObservationResult
+LauncherRuntimeController::observe_millennium_dos_post_overlay_al(
+    const MillenniumDosPostOverlayAlObservation observation) {
+    return coordinator_.observe_millennium_dos_post_overlay_al(observation);
+}
+
+MillenniumDosPostOverlayObservationResult
+LauncherRuntimeController::observe_millennium_dos_post_overlay_runtime_byte(
+    const MillenniumDosPostOverlayRuntimeByteObservation observation) {
+    return coordinator_.observe_millennium_dos_post_overlay_runtime_byte(observation);
+}
+
+std::optional<MillenniumDosPostOverlayLoopCheckpoint>
+LauncherRuntimeController::millennium_dos_post_overlay_loop_checkpoint() const {
+    return coordinator_.millennium_dos_post_overlay_loop_checkpoint();
+}
+
 std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
     return coordinator_.tick_deuteros_amiga_opening();
 }
