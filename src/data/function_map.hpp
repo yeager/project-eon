@@ -3,7 +3,9 @@
 #include "data/static_control_flow.hpp"
 #include "platform/game_data.hpp"
 
+#include <cstdint>
 #include <span>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -64,6 +66,12 @@ struct FunctionMapSidecarCoverage {
 // does not turn the map into an execution table.
 [[nodiscard]] bool function_map_manifest_is_valid();
 [[nodiscard]] bool release_has_function_map_entry(
+    std::string_view release_sha256, std::string_view entry_id);
+// Resolve one diagnostics-only runtime coordinate after validating the row.
+// This never returns a callable pointer or image-relative address and exists
+// so typed parsers can fail closed when their recovered addresses drift from
+// the public preservation map.
+[[nodiscard]] std::optional<std::uint64_t> function_map_runtime_address_for(
     std::string_view release_sha256, std::string_view entry_id);
 // Re-hash the declared parser-profile span behind every function-map row for
 // one already verified release. This is an admission-time provenance guard:

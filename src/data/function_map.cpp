@@ -371,6 +371,18 @@ bool release_has_function_map_entry(const std::string_view release_sha256,
         && release_has_parser_profile(release_sha256, entry->parser_profile_id);
 }
 
+std::optional<std::uint64_t> function_map_runtime_address_for(
+    const std::string_view release_sha256, const std::string_view entry_id) {
+    const auto entry = std::find_if(entries.begin(), entries.end(), [&](const auto& candidate) {
+        return candidate.release_sha256 == release_sha256 && candidate.id == entry_id;
+    });
+    if (entry == entries.end() || entry->address_space != "runtime"
+        || !function_map_entry_is_well_formed(*entry)) return std::nullopt;
+    std::uint64_t address = 0;
+    if (!parse_declared_address(*entry, address)) return std::nullopt;
+    return address;
+}
+
 bool function_map_entries_are_attested_by_media(const VerifiedReleaseMedia& media) {
     // A function entry's source-span digest is deliberately the digest of the
     // parser-profile interval, rather than an executable-code assertion. A

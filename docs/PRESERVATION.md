@@ -4149,6 +4149,13 @@ verified-static diagnostic records, not function labels, gameplay actions,
 hooks, or a claim that any entry is reachable. F8 retains its narrower
 trace-gated prefix record alongside its handler identity because only that
 local prefix has an evidence-limited consumption model.
+Before either CLI or F10 can expose the static dispatch DTO, the native
+coordinator resolves all ten IDs through the compiled map and compares their
+runtime coordinates to the independently parsed `MillenniumDosGameFlow`
+addresses. Missing IDs, malformed rows, image-relative coordinates, or any
+address drift suppress the DTO. The comparison still does not establish
+reachability or authorize a call; it prevents two preservation descriptions
+of the same authenticated bytes from silently diverging.
 
 Project Eon's **host** F10 is explicitly consumed before the title availability
 poll and is not an original F10 action. In Original it exposes only output

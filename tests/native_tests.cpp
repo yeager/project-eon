@@ -2828,6 +2828,15 @@ int main() {
                 return entry.id == handler.first && entry.runtime_address == handler.second;
             }));
     }
+    assert(eon::function_map_runtime_address_for(
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        "millennium-dos-en-f10-handler") == 0x7384);
+    assert(!eon::function_map_runtime_address_for(
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        "missing-handler"));
+    assert(!eon::function_map_runtime_address_for(
+        "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+        "millennium-atari-en-prg-entry"));
     for (const auto& entry : eon::function_map()) {
         assert(eon::function_map_entry_is_well_formed(entry));
     }
