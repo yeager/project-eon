@@ -1085,6 +1085,24 @@ struct DeuterosAmigaTitlePostAdjustedIndirectReturnPlan {
 struct DeuterosAmigaObservedTitlePostAdjusted37180Return { std::uint64_t trace_sequence=0; std::uint32_t call_address=0,call_target=0,return_address=0,source_address=0,source_long=0,mode_address=0; std::uint16_t mode_word=0,opaque_sr=0; std::uint32_t opaque_d0=0; };
 struct DeuterosAmigaTitlePostAdjusted37180ReturnPlan { DeuterosAmigaObservedTitlePostAdjusted37180Return observation; std::uint32_t destination_address=0,destination_long=0,branch_address=0,selected_call_address=0,selected_call_target=0,selected_return_address=0; bool mode_is_five=false; std::string continuation_sha256; };
 struct DeuterosAmigaTitlePostAdjustedModeReturnPlan { DeuterosAmigaObservedLocalCallReturn observation; std::uint32_t join_address=0,next_call_address=0,next_call_target=0,next_return_address=0; bool branch_to_join=false; };
+struct DeuterosAmigaTitlePostAdjusted222c0ReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+};
+struct DeuterosAmigaObservedTitlePostAdjustedTimerState {
+    std::uint64_t trace_sequence=0;
+    DeuterosAmigaObservedLocalCallReturn service_return;
+    std::array<std::uint32_t,4> source_addresses{};
+    std::uint16_t current_word=0,previous_word=0,inhibit_word=0;
+    std::uint32_t timer_long=0;
+};
+struct DeuterosAmigaTitlePostAdjustedTimerStatePlan {
+    DeuterosAmigaObservedTitlePostAdjustedTimerState observation;
+    bool word_changed=false,clear_timer=false,call_due=false;
+    std::uint32_t word_destination=0,timer_destination=0,join_address=0;
+    std::uint16_t word_value=0;
+    std::uint32_t timer_value=0,call_address=0,call_target=0,return_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3037,6 +3055,27 @@ public:
         post_adjusted_mode_return_=o;last_command_sequence_=o.trace_sequence;
         return DeuterosAmigaTitlePostAdjustedModeReturnPlan{o,0x40574,0x40574,0x222c0,0x4057a,five};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted222c0ReturnPlan> observe_post_adjusted_222c0_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!post_adjusted_mode_return_||post_adjusted_222c0_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x40574||o.call_target!=0x222c0||o.return_address!=0x4057a)
+            throw std::runtime_error("Deuteros $222c0 return does not match caller boundary");
+        post_adjusted_222c0_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjusted222c0ReturnPlan{o,0x4057a,0x23e4e,0x40580};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedTimerStatePlan> observe_post_adjusted_timer_state(const DeuterosAmigaObservedTitlePostAdjustedTimerState&o){
+        if(!post_adjusted_222c0_return_||post_adjusted_timer_state_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.service_return.trace_sequence!=o.trace_sequence
+            ||o.service_return.call_address!=0x4057a||o.service_return.call_target!=0x23e4e
+            ||o.service_return.return_address!=0x40580
+            ||o.source_addresses!=std::array<std::uint32_t,4>{{0x1ffc8,0x40414,0x40410,0x22d34}})
+            throw std::runtime_error("Deuteros post-adjusted timer state does not match caller boundary");
+        const bool changed=o.current_word!=o.previous_word;
+        const auto timer=changed?0U:o.timer_long;
+        const bool due=timer>=0xea60U&&o.inhibit_word!=0x11U;
+        post_adjusted_timer_state_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjustedTimerStatePlan{o,changed,changed,due,0x40414,0x40410,
+            due?0x405b6U:0x405c6U,o.current_word,timer,due?0x405b6U:0U,due?0x4069aU:0U,due?0x405bcU:0U};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3253,6 +3292,8 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostAdjustedIndirectReturn> post_adjusted_indirect_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjusted37180Return> post_adjusted_37180_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_mode_return_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_222c0_return_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedTimerState> post_adjusted_timer_state_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

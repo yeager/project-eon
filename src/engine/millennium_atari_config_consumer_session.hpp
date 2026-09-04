@@ -50,6 +50,8 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_palette_rts_boundary,
     game_init_second_config_rts_boundary,
     game_init_post_second_config_xbios_38_boundary,
+    game_init_config_final_rts_boundary,
+    game_init_post_config_gemdos_61_boundary,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -430,6 +432,14 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_second_config_rts_return_address=0;
     std::string game_init_second_config_caller_sha256;
     std::uint32_t game_init_second_config_xbios_pointer=0;
+    std::uint32_t game_init_second_config_xbios_result_d0=0;
+    std::uint32_t game_init_second_config_xbios_cleanup_bytes=0;
+    std::string game_init_second_config_xbios_return_sha256;
+    std::uint32_t game_init_config_final_rts_address=0;
+    std::uint32_t game_init_config_final_rts_stack_address=0;
+    std::uint32_t game_init_config_final_rts_return_address=0;
+    std::string game_init_post_config_caller_sha256;
+    std::uint32_t game_init_post_config_preserved_stack_long=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -548,6 +558,10 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fclose(
         const MillenniumAtariGemdosSelector62Observation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_rts(
+        const MillenniumAtariGameInitSecondConfigRtsObservation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_xbios_38(
+        const MillenniumAtariXbiosSelector38Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_config_final_rts(
         const MillenniumAtariGameInitSecondConfigRtsObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
