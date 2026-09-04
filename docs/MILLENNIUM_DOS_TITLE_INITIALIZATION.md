@@ -534,3 +534,13 @@ bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
 the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution
 stops at typed `$13e2`, source `$3c80:$0014`; no dimensions or graphics
 meaning are inferred.
+
+The decoder now distinguishes high-nibble `$1428` state from the next-byte
+low-nibble state, preserving `CL` and `SI` across escape, run, and lookup
+continuations. A high nibble dispatches to corresponding typed word or lookup
+boundaries and returns to the next low-nibble byte after its lookup. The
+mode-two `$1452` word follows exact bytes `ad 4e d3 e8 88 c5` (SHA-256
+`846a82fa183b14b5fd42d6e0c3bdf5c16cf8863e647825e8fd588d705f655756`)
+and stops at typed `$1458`. The second record's `$13e2` raw word now applies
+the exact wrapping subtraction into `CS:$138a` and stops at `$13e9`, source
+`$3c80:$0001`. No codec or graphics semantics are inferred.

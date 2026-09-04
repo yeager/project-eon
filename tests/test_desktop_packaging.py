@@ -240,7 +240,13 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("directories that are not 0755", source)
         self.assertIn("rpmspec --parse", source)
         self.assertIn("rpmlint --strict", source)
+        self.assertIn('$(dirname "$0")/rpmlintrc', source)
         self.assertIn("rpm --checksig --nosignature", source)
+
+        rpmlintrc = (ROOT / "packaging" / "rpmlintrc").read_text(encoding="utf-8")
+        self.assertIn('addFilter("no-signature$")', rpmlintrc)
+        self.assertIn('addFilter("no-packager-tag$")', rpmlintrc)
+        self.assertIn('addFilter("invalid-license MIT$")', rpmlintrc)
 
     def test_debian_package_generates_system_dependencies_without_host_sdl(self) -> None:
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
@@ -262,6 +268,9 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("project-eon.lintian-overrides", cmake)
         self.assertIn("CPACK_RPM_PACKAGE_URL", cmake)
         self.assertIn("CPACK_RPM_FILE_NAME RPM-DEFAULT", cmake)
+        self.assertIn('set(CPACK_RPM_COMPRESSION_TYPE "gzip")', cmake)
+        self.assertIn("CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION", cmake)
+        self.assertIn("create_symlink", cmake)
         self.assertIn("CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS", cmake)
         self.assertIn("DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE", cmake)
 

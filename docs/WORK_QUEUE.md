@@ -43,9 +43,9 @@ and their exact arithmetic/store sequences are native. The typed byte at
 are also native. The one/two branch owns its first payload byte and exact
 prefix through `$1427` and the first low-nibble dispatch at `$1428`; continue
 through its typed `$1437`, `$144a`, and `$1470` continuations. Continue at the
-resulting next-byte/high-nibble `$1428` states or mode-two extension `$1452`.
+resulting distinct low/high-nibble `$1428` states or mode-two `$1458` word.
 The other-value branch owns the second descriptor and first two raw words plus
-their product; continue at `$13e2`, source `$3c80:$0014`. Do not assign
+their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
@@ -108,8 +108,11 @@ caller through XBIOS selector `$26` at `$2ab24`. Continue with that typed
 firmware result and the deterministic cleanup/RTS continuation. The raw result,
 cleanup, RTS `$2ab28`, typed return `$77042`, and staged-PRG caller are now
 native through GEMDOS selector `$3d` at `$77056`. Continue with that typed
-service result and its exact success/failure branches. Do not infer filesystem,
-firmware, or wall-clock effects from static bytes.
+service result and its exact success/failure branches. Both branches are now
+native: failure stops at `$77060`, while success reaches GEMDOS selector `$3f`
+at `$77074` with count `$20000` and buffer `$11e00`. Continue from the typed
+Fread result. Do not infer filesystem, firmware, or wall-clock effects from
+static bytes.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -378,8 +381,10 @@ treat the sparse decoded memory as a renderer surface.
 Both selected returns and their join at `$40574` are exposed through every
 runtime facade with replay and revocation checks. The following `$222c0` and
 `$23e4e` calls now require typed returns, after which the exact word-change and
-60,000-count gate is recovered atomically. Continue from optional external
-`$405b6->$4069a`; its return and effects remain a typed boundary.
+60,000-count gate is recovered atomically. The optional `$405b6->$4069a`
+return is typed, clears `$40410` atomically, and joins the not-due route at
+`$405c6`. Continue from `$405d0->$1f9a4` only when the typed `$1bf36` byte is
+nonzero; the zero route branches exactly to `$40638`.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

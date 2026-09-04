@@ -267,7 +267,14 @@ filesystem operation, or firmware result is synthesized. A typed raw XBIOS
 return owns its exact cleanup and RTS `$2ab28`; a second typed stack return is
 fixed to the staged PRG caller `$77042`. Its hash-bound 22-byte continuation
 reaches GEMDOS selector `$3d` at `$77056`, with mode 2 and filename pointer
-`$1d6d8`. That service result remains external.
+`$1d6d8`. A typed signed result now follows both exact branches. A negative
+result retains its low handle word and reaches the self-loop at `$77060`; the
+10-byte branch span hashes to
+`d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7`.
+A nonnegative result reaches GEMDOS selector `$3f` at `$77074`, with original
+buffer `$11e00` and count `$20000`; that 30-byte span hashes to
+`2ceb9e3c6a8c2882f13708d64367b0a9f8bf18ee7456ea396a3e600734825476`.
+The Fread result remains external.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

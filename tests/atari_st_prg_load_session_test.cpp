@@ -79,6 +79,11 @@ int main(const int argc, const char* const argv[]) {
             std::nullopt, 0x2a500}) == 0x4e);
         assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
             std::nullopt, 0x2a501}) == 0xf9);
+        // $77042 is a return inside the separately materialized $77000
+        // bootstrap target.  It is deliberately absent from the resident
+        // PRG/config memory used to acquire the config consumer.
+        assert(!memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x77042}));
         eon::MillenniumAtariConfigConsumerSession consumer(1, memory,
             gemdos.checkpoint(), session.fread_config_load_address_boundary(),
             session.fread_mapped_config_prelude());
@@ -537,6 +542,23 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().gemdos_selector==0x3d
             && single_cell_planes.checkpoint().gemdos_open_mode==2
             && single_cell_planes.checkpoint().gemdos_filename_pointer==0x1d6d8);
+        auto post_config_failure=single_cell_planes;
+        assert(!post_config_failure.observe_game_init_post_config_fopen({1,121,0x77058,0x3d,-1}).accepted);
+        assert(post_config_failure.observe_game_init_post_config_fopen({1,121,0x77056,0x3d,-1}).accepted
+            && post_config_failure.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_post_config_fopen_failure_spin
+            && post_config_failure.checkpoint().game_init_post_config_fopen_result_d0==-1
+            && post_config_failure.checkpoint().game_init_post_config_handle_word==0xffff
+            && post_config_failure.checkpoint().game_init_post_config_fopen_branch_sha256=="d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7"
+            && post_config_failure.checkpoint().game_init_post_config_failure_spin_address==0x77060);
+        assert(single_cell_planes.observe_game_init_post_config_fopen({1,121,0x77056,0x3d,7}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_post_config_gemdos_63_boundary
+            && single_cell_planes.checkpoint().game_init_post_config_fopen_result_d0==7
+            && single_cell_planes.checkpoint().game_init_post_config_handle_word==7
+            && single_cell_planes.checkpoint().game_init_post_config_fopen_branch_sha256=="2ceb9e3c6a8c2882f13708d64367b0a9f8bf18ee7456ea396a3e600734825476"
+            && single_cell_planes.checkpoint().gemdos_trap_address==0x77074
+            && single_cell_planes.checkpoint().gemdos_selector==0x3f
+            && single_cell_planes.checkpoint().game_init_post_config_fread_buffer==0x11e00
+            && single_cell_planes.checkpoint().game_init_post_config_fread_count==0x20000);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

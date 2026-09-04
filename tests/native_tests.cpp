@@ -5382,6 +5382,8 @@ int main() {
                 {1,37,0x2ab24,0x26,0}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_config_final_rts(
                 {1,38,0x2ab28,0x00fd0000,0x77042}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_post_config_fopen(
+                {1,39,0x77056,0x3d,7}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5459,7 +5461,19 @@ int main() {
                 && opening_presentation->rgba_frame
                 && opening_presentation->rgba_frame->size()
                     == static_cast<std::size_t>(eon::DeuterosAmigaFrame::width)
-                        * eon::DeuterosAmigaFrame::height * 4U);
+                        * eon::DeuterosAmigaFrame::height * 4U
+                && opening_presentation->admitted_game_text.size() == 6);
+            const auto swedish_catalog=eon::Translator::from_language("sv");
+            const auto opening_prompt_original=eon::localize_admitted_game_text_by_id(
+                eon::Game::deuteros,eon::Platform::amiga,
+                opening_presentation->admitted_game_text,
+                "deuteros.amiga.prompt.press-any-key","sv",swedish_catalog);
+            const auto opening_prompt_modern=eon::localize_admitted_game_text_by_id(
+                eon::Game::deuteros,eon::Platform::amiga,
+                opening_presentation->admitted_game_text,
+                "deuteros.amiga.prompt.press-any-key","sv",swedish_catalog);
+            assert(opening_prompt_original.displayed_text=="Tryck på valfri tangent när du är klar.");
+            assert(opening_prompt_modern.displayed_text==opening_prompt_original.displayed_text);
             assert(!opening_controller.deuteros_amiga_title_stage_boundary());
             const auto catch_up = opening_controller.advance_deuteros_amiga_opening_scheduler(1'100);
             assert(catch_up.events.size() == eon::DeuterosAmigaOpeningRunner::maximum_catch_up_ticks
@@ -5505,7 +5519,13 @@ int main() {
                 && title_boundary->exec_prelude.stack_pointer_value == 0x40b62
                 && title_boundary->local_prefix_executed
                 && title_boundary->graphics_setup_palette.size() == 20
-                && title_boundary->alternate_renderer_trace);
+                && title_boundary->alternate_renderer_trace
+                && title_boundary->admitted_game_text.size() == 6);
+            const auto title_prompt=eon::localize_admitted_game_text_by_id(
+                eon::Game::deuteros,eon::Platform::amiga,
+                title_boundary->admitted_game_text,
+                "deuteros.amiga.prompt.press-any-key","sv",swedish_catalog);
+            assert(title_prompt.displayed_text==opening_prompt_original.displayed_text);
             const auto dependency_chain =
                 opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
             assert(dependency_chain
@@ -6084,11 +6104,23 @@ int main() {
             eon::DeuterosAmigaObservedTitlePostAdjustedTimerState timer_state{
                 runtime_copy_sequence+71,
                 {runtime_copy_sequence+71,0x4057a,0x23e4e,0x40580,0,0},
-                {0x1ffc8,0x40414,0x40410,0x22d34},0x3344,0x1122,0,0xea60};
-            auto bad_timer_state=timer_state;bad_timer_state.source_addresses[3]+=2;
+                {0x1ffc8,0x40414,0x40410},0x22d34,0,0x1122,0x1122,0xea60};
+            auto bad_timer_state=timer_state;bad_timer_state.inhibit_source_address=0x22d36;
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_timer_state(bad_timer_state).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_timer_state(timer_state).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_timer_state(timer_state).accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn return_4069a{
+                runtime_copy_sequence+72,0x405b6,0x4069a,0x405bc,0,0};
+            auto bad_return_4069a=return_4069a;bad_return_4069a.call_target+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_4069a_return(bad_return_4069a).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_4069a_return(return_4069a).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_4069a_return(return_4069a).accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedJoinByte join_byte{
+                runtime_copy_sequence+73,0x405c6,0x1bf36,0};
+            auto bad_join_byte=join_byte;bad_join_byte.source_address+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_join_byte(bad_join_byte).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_join_byte(join_byte).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_join_byte(join_byte).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

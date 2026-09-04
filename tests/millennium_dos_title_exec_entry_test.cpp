@@ -1029,19 +1029,39 @@ int main(int argc, char** argv) {
     encoded_escape.observe_far_word({100,0x1437,0x5050,0x0020,0x1234});
     const auto escaped_output=encoded_escape.checkpoint();
     assert(escaped_output.state
-        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary);
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary);
     assert(escaped_output.continuation_address==0x1428);
     assert(escaped_output.far_byte_boundary.source_offset==0x0021);
     assert(escaped_output.memory_effects.back().offset==0x0171);
     assert(escaped_output.memory_effects.back().value==0x23);
+    encoded_escape.observe_far_byte({101,0x1428,0x5050,0x0021,0x2a});
+    const auto high_nibble_lookup=encoded_escape.checkpoint();
+    assert(high_nibble_lookup.state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_xlat_byte_boundary);
+    assert(high_nibble_lookup.far_byte_boundary.source_offset==0x000a);
+    encoded_escape.observe_far_byte({102,0x1470,0x5050,0x000a,0x10});
+    const auto next_low_nibble=encoded_escape.checkpoint();
+    assert(next_low_nibble.state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary);
+    assert(next_low_nibble.far_byte_boundary.source_offset==0x0022);
     auto mode_two_dispatch=encoded_first_title_record;
     mode_two_dispatch.observe_far_byte({99,0x1428,0x5050,0x0020,0x0e});
     assert(mode_two_dispatch.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_word_boundary);
+    auto mode_two_extension=mode_two_dispatch;
+    mode_two_extension.observe_far_word({100,0x144a,0x5050,0x0020,0x0ff0});
+    assert(mode_two_extension.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_escape_word_boundary);
+    mode_two_extension.observe_far_word({101,0x1452,0x5050,0x0021,0x1230});
+    const auto mode_two_second_extension=mode_two_extension.checkpoint();
+    assert(mode_two_second_extension.state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary);
+    assert(mode_two_second_extension.continuation_address==0x1458);
+    assert(mode_two_second_extension.far_read_boundary.source_offset==0x0022);
     mode_two_dispatch.observe_far_word({100,0x144a,0x5050,0x0020,0x0030});
     const auto mode_two_run=mode_two_dispatch.checkpoint();
     assert(mode_two_run.state
-        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary);
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary);
     assert(mode_two_run.continuation_address==0x1428);
     assert(mode_two_run.far_byte_boundary.source_offset==0x0021);
     assert(mode_two_run.memory_effects.size()==18984);
@@ -1142,6 +1162,15 @@ int main(int argc, char** argv) {
     assert(second_record_third_word.far_read_boundary.source_offset==0x0014);
     assert(second_record_third_word.memory_effects.back().offset==0x133b);
     assert(second_record_third_word.memory_effects.back().value==0x4680);
+    other_success.observe_far_word({101,0x13e2,0x3c80,0x0014,0x0080});
+    const auto second_record_first_byte=other_success.checkpoint();
+    assert(second_record_first_byte.state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_byte_read_boundary);
+    assert(second_record_first_byte.continuation_address==0x13e9);
+    assert(second_record_first_byte.far_byte_boundary.source_segment==0x3c80);
+    assert(second_record_first_byte.far_byte_boundary.source_offset==0x0001);
+    assert(second_record_first_byte.memory_effects.back().offset==0x138a);
+    assert(second_record_first_byte.memory_effects.back().value==0x4600);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

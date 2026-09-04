@@ -353,6 +353,10 @@ by `src/game_text_localization.*` from its exact game, platform, and source
 text to a stable key and canonical catalog message. Menus, item names,
 messages, help, and labels share this rule. Original and Modern call the same
 resolver, so Modern cannot acquire a different translation or fallback path.
+The Deuteros Amiga opening and title-stage snapshots preserve the admitted
+prompt tokens across their lifecycle transition without retaining ADF bytes.
+Presentation resolves those tokens by stable ID; merely admitting a prompt
+does not prove that the current recovered state should display it.
 
 Each registry row additionally records the original leaf name, complete leaf
 SHA-256, byte offset, and byte length. `verify_game_text_source` rehashes the
@@ -1561,7 +1565,16 @@ staged PRG caller `$77042`. The exact 22-byte caller continuation, SHA-256
 `dc2a50400e22fdbe4870f790d4f70c7446caa379dc68281a0445db4ee027fe4d`,
 retains the literal stack longword `$11e00`, pushes open mode 2 and filename
 pointer `$1d6d8`, and stops at GEMDOS selector `$3d` trap `$77056`. No meaning
-is assigned to the preserved longword, filename, or service result.
+is assigned to the preserved longword, filename, or service result. A typed
+signed raw result admits the exact handle-word push, pending selector `$3e`,
+test and branch. Negative results reach the `$77060` self-loop through the
+10-byte span SHA-256
+`d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7`.
+Nonnegative results additionally push buffer `$11e00`, count `$20000`, the
+handle word and selector `$3f`, reaching trap `$77074`; the complete 30-byte
+span has SHA-256
+`2ceb9e3c6a8c2882f13708d64367b0a9f8bf18ee7456ea396a3e600734825476`.
+No open, read, close, filename, or buffer semantics are inferred.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4594,6 +4607,14 @@ record's `$13d0` word at `$3c80:$0016` is also native through the exact
 18-byte multiplication/store span (SHA-256
 `787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
 and stops at typed `$13e2`, source `$3c80:$0014`.
+High- and low-nibble `$1428` states are now distinct, so `CL`, `SI`, `DI`,
+`DX`, and the next source byte remain instruction-accurate after escape, run,
+and lookup paths. The mode-two extension consumes typed `$1452`, exact
+six-byte SHA-256
+`846a82fa183b14b5fd42d6e0c3bdf5c16cf8863e647825e8fd588d705f655756`,
+and stops at typed `$1458`. The second record's typed `$13e2` word applies the
+hash-bound wrapping subtraction and stops at `$13e9`, source `$3c80:$0001`.
+These remain raw control-flow and arithmetic facts, not codec or pixel claims.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7059,8 +7080,13 @@ caller then compares typed words at `$1ffc8` and `$40414`; a change atomically
 writes the new word to `$40414` and clears longword `$40410`. Otherwise the
 typed `$40410` value is compared with `$ea60`; values below it join at
 `$405c6`, as does typed inhibit word `$11` at `$22d34`. The remaining due path
-stops before external `$405b6->$4069a` (return `$405bc`). No meaning is assigned
-to either service or to these state cells.
+requires a typed external `$405b6->$4069a` return at `$405bc`, then atomically
+clears `$40410` and joins the not-due routes at `$405c6`. The 128-byte span at
+ADF `$9b5b6` hashes to
+`eee034f14ab5d9af283984b4d7f7f3c32763150cf1abcefb0dace2292e38cb9f`.
+At the join, a typed byte from `$1bf36` follows the exact zero branch to
+`$40638`; a nonzero byte stops before external `$405d0->$1f9a4`. No meaning is
+assigned to either service or to these state cells.
 SR remain opaque. The transition is replay-safe, revoked with its owning
 session, and assigns no rendering or gameplay meaning.
 

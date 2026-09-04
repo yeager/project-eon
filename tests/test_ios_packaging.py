@@ -82,6 +82,8 @@ class IosPackagingTests(unittest.TestCase):
         self.assertIn('cp assets/cards/*.png "$APP/Resources/assets/cards/"', workflow)
         self.assertIn('cp assets/branding/project-eon-logo-v1.png "$APP/Resources/assets/branding/"', workflow)
         self.assertIn('cp po/{ar,de,el,en_GB,es,fi,fr,hi,it,ja,ko,nl,no,pl,pt_BR,ru,sv,tr,uk,zh_CN}.po', workflow)
+        self.assertIn('for DUPLICATE in "$APP/assets" "$APP/po"', workflow)
+        self.assertIn('find "$DUPLICATE" -depth -delete', workflow)
 
     def test_ios_bundle_has_an_install_destination(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
