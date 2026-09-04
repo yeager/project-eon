@@ -22,12 +22,15 @@ class CompleteDisassemblyManifestTests(unittest.TestCase):
 
     def test_committed_manifest_enumerates_and_covers_the_recognized_corpus(self) -> None:
         totals = TOOL.verify(self.manifest, self.inventory, self.releases)
-        self.assertEqual(totals, {"releases": 8, "images": 14,
-                                  "ranges": 16, "bytes": 1110705})
+        self.assertEqual(totals, {"releases": 8, "images": 16,
+                                  "ranges": 18, "bytes": 1122819,
+                                  "mapped_candidates": 14,
+                                  "unmapped_candidates": 6})
         index = TOOL.render_index(self.manifest, totals)
         self.assertIn("Raw disassembly listings remain outside the repository.", index)
         self.assertIn("millennium / dos / en", index)
         self.assertIn("deuteros / amiga / en", index)
+        self.assertIn("Discovered but unmapped: `deuteros-atari-killer-boot`", index)
 
     def test_missing_release_or_image_is_rejected(self) -> None:
         manifest = copy.deepcopy(self.manifest)
@@ -61,6 +64,14 @@ class CompleteDisassemblyManifestTests(unittest.TestCase):
         ranges = manifest["releases"][1]["images"][0]["source_ranges"]
         ranges[1]["source_offset"] = ranges[0]["source_offset"] + 1
         with self.assertRaisesRegex(TOOL.ManifestError, "overlapping"):
+            TOOL.verify(manifest, self.inventory, self.releases)
+
+    def test_discovered_unmapped_candidate_cannot_disappear(self) -> None:
+        manifest = copy.deepcopy(self.manifest)
+        release = next(row for row in manifest["releases"]
+                       if row["release_sha256"].startswith("c6856d0a"))
+        release["discovered_unmapped_profile_ids"] = []
+        with self.assertRaisesRegex(TOOL.ManifestError, "discovered-unmapped"):
             TOOL.verify(manifest, self.inventory, self.releases)
 
 

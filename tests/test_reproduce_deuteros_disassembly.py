@@ -1,10 +1,20 @@
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 from tools.reproduce_deuteros_disassembly import identity
 
 
 class DeuterosDisassemblyReproductionTests(unittest.TestCase):
+    def test_script_is_directly_invocable_from_the_checkout(self):
+        completed = subprocess.run(
+            (sys.executable, "tools/reproduce_deuteros_disassembly.py", "--help"),
+            cwd=Path(__file__).resolve().parents[1], text=True,
+            capture_output=True, check=False)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("--atari-replicants-archive", completed.stdout)
+
     def test_external_report_identity_is_content_bound(self):
         cache = Path("/home/yeager/.cache/project-eon-tools/tests")
         cache.mkdir(parents=True, exist_ok=True)

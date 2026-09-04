@@ -35,6 +35,7 @@ def main(argv=None)->int:
   run(["tools/disassemble_m68k_range.py","--archive",str(amiga),"--archive-sha256",AMIGA_HASH,"--member",an,"--member-sha256","8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c","--offset","0x16400","--length","0x2c000","--address","0x68000","--sha256","d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e","--output",str(out/"millennium-amiga.md")])
   atari=find_hash(a.media_root,ATARI_HASH); sn=atari.stem+".st"
   run(["tools/analyze_atari_st_prg.py","--archive",str(atari),"--archive-sha256",ATARI_HASH,"--disk-member",sn,"--disk-sha256","3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7","--program-sha256","4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686","--output",str(out/"millennium-atari-prg.md")])
+  run(["tools/analyze_atari_st_config.py","--archive",str(atari),"--archive-sha256",ATARI_HASH,"--disk-member",sn,"--disk-sha256","3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7","--file-sha256","74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6","--output",str(out/"millennium-atari-config.md")])
  except (OSError,ValueError) as e: print(f"MILLENNIUM DISASSEMBLY REJECTED  {e}",file=sys.stderr);return 2
  print(f"MILLENNIUM DISASSEMBLY RENDERED  {out}");return 0
 if __name__=="__main__":raise SystemExit(main())

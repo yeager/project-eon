@@ -50,11 +50,24 @@ These identities differ from aggregate-carrier reports only where the report
 header records a different provenance path; source-span hashes remain pinned.
 
 The local set does not contain the recognised Spanish DOS carrier or the
-aggregate release containers. `MILL22A.INF` is recognised but its current
-analyzer still requires the aggregate/nested carrier form, so its 7,506-byte
-candidate remains an explicit reproduction gap. Linear completeness means
+aggregate release containers. The direct-media run also renders all 7,506
+bytes of `MILL22A.INF` as a 2,494-line image-relative report
+(`75220ae40c17bf06fb117f956cc7b38cf9a65bb289c4f99ff6146adde364131f`).
+Its competing observed Fread destinations remain unselected: no runtime load
+base or entry is invented. Linear completeness means
 every selected source byte was rendered, not that code/data, reachability,
 relocation, operating-system returns, or runtime load addresses were proved.
+
+The direct DOS media inventory also contains three driver-shaped leaves:
+`SCVX.DRV` (4,053 bytes, SHA-256 `99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4`),
+`SIBM.DRV` (2,871 bytes, SHA-256 `f3224caa43c1149907f852fa98816ed68c489b70f1ba795592d684d4e51f31b1`),
+and `SSBL.DRV` (9,194 bytes, SHA-256
+`be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72`).
+Existing evidence recognises SCVX and SSBL as driver profiles, but does not yet
+prove a file-to-runtime load map or entry for any of the three. They therefore
+remain explicit executable-candidate gaps rather than being silently decoded
+at the DOS COM convention. `2200AD4.BIN` is an established data/pointer-table
+leaf and is not promoted to code merely because it contains code-like bytes.
 
 The complete linear candidate reports remain outside the repository because
 they mechanically render copyrighted executable bytes. Their committed SHA-256
@@ -108,8 +121,8 @@ python3 tools/reproduce_disassembly_reports.py \
 
 For a Deuteros-only preservation pass using the directly recognised archives
 in the default data collection, run `tools/reproduce_deuteros_disassembly.py`.
-It freshly renders the complete three mapped Amiga loaded spans and the mapped
-Atari ST Replicants first stage, then writes an external `index.json` containing
+It freshly renders the complete three mapped Amiga loaded spans and both mapped
+Atari ST Replicants stages, then writes an external `index.json` containing
 only report hashes, line counts, mapped-byte totals, classification, and exact
 remaining gaps. Listings and that derived index stay outside the repository:
 
@@ -123,8 +136,11 @@ python3 tools/reproduce_deuteros_disassembly.py \
 
 This is complete byte coverage of every currently proven Deuteros load map,
 not proof that every decoded byte is code and not complete recovery of every
-stage on every recognised media variant. Atari stages after the first 4.5 KiB
-and independently unmapped variant images remain explicit preservation gaps.
+stage on every recognised media variant. The second Atari stage is the exact
+4,608-byte disk interval at `0x4800`, loaded to `0x70000`; its whole-range
+SHA-256 is `2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
+Execution after that stage and independently unmapped variant images remain
+explicit preservation gaps.
 
 ## External static control-flow sidecars
 
