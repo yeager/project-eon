@@ -4,8 +4,11 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+import stat
 import unittest
+from unittest import mock
 
 from eon_test_paths import temporary_directory
 
@@ -33,7 +36,7 @@ class LocateCaptureRecorderTests(unittest.TestCase):
     def test_locator_hashes_only_regular_executable_candidates(self) -> None:
         with temporary_directory() as temporary:
             root = Path(temporary)
-            recorder = root / "reviewed-recorder"
+            recorder = root / ("reviewed-recorder.exe" if os.name == "nt" else "reviewed-recorder")
             recorder.write_bytes(b"recorder bytes")
             recorder.chmod(0o700)
             ignored = root / "ignored"
@@ -46,6 +49,16 @@ class LocateCaptureRecorderTests(unittest.TestCase):
                     "bytes": len(recorder.read_bytes()), "path": str(recorder)}])
             finally:
                 TOOL.reviewed_hashes = original
+
+    def test_windows_executable_candidates_follow_pathext_not_posix_mode_bits(self) -> None:
+        info = os.stat(__file__)
+        non_executable_mode = os.stat_result((stat.S_IFREG | 0o600, *info[1:]))
+        with mock.patch.object(TOOL.os, "name", "nt"), \
+                mock.patch.dict(TOOL.os.environ, {"PATHEXT": ".COM;.EXE"}):
+            self.assertTrue(TOOL.is_executable_candidate(Path("reviewed-recorder.EXE"),
+                                                         non_executable_mode))
+            self.assertFalse(TOOL.is_executable_candidate(Path("reviewed-recorder"),
+                                                          non_executable_mode))
 
     def test_json_schema_is_stable(self) -> None:
         self.assertEqual(json.loads('{"schema":"project-eon.recorder-locator/v1"}')["schema"],

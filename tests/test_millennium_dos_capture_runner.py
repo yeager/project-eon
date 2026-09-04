@@ -303,15 +303,13 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
     def test_v14_normal_core_history_is_one_bounded_ordered_sidecar(self) -> None:
         with temporary_directory() as directory:
             history = Path(directory) / "normal-core-history.raw"
-            history.write_text(
-                "normal-core-history-v1 count=2 entries=0e70:18fe:00000000,f000:ca60:fe380300\n",
-                encoding="ascii")
+            history.write_bytes(
+                b"normal-core-history-v1 count=2 entries=0e70:18fe:00000000,f000:ca60:fe380300\n")
             status = TOOL.normal_core_history_status(history, "v14-normal-core-history")
             self.assertIn("normal_core_history=present\n", status)
             self.assertIn("normal_core_history_entries=2\n", status)
-            history.write_text(
-                "normal-core-history-v1 count=1 entries=0e70:18fe:00000000,f000:ca60:fe380300\n",
-                encoding="ascii")
+            history.write_bytes(
+                b"normal-core-history-v1 count=1 entries=0e70:18fe:00000000,f000:ca60:fe380300\n")
             with self.assertRaisesRegex(TOOL.CaptureError, "count does not match"):
                 TOOL.normal_core_history_status(history, "v14-normal-core-history")
             history.write_bytes(b"normal-core-history-v1 count=1 entries=f000:ca60:fe380300\r\n")
@@ -323,16 +321,15 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             root = Path(directory)
             history = root / "normal-core-history.raw"
             results = root / "results.raw"
-            history.write_text("normal-core-history-v1 count=16 entries="
-                + ",".join(TOOL.KNOWN_V14_NORMAL_CORE_HISTORY) + "\n", encoding="ascii")
+            history.write_bytes(("normal-core-history-v1 count=16 entries="
+                + ",".join(TOOL.KNOWN_V14_NORMAL_CORE_HISTORY) + "\n").encode("ascii"))
             results.write_bytes(TOOL.KNOWN_V11_EARLY_STOP_RAW)
             status = TOOL.normal_core_history_boundary_status(
                 history, results, "v14-normal-core-history", "known-unhandled-interrupt")
             self.assertIn("normal_core_history_boundary=observed-zero-context-to-default-callback\n", status)
             self.assertIn("normal_core_history_first=0e70:18e4:00000000\n", status)
-            history.write_text("normal-core-history-v1 count=16 entries="
-                + ",".join((*TOOL.KNOWN_V14_NORMAL_CORE_HISTORY[:-1], "f000:ca60:fe380301")) + "\n",
-                encoding="ascii")
+            history.write_bytes(("normal-core-history-v1 count=16 entries="
+                + ",".join((*TOOL.KNOWN_V14_NORMAL_CORE_HISTORY[:-1], "f000:ca60:fe380301")) + "\n").encode("ascii"))
             with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
                 TOOL.normal_core_history_boundary_status(
                     history, results, "v14-normal-core-history", "known-unhandled-interrupt")
@@ -367,8 +364,8 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
                 transfer, results, "v20-title-entry-transfer", "known-unhandled-interrupt")
             self.assertIn("title_entry_transfer_declared_entry_cs=0x0e70\n", status)
             self.assertIn("title_entry_transfer_predecessor_code=0xca00f00e\n", status)
-            transfer.write_text(transfer.read_text(encoding="ascii").replace(
-                "predecessor_valid=1", "predecessor_valid=0"), encoding="ascii")
+            transfer.write_bytes(transfer.read_bytes().replace(
+                b"predecessor_valid=1", b"predecessor_valid=0"))
             with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
                 TOOL.title_entry_transfer_status(
                     transfer, results, "v20-title-entry-transfer", "known-unhandled-interrupt")
@@ -384,20 +381,20 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
             installation = root / "int93-installation.raw"
             self.assertEqual(TOOL.int93_installation_status(
                 installation, "v21-int93-installation"), "int93_installation=absent\n")
-            installation.write_text(
+            installation.write_bytes((
                 "int93-installation-v1 image=titles.exe pc=0x1163 vector=0x93 "
                 "ds=0x1234 dx=0x5678 target_preimage=0x01020304 "
-                "vector_ip=0x5678 vector_cs=0x1234\n", encoding="ascii")
+                "vector_ip=0x5678 vector_cs=0x1234\n").encode("ascii"))
             status = TOOL.int93_installation_status(installation, "v21-int93-installation")
             self.assertIn("int93_installation=present\n", status)
             self.assertIn("int93_installation_opcode_preimage=0xc5161c01b89325cd21\n", status)
             self.assertIn("int93_installation_vector_cs=0x1234\n", status)
-            installation.write_text(installation.read_text(encoding="ascii").replace(
-                "vector_ip=0x5678", "vector_ip=0x5679"), encoding="ascii")
+            installation.write_bytes(installation.read_bytes().replace(
+                b"vector_ip=0x5678", b"vector_ip=0x5679"))
             with self.assertRaisesRegex(TOOL.CaptureError, "DS:DX target"):
                 TOOL.int93_installation_status(installation, "v21-int93-installation")
-            installation.write_text(installation.read_text(encoding="ascii").replace(
-                "image=titles.exe pc=0x1163", "image=titles.exe pc=0x115c"), encoding="ascii")
+            installation.write_bytes(installation.read_bytes().replace(
+                b"image=titles.exe pc=0x1163", b"image=titles.exe pc=0x115c"))
             with self.assertRaisesRegex(TOOL.CaptureError, "reviewed installer candidate"):
                 TOOL.int93_installation_status(installation, "v21-int93-installation")
             installation.unlink()

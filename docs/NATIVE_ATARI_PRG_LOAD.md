@@ -226,7 +226,10 @@ unconsumed buffer bytes are materialized.
 The correctly mapped `$2b2be` callee executes 32 deterministic setup bytes,
 commits its D6/D7 words atomically, and stops before the source-byte read at
 `$2b2de`. The older file-`+0xde0` candidate is not executed.
-One typed byte at `$2c250` drives the exact mask/bit dispatch. On the normal
+One typed byte at `$2c250` drives the exact mask/bit dispatch. Production
+acceptance also requires every typed token byte to match the corresponding
+byte of the immutable, hash-admitted `MILL22A.INF` Fread image. Contradictory
+or unavailable bytes fail atomically instead of creating display data. On the normal
 zero-bit path, one bounded pair observation admits `$2c251..$2c252`, copies
 the bytes atomically to the owned A5 destination, advances A4/A5 and
 decrements D6 through the exact eight-byte prefix whose SHA-256 is

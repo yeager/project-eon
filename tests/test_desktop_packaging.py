@@ -240,13 +240,16 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("directories that are not 0755", source)
         self.assertIn("rpmspec --parse", source)
         self.assertIn("rpmlint --strict", source)
-        self.assertIn('$(dirname "$0")/rpmlintrc', source)
+        self.assertIn('--config "$(dirname "$0")/rpmlint.toml"', source)
         self.assertIn("rpm --checksig --nosignature", source)
 
-        rpmlintrc = (ROOT / "packaging" / "rpmlintrc").read_text(encoding="utf-8")
-        self.assertIn('addFilter("no-signature$")', rpmlintrc)
-        self.assertIn('addFilter("no-packager-tag$")', rpmlintrc)
-        self.assertIn('addFilter("invalid-license MIT$")', rpmlintrc)
+        import tomllib
+        config = tomllib.loads((ROOT / "packaging" / "rpmlint.toml").read_text(encoding="utf-8"))
+        self.assertEqual(config["Filters"], [
+            "no-signature$",
+            "no-packager-tag$",
+            "invalid-license MIT$",
+        ])
 
     def test_debian_package_generates_system_dependencies_without_host_sdl(self) -> None:
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")

@@ -75,7 +75,7 @@ for package in "$@"; do
       # package cannot truthfully change: it is deliberately unsigned, CPack
       # emits Vendor/Contact but no Packager header, and Ubuntu's rpmlint 2.5
       # license table predates the valid SPDX MIT identifier.
-      rpmlint --strict -c "$(dirname "$0")/rpmlintrc" "$package"
+      rpmlint --strict --config "$(dirname "$0")/rpmlint.toml" "$package"
       ;;
     *)
       echo "unsupported package: $package" >&2

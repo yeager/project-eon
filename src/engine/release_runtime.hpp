@@ -802,6 +802,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_1fe88_return(DeuterosAmigaObservedTitlePostAdjusted1fe88Return);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_final_gate(DeuterosAmigaObservedTitlePostAdjustedFinalGate);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_input_return(DeuterosAmigaObservedTitlePostAdjustedInputReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_repeated_input_return(DeuterosAmigaObservedLocalCallReturn);
 
 
     // Active-session transition for a complete, already validated v4/v5

@@ -91,10 +91,10 @@ class ReceiptVerifierTests(unittest.TestCase):
             root = Path(directory)
             runner = TOOL.load_tool("run_millennium_dos_capture")
             sidecar = root / "int93-installation.raw"
-            sidecar.write_text(
+            sidecar.write_bytes((
                 "int93-installation-v1 image=2200ad.exe pc=0x4175 vector=0x93 "
                 "ds=0x4567 dx=0x89ab target_preimage=0xdeadbeef "
-                "vector_ip=0x89ab vector_cs=0x4567\n", encoding="ascii")
+                "vector_ip=0x89ab vector_cs=0x4567\n").encode("ascii"))
             fields = dict(line.split("=", 1) for line in runner.int93_installation_status(
                 sidecar, "v21-int93-installation").splitlines())
             TOOL.verify_millennium_int93_installation(fields, root)
@@ -260,12 +260,12 @@ class ReceiptVerifierTests(unittest.TestCase):
             root = Path(directory)
             results = root / "results.raw"
             keys = root / "host-input-receipt.raw"
-            keys.write_text(
+            keys.write_bytes((
                 "host-key 1 ticks=2 state=down scancode=0x1 sym=0x2 mod=0x0\n"
-                "host-key 2 ticks=3 state=up scancode=0x1 sym=0x2 mod=0x0\n", encoding="ascii")
-            results.write_text(
+                "host-key 2 ticks=3 state=up scancode=0x1 sym=0x2 mod=0x0\n").encode("ascii"))
+            results.write_bytes((
                 "raw-result\t1 1 title-input-poll image=titles.exe pc=0x0d0a "
-                "host_key_ordinal=2 ah=0x06 dl=0xff\n", encoding="ascii")
+                "host_key_ordinal=2 ah=0x06 dl=0xff\n").encode("ascii"))
             capture = TOOL.load_tool("run_millennium_dos_capture")
             fields = dict(line.split("=", 1) for line in
                 capture.title_input_checkpoint_status(results, keys, "v13-title-poll").splitlines())
@@ -282,8 +282,8 @@ class ReceiptVerifierTests(unittest.TestCase):
             root = Path(directory)
             history = root / "normal-core-history.raw"
             capture = TOOL.load_tool("run_millennium_dos_capture")
-            history.write_text("normal-core-history-v1 count=16 entries="
-                + ",".join(capture.KNOWN_V14_NORMAL_CORE_HISTORY) + "\n", encoding="ascii")
+            history.write_bytes(("normal-core-history-v1 count=16 entries="
+                + ",".join(capture.KNOWN_V14_NORMAL_CORE_HISTORY) + "\n").encode("ascii"))
             (root / "results.raw").write_bytes(capture.KNOWN_V11_EARLY_STOP_RAW)
             fields = dict(line.split("=", 1) for line in
                 capture.normal_core_history_status(history, "v14-normal-core-history").splitlines())

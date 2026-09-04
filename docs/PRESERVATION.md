@@ -1456,7 +1456,11 @@ The loaded `$2b2be` target begins at file `+0xdbe`, not the older candidate at
 It derives A3 `$2b2ba`, transforms D6/D7, stores both words atomically, copies
 the owned A5 into A6/A0, sets D5 to 4 and clears D2. Execution stops before
 `MOVE.B (A4)+,D0` at `$2b2de`, source `$2c250`.
-A generation-owned observation admits exactly that byte. The 12-byte
+A generation-owned observation admits exactly that byte. The production
+facade rejects it unless it equals the byte in the hash-admitted
+`MILL22A.INF` Fread image; the same check covers every later token payload,
+so typed input cannot manufacture decoded pixels. Rejection leaves both the
+consumer checkpoint and native memory unchanged. The 12-byte
 read/copy/mask/branch span hashes to
 `948e269d0e24d6ec05013d07ffe3d3ba66400189b98a30d676b44e5b39683fe6`.
 Bytes with no `$c0` bits reach the first pair copy at `$2b2ea`; a bit-6-clear
@@ -4653,6 +4657,13 @@ and `$4000` at `$5050:$0003`, `$0004`, and `$001d`. Exact
 owns their branch/address arithmetic, `CS:$14df/$14e1` pointer stores, and
 atomic destination clearing. Execution stops at typed `$16b3`; neither the
 three inputs nor subsequent source bytes have inferred graphics semantics.
+The subsequent `$16b3..$16e8` loop is hash-bound as 54 exact bytes, SHA-256
+`24a597122dd6afe0c434683295f0e97ef04e60b67722db2042178f33f2c361ed`.
+Source and lookup reads remain separately typed and ordered. Between them the
+runtime owns the exact half-byte shifts, `DX` and `BX` loop edges, destination
+advance, atomic byte write, and final register restoration. A genuine first
+lookup resolves `$4000:$0170` value `$7a` through `$5050:$409a` value zero;
+no lookup-table, palette, planar, or pixel semantics are claimed.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7149,6 +7160,16 @@ atomically; zero selects literal `$00f0`, nonzero selects `$0f00`. The path
 then stops before repeated external `$40662->$1f238` at return `$40668`.
 The helper result beyond its typed D0/SR and the hardware colour meaning are
 not inferred; no custom-chip write is committed at this boundary.
+
+After that boundary, the exact 28-byte loop span at ADF `$9b656` hashes to
+`f2f0719628f34964ec9c8554b08950a3c12e399aede501411898c3a07036f0c2`.
+Each iteration writes the already selected `$00f0` or `$0f00` word to
+`$dff180`, calls `$40662->$1f238`, and requires a typed return at `$40668`.
+A D0 low byte other than `$43` repeats at `$40656`; `$43` exits through
+`$40670` and the exact branch to `$40574`. The number of iterations and all
+helper effects remain observation-driven. Each hardware word is committed as
+one atomic native-memory effect, without assigning a renderer or gameplay
+meaning to it.
 SR remain opaque. The transition is replay-safe, revoked with its owning
 session, and assigns no rendering or gameplay meaning.
 

@@ -57,10 +57,10 @@ def is_system_temporary_path(path: Path) -> bool:
 
 def require_external_output(path: Path) -> Path:
     """Reject paths that could turn a preservation report into repository data."""
-    if not path.is_absolute():
-        raise AnalysisError("output path must be absolute")
     if is_system_temporary_path(path):
         raise AnalysisError("output path must be outside /tmp")
+    if not path.is_absolute():
+        raise AnalysisError("output path must be absolute")
     if path.exists() or path.is_symlink():
         raise AnalysisError("output path must not already exist or be a symlink")
     try:

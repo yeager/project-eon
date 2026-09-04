@@ -48,6 +48,10 @@ typed first-header bytes `$14a9`, `$14f0`, or `$1647`; continue from those
 genuine ordered runtime observations. Mode two now owns its genuine `$1647`,
 `$1653`, and `$1657` inputs and exact setup through typed source byte `$16b3`;
 continue there without assigning lookup or pixel semantics.
+The full typed `$16b3..$16e8` nested byte-pair loop is native, including
+lookup boundaries, atomic destination writes, repeated row/column edges, and
+return. Continue from its ordered source/lookup observations toward the first
+complete admitted destination state; do not infer pixel or palette meaning.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.
@@ -82,6 +86,9 @@ are now typed and native. The next exact boundary is `JSR $2b2be` at `$2aaec`.
 The correctly mapped `$2b2be` setup is now native through its atomic D6/D7
 stores. The next boundary is `MOVE.B (A4)+,D0` at `$2b2de`, source `$2c250`.
 That first source byte and all four exact dispatch outcomes are now native.
+The production facade now binds the prefix and token observations to the
+resident hash-admitted `MILL22A.INF` bytes; synthetic token streams remain
+confined to focused state-machine tests and cannot enter runtime memory.
 The normal path now owns the typed pair at `$2c251..$2c252` and executes the
 hash-bound D6/D7/D5 run, row and plane continuation at `$2b2f2..$2b321`.
 It stops only when the next pair/token needs source bytes or at the routine
@@ -397,8 +404,10 @@ conditional word reads recover the caller through `$4062c`: rejected
 conditions join at `$40638`, while the selected tail stops at external jump
 `$37f56`. At `$40638`, the first `$1f238` return is typed. A non-`$43` low
 byte loops to `$40574`; `$43` atomically XORs word `$1bf36` with `$0101`,
-selects exact colour word `$00f0` or `$0f00`, and stops before repeated
-external `$40662->$1f238`.
+selects exact colour word `$00f0` or `$0f00`. The repeated `$40662->$1f238`
+returns are now observation-driven: each iteration atomically writes the
+selected word to `$dff180`, non-`$43` repeats at `$40656`, and `$43` exits
+through `$40670` to the recovered `$40574` loop.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

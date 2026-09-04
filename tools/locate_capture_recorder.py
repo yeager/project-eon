@@ -42,10 +42,10 @@ def is_system_tmp_path(path: Path) -> bool:
 
 
 def require_root(path: Path) -> Path:
-    if not path.is_absolute():
-        raise LocatorError("search root must be absolute")
     if is_system_tmp_path(path):
         raise LocatorError("search root must not use /tmp")
+    if not path.is_absolute():
+        raise LocatorError("search root must be absolute")
     try:
         info = path.lstat()
     except OSError as error:
@@ -80,6 +80,21 @@ def reviewed_hashes(kind: str, protocol: str | None) -> dict[str, str]:
     return {"reviewed-fs-uae": runner.EXPECTED_RECORDER_SHA256}
 
 
+def is_executable_candidate(path: Path, info: os.stat_result) -> bool:
+    """Apply the host's executable-file convention without trusting content.
+
+    POSIX executes regular files through mode bits. Windows does not preserve
+    those bits, and uses executable suffixes instead; requiring ``S_IXUSR``
+    there silently excludes every reviewed ``.exe`` recorder.
+    """
+    if os.name == "nt":
+        executable_suffixes = {suffix.lower() for suffix in
+                               os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+                               if suffix}
+        return path.suffix.lower() in executable_suffixes
+    return bool(info.st_mode & stat.S_IXUSR)
+
+
 def iter_candidates(roots: list[Path], max_files: int):
     visited = 0
     pending = list(reversed(roots))
@@ -100,7 +115,7 @@ def iter_candidates(roots: list[Path], max_files: int):
             if stat.S_ISDIR(info.st_mode):
                 pending.append(path)
                 continue
-            if not stat.S_ISREG(info.st_mode) or not (info.st_mode & stat.S_IXUSR):
+            if not stat.S_ISREG(info.st_mode) or not is_executable_candidate(path, info):
                 continue
             visited += 1
             if visited > max_files:
