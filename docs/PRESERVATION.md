@@ -36,6 +36,12 @@ The hash-bound `$7339..$7381` continuation is admitted only from the active
 writes, calls, loop count, and the terminal `$73cc` jump as typed checkpoints.
 It does not execute or infer `$73cc`; see `MILLENNIUM_DOS_NINTH_FUNCTION.md`.
 
+### Millennium DOS fourth-function runtime boundary
+
+The `$72f9 -> $ba5e` continuation requires authenticated dispatch index 3.
+Its three literal writes are emitted only after their preceding exact call
+returns; see `MILLENNIUM_DOS_FOURTH_FUNCTION.md`.
+
 ### External replay checkpoints
 
 Canonical frame, audio, state, and physical-input checkpoint bytes remain
@@ -2832,6 +2838,16 @@ writes. These remain sparse values and a bounded write plan; the host does not
 allocate or clear that address range. The session stops at `$40498` before the
 first custom-chip write and therefore claims neither display output nor a
 graphics/hardware ABI implementation.
+
+The next native boundary admits the four custom-chip writes only as an exact,
+strictly ordered observation sequence: `$40498/$40/$7fff`,
+`$4049e/$42/$7fff`, `$404a4/$9a/$c000`, and `$404aa/$96/$87ff`, all relative
+to `$dff000`. Project Eon performs none of these hardware writes. Once all four
+are observed, the hash-locked caller continues through `$404b0 -> $1ef74` and
+retains the local descriptor/request plan (`$1ef48`, callback `$1f056`, request
+`$1eefa`, command 9). It stops at `$1f04a`, before reading Exec base `$4` and
+calling vector `-$1ce` at `$1f04e`. The descriptor plan does not establish the
+service, callback ABI, device, or a callback invocation.
 
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small

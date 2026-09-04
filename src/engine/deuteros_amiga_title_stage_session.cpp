@@ -17,6 +17,8 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
       exec_prelude_(execute_deuteros_amiga_title_exec_prelude(disk, plan, incoming_profile)),
       graphics_setup_(parse_deuteros_amiga_title_graphics_setup_profile(disk, plan)),
       display_clear_(parse_deuteros_amiga_title_display_clear_profile(disk, plan)),
+      callback_registration_(
+          parse_deuteros_amiga_title_callback_registration_profile(disk, plan)),
       exec_boundary_session_(disk, plan, exec_prelude_, profile_) {
     if (stage_.length == 0 || stage_.disk_offset > AmigaAdf::standard_size
         || stage_.length > AmigaAdf::standard_size - stage_.disk_offset
@@ -141,6 +143,19 @@ DeuterosAmigaTitleStageSession::observe_exec_return(
             == DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary) {
         open_library_boundary_session_.emplace(
             *advanced, graphics_setup_, profile_, display_clear_);
+    }
+    return advanced;
+}
+
+std::optional<DeuterosAmigaTitleDisplayLocalAdvance>
+DeuterosAmigaTitleStageSession::observe_display_base_and_advance(
+    const DeuterosAmigaObservedDisplayBaseRead& observation) {
+    if (!open_library_boundary_session_) return std::nullopt;
+    const auto advanced =
+        open_library_boundary_session_->observe_display_base_and_advance(observation);
+    if (advanced) {
+        custom_chip_boundary_session_.emplace(
+            observation.trace_sequence, profile_, callback_registration_);
     }
     return advanced;
 }

@@ -400,6 +400,11 @@ struct MillenniumDosNinthFunctionByteObservation { std::uint16_t instruction_add
 struct MillenniumDosNinthFunctionCallReturnObservation { std::uint16_t call_address=0; std::uint16_t return_address=0; };
 struct MillenniumDosNinthFunctionObservationResult { bool accepted=false; std::string error; };
 struct MillenniumDosNinthFunctionCheckpoint { MillenniumDosNinthFunctionState state=MillenniumDosNinthFunctionState::awaiting_guard; MillenniumDosNinthFunctionBoundary boundary; std::size_t loop_count=0; std::vector<MillenniumDosNinthFunctionByteEffect> effects; };
+struct MillenniumDosFourthFunctionDispatchObservation { std::uint16_t scaled_call_address=0; std::uint16_t dispatcher_address=0; std::size_t function_key_index=0; std::uint16_t handler_address=0; };
+struct MillenniumDosFourthFunctionWordObservation { std::uint16_t instruction_address=0; std::uint16_t runtime_address=0; std::uint16_t value=0; };
+struct MillenniumDosFourthFunctionCallReturnObservation { std::uint16_t call_address=0; std::uint16_t return_address=0; };
+struct MillenniumDosFourthFunctionObservationResult { bool accepted=false; std::string error; };
+struct MillenniumDosFourthFunctionCheckpoint { MillenniumDosFourthFunctionState state=MillenniumDosFourthFunctionState::awaiting_guard; MillenniumDosFourthFunctionBoundary boundary; std::vector<MillenniumDosFourthFunctionByteEffect> effects; };
 
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
@@ -548,6 +553,10 @@ public:
     [[nodiscard]] MillenniumDosNinthFunctionObservationResult observe_millennium_dos_ninth_function_byte(MillenniumDosNinthFunctionByteObservation);
     [[nodiscard]] MillenniumDosNinthFunctionObservationResult observe_millennium_dos_ninth_function_call_return(MillenniumDosNinthFunctionCallReturnObservation);
     [[nodiscard]] std::optional<MillenniumDosNinthFunctionCheckpoint> millennium_dos_ninth_function_checkpoint() const;
+    [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_dispatch(MillenniumDosFourthFunctionDispatchObservation);
+    [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_word(MillenniumDosFourthFunctionWordObservation);
+    [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_call_return(MillenniumDosFourthFunctionCallReturnObservation);
+    [[nodiscard]] std::optional<MillenniumDosFourthFunctionCheckpoint> millennium_dos_fourth_function_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics>
     millennium_dos_owned_function_diagnostics() const;
 
@@ -565,6 +574,7 @@ private:
     std::optional<MillenniumDosSixthFunctionSession> millennium_dos_sixth_function_;
     std::optional<MillenniumDosEighthFunctionSession> millennium_dos_eighth_function_;
     std::optional<MillenniumDosNinthFunctionSession> millennium_dos_ninth_function_;
+    std::optional<MillenniumDosFourthFunctionSession> millennium_dos_fourth_function_;
     std::optional<MillenniumDosTenthFunctionSession> millennium_dos_tenth_function_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;

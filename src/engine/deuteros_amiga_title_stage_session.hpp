@@ -5,6 +5,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "engine/deuteros_amiga_title_exec_boundary_session.hpp"
+#include "engine/deuteros_amiga_title_custom_chip_boundary_session.hpp"
 #include "engine/deuteros_amiga_title_open_library_boundary_session.hpp"
 
 #include <span>
@@ -93,9 +94,15 @@ public:
     }
     [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayLocalAdvance>
     observe_display_base_and_advance(
-        const DeuterosAmigaObservedDisplayBaseRead& observation) {
-        if (!open_library_boundary_session_) return std::nullopt;
-        return open_library_boundary_session_->observe_display_base_and_advance(observation);
+        const DeuterosAmigaObservedDisplayBaseRead& observation);
+    [[nodiscard]] const DeuterosAmigaTitleCustomChipBoundarySession*
+    custom_chip_boundary() const noexcept {
+        return custom_chip_boundary_session_ ? &*custom_chip_boundary_session_ : nullptr;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCallbackRegistrationLocalPlan>
+    observe_custom_chip_write(const DeuterosAmigaObservedCustomChipWrite& observation) {
+        if (!custom_chip_boundary_session_) return std::nullopt;
+        return custom_chip_boundary_session_->observe_write(observation);
     }
 
 private:
@@ -107,9 +114,12 @@ private:
     DeuterosAmigaTitleExecPrelude exec_prelude_;
     DeuterosAmigaTitleGraphicsSetupProfile graphics_setup_;
     DeuterosAmigaTitleDisplayClearProfile display_clear_;
+    DeuterosAmigaTitleCallbackRegistrationProfile callback_registration_;
     DeuterosAmigaTitleExecBoundarySession exec_boundary_session_;
     std::optional<DeuterosAmigaTitleOpenLibraryBoundarySession>
         open_library_boundary_session_;
+    std::optional<DeuterosAmigaTitleCustomChipBoundarySession>
+        custom_chip_boundary_session_;
     std::string original_sha256_;
     bool local_prefix_executed_ = false;
 };

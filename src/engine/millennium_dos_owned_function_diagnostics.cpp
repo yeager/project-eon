@@ -14,6 +14,8 @@ struct Profile {
     std::string_view id;
 };
 constexpr std::array profiles{
+    Profile{RuntimeSessionKind::millennium_dos_fourth_function, 3, 0x72f9,
+        "millennium-dos-en-f4-handler"},
     Profile{RuntimeSessionKind::millennium_dos_sixth_function, 5, 0x7415,
         "millennium-dos-en-f6-handler"},
     Profile{RuntimeSessionKind::millennium_dos_seventh_function, 6, 0x7521,

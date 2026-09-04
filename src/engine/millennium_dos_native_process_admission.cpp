@@ -115,6 +115,7 @@ MillenniumDosNativeProcessAdmission::make_eighth_function_session() const {
 MillenniumDosNinthFunctionSession MillenniumDosNativeProcessAdmission::make_ninth_function_session() const {
     require_admitted(); return MillenniumDosNinthFunctionSession(game_executable_);
 }
+MillenniumDosFourthFunctionSession MillenniumDosNativeProcessAdmission::make_fourth_function_session() const { require_admitted(); return MillenniumDosFourthFunctionSession(game_executable_); }
 
 void MillenniumDosNativeProcessAdmission::require_admitted() const {
     if (!admitted()) {
