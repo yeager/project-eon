@@ -162,6 +162,9 @@ opaque callee must return through explicit evidence before later setup runs.
 The first batch graphics return and `$20510` literal prefix now reach the
 runtime read at `$2052a`. Continue with an exact typed `$20276` observation;
 do not infer the word or claim the graphics vector copied pixels.
+The explicit `$20276` word now completes `$20510` and reaches `$1f37a`.
+Recover or explicitly bridge nested target `$20094` before advancing the
+remaining `$403f4` batch; do not infer its graphics/service behavior.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

@@ -39,6 +39,25 @@ struct DeuterosAmigaTitleServiceBatchLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedServiceWordRead {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint16_t observed_value = 0;
+};
+
+struct DeuterosAmigaTitlePostServiceWordLocalPlan {
+    DeuterosAmigaObservedServiceWordRead observation;
+    std::uint32_t destination_address = 0;
+    std::uint16_t destination_value = 0;
+    std::uint32_t routine_rts_address = 0;
+    std::uint32_t batch_next_call_address = 0;
+    std::uint32_t batch_next_call_target = 0;
+    std::uint32_t nested_call_address = 0;
+    std::uint32_t nested_call_target = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -47,10 +66,18 @@ public:
             return disk.bytes(plan.title_stage.disk_offset
                 + address - plan.title_stage.destination, length);
         };
+        const auto batch = parse_deuteros_amiga_title_post_exec_service_batch_profile(
+            disk, plan);
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
             || to_hex(sha256(at(0x20510, 38)))
-                != "60ee2fcb4a18f62cd2066aba2429e760a64f14cd3f07f3cfe8467972030008bc") {
+                != "60ee2fcb4a18f62cd2066aba2429e760a64f14cd3f07f3cfe8467972030008bc"
+            || to_hex(sha256(at(0x1f37a, 24)))
+                != "9dd36cbd04608b7381526479275f1846284f87886b725bf581ade813f70d10f5"
+            || batch.call_site_address != 0x404ce || batch.callee_address != 0x403f4
+            || batch.direct_callee_addresses[0] != 0x403c8
+            || batch.direct_callee_addresses[1] != 0x20510
+            || batch.direct_callee_addresses[2] != 0x1f37a) {
             throw std::runtime_error("Unsupported Deuteros service batch prefix");
         }
     }
@@ -81,11 +108,26 @@ public:
             0x2052a, 0x20276, 0x2052a};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostServiceWordLocalPlan>
+    observe_runtime_word(const DeuterosAmigaObservedServiceWordRead& observation) {
+        if (!observed_ || observed_word_) return std::nullopt;
+        if (observation.trace_sequence <= observed_->trace_sequence
+            || observation.instruction_address != 0x2052a
+            || observation.source_address != 0x20276) {
+            throw std::runtime_error("Deuteros service word observation does not match boundary");
+        }
+        observed_word_ = observation;
+        return DeuterosAmigaTitlePostServiceWordLocalPlan{observation,
+            0x2027c, observation.observed_value, 0x20534,
+            0x40400, 0x1f37a, 0x1f37a, 0x20094, 0x1f37a};
+    }
+
 private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
     std::uint32_t graphics_library_base_ = 0;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn> observed_;
+    std::optional<DeuterosAmigaObservedServiceWordRead> observed_word_;
 };
 
 } // namespace eon
