@@ -30,6 +30,7 @@ enum class RuntimePresentationKind {
     millennium_dos_third_function,
     millennium_dos_first_function,
     millennium_dos_second_function,
+    millennium_dos_second_function_callback,
     millennium_dos_tenth_function,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,

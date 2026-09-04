@@ -268,6 +268,7 @@ struct MillenniumDosPostOverlayLoopCheckpoint {
     MillenniumDosPostOverlayLoopBoundary boundary;
     std::size_t completed_call_return_count = 0;
     std::size_t action_poll_count = 0;
+    std::size_t dispatch_generation = 0;
     std::optional<std::uint16_t> observed_private_interrupt_ax;
     std::optional<std::uint8_t> observed_action;
     std::optional<std::size_t> function_key_index;
@@ -478,6 +479,13 @@ struct MillenniumDosSecondFunctionCallReturnObservation { std::uint16_t call_add
 struct MillenniumDosSecondFunctionBlObservation { std::uint16_t instruction_address=0; std::uint8_t value=0; };
 struct MillenniumDosSecondFunctionObservationResult { bool accepted=false; std::string error; };
 struct MillenniumDosSecondFunctionCheckpoint { MillenniumDosSecondFunctionState state=MillenniumDosSecondFunctionState::awaiting_availability; MillenniumDosSecondFunctionBoundary boundary; std::vector<MillenniumDosSecondFunctionEffect> effects; };
+struct MillenniumDosSecondFunctionCallbackEntryObservation { std::uint16_t entry_address=0; };
+struct MillenniumDosSecondFunctionCallbackRuntimeByteObservation { std::uint16_t instruction_address=0;std::uint16_t runtime_address=0;std::uint8_t value=0; };
+struct MillenniumDosSecondFunctionCallbackRuntimeWordObservation { std::uint16_t instruction_address=0;std::uint16_t runtime_address=0;std::uint16_t value=0; };
+struct MillenniumDosSecondFunctionCallbackCallReturnObservation { std::uint16_t call_address=0;std::uint16_t return_address=0; };
+struct MillenniumDosSecondFunctionCallbackBlObservation { std::uint16_t instruction_address=0;std::uint8_t value=0; };
+struct MillenniumDosSecondFunctionCallbackObservationResult { bool accepted=false;std::string error; };
+struct MillenniumDosSecondFunctionCallbackCheckpoint { MillenniumDosSecondFunctionCallbackState state=MillenniumDosSecondFunctionCallbackState::awaiting_selection_byte;MillenniumDosSecondFunctionCallbackBoundary boundary;std::vector<MillenniumDosSecondFunctionCallbackEffect> effects; };
 
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
@@ -659,6 +667,12 @@ public:
     [[nodiscard]] MillenniumDosSecondFunctionObservationResult observe_millennium_dos_second_function_call_return(MillenniumDosSecondFunctionCallReturnObservation);
     [[nodiscard]] MillenniumDosSecondFunctionObservationResult observe_millennium_dos_second_function_bl(MillenniumDosSecondFunctionBlObservation);
     [[nodiscard]] std::optional<MillenniumDosSecondFunctionCheckpoint> millennium_dos_second_function_checkpoint() const;
+    [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_entry(MillenniumDosSecondFunctionCallbackEntryObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_runtime_byte(MillenniumDosSecondFunctionCallbackRuntimeByteObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_runtime_word(MillenniumDosSecondFunctionCallbackRuntimeWordObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_call_return(MillenniumDosSecondFunctionCallbackCallReturnObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_bl(MillenniumDosSecondFunctionCallbackBlObservation);
+    [[nodiscard]] std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> millennium_dos_second_function_callback_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics>
     millennium_dos_owned_function_diagnostics() const;
 
@@ -682,6 +696,7 @@ private:
     std::optional<MillenniumDosThirdFunctionSession> millennium_dos_third_function_;
     std::optional<MillenniumDosFirstFunctionSession> millennium_dos_first_function_;
     std::optional<MillenniumDosSecondFunctionSession> millennium_dos_second_function_;
+    std::optional<MillenniumDosSecondFunctionCallbackSession> millennium_dos_second_function_callback_;
     std::optional<MillenniumDosTenthFunctionSession> millennium_dos_tenth_function_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;

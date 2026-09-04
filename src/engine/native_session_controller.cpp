@@ -29,6 +29,7 @@ std::string_view native_session_state_label(const NativeSessionState state) {
     case NativeSessionState::millennium_dos_third_function:return "MILLENNIUM DOS THIRD-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_first_function:return "MILLENNIUM DOS FIRST-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_second_function:return "MILLENNIUM DOS SECOND-FUNCTION HANDLER";
+    case NativeSessionState::millennium_dos_second_function_callback:return "MILLENNIUM DOS SECOND-FUNCTION CALLBACK";
     case NativeSessionState::millennium_dos_tenth_function:
         return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
@@ -74,6 +75,7 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
     case RuntimeSessionKind::millennium_dos_third_function:return NativeSessionState::millennium_dos_third_function;
     case RuntimeSessionKind::millennium_dos_first_function:return NativeSessionState::millennium_dos_first_function;
     case RuntimeSessionKind::millennium_dos_second_function:return NativeSessionState::millennium_dos_second_function;
+    case RuntimeSessionKind::millennium_dos_second_function_callback:return NativeSessionState::millennium_dos_second_function_callback;
     case RuntimeSessionKind::millennium_dos_tenth_function:
         return NativeSessionState::millennium_dos_tenth_function;
     case RuntimeSessionKind::millennium_amiga_bootstrap: return NativeSessionState::millennium_amiga_bootstrap;
@@ -366,6 +368,14 @@ EON_NATIVE_SECOND(observe_millennium_dos_second_function_call_return,MillenniumD
 EON_NATIVE_SECOND(observe_millennium_dos_second_function_bl,MillenniumDosSecondFunctionBlObservation)
 #undef EON_NATIVE_SECOND
 std::optional<MillenniumDosSecondFunctionCheckpoint> NativeSessionController::millennium_dos_second_function_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_second_function)return std::nullopt;return runtime_.millennium_dos_second_function_checkpoint();}
+MillenniumDosSecondFunctionCallbackObservationResult NativeSessionController::observe_millennium_dos_second_function_callback_entry(MillenniumDosSecondFunctionCallbackEntryObservation o){if(state_!=NativeSessionState::millennium_dos_post_overlay_loop)return{false,"F2 callback entry requires post-overlay loop"};auto r=runtime_.observe_millennium_dos_second_function_callback_entry(o);synchronize_after_runtime_change();return r;}
+#define EON_NATIVE_F2_CALLBACK(name,type) MillenniumDosSecondFunctionCallbackObservationResult NativeSessionController::name(type o){if(state_!=NativeSessionState::millennium_dos_second_function_callback)return{false,"Observation requires F2 callback session"};return runtime_.name(o);}
+EON_NATIVE_F2_CALLBACK(observe_millennium_dos_second_function_callback_runtime_byte,MillenniumDosSecondFunctionCallbackRuntimeByteObservation)
+EON_NATIVE_F2_CALLBACK(observe_millennium_dos_second_function_callback_runtime_word,MillenniumDosSecondFunctionCallbackRuntimeWordObservation)
+EON_NATIVE_F2_CALLBACK(observe_millennium_dos_second_function_callback_call_return,MillenniumDosSecondFunctionCallbackCallReturnObservation)
+EON_NATIVE_F2_CALLBACK(observe_millennium_dos_second_function_callback_bl,MillenniumDosSecondFunctionCallbackBlObservation)
+#undef EON_NATIVE_F2_CALLBACK
+std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> NativeSessionController::millennium_dos_second_function_callback_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_second_function_callback)return std::nullopt;return runtime_.millennium_dos_second_function_callback_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 NativeSessionController::millennium_dos_owned_function_diagnostics() const {
     switch (state_) {
@@ -374,6 +384,7 @@ NativeSessionController::millennium_dos_owned_function_diagnostics() const {
     case NativeSessionState::millennium_dos_third_function:
     case NativeSessionState::millennium_dos_first_function:
     case NativeSessionState::millennium_dos_second_function:
+    case NativeSessionState::millennium_dos_second_function_callback:
     case NativeSessionState::millennium_dos_sixth_function:
     case NativeSessionState::millennium_dos_seventh_function:
     case NativeSessionState::millennium_dos_eighth_function:

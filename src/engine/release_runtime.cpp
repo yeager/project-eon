@@ -230,6 +230,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_third_function_.reset();
     millennium_dos_first_function_.reset();
     millennium_dos_second_function_.reset();
+    millennium_dos_second_function_callback_.reset();
     millennium_dos_gx_startup_.reset();
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
@@ -598,7 +599,7 @@ ReleaseRuntimeCoordinator::millennium_dos_post_overlay_loop_checkpoint() const {
     const auto& loop = *millennium_dos_post_overlay_loop_;
     return MillenniumDosPostOverlayLoopCheckpoint{
         loop.state(), loop.boundary(), loop.completed_call_return_count(),
-        loop.action_poll_count(), loop.observed_private_interrupt_ax(),
+        loop.action_poll_count(), loop.dispatch_generation(), loop.observed_private_interrupt_ax(),
         loop.observed_action(), loop.function_key_index(), loop.runtime_effects()};
 }
 
@@ -1058,6 +1059,14 @@ EON_SECOND_FORWARD(observe_millennium_dos_second_function_call_return,Millennium
 EON_SECOND_FORWARD(observe_millennium_dos_second_function_bl,MillenniumDosSecondFunctionBlObservation,observe_bl(o.instruction_address,o.value))
 #undef EON_SECOND_FORWARD
 std::optional<MillenniumDosSecondFunctionCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_second_function_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function||!millennium_dos_second_function_)return std::nullopt;const auto& s=*millennium_dos_second_function_;return MillenniumDosSecondFunctionCheckpoint{s.state(),s.boundary(),s.effects()};}
+MillenniumDosSecondFunctionCallbackObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_second_function_callback_entry(const MillenniumDosSecondFunctionCallbackEntryObservation o){MillenniumDosSecondFunctionCallbackObservationResult r;if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop||!millennium_dos_native_process_||!millennium_dos_handler_completion_||millennium_dos_handler_completion_->function_key_index!=1||millennium_dos_handler_completion_->handler_address!=0x71ca||millennium_dos_handler_completion_->terminal_instruction_address!=0x7220||millennium_dos_handler_completion_->return_address!=0xd40d||o.entry_address!=0x7221){r.error="F2 callback entry requires exact prior F2 completion and observed $7221 entry";return r;}try{millennium_dos_second_function_callback_.emplace(millennium_dos_native_process_->make_second_function_callback_session());session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::millennium_dos_second_function_callback);r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+#define EON_F2_CALLBACK_FORWARD(name,type,body) MillenniumDosSecondFunctionCallbackObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosSecondFunctionCallbackObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_second_function_callback_){r.error="No active F2 callback session";return r;}try{millennium_dos_second_function_callback_->body;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_runtime_byte,MillenniumDosSecondFunctionCallbackRuntimeByteObservation,observe_runtime_byte(o.instruction_address,o.runtime_address,o.value))
+EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_runtime_word,MillenniumDosSecondFunctionCallbackRuntimeWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value))
+EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_call_return,MillenniumDosSecondFunctionCallbackCallReturnObservation,observe_call_return(o.call_address,o.return_address))
+EON_F2_CALLBACK_FORWARD(observe_millennium_dos_second_function_callback_bl,MillenniumDosSecondFunctionCallbackBlObservation,observe_bl(o.instruction_address,o.value))
+#undef EON_F2_CALLBACK_FORWARD
+std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_second_function_callback_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_second_function_callback_)return std::nullopt;const auto&s=*millennium_dos_second_function_callback_;return MillenniumDosSecondFunctionCallbackCheckpoint{s.state(),s.boundary(),s.effects()};}
 
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
@@ -1079,6 +1088,16 @@ ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
         if (boundary.call_target) input.boundary.call_target = *boundary.call_target;
     };
     switch (session_snapshot_->kind) {
+    case RuntimeSessionKind::millennium_dos_second_function_callback: {
+        if(!millennium_dos_second_function_callback_)return std::nullopt;
+        input.function_key_index=1;input.handler_address=0x71ca;
+        const auto boundary=millennium_dos_second_function_callback_->boundary();
+        auto kind=MillenniumDosOwnedFunctionBoundaryKind::register_value;
+        if(boundary.kind==MillenniumDosSecondFunctionCallbackBoundaryKind::runtime_byte)kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_byte;
+        else if(boundary.kind==MillenniumDosSecondFunctionCallbackBoundaryKind::runtime_word)kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_word;
+        else if(boundary.kind==MillenniumDosSecondFunctionCallbackBoundaryKind::call_return)kind=MillenniumDosOwnedFunctionBoundaryKind::call_return;
+        input.boundary.kind=kind;input.boundary.instruction_address=boundary.instruction_address;input.boundary.runtime_address=boundary.runtime_address;if(boundary.target)input.boundary.call_target=*boundary.target;break;
+    }
     case RuntimeSessionKind::millennium_dos_second_function: {
         if (!millennium_dos_second_function_) return std::nullopt;
         input.function_key_index=1; input.handler_address=0x71ca;

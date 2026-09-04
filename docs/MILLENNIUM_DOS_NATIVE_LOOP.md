@@ -50,3 +50,11 @@ and resumes at the existing action-poll boundary. A handler still at an
 external call, F9's jump handoff, a mismatched index/address, reset, or source
 revocation fails closed. This models control flow only: it does not reconstruct
 the handler's calls, effects, input, frame, audio, or gameplay meaning.
+
+The loop checkpoint also carries a monotonic dispatch generation. It advances
+only when the exact state machine reaches a terminal dispatch call, not when a
+handler is admitted or completed. Tests now exercise two complete dispatch
+cycles over genuine authenticated executable bytes: an explicitly driven F1
+local return resumes at poll-tail call ordinal 11, four separately observed
+returns reach a second action poll, and an explicit F5 action/guard reaches
+generation two. No call result or handler effect is supplied by the runtime.
