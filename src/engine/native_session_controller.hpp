@@ -19,6 +19,7 @@ enum class NativeSessionState {
     millennium_dos_title,
     millennium_dos_sound_driver_boundary,
     millennium_dos_title_handoff_boundary,
+    millennium_dos_gx_startup_boundary,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,
     deuteros_amiga_opening,
@@ -49,6 +50,10 @@ public:
     millennium_dos_startup_input() const;
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
+    [[nodiscard]] MillenniumDosGxActiveTraceAdmission
+    admit_active_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace);
+    [[nodiscard]] std::optional<MillenniumDosGxStartupCheckpoint>
+    millennium_dos_gx_startup_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     // The 50 Hz opening scheduler is native-session lifecycle state. SDL
     // supplies a monotonic timestamp, receives only immutable VM events, and

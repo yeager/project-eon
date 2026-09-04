@@ -191,6 +191,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    millennium_dos_gx_startup_.reset();
     millennium_dos_sound_selection_.reset();
     millennium_dos_title_.reset();
     millennium_dos_.reset();
@@ -335,6 +336,69 @@ ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace(
         rejected.error = "Unable to admit the Millennium DOS GX startup boundary";
         return rejected;
     }
+}
+
+MillenniumDosGxActiveTraceAdmission
+ReleaseRuntimeCoordinator::admit_active_millennium_dos_gx_startup_reference_trace(
+    const ReferenceTrace& trace) {
+    MillenniumDosGxActiveTraceAdmission result;
+    constexpr std::string_view release_sha256 =
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
+    if (admission_ != ReleaseRuntimeAdmission::active || !active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
+        || active_->release.game != Game::millennium || active_->release.platform != Platform::dos
+        || active_->release.language != "en" || active_->release.sha256 != release_sha256
+        || trace.source_release.game != active_->release.game
+        || trace.source_release.platform != active_->release.platform
+        || trace.source_release.language != active_->release.language
+        || trace.source_release.sha256 != active_->release.sha256
+        || trace.source_release.path != active_->release.path
+        || trace.source_release.layout != active_->release.layout
+        || trace.source_release.containers != active_->release.containers) {
+        result.error = "GX startup trace requires the exact active English DOS title-handoff boundary";
+        return result;
+    }
+    auto admitted = admit_millennium_dos_gx_startup_reference_trace(trace);
+    if (!admitted.session) {
+        result.error = admitted.error;
+        return result;
+    }
+    if (admitted.session->state()
+            != MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary
+        || !admitted.session->evaluation() || !admitted.session->post_overlay_evaluation()) {
+        result.error = "GX startup trace did not produce its exact terminal checkpoint";
+        return result;
+    }
+    // Publish only after every source/event rehash and the complete ordered
+    // replay succeeded. A rejection leaves the title-handoff state intact.
+    millennium_dos_gx_startup_.emplace(std::move(admitted));
+    session_snapshot_ = make_runtime_session_snapshot(
+        *active_, RuntimeSessionKind::millennium_dos_gx_startup_boundary);
+    result.accepted = true;
+    return result;
+}
+
+std::optional<MillenniumDosGxStartupCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_gx_startup_checkpoint() const {
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_gx_startup_boundary
+        || !millennium_dos_gx_startup_ || !millennium_dos_gx_startup_->session) {
+        return std::nullopt;
+    }
+    const auto& session = *millennium_dos_gx_startup_->session;
+    const auto& overlay = session.evaluation();
+    const auto& continuation = session.post_overlay_evaluation();
+    if (!overlay || !continuation
+        || session.state()
+            != MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary
+        || overlay->outcome != MillenniumDosGxOverlayStartupOutcome::overlay_return
+        || continuation->outcome
+            != MillenniumDosPostOverlayContinuationOutcome::private_interrupt_boundary) {
+        return std::nullopt;
+    }
+    return MillenniumDosGxStartupCheckpoint{
+        session.state(), session.observed_post_overlay_call_return_count(),
+        overlay->boundary_address, continuation->boundary_address, overlay->overlay_writes};
 }
 
 RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(

@@ -66,6 +66,10 @@ public:
     millennium_dos_startup_input() const;
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
+    [[nodiscard]] MillenniumDosGxActiveTraceAdmission
+    admit_active_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace);
+    [[nodiscard]] std::optional<MillenniumDosGxStartupCheckpoint>
+    millennium_dos_gx_startup_checkpoint() const;
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
     [[nodiscard]] std::optional<DeuterosAmigaOpeningPresentationSnapshot>

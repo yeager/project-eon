@@ -20,6 +20,10 @@ enum class RuntimeSessionKind {
     // TITLES.EXE took its local nonzero-console path but its process/launcher
     // return and 2200ad.exe request remain unobserved.
     millennium_dos_title_handoff_boundary,
+    // One exact ten-record reference trace has advanced the call-free GX
+    // startup suffix through its second private-INT boundary. No interrupt,
+    // local callee, device result, input, frame, or game state is modeled.
+    millennium_dos_gx_startup_boundary,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,
     deuteros_amiga_opening,

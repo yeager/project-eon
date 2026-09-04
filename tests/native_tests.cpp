@@ -998,6 +998,8 @@ int main() {
             eon::NativeSessionState::millennium_dos_sound_driver_boundary},
         std::pair{eon::RuntimeSessionKind::millennium_dos_title_handoff_boundary,
             eon::NativeSessionState::millennium_dos_title_handoff_boundary},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_gx_startup_boundary,
+            eon::NativeSessionState::millennium_dos_gx_startup_boundary},
         std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
             eon::NativeSessionState::millennium_amiga_bootstrap},
         std::pair{eon::RuntimeSessionKind::millennium_atari_bootstrap,
@@ -1021,6 +1023,8 @@ int main() {
             eon::RuntimePresentationKind::millennium_dos_sound_driver_boundary},
         std::pair{eon::RuntimeSessionKind::millennium_dos_title_handoff_boundary,
             eon::RuntimePresentationKind::millennium_dos_title_handoff_boundary},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_gx_startup_boundary,
+            eon::RuntimePresentationKind::millennium_dos_gx_startup_boundary},
         std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
             eon::RuntimePresentationKind::millennium_amiga_bootstrap},
         std::pair{eon::RuntimeSessionKind::millennium_atari_bootstrap,
@@ -1060,6 +1064,9 @@ int main() {
         == eon::RuntimeInputContract::deuteros_amiga_opening_held_signal);
     assert(eon::runtime_input_contract_for_session(
         eon::RuntimeSessionKind::millennium_dos_sound_driver_boundary)
+        == eon::RuntimeInputContract::none);
+    assert(eon::runtime_input_contract_for_session(
+        eon::RuntimeSessionKind::millennium_dos_gx_startup_boundary)
         == eon::RuntimeInputContract::none);
     assert(eon::runtime_input_contract_identifier(
         eon::RuntimeInputContract::millennium_dos_startup_observation)
@@ -5732,6 +5739,11 @@ int main() {
         assert(runtime_trace_admission.session->state()
             == eon::MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary);
         assert(runtime_trace_admission.session->overlay_byte(0x65) == 0x8f);
+        // The returned session outlives the local VerifiedReleaseMedia and
+        // extracted vectors used inside the admission gate. Its span backing
+        // must therefore remain owned by the result, not dangle after return.
+        assert(runtime_trace_admission.session->post_overlay_evaluation()
+            && runtime_trace_admission.session->post_overlay_evaluation()->boundary_address == 0x0129);
         // The trace gate remains a non-launching operation: no active release,
         // adapter, session snapshot, input route, or opening tick can appear.
         assert(!trace_gate.active() && !trace_gate.session_snapshot()
@@ -5739,6 +5751,31 @@ int main() {
         assert(trace_gate.observe_input(eon::RuntimeInputObservation::available_character())
             == eon::RuntimeInputDisposition::rejected);
         assert(!trace_gate.tick_deuteros_amiga_opening());
+
+        // Active admission is a separate state-machine transition. Even a
+        // complete exact trace cannot preload or infer the missing English
+        // driver/title handoff; rejection preserves the current title state.
+        eon::ReleaseRuntimeCoordinator active_trace_gate;
+        assert(active_trace_gate.acquire(admitted_dos_launch));
+        const auto premature_active_admission =
+            active_trace_gate.admit_active_millennium_dos_gx_startup_reference_trace(runtime_trace);
+        assert(!premature_active_admission.accepted
+            && !premature_active_admission.error.empty());
+        assert(active_trace_gate.session_snapshot()
+            && active_trace_gate.session_snapshot()->kind
+                == eon::RuntimeSessionKind::millennium_dos_title);
+        assert(!active_trace_gate.millennium_dos_gx_startup_checkpoint());
+        eon::RuntimeHost revoking_trace_host;
+        assert(revoking_trace_host.launch_direct(controlled_dos_request, releases).accepted());
+        revoking_trace_host.begin_source_revocation();
+        const auto revoking_trace_admission =
+            revoking_trace_host.admit_active_millennium_dos_gx_startup_reference_trace(runtime_trace);
+        assert(!revoking_trace_admission.accepted
+            && revoking_trace_admission.error
+                == "GX startup trace rejected during source revocation");
+        assert(!revoking_trace_host.millennium_dos_gx_startup_checkpoint());
+        revoking_trace_host.finish_source_revocation();
+        assert(revoking_trace_host.is_menu());
         {
             std::ofstream output(trace_events_path, std::ios::binary | std::ios::trunc);
             output << valid_gx_trace << "# changed after validation\n";

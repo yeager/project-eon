@@ -9,6 +9,8 @@ std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
         return "MILLENNIUM DOS SOUND DRIVER BOUNDARY";
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
         return "MILLENNIUM DOS TITLE HANDOFF BOUNDARY";
+    case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
+        return "MILLENNIUM DOS GX STARTUP BOUNDARY";
     case RuntimeSessionKind::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
     case RuntimeSessionKind::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case RuntimeSessionKind::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
@@ -35,6 +37,7 @@ RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind
         return RuntimeInputContract::deuteros_amiga_opening_held_signal;
     case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
+    case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
     case RuntimeSessionKind::deuteros_amiga_title_stage:
@@ -88,6 +91,7 @@ bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
         break;
     case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
+    case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
     case RuntimeSessionKind::deuteros_amiga_title_stage:
@@ -118,6 +122,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
         break;
     case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
+    case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
         // Neither original transition has a recovered return/ABI contract.
         // Preserve its terminal observation without forwarding another host
         // input byte, rendering a successor screen, or changing game state.

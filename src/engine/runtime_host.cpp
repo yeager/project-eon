@@ -58,6 +58,19 @@ RuntimeHost::millennium_dos_static_dispatch_diagnostics() const {
     return NativeSessionController::millennium_dos_static_dispatch_diagnostics();
 }
 
+MillenniumDosGxActiveTraceAdmission
+RuntimeHost::admit_active_millennium_dos_gx_startup_reference_trace(
+    const ReferenceTrace& trace) {
+    if (revoking()) return {false, "GX startup trace rejected during source revocation"};
+    return NativeSessionController::admit_active_millennium_dos_gx_startup_reference_trace(trace);
+}
+
+std::optional<MillenniumDosGxStartupCheckpoint>
+RuntimeHost::millennium_dos_gx_startup_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_gx_startup_checkpoint();
+}
+
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {
     if (revoking()) return std::nullopt;

@@ -91,6 +91,11 @@ void MillenniumDosGxStartupSession::observe_post_overlay_mode_byte(const std::ui
         throw std::runtime_error("Unsupported Millennium DOS GX post-overlay private-INT boundary");
     }
     state_ = MillenniumDosGxStartupSessionState::post_overlay_private_interrupt_boundary;
+    // The terminal object retains only reconstructed values. The source
+    // leaves were used to validate and advance the trace but must not remain
+    // as borrowed spans after the admission function's media snapshot ends.
+    game_executable_ = {};
+    gx_overlay_executable_ = {};
 }
 std::optional<std::uint8_t> MillenniumDosGxStartupSession::overlay_byte(const std::uint16_t offset) const {
     const auto found = overlay_bytes_.find(offset);
