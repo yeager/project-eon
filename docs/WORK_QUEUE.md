@@ -156,6 +156,9 @@ required boundary is the exact `-$1bc` return from `$207a0`.
 That final return now completes the hash-proven `$206d4` routine and reaches
 `$404bc`. Continue by recovering `$206be`; do not infer its returned D0 or
 pointer effect.
+The fully local `$206be` controller transfer and `$403e6` literal pointer seed
+now advance to `$404ce`. The next boundary is the `$403f4` service batch; each
+opaque callee must return through explicit evidence before later setup runs.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

@@ -99,6 +99,8 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> service_setup_local_plan;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> second_service_local_plan;
     std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> third_service_local_plan;
+    std::optional<DeuterosAmigaTitleFourthServiceLocalPlan> fourth_service_local_plan;
+    std::optional<DeuterosAmigaTitleFifthServiceLocalPlan> fifth_service_local_plan;
     std::uint32_t stop_before_address = 0;
 };
 struct DeuterosAmigaTitleDependencyObservationResult { bool accepted=false; std::string error; };
@@ -484,6 +486,7 @@ struct MillenniumDosSecondFunctionCallbackRuntimeByteObservation { std::uint16_t
 struct MillenniumDosSecondFunctionCallbackRuntimeWordObservation { std::uint16_t instruction_address=0;std::uint16_t runtime_address=0;std::uint16_t value=0; };
 struct MillenniumDosSecondFunctionCallbackCallReturnObservation { std::uint16_t call_address=0;std::uint16_t return_address=0; };
 struct MillenniumDosSecondFunctionCallbackBlObservation { std::uint16_t instruction_address=0;std::uint8_t value=0; };
+struct MillenniumDosSecondFunctionCallbackJumpEntryObservation { std::uint16_t instruction_address=0;std::uint16_t target_address=0; };
 struct MillenniumDosSecondFunctionCallbackObservationResult { bool accepted=false;std::string error; };
 struct MillenniumDosSecondFunctionCallbackCheckpoint { MillenniumDosSecondFunctionCallbackState state=MillenniumDosSecondFunctionCallbackState::awaiting_selection_byte;MillenniumDosSecondFunctionCallbackBoundary boundary;std::vector<MillenniumDosSecondFunctionCallbackEffect> effects; };
 
@@ -549,6 +552,8 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_service_setup_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_second_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_third_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_fourth_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_fifth_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     // Active-session transition for a complete, already validated v4/v5
     // trace. The owned result is metadata only and grants no host capability.
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -672,6 +677,7 @@ public:
     [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_runtime_word(MillenniumDosSecondFunctionCallbackRuntimeWordObservation);
     [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_call_return(MillenniumDosSecondFunctionCallbackCallReturnObservation);
     [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_bl(MillenniumDosSecondFunctionCallbackBlObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_jump_entry(MillenniumDosSecondFunctionCallbackJumpEntryObservation);
     [[nodiscard]] std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> millennium_dos_second_function_callback_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics>
     millennium_dos_owned_function_diagnostics() const;
@@ -704,6 +710,8 @@ private:
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> deuteros_amiga_title_second_service_plan_;
     std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> deuteros_amiga_title_third_service_plan_;
+    std::optional<DeuterosAmigaTitleFourthServiceLocalPlan> deuteros_amiga_title_fourth_service_plan_;
+    std::optional<DeuterosAmigaTitleFifthServiceLocalPlan> deuteros_amiga_title_fifth_service_plan_;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula_;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;

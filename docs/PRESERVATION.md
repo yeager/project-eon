@@ -2925,6 +2925,17 @@ second descriptor reached through `$2069c` inactive at offsets `$30/$1e`.
 Both join at RTS `$207ca`, return to `$404bc`, and stop before the unresolved
 call to `$206be`. No pointer target is dereferenced by the host model.
 
+After either admitted final `$206d4` outcome, `$20698` still contains the
+literal first descriptor pointer `$205e4`. The complete local `$206be..$206d3`
+helper hashes to
+`cdcda125af5c05d4d88e7d486f15f50bd87c4641a38e9c8a4e29a9394152317a`;
+its caller-connected path copies that value to controller cell `$206a0` and
+returns at `$206d2`. The caller then sets D1 to `$13000` and invokes the
+separately hash-locked `$404c2 -> $403e6` pointer seed, which records literal
+`$1c482` at `$1f97c`. The native session stops at `$404ce` before the opaque
+`$403f4` service batch. These are sparse local effects only; no pointer target
+is dereferenced and no service return is assumed.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -5783,6 +5794,15 @@ checkpoint for F2 index 1 (`$71ca`, terminal RET `$7220`, dispatcher return
 premature, stale, and source-revoking observations are rejected. No record
 content, menu selection meaning, callee result, input, rendering, or
 destination-jump behavior is manufactured.
+
+The callback's `$ff` wrap branch advances only after an explicit observation
+of jump `$7228 -> $702c`. The exact `$702c..$7040` continuation observes
+returns from calls `$0bd7`, `$4bf7`, `$0b76`, `$0bdf`, and `$0b0c`, then
+records the literal byte write `$da1e = 0` before its local `RET`. No callee is
+executed or assigned a result. The normal tail jump `$7253 -> $0bdf` remains
+an external handoff: `$0bdf` is a shared runtime-branched routine and its
+eventual return target belongs to the unobserved callback caller. Eon does not
+claim that it returns to the post-overlay loop.
 
 The exact English `2200AD.EXE` sixth-table handler `$7415..$7454` is available
 through the native runtime only after the active post-overlay state machine has

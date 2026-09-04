@@ -74,6 +74,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> observe_title_service_setup_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_service_setup_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> observe_title_second_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_second_service_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> observe_title_third_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_third_service_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFourthServiceLocalPlan> observe_title_fourth_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_fourth_service_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFifthServiceLocalPlan> observe_title_fifth_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_fifth_service_exec_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 
