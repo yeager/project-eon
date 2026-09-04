@@ -560,6 +560,17 @@ and stops before `$16b3` reads the next byte through the already admitted
 source pointer. No header fields, lookup table, pixels, or palette semantics
 are inferred.
 
+The complete `$16b3..$16e8` byte-pair loop is now represented by its exact
+54-byte prefix/loop body (SHA-256
+`24a597122dd6afe0c434683295f0e97ef04e60b67722db2042178f33f2c361ed`).
+Each source byte produces a separately typed lookup address through the
+stored `$5050:$4020` pointer. The native state machine preserves `CL`, `CH`,
+`SI`, `DI`, `BX`, and `DX`, combines only the instruction-selected halves,
+writes each resulting raw byte atomically, and implements both nested loop
+edges and the `$16e8` return. The first tested pair uses already produced
+bytes at `$4000:$0170/$0171` and genuine lookup byte zero at
+`$5050:$409a`; this is execution evidence, not a pixel interpretation.
+
 The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
 bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
 the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution

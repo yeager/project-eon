@@ -1164,6 +1164,13 @@ struct DeuterosAmigaTitlePostAdjustedInputReturnPlan {
     std::uint16_t toggle_word=0,colour_word=0;
     std::uint32_t next_address=0,next_call_address=0,next_call_target=0,next_return_address=0;
 };
+struct DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t colour_destination=0;
+    std::uint16_t colour_word=0;
+    bool command_43=false,repeats=false,completed=false;
+    std::uint32_t next_address=0,next_call_address=0,next_call_target=0,next_return_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3243,6 +3250,22 @@ public:
             colour,command?0x40656U:0x40574U,command?0x40662U:0U,
             command?0x1f238U:0U,command?0x40668U:0U};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan> observe_post_adjusted_repeated_input_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!post_adjusted_input_return_||post_adjusted_repeated_input_completed_)return std::nullopt;
+        if(static_cast<std::uint8_t>(post_adjusted_input_return_->service_return.result_d0)!=0x43U)
+            return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x40662
+            ||o.call_target!=0x1f238||o.return_address!=0x40668)
+            throw std::runtime_error("Deuteros repeated input return does not match boundary");
+        const bool command=static_cast<std::uint8_t>(o.result_d0)==0x43U;
+        last_command_sequence_=o.trace_sequence;++post_adjusted_repeated_input_iteration_;
+        post_adjusted_repeated_input_completed_=command;
+        const auto toggled=static_cast<std::uint16_t>(*post_adjusted_input_return_->toggle_source_word^0x0101U);
+        const auto colour=static_cast<std::uint16_t>(toggled==0?0x00f0U:0x0f00U);
+        return DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan{o,0xdff180,colour,
+            command,!command,command,command?0x40574U:0x40656U,
+            command?0U:0x40662U,command?0U:0x1f238U,command?0U:0x40668U};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3467,6 +3490,8 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostAdjusted1fe88Return> post_adjusted_1fe88_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedFinalGate> post_adjusted_final_gate_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedInputReturn> post_adjusted_input_return_;
+    std::uint32_t post_adjusted_repeated_input_iteration_=0;
+    bool post_adjusted_repeated_input_completed_=false;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

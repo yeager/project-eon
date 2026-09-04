@@ -1,0 +1,10 @@
+# Project Eon CI builds non-release RPM artifacts. Releases are maintainer-only,
+# so manufacturing a CI signing identity would misrepresent their provenance.
+# CPack also provides truthful Vendor and Contact metadata but cannot emit the
+# redundant Packager header. Ubuntu 24.04's rpmlint 2.5 license table predates
+# RPM's accepted SPDX spelling of MIT.
+Filters = [
+  "no-signature$",
+  "no-packager-tag$",
+  "invalid-license MIT$",
+]

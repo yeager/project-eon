@@ -36,6 +36,9 @@ def read_verified_direct_file(path: Path, expected_sha256: str,
     without creating a materialized copy beside the user's media.
     """
     try:
+        before = path.lstat()
+        if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+            raise ValueError("direct member is not its declared regular file")
         flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
         descriptor = os.open(path, flags)
         with os.fdopen(descriptor, "rb") as source:
@@ -44,8 +47,14 @@ def read_verified_direct_file(path: Path, expected_sha256: str,
                     and status.st_size != expected_size):
                 raise ValueError("direct member is not its declared regular file")
             data = source.read()
+        after = path.lstat()
     except OSError as error:
         raise ValueError("unable to read declared direct media member") from error
+    if (stat.S_ISLNK(after.st_mode) or not stat.S_ISREG(after.st_mode)
+            or before.st_dev != after.st_dev or before.st_ino != after.st_ino
+            or before.st_size != after.st_size or before.st_mtime_ns != after.st_mtime_ns
+            or (status.st_dev, status.st_ino) != (before.st_dev, before.st_ino)):
+        raise ValueError("direct member changed while being read")
     if (expected_size is not None and len(data) != expected_size
             or hashlib.sha256(data).hexdigest() != expected_sha256):
         raise ValueError("direct member hash mismatch")
