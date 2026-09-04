@@ -44,6 +44,7 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_complete,
     game_init_jsr_2b448_boundary,
     game_init_palette_transform_boundary,
+    game_init_palette_xbios_selector_6_boundary,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -146,6 +147,12 @@ struct MillenniumAtariGameInitExtendedRunObservation {
 struct MillenniumAtariGameInitAlternateWrite {
     std::uint32_t address=0; std::uint16_t value=0;
     constexpr bool operator==(const MillenniumAtariGameInitAlternateWrite&) const = default;
+};
+struct MillenniumAtariGameInitPaletteWordsObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t instruction_address=0;
+    std::uint32_t source_address=0; std::uint32_t destination_address=0;
+    std::array<std::uint16_t,16> destination_words{};
 };
 
 struct MillenniumAtariBchgObservation {
@@ -371,6 +378,12 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::array<std::uint32_t,24> game_init_palette_source_longs{};
     std::uint32_t game_init_palette_clear_destination=0;
     std::uint32_t game_init_palette_copy_destination=0;
+    std::string game_init_palette_arithmetic_sha256;
+    std::array<std::uint16_t,16> game_init_palette_result_words{};
+    std::array<std::uint8_t,48> game_init_palette_result_bytes{};
+    std::uint32_t game_init_palette_xbios_trap_address=0;
+    std::uint16_t game_init_palette_xbios_selector=0;
+    std::uint32_t game_init_palette_xbios_pointer=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -473,6 +486,9 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_return();
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_palette_copy_prefix();
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_palette_copy_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_words(
+        const MillenniumAtariGameInitPaletteWordsObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_palette_arithmetic_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

@@ -1488,8 +1488,16 @@ Eon clears eight longwords at the decoder's final A5, then copies the 24
 original longwords at `$2a66c..$2a6cb` to `$2b3c8..$2b427` in one atomic
 batch. Those 96 immutable source bytes hash to
 `a2263d35c251e787a9a5705a5277bcf641321817f825e7689081280fbd157dfe`.
-Execution stops before the palette arithmetic read at `$2b486`; its existing
-destination words and the later XBIOS selector-6 effect are not inferred.
+The existing 16 destination words at `$2b428..$2b447` are admitted as one
+ordered typed observation. The exact 40-byte span at file `+0xf86`, runtime
+`$2b486..$2b4ad`, hashes to
+`0866601f1a271ee74b399dd544b5b1ced15693e600c30034531a094dbc41d746`.
+For each of 16 groups it adds the three adjacent byte pairs in the copied
+source, stores each low sum byte back at the first byte of its pair, and adds
+carry weights `$0100`, `$0010`, and `$0001` to that group's destination word.
+Eon commits the 48 byte writes and 16 word writes atomically. Execution then
+stops at `TRAP #14` `$2b4ac`, with selector 6 and pointer `$2b428` retained;
+the XBIOS result and all later timing behaviour remain external boundaries.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4516,6 +4524,13 @@ Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
 memory or original media.
+The next `$5050:$0019` word is also accepted only as an ordered typed runtime
+observation. The exact `$13d0..$13e1` span (SHA-256
+`787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
+atomically stores both observed words at `CS:$1357/$1359` and the low unsigned
+product at `CS:$133b`; AX/DX retain the exact low/high product pair. The next
+boundary is `$13e2`, source `$5050:$0017`. No dimension, pixel, or rendering
+semantics are inferred from either input or their product.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6867,6 +6882,12 @@ without assigning effects. The exact four-byte continuation at
 it loads the next immutable pair D0 `$0017`, D1 `$03a8` and stops before the
 second `$20cb2->$41ad2` call. Eon does not infer either helper effect, the
 second return, object meaning, or any visual meaning from sparse output.
+A typed second return now retains its raw D0/SR without assigning helper
+effects. The exact second-call-plus-local-RTS span `$20cb2..$20cb9` hashes to
+`889c758fbfd514bc3633787bc2736b39a95aa712af79d4dc8f119eee6bbb65ab`.
+Execution stops at RTS `$20cb8`: its stack-supplied destination and caller
+continuation are not inferred, and the sparse descriptor bytes remain only
+recovered runtime state.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

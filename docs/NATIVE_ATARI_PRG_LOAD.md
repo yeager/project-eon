@@ -241,8 +241,11 @@ all derived destination words atomically.
 After the token engine returns, the exact caller continuation reaches
 `JSR $2b448`. Its native deterministic prefix clears eight longwords and
 copies the hash-bound 96-byte source at `$2a66c` to `$2b3c8` atomically.
-Execution now stops before palette arithmetic at `$2b486`; XBIOS selector 6
-remains an external boundary.
+The native palette loop now accepts the 16 existing destination words as one
+typed observation, performs all 16-by-3 byte additions and weighted carry
+updates, and commits its 48 byte plus 16 word effects atomically. Execution
+stops at `TRAP #14` `$2b4ac`, with XBIOS selector 6 and palette pointer
+`$2b428` retained; the firmware result and later timing remain external.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

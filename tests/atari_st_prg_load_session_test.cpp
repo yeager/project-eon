@@ -414,6 +414,25 @@ int main(const int argc, const char* const argv[]) {
         assert(palette_memory.apply(single_cell_planes.make_game_init_palette_copy_effect_batch("palette-copy-prefix")).accepted
             && palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,palette_clear_destination})==0
             && palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b3c8})==static_cast<std::uint8_t>(single_cell_planes.checkpoint().game_init_palette_source_longs[0]>>24U));
+        eon::MillenniumAtariGameInitPaletteWordsObservation palette_words{1,99,0x2b486,0x2b3c8,0x2b428,{}};
+        for(std::size_t i=0;i<palette_words.destination_words.size();++i){const auto hi=palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b428U+static_cast<std::uint32_t>(i*2U)});const auto lo=palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b429U+static_cast<std::uint32_t>(i*2U)});assert(hi&&lo);palette_words.destination_words[i]=static_cast<std::uint16_t>((*hi<<8U)|*lo);}
+        const auto first_source_long=single_cell_planes.checkpoint().game_init_palette_source_longs[0];
+        const auto first_sum=static_cast<std::uint16_t>(first_source_long>>24U)
+            +static_cast<std::uint8_t>(first_source_long>>16U);
+        const auto expected_first_word=static_cast<std::uint16_t>(palette_words.destination_words[0]
+            +(first_sum>0xffU?0x0100U:0U));
+        auto bad_palette_words=palette_words;bad_palette_words.instruction_address=0x2b488;
+        assert(!single_cell_planes.observe_game_init_palette_words(bad_palette_words).accepted);
+        assert(single_cell_planes.observe_game_init_palette_words(palette_words).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_xbios_selector_6_boundary
+            && single_cell_planes.checkpoint().game_init_palette_arithmetic_sha256=="0866601f1a271ee74b399dd544b5b1ced15693e600c30034531a094dbc41d746"
+            && single_cell_planes.checkpoint().game_init_palette_xbios_trap_address==0x2b4ac
+            && single_cell_planes.checkpoint().game_init_palette_xbios_selector==6
+            && single_cell_planes.checkpoint().game_init_palette_xbios_pointer==0x2b428
+            && single_cell_planes.checkpoint().game_init_palette_result_bytes[0]==static_cast<std::uint8_t>(first_sum)
+            && single_cell_planes.checkpoint().game_init_palette_result_words[0]==expected_first_word);
+        assert(palette_memory.apply(single_cell_planes.make_game_init_palette_arithmetic_effect_batch("palette-arithmetic")).accepted
+            && palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b3c8})==single_cell_planes.checkpoint().game_init_palette_result_bytes[0]);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

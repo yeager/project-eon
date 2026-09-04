@@ -34,11 +34,11 @@ FLAGS, and ten-byte `CS:$0fdf` record are now admitted atomically. The first
 `$1941` title-loop iteration advances both output pointers and stops at the
 typed two-word `$13aa` read from relocated `TITLE.LIB+$000f`. The genuine
 `$0503/$1f02` pair is now provenance-checked and normalized to
-`$5050:$0003`. Continue with the typed runtime word at `$13cd`, source
-`$5050:$001b`; do not infer its value from unrelated archive offsets.
-That raw word is now admitted through all typed single-word facades and the
-exact `$13cd` load. Continue at `$13d0` with the typed runtime word from
-`$5050:$0019`; its value and graphics meaning remain unproven.
+`$5050:$0003`. The raw runtime words at `$5050:$001b` and `$5050:$0019`
+are now admitted through all single-word facades. Their exact unsigned
+product/store sequence is native.
+Continue at `$13e2` with the typed runtime word from `$5050:$0017`; do not
+assign dimension or rendering semantics to these fields.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -78,8 +78,11 @@ RTS. The repeated-byte, swapped-pair, and extended 14-bit run paths at
 atomic destination effects. The next large Atari job begins with the caller
 continuation after `$2b2be` returns. That caller and the `$2b448` clear/copy
 prefix are now native through `$2b486`, with the 96-byte original source and
-all 32 longword writes hash-bound and atomic. The palette arithmetic loop and
-its first XBIOS selector-6 boundary are the next large Atari job.
+all 32 longword writes hash-bound and atomic. The 16-by-3 palette arithmetic
+loop is now native with typed existing destination words and atomic byte/word
+effects through `TRAP #14` `$2b4ac`. Continue with a typed XBIOS selector-6
+return and the largest deterministic portion of the following timing loop;
+do not infer firmware results or timing from static bytes.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -333,8 +336,9 @@ descriptor and completes its 68-by-168 decode as 22,848 atomic byte writes
 after one typed destination-pointer read. Caller `$20c80` now owns the typed
 `$19d1e` pointer and exact zero branch. The qualifying nonzero object gate
 now owns typed `$ee`/`$f0` bytes and immutable table loads through the first
-`$20ca8->$41ad2` call. Its typed return and second table pair are now owned;
-continue at the second `$20cb2->$41ad2` return. Do not
+`$20ca8->$41ad2` call. Both helper returns and the second table pair are now
+owned through local RTS `$20cb8` without assigning helper effects. Continue
+with an observed RTS destination. Do not
 treat the sparse decoded memory as a renderer surface.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

@@ -1041,16 +1041,42 @@ void MillenniumDosTitleInitializationSession::observe_far_word(
     if((boundary_state!=MillenniumDosTitleInitializationState::graphics_record_word_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_third_word_read_boundary
-            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary)
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_word_read_boundary)
         ||observation.sequence!=last_sequence_+1
         ||observation.instruction_address!=far_read_boundary_.instruction_address
         ||observation.source_segment!=far_read_boundary_.source_segment
         ||observation.source_offset!=far_read_boundary_.source_offset
         ||(boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_word_read_boundary
             &&observation.word!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_word_read_boundary?0x0140
                 :boundary_state==MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary?0x00c8:0x0000)))
         throw std::runtime_error("Detached Millennium DOS record word");
     far_single_word_observations_.push_back(observation);
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_word_read_boundary){
+        if(far_single_word_observations_.size()<2)
+            throw std::runtime_error("Missing Millennium DOS first title-loop record word");
+        const auto first_word=far_single_word_observations_[
+            far_single_word_observations_.size()-2].word;
+        const auto product=static_cast<std::uint32_t>(first_word)*observation.word;
+        const auto product_low=static_cast<std::uint16_t>(product);
+        const auto product_high=static_cast<std::uint16_t>(product>>16U);
+        memory_effects_.push_back({0x13d3,0x1357,
+            MillenniumDosTitleInitializationEffectWidth::word,observation.word});
+        memory_effects_.push_back({0x13d8,0x1359,
+            MillenniumDosTitleInitializationEffectWidth::word,first_word});
+        memory_effects_.push_back({0x13de,0x133b,
+            MillenniumDosTitleInitializationEffectWidth::word,product_low});
+        effects_.insert(effects_.end(),{{0x13d0,"CX",observation.word},
+            {0x13dc,"AX",product_low},{0x13dc,"DX",product_high}});
+        far_read_boundary_={0x13e2,observation.source_segment,
+            static_cast<std::uint16_t>(observation.source_offset-2),1,
+            child_code_segment_,0x138a};
+        last_sequence_=observation.sequence;
+        continuation_address_=0x13e2;
+        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_third_word_read_boundary;
+        return;
+    }
     if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary){
         effects_.push_back({0x13cd,"AX",observation.word});
         far_read_boundary_={0x13d0,observation.source_segment,
