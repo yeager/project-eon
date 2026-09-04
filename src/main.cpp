@@ -593,6 +593,7 @@ struct ModernRuntimeDiagnostics {
     // interpreted as an active input mapping or executed game path.
     std::string millennium_dos_static_dispatch;
     std::string millennium_dos_owned_function;
+    std::string deuteros_amiga_title_dependency_chain;
     // This comes only from the launcher preflight object. It does not expose
     // a local path, decode an external asset, or imply the renderer loaded it.
     std::string modern_pack = "NOT SELECTED";
@@ -988,6 +989,7 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     const std::optional<eon::MillenniumDosOwnedFunctionDiagnostics>& owned_function,
     const std::optional<eon::MillenniumDosNativeProcessCheckpoint>& millennium_process,
     const std::optional<eon::DeuterosAtariBootstrapCheckpoint>& atari_checkpoint,
+    const std::optional<eon::DeuterosAmigaTitleDependencyChainCheckpoint>& deuteros_title_chain,
     const eon::Presentation presentation,
     const eon::DisplayPreferences& display, const std::string_view aspect_identifier) {
     const auto diagnostics = eon::runtime_diagnostics_for_release(launch.release);
@@ -1102,6 +1104,21 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
         std::cout << ",\"call_target\":";
         if(owned_function->boundary.call_target) write_json_string(std::cout,hex(*owned_function->boundary.call_target)); else std::cout << "null";
         std::cout << "}}";
+    } else std::cout << "null";
+    std::cout << ",\"deuteros_amiga_title_dependency_chain\":";
+    if (deuteros_title_chain) {
+        const auto& chain = *deuteros_title_chain;
+        const auto address=[](const auto value){ std::ostringstream out; out << '$' << std::hex << value; return out.str(); };
+        std::cout << "{\"custom_chip_writes\":" << chain.observed_custom_chip_write_count
+            << ",\"custom_chip_complete\":" << (chain.custom_chip_complete ? "true" : "false")
+            << ",\"callback_return\":" << (chain.callback_exec_return_observed ? "true" : "false")
+            << ",\"service_setup_armed\":" << (chain.service_setup_boundary_armed ? "true" : "false")
+            << ",\"first_service_return\":" << (chain.service_setup_local_plan ? "true" : "false")
+            << ",\"second_service_return\":" << (chain.second_service_local_plan ? "true" : "false")
+            << ",\"third_service_return\":" << (chain.third_service_local_plan ? "true" : "false")
+            << ",\"stop_before\":";
+        write_json_string(std::cout, address(chain.stop_before_address));
+        std::cout << '}';
     } else std::cout << "null";
     // Atari's bootstrap profile has an additional media-safe checkpoint. It
     // is optional because every other adapter deliberately has no equivalent
@@ -1478,7 +1495,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
             + (diagnostics.millennium_dos_static_dispatch.empty() ? ""
                 : " / " + diagnostics.millennium_dos_static_dispatch)
             + (diagnostics.millennium_dos_owned_function.empty() ? ""
-                : " / " + diagnostics.millennium_dos_owned_function)},
+                : " / " + diagnostics.millennium_dos_owned_function)
+            + (diagnostics.deuteros_amiga_title_dependency_chain.empty() ? ""
+                : " / " + diagnostics.deuteros_amiga_title_dependency_chain)},
         {"MODERN PACK", diagnostics.modern_pack},
         {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -4304,6 +4323,7 @@ int main(int argc, char** argv) {
                 runtime.millennium_dos_owned_function_diagnostics(),
                 runtime.millennium_dos_native_process_checkpoint(),
                 runtime.deuteros_atari_bootstrap_checkpoint(),
+                runtime.deuteros_amiga_title_dependency_chain_checkpoint(),
                 request.presentation, request.display,
                 display_aspect_identifiers.at(request.display.aspect_ratio_index));
             return 0;
@@ -5161,6 +5181,16 @@ int main(int argc, char** argv) {
                 << " BOUNDARY=$" << owned->boundary.instruction_address
                 << " " << owned->mode;
             diagnostics.millennium_dos_owned_function = summary.str();
+        }
+        if (const auto chain = runtime.deuteros_amiga_title_dependency_chain_checkpoint()) {
+            std::ostringstream summary;
+            summary << "DEUTEROS TITLE STOP=$" << std::hex << chain->stop_before_address
+                << " CUSTOM=" << std::dec << chain->observed_custom_chip_write_count << "/4"
+                << " CALLBACK=" << (chain->callback_exec_return_observed ? "Y" : "N")
+                << " S1=" << (chain->service_setup_local_plan ? "Y" : "N")
+                << " S2=" << (chain->second_service_local_plan ? "Y" : "N")
+                << " S3=" << (chain->third_service_local_plan ? "Y" : "N");
+            diagnostics.deuteros_amiga_title_dependency_chain = summary.str();
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");

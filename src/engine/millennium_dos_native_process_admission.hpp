@@ -11,6 +11,7 @@
 #include "engine/millennium_dos_fifth_function_session.hpp"
 #include "engine/millennium_dos_third_function_session.hpp"
 #include "engine/millennium_dos_first_function_session.hpp"
+#include "engine/millennium_dos_second_function_session.hpp"
 #include "engine/millennium_dos_tenth_function_session.hpp"
 
 #include <cstdint>
@@ -86,6 +87,7 @@ public:
     [[nodiscard]] MillenniumDosFifthFunctionSession make_fifth_function_session() const;
     [[nodiscard]] MillenniumDosThirdFunctionSession make_third_function_session() const;
     [[nodiscard]] MillenniumDosFirstFunctionSession make_first_function_session() const;
+    [[nodiscard]] MillenniumDosSecondFunctionSession make_second_function_session() const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
     void observe_runtime_byte(std::uint16_t instruction_address,

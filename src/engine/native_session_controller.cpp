@@ -28,6 +28,7 @@ std::string_view native_session_state_label(const NativeSessionState state) {
     case NativeSessionState::millennium_dos_fifth_function:return "MILLENNIUM DOS FIFTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_third_function:return "MILLENNIUM DOS THIRD-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_first_function:return "MILLENNIUM DOS FIRST-FUNCTION HANDLER";
+    case NativeSessionState::millennium_dos_second_function:return "MILLENNIUM DOS SECOND-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_tenth_function:
         return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
@@ -72,6 +73,7 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
     case RuntimeSessionKind::millennium_dos_fifth_function:return NativeSessionState::millennium_dos_fifth_function;
     case RuntimeSessionKind::millennium_dos_third_function:return NativeSessionState::millennium_dos_third_function;
     case RuntimeSessionKind::millennium_dos_first_function:return NativeSessionState::millennium_dos_first_function;
+    case RuntimeSessionKind::millennium_dos_second_function:return NativeSessionState::millennium_dos_second_function;
     case RuntimeSessionKind::millennium_dos_tenth_function:
         return NativeSessionState::millennium_dos_tenth_function;
     case RuntimeSessionKind::millennium_amiga_bootstrap: return NativeSessionState::millennium_amiga_bootstrap;
@@ -355,6 +357,13 @@ EON_NATIVE_FIRST(observe_millennium_dos_first_function_call_return,MillenniumDos
 EON_NATIVE_FIRST(observe_millennium_dos_first_function_bl,MillenniumDosFirstFunctionBlObservation)
 #undef EON_NATIVE_FIRST
 std::optional<MillenniumDosFirstFunctionCheckpoint> NativeSessionController::millennium_dos_first_function_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_first_function)return std::nullopt;return runtime_.millennium_dos_first_function_checkpoint();}
+MillenniumDosSecondFunctionObservationResult NativeSessionController::observe_millennium_dos_second_function_dispatch(MillenniumDosSecondFunctionDispatchObservation o){if(state_!=NativeSessionState::millennium_dos_post_overlay_loop)return{false,"Second-function dispatch requires post-overlay loop"};auto r=runtime_.observe_millennium_dos_second_function_dispatch(o);synchronize_after_runtime_change();return r;}
+#define EON_NATIVE_SECOND(name,type) MillenniumDosSecondFunctionObservationResult NativeSessionController::name(type o){if(state_!=NativeSessionState::millennium_dos_second_function)return{false,"Observation requires second-function session"};return runtime_.name(o);}
+EON_NATIVE_SECOND(observe_millennium_dos_second_function_runtime_byte,MillenniumDosSecondFunctionRuntimeByteObservation)
+EON_NATIVE_SECOND(observe_millennium_dos_second_function_call_return,MillenniumDosSecondFunctionCallReturnObservation)
+EON_NATIVE_SECOND(observe_millennium_dos_second_function_bl,MillenniumDosSecondFunctionBlObservation)
+#undef EON_NATIVE_SECOND
+std::optional<MillenniumDosSecondFunctionCheckpoint> NativeSessionController::millennium_dos_second_function_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_second_function)return std::nullopt;return runtime_.millennium_dos_second_function_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 NativeSessionController::millennium_dos_owned_function_diagnostics() const {
     switch (state_) {
@@ -362,6 +371,7 @@ NativeSessionController::millennium_dos_owned_function_diagnostics() const {
     case NativeSessionState::millennium_dos_fifth_function:
     case NativeSessionState::millennium_dos_third_function:
     case NativeSessionState::millennium_dos_first_function:
+    case NativeSessionState::millennium_dos_second_function:
     case NativeSessionState::millennium_dos_sixth_function:
     case NativeSessionState::millennium_dos_seventh_function:
     case NativeSessionState::millennium_dos_eighth_function:
@@ -437,6 +447,7 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_custom_chip_write,(const 
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_callback_exec_return,(const DeuterosAmigaObservedCallbackExecReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_service_setup_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_second_service_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_third_service_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
 #undef EON_NATIVE_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
