@@ -2972,6 +2972,15 @@ evidence. The following local instructions set D0 to `$ffffffff`, load
 descriptor A0 `$1ffda`, and reload the same library-base cell. Execution stops
 at `$200b0` before vector `-$198`; no graphics service effect is inferred.
 
+The second active `$20094` boundary requires the same `$12fec` library-base
+identity, a strictly later observation of call `$200b0`, vector `-$198`, and
+return `$200b4`. D0/SR remain raw; only D0's instruction-defined low byte is
+retained for sparse destination `$20092`. The hash-proven local continuation
+records literal pointer `$1ffe6` at `$2008e`, descriptor `$1ffda` words
+`10/10/12` at offsets `6/8/4`, and the exact A0/A1/A2 inputs for the next call.
+It stops at `$200f4` before graphics vector `-$1a4`, without applying any
+graphics effect or dereferencing the destination pointer.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -5866,3 +5875,22 @@ through the coordinator, native controller, host, and launcher layers. Source
 revocation destroys the span-backed session before its admitted media owner and
 rejects subsequent observations. See `MILLENNIUM_DOS_SIXTH_FUNCTION.md` for the
 instruction-level evidence and excluded `$7455` restoration routine.
+### Millennium DOS `$0c6d` / `$0c8b` far-memory copy continuations
+
+The hash-bound `$0bdf` service now owns both mode-1 copy branches through their
+local returns.  For the non-zero `$07d8` branch, `$0c6d` reads exactly 15 rows
+of eight bytes from the observed `ES:DI`; `$0c70` records each byte at
+`CS:$07fa..$0871`, `$0c74` observes the corresponding `CS:$08ea..$0961` byte,
+and `$0c7b` records the selected byte written back to `ES:DI`.  A zero source
+byte selects the observed far-memory byte; a non-zero source byte selects
+itself.  `DI` advances eight bytes and then `$0138` per row, ending at the
+proven RET `$0c8a`.
+
+For the zero `$07d8` branch, `$0c8b` loads the previously observed segment from
+`$0107`; `$0c9b` observes 60 consecutive words from `CS:$07fa..$0871` and
+records four far-memory word writes per row at the observed mapping-return
+`DI`, with the same `$0138` row stride, ending at RET `$0ca9`.  Segment, offset,
+width, value, and instruction address are retained in typed checkpoint effects.
+No framebuffer meaning, display mode, or pixel semantics is inferred.  The
+admitted executable remains SHA-256
+`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`.

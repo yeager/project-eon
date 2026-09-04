@@ -1059,6 +1059,28 @@ int main() {
         assert(active_tail.observe_entry({30,0x7253,0x0bdf}).accepted);
         assert(!active_tail.observe_return({30,0x0be6,0xbeef}).accepted);
         assert(active_tail.observe_return({31,0x0be6,0xbeef}).accepted);
+
+        eon::MillenniumDosExternalTransferAdmission mode_two(
+            eon::MillenniumDosExternalTransferKind::bdf_mode_two_jump);
+        assert(!mode_two.observe_entry({0,0x0c4b,0x11f7}).accepted);
+        assert(!mode_two.observe_entry({40,0x0c4e,0x11f7}).accepted);
+        assert(mode_two.observe_entry({40,0x0c4b,0x11f7}).accepted);
+        assert(!mode_two.observe_return({41,0x11f7,0xd40d}).accepted);
+        const auto mode_two_checkpoint=mode_two.checkpoint();
+        assert(mode_two_checkpoint.entry
+            && mode_two_checkpoint.entry->sequence==40
+            && mode_two_checkpoint.entry->source_instruction==0x0c4b
+            && mode_two_checkpoint.entry->target_address==0x11f7
+            && !mode_two_checkpoint.returned);
+
+        eon::MillenniumDosExternalTransferAdmission other_mode(
+            eon::MillenniumDosExternalTransferKind::bdf_other_mode_jump);
+        assert(!other_mode.observe_entry({50,0x0c4e,0x11f7}).accepted);
+        assert(other_mode.observe_entry({50,0x0c4e,0x0caa}).accepted);
+        assert(!other_mode.observe_entry({51,0x0c4e,0x0caa}).accepted);
+        assert(!other_mode.observe_return({51,0x0caa,0xd40d}).accepted);
+        assert(other_mode.checkpoint().entry
+            && !other_mode.checkpoint().returned);
     }
     {
         eon::ResolvedLaunchRequest launch;
@@ -6489,6 +6511,7 @@ int main() {
         assert(!revoking_trace_host.observe_millennium_dos_bdf_word({0x0bed,0x0107,0}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_bdf_poll_return({0x0c0a,0x0c0d,0,0}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_bdf_external_return({0x0be6,0xd40d,3}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_bdf_terminal_jump({0x0c4b,0x11f7,4}).accepted);
         assert(!revoking_trace_host.millennium_dos_bdf_checkpoint());
         assert(!revoking_trace_host.observe_millennium_dos_ninth_function_word(
             {0x7339, 0xa19e, 0}).accepted);
@@ -6851,6 +6874,12 @@ int main() {
         bdf.observe_runtime_byte(0x0c3c,0xda05,2);
         assert(bdf.state()==eon::MillenniumDosBdfServiceState::external_mode_two_jump&&bdf.boundary().call_target==0x11f7);
         eon::MillenniumDosBdfServiceSession copy_bdf(*game_executable);copy_bdf.observe_runtime_byte(0x0bdf,0x07d8,0);copy_bdf.observe_runtime_word(0x0bed,0x0107,0);copy_bdf.observe_runtime_word(0x0bf2,0x07d6,0);copy_bdf.observe_runtime_byte(0x0bf6,0x07d8,0);copy_bdf.observe_poll_return(0x0c0a,0x0c0d,8,0);copy_bdf.observe_runtime_byte(0x0c19,0xda05,1);copy_bdf.observe_mapping_return(0x0c34,0x0c37,0);copy_bdf.observe_runtime_byte(0x0c3c,0xda05,1);copy_bdf.observe_runtime_byte(0x0c51,0x07d8,1);assert(copy_bdf.state()==eon::MillenniumDosBdfServiceState::far_memory_nonzero_boundary);
+        assert((copy_bdf.far_memory_boundary()==eon::MillenniumDosBdfFarMemoryBoundary{0x0c6d,0,0}));
+        for(std::uint16_t row=0;row<15;++row)for(std::uint16_t column=0;column<8;++column){const auto offset=std::uint16_t(row*0x140+column);copy_bdf.observe_far_memory_byte(0x0c6d,0,offset,0x33);copy_bdf.observe_runtime_byte(0x0c74,std::uint16_t(0x08ea+row*8+column),column?0x44:0);}
+        assert(copy_bdf.state()==eon::MillenniumDosBdfServiceState::returned_by_copy&&copy_bdf.boundary().instruction_address==0x0c8a&&copy_bdf.far_memory_effects().size()==120&&copy_bdf.far_memory_effects().front().value==0x33&&copy_bdf.far_memory_effects()[1].value==0x44);
+        eon::MillenniumDosBdfServiceSession zero_bdf(*game_executable);zero_bdf.observe_runtime_byte(0x0bdf,0x07d8,0);zero_bdf.observe_runtime_word(0x0bed,0x0107,0xa000);zero_bdf.observe_runtime_word(0x0bf2,0x07d6,0);zero_bdf.observe_runtime_byte(0x0bf6,0x07d8,0);zero_bdf.observe_poll_return(0x0c0a,0x0c0d,8,0);zero_bdf.observe_runtime_byte(0x0c19,0xda05,1);zero_bdf.observe_mapping_return(0x0c34,0x0c37,0x0100);zero_bdf.observe_runtime_byte(0x0c3c,0xda05,1);zero_bdf.observe_runtime_byte(0x0c51,0x07d8,0);
+        for(std::uint16_t row=0;row<15;++row)for(std::uint16_t word=0;word<4;++word)zero_bdf.observe_runtime_word(0x0c9b,std::uint16_t(0x07fa+(row*4+word)*2),std::uint16_t(row*4+word));
+        assert(zero_bdf.state()==eon::MillenniumDosBdfServiceState::returned_by_copy&&zero_bdf.boundary().instruction_address==0x0ca9&&zero_bdf.far_memory_effects().size()==60&&zero_bdf.far_memory_effects().back().segment==0xa000);
         eon::MillenniumDosBdfServiceSession busy_bdf(*game_executable);busy_bdf.observe_runtime_byte(0x0bdf,0x07d8,1);assert(busy_bdf.state()==eon::MillenniumDosBdfServiceState::returned_by_active);
         eon::MillenniumDosExternalTransferAdmission busy_transfer(eon::MillenniumDosExternalTransferKind::f2_tail_active_return);
         assert(busy_transfer.observe_entry({40,0x7253,0x0bdf}).accepted);
@@ -10445,6 +10474,41 @@ int main() {
     assert(first_graphics_service->next_vector == -0x198);
     assert(first_graphics_service->next_return_address == 0x200b4);
     assert(first_graphics_service->stop_before_address == 0x200b0);
+    bool rejected_second_graphics_service = false;
+    try {
+        static_cast<void>(title_stage_session.observe_graphics_service_second_return(
+            {27, 0x12fec, 0x00abcdee, 0x200b0, -0x198, 0x200b4,
+                0xa1b2c3d4, 0x2004}));
+    } catch (const std::runtime_error&) {
+        rejected_second_graphics_service = true;
+    }
+    assert(rejected_second_graphics_service);
+    const auto second_graphics_service =
+        title_stage_session.observe_graphics_service_second_return(
+            {27, 0x12fec, 0x00abcdef, 0x200b0, -0x198, 0x200b4,
+                0xa1b2c3d4, 0x2004});
+    assert(second_graphics_service);
+    assert(second_graphics_service->observed_return.result_d0 == 0xa1b2c3d4);
+    assert(second_graphics_service->observed_return.result_sr == 0x2004);
+    assert(second_graphics_service->result_byte_destination == 0x20092);
+    assert(second_graphics_service->result_low_byte == 0xd4);
+    assert(second_graphics_service->pointer_destination == 0x2008e);
+    assert(second_graphics_service->pointer_value == 0x1ffe6);
+    assert(second_graphics_service->descriptor_address == 0x1ffda);
+    assert((second_graphics_service->descriptor_offsets
+        == std::array<std::uint16_t, 3>{6, 8, 4}));
+    assert((second_graphics_service->descriptor_values
+        == std::array<std::uint16_t, 3>{10, 10, 12}));
+    assert(second_graphics_service->next_a0_value == 0x12e12);
+    assert(second_graphics_service->next_a1_value == 0x1ffda);
+    assert(second_graphics_service->next_a2_pointer_cell == 0x2008e);
+    assert(second_graphics_service->next_library_base_source_address == 0x12fec);
+    assert(second_graphics_service->next_call_address == 0x200f4);
+    assert(second_graphics_service->next_vector == -0x1a4);
+    assert(second_graphics_service->next_return_address == 0x200f8);
+    assert(second_graphics_service->stop_before_address == 0x200f4);
+    assert(!title_stage_session.observe_graphics_service_second_return(
+        {28, 0x12fec, 0x00abcdef, 0x200b0, -0x198, 0x200b4, 0, 0}));
     assert(!title_stage_session.observe_graphics_service_first_return(
         {27, 0x12fec, 0x00abcdef, 0x2009c, -0x19e, 0x200a0, 0, 0}));
     assert(!title_stage_session.observe_service_batch_runtime_word(
