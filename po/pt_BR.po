@@ -387,6 +387,15 @@ msgstr "LIMITES DO MAPA DE RECUPERAÇÃO"
 msgid "STARTUP BOUNDARY"
 msgstr "LIMITE DE INICIALIZAÇÃO"
 
+msgid "CODE IMAGES"
+msgstr "IMAGENS DE CÓDIGO"
+
+msgid "EXCLUDED"
+msgstr "EXCLUÍDAS"
+
+msgid "ACTIVE"
+msgstr "ATIVA"
+
 msgid "TRACE ADMISSION"
 msgstr "ADMISSÃO DE RASTRO"
 

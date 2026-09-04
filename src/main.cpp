@@ -5223,15 +5223,15 @@ int main(int argc, char** argv) {
         {
             const auto images = runtime.native_code_image_registry_diagnostics();
             std::ostringstream summary;
-            summary << "CODE IMAGES=" << images.mapped_descriptor_count
-                << " / EXCLUDED=" << images.excluded_image_count;
+            summary << tr("CODE IMAGES") << '=' << images.mapped_descriptor_count
+                << " / " << tr("EXCLUDED") << '=' << images.excluded_image_count;
             if (images.active) {
-                summary << " / ACTIVE=" << images.active->image_id
+                summary << " / " << tr("ACTIVE") << '=' << images.active->image_id
                     << ':' << images.active->range_id
                     << " / " << eon::native_code_address_basis_label(images.active->address_basis)
                     << " / " << eon::native_code_load_status_label(images.active->load_status);
             } else {
-                summary << " / ACTIVE=NONE";
+                summary << " / " << tr("ACTIVE") << '=' << tr("NONE");
             }
             diagnostics.native_code_images = summary.str();
         }

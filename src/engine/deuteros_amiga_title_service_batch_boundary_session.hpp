@@ -212,6 +212,49 @@ struct DeuterosAmigaTitleTailRepeatedWrapperReturnPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedTailSourceTable {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t first_instruction_address = 0;
+    std::array<std::uint32_t, 2> source_addresses{};
+    std::array<std::uint32_t, 2> observed_longwords{};
+};
+
+struct DeuterosAmigaTitleTailSourceTableLocalPlan {
+    DeuterosAmigaObservedTailSourceTable observation;
+    std::array<std::uint32_t, 2> destination_addresses{};
+    std::array<std::uint32_t, 2> destination_values{};
+    std::uint32_t local_call_address = 0;
+    std::uint32_t local_call_target = 0;
+    std::uint32_t descriptor_address = 0;
+    std::array<std::uint16_t, 4> descriptor_offsets{};
+    std::array<std::uint32_t, 4> descriptor_values{};
+    std::uint32_t exec_base_source_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::int16_t next_vector = 0;
+    std::uint32_t next_return_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
+struct DeuterosAmigaObservedTailExecReturn {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t exec_base_source_address = 0;
+    std::uint32_t observed_exec_base = 0;
+    std::uint32_t call_address = 0;
+    std::int16_t vector = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t result_d0 = 0;
+    std::uint16_t result_sr = 0;
+};
+
+struct DeuterosAmigaTitleTailExecReturnLocalPlan {
+    DeuterosAmigaObservedTailExecReturn observation;
+    std::uint32_t local_rts_address = 0;
+    std::uint32_t caller_resume_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_call_target = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -553,6 +596,48 @@ public:
             tail_return_.source_table_address, 0x404da};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSourceTableLocalPlan>
+    observe_tail_source_table(const DeuterosAmigaObservedTailSourceTable& observation) {
+        constexpr std::array<std::uint32_t, 2> sources{{0x12ff4, 0x12ff8}};
+        if (!observed_tail_repeated_wrapper_graphics_ || observed_tail_source_table_) {
+            return std::nullopt;
+        }
+        if (observation.trace_sequence
+                <= observed_tail_repeated_wrapper_graphics_->trace_sequence
+            || observation.first_instruction_address != 0x404da
+            || observation.source_addresses != sources) {
+            throw std::runtime_error("Deuteros tail source-table observation does not match boundary");
+        }
+        observed_tail_source_table_ = observation;
+        return DeuterosAmigaTitleTailSourceTableLocalPlan{observation,
+            tail_return_.destination_addresses, observation.observed_longwords,
+            tail_return_.local_service_call_address, tail_return_.local_service_address,
+            tail_return_.service_a1_literal, tail_return_.service_a1_offsets,
+            {{2, 0xc4, tail_return_.service_long_literals[0],
+                tail_return_.service_long_literals[1]}},
+            tail_return_.exec_base_address, 0x204f4, tail_return_.exec_vector,
+            tail_return_.vector_return_address, 0x204f4};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecReturnLocalPlan>
+    observe_tail_exec_return(const DeuterosAmigaObservedTailExecReturn& observation) {
+        if (!observed_tail_source_table_ || observed_tail_exec_return_) {
+            return std::nullopt;
+        }
+        if (observation.trace_sequence <= observed_tail_source_table_->trace_sequence
+            || observation.exec_base_source_address != tail_return_.exec_base_address
+            || observation.observed_exec_base == 0
+            || observation.call_address != 0x204f4
+            || observation.vector != tail_return_.exec_vector
+            || observation.return_address != tail_return_.vector_return_address) {
+            throw std::runtime_error("Deuteros tail Exec return does not match boundary");
+        }
+        observed_tail_exec_return_ = observation;
+        return DeuterosAmigaTitleTailExecReturnLocalPlan{observation,
+            tail_return_.vector_return_address, 0x404f0,
+            0x404f0, 0x389e2, 0x404f0};
+    }
+
 private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
@@ -585,6 +670,8 @@ private:
         observed_tail_repeated_graphics_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_tail_repeated_wrapper_graphics_;
+    std::optional<DeuterosAmigaObservedTailSourceTable> observed_tail_source_table_;
+    std::optional<DeuterosAmigaObservedTailExecReturn> observed_tail_exec_return_;
 };
 
 } // namespace eon

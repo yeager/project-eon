@@ -478,3 +478,12 @@ msgstr "RECOVERED PRESENTATION BOUNDARY"
 
 msgid "BOOTSTRAP BOUNDARY"
 msgstr "BOOTSTRAP BOUNDARY"
+
+msgid "CODE IMAGES"
+msgstr "CODE IMAGES"
+
+msgid "EXCLUDED"
+msgstr "EXCLUDED"
+
+msgid "ACTIVE"
+msgstr "ACTIVE"

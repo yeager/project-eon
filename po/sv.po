@@ -387,6 +387,15 @@ msgstr "ÅTERSTÄLLNINGSKARTANS GRÄNSER"
 msgid "STARTUP BOUNDARY"
 msgstr "STARTGRÄNS"
 
+msgid "CODE IMAGES"
+msgstr "KODAVBILDER"
+
+msgid "EXCLUDED"
+msgstr "UNDANTAGNA"
+
+msgid "ACTIVE"
+msgstr "AKTIV"
+
 msgid "TRACE ADMISSION"
 msgstr "SPÅRINLÄSNING"
 

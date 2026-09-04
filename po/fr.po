@@ -478,3 +478,12 @@ msgstr "LIMITE DE PRÉSENTATION RÉCUPÉRÉE"
 
 msgid "BOOTSTRAP BOUNDARY"
 msgstr "LIMITE D’AMORÇAGE"
+
+msgid "CODE IMAGES"
+msgstr "IMAGES DE CODE"
+
+msgid "EXCLUDED"
+msgstr "EXCLUES"
+
+msgid "ACTIVE"
+msgstr "ACTIF"

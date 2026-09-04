@@ -126,6 +126,7 @@ MillenniumDosSecondFunctionSession MillenniumDosNativeProcessAdmission::make_sec
 MillenniumDosSecondFunctionCallbackSession MillenniumDosNativeProcessAdmission::make_second_function_callback_session() const { require_admitted(); return MillenniumDosSecondFunctionCallbackSession(game_executable_); }
 MillenniumDosBdfServiceSession MillenniumDosNativeProcessAdmission::make_bdf_service_session() const { require_admitted(); return MillenniumDosBdfServiceSession(game_executable_); }
 MillenniumDosBdfModeTwoSession MillenniumDosNativeProcessAdmission::make_bdf_mode_two_session(const std::uint16_t entry_di) const { require_admitted(); return MillenniumDosBdfModeTwoSession(game_executable_,entry_di); }
+MillenniumDosBdfOtherModeSession MillenniumDosNativeProcessAdmission::make_bdf_other_mode_session(const std::uint8_t entry_dl,const std::uint16_t entry_di) const { require_admitted(); return MillenniumDosBdfOtherModeSession(game_executable_,entry_dl,entry_di); }
 
 void MillenniumDosNativeProcessAdmission::require_admitted() const {
     if (!admitted()) {

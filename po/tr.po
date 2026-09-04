@@ -516,3 +516,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "ÖNYÜKLEME SINIRI"
 msgid "REDUCED MOTION"
 msgstr "HAREKETİ AZALT"
+
+msgid "CODE IMAGES"
+msgstr "KOD İMAJLARI"
+
+msgid "EXCLUDED"
+msgstr "HARİÇ TUTULAN"
+
+msgid "ACTIVE"
+msgstr "ETKİN"

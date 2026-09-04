@@ -23,4 +23,17 @@ class NativeCodeImageRegistryCoverageTests(unittest.TestCase):
         self.assertIsNotNone(declared_count)
         self.assertEqual(int(declared_count.group(1)),len(rows))
 
+    def test_runtime_diagnostics_dto_and_json_surface_do_not_expose_media(self) -> None:
+        header=(ROOT/"src/engine/native_code_image_diagnostics.hpp").read_text()
+        main=(ROOT/"src/main.cpp").read_text()
+        start=main.index('std::cout << ",\\\"native_code_images\\\"')
+        end=main.index('std::cout << ",\\\"deuteros_amiga_title_dependency_chain\\\"',start)
+        dto=header[header.index("struct ActiveNativeCodeImageDiagnostics"):
+                   header.index("};",header.index("struct NativeCodeImageRegistryDiagnostics"))+2]
+        surface=(dto+main[start:end]).lower()
+        for forbidden in ("sha256", "source_offset", "span<const", "filesystem", "member"):
+            self.assertNotIn(forbidden,surface)
+        for required in ("image_id", "range_id", "address_basis", "load_status"):
+            self.assertIn(required,surface)
+
 if __name__=="__main__": unittest.main()

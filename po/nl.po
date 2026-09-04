@@ -516,3 +516,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "OPSTARTGRENS"
 msgid "REDUCED MOTION"
 msgstr "MINDER BEWEGING"
+
+msgid "CODE IMAGES"
+msgstr "CODE-IMAGES"
+
+msgid "EXCLUDED"
+msgstr "UITGESLOTEN"
+
+msgid "ACTIVE"
+msgstr "ACTIEF"

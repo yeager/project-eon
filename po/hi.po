@@ -466,3 +466,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "बूटस्ट्रैप सीमा"
 msgid "REDUCED MOTION"
 msgstr "कम गति"
+
+msgid "CODE IMAGES"
+msgstr "कोड छवियाँ"
+
+msgid "EXCLUDED"
+msgstr "बहिष्कृत"
+
+msgid "ACTIVE"
+msgstr "सक्रिय"

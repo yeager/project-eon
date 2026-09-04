@@ -348,6 +348,15 @@ msgstr "LIMITI DELLA MAPPA DI RECUPERO"
 msgid "STARTUP BOUNDARY"
 msgstr "LIMITE DI AVVIO"
 
+msgid "CODE IMAGES"
+msgstr "IMMAGINI CODICE"
+
+msgid "EXCLUDED"
+msgstr "ESCLUSE"
+
+msgid "ACTIVE"
+msgstr "ATTIVA"
+
 msgid "TRACE ADMISSION"
 msgstr "AMMISSIONE TRACCIA"
 

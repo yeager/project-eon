@@ -188,6 +188,7 @@ class CatalogTests(unittest.TestCase):
             "RECOVERY FUNCTION MAP", "UP/DOWN: PAGE   F10 / ESC: BACK TO DIAGNOSTICS",
             "PAGE", "NO HASH-BOUND FUNCTION ENTRIES FOR THIS RELEASE.",
             "DECLARATIVE DIAGNOSTICS ONLY; THIS DOES NOT EXECUTE ORIGINAL CODE.",
+            "CODE IMAGES", "EXCLUDED", "ACTIVE",
         }
         source_catalog = po_messages(PO / "ProjectEon.pot")
         self.assertTrue(labels <= set(source_catalog))
@@ -238,6 +239,7 @@ class CatalogTests(unittest.TestCase):
             "FRAME PACING", "SDL VSYNC: ON", "SDL VSYNC: OFF",
             "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
             "SCALE4X (MEMORY ONLY)", "NOT LOADED", "OPEN",
+            "CODE IMAGES", "EXCLUDED", "ACTIVE",
         }
         # English is the source-language default; every other shipped
         # catalogue must translate this complete Eon-owned diagnostics page.

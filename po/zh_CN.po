@@ -505,3 +505,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "引导边界"
 msgid "REDUCED MOTION"
 msgstr "减少动态"
+
+msgid "CODE IMAGES"
+msgstr "代码映像"
+
+msgid "EXCLUDED"
+msgstr "已排除"
+
+msgid "ACTIVE"
+msgstr "活动"
