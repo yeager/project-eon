@@ -198,6 +198,13 @@ EON_HOST_FOURTH(observe_millennium_dos_fourth_function_call_return,MillenniumDos
 #undef EON_HOST_FOURTH
 std::optional<MillenniumDosFourthFunctionCheckpoint> RuntimeHost::millennium_dos_fourth_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_fourth_function_checkpoint();}
 MillenniumDosFifthFunctionObservationResult RuntimeHost::observe_millennium_dos_fifth_function_dispatch(MillenniumDosFifthFunctionDispatchObservation o){if(revoking())return{false,"Fifth-function observation rejected during source revocation"};return NativeSessionController::observe_millennium_dos_fifth_function_dispatch(o);} MillenniumDosFifthFunctionObservationResult RuntimeHost::observe_millennium_dos_fifth_function_call_return(MillenniumDosFifthFunctionCallReturnObservation o){if(revoking())return{false,"Fifth-function observation rejected during source revocation"};return NativeSessionController::observe_millennium_dos_fifth_function_call_return(o);} std::optional<MillenniumDosFifthFunctionCheckpoint> RuntimeHost::millennium_dos_fifth_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_fifth_function_checkpoint();}
+#define EON_HOST_THIRD(name,type) MillenniumDosThirdFunctionObservationResult RuntimeHost::name(type o){if(revoking())return{false,"Third-function observation rejected during source revocation"};return NativeSessionController::name(o);}
+EON_HOST_THIRD(observe_millennium_dos_third_function_dispatch,MillenniumDosThirdFunctionDispatchObservation)
+EON_HOST_THIRD(observe_millennium_dos_third_function_word,MillenniumDosThirdFunctionWordObservation)
+EON_HOST_THIRD(observe_millennium_dos_third_function_call_return,MillenniumDosThirdFunctionCallReturnObservation)
+EON_HOST_THIRD(observe_millennium_dos_third_function_bl,MillenniumDosThirdFunctionBlObservation)
+#undef EON_HOST_THIRD
+std::optional<MillenniumDosThirdFunctionCheckpoint> RuntimeHost::millennium_dos_third_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_third_function_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 RuntimeHost::millennium_dos_owned_function_diagnostics() const {
     if (revoking()) return std::nullopt;
@@ -227,6 +234,15 @@ RuntimeHost::deuteros_amiga_title_dependency_chain_checkpoint() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_amiga_title_dependency_chain_checkpoint();
 }
+#define EON_HOST_DEUTEROS_TITLE(name,signature,arg) DeuterosAmigaTitleDependencyObservationResult RuntimeHost::name signature { if(revoking()) return {false,"Deuteros title observation rejected during source revocation"}; return NativeSessionController::name arg; }
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_local_prefix,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_exec_return,(const DeuterosAmigaObservedExecReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_open_library_return,(const DeuterosAmigaObservedOpenLibraryReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_open_library_local_path,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_display_base,(const DeuterosAmigaObservedDisplayBaseRead o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_custom_chip_write,(const DeuterosAmigaObservedCustomChipWrite o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_callback_exec_return,(const DeuterosAmigaObservedCallbackExecReturn o),(o))
+#undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
 RuntimeHost::admit_active_deuteros_amiga_title_display_trace(const ReferenceTrace& trace) {

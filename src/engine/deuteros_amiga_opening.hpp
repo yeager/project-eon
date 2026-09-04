@@ -64,6 +64,13 @@ public:
     [[nodiscard]] const std::optional<DeuterosAmigaTitleStageSession>& title_stage_session() const {
         return title_stage_session_;
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance> advance_title_local_prefix() { return title_stage_session_ ? title_stage_session_->execute_local_prefix() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint> observe_title_exec_return(const DeuterosAmigaObservedExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint> observe_title_open_library_return(const DeuterosAmigaObservedOpenLibraryReturn& o) { return title_stage_session_ ? title_stage_session_->observe_open_library_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostOpenLibraryLocalAdvance> advance_title_post_open_library_local_path() { return title_stage_session_ ? title_stage_session_->advance_post_open_library_local_path() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayLocalAdvance> observe_title_display_base(const DeuterosAmigaObservedDisplayBaseRead& o) { return title_stage_session_ ? title_stage_session_->observe_display_base_and_advance(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCallbackRegistrationLocalPlan> observe_title_custom_chip_write(const DeuterosAmigaObservedCustomChipWrite& o) { return title_stage_session_ ? title_stage_session_->observe_custom_chip_write(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCallbackRegistrationAdvance> observe_title_callback_exec_return(const DeuterosAmigaObservedCallbackExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_callback_exec_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

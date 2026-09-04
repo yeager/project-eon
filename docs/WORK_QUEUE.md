@@ -142,6 +142,9 @@ an explicit return observation for its Exec vector `-$1ce` and must not infer
 the service or callback semantics. That typed return is now admitted and the
 local RTS reaches `$404b6`; the next continuation must resolve or explicitly
 observe the `$206d4` boundary rather than assigning it invented behavior.
+The `$206d4` prefix and its explicit `-$126` return now advance the first local
+descriptor plan to `$20708`. Continue only with an exact `-$162` observation;
+do not infer either Exec service or manufacture its result.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

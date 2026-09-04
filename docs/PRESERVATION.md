@@ -48,6 +48,12 @@ The complete `$7597..$75a5` four-call chain is hash-bound and admits only
 dispatch index 4. Each callee remains opaque; see
 `MILLENNIUM_DOS_FIFTH_FUNCTION.md`.
 
+### Millennium DOS third-function boundary
+
+The hash-bound `$6faa..$6fee` continuation is admitted only for dispatch index
+2. It stops before dereferencing original far pointer cell `$0112`; see
+`MILLENNIUM_DOS_THIRD_FUNCTION.md`.
+
 ### External replay checkpoints
 
 Canonical frame, audio, state, and physical-input checkpoint bytes remain
@@ -2862,6 +2868,17 @@ D0 and SR are retained verbatim without interpreting the service result. The
 hash-proven `$1f052` RTS then returns to `$404b6`, where the session stops
 before the next unresolved direct call to `$206d4`. This does not assert that
 a callback was installed, invoked, or associated with a host input/device.
+
+At `$206d4`, a separately hash-locked 14-byte prefix (SHA-256
+`a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001`)
+clears A1 and calls Exec vector `-$126` from base `$4` at `$206de`. The native
+session accepts only an exact, later return observation at `$206e2`, retaining
+D0/SR verbatim. The following 38 local bytes (SHA-256
+`b1cc2be3a282d4a49fdc161f1d6b8c74a03be4a7aa5b13b8f2300f179dbb8cde`)
+save observed D0 and describe the literal `$2061c` descriptor fields, including
+pointer `$206ac`. Execution stops at `$20708`, before another Exec-base read
+and vector `-$162` call at `$2070c`; neither Exec service is identified or
+implemented.
 
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small

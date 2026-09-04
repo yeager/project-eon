@@ -19,7 +19,8 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
       display_clear_(parse_deuteros_amiga_title_display_clear_profile(disk, plan)),
       callback_registration_(
           parse_deuteros_amiga_title_callback_registration_profile(disk, plan)),
-      exec_boundary_session_(disk, plan, exec_prelude_, profile_) {
+      exec_boundary_session_(disk, plan, exec_prelude_, profile_),
+      service_setup_boundary_session_(disk, plan) {
     if (stage_.length == 0 || stage_.disk_offset > AmigaAdf::standard_size
         || stage_.length > AmigaAdf::standard_size - stage_.disk_offset
         || stage_.entry_address < stage_.destination
@@ -157,6 +158,15 @@ DeuterosAmigaTitleStageSession::observe_display_base_and_advance(
         custom_chip_boundary_session_.emplace(
             observation.trace_sequence, profile_, callback_registration_);
     }
+    return advanced;
+}
+
+std::optional<DeuterosAmigaTitlePostCallbackRegistrationAdvance>
+DeuterosAmigaTitleStageSession::observe_callback_exec_return(
+    const DeuterosAmigaObservedCallbackExecReturn& observation) {
+    if (!custom_chip_boundary_session_) return std::nullopt;
+    const auto advanced = custom_chip_boundary_session_->observe_exec_return(observation);
+    if (advanced) service_setup_boundary_session_.enter(observation.trace_sequence);
     return advanced;
 }
 

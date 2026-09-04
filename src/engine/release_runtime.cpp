@@ -226,6 +226,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_ninth_function_.reset();
     millennium_dos_fourth_function_.reset();
     millennium_dos_fifth_function_.reset();
+    millennium_dos_third_function_.reset();
     millennium_dos_gx_startup_.reset();
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
@@ -887,6 +888,70 @@ EON_FOURTH_FORWARD(observe_millennium_dos_fourth_function_call_return,Millennium
 std::optional<MillenniumDosFourthFunctionCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_fourth_function_checkpoint() const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_fourth_function||!millennium_dos_fourth_function_)return std::nullopt;auto&s=*millennium_dos_fourth_function_;return MillenniumDosFourthFunctionCheckpoint{s.state(),s.boundary(),s.effects()};}
 MillenniumDosFifthFunctionObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_fifth_function_dispatch(MillenniumDosFifthFunctionDispatchObservation o){MillenniumDosFifthFunctionObservationResult r;if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop||!millennium_dos_post_overlay_loop_||!millennium_dos_native_process_){r.error="Fifth-function dispatch requires post-overlay loop";return r;}auto d=millennium_dos_native_process_->admit_function_dispatch(*millennium_dos_post_overlay_loop_,{o.scaled_call_address,o.dispatcher_address,o.function_key_index,o.handler_address});if(!d.accepted||o.function_key_index!=4||o.handler_address!=0x7597){r.error="Detached fifth-function dispatch";return r;}millennium_dos_fifth_function_.emplace(millennium_dos_native_process_->make_fifth_function_session());session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::millennium_dos_fifth_function);r.accepted=true;return r;} MillenniumDosFifthFunctionObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_fifth_function_call_return(MillenniumDosFifthFunctionCallReturnObservation o){MillenniumDosFifthFunctionObservationResult r;if(!millennium_dos_fifth_function_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_fifth_function){r.error="No fifth-function session";return r;}try{millennium_dos_fifth_function_->observe_call_return(o.call_address,o.return_address);r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;} std::optional<MillenniumDosFifthFunctionCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_fifth_function_checkpoint()const{if(!millennium_dos_fifth_function_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_fifth_function)return std::nullopt;return MillenniumDosFifthFunctionCheckpoint{millennium_dos_fifth_function_->state(),millennium_dos_fifth_function_->boundary()};}
 
+MillenniumDosThirdFunctionObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_third_function_dispatch(
+    const MillenniumDosThirdFunctionDispatchObservation observation) {
+    MillenniumDosThirdFunctionObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_post_overlay_loop
+        || !millennium_dos_post_overlay_loop_ || !millennium_dos_native_process_) {
+        result.error = "Third-function dispatch requires the active post-overlay loop";
+        return result;
+    }
+    const auto admission = millennium_dos_native_process_->admit_function_dispatch(
+        *millennium_dos_post_overlay_loop_, {observation.scaled_call_address,
+            observation.dispatcher_address, observation.function_key_index,
+            observation.handler_address});
+    if (!admission.accepted || observation.function_key_index != 2
+        || observation.handler_address != 0x6faa) {
+        result.error = "Third-function observation is detached from dispatch index 2";
+        return result;
+    }
+    try {
+        millennium_dos_third_function_.emplace(
+            millennium_dos_native_process_->make_third_function_session());
+        session_snapshot_ = make_runtime_session_snapshot(
+            *active_, RuntimeSessionKind::millennium_dos_third_function);
+        result.accepted = true;
+    } catch (const std::exception& exception) { result.error = exception.what(); }
+    return result;
+}
+
+#define EON_THIRD_FORWARD(name, type, expression) \
+MillenniumDosThirdFunctionObservationResult ReleaseRuntimeCoordinator::name( \
+    const type observation) { \
+    MillenniumDosThirdFunctionObservationResult result; \
+    if (!session_snapshot_ \
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_third_function \
+        || !millennium_dos_third_function_) { \
+        result.error = "Observation requires active third-function session"; return result; \
+    } \
+    try { millennium_dos_third_function_->expression; result.accepted = true; } \
+    catch (const std::exception& exception) { result.error = exception.what(); } \
+    return result; \
+}
+EON_THIRD_FORWARD(observe_millennium_dos_third_function_word,
+    MillenniumDosThirdFunctionWordObservation,
+    observe_runtime_word(observation.instruction_address, observation.runtime_address,
+        observation.value))
+EON_THIRD_FORWARD(observe_millennium_dos_third_function_call_return,
+    MillenniumDosThirdFunctionCallReturnObservation,
+    observe_call_return(observation.call_address, observation.return_address))
+EON_THIRD_FORWARD(observe_millennium_dos_third_function_bl,
+    MillenniumDosThirdFunctionBlObservation,
+    observe_bl(observation.instruction_address, observation.value))
+#undef EON_THIRD_FORWARD
+
+std::optional<MillenniumDosThirdFunctionCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_third_function_checkpoint() const {
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_third_function
+        || !millennium_dos_third_function_) return std::nullopt;
+    const auto& session = *millennium_dos_third_function_;
+    return MillenniumDosThirdFunctionCheckpoint{
+        session.state(), session.boundary(), session.effects()};
+}
+
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
     if (!session_snapshot_) return std::nullopt;
@@ -907,6 +972,20 @@ ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
         if (boundary.call_target) input.boundary.call_target = *boundary.call_target;
     };
     switch (session_snapshot_->kind) {
+    case RuntimeSessionKind::millennium_dos_third_function: {
+        if (!millennium_dos_third_function_) return std::nullopt;
+        input.function_key_index = 2; input.handler_address = 0x6faa;
+        const auto boundary = millennium_dos_third_function_->boundary();
+        auto kind = MillenniumDosOwnedFunctionBoundaryKind::local_return;
+        if (boundary.kind == MillenniumDosThirdFunctionBoundaryKind::runtime_word)
+            kind = MillenniumDosOwnedFunctionBoundaryKind::runtime_word;
+        else if (boundary.kind == MillenniumDosThirdFunctionBoundaryKind::call_return)
+            kind = MillenniumDosOwnedFunctionBoundaryKind::call_return;
+        else if (boundary.kind == MillenniumDosThirdFunctionBoundaryKind::register_bl
+            || boundary.kind == MillenniumDosThirdFunctionBoundaryKind::far_pointer)
+            kind = MillenniumDosOwnedFunctionBoundaryKind::register_value;
+        assign(boundary, kind); break;
+    }
     case RuntimeSessionKind::millennium_dos_fifth_function: {
         if (!millennium_dos_fifth_function_) return std::nullopt;
         input.function_key_index = 4; input.handler_address = 0x7597;
@@ -1124,12 +1203,47 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_dependency_chain_checkpoint() co
         result.custom_chip_boundary_present = true;
         result.observed_custom_chip_write_count = custom->observed_write_count();
         result.custom_chip_complete = custom->complete();
+        result.callback_exec_return_observed = custom->observed_exec_return().has_value();
         result.stop_before_address = custom->stop_before_address();
     } else if (result.open_library) {
         result.stop_before_address = result.open_library->stop_before_address;
     } else {
         result.stop_before_address = result.exec.stop_before_address;
     }
+    return result;
+}
+
+#define EON_DEUTEROS_TITLE_ADVANCE(name, expression) \
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::name { \
+    DeuterosAmigaTitleDependencyObservationResult result; \
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage || !deuteros_amiga_) { result.error="Deuteros title observation requires the active title stage"; return result; } \
+    try { if (!(expression)) { result.error="Deuteros title observation did not match the next owned boundary"; return result; } result.accepted=true; } \
+    catch(const std::exception& e) { result.error=std::string("Deuteros title observation rejected: ")+e.what(); } return result; }
+EON_DEUTEROS_TITLE_ADVANCE(advance_deuteros_amiga_title_local_prefix(), deuteros_amiga_->advance_title_local_prefix())
+EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_exec_return(const DeuterosAmigaObservedExecReturn o), deuteros_amiga_->observe_title_exec_return(o))
+EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_open_library_return(const DeuterosAmigaObservedOpenLibraryReturn o), deuteros_amiga_->observe_title_open_library_return(o))
+EON_DEUTEROS_TITLE_ADVANCE(advance_deuteros_amiga_title_post_open_library_local_path(), deuteros_amiga_->advance_title_post_open_library_local_path())
+EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_display_base(const DeuterosAmigaObservedDisplayBaseRead o), deuteros_amiga_->observe_title_display_base(o))
+EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_callback_exec_return(const DeuterosAmigaObservedCallbackExecReturn o), deuteros_amiga_->observe_title_callback_exec_return(o))
+#undef EON_DEUTEROS_TITLE_ADVANCE
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
+    const DeuterosAmigaObservedCustomChipWrite observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !deuteros_amiga_->title_stage_session()
+        || !deuteros_amiga_->title_stage_session()->custom_chip_boundary()) {
+        result.error="Deuteros title observation requires the active custom-chip boundary";
+        return result;
+    }
+    const auto before=deuteros_amiga_->title_stage_session()->custom_chip_boundary()->observed_write_count();
+    try {
+        static_cast<void>(deuteros_amiga_->observe_title_custom_chip_write(observation));
+        const auto* after=deuteros_amiga_->title_stage_session()->custom_chip_boundary();
+        if (!after || after->observed_write_count()!=before+1) { result.error="Deuteros custom-chip observation did not advance"; return result; }
+        result.accepted=true;
+    } catch(const std::exception& e) { result.error=std::string("Deuteros title observation rejected: ")+e.what(); }
     return result;
 }
 
