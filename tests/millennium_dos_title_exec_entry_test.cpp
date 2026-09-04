@@ -987,6 +987,29 @@ int main(int argc, char** argv) {
         &&encoded_payload.memory_effects.size()==18978
         &&encoded_payload.memory_effects.back().offset==0x1388
         &&encoded_payload.memory_effects.back().value==1);
+    auto detached_encoded_payload=encoded_first_title_record;
+    bool detached_encoded_payload_rejected=false;
+    try { detached_encoded_payload.observe_far_byte(
+        {98,0x1419,0x5050,0x0020,0x7a}); }
+    catch(const std::runtime_error&) { detached_encoded_payload_rejected=true; }
+    assert(detached_encoded_payload_rejected
+        &&detached_encoded_payload.checkpoint().last_sequence==97
+        &&detached_encoded_payload.checkpoint().memory_effects.size()==18978);
+    encoded_first_title_record.observe_far_byte({98,0x1419,0x5050,0x001f,0x7a});
+    const auto encoded_stream=encoded_first_title_record.checkpoint();
+    assert(encoded_stream.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
+        &&encoded_stream.last_sequence==98
+        &&encoded_stream.continuation_address==0x1428
+        &&encoded_stream.far_byte_observations.size()==5
+        &&encoded_stream.far_byte_observations.back().byte==0x7a
+        &&encoded_stream.far_byte_boundary.instruction_address==0x1428
+        &&encoded_stream.far_byte_boundary.source_segment==0x5050
+        &&encoded_stream.far_byte_boundary.source_offset==0x0020
+        &&encoded_stream.memory_effects.size()==18979
+        &&encoded_stream.memory_effects.back().instruction_address==0x141c
+        &&encoded_stream.memory_effects.back().offset==0x0170
+        &&encoded_stream.memory_effects.back().value==0x7a);
     auto detached_first_title_second_byte=other_success;
     bool detached_first_title_second_byte_rejected=false;
     try { detached_first_title_second_byte.observe_far_byte(
@@ -1015,6 +1038,31 @@ int main(int argc, char** argv) {
         &&second_title_loop.memory_effects[18978].value==0x02e0
         &&second_title_loop.memory_effects[18979].offset==0x0110
         &&second_title_loop.memory_effects[18979].value==0x02e0);
+    auto detached_second_descriptor=other_success;
+    bool detached_second_descriptor_rejected=false;
+    try { detached_second_descriptor.observe_far_words(
+        {98,0x13aa,0x3481,0x001b,0xc800,0x4001}); }
+    catch(const std::runtime_error&) { detached_second_descriptor_rejected=true; }
+    assert(detached_second_descriptor_rejected
+        &&detached_second_descriptor.checkpoint().last_sequence==97
+        &&detached_second_descriptor.checkpoint().memory_effects.size()==18980);
+    other_success.observe_far_words({98,0x13aa,0x3481,0x001b,0xc800,0x4000});
+    const auto second_descriptor=other_success.checkpoint();
+    assert(second_descriptor.state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_record_word_read_boundary);
+    assert(second_descriptor.last_sequence==98);
+    assert(second_descriptor.continuation_address==0x13cd);
+    assert(second_descriptor.far_word_observations.size()==5);
+    assert(second_descriptor.far_word_observations.back().first_word==0xc800);
+    assert(second_descriptor.far_word_observations.back().second_word==0x4000);
+    assert(second_descriptor.far_read_boundary.instruction_address==0x13cd);
+    assert(second_descriptor.far_read_boundary.source_segment==0x3c80);
+    assert(second_descriptor.far_read_boundary.source_offset==0x0018);
+    assert(second_descriptor.memory_effects.size()==18982);
+    assert(second_descriptor.memory_effects[18980].offset==0x138c);
+    assert(second_descriptor.memory_effects[18980].value==0);
+    assert(second_descriptor.memory_effects[18981].offset==0x138e);
+    assert(second_descriptor.memory_effects[18981].value==0x3c80);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

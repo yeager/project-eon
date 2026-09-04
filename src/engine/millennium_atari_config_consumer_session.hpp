@@ -421,6 +421,7 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_palette_rts_stack_address=0;
     std::uint32_t game_init_palette_rts_return_address=0;
     std::string game_init_palette_caller_continuation_sha256;
+    bool game_init_second_config_open=false;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -532,6 +533,8 @@ public:
         const MillenniumAtariGameInitPaletteRecurrenceObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_rts(
         const MillenniumAtariGameInitPaletteRtsObservation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fopen(
+        const MillenniumAtariGemdosSelector61Observation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

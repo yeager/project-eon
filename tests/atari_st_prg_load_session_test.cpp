@@ -483,6 +483,20 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_61_boundary
             && single_cell_planes.checkpoint().gemdos_filename_pointer==0x2a634
             && single_cell_planes.checkpoint().gemdos_trap_address==0x2a5b4);
+        auto second_config_failure=single_cell_planes;
+        assert(!single_cell_planes.observe_game_init_second_config_fopen({1,115,0x2a5b6,0x3d,7}).accepted);
+        assert(single_cell_planes.observe_game_init_second_config_fopen({1,115,0x2a5b4,0x3d,7}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2a5c2_boundary
+            && single_cell_planes.checkpoint().gemdos_61_result_d0==7
+            && single_cell_planes.checkpoint().fopen_branch_target==0x2aa1c
+            && single_cell_planes.checkpoint().fopen_positive_d0==0x7d42
+            && single_cell_planes.checkpoint().fopen_positive_d1==0x2c24a);
+        auto second_config_memory=palette_memory;
+        assert(second_config_memory.apply(single_cell_planes.make_gemdos_selector_61_effect_batch("second-config-fopen")).accepted
+            && second_config_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2a5fb})==7);
+        assert(second_config_failure.observe_game_init_second_config_fopen({1,115,0x2a5b4,0x3d,-1}).accepted
+            && second_config_failure.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin
+            && second_config_failure.checkpoint().fopen_branch_target==0x2a632);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

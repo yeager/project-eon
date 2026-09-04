@@ -489,3 +489,18 @@ Other values return to the caller, execute the exact second loop setup with
 output offsets `$02e0`, and stop before `$13aa` reads the next two-word
 descriptor from relocated `TITLE.LIB+$001b`. These are control-flow facts;
 no field, encoding, pixel, or graphics meaning is inferred.
+
+The first encoded payload byte at `$5050:$001f` is now admitted at `$1419`.
+Exact bytes `$1419..$1427` (SHA-256
+`912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b`)
+retain it in `CH`, atomically write it to the current output byte at
+`CS:$0170`, load the owned raw count from `CS:$138a`, advance `BX` by five,
+and decrement that count. A nonzero remainder stops before the next typed byte
+at `$1428`, source `$5050:$0020`; zero stops at the internal `$1488` dispatch.
+No encoding or output-pixel interpretation is assigned.
+
+The other-value branch now accepts the exact genuine `TITLE.LIB+$001b`
+descriptor words `$c800/$4000`. The already hash-bound `$13aa..$13cc` suffix
+normalizes them to `$3c80:$0000`, atomically stores that far pointer at
+`CS:$138c/$138e`, and stops before `$13cd` reads the runtime word at
+`$3c80:$0018`. Contradictory descriptor data is rejected before mutation.
