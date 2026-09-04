@@ -24,6 +24,8 @@ single-word facade. Continue at `$13d0` with genuine word `$00c8` from
 `TITLE.LIB+$001c`.
 That `$00c8` word and its exact multiplication effects are now native. Continue
 at `$13e2` with the external `$3000:$001a` word.
+That genuine zero word and adjusted-product write are native. Continue at the
+typed byte boundary `$13e9`, source `$3000:$0007`.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -50,6 +52,8 @@ written to `$7d42` require an explicit typed observation.
 The raw Fread result is now typed; because original code does not branch on
 it, no buffer observation is needed to reach Fclose. Execution now stops at
 selector `$3e` `TRAP #1` `$2a5e6`; its return is the next boundary.
+The Fclose return and the only four Fread bytes consumed before the next call
+are now typed and native. The next exact boundary is `JSR $2b2be` at `$2aaec`.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only

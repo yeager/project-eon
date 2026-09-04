@@ -303,6 +303,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_61(MillenniumAtariGemdosSelector61Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2a5c2();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_63(MillenniumAtariGemdosSelector63Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_62(MillenniumAtariGemdosSelector62Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_fread_prefix(MillenniumAtariFreadPrefixObservation);
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

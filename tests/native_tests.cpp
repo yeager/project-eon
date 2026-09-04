@@ -4356,6 +4356,7 @@ int main() {
     assert(english_dos_runtime->gx_canvas && english_dos_runtime->static_game_data
         && english_dos_runtime->static_data_evidence && english_dos_runtime->title_flow
         && english_dos_runtime->sound_selection && english_dos_runtime->sound_selection_prompt
+        && english_dos_runtime->admitted_launcher_text.size() == 10U
         && english_dos_runtime->game_flow && english_dos_runtime->ega_video_driver
         && english_dos_runtime->mcga_video_driver && english_dos_runtime->initial_save);
     // The executable selection table and each independently supplied driver
@@ -5188,6 +5189,14 @@ int main() {
                 && fclose_user->config_consumer.gemdos_62_trap_address==0x2a5e6
                 && fclose_user->config_consumer.gemdos_62_selector==0x3e
                 && fclose_user->config_consumer.gemdos_62_handle==7);
+            assert(all_release_runtime.observe_millennium_atari_gemdos_selector_62({1,20,0x2a5e6,0x3e,0}).accepted);
+            assert(!all_release_runtime.observe_millennium_atari_fread_prefix({1,21,0x2c24a,0x1122,0x2c24e,0x3344}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_fread_prefix({1,21,0x2c24c,0x1122,0x2c24e,0x3344}).accepted);
+            const auto game_init_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(game_init_user && game_init_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::jsr_2b2be_boundary
+                && game_init_user->config_consumer.fread_prefix_d6==0x1122
+                && game_init_user->config_consumer.fread_prefix_d7==0x3344
+                && game_init_user->config_consumer.next_jsr_target==0x2b2be);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -5276,6 +5285,8 @@ int main() {
             assert(!atari_host.observe_millennium_atari_gemdos_selector_61({1,21,0x2a5b4,0x3d,-1}).accepted);
             assert(!atari_host.execute_millennium_atari_jsr_2a5c2().accepted);
             assert(!atari_host.observe_millennium_atari_gemdos_selector_63({1,22,0x2a5d0,0x3f,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_gemdos_selector_62({1,23,0x2a5e6,0x3e,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_fread_prefix({1,24,0x2c24c,0,0x2c24e,0}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening

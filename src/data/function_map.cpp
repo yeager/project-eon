@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 56> entries{{
+constexpr std::array<FunctionMapEntry, 57> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -30,6 +30,13 @@ constexpr std::array<FunctionMapEntry, 56> entries{{
      "MILENIUM.TOS+0x00de", "$2a5c2", "verified-static",
      "GEMDOS selector 62 return and all file contents remain externally observed",
      "native Fread-to-Fclose boundary", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
+     "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7"},
+    {"millennium-atari-en-fclose-to-game-init", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+     "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
+     "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6",
+     "MILENIUM.TOS+0x0104", "$2a5e8", "verified-static",
+     "the game-initialization callee at $2b2be and remaining Fread buffer bytes are unproven",
+     "native typed Fclose and buffer prefix", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
      "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7"},
     {"millennium-amiga-en-resident-independent-entry", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
      "millennium-amiga-shared-resident", Game::millennium, Platform::amiga, "en", "m68000",
@@ -63,7 +70,7 @@ constexpr std::array<FunctionMapEntry, 56> entries{{
     {"millennium-dos-en-title-buffer-selection", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x125e", "$135e", "verified-static", "the setup call at $1c11->$0ff3 remains unproven", "native buffer selection", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-graphics-request", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x0ef3", "$0ff3", "verified-static", "the callee at $1c17->$1725 remains unproven", "native observed private result", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-descriptor-setup", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x1290", "$1390", "verified-static", "the two relocated source words at $13aa remain unproven", "native far-read boundary", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
-    {"millennium-dos-en-title-descriptor-pointer", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x12aa", "$13aa", "verified-static", "the third record word at $3000:$001a remains unproven", "native descriptor dimensions", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
+    {"millennium-dos-en-title-descriptor-pointer", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x12aa", "$13aa", "verified-static", "the record byte at $3000:$0007 remains unproven", "native descriptor byte boundary", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-private-wrapper", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086",
      "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6",

@@ -217,6 +217,10 @@ The typed raw Fread return advances through exact cleanup, test, RTS, and
 caller JMP instructions without observing buffer bytes, because no branch
 consults the result. The close wrapper pushes the same owned handle and
 selector `$3e`, then stops at `TRAP #1` `$2a5e6` without host I/O.
+After a typed raw Fclose return, a four-byte observation covers only the two
+buffer words immediately consumed at `$2c24c` and `$2c24e`. They commit
+atomically, become D6/D7, and execution stops before `$2aaec->$2b2be`; no
+unconsumed buffer bytes are materialized.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

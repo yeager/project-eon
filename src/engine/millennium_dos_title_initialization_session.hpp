@@ -53,6 +53,7 @@ enum class MillenniumDosTitleInitializationState {
     graphics_record_word_read_boundary,
     graphics_record_second_word_read_boundary,
     graphics_record_third_word_read_boundary,
+    graphics_record_byte_read_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };
@@ -214,6 +215,12 @@ struct MillenniumDosTitleFarWordObservation {
     std::uint16_t source_offset=0;
     std::uint16_t word=0;
 };
+struct MillenniumDosTitleFarByteBoundary {
+    std::uint16_t instruction_address=0;
+    std::uint16_t source_segment=0;
+    std::uint16_t source_offset=0;
+    std::uint16_t destination_offset=0;
+};
 
 struct MillenniumDosTitleDosBoundary {
     std::uint16_t interrupt_address = 0;
@@ -290,6 +297,7 @@ struct MillenniumDosTitleInitializationCheckpoint {
     MillenniumDosTitleFarReadBoundary far_read_boundary;
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations;
     std::vector<MillenniumDosTitleFarWordObservation> far_single_word_observations;
+    MillenniumDosTitleFarByteBoundary far_byte_boundary;
     std::uint16_t failure_address = 0;
     std::uint16_t continuation_address = 0;
     std::uint16_t post_video_observed_ax = 0;
@@ -398,6 +406,7 @@ private:
     MillenniumDosTitleFarReadBoundary far_read_boundary_;
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations_;
     std::vector<MillenniumDosTitleFarWordObservation> far_single_word_observations_;
+    MillenniumDosTitleFarByteBoundary far_byte_boundary_;
     std::uint16_t post_video_observed_ax_ = 0;
     std::uint16_t post_video_observed_flags_ = 0;
 };

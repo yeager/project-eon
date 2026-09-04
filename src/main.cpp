@@ -671,22 +671,32 @@ void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
-void draw_game_text(SDL_Renderer* renderer, const float x, const float y,
-    const eon::Game game, const eon::Platform platform,
-    const std::string_view source_sha256, const std::string_view language,
+const eon::AdmittedGameText& admitted_game_text_for_original(
+    const std::span<const eon::AdmittedGameText> admitted,
     const std::string_view original_text) {
+    const auto match = std::ranges::find(admitted, original_text,
+        &eon::AdmittedGameText::original_text);
+    if (match == admitted.end())
+        throw std::runtime_error("Rendered game text lacks an admitted source token");
+    return *match;
+}
+
+void draw_admitted_game_text(SDL_Renderer* renderer, const float x, const float y,
+    const eon::Game game, const eon::Platform platform,
+    const std::span<const eon::AdmittedGameText> admitted,
+    const std::string_view language, const std::string_view original_text) {
     if (!active_translator) throw std::runtime_error("Game text renderer has no active catalog");
-    const auto localized = eon::localize_game_text(
-        game, platform, source_sha256, original_text, language, *active_translator);
+    const auto localized = eon::localize_admitted_game_text(game, platform,
+        admitted_game_text_for_original(admitted, original_text), language, *active_translator);
     if (active_text_renderer
         && active_text_renderer->draw(x, y, localized.displayed_text)) return;
     SDL_RenderDebugText(renderer, x, y, localized.displayed_text.c_str());
 }
 
-void draw_game_multiline_text(SDL_Renderer* renderer, const float x, float y,
+void draw_admitted_game_multiline_text(SDL_Renderer* renderer, const float x, float y,
     const eon::Game game, const eon::Platform platform,
-    const std::string_view source_sha256, const std::string_view language,
-    const std::string_view text,
+    const std::span<const eon::AdmittedGameText> admitted,
+    const std::string_view language, const std::string_view text,
     const float line_stride = 22.0F) {
     std::size_t line_start = 0;
     while (line_start <= text.size()) {
@@ -694,8 +704,8 @@ void draw_game_multiline_text(SDL_Renderer* renderer, const float x, float y,
         const auto count = (line_end == std::string_view::npos ? text.size() : line_end) - line_start;
         auto line = text.substr(line_start, count);
         if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
-        if (!line.empty()) draw_game_text(
-            renderer, x, y, game, platform, source_sha256, language, line);
+        if (!line.empty()) draw_admitted_game_text(
+            renderer, x, y, game, platform, admitted, language, line);
         y += line_stride;
         if (line_end == std::string_view::npos) return;
         line_start = line_end + 1;
@@ -6072,15 +6082,15 @@ int main(int argc, char** argv) {
                 // The immutable source bytes remain owned by the verified
                 // media parser. Both presentation modes resolve each exact
                 // source line through Eon's stable game-text catalog.
-                draw_game_multiline_text(renderer, 64, 222,
+                draw_admitted_game_multiline_text(renderer, 64, 222,
                     eon::Game::millennium, eon::Platform::dos,
-                    millennium_assets->assets.sound_selection->launcher_sha256, request.language,
+                    millennium_assets->assets.admitted_launcher_text, request.language,
                     *millennium_assets->assets.sound_selection_prompt);
                 if (!millennium_startup_input->sound_selection_awaiting_choice
                     && millennium_startup_input->selected_original_filename) {
-                    draw_game_text(renderer, 64, 430,
+                    draw_admitted_game_text(renderer, 64, 430,
                         eon::Game::millennium, eon::Platform::dos,
-                        millennium_assets->assets.sound_selection->launcher_sha256, request.language,
+                        millennium_assets->assets.admitted_launcher_text, request.language,
                         *millennium_startup_input->selected_original_filename);
                     draw_text(renderer, 64, 454, millennium_startup_input->selected_driver_is_admitted
                         ? tr("VERIFIED ORIGINAL DATA") : tr("STARTUP BOUNDARY"));

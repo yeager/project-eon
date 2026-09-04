@@ -36,6 +36,8 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     fopen_failure_spin,
     gemdos_selector_63_boundary,
     gemdos_selector_62_boundary,
+    fread_prefix_boundary,
+    jsr_2b2be_boundary,
     revoked,
 };
 
@@ -97,6 +99,12 @@ struct MillenniumAtariGemdosSelector61Observation {
     std::int32_t result_d0=0;
 };
 using MillenniumAtariGemdosSelector63Observation = MillenniumAtariGemdosSelector61Observation;
+using MillenniumAtariGemdosSelector62Observation = MillenniumAtariGemdosSelector61Observation;
+struct MillenniumAtariFreadPrefixObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t first_address=0; std::uint16_t first_word=0;
+    std::uint32_t second_address=0; std::uint16_t second_word=0;
+};
 
 struct MillenniumAtariBchgObservation {
     std::uint64_t generation = 0;
@@ -280,6 +288,16 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint16_t gemdos_62_selector=0;
     std::uint16_t gemdos_62_handle=0;
     std::string gemdos_62_prefix_sha256;
+    bool gemdos_62_result_observed=false;
+    std::int32_t gemdos_62_result_d0=0;
+    std::uint32_t gemdos_62_stack_cleanup_bytes=0;
+    std::string gemdos_62_return_sha256;
+    std::uint32_t fread_prefix_a4=0;
+    bool fread_prefix_observed=false;
+    std::uint16_t fread_prefix_d6=0;
+    std::uint16_t fread_prefix_d7=0;
+    std::uint32_t caller_a5=0;
+    std::string fread_caller_prefix_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -358,6 +376,11 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2a5c2();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_gemdos_selector_63(
         const MillenniumAtariGemdosSelector63Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_gemdos_selector_62(
+        const MillenniumAtariGemdosSelector62Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_fread_prefix(
+        const MillenniumAtariFreadPrefixObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_fread_prefix_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

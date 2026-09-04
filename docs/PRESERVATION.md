@@ -398,6 +398,14 @@ celestial table into 41 copy-only provenance tokens while the verified
 source map when localized, so a stale or forged snapshot cannot change an ID,
 range, source language, or canonical message. The runtime retains no complete
 commercial source leaf for this purpose.
+The English DOS runtime likewise converts all ten declared `MILL.COM` prompt
+and driver-name ranges into copy-only tokens at admission time. SDL resolves
+the multiline sound prompt and the selected driver name from those tokens;
+it no longer accepts a bare hash/string pair from the presentation snapshot.
+Original and Modern share this exact path. A missing or forged token aborts
+presentation instead of leaking untranslated original text or guessing a
+semantic identity. Other platforms receive the same treatment as their
+player-visible tables are recovered; an empty token set grants no fallback.
 
 Project Eon deliberately distinguishes a preservation result from an
 enhancement. **Original** is the preservation contract: a hash-admitted,
@@ -1414,6 +1422,16 @@ The caller's absolute JMP to `$2a5dc` hashes to
 There the exact 12-byte handle/selector-`$3e` prefix hashes to
 `e815352850ca1cb7dffb7fa6d7e46d7775e82146695009e790e525daac17a2e9`
 and stops at Fclose `TRAP #1` `$2a5e6`. No file bytes or host I/O are inferred.
+The typed raw Fclose return advances through its six-byte cleanup/test/RTS
+body (SHA-256
+`1653b046f59ffdf7cdcdae81914ab08b45f9fd09915e21b1c27ea8c6021e0b2f`).
+The caller consumes only two Fread-buffer words before its next call. A
+bounded typed observation supplies exactly those four bytes at `$2c24c` and
+`$2c24e`; Eon commits them atomically, loads D6/D7, and reuses the already
+owned selector-3 pointer as A5. The 16-byte consumer/call span hashes to
+`06aca8d014e4064f17c8dba3c9b19ed705214dcb63cc41b0b3d9f8da7a2cd782`.
+Execution stops before `JSR $2b2be` at `$2aaec`; no remaining buffer is
+invented or admitted.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4387,6 +4405,10 @@ span (SHA-256
 `787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
 atomically stores the dimensions and their `$fa00` product. The next boundary
 is external word `$3000:$001a` at `$13e2`; no subtraction result is inferred.
+The word is now admitted as genuine `$0000`. Exact bytes `$13e2..$13e8`
+(SHA-256 `0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`)
+atomically store adjusted product `$fa00` at `CS:$138a`. The new typed external
+byte boundary is `$13e9`, source `$3000:$0007`; no byte value is inferred.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
