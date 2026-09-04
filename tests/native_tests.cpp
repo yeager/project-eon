@@ -4644,6 +4644,35 @@ int main() {
                 && fifth_chain->fifth_service_local_plan->outcome==eon::DeuterosAmigaTitleFifthServiceOutcome::nonzero_reuse_first_pointer
                 && fifth_chain->stop_before_address==0x404bc);
             assert(!opening_controller.observe_deuteros_amiga_title_fifth_service_exec_return({24,4,0x207a0,-0x1bc,0x207a4,0,0}).accepted);
+            assert(opening_controller.advance_deuteros_amiga_title_controller_pointer_seed().accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_service_batch_graphics_return({24,0x12fec,0x00abcdef,0x403e0,-0xc0,0x403e4,0x55667788,0x2004}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_service_batch_runtime_word({25,0x2052a,0x20276,0x3456}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_graphics_service_first_return({26,0x12fec,0x00abcdef,0x2009c,-0x19e,0x200a0,0x01020304,0x2000}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_graphics_service_second_return({27,0x12fec,0x00abcdef,0x200b0,-0x198,0x200b4,0xa1b2c3d4,0x2004}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_graphics_service_third_return({28,0x12fec,0x00abcdef,0x200f4,-0x1a4,0x200f8,0x11223344,0x2008}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_first_graphics_return({29,0x12fec,0x00abcdef,0x20112,-0x1a4,0x20116,0x55667788,0x2010}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_copy_words({30,0x201e4,0x1f372,{{0x1111,0x2222,0x3333,0x4444}}}).accepted);
+            constexpr std::array<std::uint32_t,8> runtime_tail_sources{{0x1ffc8,0x1ee10,0x1ffca,0x1ffcc,0x1ffce,0x1ee12,0x1ffd0,0x1ffd2}};
+            assert(opening_controller.observe_deuteros_amiga_title_tail_selection_words({31,0x20118,runtime_tail_sources,{{0x20,0xffff,0x18,0x40,0x30,1,0x10,0x30}}}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_second_graphics_return({32,0x12fec,0x00abcdef,0x201b6,-0x1aa,0x201ba,0x99aabbcc,0x2020}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_repeated_selection_words({33,0x20118,runtime_tail_sources,{{0,0xffff,0x10,0x40,0x20,1,0x10,0x30}}}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_repeated_graphics_return({34,0x12fec,0x00abcdef,0x201b6,-0x1aa,0x201ba,0x10203040,0x2024}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_repeated_wrapper_graphics_return({35,0x12fec,0x00abcdef,0x200f4,-0x1a4,0x200f8,0x50607080,0x2028}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_source_table({36,0x404da,{{0x12ff4,0x12ff8}},{{0x11223344,0x55667788}}}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_exec_return({37,4,0x00fedcba,0x204f4,-0xa8,0x204f8,0xaabbccdd,0x2030}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
+            const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
+            assert(before_copy_memory && before_copy_memory->initialized_byte_count==0 && before_copy_memory->applied_batch_count==0);
+            std::uint32_t runtime_copied=0;
+            std::uint64_t runtime_copy_sequence=40;
+            while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
+            const auto completed_copy_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(completed_copy_memory && completed_copy_memory->initialized_bytes.size()==0xa20*4 && completed_copy_memory->applied_batch_count==1);
+            const auto completed_copy_diagnostics=opening_controller.native_runtime_memory_diagnostics();
+            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==0xa20*4 && completed_copy_diagnostics->applied_batch_count==1 && completed_copy_diagnostics->checksum!=0);
+            assert(!opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence,0x38a28,0x2bdc0,0x1ed02,0,{1}}).accepted);
+            assert(opening_controller.native_runtime_memory_diagnostics()->checksum==completed_copy_diagnostics->checksum);
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
@@ -4786,6 +4815,11 @@ int main() {
             {21,4,0x20732,-0x1bc,0x20736,0,0}).accepted);
         assert(!revocation_host.observe_deuteros_amiga_title_fourth_service_exec_return({22,4,0x2077a,-0x162,0x2077e,0,0}).accepted);
         assert(!revocation_host.observe_deuteros_amiga_title_fifth_service_exec_return({23,4,0x207a0,-0x1bc,0x207a4,0,0}).accepted);
+        assert(!revocation_host.advance_deuteros_amiga_title_controller_pointer_seed().accepted);
+        assert(!revocation_host.observe_deuteros_amiga_title_service_batch_graphics_return(
+            {24,0x12fec,0x00abcdef,0x403e0,-0xc0,0x403e4,0,0}).accepted);
+        assert(!revocation_host.observe_deuteros_amiga_title_load_copy_chunk(
+            {40,0x38a28,0x29540,0x1c482,0,{1}}).accepted);
         assert(revocation_host.revoking()
             && !revocation_host.millennium_dos_presentation()
             && !revocation_host.millennium_dos_startup_input()
@@ -4793,6 +4827,8 @@ int main() {
             && !revocation_host.deuteros_amiga_opening_presentation()
             && !revocation_host.deuteros_amiga_title_stage_boundary()
             && !revocation_host.deuteros_amiga_title_dependency_chain_checkpoint()
+            && !revocation_host.native_runtime_memory_checkpoint()
+            && !revocation_host.native_runtime_memory_diagnostics()
             && !revocation_host.deuteros_atari_bootstrap_checkpoint()
             && !revocation_host.deuteros_atari_bootstrap_presentation()
             && !revocation_host.millennium_amiga_bootstrap_presentation()
@@ -6595,6 +6631,8 @@ int main() {
         assert(!revoking_trace_host.observe_millennium_dos_shared_helper_far_word({0x0678,0,0x0254,0}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_shared_helper_external_return({0x0681,0x753a,2}).accepted);
         assert(!revoking_trace_host.millennium_dos_shared_helper_checkpoint());
+        assert(!revoking_trace_host.observe_millennium_dos_special_action_helper_entry({0xd40e,0x11a4,0x07f9,0,0x11b7,0x0666,0x018f,3}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_special_action_external_return({0x11c1,0xd411,4}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_sixth_function_dispatch(
             {0xd40a, 0x76f1, 5, 0x7415}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_sixth_function_word(
@@ -11121,8 +11159,62 @@ int main() {
     assert(operand_11);
     assert(operand_11->destination_address == 0x1f970);
     assert(operand_11->destination_value == 0x1f8fc);
+    const auto command_noop = title_stage_session.observe_command_opcode(
+        {copy_sequence + 8, 0x1fa0a, 0x2ff05, 0x01});
+    assert(command_noop);
+    assert(command_noop->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::local_no_op);
+    assert(command_noop->unresolved_call_address == 0x1fab4);
+    assert(command_noop->unresolved_call_target == 0x1fde4);
+    const auto command_8 = title_stage_session.observe_command_opcode(
+        {copy_sequence + 9, 0x1fa0a, 0x2ff06, 0x08});
+    assert(command_8);
+    assert(command_8->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::runtime_long_boundary);
+    const auto command_8_pointer = title_stage_session.observe_command_eight_pointer(
+        {copy_sequence + 10, 0x1fa70, 0x1f978, 0x00100000});
+    assert(command_8_pointer);
+    assert(command_8_pointer->mode_read_instruction_address == 0x1fa76);
+    assert(command_8_pointer->mode_source_address == 0x1f98e);
+    const auto command_8_mode = title_stage_session.observe_command_eight_mode(
+        {copy_sequence + 11, 0x1fa76, 0x1f98e, 1});
+    assert(command_8_mode && command_8_mode->scale_read_required);
+    assert(command_8_mode->scale_read_instruction_address == 0x1fa80);
+    assert(command_8_mode->scale_source_address == 0x1f994);
+    const auto command_8_scale = title_stage_session.observe_command_eight_scale(
+        {copy_sequence + 12, 0x1fa80, 0x1f994, 0x12340003});
+    assert(command_8_scale);
+    assert(command_8_scale->word_shifted_scale == 0x12340018);
+    assert(command_8_scale->destination_value == 0x12440018);
+    assert((command_8_scale->destination_addresses
+        == std::array<std::uint32_t, 2>{{0x1f978, 0x1f974}}));
+    assert(command_8_scale->next_stream_address == 0x2ff07);
+    const auto command_external_call = title_stage_session.observe_command_opcode(
+        {copy_sequence + 13, 0x1fa0a, 0x2ff07, 0x20});
+    assert(command_external_call);
+    assert(command_external_call->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::unresolved_boundary);
+    assert(command_external_call->unresolved_call_address == 0x1fac2);
+    assert(command_external_call->unresolved_call_target == 0x1fbe6);
+    bool rejected_command_return = false;
+    try {
+        static_cast<void>(title_stage_session.observe_command_call_return(
+            {copy_sequence + 14, 0x1fac2, 0x1fbe6, 0x1fac8,
+                0x2ff08, 0x12, 0x2000}));
+    } catch (const std::runtime_error&) {
+        rejected_command_return = true;
+    }
+    assert(rejected_command_return);
+    const auto command_call_return = title_stage_session.observe_command_call_return(
+        {copy_sequence + 14, 0x1fac2, 0x1fbe6, 0x1fac6,
+            0x2ff08, 0x12, 0x2000});
+    assert(command_call_return);
+    assert(command_call_return->observation.result_d0 == 0x12);
+    assert(command_call_return->observation.result_sr == 0x2000);
+    assert(command_call_return->next_stream_address == 0x2ff08);
+    assert(command_call_return->next_opcode_read_address == 0x1fa0a);
     const auto command_end = title_stage_session.observe_command_opcode(
-        {copy_sequence + 8, 0x1fa0a, 0x2ff05, 0});
+        {copy_sequence + 15, 0x1fa0a, 0x2ff08, 0});
     assert(command_end);
     assert(command_end->outcome
         == eon::DeuterosAmigaTitleCommandOpcodeOutcome::complete);
@@ -11131,7 +11223,7 @@ int main() {
     assert(command_end->caller_resume_address == 0x404fe);
     assert(command_end->stop_before_address == 0x404fe);
     assert(!title_stage_session.observe_command_opcode(
-        {copy_sequence + 9, 0x1fa0a, 0x2ff06, 0}));
+        {copy_sequence + 16, 0x1fa0a, 0x2ff09, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_word(
         {copy_sequence + 2, 0x1fba4, 0x30002, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_base(
@@ -11869,6 +11961,10 @@ int main() {
     assert(command_interpreter.operand_table_base == 0x1f8ec);
     assert(command_interpreter.interpreter_sha256
         == "9f3ee558ee309d4f8b5f73ee11ac085fa9d11510c7536180ee515f40b01546ef");
+    assert(command_interpreter.no_op_call_address == 0x1fab4);
+    assert(command_interpreter.no_op_target == 0x1fde4);
+    assert(command_interpreter.no_op_sha256
+        == "1ceeabf0c6a5a30bad12cdac0e3ab015a7188a42e6aebb556aad00bb9cd693ad");
     assert(post_exec_tail_return.service_a1_literal == 0x204aa);
     assert((post_exec_tail_return.service_a1_offsets
         == std::array<std::uint16_t, 4>{{0x0008, 0x0009, 0x000e, 0x0012}}));

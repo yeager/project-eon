@@ -98,8 +98,10 @@ void MillenniumDosPostOverlayLoopSession::observe_dispatch_return(
     const std::uint16_t call_address, const std::uint16_t return_address) {
     if (state_ != MillenniumDosPostOverlayLoopState::dispatch_call_boundary
         || !dispatch_call_address_ || !dispatch_call_target_
-        || call_address != *dispatch_call_address_ || call_address != 0xd40a
-        || return_address != 0xd40d || !function_key_index_) {
+        || call_address != *dispatch_call_address_
+        || (call_address == 0xd40a ? return_address != 0xd40d || !function_key_index_
+                                  : call_address != dispatch_.first_action_call_address
+                                    || return_address != std::uint16_t(call_address+3))) {
         throw std::runtime_error("Millennium DOS handler return is detached from dispatch call");
     }
     dispatch_call_address_.reset();

@@ -18,6 +18,7 @@
 #include "engine/millennium_dos_bdf_mode_two_session.hpp"
 #include "engine/millennium_dos_bdf_other_mode_session.hpp"
 #include "engine/millennium_dos_shared_helper_session.hpp"
+#include "engine/millennium_dos_game_session.hpp"
 #include "engine/millennium_dos_tenth_function_session.hpp"
 
 #include <cstdint>
@@ -100,6 +101,7 @@ public:
     [[nodiscard]] MillenniumDosBdfModeTwoSession make_bdf_mode_two_session(std::uint16_t entry_di) const;
     [[nodiscard]] MillenniumDosBdfOtherModeSession make_bdf_other_mode_session(std::uint8_t entry_dl,std::uint16_t entry_di) const;
     [[nodiscard]] MillenniumDosSharedHelperSession make_shared_helper_session(std::uint16_t caller_ax) const;
+    [[nodiscard]] MillenniumDosGameSession make_game_session() const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
     void observe_runtime_byte(std::uint16_t instruction_address,

@@ -49,10 +49,17 @@ external-transfer entry sequence, so a completed invocation can be applied at
 most once. Other BDF modes remain unapplied until their address-space meaning
 (including VGA plane selection) is represented explicitly.
 
-The Deuteros `$38a28` adapter remains intentionally disconnected from the
-coordinator. Its bounded-copy checkpoint currently exists only inside the
-local title-stage service-batch session, while the admitted coordinator chain
-does not yet reach or expose that session. Accepting a detached checkpoint
-would bypass release ownership and reachability, so there is no public apply
-API for it. Integration must wait for the preceding title-stage state machine
-to own that boundary and return its copy-safe completed checkpoint.
+The Deuteros title-stage route now forwards every typed observation from the
+fifth Exec-service return through the controller seed, graphics calls, tail
+wrappers, source table, load service and selector to the `$38a28` copy loop.
+The coordinator mirrors the local loop in a bounded transfer owner. Each
+chunk must first satisfy its exact sequence/index/source/destination contract;
+the completed big-endian batch and runtime memory are then prepared on copies
+before the title-stage observation and both owned states are committed. Its
+batch ID contains the coordinator's load-copy generation, so the generation
+can apply once only. Reset destroys the transfer, generation, and RAM owner;
+host revocation suppresses both observations and checkpoints.
+
+There is deliberately no API accepting a detached Deuteros checkpoint. The
+only route into runtime RAM begins with the already admitted release-owned
+title session and traverses every preceding state-machine boundary.
