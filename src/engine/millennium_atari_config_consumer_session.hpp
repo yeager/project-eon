@@ -39,6 +39,10 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     fread_prefix_boundary,
     jsr_2b2be_boundary,
     game_init_source_byte_boundary,
+    game_init_zero_copy_boundary,
+    game_init_bit6_clear_boundary,
+    game_init_bit7_set_boundary,
+    game_init_second_source_boundary,
     revoked,
 };
 
@@ -105,6 +109,11 @@ struct MillenniumAtariFreadPrefixObservation {
     std::uint64_t generation=0; std::uint64_t sequence=0;
     std::uint32_t first_address=0; std::uint16_t first_word=0;
     std::uint32_t second_address=0; std::uint16_t second_word=0;
+};
+struct MillenniumAtariGameInitSourceByteObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t instruction_address=0; std::uint32_t source_address=0;
+    std::uint8_t source_byte=0;
 };
 
 struct MillenniumAtariBchgObservation {
@@ -308,6 +317,11 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint16_t game_init_d2=0;
     std::uint32_t game_init_source_address=0;
     std::string game_init_dispatch_sha256;
+    bool game_init_source_observed=false;
+    std::uint8_t game_init_source_byte=0;
+    std::uint32_t game_init_next_instruction=0;
+    std::string game_init_source_dispatch_sha256;
+    std::string game_init_nonzero_dispatch_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -393,6 +407,9 @@ public:
     [[nodiscard]] NativeRuntimeEffectBatch make_fread_prefix_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2b2be();
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_setup_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_source_byte(
+        const MillenniumAtariGameInitSourceByteObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_source_byte_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

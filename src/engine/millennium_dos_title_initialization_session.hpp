@@ -55,6 +55,7 @@ enum class MillenniumDosTitleInitializationState {
     graphics_record_third_word_read_boundary,
     graphics_record_byte_read_boundary,
     graphics_record_second_byte_read_boundary,
+    graphics_record_private_interrupt_result_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };

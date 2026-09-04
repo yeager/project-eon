@@ -1438,6 +1438,14 @@ The loaded `$2b2be` target begins at file `+0xdbe`, not the older candidate at
 It derives A3 `$2b2ba`, transforms D6/D7, stores both words atomically, copies
 the owned A5 into A6/A0, sets D5 to 4 and clears D2. Execution stops before
 `MOVE.B (A4)+,D0` at `$2b2de`, source `$2c250`.
+A generation-owned observation admits exactly that byte. The 12-byte
+read/copy/mask/branch span hashes to
+`948e269d0e24d6ec05013d07ffe3d3ba66400189b98a30d676b44e5b39683fe6`.
+Bytes with no `$c0` bits stop before the next copy at `$2b2ec`; a bit-6-clear
+value reaches `$2b3b8`, a bit-7-set value reaches `$2b376`, and bit 6 alone
+reaches the next source read at `$2b338`. The exact nonzero bit-gate span
+hashes to `4b98ca43cbf9af758b5d56087a8d113f23fedf107e1320a2a6ee137d6cfe92c3`.
+No subsequent buffer byte or branch-target effect is inferred.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4420,6 +4428,12 @@ the 9-byte span (SHA-256
 `ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`)
 increments and atomically stores `$24` at `CS:$1389`. The next exact boundary
 is external byte `$3000:$000a` at `$13f2`.
+The second byte is admitted as genuine `$00`. Its 20-byte branch suffix
+(SHA-256 `172d30853354efec879699618dd36f3fbda28ddd07d8ea66bc2a23ace6ee6753`)
+returns locally; the 39-byte caller suffix (SHA-256
+`d095399b2a968131f10112f1895b1449f6d1572052c032e48289218e5d07355b`)
+atomically builds the dimension request and reaches typed private INT `$91`
+function `$0006` at `$0127`. No result is inferred.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6611,15 +6625,17 @@ revocation discards it with the title state. This preserves the precise
 read-before-write dependency of `$41eb0..$41f30` without treating zero-filled
 host storage as original display memory.
 
-The complete merge loop is now admitted through a narrowly typed observation
-of the 960 unique pre-existing destination words, in their exact first-read
-order. The original performs 2,208 word writes: three outer iterations,
+The complete merge loop is admitted through narrowly typed observations of
+the 960 unique pre-existing destination words and the 352 unique mask words
+that lie in the decoder's `$38`-byte row gaps, each in exact first-read order.
+The first such external mask is `$256fe`; decoded mask words remain owned and
+are never redundantly observed. The original performs 2,208 word writes: three outer iterations,
 184 words per iteration, and four planes. Later writes to overlapping
 addresses consume the value computed by the preceding write rather than the
 initial observation. For each word, the four decoded plane masks are ORed and
 the selected plane is merged as `(old | combined) & (plane | ~combined)`.
 All 960 final big-endian word effects commit as one bounded atomic batch; an
-owned byte that contradicts the observation rejects the entire transition.
+owned byte or observation ordering mismatch rejects the entire transition.
 Replay and source revocation likewise leave memory unchanged. The routine
 returns at `$41f30` through caller `$40514`, loads D0 `$004e`, and stops before
 the next opaque call `$40518 -> $41bb4`. The resulting sparse bytes remain
@@ -6722,6 +6738,13 @@ no-call cases. `$00b0` therefore admits eight typed `$20c4c->$41ad2` returns
 Opaque D0/SR are retained at every return but never used to invent helper
 effects. Loop completion deterministically stores `$00bd` at `$416b4` as one
 atomic word and stops before mutable byte read `$20c6c` from `$20a10`.
+
+The `$20c6c` read is now an exact typed byte observation. The caller performs
+the admitted `add.b` against base descriptor `$00bd`, retaining only the low
+byte, and atomically replaces word `$416b4` with the adjusted descriptor. D0
+is then overwritten with selector `$004b`; execution stops before
+`$20c7a->$41bb4`. This does not assume that a nonzero adjustment preserves
+the `$00bd` resource route.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

@@ -28,6 +28,8 @@ That genuine zero word and adjusted-product write are native. Continue at the
 typed byte boundary `$13e9`, source `$3000:$0007`.
 The genuine `$23` byte is now admitted through all production facades and its
 incremented `$24` is committed. Continue at `$13f2`, source `$3000:$000a`.
+The genuine zero byte and complete local return/request build are now native.
+Continue with raw INT `$91` function `$0006` result at `$0127`.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -58,6 +60,9 @@ The Fclose return and the only four Fread bytes consumed before the next call
 are now typed and native. The next exact boundary is `JSR $2b2be` at `$2aaec`.
 The correctly mapped `$2b2be` setup is now native through its atomic D6/D7
 stores. The next boundary is `MOVE.B (A4)+,D0` at `$2b2de`, source `$2c250`.
+That first source byte and all four exact dispatch outcomes are now native.
+The normal path next needs buffer bytes at `$2c251`; alternate paths stop at
+`$2b338`, `$2b376`, or `$2b3b8`.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -302,8 +307,10 @@ direct `$41c32` route, and both distinct `$74576/$76e24` streams are now
 hash-bound, fully decoded, and atomically written through the typed `$1f168`
 destination. Exact typed `$20c4c->$41ad2` returns now complete the bounded
 12-entry descriptor-bit loop and atomically store `$00bd` at `$416b4`.
-Continue with a typed byte observation for mutable `$20a10` at `$20c6c`, then
-derive selector `$004b`; do not infer the byte from surrounding title data.
+The mutable `$20a10` byte now has an exact typed observation; its low-byte
+addition atomically adjusts `$416b4`, and D0 becomes `$004b`. Continue at
+`$20c7a->$41bb4` by proving the adjusted descriptor route selected by that
+observed byte; do not reuse the unadjusted `$00bd` stream implicitly.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
