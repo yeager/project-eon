@@ -323,6 +323,32 @@ public:
         const DeuterosAmigaObservedTitlePostCommandPointerRoute& observation) {
         return service_batch_boundary_session_.observe_post_command_pointer_route(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandGraphicsReturnPlan>
+    observe_post_command_graphics_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        return service_batch_boundary_session_.observe_post_command_graphics_return(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandFirstDispatchPlan>
+    advance_post_command_first_dispatch() {
+        return service_batch_boundary_session_.advance_post_command_first_dispatch();
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchHeaderPlan>
+    observe_post_command_first_dispatch_header(
+        const DeuterosAmigaObservedTitleFirstDispatchHeader& observation) {
+        return service_batch_boundary_session_.observe_post_command_first_dispatch_header(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchPacketPlan>
+    advance_post_command_first_dispatch_packet() {
+        return service_batch_boundary_session_.advance_post_command_first_dispatch_packet();
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchDecodePlan>
+    advance_post_command_first_dispatch_decode() {
+        return service_batch_boundary_session_.advance_post_command_first_dispatch_decode();
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFirstDispatchCallerTailPlan>
+    advance_post_command_first_dispatch_caller_tail() {
+        return service_batch_boundary_session_.advance_post_command_first_dispatch_caller_tail();
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

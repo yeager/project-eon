@@ -643,6 +643,12 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult
     observe_millennium_dos_title_bios_result(
         MillenniumDosTitleBiosResultObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult
+    observe_millennium_dos_title_dos_memory_result(
+        MillenniumDosTitleDosResultObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult
+    observe_millennium_dos_title_dos_file_result(
+        MillenniumDosTitleDosFileResultObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_call_return(
         MillenniumDosTitleToGameCallReturnObservation observation);
@@ -734,6 +740,12 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_variant_write(DeuterosAmigaObservedTitleCommandPlanarVariantWrite);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_negative_service(DeuterosAmigaObservedTitleCommandNegativeService);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_pointer_route(DeuterosAmigaObservedTitlePostCommandPointerRoute);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_graphics_return(DeuterosAmigaObservedGraphicsVectorReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_first_dispatch_header(DeuterosAmigaObservedTitleFirstDispatchHeader);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch_packet();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch_decode();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail();
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -764,6 +776,12 @@ public:
     observe_millennium_atari_status_register(MillenniumAtariStatusRegisterObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult
     observe_millennium_atari_xbios_selector_two(MillenniumAtariXbiosSelectorTwoObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_three(MillenniumAtariXbiosSelectorThreeObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_four(MillenniumAtariXbiosSelectorFourObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_line_a(MillenniumAtariLineAObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_21(MillenniumAtariXbiosSelector21Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_6(MillenniumAtariXbiosSelector6Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_bchg_2b55a(MillenniumAtariBchgObservation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

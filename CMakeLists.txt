@@ -406,10 +406,15 @@ if(BUILD_TESTING)
     add_executable(eon-game-text-localization-tests
         tests/game_text_localization_tests.cpp
         src/game_text_localization.cpp
-        src/i18n.cpp)
+        src/i18n.cpp
+        src/data/sha256.cpp)
     target_include_directories(eon-game-text-localization-tests PRIVATE src)
     target_compile_definitions(eon-game-text-localization-tests PRIVATE
         EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
+    if(EON_DIRECT_DATA_DIR)
+        target_compile_definitions(eon-game-text-localization-tests PRIVATE
+            EON_DIRECT_DATA_DIR="${EON_DIRECT_DATA_DIR}")
+    endif()
     add_test(NAME game-text-localization COMMAND eon-game-text-localization-tests)
     add_executable(eon-native-runtime-memory-tests
         tests/native_runtime_memory_tests.cpp

@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "contract": "player-visible game text in Original and Modern",
+  "entries": [
+    {"id":"millennium.dos.sound.welcome","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":775,"source_size":21,"original_text":"Welcome To MILLENIUM.","catalog_msgid":"Welcome to Millennium."},
+    {"id":"millennium.dos.sound.choose","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":799,"source_size":31,"original_text":"Please Select Sound Effect Type","catalog_msgid":"Please select a sound system"},
+    {"id":"millennium.dos.sound.instruction","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":832,"source_size":33,"original_text":"By Typing The Appropriate Number.","catalog_msgid":"Type the corresponding number."},
+    {"id":"millennium.dos.sound.ibm","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":868,"source_size":15,"original_text":"0 = IBM Speaker","catalog_msgid":"0 = IBM PC speaker"},
+    {"id":"millennium.dos.sound.blaster","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":885,"source_size":17,"original_text":"1 = Sound Blaster","catalog_msgid":"1 = Sound Blaster"},
+    {"id":"millennium.dos.sound.covox","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":904,"source_size":22,"original_text":"2 = Covox Sound Master","catalog_msgid":"2 = Covox Sound Master"},
+    {"id":"millennium.dos.sound.wait","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":933,"source_size":25,"original_text":"Thank You. Please Wait...","catalog_msgid":"Thank you. Please wait…"},
+    {"id":"millennium.dos.sound.ibm-name","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":1322,"source_size":8,"original_text":"sibm.drv","catalog_msgid":"IBM PC speaker"},
+    {"id":"millennium.dos.sound.blaster-name","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":1349,"source_size":8,"original_text":"ssbl.drv","catalog_msgid":"Sound Blaster"},
+    {"id":"millennium.dos.sound.covox-name","game":"millennium","platform":"dos","source_leaf":"MILL.COM","source_sha256":"4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e","source_offset":1358,"source_size":8,"original_text":"scvx.drv","catalog_msgid":"Covox Sound Master"}
+  ]
+}

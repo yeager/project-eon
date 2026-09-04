@@ -142,6 +142,117 @@ and `$1ae8..$1af5`
 The common `$1bb5..$1bba` span hashes to
 `076161dddab78341dd9a014e90cff175b9f76ea5d0184ec2f6c244f09f659bc6`.
 
-The next routine `$1b1f` begins DOS memory-resize/allocation services. No DOS
-result or process-memory layout is inferred, so the native title path stops at
-that call boundary.
+## DOS memory service chain
+
+Production automatically enters the exact `$1bb8 -> $1b1f` call after the
+sixteenth BIOS observation. The 67-byte local span at loaded
+`$1b1f..$1b61` (file `+$1a1f`) has SHA-256
+`62bb857bf927ca3392900f9a8f26b9ab23f0780cd84c0ccf248f084e17c02ba7`.
+It makes five ordered DOS `INT $21` requests before the next opaque service:
+
+| request | interrupt / return | exact inputs used by the code |
+|---|---|---|
+| resize current block | `$1b26 / $1b28` | `AH=$4a`, `ES=CS`, `BX=$1000` |
+| large allocation | `$1b2d / $1b2f` | `AH=$48`, `BX=$fa00` |
+| free returned segment | `$1b38 / $1b3a` | `AH=$49`, `ES=previous AX` |
+| first buffer allocation | `$1b3f / $1b41` | `AH=$48`, `BX=$1000` |
+| second buffer allocation | `$1b4f / $1b51` | `AH=$48`, `BX=$0fa1` |
+
+Each typed observation retains raw AX, BX, FLAGS and the carry value, and
+requires carry to agree with FLAGS bit zero. The original instructions ignore
+carry after the first three calls. They store the large-allocation return BX
+at child word `$1aa2`, store the first buffer's AX at `$010e`, and store the
+second buffer's AX at `$0112`. Eon reproduces those writes literally without
+interpreting them as valid host allocations or manufacturing DOS memory-control
+blocks.
+
+Carry after either buffer allocation follows the exact `$1b7c` failure return
+(four bytes, SHA-256
+`d0f75b0f97509ff14ce1308b5a829de214523523b3fdc6ea7270df3a13e0ea5b`).
+The caller span `$1bbb..$1bc4` (SHA-256
+`8f78c75697fe56993706c0b6ea69df78c90922b27775feaccb9f40071abbff1f`)
+stores raw AX at `$1a9c`, observes nonzero DX, and stops at its jump to
+`$1c6a`.
+
+After two carry-clear buffer results, the local code restores DS from CS,
+sets `DX=$0e4e`, and enters `$1af6`. Its five-byte prefix has SHA-256
+`06a31ffeae96544b136159050eabb961328023c749e073cd9e9e0b752a905884`
+and reaches DOS file-open service `$3d00` at `$1af9`, returning at `$1afb`.
+The filename bytes, open result, later allocation, file contents, and process
+memory semantics remain external. State and each set of instruction-defined
+memory writes are committed atomically; a detached address, duplicate
+sequence, inconsistent carry/FLAGS pair, revoked session, or rejected memory
+batch changes neither session nor native memory.
+
+## `title.lib` size query
+
+The open request names the exact ten-byte NUL-terminated media string
+`title.lib` at loaded `$0e4e` (file `+$0d4e`, SHA-256
+`62bfc3e4275f23097edf305a3e1144d3eac79b4a4c75cc35cfbb3eb0b9255aed`).
+The complete 41-byte helper `$1af6..$1b1e` hashes to
+`4fd3a9694c9ea36d7baf33607ed0b70ac764bb1f27bb6b686c3401bce5ef6b3d`.
+After an observed carry-clear open return, it retains AX as the file handle and
+issues seek service `$4202` at `$1b09` with that handle, `CX=0`, and `DX=0`.
+This is a seek relative to the end; there is no DOS read request in this helper.
+
+A carry-set open or seek result follows the exact jump to `$05a3` and stops
+there because that error routine is outside this recovered batch. A carry-clear
+seek retains raw `DX:AX`, restores the handle, and issues close service `$3e00`
+at `$1b12`. The original code ignores close carry and raw close registers. It
+restores the seek result's low AX word, computes the 16-bit expression
+`(AX + $000f) >> 4`, copies that paragraph count to BX, and returns. It neither
+checks DX nor detects 16-bit rounding overflow.
+
+The caller's exact six-byte `$1b62..$1b67` prefix hashes to
+`b24d8fd1fa6200c9ea1cf43cfdd413e90089b63d0608efb3866beb8b782b5f3a`.
+It changes AH to `$48` and reaches the next allocation `INT $21` at `$1b64`.
+The typed checkpoint retains all raw open/seek/close AX, BX, CX, DX, FLAGS and
+carry values, the exact source address and length, the handle, and the computed
+paragraph request. It does not open host files, infer that `title.lib` exists,
+read its bytes, fabricate a DOS handle, or claim that the high seek word is
+unused outside this bounded original helper.
+
+## Sized allocation and `TITLE.LIB` load
+
+The sized allocation result at `$1b66` is now a typed continuation. Carry
+follows `$1b7c`, returns `DX=1`, stores raw AX at `$1a9c`, and stops at
+`$1c6a`. On carry-clear, the original stores AX as the segment half of far
+pointer `$0e46`, requests one additional paragraph at `$1b74`, stores that
+raw AX at `$1a9e` and `$1a9c` without testing carry, and performs a temporary
+`$fa00`-paragraph allocate/free pair at `$1bca/$1bd5`. Those latter results
+are also retained literally; the temporary allocation stores raw BX at
+`$1aa4`, and neither carry flag changes the local path. The 30 bytes
+`$1b62..$1b7f` hash to
+`aa3738ee068dcdc02e63c90b3021d9da8672878ef0bae3af7a6ac35f50a3a578`.
+
+The caller then invokes the loader at `$0e5f`. Its open helper requests
+read/write mode `$3d02` for the same verified `$0e4e` filename and stores raw
+AX at `$19c6`. Open carry stops before the error-display call at `$0e6a`.
+Success issues nine ordered DOS reads through `$057c`: eight requests of
+`$8000` bytes followed by one of `$a000`, using the exact segment/offset
+sequence `base:0000`, `base:8000`, `base+1000:0000`, through
+`base+3000:8000`, then `base+4000:0000`. The supplied English `TITLE.LIB` is
+required at its manifest identity: 18,907 bytes, SHA-256
+`6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678`.
+
+For every carry-clear read, observed AX must not exceed requested CX, the
+remaining verified source bytes, or the previously observed allocation size.
+Only that exact prefix of the immutable media is copied to the observed DOS
+buffer. Carry-set reads reproduce the original unchecked continuation without
+inventing written bytes. A zero-byte EOF return is accepted even for a later
+request address beyond the allocation because it performs no memory write.
+After all nine results the loader closes the retained handle at `$059e`; as in
+the original, close carry is recorded but does not branch. The shared DOS I/O
+helper span `$0536..$05a2` hashes to
+`d74f413ecf61f099d786f957f3f7a17e0044a78027bac844912b087e33d27b27`.
+
+Once at least the six-byte header is actually loaded, the deterministic local
+relocation stores its little-endian entry count at `$0e5d` and normalizes the
+directory far pointer into `$0e4a:$0e4c`. For the genuine library header
+`26 00 13 48 00 00`, an observed base segment `S` therefore produces count
+`$0026`, offset `$0003`, and segment `S+$0481`. Mode one stops before `$0f6b`;
+other modes stop at the local return `$0f6a`. The loader and relocation span
+`$0e5f..$0f6a` hashes to
+`63d5b5a645879a0a79ed0a7c880051e98ddf62b91f07616c0a72d035ee9581cf`.
+All buffer writes and relocation cells commit as atomic runtime-memory batches;
+source revocation or any bound failure leaves the prior checkpoint unchanged.

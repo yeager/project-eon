@@ -127,18 +127,59 @@ observation may provide the returned D0. The exact continuation then executes
 relative to the unmaterialized A7, and stops before the next `TRAP #14` at
 `$2a52e`. The 20 verified bytes `$2a51c..$2a52f` have SHA-256
 `751915c217471e4763ebeef2928dc4cca68bc481dae3113adabb441c2446ee2f`.
+An explicit typed selector-3 D0 result admits the next exact local block:
+`ADDQ.L #2,A7`, an atomic big-endian `MOVE.L D0,$2a50e`, and
+`MOVE.W #4,-(A7)`. Its 16 bytes `$2a52e..$2a53d` have SHA-256
+`f4a7b019591ccff43e4478ac1549e262387ebfb22c16ded18457fe2aca6bbcc2`.
+Execution then stops before opaque XBIOS selector 4 at `$2a53c`.
+A typed selector-4 result consumes only D0's low word, exactly as the original
+`MOVE.W` requires. The 12 bytes `$2a53c..$2a547` hash to
+`42c6d7ede7609ced9c859e6222d678edf861018b86ee80be2cfe6f8a23010e44`:
+they clean two stack bytes, atomically store that word big-endian at `$2a512`,
+then stop before the opaque Line-A `$a000` instruction at `$2a546`.
+A typed Line-A observation supplies only returned A0 and the two longwords
+which the original immediately reads from `8(A0)` and `12(A0)`; it does not
+model firmware internals. The 24-byte local block through RTS hashes to
+`1705523f57debe7644c3a874cd76e42464f1f34f227c9ee1247026afdb2f3539`.
+It atomically stores the observed values at `$2a514` and `$2a518`, returns to
+`$2aaaa`, then executes the 8-byte caller continuation (SHA-256
+`37f9fb95e45dc6c4807821ac79189a2d764fffe6bbbef6196ee17f3ad1a18684`)
+and stops before XBIOS selector `$15` at `$2aab0`.
+A typed selector-`$15` return records D0 without assigning it meaning: the
+following code never reads it. The exact 16 bytes `$2aab0..$2aabf` hash to
+`de3f0996c3b76c20c1e83a686f9a97f7a5ad8f9575a03d8f01b7f4cadf45a233`.
+They clean six stack bytes, push pointer `$2a612` and selector 6, then stop
+before XBIOS `TRAP #14` at `$2aabe`.
+A typed selector-6 return similarly records otherwise-unused D0. The exact
+10 bytes `$2aabe..$2aac7` hash to
+`ba614a28f861921a263225ef85209b20dc2673ea3444cb556b88ca29b2b23163`.
+They clean six stack bytes and stop before absolute `JSR $2b55a` at `$2aac2`.
+The eight bytes previously inventoried at file `+$107c` would map to `$2b57c`
+under the exact `$2a500` load, not the called `$2b55a`. The typed callee
+observation is therefore rejected: the 22-byte mapping disagreement is a hard
+preservation boundary, and Eon does not execute those bytes at the wrong PC.
 The checkpoint is generation-owned and disappears
 with the same coordinator revocation as its PRG and Fread memory.
 
 ## Remaining boundary
 
 The materialized image and exact configuration occupy native runtime memory.
-With explicit SR and selector-2 result observations, both entry branches reach
-XBIOS selector 3 at `$2a52e`. Its return value is the next boundary. TOS
+With explicit SR, selector-2, selector-3, selector-4, and Line-A observations,
+both entry branches
+reach the opaque call `JSR $2b55a` at `$2aac2`. Its load mapping is the next
+boundary. TOS
 basepage fields, other XBIOS results, Line-A state, input, timing, and every unclassified indirect
 target remain explicit preservation boundaries.
 
 No original bytes are written to disk, copied into a package, or committed.
+
+The named recovery map binds `millennium-atari-config-xbios-3` to runtime
+`$2a52e..$2a53b`, immutable `MILL22A.inf` hash
+`74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6`,
+and the continuation hash above. `millennium-atari-config-xbios-4` binds
+`$2a53c..$2a545` to the 12-byte hash above. The named
+`millennium-atari-line-a-init` row binds the two hashes above
+and terminates at `millennium-atari-xbios-15`, `$2aab0`.
 The structural unit fixture checks loader arithmetic only; the canonical
 native corpus test constructs `MillenniumAtariBootstrapSession` from the real,
 hash-identified supplied disk and therefore also enforces this exact native

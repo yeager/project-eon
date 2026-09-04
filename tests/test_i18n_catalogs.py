@@ -10,6 +10,7 @@ catalog contract for Original and Modern mode.
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 import re
 import unittest
@@ -18,6 +19,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 PO = ROOT / "po"
 LAUNCHER_SOURCE = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
+GAME_TEXT_SOURCE = (ROOT / "src" / "game_text_localization.cpp").read_text(encoding="utf-8")
 CATALOGS = {
     "ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja",
     "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN",
@@ -118,6 +120,25 @@ def po_message_ids(path: Path) -> list[str]:
 
 
 class CatalogTests(unittest.TestCase):
+    def test_declarative_game_text_map_matches_compiled_registry(self) -> None:
+        document = json.loads((ROOT / "docs" / "game-text-map.json").read_text(encoding="utf-8"))
+        self.assertEqual(document["schema"], 1)
+        pattern = re.compile(
+            r'GameTextDefinition\{Game::(\w+), Platform::(\w+),\s*'
+            r'"([^"]+)", "([^"]+)", "([0-9a-f]{64})", (\d+), (\d+), '
+            r'"([^"]+)",\s*"([^"]+)"\}')
+        compiled = []
+        for match in pattern.finditer(GAME_TEXT_SOURCE):
+            game, platform, key, leaf, digest, offset, size, original, message = match.groups()
+            compiled.append({
+                "id": key, "game": game, "platform": platform,
+                "source_leaf": leaf, "source_sha256": digest,
+                "source_offset": int(offset), "source_size": int(size),
+                "original_text": original, "catalog_msgid": message,
+            })
+        self.assertTrue(compiled)
+        self.assertEqual(document["entries"], compiled)
+
     def test_exactly_twenty_shipped_catalogs(self) -> None:
         self.assertEqual({path.stem for path in PO.glob("*.po")}, CATALOGS)
 

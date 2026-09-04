@@ -23,17 +23,20 @@ int main(int argc, char** argv) {
     const auto root = std::filesystem::path(argv[1]);
     std::filesystem::path mill_path;
     std::filesystem::path titles_path;
+    std::filesystem::path title_library_path;
     for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
         if (!entry.is_regular_file()) continue;
         if (entry.path().filename() == "MILL.COM") mill_path = entry.path();
         if (entry.path().filename() == "TITLES.EXE") titles_path = entry.path();
+        if (entry.path().filename() == "TITLE.LIB") title_library_path = entry.path();
         if (!mill_path.empty() && !titles_path.empty()
             && mill_path.parent_path() == titles_path.parent_path()) break;
     }
-    if (mill_path.empty() || titles_path.empty()
+    if (mill_path.empty() || titles_path.empty() || title_library_path.empty()
         || mill_path.parent_path() != titles_path.parent_path()) return 3;
     const auto mill = read(mill_path);
     const auto titles = read(titles_path);
+    const auto title_library = read(title_library_path);
     eon::MillenniumDosTitleExecEntrySession session(mill, titles);
     assert(session.state()
         == eon::MillenniumDosTitleExecEntryState::awaiting_child_process_entry);
@@ -206,6 +209,183 @@ int main(int argc, char** argv) {
         &&mode_one_complete.memory_effects.back().value==1
         &&mode_one_complete.title_main_call_address==0x1bb8
         &&mode_one_complete.title_main_call_target==0x1b1f);
+    initialization.execute_title_main_allocation_start(24,0x1bb8,0x1b1f);
+    assert(initialization.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::dos_resize_result_boundary
+        &&initialization.checkpoint().dos_boundary.interrupt_address==0x1b26
+        &&initialization.checkpoint().dos_boundary.interrupt==0x21
+        &&initialization.checkpoint().dos_boundary.service==0x4a
+        &&initialization.checkpoint().dos_boundary.ax_known_value==0x4a01
+        &&initialization.checkpoint().dos_boundary.bx==0x1000
+        &&initialization.checkpoint().dos_boundary.segment==0x2468);
+    initialization.observe_dos_memory_result(
+        {25,0x1b26,0x1b28,true,0x1203,0x4567,0x0001});
+    assert(initialization.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::
+            dos_large_allocation_result_boundary
+        &&initialization.checkpoint().dos_boundary.interrupt_address==0x1b2d
+        &&initialization.checkpoint().dos_boundary.ax_known_value==0x4803
+        &&initialization.checkpoint().dos_boundary.bx==0xfa00);
+    initialization.observe_dos_memory_result(
+        {26,0x1b2d,0x1b2f,false,0x3004,0x5678,0x0202});
+    assert(initialization.checkpoint().dos_boundary.interrupt_address==0x1b38
+        &&initialization.checkpoint().dos_boundary.service==0x49
+        &&initialization.checkpoint().dos_boundary.ax_known_value==0x4904
+        &&initialization.checkpoint().dos_boundary.segment==0x3004);
+    initialization.observe_dos_memory_result(
+        {27,0x1b38,0x1b3a,false,0x0005,0,0x0202});
+    assert(initialization.checkpoint().dos_boundary.interrupt_address==0x1b3f
+        &&initialization.checkpoint().dos_boundary.ax_known_value==0x4805);
+    initialization.observe_dos_memory_result(
+        {28,0x1b3f,0x1b41,false,0x4006,0,0x0202});
+    assert(initialization.checkpoint().dos_boundary.interrupt_address==0x1b4f
+        &&initialization.checkpoint().dos_boundary.bx==0x0fa1
+        &&initialization.checkpoint().dos_boundary.ax_known_value==0x4806);
+    initialization.observe_dos_memory_result(
+        {29,0x1b4f,0x1b51,false,0x5007,0,0x0202});
+    const auto allocation_success=initialization.checkpoint();
+    assert(allocation_success.state
+        ==eon::MillenniumDosTitleInitializationState::dos_file_open_result_boundary
+        &&allocation_success.last_sequence==29
+        &&allocation_success.dos_results.size()==5
+        &&allocation_success.dos_boundary.interrupt_address==0x1af9
+        &&allocation_success.dos_boundary.return_address==0x1afb
+        &&allocation_success.dos_boundary.service==0x3d
+        &&allocation_success.dos_boundary.ax_known_value==0x3d00
+        &&allocation_success.dos_boundary.segment==0x2468
+        &&allocation_success.dos_boundary.dx==0x0e4e
+        &&allocation_success.dos_boundary.source_address==0x0e4e
+        &&allocation_success.dos_boundary.source_size==10
+        &&allocation_success.memory_effects.size()==9
+        &&allocation_success.memory_effects[6].offset==0x1aa2
+        &&allocation_success.memory_effects[6].value==0x5678
+        &&allocation_success.memory_effects[7].offset==0x010e
+        &&allocation_success.memory_effects[7].value==0x4006
+        &&allocation_success.memory_effects[8].offset==0x0112
+        &&allocation_success.memory_effects[8].value==0x5007);
+    auto open_failure=initialization;
+    open_failure.observe_dos_file_result(
+        {30,0x1af9,0x1afb,true,2,0,0,0,0x0001});
+    assert(open_failure.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::dos_file_failure_boundary
+        &&open_failure.checkpoint().failure_address==0x05a3
+        &&open_failure.checkpoint().dos_file_results.size()==1);
+    initialization.observe_dos_file_result(
+        {30,0x1af9,0x1afb,false,0x0042,0xabcd,0x1234,0x5678,0x0202});
+    const auto seek_boundary=initialization.checkpoint();
+    assert(seek_boundary.state
+        ==eon::MillenniumDosTitleInitializationState::dos_file_seek_result_boundary
+        &&seek_boundary.dos_boundary.interrupt_address==0x1b09
+        &&seek_boundary.dos_boundary.return_address==0x1b0b
+        &&seek_boundary.dos_boundary.service==0x42
+        &&seek_boundary.dos_boundary.ax_known_value==0x4202
+        &&seek_boundary.dos_boundary.bx==0x0042
+        &&seek_boundary.dos_boundary.cx==0
+        &&seek_boundary.dos_boundary.dx==0);
+    auto seek_failure=initialization;
+    seek_failure.observe_dos_file_result(
+        {31,0x1b09,0x1b0b,true,0x0005,0x0042,0,0,0x0001});
+    assert(seek_failure.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::dos_file_failure_boundary
+        &&seek_failure.checkpoint().failure_address==0x05a3);
+    initialization.observe_dos_file_result(
+        {31,0x1b09,0x1b0b,false,0x49db,0x0042,0,0,0x0202});
+    const auto close_boundary=initialization.checkpoint();
+    assert(close_boundary.state
+        ==eon::MillenniumDosTitleInitializationState::dos_file_close_result_boundary
+        &&close_boundary.dos_boundary.interrupt_address==0x1b12
+        &&close_boundary.dos_boundary.return_address==0x1b14
+        &&close_boundary.dos_boundary.service==0x3e
+        &&close_boundary.dos_boundary.ax_known_value==0x3e00
+        &&close_boundary.dos_boundary.bx==0x0042
+        &&close_boundary.dos_boundary.cx==0
+        &&close_boundary.dos_boundary.dx==0);
+    initialization.observe_dos_file_result(
+        {32,0x1b12,0x1b14,true,0x0006,0x0042,0,0xbeef,0x0001});
+    const auto sized_allocation=initialization.checkpoint();
+    assert(sized_allocation.state
+        ==eon::MillenniumDosTitleInitializationState::
+            dos_file_sized_allocation_result_boundary
+        &&sized_allocation.last_sequence==32
+        &&sized_allocation.dos_file_results.size()==3
+        &&sized_allocation.dos_file_results[0].ax==0x0042
+        &&sized_allocation.dos_file_results[1].ax==0x49db
+        &&sized_allocation.dos_file_results[1].dx==0
+        &&sized_allocation.dos_file_results[2].carry
+        &&sized_allocation.dos_boundary.interrupt_address==0x1b64
+        &&sized_allocation.dos_boundary.return_address==0x1b66
+        &&sized_allocation.dos_boundary.service==0x48
+        &&sized_allocation.dos_boundary.ax_known_value==0x489e
+        &&sized_allocation.dos_boundary.bx==0x049e
+        &&sized_allocation.dos_boundary.cx==0x0004
+        &&sized_allocation.dos_boundary.dx==0xbeef
+        &&sized_allocation.memory_effects.size()==9);
+    initialization.observe_dos_memory_result(
+        {33,0x1b64,0x1b66,false,0x3000,0,0x0202});
+    assert(initialization.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::
+            dos_single_paragraph_allocation_result_boundary
+        &&initialization.checkpoint().dos_boundary.interrupt_address==0x1b74
+        &&initialization.checkpoint().dos_boundary.bx==1);
+    initialization.observe_dos_memory_result(
+        {34,0x1b74,0x1b76,true,0x4000,0,0x0001});
+    initialization.observe_dos_memory_result(
+        {35,0x1bca,0x1bcc,true,0x5000,0x6000,0x0001});
+    initialization.observe_dos_memory_result(
+        {36,0x1bd5,0x1bd7,true,0x0007,0,0x0001});
+    const auto library_open=initialization.checkpoint();
+    assert(library_open.state
+        ==eon::MillenniumDosTitleInitializationState::dos_library_open_result_boundary
+        &&library_open.dos_boundary.interrupt_address==0x0549
+        &&library_open.dos_boundary.service==0x3d
+        &&library_open.dos_boundary.ax_known_value==0x3d02
+        &&library_open.dos_boundary.source_address==0x0e4e);
+    initialization.observe_dos_file_result(
+        {37,0x0549,0x054b,false,0x0055,0,0,0,0x0202},title_library);
+    assert(initialization.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::dos_library_read_result_boundary
+        &&initialization.checkpoint().dos_boundary.interrupt_address==0x057c
+        &&initialization.checkpoint().dos_boundary.service==0x3f
+        &&initialization.checkpoint().dos_boundary.bx==0x0055
+        &&initialization.checkpoint().dos_boundary.cx==0x8000
+        &&initialization.checkpoint().dos_boundary.segment==0x3000);
+    bool oversized_library_read_rejected=false;
+    try {
+        initialization.observe_dos_file_result(
+            {38,0x057c,0x057e,false,0x49dc,0x0055,0x8000,0,0x0202},
+            title_library);
+    } catch(const std::runtime_error&) { oversized_library_read_rejected=true; }
+    assert(oversized_library_read_rejected
+        &&initialization.checkpoint().last_sequence==37);
+    initialization.observe_dos_file_result(
+        {38,0x057c,0x057e,false,0x49db,0x0055,0x8000,0,0x0202},
+        title_library);
+    for(std::uint64_t sequence=39;sequence<=46;++sequence){
+        initialization.observe_dos_file_result(
+            {sequence,0x057c,0x057e,false,0,0x0055,0,0,0x0202},
+            title_library);
+    }
+    assert(initialization.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::dos_library_close_result_boundary
+        &&initialization.checkpoint().dos_boundary.interrupt_address==0x059e);
+    initialization.observe_dos_file_result(
+        {47,0x059e,0x05a0,true,6,0x0055,0,0,0x0001},title_library);
+    const auto relocation=initialization.checkpoint();
+    assert(relocation.state
+        ==eon::MillenniumDosTitleInitializationState::library_relocation_complete
+        &&relocation.last_sequence==47
+        &&relocation.continuation_address==0x0f6b
+        &&relocation.dos_file_results.size()==14
+        &&relocation.memory_effects.size()==18924
+        &&relocation.memory_effects[14].segment==0x3000
+        &&relocation.memory_effects[14].offset==0
+        &&relocation.memory_effects[14].value==0x26
+        &&relocation.memory_effects[18921].offset==0x0e5d
+        &&relocation.memory_effects[18921].value==0x0026
+        &&relocation.memory_effects[18922].offset==0x0e4a
+        &&relocation.memory_effects[18922].value==3
+        &&relocation.memory_effects[18923].offset==0x0e4c
+        &&relocation.memory_effects[18923].value==0x3481);
     eon::MillenniumDosTitleInitializationSession other_mode(titles,0x2468,2);
     other_mode.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
     other_mode.observe_private_interrupt_result({4,0x0127,0x0129,0x02ff,0});
@@ -262,6 +442,31 @@ int main(int argc, char** argv) {
         &&other_complete.memory_effects.back().value==0xb800
         &&other_complete.title_main_call_address==0x1bb8
         &&other_complete.title_main_call_target==0x1b1f);
+    other_mode.execute_title_main_allocation_start(24,0x1bb8,0x1b1f);
+    assert(other_mode.checkpoint().dos_boundary.ax_known_value==0x4a00);
+    bool inconsistent_carry_rejected=false;
+    try {
+        other_mode.observe_dos_memory_result(
+            {25,0x1b26,0x1b28,true,0,0,0});
+    } catch(const std::runtime_error&) { inconsistent_carry_rejected=true; }
+    assert(inconsistent_carry_rejected&&other_mode.checkpoint().last_sequence==24
+        &&other_mode.checkpoint().dos_results.empty());
+    other_mode.observe_dos_memory_result({25,0x1b26,0x1b28,false,0,0,0});
+    other_mode.observe_dos_memory_result({26,0x1b2d,0x1b2f,false,0x6000,0x7000,0});
+    other_mode.observe_dos_memory_result({27,0x1b38,0x1b3a,false,0,0,0});
+    other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
+    const auto allocation_failure=other_mode.checkpoint();
+    assert(allocation_failure.state
+        ==eon::MillenniumDosTitleInitializationState::allocation_failure_boundary
+        &&allocation_failure.failure_address==0x1c6a
+        &&allocation_failure.dos_results.size()==4
+        &&allocation_failure.memory_effects.size()==8
+        &&allocation_failure.memory_effects[5].offset==0x1aa2
+        &&allocation_failure.memory_effects[5].value==0x7000
+        &&allocation_failure.memory_effects[6].offset==0x010e
+        &&allocation_failure.memory_effects[6].value==0x8000
+        &&allocation_failure.memory_effects[7].offset==0x1a9c
+        &&allocation_failure.memory_effects[7].value==0x8000);
     bool detached_initialization_rejected=false;
     try {
         eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);

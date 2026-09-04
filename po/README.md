@@ -36,6 +36,12 @@ the selected PO catalog supplies only its presentation. A non-English catalog
 missing a declared game-text message fails closed instead of silently showing
 another language. Every newly rendered recovered string must therefore be
 added to the registry, POT, and all shipped catalogs in the same change.
+Every registry row also carries its original leaf SHA-256, byte offset, and
+length. Genuine-media tests rehash and compare those ranges, preventing an
+identical-looking string from another release or file from inheriting the
+wrong semantic key.
+The reviewable mirror is [`docs/game-text-map.json`](../docs/game-text-map.json);
+tests require it to match the compiled registry exactly.
 
 ## Unicode rendering
 
