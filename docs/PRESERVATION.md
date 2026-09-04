@@ -1575,6 +1575,17 @@ handle word and selector `$3f`, reaching trap `$77074`; the complete 30-byte
 span has SHA-256
 `2ceb9e3c6a8c2882f13708d64367b0a9f8bf18ee7456ea396a3e600734825476`.
 No open, read, close, filename, or buffer semantics are inferred.
+Typed Fread results of either sign follow the same eight executed bytes,
+SHA-256
+`368338a18784d37b5867fa551121703b2fb0ab613db51cbc5b2c08e14f474558`,
+which remove 12 stack bytes and reach the pending selector `$3e` trap at
+`$7707c`. A typed Fclose result similarly has no inferred meaning. Its exact
+cleanup and branch reach `$770a2`, write original constant `$361436a7` to
+`$2ab2c` and `$11dfc` atomically, and stop at local RTS `$770ba`. The
+concatenated executed span hashes to
+`aa177208872c4125af13601feb4566003e5fb01c851c44f8b7f4904fb5f52b52`;
+the skipped embedded strings are not executed and the RTS destination remains
+external.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4615,6 +4626,14 @@ six-byte SHA-256
 and stops at typed `$1458`. The second record's typed `$13e2` word applies the
 hash-bound wrapping subtraction and stops at `$13e9`, source `$3c80:$0001`.
 These remain raw control-flow and arithmetic facts, not codec or pixel claims.
+The typed `$1458` continuation and both high-half variants are now native
+through the whole `$1437..$1487` loop, exact 81-byte SHA-256
+`5fab2565b47896f17a9418a67095c43645b61c02f960f8749dbb3d5b9718a725`.
+The session preserves the selected half-byte shift, constructs the two-byte
+mode-two count exactly, applies wrapping `DX` subtraction and ordered output
+writes atomically, then stops at `$1488` or the next typed `$1428` input.
+This expands deterministic execution only; stream and output bytes still have
+no claimed compression, palette, pixel, or graphics semantics.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7085,8 +7104,15 @@ clears `$40410` and joins the not-due routes at `$405c6`. The 128-byte span at
 ADF `$9b5b6` hashes to
 `eee034f14ab5d9af283984b4d7f7f3c32763150cf1abcefb0dace2292e38cb9f`.
 At the join, a typed byte from `$1bf36` follows the exact zero branch to
-`$40638`; a nonzero byte stops before external `$405d0->$1f9a4`. No meaning is
-assigned to either service or to these state cells.
+`$40638`. A nonzero byte enters external `$405d0->$1f9a4`. The exact 32-byte
+caller span at ADF `$9b5d0` hashes to
+`c40858408c0ce8e2754dd87f827e60bbcaf1dfa685cd2c8a418d25d17dcec5ce`.
+That helper removes the stacked return PC and interprets the embedded bytes
+at `$405d6..$405dd`, so its typed return must be `$405de`, not the ordinary
+JSR fall-through `$405d6`. The caller then reads typed word `$22a0` and
+requires `$405e4->$1fe88` to return at `$405ea`; execution stops before
+`$405f0->$1fe6c`. Helper effects and the word's meaning remain opaque, and no
+caller memory effect occurs in this bounded continuation.
 SR remain opaque. The transition is replay-safe, revoked with its owning
 session, and assigns no rendering or gameplay meaning.
 

@@ -154,6 +154,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedTimerStatePlan> observe_title_post_adjusted_timer_state(const DeuterosAmigaObservedTitlePostAdjustedTimerState& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_timer_state(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted4069aReturnPlan> observe_title_post_adjusted_4069a_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_4069a_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedJoinBytePlan> observe_title_post_adjusted_join_byte(const DeuterosAmigaObservedTitlePostAdjustedJoinByte& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_join_byte(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1f9a4ReturnPlan> observe_title_post_adjusted_1f9a4_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_1f9a4_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan> observe_title_post_adjusted_1fe88_return(const DeuterosAmigaObservedTitlePostAdjusted1fe88Return& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_1fe88_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

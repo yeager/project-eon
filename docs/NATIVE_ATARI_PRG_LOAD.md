@@ -275,6 +275,16 @@ A nonnegative result reaches GEMDOS selector `$3f` at `$77074`, with original
 buffer `$11e00` and count `$20000`; that 30-byte span hashes to
 `2ceb9e3c6a8c2882f13708d64367b0a9f8bf18ee7456ea396a3e600734825476`.
 The Fread result remains external.
+Both negative and nonnegative typed Fread results take the same exact
+eight-byte continuation (SHA-256
+`368338a18784d37b5867fa551121703b2fb0ab613db51cbc5b2c08e14f474558`):
+12 stack bytes are removed and the already-pending selector `$3e` reaches
+GEMDOS trap `$7707c`. A typed Fclose result then admits the exact cleanup and
+branch to `$770a2`, two atomic longword writes of `$361436a7` to `$2ab2c` and
+`$11dfc`, and local RTS `$770ba`. The concatenated executed bytes hash to
+`aa177208872c4125af13601feb4566003e5fb01c851c44f8b7f4904fb5f52b52`.
+The RTS destination remains external; no service or target-data meaning is
+assigned.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

@@ -373,6 +373,14 @@ if(BUILD_TESTING)
     # built as Release, where CMake otherwise defines NDEBUG globally.
     if(MSVC)
         target_compile_options(eon-native-tests PRIVATE /UNDEBUG)
+        # The byte-exact corpus test intentionally keeps many independent
+        # release/session fixtures alive in one main() so later assertions can
+        # prove revocation and cross-release isolation. MSVC's default 1 MiB
+        # executable stack is smaller than that test-only fixture frame and
+        # terminates before the first assertion with STATUS_STACK_OVERFLOW.
+        # This changes only the non-installed test executable; the runtime
+        # keeps the platform default stack contract.
+        target_link_options(eon-native-tests PRIVATE /STACK:8388608)
     else()
         target_compile_options(eon-native-tests PRIVATE -UNDEBUG)
         # GCC 15 on aarch64 can ICE during RTL expansion for the deliberately

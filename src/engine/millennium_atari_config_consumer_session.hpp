@@ -54,6 +54,8 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_post_config_gemdos_61_boundary,
     game_init_post_config_fopen_failure_spin,
     game_init_post_config_gemdos_63_boundary,
+    game_init_post_config_gemdos_62_boundary,
+    game_init_post_config_rts_boundary,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -448,6 +450,15 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_post_config_failure_spin_address=0;
     std::uint32_t game_init_post_config_fread_buffer=0;
     std::uint32_t game_init_post_config_fread_count=0;
+    std::int32_t game_init_post_config_fread_result_d0=0;
+    std::uint32_t game_init_post_config_fread_cleanup_bytes=0;
+    std::string game_init_post_config_fread_return_sha256;
+    std::int32_t game_init_post_config_fclose_result_d0=0;
+    std::uint32_t game_init_post_config_fclose_cleanup_bytes=0;
+    std::string game_init_post_config_fclose_return_sha256;
+    std::array<std::uint32_t,2> game_init_post_config_write_addresses{};
+    std::uint32_t game_init_post_config_write_value=0;
+    std::uint32_t game_init_post_config_rts_address=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -573,6 +584,11 @@ public:
         const MillenniumAtariGameInitSecondConfigRtsObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_post_config_fopen(
         const MillenniumAtariGemdosSelector61Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_post_config_fread(
+        const MillenniumAtariGemdosSelector63Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_post_config_fclose(
+        const MillenniumAtariGemdosSelector62Observation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_post_config_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

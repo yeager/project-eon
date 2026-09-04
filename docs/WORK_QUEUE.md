@@ -41,9 +41,10 @@ The third typed runtime word from `$5050:$0017`, the byte from `$5050:$0004`,
 and their exact arithmetic/store sequences are native. The typed byte at
 `$13f2`, source `$5050:$0007`, and both deterministic branch continuations
 are also native. The one/two branch owns its first payload byte and exact
-prefix through `$1427` and the first low-nibble dispatch at `$1428`; continue
-through its typed `$1437`, `$144a`, and `$1470` continuations. Continue at the
-resulting distinct low/high-nibble `$1428` states or mode-two `$1458` word.
+prefix through `$1427`; the complete hash-bound `$1437..$1487` escape, run,
+lookup, high/low-half, and extended mode-two output loop is now native with
+atomic writes. Continue at the next typed `$1428` stream byte or `$1488`
+post-record state using genuine ordered runtime observations.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.
@@ -111,7 +112,9 @@ native through GEMDOS selector `$3d` at `$77056`. Continue with that typed
 service result and its exact success/failure branches. Both branches are now
 native: failure stops at `$77060`, while success reaches GEMDOS selector `$3f`
 at `$77074` with count `$20000` and buffer `$11e00`. Continue from the typed
-Fread result. Do not infer filesystem, firmware, or wall-clock effects from
+Fread result. Typed Fread and Fclose results now reach the two atomic constant
+writes and local RTS `$770ba`; continue by proving its stack-supplied return
+separately. Do not infer filesystem, firmware, or wall-clock effects from
 static bytes.
 
 This is the ordered execution queue for the completion plan. It is a
@@ -383,8 +386,10 @@ runtime facade with replay and revocation checks. The following `$222c0` and
 `$23e4e` calls now require typed returns, after which the exact word-change and
 60,000-count gate is recovered atomically. The optional `$405b6->$4069a`
 return is typed, clears `$40410` atomically, and joins the not-due route at
-`$405c6`. Continue from `$405d0->$1f9a4` only when the typed `$1bf36` byte is
-nonzero; the zero route branches exactly to `$40638`.
+`$405c6`. A nonzero typed `$1bf36` byte now admits `$405d0->$1f9a4` returning
+after its exact inline byte stream at `$405de`, followed by typed word `$22a0`
+and `$405e4->$1fe88` return. Continue from `$405f0->$1fe6c`; the zero route
+still branches exactly to `$40638`.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

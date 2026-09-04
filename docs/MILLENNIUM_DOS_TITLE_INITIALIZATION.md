@@ -529,6 +529,18 @@ original byte arithmetic against `CS:$1389`, writes `CS:$0171`, and stops at
 a distinct high-nibble `$1428` boundary for the same source byte. These names
 describe control flow only, not a recovered codec.
 
+The complete `$1437..$1487` output-loop span is now hash-bound as 81 exact
+bytes (SHA-256
+`5fab2565b47896f17a9418a67095c43645b61c02f960f8749dbb3d5b9718a725`).
+Both low- and high-half escape and mode-two paths retain their actual `CL`
+shift state, current `SI`, `DI`, and wrapping `DX`. The typed `$1458` word
+completes the two-byte count construction and applies the exact `add cx,2`,
+`sub dx,cx`, and `rep stosb` effects before either returning to the next
+half-byte or stopping at `$1488`. Invalid sequence/address observations are
+rejected before any session or native-memory effect is committed. Stream
+bytes and produced bytes remain raw observations; this does not name an
+encoding, pixel layout, or graphics meaning.
+
 The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
 bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
 the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution
