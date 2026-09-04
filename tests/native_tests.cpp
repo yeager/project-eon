@@ -5134,9 +5134,9 @@ int main() {
             const auto a0_word_user=all_release_runtime.millennium_atari_bootstrap_presentation();
             assert(a0_word_user && a0_word_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::a0_indexed_word_boundary && a0_word_user->config_consumer.a0_indexed_instruction_address==0x2b5ec);
             assert(!all_release_runtime.observe_millennium_atari_a0_indexed_word(
-                {1,11,0x2b5ec,0,0x26ee4,0xffff}).accepted);
+                {1,11,0x2b5ec,0,0x2be08,0xffff}).accepted);
             assert(all_release_runtime.observe_millennium_atari_a0_indexed_word(
-                {1,11,0x2b5ec,0,0x26ee4,0}).accepted);
+                {1,11,0x2b5ec,0,0x2be08,0}).accepted);
             const auto loop_user=all_release_runtime.millennium_atari_bootstrap_presentation();
             assert(loop_user && loop_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::loop_branch_boundary
                 && loop_user->config_consumer.loop_branch_target==0x2b5b8
@@ -5147,10 +5147,11 @@ int main() {
                 && loop1_user->config_consumer.loop_iteration==1
                 && loop1_user->config_consumer.loop_current_a1==0x2b64e);
             assert(all_release_runtime.observe_millennium_atari_d0_indexed_word({1,12,0x2b5de,2,0x2be00,0x0d24}).accepted);
-            assert(all_release_runtime.observe_millennium_atari_a0_indexed_word({1,13,0x2b5ec,0,0x26ee4,0}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_a0_indexed_word({1,13,0x2b5ec,0,0x2be0c,0}).accepted);
             assert(all_release_runtime.execute_millennium_atari_loop_iteration_setup().accepted);
+            assert(!all_release_runtime.observe_millennium_atari_d0_indexed_word({1,14,0x2b5de,4,0x2be02,0}).accepted);
             assert(all_release_runtime.observe_millennium_atari_d0_indexed_word({1,14,0x2b5de,2,0x2be00,0x0d24}).accepted);
-            assert(all_release_runtime.observe_millennium_atari_a0_indexed_word({1,15,0x2b5ec,0,0x26ee4,0}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_a0_indexed_word({1,15,0x2b5ec,0,0x2be0c,0}).accepted);
             assert(all_release_runtime.execute_millennium_atari_loop_epilogue().accepted);
             const auto restore_user=all_release_runtime.millennium_atari_bootstrap_presentation();
             assert(restore_user && restore_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::movem_restore_boundary
@@ -6146,11 +6147,18 @@ int main() {
                   {runtime_copy_sequence+77,0x405fc,0x1fe6c,0x40602,0,0},
                   {runtime_copy_sequence+78,0x40608,0x1fe7a,0x4060e,0,0}}},
                 {0x1ffc8,0x1ffce,0x22d34},{1,2,3},0x1ffc8,0,
-                0x1ffce,0x00b4,0x1ffd4,1};
+                0x1ffce,0x00b4,0x1ffd4,0};
             auto bad_final_gate=final_gate;bad_final_gate.service_returns[1].call_target+=2;
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(bad_final_gate).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(final_gate).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(final_gate).accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedInputReturn input_return{
+                {runtime_copy_sequence+80,0x40638,0x1f238,0x4063e,0x43,0x2000},
+                0x1bf36,0x0101};
+            auto bad_input_return=input_return;bad_input_return.toggle_source_address=0x1bf38;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_input_return(bad_input_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_input_return(input_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_input_return(input_return).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

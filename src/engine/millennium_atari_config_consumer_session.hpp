@@ -313,6 +313,7 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t a0_indexed_instruction_address = 0;
     std::string indexed_word_sha256;
     std::uint16_t a0_indexed_word_value = 0;
+    std::uint32_t a0_indexed_source_address = 0;
     std::uint32_t loop_a0_value = 0;
     std::uint16_t loop_d0_value = 0;
     std::uint16_t loop_d7_value = 0;

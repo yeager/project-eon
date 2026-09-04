@@ -244,13 +244,20 @@ int main(const int argc, const char* const argv[]) {
         const auto word_hi=*memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2bdfe});
         const auto word_lo=*memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2bdff});
         const auto indexed_word=static_cast<std::uint16_t>((word_hi<<8U)|word_lo);
+        const auto read_native_word=[&memory](const std::uint32_t address){
+            const auto hi=*memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,address});
+            const auto lo=*memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,address+1U});
+            return static_cast<std::uint16_t>((hi<<8U)|lo);
+        };
         assert(user_consumer.observe_d0_indexed_word({1,10,0x2b5de,0,0x2bdfe,indexed_word}).accepted);
         assert(bsr_memory.apply(user_consumer.make_d0_indexed_word_effect_batch("word")).accepted);
         assert(user_consumer.checkpoint().a0_indexed_instruction_address==0x2b5ec);
-        assert(user_consumer.observe_a0_indexed_word({1,11,0x2b5ec,0,0x26ee4,0}).accepted);
+        const auto first_a0_source=static_cast<std::uint32_t>(0x2b0e8LL+static_cast<std::int16_t>(indexed_word));
+        const auto first_a0_word=read_native_word(first_a0_source);
+        assert(user_consumer.observe_a0_indexed_word({1,11,0x2b5ec,0,first_a0_source,first_a0_word}).accepted);
         assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::loop_branch_boundary
             && user_consumer.checkpoint().loop_a0_value==0x56eee4
-            && user_consumer.checkpoint().loop_d0_value==2
+            && user_consumer.checkpoint().loop_d0_value==static_cast<std::uint16_t>(first_a0_word+2U)
             && user_consumer.checkpoint().loop_d7_value==1
             && user_consumer.checkpoint().loop_branch_target==0x2b5b8);
         assert(bsr_memory.apply(user_consumer.make_a0_indexed_tail_effect_batch("tail")).accepted);
@@ -262,13 +269,22 @@ int main(const int argc, const char* const argv[]) {
             && user_consumer.checkpoint().loop_current_a1==0x2b64e);
         assert(bsr_memory.apply(user_consumer.make_loop_iteration_setup_effect_batch("loop1")).accepted);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b669})==1);
-        assert(user_consumer.observe_d0_indexed_word({1,12,0x2b5de,2,0x2be00,0x0d24}).accepted);
-        assert(user_consumer.observe_a0_indexed_word({1,13,0x2b5ec,0,0x26ee4,0}).accepted);
+        const auto second_d0=user_consumer.checkpoint().loop_d0_value;
+        const auto second_d0_source=static_cast<std::uint32_t>(0x2bdfeLL+static_cast<std::int16_t>(second_d0));
+        const auto second_indexed_word=read_native_word(second_d0_source);
+        assert(!user_consumer.observe_d0_indexed_word({1,12,0x2b5de,static_cast<std::uint16_t>(second_d0+2U),second_d0_source+2U,read_native_word(second_d0_source+2U)}).accepted);
+        assert(user_consumer.observe_d0_indexed_word({1,12,0x2b5de,second_d0,second_d0_source,second_indexed_word}).accepted);
+        const auto second_a0_source=static_cast<std::uint32_t>(0x2b0e8LL+static_cast<std::int16_t>(second_indexed_word));
+        assert(user_consumer.observe_a0_indexed_word({1,13,0x2b5ec,0,second_a0_source,read_native_word(second_a0_source)}).accepted);
         assert(user_consumer.checkpoint().loop_d7_value==0);
         assert(user_consumer.execute_loop_iteration_setup().accepted);
         assert(user_consumer.checkpoint().loop_iteration==2 && user_consumer.checkpoint().loop_current_a1==0x2b67e);
-        assert(user_consumer.observe_d0_indexed_word({1,14,0x2b5de,2,0x2be00,0x0d24}).accepted);
-        assert(user_consumer.observe_a0_indexed_word({1,15,0x2b5ec,0,0x26ee4,0}).accepted);
+        const auto third_d0=user_consumer.checkpoint().loop_d0_value;
+        const auto third_d0_source=static_cast<std::uint32_t>(0x2bdfeLL+static_cast<std::int16_t>(third_d0));
+        const auto third_indexed_word=read_native_word(third_d0_source);
+        assert(user_consumer.observe_d0_indexed_word({1,14,0x2b5de,third_d0,third_d0_source,third_indexed_word}).accepted);
+        const auto third_a0_source=static_cast<std::uint32_t>(0x2b0e8LL+static_cast<std::int16_t>(third_indexed_word));
+        assert(user_consumer.observe_a0_indexed_word({1,15,0x2b5ec,0,third_a0_source,read_native_word(third_a0_source)}).accepted);
         assert(user_consumer.checkpoint().loop_d7_value==0xffff && user_consumer.checkpoint().loop_branch_target==0x2b600);
         assert(user_consumer.execute_loop_epilogue().accepted);
         assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::movem_restore_boundary

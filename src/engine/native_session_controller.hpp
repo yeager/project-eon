@@ -280,6 +280,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_1f9a4_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_1fe88_return(DeuterosAmigaObservedTitlePostAdjusted1fe88Return);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_final_gate(DeuterosAmigaObservedTitlePostAdjustedFinalGate);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_input_return(DeuterosAmigaObservedTitlePostAdjustedInputReturn);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission

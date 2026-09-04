@@ -12,12 +12,13 @@ on:
 permissions:
   contents: read
 
-# Main receives frequent, self-contained preservation updates.  Keep an active
-# platform matrix running so every pushed revision is actually checked; GitHub
-# queues the newest follow-up run instead of cancelling useful evidence.
+# Main receives frequent, self-contained preservation updates. Only the newest
+# revision can become a package or future release candidate, so do not let a
+# scarce queued runner (notably macOS x86_64) hold newer main revisions behind
+# an obsolete matrix. Local preservation gates still run before every push.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 # Every source-built CI dependency is fetched by immutable Git object ID.
 # Each object ID resolves to the respective upstream release tag: SDL

@@ -1152,6 +1152,18 @@ struct DeuterosAmigaTitlePostAdjustedFinalGatePlan {
     bool branches_to_join=false,jumps_to_external=false;
     std::uint32_t join_address=0,jump_instruction=0,jump_target=0;
 };
+struct DeuterosAmigaObservedTitlePostAdjustedInputReturn {
+    DeuterosAmigaObservedLocalCallReturn service_return;
+    std::optional<std::uint32_t> toggle_source_address;
+    std::optional<std::uint16_t> toggle_source_word;
+};
+struct DeuterosAmigaTitlePostAdjustedInputReturnPlan {
+    DeuterosAmigaObservedTitlePostAdjustedInputReturn observation;
+    bool command_43=false,writes_toggle=false;
+    std::uint32_t toggle_destination=0;
+    std::uint16_t toggle_word=0,colour_word=0;
+    std::uint32_t next_address=0,next_call_address=0,next_call_target=0,next_return_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3208,6 +3220,29 @@ public:
         return DeuterosAmigaTitlePostAdjustedFinalGatePlan{o,!jump,jump,
             jump?0U:0x40638U,jump?0x4062cU:0U,jump?0x37f56U:0U};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedInputReturnPlan> observe_post_adjusted_input_return(const DeuterosAmigaObservedTitlePostAdjustedInputReturn&o){
+        if(!post_adjusted_final_gate_||post_adjusted_input_return_)return std::nullopt;
+        const bool final_jump=post_adjusted_final_gate_->gate_current_word==0
+            &&post_adjusted_final_gate_->gate_secondary_word
+            &&static_cast<std::uint8_t>(*post_adjusted_final_gate_->gate_secondary_word)>=0xb4U
+            &&post_adjusted_final_gate_->gate_tertiary_word
+            &&(static_cast<std::uint8_t>(*post_adjusted_final_gate_->gate_tertiary_word)&1U)!=0;
+        if(final_jump)return std::nullopt;
+        const auto&s=o.service_return;
+        if(s.trace_sequence<=last_command_sequence_||s.call_address!=0x40638
+            ||s.call_target!=0x1f238||s.return_address!=0x4063e)
+            throw std::runtime_error("Deuteros joined input return does not match boundary");
+        const bool command=static_cast<std::uint8_t>(s.result_d0)==0x43U;
+        if(command!=(o.toggle_source_address.has_value()&&o.toggle_source_word.has_value())
+            ||(command&&*o.toggle_source_address!=0x1bf36U))
+            throw std::runtime_error("Deuteros joined input toggle read does not match executed branch");
+        post_adjusted_input_return_=o;last_command_sequence_=s.trace_sequence;
+        const auto toggled=static_cast<std::uint16_t>(command?(*o.toggle_source_word^0x0101U):0U);
+        const auto colour=static_cast<std::uint16_t>(command?(toggled==0?0x00f0U:0x0f00U):0U);
+        return DeuterosAmigaTitlePostAdjustedInputReturnPlan{o,command,command,0x1bf36,toggled,
+            colour,command?0x40656U:0x40574U,command?0x40662U:0U,
+            command?0x1f238U:0U,command?0x40668U:0U};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3431,6 +3466,7 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_1f9a4_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjusted1fe88Return> post_adjusted_1fe88_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedFinalGate> post_adjusted_final_gate_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedInputReturn> post_adjusted_input_return_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};
