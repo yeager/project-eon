@@ -12,6 +12,8 @@ std::string_view native_session_state_label(const NativeSessionState state) {
         return "MILLENNIUM DOS SOUND DRIVER BOUNDARY";
     case NativeSessionState::millennium_dos_title_handoff_boundary:
         return "MILLENNIUM DOS TITLE HANDOFF BOUNDARY";
+    case NativeSessionState::millennium_dos_gx_startup_boundary:
+        return "MILLENNIUM DOS GX STARTUP BOUNDARY";
     case NativeSessionState::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
     case NativeSessionState::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case NativeSessionState::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
@@ -36,6 +38,8 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
         return NativeSessionState::millennium_dos_sound_driver_boundary;
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
         return NativeSessionState::millennium_dos_title_handoff_boundary;
+    case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
+        return NativeSessionState::millennium_dos_gx_startup_boundary;
     case RuntimeSessionKind::millennium_amiga_bootstrap: return NativeSessionState::millennium_amiga_bootstrap;
     case RuntimeSessionKind::millennium_atari_bootstrap: return NativeSessionState::millennium_atari_bootstrap;
     case RuntimeSessionKind::deuteros_amiga_opening: return NativeSessionState::deuteros_amiga_opening;
@@ -99,6 +103,23 @@ std::optional<MillenniumDosStaticDispatchDiagnostics>
 NativeSessionController::millennium_dos_static_dispatch_diagnostics() const {
     if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
     return runtime_.millennium_dos_static_dispatch_diagnostics();
+}
+
+MillenniumDosGxActiveTraceAdmission
+NativeSessionController::admit_active_millennium_dos_gx_startup_reference_trace(
+    const ReferenceTrace& trace) {
+    if (state_ != NativeSessionState::millennium_dos_title_handoff_boundary) {
+        return {false, "GX startup trace requires the active title-handoff boundary"};
+    }
+    const auto result = runtime_.admit_active_millennium_dos_gx_startup_reference_trace(trace);
+    synchronize_after_runtime_change();
+    return result;
+}
+
+std::optional<MillenniumDosGxStartupCheckpoint>
+NativeSessionController::millennium_dos_gx_startup_checkpoint() const {
+    if (state_ != NativeSessionState::millennium_dos_gx_startup_boundary) return std::nullopt;
+    return runtime_.millennium_dos_gx_startup_checkpoint();
 }
 
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {

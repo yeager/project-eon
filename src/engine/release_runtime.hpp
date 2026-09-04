@@ -196,6 +196,23 @@ struct MillenniumDosStaticDispatchDiagnostics {
     std::array<MillenniumDosStaticDispatchEntry, 10> handlers{};
 };
 
+// Value-only terminal checkpoint for the one admitted GX startup suffix.
+// The write records are reconstructed from the exact original instructions;
+// they neither expose original bytes nor name complete game-state semantics.
+struct MillenniumDosGxStartupCheckpoint {
+    MillenniumDosGxStartupSessionState state =
+        MillenniumDosGxStartupSessionState::awaiting_private_return;
+    std::size_t observed_post_overlay_call_return_count = 0;
+    std::uint16_t overlay_return_boundary = 0;
+    std::uint16_t private_interrupt_boundary = 0;
+    std::vector<MillenniumDosGxOverlayStartupWrite> overlay_writes;
+};
+
+struct MillenniumDosGxActiveTraceAdmission {
+    bool accepted = false;
+    std::string error;
+};
+
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
 // outside this class; this is the common source boundary for every platform
@@ -253,16 +270,26 @@ public:
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
     millennium_atari_bootstrap_presentation() const;
     // This is a transient, trace-gated exception for the proven GX suffix.
-    // It does not acquire or publish a game runtime and retains neither trace
-    // nor media bytes. Every other trace remains diagnostics-only.
+    // It does not acquire or publish a game runtime. Its result privately
+    // owns the exact transient parser bytes required by its span-based
+    // session; no bytes cross its public API. Every other trace remains
+    // diagnostics-only.
     [[nodiscard]] MillenniumDosGxStartupTraceAdmission
     admit_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace) const;
+    // Active-session transition: unlike the diagnostics-only helper above,
+    // this requires the exact English DOS adapter to have independently
+    // reached its title-handoff boundary before it owns the admitted suffix.
+    [[nodiscard]] MillenniumDosGxActiveTraceAdmission
+    admit_active_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace);
+    [[nodiscard]] std::optional<MillenniumDosGxStartupCheckpoint>
+    millennium_dos_gx_startup_checkpoint() const;
 
 private:
     std::optional<ResolvedLaunchRequest> active_;
     std::optional<MillenniumDosRuntimeAssets> millennium_dos_;
     std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection_;
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title_;
+    std::optional<MillenniumDosGxStartupTraceAdmission> millennium_dos_gx_startup_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

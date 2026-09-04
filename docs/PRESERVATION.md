@@ -4526,8 +4526,10 @@ continuation: six individually observed local-call returns advance to its
 second `$da05` read at `$d388`, and a separately observed byte selects the
 existing `$d1a1` or `$d1b5` private-INT boundary at `$0129`. The second byte
 is never inferred from the earlier selector because the original rereads it
-after opaque calls. The transient overlay retains only bytes written by the
-verified evaluator; it owns no original media bytes. Out-of-order or repeated
+after opaque calls. The public overlay view retains only bytes written by the
+verified evaluator. Its admission object privately owns exact in-memory copies
+of both verified leaves for the lifetime of the span-based session; these are
+never exposed, installed, written, or persisted. Out-of-order or repeated
 observations are rejected, and the session neither starts from the launcher
 nor emulates DOS, private calls, overlay loading, or a title handoff.
 
@@ -4552,11 +4554,26 @@ starting a title/game session.
 The generic trace validator and the GX runtime gate are deliberately separate
 checks. The gate rehashes the event file after validation, reopens the pinned
 outer archive through `VerifiedReleaseMedia`, and extracts only the two
-hash-addressed executable leaves required by the call-free suffix. It retains
-neither those bytes nor the capture path, does not acquire or replace the
-coordinator's active release, and cannot publish a runtime session, input
-route, frame, audio route, title handoff, or game state. A changed event file,
-archive, adapter, or release identity fails closed at this second boundary.
+hash-addressed executable leaves required by the call-free suffix. Private,
+destruction-ordered backing buffers close the session-span lifetime inside the
+admission result; no original bytes or capture path cross its public API. The
+standalone gate does not acquire or replace the coordinator's active release
+and cannot publish a runtime session, input route, frame, audio route, title
+handoff, or game state. A changed event file, archive, adapter, or release
+identity fails closed at this second boundary.
+
+The release coordinator also defines an engine-owned successor state,
+`MILLENNIUM DOS GX STARTUP BOUNDARY`. It can be entered only when this strict
+trace names the exact active English DOS release and the live session has
+already reached `MILLENNIUM DOS TITLE HANDOFF BOUNDARY`. Publication is
+atomic: failure preserves the handoff state; success owns the complete trace
+admission and exposes only its terminal state, six observed local returns,
+the `$d376`/`$0129` boundaries, and reconstructed sparse overlay writes.
+Reset and source revocation destroy it before another release is admitted.
+The state admits no host input, presentation, or audio. The current English
+path still stops at the independently unresolved sound-driver ABI, so this
+successor cannot yet be reached honestly from CLI or SDL; the trace is never
+preloaded and never substitutes for that missing handoff.
 
 ### Millennium DOS GX dispatcher slot 13 boundary
 

@@ -14,7 +14,11 @@ MillenniumDosGxStartupTraceAdmission admit_millennium_dos_gx_startup_trace(
     const auto observations = parse_millennium_dos_gx_startup_reference_observations(events, result.error);
     if (!observations) return result;
     try {
-        MillenniumDosGxStartupSession session(game_executable, gx_overlay_executable);
+        result.game_executable_.assign(game_executable.begin(), game_executable.end());
+        result.gx_overlay_executable_.assign(
+            gx_overlay_executable.begin(), gx_overlay_executable.end());
+        MillenniumDosGxStartupSession session(
+            result.game_executable_, result.gx_overlay_executable_);
         session.observe_private_return(observations->private_return_ax);
         session.observe_mode_byte(observations->initial_mode_byte);
         session.observe_adapter_return();

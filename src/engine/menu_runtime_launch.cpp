@@ -51,6 +51,17 @@ LauncherRuntimeController::millennium_dos_static_dispatch_diagnostics() const {
     return coordinator_.millennium_dos_static_dispatch_diagnostics();
 }
 
+MillenniumDosGxActiveTraceAdmission
+LauncherRuntimeController::admit_active_millennium_dos_gx_startup_reference_trace(
+    const ReferenceTrace& trace) {
+    return coordinator_.admit_active_millennium_dos_gx_startup_reference_trace(trace);
+}
+
+std::optional<MillenniumDosGxStartupCheckpoint>
+LauncherRuntimeController::millennium_dos_gx_startup_checkpoint() const {
+    return coordinator_.millennium_dos_gx_startup_checkpoint();
+}
+
 std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
     return coordinator_.tick_deuteros_amiga_opening();
 }
