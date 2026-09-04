@@ -38,11 +38,11 @@ the exact `$0c4b -> $11f7` edge; every other nonzero mode reaches
 nonzero sequence-bearing entry observation matching both addresses. The
 mode-two target has proven terminal RET sites at `$12cb` and `$129c`. The
 other-mode zero-copy path has RET `$0d67`, while the separately recovered
-`DL == 4` zero path has RET `$0e53`. A later return observation must name one
+`DL == 4` paths end at RET `$0e53` for a zero toggle or `$0e28` for a nonzero
+toggle. A later return observation must name one
 of the terminal sites belonging to its entered transfer and supply a nonzero
 destination. The destination is retained verbatim; it is never synthesized
-as a caller-resume address. `$0e28` remains unowned because its corresponding
-nonzero branch has not crossed the local recovery boundary.
+as a caller-resume address.
 
 The BDF checkpoint exposes only value copies of the admitted edge and any
 explicit return. Reset destroys that admission, while source revocation

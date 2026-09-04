@@ -219,6 +219,10 @@ public:
     observe_load_selector(const DeuterosAmigaObservedLoadSelector& observation) {
         return service_batch_boundary_session_.observe_load_selector(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadCopyChunkPlan>
+    observe_load_copy_chunk(const DeuterosAmigaObservedLoadCopyChunk& observation) {
+        return service_batch_boundary_session_.observe_load_copy_chunk(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

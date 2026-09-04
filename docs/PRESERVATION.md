@@ -5725,6 +5725,19 @@ longwords and stop before the first runtime source read at `$38a28`. Eon does
 not fabricate the 10,368 source bytes, execute the copy, or infer what the
 selector or copied region represents.
 
+The active copy boundary accepts those 10,368 bytes only as ordered chunks of
+at most 256 longwords. Every chunk must name instruction `$38a28`, the exact
+next longword index, monotonically newer sequence, source address and
+destination address; gaps, overlap, replay, empty chunks and overrun fail
+closed. Selector two fixes the source base at `$26cc0`; every other copy-path
+selector fixes it at `$29540`; destination is always `$1c482`. Each admitted
+plan contains only that chunk's observed values and instruction-defined
+destination addresses. The shared bounded-memory-transfer owner retains the
+admitted effects for checkpoint/diagnostic replay, never source bytes that
+were not explicitly observed.
+After exactly `$a20` longwords, DBRA falls through to RTS `$38a2e`, returning
+to `$404f6`; the session stops before the next call `$404f8 -> $1fb9a`.
+
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
 `b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its
@@ -6070,3 +6083,16 @@ The exact writes use entry `DI + row * $50` and the following byte, with `DI`
 restored for each of four groups. Port `$03c5` again receives 1, 2, 4, and 8.
 The local path terminates at RET `$0e53`; return ownership uses the original
 `$0c4e -> $0caa` transfer and does not invent a caller destination.
+
+The `DL == 4`, nonzero-toggle path is also owned through RET `$0e28`. `$0d74`
+observes the segment at `$0107`; `$0d8e/$0d8f` then consume four groups of 16
+three-byte far-memory records and retain their exact copies to
+`CS:$07fa..$08b9`. The four `$03cf` writes are recorded. `$0da5` explicitly
+observes `CS:$07da & 3`. For every one of four output groups and 16 rows,
+`$0dd1` observes the mask word at `CS:$09c2+2*row`; the literal two-step
+carry rotations are applied that many times before explicit far word/byte
+observations are ANDed at `$0dec/$0def`. `$0df3` observes the merge word at
+`CS:$09a2+2*row`, applies the corresponding shifts/carry rotations, and
+records the OR results at `$0e0a/$0e0d`. Far offsets advance by `$50` per row
+and reset per group. Exact `$03c5/$03cf` selection effects are retained. No
+meaning is assigned to these buffers, ports, masks, or output groups.
