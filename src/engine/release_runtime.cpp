@@ -1092,8 +1092,9 @@ MillenniumDosBdfObservationResult ReleaseRuntimeCoordinator::observe_millennium_
 EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_byte,MillenniumDosBdfByteObservation,observe_runtime_byte(o.instruction_address,o.runtime_address,o.value))
 EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_word,MillenniumDosBdfWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value))
 EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_far_word,MillenniumDosBdfModeTwoFarWordObservation,observe_far_word(o.instruction_address,o.segment,o.offset,o.value))
+EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_far_byte,MillenniumDosBdfModeTwoFarByteObservation,observe_far_byte(o.instruction_address,o.segment,o.offset,o.value))
 #undef EON_BDF_MODE_TWO_FORWARD
-std::optional<MillenniumDosBdfCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_bdf_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_service_||!millennium_dos_second_function_callback_transfer_)return std::nullopt;const auto&s=*millennium_dos_bdf_service_;std::optional<MillenniumDosBdfModeTwoCheckpoint>m;if(millennium_dos_bdf_mode_two_){const auto&x=*millennium_dos_bdf_mode_two_;m=MillenniumDosBdfModeTwoCheckpoint{x.state(),x.boundary(),x.far_effects(),x.runtime_effects()};}return MillenniumDosBdfCheckpoint{s.state(),s.boundary(),s.effects(),s.far_memory_effects(),millennium_dos_second_function_callback_transfer_->checkpoint(),millennium_dos_bdf_terminal_transfer_?std::optional{millennium_dos_bdf_terminal_transfer_->checkpoint()}:std::nullopt,m};}
+std::optional<MillenniumDosBdfCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_bdf_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_service_||!millennium_dos_second_function_callback_transfer_)return std::nullopt;const auto&s=*millennium_dos_bdf_service_;std::optional<MillenniumDosBdfModeTwoCheckpoint>m;if(millennium_dos_bdf_mode_two_){const auto&x=*millennium_dos_bdf_mode_two_;m=MillenniumDosBdfModeTwoCheckpoint{x.state(),x.boundary(),x.far_effects(),x.far_byte_effects(),x.runtime_effects()};}return MillenniumDosBdfCheckpoint{s.state(),s.boundary(),s.effects(),s.far_memory_effects(),millennium_dos_second_function_callback_transfer_->checkpoint(),millennium_dos_bdf_terminal_transfer_?std::optional{millennium_dos_bdf_terminal_transfer_->checkpoint()}:std::nullopt,m};}
 
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
@@ -1661,7 +1662,9 @@ std::unique_ptr<DeuterosAtariBootstrapSession> load_deuteros_atari_runtime(const
         const auto second_stage = admit_native_code_image(media,
             "deuteros-atari-replicants-second-stage-linear",
             "deuteros-atari-replicants-second-stage");
-        if (!first_stage.accepted() || !second_stage.accepted()) return {};
+        const auto killer_boot = admit_native_code_image(media,
+            "deuteros-atari-killer-boot-linear", "deuteros-atari-killer-boot");
+        if (!first_stage.accepted() || !second_stage.accepted() || !killer_boot.accepted()) return {};
         const auto image = media.extract(disk);
         return image ? std::make_unique<DeuterosAtariBootstrapSession>(std::move(*image)) : nullptr;
     } catch (...) { return {}; }
@@ -1718,12 +1721,6 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
     constexpr auto gx_lib_sha256 =
         "4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f";
-    constexpr auto titles_sha256 =
-        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
-    constexpr auto launcher_sha256 =
-        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
-    constexpr auto game_sha256 =
-        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr auto initial_save_sha256 =
         "a9b3d77534d3d575012f9553bfed9520edf92a83af408c977e7f0fd226a470e7";
     constexpr auto static_data_sha256 =
@@ -1782,16 +1779,20 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         if (!bytes) return std::nullopt;
         const MillenniumDosLib title_lib(*bytes);
         const auto gx_bytes = media.borrow(gx_lib_sha256);
-        const auto titles = media.borrow(titles_sha256);
-        const auto launcher = media.borrow(launcher_sha256);
-        const auto game = media.borrow(game_sha256);
+        const auto titles_code = admit_native_code_image(media,
+            "millennium-dos-titles-exe-linear", "millennium-dos-title-flow");
+        const auto launcher_code = admit_native_code_image(media,
+            "millennium-dos-mill-com-linear", "millennium-dos-launcher");
+        const auto game_code = admit_native_code_image(media,
+            "millennium-dos-2200ad-exe-linear", "millennium-dos-game-flow");
         const auto initial_save = media.borrow(initial_save_sha256);
         const auto static_data = media.borrow(static_data_sha256);
         const auto ega640 = media.borrow(ega640_sha256);
         const auto mcga = media.borrow(mcga_sha256);
         const auto sound_blaster = media.borrow(sound_blaster_sha256);
         const auto covox = media.borrow(covox_sha256);
-        if (!gx_bytes || !titles || !launcher || !game || !initial_save || !static_data || !ega640 || !mcga
+        if (!gx_bytes || !titles_code.accepted() || !launcher_code.accepted()
+            || !game_code.accepted() || !initial_save || !static_data || !ega640 || !mcga
             || !sound_blaster || !covox) {
             return std::nullopt;
         }
@@ -1802,13 +1803,14 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
         // media. It still exposes only P00 as the static title frame: patch
         // composition, cadence, title input, and the DOS hand-off remain
         // unproven.
-        const auto title_flow = parse_millennium_dos_title_flow(*titles, *launcher);
+        const auto title_flow = parse_millennium_dos_title_flow(
+            titles_code.view->bytes, launcher_code.view->bytes);
         const auto title_presentation = parse_millennium_dos_title_presentation_assets(
             title_lib, title_flow);
         const auto gx_canvas = parse_millennium_dos_gameplay_screen(*gx_bytes);
-        const auto sound_selection = parse_millennium_dos_sound_selection(*launcher);
+        const auto sound_selection = parse_millennium_dos_sound_selection(launcher_code.view->bytes);
         const auto sound_selection_prompt = extract_millennium_dos_sound_selection_prompt(
-            *launcher, sound_selection);
+            launcher_code.view->bytes, sound_selection);
         return MillenniumDosRuntimeAssets{
             .title = {title_presentation.base_bitmap.width, title_presentation.base_bitmap.height,
                 {title_presentation.base_rgba}},
@@ -1824,7 +1826,7 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
             .sound_blaster_driver = admit_millennium_dos_sound_driver_leaf(*sound_blaster),
             .covox_driver = admit_millennium_dos_sound_driver_leaf(*covox),
             .spanish_title_boundary = std::nullopt,
-            .game_flow = parse_millennium_dos_game_flow(*game),
+            .game_flow = parse_millennium_dos_game_flow(game_code.view->bytes),
             .ega_video_driver = parse_millennium_dos_video_driver(*ega640,
                 MillenniumDosVideoDriverKind::ega640),
             .mcga_video_driver = parse_millennium_dos_video_driver(*mcga,

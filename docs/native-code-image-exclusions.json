@@ -1,0 +1,9 @@
+{"schema":"project-eon.native-code-image-exclusions/v1","images":[
+{"image_id":"millennium-atari-equinox-direct-milenium-tos-image-relative-linear","reason":"container-only-candidate"},
+{"image_id":"millennium-atari-equinox-direct-mill22a-inf-image-relative-linear","reason":"container-only-candidate"},
+{"image_id":"millennium-atari-equinox-milenium-tos-image-relative-linear","reason":"container-only-candidate"},
+{"image_id":"millennium-atari-equinox-mill22a-inf-image-relative-linear","reason":"container-only-candidate"},
+{"image_id":"millennium-dos-spanish-ibm-com-linear","reason":"container-only-candidate"},
+{"image_id":"millennium-dos-spanish-titles-exe-linear","reason":"container-only-candidate"},
+{"image_id":"millennium-dos-spanish-2200ad-exe-linear","reason":"container-only-candidate"}
+]}

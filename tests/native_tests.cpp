@@ -6912,8 +6912,17 @@ int main() {
         nonzero_mode_two.observe_runtime_byte(0x11f7,0x07d8,1);
         nonzero_mode_two.observe_runtime_word(0x1203,0x0107,0xa000);
         for(std::uint16_t row=0;row<16;++row)for(std::uint16_t word=0;word<4;++word){const auto offset=nonzero_mode_two.boundary().runtime_address;nonzero_mode_two.observe_far_word(0x1218,0xa000,offset,std::uint16_t(0x5000+row*4+word));}
-        assert(nonzero_mode_two.state()==eon::MillenniumDosBdfModeTwoState::transform_boundary&&nonzero_mode_two.boundary().instruction_address==0x1237);
         assert(nonzero_mode_two.runtime_effects().size()==64&&nonzero_mode_two.runtime_effects().front().runtime_address==0x07fa&&nonzero_mode_two.runtime_effects().back().runtime_address==0x0878&&nonzero_mode_two.runtime_effects().back().value==0x503f);
+        assert(nonzero_mode_two.state()==eon::MillenniumDosBdfModeTwoState::awaiting_transform_flag&&nonzero_mode_two.boundary().instruction_address==0x123a);
+        nonzero_mode_two.observe_runtime_word(0x123a,0x07da,0);
+        for(std::uint16_t row=0;row<16;++row){
+            assert(nonzero_mode_two.boundary().runtime_address==std::uint16_t(0x0982+row*2));
+            nonzero_mode_two.observe_runtime_word(0x1251,std::uint16_t(0x0982+row*2),0xffff);
+            nonzero_mode_two.observe_runtime_word(0x1256,std::uint16_t(0x0962+row*2),0);
+            for(std::uint16_t pixel=0;pixel<8;++pixel){const auto offset=nonzero_mode_two.boundary().runtime_address;nonzero_mode_two.observe_far_byte(0x1263,0xa000,offset,0xab);}
+        }
+        assert(nonzero_mode_two.state()==eon::MillenniumDosBdfModeTwoState::returned&&nonzero_mode_two.boundary().instruction_address==0x129c);
+        assert(nonzero_mode_two.far_byte_effects().size()==128&&(nonzero_mode_two.far_byte_effects().front()==eon::MillenniumDosBdfModeTwoFarByteEffect{0x127e,0xa000,0x6100,0xab})&&nonzero_mode_two.far_byte_effects()[8].offset==0x01a0);
         eon::MillenniumDosExternalTransferAdmission busy_transfer(eon::MillenniumDosExternalTransferKind::f2_tail_active_return);
         assert(busy_transfer.observe_entry({40,0x7253,0x0bdf}).accepted);
         assert(busy_transfer.observe_return({41,busy_bdf.boundary().instruction_address,0xcafe}).accepted);
@@ -10679,6 +10688,59 @@ int main() {
     assert(tail_second_graphics->unresolved_read_address == 0x20118);
     assert(tail_second_graphics->unresolved_read_source == 0x1ffc8);
     assert(tail_second_graphics->stop_before_address == 0x20118);
+    bool rejected_repeated_selection = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_repeated_selection_words(
+            {33, 0x2011a, tail_selection_sources,
+                {{0, 0xffff, 0x10, 0x40, 0x20, 1, 0x10, 0x30}}}));
+    } catch (const std::runtime_error&) {
+        rejected_repeated_selection = true;
+    }
+    assert(rejected_repeated_selection);
+    const auto repeated_selection =
+        title_stage_session.observe_tail_repeated_selection_words(
+            {33, 0x20118, tail_selection_sources,
+                {{0, 0xffff, 0x10, 0x40, 0x20, 1, 0x10, 0x30}}});
+    assert(repeated_selection);
+    assert((repeated_selection->selected_words
+        == std::array<std::uint16_t, 2>{{0x10, 0x21}}));
+    assert(repeated_selection->graphics_d0 == 0);
+    assert(repeated_selection->graphics_d1 == 0x1b);
+    assert(repeated_selection->next_call_address == 0x201b6);
+    assert(repeated_selection->next_vector == -0x1aa);
+    bool rejected_repeated_graphics = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_repeated_graphics_return(
+            {34, 0x12fec, 0x00abcdef, 0x201b6, -0x1a4, 0x201ba,
+                0x10203040, 0x2024}));
+    } catch (const std::runtime_error&) {
+        rejected_repeated_graphics = true;
+    }
+    assert(rejected_repeated_graphics);
+    const auto repeated_graphics =
+        title_stage_session.observe_tail_repeated_graphics_return(
+            {34, 0x12fec, 0x00abcdef, 0x201b6, -0x1aa, 0x201ba,
+                0x10203040, 0x2024});
+    assert(repeated_graphics);
+    assert(repeated_graphics->observed_return.result_d0 == 0x10203040);
+    assert(repeated_graphics->observed_return.result_sr == 0x2024);
+    assert(repeated_graphics->register_restore_address == 0x201ba);
+    assert(repeated_graphics->wrapper_rts_address == 0x201be);
+    assert(repeated_graphics->caller_resume_address == 0x20216);
+    assert(repeated_graphics->next_call_address == 0x20216);
+    assert(repeated_graphics->next_call_target == 0x200dc);
+    assert(repeated_graphics->next_a0_value == 0x12e12);
+    assert(repeated_graphics->next_a1_value == 0x1ffda);
+    assert(repeated_graphics->next_a2_pointer_cell == 0x2008e);
+    assert(repeated_graphics->next_library_base_source_address == 0x12fec);
+    assert(repeated_graphics->next_graphics_call_address == 0x200f4);
+    assert(repeated_graphics->next_graphics_vector == -0x1a4);
+    assert(repeated_graphics->next_graphics_return_address == 0x200f8);
+    assert(repeated_graphics->stop_before_address == 0x200f4);
+    assert(!title_stage_session.observe_tail_repeated_graphics_return(
+        {35, 0x12fec, 0x00abcdef, 0x201b6, -0x1aa, 0x201ba, 0, 0}));
+    assert(!title_stage_session.observe_tail_repeated_selection_words(
+        {34, 0x20118, tail_selection_sources, {{0, 0, 0, 0, 0, 0, 0, 0}}}));
     assert(!title_stage_session.observe_tail_second_graphics_return(
         {33, 0x12fec, 0x00abcdef, 0x201b6, -0x1aa, 0x201ba, 0, 0}));
     assert(!title_stage_session.observe_tail_selection_words(

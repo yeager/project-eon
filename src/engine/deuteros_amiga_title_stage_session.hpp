@@ -185,6 +185,18 @@ public:
         return service_batch_boundary_session_.observe_tail_second_graphics_return(
             observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSelectionLocalPlan>
+    observe_tail_repeated_selection_words(
+        const DeuterosAmigaObservedTailSelectionWords& observation) {
+        return service_batch_boundary_session_.observe_tail_repeated_selection_words(
+            observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailRepeatedGraphicsLocalPlan>
+    observe_tail_repeated_graphics_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        return service_batch_boundary_session_.observe_tail_repeated_graphics_return(
+            observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;
