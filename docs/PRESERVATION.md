@@ -4142,6 +4142,14 @@ DOS return nor `2200AD.EXE` startup. No host action invokes a handler, mutates
 documented but are not host-bound until their input production and state
 prerequisites are recovered.
 
+The declarative function map separately names the ten table handler entries
+(`$6f9a`, `$71ca`, `$6faa`, `$72f9`, `$7597`, `$7415`, `$7521`, `$7306`,
+`$7339`, `$7384`) with the same authenticated `2200AD.EXE` span. These are
+verified-static diagnostic records, not function labels, gameplay actions,
+hooks, or a claim that any entry is reachable. F8 retains its narrower
+trace-gated prefix record alongside its handler identity because only that
+local prefix has an evidence-limited consumption model.
+
 Project Eon's **host** F10 is explicitly consumed before the title availability
 poll and is not an original F10 action. In Original it exposes only output
 resolution and aspect ratio; these centre and scale the same recovered frame
