@@ -171,8 +171,10 @@ Exit criteria:
   why without creating or modifying a data directory.
 - F10 and Custom settings cover resolution, aspect ratio, renderer features,
   and accessibility without leaking input through the modal panel.
-- All Eon UI strings are catalogued and tested in the 20 shipped languages;
-  original in-game text remains untouched.
+- All Eon UI and player-visible game strings are catalogued and tested in the
+  20 shipped non-English catalogs. This applies equally to Original and
+  Modern. Original in-game source bytes remain untouched and hash-addressed;
+  only their presentation is localized.
 
 ## Phase 6 — Preservation records, diagnostics, and public documentation
 

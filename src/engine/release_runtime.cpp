@@ -816,6 +816,51 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_selected_callee_result(
     return result;
 }
 
+MillenniumDosTitleInitializationObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_bios_result(
+    const MillenniumDosTitleBiosResultObservation observation) {
+    MillenniumDosTitleInitializationObservationResult result;
+    if(!active_||!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title
+        ||!millennium_dos_title_initialization_||!native_runtime_memory_){
+        result.error="Title BIOS result requires the active native title boundary";
+        return result;
+    }
+    constexpr std::string_view titles_sha=
+        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+    try {
+        const auto media=VerifiedReleaseMedia::open(active_->release);
+        const auto titles=media.borrow(titles_sha);
+        if(!titles)throw std::runtime_error("Exact TITLES.EXE BIOS source is unavailable");
+        auto next=*millennium_dos_title_initialization_;
+        auto memory=*native_runtime_memory_;
+        const auto prior_effect_count=next.checkpoint().memory_effects.size();
+        next.observe_bios_palette_result(observation,*titles);
+        const auto checkpoint=next.checkpoint();
+        if(checkpoint.memory_effects.size()>prior_effect_count){
+            NativeRuntimeEffectBatch batch{
+                "millennium-dos-title-bios-"
+                    +std::to_string(millennium_dos_sound_driver_load_generation_)
+                    +"-"+std::to_string(observation.sequence),true,{}};
+            for(std::size_t i=prior_effect_count;i<checkpoint.memory_effects.size();++i){
+                const auto& effect=checkpoint.memory_effects[i];
+                batch.effects.push_back({batch.effects.size()+1,
+                    {NativeRuntimeAddressSpace::dos_segmented,
+                        checkpoint.child_code_segment,effect.offset},
+                    effect.width==MillenniumDosTitleInitializationEffectWidth::byte
+                        ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
+                    NativeRuntimeByteOrder::little_endian,effect.value});
+            }
+            const auto applied=memory.apply(batch);
+            if(!applied.accepted){result.error=applied.error;return result;}
+        }
+        millennium_dos_title_initialization_=std::move(next);
+        *native_runtime_memory_=std::move(memory);
+        result.accepted=true;
+    } catch(const std::exception& e){result.error=e.what();}
+    return result;
+}
+
 namespace {
 MillenniumDosTitleToGameObservationResult title_to_game_rejected(std::string error) {
     return {false, std::move(error)};
@@ -2484,6 +2529,54 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_negative_service
 }
 
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_post_command_pointer_route(
+    const DeuterosAmigaObservedTitlePostCommandPointerRoute observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !native_runtime_memory_) {
+        result.error = "Deuteros post-command route requires an active owned title session";
+        return result;
+    }
+    try {
+        if (!deuteros_amiga_->title_stage_session()) {
+            result.error = "Deuteros post-command route requires the owned title-stage session";
+            return result;
+        }
+        auto preview_session = *deuteros_amiga_->title_stage_session();
+        const auto plan = preview_session.observe_post_command_pointer_route(observation);
+        if (!plan) {
+            result.error = "Deuteros post-command route did not match its owned boundary";
+            return result;
+        }
+        auto next_memory = *native_runtime_memory_;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-post-command-pointer-route",
+            true,{}};
+        for (std::size_t index=0; index<plan->effect_count; ++index) {
+            batch.effects.push_back({index+1U,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,
+                    plan->destination_addresses[index]},
+                plan->destination_widths[index],NativeRuntimeByteOrder::big_endian,
+                plan->destination_values[index]});
+        }
+        const auto applied=next_memory.apply(batch);
+        if (!applied.accepted) {
+            result.error="Runtime-memory application rejected: "+applied.error;
+            return result;
+        }
+        if (!deuteros_amiga_->observe_title_post_command_pointer_route(observation)) {
+            result.error="Deuteros post-command route disappeared before commit";
+            return result;
+        }
+        *native_runtime_memory_=std::move(next_memory);
+        result.accepted=true;
+    } catch(const std::exception& e) {
+        result.error=std::string("Deuteros post-command route rejected: ")+e.what();
+    }
+    return result;
+}
+
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
     DeuterosAmigaTitleDependencyObservationResult result;
@@ -2688,6 +2781,34 @@ ReleaseRuntimeCoordinator::observe_millennium_atari_status_register(
         return {true, {}};
     } catch (const std::exception& error) {
         return {false, std::string("Atari SR observation rejected: ") + error.what()};
+    }
+}
+
+MillenniumAtariConfigConsumerResult
+ReleaseRuntimeCoordinator::observe_millennium_atari_xbios_selector_two(
+    const MillenniumAtariXbiosSelectorTwoObservation observation) {
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_atari_bootstrap
+        || !millennium_atari_config_consumer_ || !native_runtime_memory_) {
+        return {false, "XBIOS selector-2 result requires the active Millennium Atari consumer"};
+    }
+    try {
+        auto next_consumer = *millennium_atari_config_consumer_;
+        auto result = next_consumer.observe_xbios_selector_two(observation);
+        if (!result.accepted) return result;
+        auto next_memory = *native_runtime_memory_;
+        const auto batch = next_consumer.make_selector_two_result_effect_batch(
+            "millennium-atari-" + std::to_string(observation.generation)
+                + "-xbios-2-" + std::to_string(observation.sequence));
+        const auto applied = next_memory.apply(batch);
+        if (!applied.accepted) {
+            return {false, "XBIOS selector-2 memory effect rejected: " + applied.error};
+        }
+        *millennium_atari_config_consumer_ = std::move(next_consumer);
+        *native_runtime_memory_ = std::move(next_memory);
+        return {true, {}};
+    } catch (const std::exception& error) {
+        return {false, std::string("XBIOS selector-2 result rejected: ") + error.what()};
     }
 }
 

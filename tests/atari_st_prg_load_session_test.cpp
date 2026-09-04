@@ -112,6 +112,29 @@ int main(const int argc, const char* const argv[]) {
             && user_path.xbios_trap_address == 0x2a520
             && user_path.xbios_selector == 2 && user_path.local_instruction_count == 5);
         assert(user_consumer.make_hardware_effect_batches("user").empty());
+        assert(!user_consumer.observe_xbios_selector_two(
+            {1, 1, 0x2a520, 2, 0x12345678}).accepted);
+        assert(!user_consumer.observe_xbios_selector_two(
+            {1, 2, 0x2a522, 2, 0x12345678}).accepted);
+        assert(user_consumer.observe_xbios_selector_two(
+            {1, 2, 0x2a520, 2, 0x12345678}).accepted);
+        const auto& user_selector_three = user_consumer.checkpoint();
+        assert(user_selector_three.state
+                == eon::MillenniumAtariConfigConsumerState::xbios_selector_three_boundary
+            && user_selector_three.selector_two_result_observed
+            && user_selector_three.selector_two_result_d0 == 0x12345678
+            && user_selector_three.selector_two_store_address == 0x2a50a
+            && user_selector_three.selector_two_stack_cleanup_bytes == 2
+            && user_selector_three.xbios_trap_address == 0x2a52e
+            && user_selector_three.xbios_selector == 3
+            && user_selector_three.local_instruction_count == 8);
+        auto user_result_memory = memory;
+        assert(user_result_memory.apply(user_consumer.make_selector_two_result_effect_batch(
+            "user-selector-two-result")).accepted);
+        assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2a50a}) == 0x12);
+        assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2a50d}) == 0x78);
         assert(!user_consumer.observe_status_register(
             {1, 2, 0x2aa88, 0, eon::MillenniumAtariObservedPrivilege::user}).accepted);
 
@@ -135,6 +158,14 @@ int main(const int argc, const char* const argv[]) {
             std::nullopt, 0xffff8800U}) == 0x0e);
         assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
             std::nullopt, 0xffff8802U}) == 0xff);
+        assert(supervisor_consumer.observe_xbios_selector_two(
+            {1, 9, 0x2a520, 2, 0x89abcdef}).accepted);
+        assert(hardware_memory.apply(supervisor_consumer.make_selector_two_result_effect_batch(
+            "supervisor-selector-two-result")).accepted);
+        assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2a50a}) == 0x89);
+        assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0x2a50d}) == 0xef);
         rejects([&] {
             const eon::NativeRuntimeMemory empty_memory(0x01000000U);
             static_cast<void>(eon::MillenniumAtariConfigConsumerSession(1, empty_memory,

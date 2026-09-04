@@ -148,6 +148,7 @@ MillenniumDosTitleExecEntryObservationResult NativeSessionController::advance_mi
 std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> NativeSessionController::millennium_dos_title_exec_entry_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary&&state_!=NativeSessionState::millennium_dos_title)return std::nullopt;return runtime_.millennium_dos_title_exec_entry_checkpoint();}
 MillenniumDosTitleInitializationObservationResult NativeSessionController::observe_millennium_dos_title_private_interrupt_result(MillenniumDosTitlePrivateInterruptResultObservation o){if(state_!=NativeSessionState::millennium_dos_title)return {false,"Title private-interrupt result requires the active title boundary"};return runtime_.observe_millennium_dos_title_private_interrupt_result(o);}
 MillenniumDosTitleInitializationObservationResult NativeSessionController::observe_millennium_dos_title_selected_callee_result(MillenniumDosTitleSelectedCalleeResultObservation o){if(state_!=NativeSessionState::millennium_dos_title)return {false,"Selected title-callee result requires the active title boundary"};return runtime_.observe_millennium_dos_title_selected_callee_result(o);}
+MillenniumDosTitleInitializationObservationResult NativeSessionController::observe_millennium_dos_title_bios_result(MillenniumDosTitleBiosResultObservation o){if(state_!=NativeSessionState::millennium_dos_title)return {false,"Title BIOS result requires the active title boundary"};return runtime_.observe_millennium_dos_title_bios_result(o);}
 
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_stack_word(o);}
@@ -547,6 +548,7 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_call_return,(cons
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_write,(const DeuterosAmigaObservedTitleCommandPlanarWrite o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_variant_write,(const DeuterosAmigaObservedTitleCommandPlanarVariantWrite o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_negative_service,(const DeuterosAmigaObservedTitleCommandNegativeService o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_pointer_route,(const DeuterosAmigaObservedTitlePostCommandPointerRoute o),(o))
 #undef EON_NATIVE_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -617,6 +619,14 @@ NativeSessionController::observe_millennium_atari_status_register(
         return {false, "Atari SR observation requires Millennium Atari bootstrap"};
     }
     return runtime_.observe_millennium_atari_status_register(observation);
+}
+MillenniumAtariConfigConsumerResult
+NativeSessionController::observe_millennium_atari_xbios_selector_two(
+    const MillenniumAtariXbiosSelectorTwoObservation observation) {
+    if (state_ != NativeSessionState::millennium_atari_bootstrap) {
+        return {false, "XBIOS selector-2 result requires Millennium Atari bootstrap"};
+    }
+    return runtime_.observe_millennium_atari_xbios_selector_two(observation);
 }
 
 void NativeSessionController::begin_return_to_menu() {

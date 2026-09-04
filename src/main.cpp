@@ -3,6 +3,7 @@
 #include "presentation_preferences.hpp"
 #include "presentation/modern_presentation_pipeline.hpp"
 #include "i18n.hpp"
+#include "game_text_localization.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
@@ -670,24 +671,28 @@ void draw_text(SDL_Renderer* renderer, float x, float y, const std::string& text
     SDL_RenderDebugText(renderer, x, y, localized.c_str());
 }
 
-void draw_original_text(SDL_Renderer* renderer, const float x, const float y,
-    const std::string_view text) {
-    // Unlike launcher chrome, this is verified source text from the user's
-    // supplied media. Localisation must never translate or replace it.
-    const std::string original(text);
-    if (active_text_renderer && active_text_renderer->draw(x, y, original)) return;
-    SDL_RenderDebugText(renderer, x, y, original.c_str());
+void draw_game_text(SDL_Renderer* renderer, const float x, const float y,
+    const eon::Game game, const eon::Platform platform,
+    const std::string_view language, const std::string_view original_text) {
+    if (!active_translator) throw std::runtime_error("Game text renderer has no active catalog");
+    const auto localized = eon::localize_game_text(
+        game, platform, original_text, language, *active_translator);
+    if (active_text_renderer
+        && active_text_renderer->draw(x, y, localized.displayed_text)) return;
+    SDL_RenderDebugText(renderer, x, y, localized.displayed_text.c_str());
 }
 
-void draw_original_multiline_text(SDL_Renderer* renderer, const float x, float y,
-    const std::string_view text, const float line_stride = 22.0F) {
+void draw_game_multiline_text(SDL_Renderer* renderer, const float x, float y,
+    const eon::Game game, const eon::Platform platform,
+    const std::string_view language, const std::string_view text,
+    const float line_stride = 22.0F) {
     std::size_t line_start = 0;
     while (line_start <= text.size()) {
         const auto line_end = text.find('\n', line_start);
         const auto count = (line_end == std::string_view::npos ? text.size() : line_end) - line_start;
         auto line = text.substr(line_start, count);
         if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
-        draw_original_text(renderer, x, y, line);
+        if (!line.empty()) draw_game_text(renderer, x, y, game, platform, language, line);
         y += line_stride;
         if (line_end == std::string_view::npos) return;
         line_start = line_end + 1;
@@ -6060,15 +6065,16 @@ int main(int argc, char** argv) {
             if (selected == eon::Game::millennium && millennium_assets
                 && millennium_startup_input && millennium_startup_input->sound_selection_active
                 && millennium_assets->assets.sound_selection_prompt) {
-                // These lines are unmodified text bytes from the verified
-                // launcher, rendered with Eon's UI font only because the DOS
-                // text-mode font/mode has not been recovered. They are not
-                // translated launcher text and are not a visual-parity claim.
-                draw_original_multiline_text(renderer, 64, 222,
+                // The immutable source bytes remain owned by the verified
+                // media parser. Both presentation modes resolve each exact
+                // source line through Eon's stable game-text catalog.
+                draw_game_multiline_text(renderer, 64, 222,
+                    eon::Game::millennium, eon::Platform::dos, request.language,
                     *millennium_assets->assets.sound_selection_prompt);
                 if (!millennium_startup_input->sound_selection_awaiting_choice
                     && millennium_startup_input->selected_original_filename) {
-                    draw_original_text(renderer, 64, 430,
+                    draw_game_text(renderer, 64, 430,
+                        eon::Game::millennium, eon::Platform::dos, request.language,
                         *millennium_startup_input->selected_original_filename);
                     draw_text(renderer, 64, 454, millennium_startup_input->selected_driver_is_admitted
                         ? tr("VERIFIED ORIGINAL DATA") : tr("STARTUP BOUNDARY"));

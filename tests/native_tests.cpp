@@ -3149,7 +3149,7 @@ int main() {
     }
     const auto deuteros_amiga_functions = eon::function_map_for_release(
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
-    assert(deuteros_amiga_functions.size() == 14);
+    assert(deuteros_amiga_functions.size() == 15);
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-exec-boundary";
     }));
@@ -3162,6 +3162,10 @@ int main() {
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-negative-service"
             && entry.runtime_status == "native trace-gated command completion";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-title-post-command-pointer-route"
+            && entry.runtime_status == "native trace-gated post-command state";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
@@ -4685,6 +4689,46 @@ int main() {
         {19,0x0127,0x0129,0x1ad1,0,0}).accepted);
     assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
         ==selected_callee_checksum);
+    const auto before_bios_loop=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    for(std::uint64_t index=0;index<16;++index){
+        assert(admitted_dos_runtime.observe_millennium_dos_title_bios_result(
+            {19+index,0x046d,0x046f,
+                static_cast<std::uint16_t>(0x4000+index),
+                static_cast<std::uint16_t>(0x0400+index)}).accepted);
+        title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
+        assert(title_entry&&title_entry->title_initialization
+            &&title_entry->title_initialization->bios_results.size()==index+1);
+        if(index<15){
+            assert(title_entry->title_initialization->state
+                    ==eon::MillenniumDosTitleInitializationState::
+                        bios_palette_interrupt_boundary
+                &&title_entry->title_initialization->bios_boundary.bx==index+1
+                &&title_entry->title_initialization->bios_boundary.source_address
+                    ==0x014c+(index+1)*3);
+        }
+    }
+    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
+    assert(title_entry&&title_entry->title_initialization
+        &&title_entry->title_initialization->state
+            ==eon::MillenniumDosTitleInitializationState::
+                title_main_allocation_call_boundary
+        &&title_entry->title_initialization->last_sequence==34
+        &&title_entry->title_initialization->bios_results.size()==16
+        &&title_entry->title_initialization->title_main_call_address==0x1bb8
+        &&title_entry->title_initialization->title_main_call_target==0x1b1f);
+    const auto after_bios_loop=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(before_bios_loop&&after_bios_loop
+        &&after_bios_loop->initialized_byte_count
+            ==before_bios_loop->initialized_byte_count
+        &&after_bios_loop->applied_batch_count
+            ==before_bios_loop->applied_batch_count+1);
+    const auto completed_bios_checksum=after_bios_loop->checksum;
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_bios_result(
+        {35,0x046d,0x046f,0,0}).accepted);
+    assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
+        ==completed_bios_checksum);
     assert(!admitted_dos_runtime.observe_millennium_dos_title_child_process_entry(
         {14,0x0336,0x4b00,0x068f,0x067a,0x0100,0xe33f,
             eon::MillenniumDosTitleExecEntryProvenance::observed_process_entry}).accepted);
@@ -4824,6 +4868,16 @@ int main() {
                 && !user_config->config_consumer.hardware_write_executed
                 && user_config->config_consumer.xbios_trap_address == 0x2a520);
             assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count == 2);
+            assert(all_release_runtime.observe_millennium_atari_xbios_selector_two(
+                {1, 2, 0x2a520, 2, 0x12345678}).accepted);
+            const auto selector_three_user =
+                all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(selector_three_user && selector_three_user->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::xbios_selector_three_boundary
+                && selector_three_user->config_consumer.xbios_trap_address == 0x2a52e
+                && selector_three_user->config_consumer.xbios_selector == 3
+                && selector_three_user->config_consumer.selector_two_result_d0 == 0x12345678);
+            assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count == 3);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -4857,12 +4911,25 @@ int main() {
             assert(supervisor_memory && supervisor_memory->applied_batch_count == 4
                 && supervisor_memory->initialized_byte_count
                     == presentation->native_prg_image.image_byte_count + 2);
+            assert(atari_host.observe_millennium_atari_xbios_selector_two(
+                {1, 8, 0x2a520, 2, 0x89abcdef}).accepted);
+            const auto selector_three = atari_host.millennium_atari_bootstrap_presentation();
+            assert(selector_three && selector_three->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::xbios_selector_three_boundary
+                && selector_three->config_consumer.xbios_trap_address == 0x2a52e
+                && selector_three->config_consumer.xbios_selector == 3);
+            const auto selector_three_memory = atari_host.native_runtime_memory_diagnostics();
+            assert(selector_three_memory && selector_three_memory->applied_batch_count == 5
+                && selector_three_memory->initialized_byte_count
+                    == presentation->native_prg_image.image_byte_count + 2);
             atari_host.begin_source_revocation();
             assert(!atari_host.active() && !atari_host.session_snapshot()
                 && !atari_host.millennium_atari_bootstrap_presentation());
             assert(!atari_host.observe_millennium_atari_status_register(
                 {1, 8, 0x2aa88, 0x2700,
                     eon::MillenniumAtariObservedPrivilege::supervisor}).accepted);
+            assert(!atari_host.observe_millennium_atari_xbios_selector_two(
+                {1, 9, 0x2a520, 2, 0}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5209,6 +5276,22 @@ int main() {
                 suppressed_service).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
                 {runtime_copy_sequence+21,0x1fa0a,0x2ff0b,0}).accepted);
+            eon::DeuterosAmigaObservedTitlePostCommandPointerRoute post_command_route{
+                runtime_copy_sequence+22,0x404fe,0x38912,0x40504,
+                0x40504,0x2022a,0x20238,0x1ffd8,1};
+            auto bad_post_command_route=post_command_route;
+            bad_post_command_route.pointer_call_target++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_pointer_route(
+                bad_post_command_route).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_pointer_route(
+                post_command_route).accepted);
+            const auto post_command_memory=
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(post_command_memory
+                && std::any_of(post_command_memory->initialized_bytes.begin(),
+                    post_command_memory->initialized_bytes.end(),[](const auto& byte){
+                        return byte.location.offset==0x1ffd9 && byte.value==0;
+                    }));
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);

@@ -9,6 +9,36 @@ msgstr ""
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "Welcome to Millennium."
+msgstr "Willkommen bei Millennium."
+
+msgid "Please select a sound system"
+msgstr "Bitte ein Soundsystem auswählen"
+
+msgid "Type the corresponding number."
+msgstr "Gib die entsprechende Zahl ein."
+
+msgid "0 = IBM PC speaker"
+msgstr "0 = IBM-PC-Lautsprecher"
+
+msgid "1 = Sound Blaster"
+msgstr "1 = Sound Blaster"
+
+msgid "2 = Covox Sound Master"
+msgstr "2 = Covox Sound Master"
+
+msgid "Thank you. Please wait…"
+msgstr "Danke. Bitte warten…"
+
+msgid "IBM PC speaker"
+msgstr "IBM-PC-Lautsprecher"
+
+msgid "Sound Blaster"
+msgstr "Sound Blaster"
+
+msgid "Covox Sound Master"
+msgstr "Covox Sound Master"
+
 msgid "GRAPHICS PRESET"
 msgstr "GRAFIKVOREINSTELLUNG"
 

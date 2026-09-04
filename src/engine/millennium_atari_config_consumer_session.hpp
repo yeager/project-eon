@@ -14,6 +14,7 @@ namespace eon {
 enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     status_register_boundary,
     xbios_trap_boundary,
+    xbios_selector_three_boundary,
     revoked,
 };
 
@@ -25,6 +26,14 @@ struct MillenniumAtariStatusRegisterObservation {
     std::uint32_t instruction_address = 0;
     std::uint16_t status_register = 0;
     MillenniumAtariObservedPrivilege privilege = MillenniumAtariObservedPrivilege::user;
+};
+
+struct MillenniumAtariXbiosSelectorTwoObservation {
+    std::uint64_t generation = 0;
+    std::uint64_t sequence = 0;
+    std::uint32_t trap_address = 0;
+    std::uint16_t selector = 0;
+    std::uint32_t result_d0 = 0;
 };
 
 struct MillenniumAtariConfigHardwareWrite {
@@ -67,6 +76,11 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint16_t xbios_selector = 0;
     std::size_t local_instruction_count = 0;
     std::vector<MillenniumAtariConfigHardwareWrite> hardware_writes;
+    bool selector_two_result_observed = false;
+    std::uint32_t selector_two_result_d0 = 0;
+    std::uint32_t selector_two_store_address = 0;
+    std::uint32_t selector_two_stack_cleanup_bytes = 0;
+    std::string selector_two_continuation_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -93,6 +107,10 @@ public:
         const MillenniumAtariStatusRegisterObservation& observation);
     [[nodiscard]] std::vector<NativeRuntimeEffectBatch> make_hardware_effect_batches(
         std::string id_prefix) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_two(
+        const MillenniumAtariXbiosSelectorTwoObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_selector_two_result_effect_batch(
+        std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

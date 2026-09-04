@@ -14,6 +14,7 @@ enum class MillenniumDosTitleInitializationState {
     selected_callee_private_interrupt_result_boundary,
     selected_followup_call_boundary,
     bios_palette_interrupt_boundary,
+    title_main_allocation_call_boundary,
 };
 
 enum class MillenniumDosTitleInitializationEffectWidth { byte, word };
@@ -47,6 +48,22 @@ struct MillenniumDosTitleBiosInterruptBoundary {
     std::uint16_t dx_known_value = 0;
     std::uint16_t source_address = 0;
     bool result_observed = false;
+};
+
+struct MillenniumDosTitleBiosResultObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    std::uint16_t ax = 0;
+    std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleBiosResultRecord {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    std::uint16_t ax = 0;
+    std::uint16_t flags = 0;
 };
 
 struct MillenniumDosTitleInitializationMemoryEffect {
@@ -94,6 +111,9 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t selected_followup_call_address = 0;
     std::uint16_t selected_followup_call_target = 0;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary;
+    std::vector<MillenniumDosTitleBiosResultRecord> bios_results;
+    std::uint16_t title_main_call_address = 0;
+    std::uint16_t title_main_call_target = 0;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -119,6 +139,9 @@ public:
     void execute_selected_followup_start(std::uint64_t sequence,
         std::uint16_t selected_followup_call_address,
         std::uint16_t selected_followup_call_target);
+    void observe_bios_palette_result(
+        const MillenniumDosTitleBiosResultObservation&,
+        std::span<const std::uint8_t> titles_executable);
 
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
@@ -141,6 +164,9 @@ private:
     std::uint16_t selected_followup_call_address_ = 0;
     std::uint16_t selected_followup_call_target_ = 0;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary_;
+    std::vector<MillenniumDosTitleBiosResultRecord> bios_results_;
+    std::uint16_t title_main_call_address_ = 0;
+    std::uint16_t title_main_call_target_ = 0;
 };
 
 } // namespace eon

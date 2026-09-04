@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 44> entries{{
+constexpr std::array<FunctionMapEntry, 45> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -240,6 +240,13 @@ constexpr std::array<FunctionMapEntry, 44> entries{{
      "ADF+0x7abe6", "$1fbe6", "verified-static",
      "the nested $3fbf8 service effect remains opaque and requires an exact return observation",
      "native trace-gated command completion", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
+     "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
+    {"deuteros-amiga-en-title-post-command-pointer-route", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+     "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
+     "a7f7c0c3efa60284b3d292249b3560da4d832ff0c5dfa34711b72604760b39a9",
+     "ADF+0x7b22a", "$2022a", "verified-static",
+     "the zero-flag graphics wrapper remains an explicit nested-call boundary",
+     "native trace-gated post-command state", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
     {"deuteros-amiga-en-title-planar-zero-route", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",

@@ -26,6 +26,17 @@ None of these locations is a game-data directory. User-supplied media is
 looked up separately and never created, populated, or packaged by localization
 installation.
 
+## Game text
+
+Localization applies to all player-visible text in both Original and Modern:
+menus, item names, status messages, prompts, help, and labels. Original media
+bytes remain immutable and hash-addressed. `src/game_text_localization.*`
+maps each recovered source string to a stable ID and canonical English message;
+the selected PO catalog supplies only its presentation. A non-English catalog
+missing a declared game-text message fails closed instead of silently showing
+another language. Every newly rendered recovered string must therefore be
+added to the registry, POT, and all shipped catalogs in the same change.
+
 ## Unicode rendering
 
 The catalogs are UTF-8 and include scripts such as Arabic, Japanese, Korean,

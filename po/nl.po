@@ -9,6 +9,36 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "Welcome to Millennium."
+msgstr "Welkom bij Millennium."
+
+msgid "Please select a sound system"
+msgstr "Selecteer een geluidssysteem"
+
+msgid "Type the corresponding number."
+msgstr "Typ het bijbehorende nummer."
+
+msgid "0 = IBM PC speaker"
+msgstr "0 = IBM-pc-luidspreker"
+
+msgid "1 = Sound Blaster"
+msgstr "1 = Sound Blaster"
+
+msgid "2 = Covox Sound Master"
+msgstr "2 = Covox Sound Master"
+
+msgid "Thank you. Please wait…"
+msgstr "Bedankt. Even geduld…"
+
+msgid "IBM PC speaker"
+msgstr "IBM-pc-luidspreker"
+
+msgid "Sound Blaster"
+msgstr "Sound Blaster"
+
+msgid "Covox Sound Master"
+msgstr "Covox Sound Master"
+
 msgid "OUTPUT RESOLUTION"
 msgstr "UITVOERRESOLUTIE"
 msgid "ASPECT RATIO"

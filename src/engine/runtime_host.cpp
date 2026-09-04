@@ -66,6 +66,7 @@ MillenniumDosTitleExecEntryObservationResult RuntimeHost::advance_millennium_dos
 std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> RuntimeHost::millennium_dos_title_exec_entry_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_title_exec_entry_checkpoint();}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_private_interrupt_result(MillenniumDosTitlePrivateInterruptResultObservation o){if(revoking())return {false,"Title private-interrupt result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_private_interrupt_result(o);}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_selected_callee_result(MillenniumDosTitleSelectedCalleeResultObservation o){if(revoking())return {false,"Selected title-callee result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_selected_callee_result(o);}
+MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_bios_result(MillenniumDosTitleBiosResultObservation o){if(revoking())return {false,"Title BIOS result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_bios_result(o);}
 
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_stack_word(o);}
@@ -359,6 +360,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_call_return,(const 
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_write,(const DeuterosAmigaObservedTitleCommandPlanarWrite o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_variant_write,(const DeuterosAmigaObservedTitleCommandPlanarVariantWrite o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_negative_service,(const DeuterosAmigaObservedTitleCommandNegativeService o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_pointer_route,(const DeuterosAmigaObservedTitlePostCommandPointerRoute o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -405,6 +407,11 @@ MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_status
     const MillenniumAtariStatusRegisterObservation observation) {
     if (revoking()) return {false, "Atari SR observation rejected during source revocation"};
     return NativeSessionController::observe_millennium_atari_status_register(observation);
+}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_xbios_selector_two(
+    const MillenniumAtariXbiosSelectorTwoObservation observation) {
+    if (revoking()) return {false, "XBIOS selector-2 result rejected during source revocation"};
+    return NativeSessionController::observe_millennium_atari_xbios_selector_two(observation);
 }
 
 void RuntimeHost::begin_source_revocation() {

@@ -43,7 +43,12 @@ never claim parity or invent behaviour that evidence does not support.
   `<install-directory>/data` on Windows. Looking up a missing default path
   must not create it.
 - Keep visible launcher text translatable through `src/i18n.*` and `po/`.
-  Preserve original in-game text/data rather than translating or replacing it.
+  Every user-presented game string (menus, item names, messages, help, and
+  labels) must use the same localization selection in both Original and
+  Modern. Preserve and hash-address the original source bytes separately;
+  localization is a presentation mapping and must never mutate game media.
+  A newly recovered visible string is incomplete until it has a stable game
+  text key and translations in every shipped PO catalog.
 
 ## Build, tests, and packaging
 

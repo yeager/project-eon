@@ -9,6 +9,36 @@ msgstr ""
 "Language: hi\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "Welcome to Millennium."
+msgstr "Millennium में आपका स्वागत है।"
+
+msgid "Please select a sound system"
+msgstr "ध्वनि प्रणाली चुनें"
+
+msgid "Type the corresponding number."
+msgstr "संबंधित संख्या लिखें।"
+
+msgid "0 = IBM PC speaker"
+msgstr "0 = IBM PC स्पीकर"
+
+msgid "1 = Sound Blaster"
+msgstr "1 = Sound Blaster"
+
+msgid "2 = Covox Sound Master"
+msgstr "2 = Covox Sound Master"
+
+msgid "Thank you. Please wait…"
+msgstr "धन्यवाद। कृपया प्रतीक्षा करें…"
+
+msgid "IBM PC speaker"
+msgstr "IBM PC स्पीकर"
+
+msgid "Sound Blaster"
+msgstr "Sound Blaster"
+
+msgid "Covox Sound Master"
+msgstr "Covox Sound Master"
+
 msgid "OUTPUT RESOLUTION"
 msgstr "आउटपुट रिज़ॉल्यूशन"
 msgid "ASPECT RATIO"

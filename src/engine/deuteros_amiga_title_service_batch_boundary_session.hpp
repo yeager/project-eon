@@ -696,6 +696,29 @@ struct DeuterosAmigaTitleCommandNegativeServicePlan {
     std::uint32_t next_opcode_read_address = 0;
 };
 
+struct DeuterosAmigaObservedTitlePostCommandPointerRoute {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t preceding_call_address = 0;
+    std::uint32_t preceding_call_target = 0;
+    std::uint32_t preceding_return_address = 0;
+    std::uint32_t pointer_call_address = 0;
+    std::uint32_t pointer_call_target = 0;
+    std::uint32_t flag_instruction_address = 0;
+    std::uint32_t flag_source_address = 0;
+    std::uint8_t observed_flag_value = 0;
+};
+
+struct DeuterosAmigaTitlePostCommandPointerRoutePlan {
+    DeuterosAmigaObservedTitlePostCommandPointerRoute observation;
+    std::array<std::uint32_t, 3> destination_addresses{};
+    std::array<std::uint32_t, 3> destination_values{};
+    std::array<MemoryTransferElementWidth, 3> destination_widths{};
+    std::uint8_t effect_count = 0;
+    bool pointer_call_completed = false;
+    std::uint32_t nested_boundary_address = 0;
+    std::uint32_t caller_continuation_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -723,6 +746,10 @@ public:
         load_dispatch_ = parse_deuteros_amiga_title_post_load_dispatch_profile(disk, plan);
         command_interpreter_ =
             parse_deuteros_amiga_title_command_interpreter_profile(disk, plan);
+        post_command_continuation_ =
+            parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(disk, plan);
+        post_command_pointer_route_ =
+            parse_deuteros_amiga_title_post_exec_pointer_route_profile(disk, plan);
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
             || to_hex(sha256(at(0x20510, 38)))
@@ -1755,6 +1782,49 @@ public:
             command_interpreter_.opcode_read_address};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandPointerRoutePlan>
+    observe_post_command_pointer_route(
+        const DeuterosAmigaObservedTitlePostCommandPointerRoute& observation) {
+        if (!command_halted_ || observed_post_command_pointer_route_) return std::nullopt;
+        if (observation.trace_sequence <= last_command_sequence_
+            || observation.preceding_call_address != 0x404fe
+            || observation.preceding_call_target
+                != post_command_continuation_.direct_call_addresses[2]
+            || observation.preceding_return_address != 0x40504
+            || observation.pointer_call_address != post_command_pointer_route_.caller_address
+            || observation.pointer_call_target != post_command_pointer_route_.entry_address
+            || observation.flag_instruction_address != 0x20238
+            || observation.flag_source_address
+                != post_command_pointer_route_.selected_flag_address) {
+            throw std::runtime_error("Deuteros post-command pointer route does not match boundary");
+        }
+        DeuterosAmigaTitlePostCommandPointerRoutePlan plan;
+        plan.observation = observation;
+        if (observation.observed_flag_value == 0) {
+            plan.destination_addresses = {{
+                post_command_pointer_route_.selected_pointer_cell_address,
+                post_command_pointer_route_.selected_flag_address, 0}};
+            plan.destination_values = {{
+                post_command_pointer_route_.selected_pointer_literal,
+                post_command_pointer_route_.selected_flag_value, 0}};
+            plan.destination_widths = {{MemoryTransferElementWidth::longword,
+                MemoryTransferElementWidth::byte, MemoryTransferElementWidth::byte}};
+            plan.effect_count = 2;
+            plan.nested_boundary_address = post_command_pointer_route_.selected_branch_target;
+        } else {
+            plan.destination_addresses[0] = post_command_pointer_route_.entry_clear_flag_address;
+            plan.destination_values[0] = 0;
+            plan.destination_widths[0] = MemoryTransferElementWidth::byte;
+            plan.effect_count = 1;
+            plan.pointer_call_completed = true;
+            plan.caller_continuation_address =
+                post_command_pointer_route_.caller_continuation_address;
+        }
+        observed_post_command_pointer_route_ = observation;
+        last_command_sequence_ = observation.trace_sequence;
+        return plan;
+    }
+
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
         const DeuterosAmigaObservedTitleCommandOperandByte& observation) {
@@ -1876,6 +1946,8 @@ private:
     DeuterosAmigaTitlePostExecLoadServiceProfile load_service_;
     DeuterosAmigaTitlePostLoadDispatchProfile load_dispatch_;
     DeuterosAmigaTitleCommandInterpreterProfile command_interpreter_;
+    DeuterosAmigaTitlePostExecTailReturnContinuationProfile post_command_continuation_;
+    DeuterosAmigaTitlePostExecPointerRouteProfile post_command_pointer_route_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_graphics_service_first_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
@@ -1911,6 +1983,8 @@ private:
         command_eight_pointer_;
     std::optional<DeuterosAmigaObservedTitleCommandEightMode> command_eight_mode_;
     bool command_halted_ = false;
+    std::optional<DeuterosAmigaObservedTitlePostCommandPointerRoute>
+        observed_post_command_pointer_route_;
     struct PendingCommandCall {
         std::uint32_t address;
         std::uint32_t target;

@@ -89,6 +89,9 @@ their often inconsistent filenames.
   interface layout and timing.
 - Provide a polished Modern mode with opt-in improvements while retaining a
   separately verifiable Original mode.
+- Localize every player-visible game string—including menus, item names,
+  messages, help, and labels—in both Original and Modern, while retaining the
+  exact source bytes and release identity from the supplied media.
 - Support deterministic, versioned saves and migrate imported original saves
   where their formats can be verified.
 - Run on current desktop operating systems without requiring the original
@@ -229,8 +232,11 @@ launcher locale in its own language (for example, `Svenska` rather than
 One deliberate menu-language choice is remembered in Eon's own preferences;
 an explicit `--language` always takes priority. With neither an explicit choice
 nor a saved preference, the launcher starts in English.
-Only Project Eon's own UI is translated—original game text remains sourced from
-the selected original media. All 20 UTF-8 catalogs are rendered through the
+Player-visible game text is also localized in both Original and Modern. Each
+exact string recovered from the selected media maps to a stable presentation
+key; unknown strings and missing non-English catalog entries fail closed. The
+original text bytes remain immutable and hash-addressed, and localization
+never changes the selected release, simulation, or saved data. All 20 UTF-8 catalogs are rendered through the
 bundled, hash-reviewed SDL_ttf/Noto fallback chain; Project Eon never selects a
 host font or transliterates a translation. See [the localization rendering
 contract](po/README.md#unicode-rendering).

@@ -2,8 +2,9 @@
 
 The native reader intentionally consumes PO source directly, so this lightweight
 test checks the source catalog contract without requiring gettext tooling in
-CI.  It checks Project Eon's own UI only; original game prose stays in the
-verified media and is deliberately outside this catalog.
+CI. Original game bytes stay in verified media, while every recovered string
+shown to a player is represented by a stable presentation message in the same
+catalog contract for Original and Modern mode.
 """
 
 from __future__ import annotations
@@ -52,6 +53,15 @@ INTENTIONALLY_IDENTICAL_TRANSLATIONS = {
     "uk": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
     "zh_CN": {"AMIGA", "ATARI ST", "CRT", "DEUTEROS", "DOS", "MILLENNIUM 2.2"},
 }
+
+# Hardware and product names are proper nouns in every shipped language. The
+# numeric forms are complete user-facing choices, not untranslated prose.
+GAME_TEXT_PRODUCT_NAMES = {
+    "Sound Blaster", "Covox Sound Master",
+    "1 = Sound Blaster", "2 = Covox Sound Master",
+}
+for _language in INTENTIONALLY_IDENTICAL_TRANSLATIONS:
+    INTENTIONALLY_IDENTICAL_TRANSLATIONS[_language] |= GAME_TEXT_PRODUCT_NAMES
 
 
 def po_messages(path: Path) -> dict[str, str]:

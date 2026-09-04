@@ -190,4 +190,8 @@ std::string_view Translator::translate(const std::string_view message) const {
     return found == messages_.end() ? message : std::string_view(found->second);
 }
 
+bool Translator::has_translation(const std::string_view message) const {
+    return messages_.contains(std::string(message));
+}
+
 } // namespace eon

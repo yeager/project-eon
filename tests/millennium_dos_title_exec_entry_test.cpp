@@ -181,10 +181,35 @@ int main(int argc, char** argv) {
         &&mode_one_bios.bios_boundary.dx_known_value==0
         &&mode_one_bios.bios_boundary.source_address==0x014c
         &&!mode_one_bios.bios_boundary.result_observed);
+    for(std::uint64_t index=0;index<16;++index){
+        initialization.observe_bios_palette_result(
+            {8+index,0x046d,0x046f,static_cast<std::uint16_t>(0x2000+index),
+                static_cast<std::uint16_t>(0x0200+index)},titles);
+        const auto step=initialization.checkpoint();
+        assert(step.bios_results.size()==index+1);
+        if(index<15){
+            assert(step.state==eon::MillenniumDosTitleInitializationState::
+                    bios_palette_interrupt_boundary
+                &&step.bios_boundary.source_address==0x014c+(index+1)*3
+                &&step.bios_boundary.bx==index+1
+                &&!step.bios_boundary.result_observed);
+        }
+    }
+    const auto mode_one_complete=initialization.checkpoint();
+    assert(mode_one_complete.state
+        ==eon::MillenniumDosTitleInitializationState::title_main_allocation_call_boundary
+        &&mode_one_complete.last_sequence==23
+        &&mode_one_complete.bios_results.size()==16
+        &&mode_one_complete.memory_effects.size()==6
+        &&mode_one_complete.memory_effects.back().instruction_address==0x1ad6
+        &&mode_one_complete.memory_effects.back().offset==0x0107
+        &&mode_one_complete.memory_effects.back().value==1
+        &&mode_one_complete.title_main_call_address==0x1bb8
+        &&mode_one_complete.title_main_call_target==0x1b1f);
     eon::MillenniumDosTitleInitializationSession other_mode(titles,0x2468,2);
     other_mode.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
-    other_mode.observe_private_interrupt_result({4,0x0127,0x0129,0x00ff,0});
-    assert(other_mode.checkpoint().selected_mode==0
+    other_mode.observe_private_interrupt_result({4,0x0127,0x0129,0x02ff,0});
+    assert(other_mode.checkpoint().selected_mode==2
         &&other_mode.checkpoint().selected_call_address==0x1bb2
         &&other_mode.checkpoint().selected_call_target==0x1ada);
     other_mode.execute_selected_callee_start(5,0x1bb2,0x1ada);
@@ -210,6 +235,33 @@ int main(int argc, char** argv) {
         &&other_bios.bios_boundary.cx==0x0010
         &&other_bios.bios_boundary.dx_known_mask==0
         &&other_bios.bios_boundary.source_address==0x0477);
+    for(std::uint64_t index=0;index<16;++index){
+        other_mode.observe_bios_palette_result(
+            {8+index,0x0497,0x0499,static_cast<std::uint16_t>(0x3000+index),
+                static_cast<std::uint16_t>(0x0300+index)},titles);
+        const auto step=other_mode.checkpoint();
+        assert(step.bios_results.size()==index+1);
+        if(index<15){
+            assert(step.state==eon::MillenniumDosTitleInitializationState::
+                    bios_palette_interrupt_boundary
+                &&step.bios_boundary.source_address==0x0477+index+1
+                &&step.bios_boundary.cx==15-index
+                &&!step.bios_boundary.result_observed);
+        }
+    }
+    const auto other_complete=other_mode.checkpoint();
+    assert(other_complete.state
+        ==eon::MillenniumDosTitleInitializationState::title_main_allocation_call_boundary
+        &&other_complete.last_sequence==23
+        &&other_complete.bios_results.size()==16
+        &&other_complete.memory_effects.size()==5
+        &&other_complete.memory_effects.back().instruction_address==0x1af2
+        &&other_complete.memory_effects.back().offset==0x010a
+        &&other_complete.memory_effects.back().width
+            ==eon::MillenniumDosTitleInitializationEffectWidth::word
+        &&other_complete.memory_effects.back().value==0xb800
+        &&other_complete.title_main_call_address==0x1bb8
+        &&other_complete.title_main_call_target==0x1b1f);
     bool detached_initialization_rejected=false;
     try {
         eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
@@ -241,4 +293,10 @@ int main(int argc, char** argv) {
             {6,0x0127,0x0129,0x1ae5,0,0});
     } catch(const std::runtime_error&) { detached_second_result_rejected=true; }
     assert(detached_second_result_rejected);
+    bool duplicate_bios_rejected=false;
+    try {
+        initialization.observe_bios_palette_result(
+            {24,0x046d,0x046f,0,0},titles);
+    } catch(const std::runtime_error&) { duplicate_bios_rejected=true; }
+    assert(duplicate_bios_rejected);
 }

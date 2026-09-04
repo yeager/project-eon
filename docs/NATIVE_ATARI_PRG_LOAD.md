@@ -121,15 +121,21 @@ the deliberate overwrite remains explicit. They are admitted only for an
 observed supervisor SR. Both branches converge at `JSR $2a51c`; the native
 session records return `$2aaaa`, executes the local selector-2 stack prefix,
 and stops before XBIOS `TRAP #14` at `$2a520`. It does not synthesize an A7
-address or invoke XBIOS. The checkpoint is generation-owned and disappears
+address or invoke XBIOS. A typed, generation- and sequence-owned selector-2
+observation may provide the returned D0. The exact continuation then executes
+`ADDQ.L #2,A7`, atomically stores D0 big-endian at `$2a50a`, pushes selector 3
+relative to the unmaterialized A7, and stops before the next `TRAP #14` at
+`$2a52e`. The 20 verified bytes `$2a51c..$2a52f` have SHA-256
+`751915c217471e4763ebeef2928dc4cca68bc481dae3113adabb441c2446ee2f`.
+The checkpoint is generation-owned and disappears
 with the same coordinator revocation as its PRG and Fread memory.
 
 ## Remaining boundary
 
 The materialized image and exact configuration occupy native runtime memory.
-With an explicit SR observation, both entry branches reach XBIOS selector 2
-at `$2a520`. Its return value is the next boundary. TOS basepage fields, other
-XBIOS results, Line-A state, input, timing, and every unclassified indirect
+With explicit SR and selector-2 result observations, both entry branches reach
+XBIOS selector 3 at `$2a52e`. Its return value is the next boundary. TOS
+basepage fields, other XBIOS results, Line-A state, input, timing, and every unclassified indirect
 target remain explicit preservation boundaries.
 
 No original bytes are written to disk, copied into a package, or committed.
