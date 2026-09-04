@@ -30,3 +30,29 @@ The first adapters cover two already typed paths:
 Neither adapter reads source memory. Partial transfer checkpoints, unfinished
 BDF sessions, and BDF transfers without an explicit admitted return produce
 no effect batch.
+
+## Runtime ownership
+
+`ReleaseRuntimeCoordinator` creates a fresh runtime-memory owner only after a
+release has passed normal media admission. Reset destroys that owner, and the
+controller/host accessors return no checkpoint while the session is in the
+menu or its source is being revoked. Checkpoints are copies; they cannot be
+used to mutate or re-submit effects.
+
+The active Millennium BDF mode-two route applies its word/byte effects in the
+same transaction that admits the exact terminal return. The transfer
+admission and runtime-memory state are both copied first and committed only
+after the sequence-bound batch validates and applies. A rejected return,
+duplicate batch identifier, malformed effect, or overlap therefore changes
+neither lifecycle state nor RAM. The batch identifier includes the admitted
+external-transfer entry sequence, so a completed invocation can be applied at
+most once. Other BDF modes remain unapplied until their address-space meaning
+(including VGA plane selection) is represented explicitly.
+
+The Deuteros `$38a28` adapter remains intentionally disconnected from the
+coordinator. Its bounded-copy checkpoint currently exists only inside the
+local title-stage service-batch session, while the admitted coordinator chain
+does not yet reach or expose that session. Accepting a detached checkpoint
+would bypass release ownership and reachability, so there is no public apply
+API for it. Integration must wait for the preceding title-stage state machine
+to own that boundary and return its copy-safe completed checkpoint.

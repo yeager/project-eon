@@ -2319,6 +2319,42 @@ parse_deuteros_amiga_title_post_load_dispatch_profile(
         std::string(caller_hash), std::string(routine_hash), std::string(parser_hash)};
 }
 
+DeuterosAmigaTitleCommandInterpreterProfile
+parse_deuteros_amiga_title_command_interpreter_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t entry = 0x1fa00;
+    constexpr std::size_t length = 0xec;
+    constexpr std::array<std::uint32_t, 2> helpers{{0x1f9b8, 0x1f9d2}};
+    constexpr std::size_t helper_length = 0x1a;
+    constexpr std::string_view stage_hash =
+        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
+    constexpr std::string_view interpreter_hash =
+        "9f3ee558ee309d4f8b5f73ee11ac085fa9d11510c7536180ee515f40b01546ef";
+    constexpr std::array<std::string_view, 2> helper_hashes{{
+        "d15a4fe158160fd3aee3a439755fa108a403d09bd0d92c72ce0fea3505c1f3e5",
+        "f488d16abd19300d49deeb62d7d4227c0bdbb1b0d40b7bc305383414f1d195d3"}};
+    const auto& stage = plan.title_stage;
+    const auto bytes = disk.bytes(stage.disk_offset, stage.length);
+    const auto at = [&](const std::uint32_t address, const std::size_t size) {
+        if (address < stage.destination || address - stage.destination > stage.length
+            || size > stage.length - (address - stage.destination)) {
+            throw std::runtime_error("Deuteros command interpreter lies outside original stage");
+        }
+        return bytes.subspan(address - stage.destination, size);
+    };
+    if (to_hex(sha256(bytes)) != stage_hash
+        || to_hex(sha256(at(entry, length))) != interpreter_hash
+        || to_hex(sha256(at(helpers[0], helper_length))) != helper_hashes[0]
+        || to_hex(sha256(at(helpers[1], helper_length))) != helper_hashes[1]) {
+        throw std::runtime_error("Unsupported Deuteros command-interpreter profile");
+    }
+    return {entry, 0x1fa0a, 0x1fa26, 0x1f974, 0x1f978,
+        {{0x00, 0x07, 0x10, 0x11}}, helpers, {{0x1f96c, 0x1f970}}, 0x1f8ec,
+        {{0x1fb00, 0x1fde6, 0x1fe3c, 0x402ac, 0x1fde4, 0x1fbe6}},
+        std::string(interpreter_hash),
+        {{std::string(helper_hashes[0]), std::string(helper_hashes[1])}}};
+}
+
 DeuterosAmigaTitlePostExecPointerRouteProfile
 parse_deuteros_amiga_title_post_exec_pointer_route_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {

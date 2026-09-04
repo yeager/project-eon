@@ -233,6 +233,20 @@ public:
         const DeuterosAmigaObservedLoadDispatchTableWord& observation) {
         return service_batch_boundary_session_.observe_load_dispatch_table_word(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOpcodePlan>
+    observe_command_opcode(const DeuterosAmigaObservedTitleCommandOpcode& observation) {
+        return service_batch_boundary_session_.observe_command_opcode(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
+    observe_command_operand_byte(
+        const DeuterosAmigaObservedTitleCommandOperandByte& observation) {
+        return service_batch_boundary_session_.observe_command_operand_byte(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPointerCopyPlan>
+    observe_command_pointer_long(
+        const DeuterosAmigaObservedTitleCommandPointerLong& observation) {
+        return service_batch_boundary_session_.observe_command_pointer_long(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

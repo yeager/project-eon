@@ -213,12 +213,14 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     deuteros_atari_ = std::move(deuteros_atari);
     session_snapshot_ = std::move(session_snapshot);
     active_ = launch;
+    native_runtime_memory_.emplace();
     admission_ = ReleaseRuntimeAdmission::active;
     rejection_ = ReleaseRuntimeRejection::none;
     return true;
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    native_runtime_memory_.reset();
     millennium_dos_handler_completion_.reset();
     millennium_dos_tenth_function_.reset();
     millennium_dos_seventh_function_.reset();
@@ -235,6 +237,9 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_bdf_terminal_transfer_.reset();
     millennium_dos_bdf_mode_two_.reset();
     millennium_dos_bdf_other_mode_.reset();
+    millennium_dos_shared_helper_.reset();
+    millennium_dos_shared_helper_entry_.reset();
+    millennium_dos_shared_helper_return_.reset();
     millennium_dos_bdf_service_.reset();
     millennium_dos_second_function_callback_transfer_.reset();
     millennium_dos_gx_startup_.reset();
@@ -770,6 +775,15 @@ ReleaseRuntimeCoordinator::millennium_dos_seventh_function_checkpoint() const {
         session.returned_by_guard(), session.runtime_effects()};
 }
 
+MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_shared_helper_entry(const MillenniumDosSharedHelperEntryObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_seventh_function_||!millennium_dos_native_process_||millennium_dos_shared_helper_){r.error="Shared helper entry requires one active F7 call boundary";return r;}const auto b=millennium_dos_seventh_function_->boundary();if(o.sequence==0||o.call_instruction!=0x7537||o.target_address!=0x0666||o.caller_ax!=0x012a||b.kind!=MillenniumDosSeventhFunctionBoundaryKind::call_return||b.instruction_address!=o.call_instruction||b.call_target!=o.target_address||b.known_ax!=o.caller_ax){r.error="Shared helper entry does not match the exact F7 call";return r;}try{millennium_dos_shared_helper_.emplace(millennium_dos_native_process_->make_shared_helper_session(o.caller_ax));millennium_dos_shared_helper_entry_=o;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+#define EON_SHARED_HELPER_FORWARD(name,type,body) MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_shared_helper_||millennium_dos_shared_helper_return_){r.error="No active shared helper";return r;}try{millennium_dos_shared_helper_->body;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+EON_SHARED_HELPER_FORWARD(observe_millennium_dos_shared_helper_word,MillenniumDosSharedHelperWordObservation,observe_runtime_word(o.instruction_address,o.address,o.value))
+EON_SHARED_HELPER_FORWARD(observe_millennium_dos_shared_helper_far_word,MillenniumDosSharedHelperFarWordObservation,observe_far_word(o.instruction_address,o.segment,o.offset,o.value))
+EON_SHARED_HELPER_FORWARD(observe_millennium_dos_shared_helper_call_return,MillenniumDosSharedHelperCallReturnObservation,observe_call_return(o.call_address,o.return_address))
+#undef EON_SHARED_HELPER_FORWARD
+MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_shared_helper_external_return(const MillenniumDosSharedHelperExternalReturnObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_seventh_function_||!millennium_dos_shared_helper_||!millennium_dos_shared_helper_entry_||millennium_dos_shared_helper_return_||millennium_dos_shared_helper_->state()!=MillenniumDosSharedHelperState::returned||o.sequence<=millennium_dos_shared_helper_entry_->sequence||o.return_instruction!=0x0681||o.returned_to!=0x753a){r.error="Shared helper return does not match the exact entered F7 call";return r;}try{millennium_dos_seventh_function_->observe_call_return(0x7537,0x753a);millennium_dos_shared_helper_return_=o;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+std::optional<MillenniumDosSharedHelperCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_shared_helper_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_shared_helper_||!millennium_dos_shared_helper_entry_)return std::nullopt;const auto&s=*millennium_dos_shared_helper_;return MillenniumDosSharedHelperCheckpoint{s.state(),s.boundary(),s.effects(),s.selected_offset(),*millennium_dos_shared_helper_entry_,millennium_dos_shared_helper_return_};}
+
 MillenniumDosSixthFunctionObservationResult
 ReleaseRuntimeCoordinator::observe_millennium_dos_sixth_function_dispatch(
     const MillenniumDosSixthFunctionDispatchObservation observation) {
@@ -1095,7 +1109,39 @@ EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_word,MillenniumDosB
 EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_far_word,MillenniumDosBdfModeTwoFarWordObservation,observe_far_word(o.instruction_address,o.segment,o.offset,o.value))
 EON_BDF_MODE_TWO_FORWARD(observe_millennium_dos_bdf_mode_two_far_byte,MillenniumDosBdfModeTwoFarByteObservation,observe_far_byte(o.instruction_address,o.segment,o.offset,o.value))
 #undef EON_BDF_MODE_TWO_FORWARD
-MillenniumDosBdfObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_bdf_mode_two_external_return(const MillenniumDosBdfExternalReturnObservation o){MillenniumDosBdfObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_terminal_transfer_||!millennium_dos_bdf_mode_two_||millennium_dos_bdf_mode_two_->state()!=MillenniumDosBdfModeTwoState::returned||millennium_dos_bdf_mode_two_->boundary().instruction_address!=o.return_instruction){r.error="$11f7 external return requires its active exact RET boundary";return r;}const auto admitted=millennium_dos_bdf_terminal_transfer_->observe_return({o.sequence,o.return_instruction,o.returned_to});r.accepted=admitted.accepted;r.error=admitted.error;return r;}
+MillenniumDosBdfObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_bdf_mode_two_external_return(
+    const MillenniumDosBdfExternalReturnObservation o) {
+    MillenniumDosBdfObservationResult result;
+    if (!session_snapshot_
+        || session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback
+        || !millennium_dos_bdf_terminal_transfer_ || !millennium_dos_bdf_mode_two_
+        || !native_runtime_memory_
+        || millennium_dos_bdf_mode_two_->state()!=MillenniumDosBdfModeTwoState::returned
+        || millennium_dos_bdf_mode_two_->boundary().instruction_address!=o.return_instruction) {
+        result.error="$11f7 external return requires its active exact RET boundary";
+        return result;
+    }
+    auto next_transfer=*millennium_dos_bdf_terminal_transfer_;
+    const auto admitted=next_transfer.observe_return({o.sequence,o.return_instruction,o.returned_to});
+    if (!admitted.accepted) { result.error=admitted.error; return result; }
+
+    const auto& session=*millennium_dos_bdf_mode_two_;
+    MillenniumDosBdfCheckpoint checkpoint;
+    checkpoint.terminal_transfer=next_transfer.checkpoint();
+    checkpoint.mode_two=MillenniumDosBdfModeTwoCheckpoint{session.state(),session.boundary(),
+        session.far_effects(),session.far_byte_effects(),session.runtime_effects()};
+    const auto batch=make_millennium_dos_bdf_effect_batch(checkpoint,
+        "millennium-dos-bdf-mode-two-"+std::to_string(
+            next_transfer.checkpoint().entry->sequence));
+    if (!batch) { result.error="$11f7 returned effects are not fully admitted"; return result; }
+    auto next_memory=*native_runtime_memory_;
+    const auto applied=next_memory.apply(*batch);
+    if (!applied.accepted) { result.error="Runtime-memory application rejected: "+applied.error; return result; }
+    *millennium_dos_bdf_terminal_transfer_=std::move(next_transfer);
+    *native_runtime_memory_=std::move(next_memory);
+    result.accepted=true;
+    return result;
+}
 #define EON_BDF_OTHER_FORWARD(name,type,body) MillenniumDosBdfObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosBdfObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_terminal_transfer_||!millennium_dos_bdf_other_mode_){r.error="No active $0caa continuation";return r;}try{millennium_dos_bdf_other_mode_->body;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
 EON_BDF_OTHER_FORWARD(observe_millennium_dos_bdf_other_mode_byte,MillenniumDosBdfByteObservation,observe_runtime_byte(o.instruction_address,o.runtime_address,o.value))
 EON_BDF_OTHER_FORWARD(observe_millennium_dos_bdf_other_mode_word,MillenniumDosBdfWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value))
@@ -1104,6 +1150,16 @@ EON_BDF_OTHER_FORWARD(observe_millennium_dos_bdf_other_mode_far_byte,MillenniumD
 #undef EON_BDF_OTHER_FORWARD
 MillenniumDosBdfObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_bdf_other_mode_external_return(const MillenniumDosBdfExternalReturnObservation o){MillenniumDosBdfObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_terminal_transfer_||!millennium_dos_bdf_other_mode_||millennium_dos_bdf_other_mode_->state()!=MillenniumDosBdfOtherModeState::returned||millennium_dos_bdf_other_mode_->boundary().instruction_address!=o.return_instruction){r.error="$0caa external return requires its active exact RET boundary";return r;}const auto admitted=millennium_dos_bdf_terminal_transfer_->observe_return({o.sequence,o.return_instruction,o.returned_to});r.accepted=admitted.accepted;r.error=admitted.error;return r;}
 std::optional<MillenniumDosBdfCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_bdf_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_second_function_callback||!millennium_dos_bdf_service_||!millennium_dos_second_function_callback_transfer_)return std::nullopt;const auto&s=*millennium_dos_bdf_service_;std::optional<MillenniumDosBdfModeTwoCheckpoint>m;if(millennium_dos_bdf_mode_two_){const auto&x=*millennium_dos_bdf_mode_two_;m=MillenniumDosBdfModeTwoCheckpoint{x.state(),x.boundary(),x.far_effects(),x.far_byte_effects(),x.runtime_effects()};}std::optional<MillenniumDosBdfOtherModeCheckpoint>other;if(millennium_dos_bdf_other_mode_){const auto&x=*millennium_dos_bdf_other_mode_;other=MillenniumDosBdfOtherModeCheckpoint{x.state(),x.boundary(),x.far_effects(),x.far_byte_effects(),x.port_effects(),x.runtime_effects(),x.runtime_byte_effects()};}return MillenniumDosBdfCheckpoint{s.state(),s.boundary(),s.effects(),s.far_memory_effects(),millennium_dos_second_function_callback_transfer_->checkpoint(),millennium_dos_bdf_terminal_transfer_?std::optional{millennium_dos_bdf_terminal_transfer_->checkpoint()}:std::nullopt,m,other};}
+std::optional<NativeRuntimeMemoryCheckpoint>
+ReleaseRuntimeCoordinator::native_runtime_memory_checkpoint() const {
+    if (!active_ || !session_snapshot_ || !native_runtime_memory_) return std::nullopt;
+    return native_runtime_memory_->checkpoint();
+}
+std::optional<NativeRuntimeMemoryDiagnostics>
+ReleaseRuntimeCoordinator::native_runtime_memory_diagnostics() const {
+    if (!active_ || !session_snapshot_ || !native_runtime_memory_) return std::nullopt;
+    return native_runtime_memory_->diagnostics();
+}
 
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {

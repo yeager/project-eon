@@ -624,6 +624,28 @@ struct DeuterosAmigaTitlePostLoadDispatchProfile {
 parse_deuteros_amiga_title_post_load_dispatch_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
+// Exact byte provenance for the command interpreter entered by `$1fb9a`.
+// Opcode meanings are intentionally not named. The two small table-pointer
+// helpers are local and complete; every other call remains a boundary.
+struct DeuterosAmigaTitleCommandInterpreterProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t opcode_read_address = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t pointer_copy_source_address = 0;
+    std::uint32_t pointer_copy_destination_address = 0;
+    std::array<std::uint8_t, 4> locally_supported_opcodes{};
+    std::array<std::uint32_t, 2> operand_helper_addresses{};
+    std::array<std::uint32_t, 2> operand_helper_destinations{};
+    std::uint32_t operand_table_base = 0;
+    std::array<std::uint32_t, 6> unresolved_call_targets{};
+    std::string interpreter_sha256;
+    std::array<std::string, 2> operand_helper_sha256{};
+};
+
+[[nodiscard]] DeuterosAmigaTitleCommandInterpreterProfile
+parse_deuteros_amiga_title_command_interpreter_profile(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
 // This is the original caller continuation beginning immediately after the
 // post-Exec tail wrapper's RTS.  It is reachable only if the wrapper's final
 // Exec vector returns.  The profile records direct/indirect call operands and

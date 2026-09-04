@@ -83,6 +83,7 @@
 #include "engine/millennium_dos_second_function_session.hpp"
 #include "engine/millennium_dos_second_function_callback_session.hpp"
 #include "engine/millennium_dos_bdf_service_session.hpp"
+#include "engine/millennium_dos_shared_helper_session.hpp"
 #include "engine/millennium_dos_gx_startup_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -6137,6 +6138,8 @@ int main() {
             && admitted_seventh.boundary().instruction_address == 0x7521
             && admitted_seventh.boundary().runtime_address
                 == std::optional<std::uint16_t>{0xa19e});
+        auto admitted_helper=admitted.make_shared_helper_session(0x012a);
+        assert(admitted_helper.boundary().instruction_address==0x0669);
         auto admitted_sixth = admitted.make_sixth_function_session();
         assert(admitted_sixth.boundary().instruction_address == 0x7415);
         admitted_sixth.observe_runtime_word(0x7415, 0xa19e, 0);
@@ -6495,6 +6498,14 @@ int main() {
         // driver/title handoff; rejection preserves the current title state.
         eon::ReleaseRuntimeCoordinator active_trace_gate;
         assert(active_trace_gate.acquire(admitted_dos_launch));
+        const auto initial_runtime_memory=active_trace_gate.native_runtime_memory_checkpoint();
+        assert(initial_runtime_memory && initial_runtime_memory->initialized_bytes.empty()
+            && initial_runtime_memory->applied_batch_count==0);
+        const auto initial_runtime_memory_diagnostics=
+            active_trace_gate.native_runtime_memory_diagnostics();
+        assert(initial_runtime_memory_diagnostics
+            && initial_runtime_memory_diagnostics->initialized_byte_count==0
+            && initial_runtime_memory_diagnostics->applied_batch_count==0);
         const auto premature_active_admission =
             active_trace_gate.admit_active_millennium_dos_gx_startup_reference_trace(runtime_trace);
         assert(!premature_active_admission.accepted
@@ -6548,6 +6559,8 @@ int main() {
         assert(active_code_image.active
             && active_code_image.active->image_id == "millennium-dos-titles-exe-linear");
         revoking_trace_host.begin_source_revocation();
+        assert(!revoking_trace_host.native_runtime_memory_checkpoint());
+        assert(!revoking_trace_host.native_runtime_memory_diagnostics());
         const auto revoking_code_image = revoking_trace_host.native_code_image_registry_diagnostics();
         assert(revoking_code_image.mapped_descriptor_count == 13
             && revoking_code_image.excluded_image_count == 7
@@ -6577,6 +6590,11 @@ int main() {
         assert(!revoking_trace_host.observe_millennium_dos_seventh_function_returned_bx(
             {0x7550, 0}).accepted);
         assert(!revoking_trace_host.millennium_dos_seventh_function_checkpoint());
+        assert(!revoking_trace_host.observe_millennium_dos_shared_helper_entry({0x7537,0x0666,0x012a,1}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_shared_helper_word({0x0669,0x0116,0}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_shared_helper_far_word({0x0678,0,0x0254,0}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_shared_helper_external_return({0x0681,0x753a,2}).accepted);
+        assert(!revoking_trace_host.millennium_dos_shared_helper_checkpoint());
         assert(!revoking_trace_host.observe_millennium_dos_sixth_function_dispatch(
             {0xd40a, 0x76f1, 5, 0x7415}).accepted);
         assert(!revoking_trace_host.observe_millennium_dos_sixth_function_word(
@@ -6659,6 +6677,9 @@ int main() {
             && changed_trace_admission.error == "Reference trace events changed after validation");
         assert(!trace_gate.active() && !trace_gate.session_snapshot()
             && !trace_gate.millennium_dos_presentation());
+        active_trace_gate.reset();
+        assert(!active_trace_gate.native_runtime_memory_checkpoint());
+        assert(!active_trace_gate.native_runtime_memory_diagnostics());
         std::filesystem::remove(trace_events_path);
     }
     {
@@ -6877,6 +6898,14 @@ int main() {
     const auto shared_helper_from_nonzero_action = eon::evaluate_millennium_dos_shared_helper_prefix(
         *game_executable, first_special_action_nonzero.selected_ax_value);
     assert(shared_helper_from_nonzero_action.shifted_ax == 0x031c);
+    eon::MillenniumDosSharedHelperSession shared_helper_session(*game_executable,0x018f);
+    assert((shared_helper_session.boundary()==eon::MillenniumDosSharedHelperBoundary{0x0669,0x0116,false,0}));
+    shared_helper_session.observe_runtime_word(0x0669,0x0116,0x4321);
+    assert((shared_helper_session.boundary()==eon::MillenniumDosSharedHelperBoundary{0x0678,0x031e,true,0x4321}));
+    shared_helper_session.observe_far_word(0x0678,0x4321,0x031e,0x2468);
+    assert(shared_helper_session.selected_offset()==0x2468&&shared_helper_session.boundary().instruction_address==0x067b);
+    shared_helper_session.observe_call_return(0x067b,0x067e);
+    assert(shared_helper_session.state()==eon::MillenniumDosSharedHelperState::returned&&shared_helper_session.boundary().instruction_address==0x0681&&(shared_helper_session.effects()==std::vector<eon::MillenniumDosSharedHelperEffect>{{0x066e,0x05c8,0}}));
     const auto second_special_action_blocked =
         eon::evaluate_millennium_dos_second_special_action_prefix(*game_executable, 1);
     assert(second_special_action_blocked.runtime_byte_address == 0xda3a);
@@ -11060,6 +11089,49 @@ int main() {
     assert(dispatch->byte_write_address == 0x1f98c);
     assert(dispatch->byte_write_value == 0);
     assert(dispatch->stop_before_address == 0x1fa0a);
+    const auto command_10 = title_stage_session.observe_command_opcode(
+        {copy_sequence + 2, 0x1fa0a, 0x2ff00, 0x10});
+    assert(command_10);
+    assert(command_10->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::operand_byte_boundary);
+    assert(command_10->next_stream_address == 0x2ff01);
+    assert(command_10->next_observation_instruction_address == 0x1fa2e);
+    const auto operand_10 = title_stage_session.observe_command_operand_byte(
+        {copy_sequence + 3, 0x1fa2e, 0x2ff01, 0x2f});
+    assert(operand_10);
+    assert(operand_10->destination_address == 0x1f96c);
+    assert(operand_10->destination_value == 0x1f964);
+    assert(operand_10->next_stream_address == 0x2ff02);
+    const auto command_7 = title_stage_session.observe_command_opcode(
+        {copy_sequence + 4, 0x1fa0a, 0x2ff02, 0x07});
+    assert(command_7);
+    assert(command_7->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::pointer_copy_boundary);
+    const auto pointer_copy = title_stage_session.observe_command_pointer_long(
+        {copy_sequence + 5, 0x1fa5e, 0x1f974, 0x00abcdef});
+    assert(pointer_copy);
+    assert(pointer_copy->destination_address == 0x1f978);
+    assert(pointer_copy->destination_value == 0x00abcdef);
+    assert(pointer_copy->next_stream_address == 0x2ff03);
+    const auto command_11 = title_stage_session.observe_command_opcode(
+        {copy_sequence + 6, 0x1fa0a, 0x2ff03, 0x11});
+    assert(command_11);
+    const auto operand_11 = title_stage_session.observe_command_operand_byte(
+        {copy_sequence + 7, 0x1fa3a, 0x2ff04, 0x12});
+    assert(operand_11);
+    assert(operand_11->destination_address == 0x1f970);
+    assert(operand_11->destination_value == 0x1f8fc);
+    const auto command_end = title_stage_session.observe_command_opcode(
+        {copy_sequence + 8, 0x1fa0a, 0x2ff05, 0});
+    assert(command_end);
+    assert(command_end->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::complete);
+    assert(command_end->parser_return_address == 0x1fa26);
+    assert(command_end->dispatcher_return_address == 0x1fbae);
+    assert(command_end->caller_resume_address == 0x404fe);
+    assert(command_end->stop_before_address == 0x404fe);
+    assert(!title_stage_session.observe_command_opcode(
+        {copy_sequence + 9, 0x1fa0a, 0x2ff06, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_word(
         {copy_sequence + 2, 0x1fba4, 0x30002, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_base(
@@ -11782,6 +11854,21 @@ int main() {
         == "173ecec3e880b6b6d9022567622548e25629dd23d671f6f8f9e46fe700edcbbb");
     assert(post_load_dispatch.parser_prefix_sha256
         == "2605ca4af737e72accc1c6dc91bf640aac370f6037da3ec284ba440377a6b4cf");
+    const auto command_interpreter =
+        eon::parse_deuteros_amiga_title_command_interpreter_profile(
+            system_disk, load_plan);
+    assert(command_interpreter.entry_address == 0x1fa00);
+    assert(command_interpreter.opcode_read_address == 0x1fa0a);
+    assert(command_interpreter.return_address == 0x1fa26);
+    assert((command_interpreter.locally_supported_opcodes
+        == std::array<std::uint8_t, 4>{{0x00, 0x07, 0x10, 0x11}}));
+    assert((command_interpreter.operand_helper_addresses
+        == std::array<std::uint32_t, 2>{{0x1f9b8, 0x1f9d2}}));
+    assert((command_interpreter.operand_helper_destinations
+        == std::array<std::uint32_t, 2>{{0x1f96c, 0x1f970}}));
+    assert(command_interpreter.operand_table_base == 0x1f8ec);
+    assert(command_interpreter.interpreter_sha256
+        == "9f3ee558ee309d4f8b5f73ee11ac085fa9d11510c7536180ee515f40b01546ef");
     assert(post_exec_tail_return.service_a1_literal == 0x204aa);
     assert((post_exec_tail_return.service_a1_offsets
         == std::array<std::uint16_t, 4>{{0x0008, 0x0009, 0x000e, 0x0012}}));

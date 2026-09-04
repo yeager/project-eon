@@ -4664,6 +4664,28 @@ at the same `$05f7` boundary. It cannot be entered before `$0b`, repeated, or
 reached from an SDL key; it supplies neither the original segment/table word
 nor any helper result or game-state effect.
 
+An additional typed native session now owns the exact `$0666` helper itself
+without weakening that game-session gate. It begins with the caller-supplied
+`AX`, records literal `CS:$05c8 := 0`, explicitly observes the segment word at
+`$0669` / `CS:$0116`, and requires a far word observation at `$0678` using
+that exact segment and the instruction-defined offset `(AX << 1) & $ffff`.
+The selected word is retained as the resulting `SI`; it is never sourced from
+host or synthetic memory. The session then requires the exact `$067b -> $05f7`
+call-return pair (`$067e`) before reaching RET `$0681`. Effects of `$05f7`,
+the table contents, and all gameplay meaning remain external observations.
+
+Active runtime ownership is deliberately narrower than the helper's many
+static callers. It admits the helper only while the owned F7 session is at its
+exact `$7537 -> $0666` call boundary with known `AX=$012a`, and requires a
+nonzero ordered entry observation. Runtime word, far-word, and internal
+`$067b -> $05f7` return observations then advance the typed child session.
+Only after RET `$0681` may a later explicit return to the statically proven
+F7 destination `$753a` complete that parent call. The child checkpoint retains
+entry, selected offset, effects, and optional return by value. Reset and source
+revocation destroy or hide both child ownership and checkpoint. The separate
+`$11b7` special-action caller remains static evidence until its parent action
+has an active runtime session; it is not silently substituted for F7.
+
 The next English-only special action `$0c` is likewise bounded. Its admission
 prefix `$d3e8..$d3f6` (15 bytes at `+$d2e8`, SHA-256
 `e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3`)
@@ -5753,6 +5775,29 @@ clears byte `$1f98c`, executes NOP and clears D0. Eon exposes that one literal
 byte effect and stops before the first runtime command-byte read at `$1fa0a`.
 It does not interpret the command stream, infer presentation, or claim the
 outer call returned.
+
+The byte-complete command dispatcher `$1fa00..$1faeb` hashes to
+`9f3ee558ee309d4f8b5f73ee11ac085fa9d11510c7536180ee515f40b01546ef`.
+Its active state machine admits every opcode only at the exact next A4 source
+address through instruction `$1fa0a`, with a strictly newer sequence. It does
+not assign semantic command names. Four paths are currently wholly local:
+zero returns through `$1fa26`, `$1fbae` and `$1fbb0` to caller `$404fe`; byte
+`$07` copies an explicitly observed longword from `$1f974` to `$1f978`; and
+bytes `$10`/`$11` consume one explicit operand byte and store the address
+`$1f8ec + ((operand & $0f) * 8)` in `$1f96c`/`$1f970`. The two complete
+26-byte helpers hash respectively to
+`d15a4fe158160fd3aee3a439755fa108a403d09bd0d92c72ce0fea3505c1f3e5`
+and
+`f488d16abd19300d49deeb62d7d4227c0bdbb1b0d40b7bc305383414f1d195d3`.
+After each admitted nonterminal local path the next opcode must come from the
+advanced command pointer; pending operands prevent opcode re-entry.
+
+All remaining byte values stop fail-closed at their first unresolved fact:
+the local calls `$1fb00`, `$1fde6`, `$1fe3c`, `$402ac`, `$1fde4` or `$1fbe6`,
+the runtime pointer reads in byte `$08`, or the fixed-table byte reads used by
+values at least `$90`. Their addresses and branch selection are retained as
+raw instruction facts only. No call return, display effect, command meaning,
+or further stream advancement is fabricated.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
