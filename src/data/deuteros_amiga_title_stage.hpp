@@ -649,6 +649,9 @@ struct DeuterosAmigaTitleCommandInterpreterProfile {
     std::uint32_t two_operand_target = 0;
     std::uint32_t two_operand_length = 0;
     std::string two_operand_sha256;
+    std::uint32_t high_opcode_table_address = 0;
+    std::uint32_t high_opcode_table_length = 0;
+    std::string high_opcode_table_sha256;
 };
 
 [[nodiscard]] DeuterosAmigaTitleCommandInterpreterProfile

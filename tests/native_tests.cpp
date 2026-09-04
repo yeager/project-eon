@@ -17,6 +17,7 @@
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_relocator_session.hpp"
 #include "engine/millennium_dos_title_to_game_session.hpp"
+#include "engine/millennium_dos_sound_driver_load_session.hpp"
 #include "data/zip_archive.hpp"
 #include "data/native_code_image_admission.hpp"
 #include "data/amiga_adf.hpp"
@@ -1427,6 +1428,9 @@ int main() {
         && !idle_host_snapshot.session && !idle_host_snapshot.presentation);
     runtime_host.begin_source_revocation();
     assert(runtime_host.generation() == 1 && runtime_host.revoking());
+    assert(!runtime_host.millennium_dos_sound_driver_load_checkpoint());
+    assert(!runtime_host.observe_millennium_dos_sound_driver_load(
+        eon::MillenniumDosSoundDriverLoadEntryObservation{1,0x2222}).accepted);
     const auto revoking_host_snapshot = runtime_host.snapshot();
     assert(revoking_host_snapshot.revoking && !revoking_host_snapshot.input_suppressed
         && !revoking_host_snapshot.session
@@ -4405,8 +4409,18 @@ int main() {
     const auto initial_startup_input = admitted_dos_runtime.millennium_dos_startup_input();
     assert(initial_startup_input && initial_startup_input->sound_selection_active);
     assert(!admitted_dos_runtime.millennium_dos_title_to_game_checkpoint());
+    const auto title_to_game_initial_memory =
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
     assert(!admitted_dos_runtime.observe_millennium_dos_title_to_game_call_return(
         {1, 0x1c54, 0x1c57}).accepted);
+    const auto title_to_game_rejected_memory =
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(title_to_game_initial_memory && title_to_game_rejected_memory
+        && title_to_game_rejected_memory->initialized_byte_count
+            == title_to_game_initial_memory->initialized_byte_count
+        && title_to_game_rejected_memory->applied_batch_count
+            == title_to_game_initial_memory->applied_batch_count
+        && title_to_game_rejected_memory->checksum == title_to_game_initial_memory->checksum);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::available_character())
         == eon::RuntimeInputDisposition::rejected);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('x'))
@@ -4425,6 +4439,38 @@ int main() {
         && sound_driver_snapshot.input_contract == eon::RuntimeInputContract::none);
     assert(eon::runtime_session_kind_label(sound_driver_snapshot.kind)
         == "MILLENNIUM DOS SOUND DRIVER BOUNDARY");
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(
+        eon::MillenniumDosSoundDriverLoadEntryObservation{1,0x2222}).accepted);
+    auto sound_load_checkpoint=admitted_dos_runtime.millennium_dos_sound_driver_load_checkpoint();
+    assert(sound_load_checkpoint && sound_load_checkpoint->generation==1
+        && sound_load_checkpoint->state==eon::MillenniumDosSoundDriverLoadState::awaiting_open_result
+        && sound_load_checkpoint->driver_kind==eon::MillenniumDosSoundDriverKind::sound_blaster);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverOpenObservation{2,0x02d2,false,7}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverSeekObservation{3,0x02eb,false,7,9194,0}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverAllocationObservation{4,0x02fa,false,0x3456}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverSeekObservation{5,0x0309,false,7,0,0}).accepted);
+    const auto before_driver_read=admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(before_driver_read && before_driver_read->initialized_byte_count==1
+        && before_driver_read->applied_batch_count==1);
+    assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverReadObservation{5,0x0313,false,7,9194}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverReadObservation{6,0x0313,false,7,9194}).accepted);
+    const auto after_driver_read=admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(after_driver_read && after_driver_read->initialized_byte_count==9195
+        && after_driver_read->applied_batch_count==2);
+    assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverReadObservation{7,0x0313,false,7,9194}).accepted);
+    assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum==after_driver_read->checksum);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverCloseObservation{7,0x0319,false,7}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverVectorObservation{8,0x0239,0x2595,0}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverStackObservation{9,0x032f,0x05f7,0xabcd}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverTitleExecObservation{10,0x0336,0x4b00,0x068f,0x067a}).accepted);
+    sound_load_checkpoint=admitted_dos_runtime.millennium_dos_sound_driver_load_checkpoint();
+    assert(sound_load_checkpoint
+        && sound_load_checkpoint->state==eon::MillenniumDosSoundDriverLoadState::title_exec_requested
+        && sound_load_checkpoint->admitted_driver_byte_count==9194
+        && sound_load_checkpoint->runtime_word_effects.size()==4);
+    const auto requested_title=admitted_dos_runtime.millennium_dos_startup_input();
+    assert(requested_title && requested_title->title_active
+        && !requested_title->title_handed_off);
     assert(admitted_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('2'))
         == eon::RuntimeInputDisposition::rejected);
     admitted_dos_runtime.reset();
@@ -4432,6 +4478,7 @@ int main() {
         && !admitted_dos_runtime.session_snapshot()
         && !admitted_dos_runtime.millennium_dos_static_dispatch_diagnostics()
         && !admitted_dos_runtime.millennium_dos_native_process_checkpoint());
+    assert(!admitted_dos_runtime.millennium_dos_sound_driver_load_checkpoint());
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
     // The Spanish release has no recovered sound-driver route. Its one
     // availability observation must instead become the explicit TITLES.EXE
@@ -4463,6 +4510,9 @@ int main() {
     assert(!admitted_spanish_runtime.millennium_dos_title_to_game_checkpoint());
     assert(!admitted_spanish_runtime.observe_millennium_dos_title_to_game_call_return(
         {1, 0x1c54, 0x1c57}).accepted);
+    const auto spanish_title_memory = admitted_spanish_runtime.native_runtime_memory_diagnostics();
+    assert(spanish_title_memory && spanish_title_memory->applied_batch_count == 0
+        && spanish_title_memory->initialized_byte_count == 0);
     assert(admitted_spanish_runtime.observe_input(eon::RuntimeInputObservation::available_character())
         == eon::RuntimeInputDisposition::rejected);
     // Every recognised outer identity admits exactly one engine-owned startup
@@ -5398,6 +5448,49 @@ int main() {
     assert(covox_leaf.original_filename == "scvx.drv" && covox_leaf.byte_size == 4053);
     assert(covox_leaf.sha256
         == "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4");
+    eon::MillenniumDosSoundDriverLoadSession sound_load(
+        *mill_bytes,*sound_blaster,'1',0x2222);
+    assert(sound_load.driver().kind==eon::MillenniumDosSoundDriverKind::sound_blaster);
+    assert(sound_load.runtime_byte_effects().size()==1
+        && sound_load.runtime_byte_effects().front().address==0x068a
+        && sound_load.runtime_byte_effects().front().value=='3');
+    assert(sound_load.boundary().instruction_address==0x02d2
+        && sound_load.boundary().dx==0x0645);
+    sound_load.observe_open_result(0x02d2,false,7);
+    assert(sound_load.file_handle()==7);
+    sound_load.observe_seek_end_result(0x02eb,false,7,9194,0);
+    assert(sound_load.boundary().cx==(9194+15)/16);
+    sound_load.observe_allocation_result(0x02fa,false,0x3456);
+    sound_load.observe_seek_start_result(0x0309,false,7,0,0);
+    assert(sound_load.memory_effects().empty());
+    sound_load.observe_read_result(0x0313,false,7,9194);
+    assert(sound_load.memory_effects().size()==9194
+        && sound_load.memory_effects().front().segment==0x3456
+        && sound_load.memory_effects().front().value==sound_blaster->front()
+        && sound_load.memory_effects().back().offset==9193
+        && sound_load.memory_effects().back().value==sound_blaster->back());
+    sound_load.observe_close_result(0x0319,false,7);
+    sound_load.observe_vector_install(0x0239,0x2595,0);
+    sound_load.observe_parent_stack(0x032f,0x05f7,0xabcd);
+    assert(sound_load.runtime_word_effects().size()==4);
+    sound_load.observe_title_exec_request(0x0336,0x4b00,0x068f,0x067a);
+    assert(sound_load.state()==eon::MillenniumDosSoundDriverLoadState::title_exec_requested);
+    {
+        eon::MillenniumDosSoundDriverLoadSession covox_load(*mill_bytes,*covox,'2',0x2222);
+        assert(covox_load.boundary().dx==0x064e
+            && covox_load.runtime_byte_effects().front().value=='4');
+        bool rejected=false;
+        try { covox_load.observe_open_result(0x02d2,true,5); }
+        catch(const std::runtime_error&) { rejected=true; }
+        assert(rejected && covox_load.memory_effects().empty());
+    }
+    {
+        bool rejected=false;
+        try { static_cast<void>(eon::MillenniumDosSoundDriverLoadSession(
+            *mill_bytes,*sound_blaster,'2',0x2222)); }
+        catch(const std::runtime_error&) { rejected=true; }
+        assert(rejected);
+    }
     eon::MillenniumDosSoundSelectionSession admitted_ibm_sound_session(
         sound_selection, sound_blaster_leaf, covox_leaf);
     assert(admitted_ibm_sound_session.accept_ascii_character('0'));
@@ -11489,8 +11582,38 @@ int main() {
     assert(command_16_result->destination_value == 0x256eb);
     assert(command_16_result->next_stream_address == 0x2ff12);
     assert(command_16_result->next_opcode_read_address == 0x1fa0a);
+    const auto command_high = title_stage_session.observe_command_opcode(
+        {copy_sequence + 27, 0x1fa0a, 0x2ff12, 0x9f});
+    assert(command_high);
+    assert(command_high->outcome
+        == eon::DeuterosAmigaTitleCommandOpcodeOutcome::fixed_table_byte_boundary);
+    assert(command_high->stop_before_address == 0x1fada);
+    const auto high_first_byte = title_stage_session.observe_command_high_table_byte(
+        {copy_sequence + 28, 0x1fada, 0x1c498, 0x03});
+    assert(high_first_byte);
+    assert(high_first_byte->byte_index == 0);
+    assert(high_first_byte->call_input_d0 == 0x03);
+    assert(high_first_byte->call_address == 0x1fadc);
+    const auto high_first_return = title_stage_session.observe_command_high_call_return(
+        {copy_sequence + 29, 0x1fadc, 0x1fbe6, 0x1fae0,
+            0x1c499, 0x03, 0x2000});
+    assert(high_first_return);
+    assert(high_first_return->completed_calls == 1);
+    assert(high_first_return->next_table_read_instruction_address == 0x1fae0);
+    assert(high_first_return->next_table_source_address == 0x1c499);
+    const auto high_second_byte = title_stage_session.observe_command_high_table_byte(
+        {copy_sequence + 30, 0x1fae0, 0x1c499, 0xbe});
+    assert(high_second_byte && high_second_byte->byte_index == 1);
+    assert(high_second_byte->call_address == 0x1fae2);
+    const auto high_final_return = title_stage_session.observe_command_high_call_return(
+        {copy_sequence + 31, 0x1fae2, 0x1fbe6, 0x1fae6,
+            0x1c499, 0xbe, 0x2000});
+    assert(high_final_return);
+    assert(high_final_return->completed_calls == 2);
+    assert(high_final_return->next_stream_address == 0x2ff13);
+    assert(high_final_return->next_opcode_read_address == 0x1fa0a);
     const auto command_end = title_stage_session.observe_command_opcode(
-        {copy_sequence + 27, 0x1fa0a, 0x2ff12, 0});
+        {copy_sequence + 32, 0x1fa0a, 0x2ff13, 0});
     assert(command_end);
     assert(command_end->outcome
         == eon::DeuterosAmigaTitleCommandOpcodeOutcome::complete);
@@ -11499,7 +11622,7 @@ int main() {
     assert(command_end->caller_resume_address == 0x404fe);
     assert(command_end->stop_before_address == 0x404fe);
     assert(!title_stage_session.observe_command_opcode(
-        {copy_sequence + 28, 0x1fa0a, 0x2ff13, 0}));
+        {copy_sequence + 33, 0x1fa0a, 0x2ff14, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_word(
         {copy_sequence + 2, 0x1fba4, 0x30002, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_base(
@@ -12257,6 +12380,10 @@ int main() {
     assert(command_interpreter.two_operand_length == 0x68);
     assert(command_interpreter.two_operand_sha256
         == "a431f810a110c1640f0f99460a7685054406b0312260cdc400a52e62ee4da2ac");
+    assert(command_interpreter.high_opcode_table_address == 0x1c47a);
+    assert(command_interpreter.high_opcode_table_length == 0x20);
+    assert(command_interpreter.high_opcode_table_sha256
+        == "876532af8a5aec1ac7f230c6ffaeec1d82ba3dec23feaa570ba2784924530149");
     assert(post_exec_tail_return.service_a1_literal == 0x204aa);
     assert((post_exec_tail_return.service_a1_offsets
         == std::array<std::uint16_t, 4>{{0x0008, 0x0009, 0x000e, 0x0012}}));

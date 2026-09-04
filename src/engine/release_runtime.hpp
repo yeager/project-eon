@@ -11,6 +11,7 @@
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
+#include "engine/millennium_dos_sound_driver_load_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_native_process_admission.hpp"
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
@@ -30,6 +31,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <variant>
 
 namespace eon {
 
@@ -210,6 +212,27 @@ struct MillenniumDosStartupInputSnapshot {
     bool selected_driver_is_admitted = false;
     bool title_active = false;
     bool title_handed_off = false;
+};
+struct MillenniumDosSoundDriverLoadEntryObservation { std::uint64_t sequence=0; std::uint16_t code_segment=0; };
+struct MillenniumDosSoundDriverOpenObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t ax=0; };
+struct MillenniumDosSoundDriverSeekObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t bx=0,ax=0,dx=0; };
+struct MillenniumDosSoundDriverAllocationObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t ax=0; };
+struct MillenniumDosSoundDriverReadObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t bx=0,ax=0; };
+struct MillenniumDosSoundDriverCloseObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t bx=0; };
+struct MillenniumDosSoundDriverVectorObservation { std::uint64_t sequence=0; std::uint16_t instruction=0,ax=0,dx=0; };
+struct MillenniumDosSoundDriverStackObservation { std::uint64_t sequence=0; std::uint16_t instruction=0,address=0,value=0; };
+struct MillenniumDosSoundDriverTitleExecObservation { std::uint64_t sequence=0; std::uint16_t instruction=0,ax=0,dx=0,parameter_block=0; };
+using MillenniumDosSoundDriverLoadObservation = std::variant<MillenniumDosSoundDriverLoadEntryObservation,MillenniumDosSoundDriverOpenObservation,MillenniumDosSoundDriverSeekObservation,MillenniumDosSoundDriverAllocationObservation,MillenniumDosSoundDriverReadObservation,MillenniumDosSoundDriverCloseObservation,MillenniumDosSoundDriverVectorObservation,MillenniumDosSoundDriverStackObservation,MillenniumDosSoundDriverTitleExecObservation>;
+struct MillenniumDosSoundDriverLoadObservationResult { bool accepted=false; std::string error; };
+struct MillenniumDosSoundDriverLoadCheckpoint {
+    std::uint64_t generation=0,last_sequence=0;
+    MillenniumDosSoundDriverLoadState state=MillenniumDosSoundDriverLoadState::awaiting_open_result;
+    MillenniumDosSoundDriverLoadBoundary boundary;
+    MillenniumDosSoundDriverKind driver_kind=MillenniumDosSoundDriverKind::sound_blaster;
+    std::size_t admitted_driver_byte_count=0;
+    std::uint16_t file_handle=0,load_segment=0;
+    std::vector<MillenniumDosSoundDriverRuntimeWordEffect> runtime_word_effects;
+    std::vector<MillenniumDosSoundDriverRuntimeByteEffect> runtime_byte_effects;
 };
 
 struct MillenniumDosTitleToGameCallReturnObservation {
@@ -572,6 +595,8 @@ public:
     millennium_dos_presentation() const;
     [[nodiscard]] std::optional<MillenniumDosStartupInputSnapshot>
     millennium_dos_startup_input() const;
+    [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation);
+    [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_call_return(
         MillenniumDosTitleToGameCallReturnObservation observation);
@@ -826,10 +851,18 @@ public:
     millennium_dos_owned_function_diagnostics() const;
 
 private:
+    // Central exact-media gate for the recovered title successor. Future
+    // sound-driver ownership may call this only after it has advanced the
+    // same owned title session to handed_off; it is intentionally not a
+    // public bypass around the missing driver ABI.
+    [[nodiscard]] bool prepare_millennium_dos_title_to_game_after_handoff();
     std::optional<ResolvedLaunchRequest> active_;
     std::optional<MillenniumDosRuntimeAssets> millennium_dos_;
     std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection_;
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title_;
+    std::optional<MillenniumDosSoundDriverLoadSession> millennium_dos_sound_driver_load_;
+    std::uint64_t millennium_dos_sound_driver_load_generation_=0;
+    std::uint64_t millennium_dos_sound_driver_load_last_sequence_=0;
     std::optional<MillenniumDosTitleToGameSession> millennium_dos_title_to_game_;
     std::uint64_t millennium_dos_title_to_game_generation_ = 0;
     std::uint64_t millennium_dos_title_to_game_last_sequence_ = 0;
