@@ -968,6 +968,18 @@ struct DeuterosAmigaTitlePostCommandDispatchSetupPlan {
     std::uint16_t x_word=0,y_word=0,wrap_word=0,row_stride=0;
     std::uint32_t destination=0,first_source_read=0,stop_before_address=0;
 };
+struct DeuterosAmigaTitlePostCommandSelectedStreamPlan {
+    std::uint16_t descriptor=0,width=0,height=0;
+    std::uint32_t source_header=0,payload_start=0,payload_end=0;
+    std::vector<std::uint32_t> destination_addresses;
+    std::vector<std::uint8_t> destination_values;
+    std::uint32_t packet_count=0;
+    std::array<std::uint32_t,4> packet_family_counts{};
+    std::uint32_t decoded_pairs=0,return_address=0,caller_continuation=0;
+    std::uint16_t caller_d5=0,caller_d6=0;
+    std::uint32_t stop_before_address=0;
+    std::string payload_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1141,6 +1153,62 @@ public:
         if(source!=second_compressed.size()||second_dispatch_decode_values_.size()!=640U
             ||second_dispatch_family_counts_!=std::array<std::uint32_t,4>{{33,32,1,0}})
             throw std::runtime_error("Deuteros second compressed stream completion mismatch");
+
+        const auto decode_selected=[&](std::uint16_t descriptor,std::uint32_t header_address,
+            std::size_t payload_length,std::uint32_t groups,std::string_view header_hash,
+            std::string_view payload_hash,std::vector<std::uint32_t>& addresses,
+            std::vector<std::uint8_t>& values,std::uint32_t& packets,
+            std::array<std::uint32_t,4>& families){
+            if(to_hex(sha256(at(header_address,4)))!=header_hash)
+                throw std::runtime_error("Unsupported Deuteros selected dispatch header");
+            const auto payload=at(header_address+4U,payload_length);
+            if(to_hex(sha256(payload))!=payload_hash)
+                throw std::runtime_error("Unsupported Deuteros selected dispatch payload");
+            std::size_t cursor=0;std::uint32_t plane=0,row=0,group=0;
+            const auto pair_total=groups*16U*4U;
+            auto emit_pair=[&](std::uint8_t first,std::uint8_t second){
+                const auto address=plane*0x1a40U+row*0x28U+group*2U;
+                addresses.push_back(address);values.push_back(first);
+                addresses.push_back(address+1U);values.push_back(second);
+                if(++group==groups){group=0;if(++row==16U){row=0;++plane;}}
+            };
+            while(values.size()/2U<pair_total){
+                if(cursor>=payload.size())throw std::runtime_error("Truncated Deuteros selected dispatch payload");
+                const auto control=payload[cursor++];const auto family=control>>6U;
+                ++families[family];++packets;std::uint32_t count=control&0x3fU;
+                if(family==0){count=control==0?256U:count;for(std::uint32_t i=0;i<count&&values.size()/2U<pair_total;++i){
+                    if(cursor+2U>payload.size())throw std::runtime_error("Truncated Deuteros selected literal packet");
+                    emit_pair(payload[cursor],payload[cursor+1U]);cursor+=2U;}continue;}
+                std::uint8_t first=0,second=0;
+                if(family==1){count=count==0?256U:count;if(cursor>=payload.size())throw std::runtime_error("Truncated Deuteros selected fill packet");first=second=payload[cursor++];}
+                else {
+                    if(family==2) {
+                        if(cursor>=payload.size())
+                            throw std::runtime_error("Truncated Deuteros selected extended count");
+                        count=(count<<8U)|payload[cursor++];
+                        if(count==0)count=65536U;
+                    } else if(count==0) {
+                        count=256U;
+                    }
+                    if(cursor+2U>payload.size())
+                        throw std::runtime_error("Truncated Deuteros selected swapped packet");
+                    second=payload[cursor++];
+                    first=payload[cursor++];
+                }
+                for(std::uint32_t i=0;i<count&&values.size()/2U<pair_total;++i)emit_pair(first,second);
+            }
+            if(cursor!=payload.size()||values.size()!=pair_total*2U)
+                throw std::runtime_error("Deuteros selected dispatch completion mismatch");
+            (void)descriptor;
+        };
+        decode_selected(0x00b0,0x74576,1320,12,
+            "5b5f874b3e3dcaf3ab874493a0483ce5be66dbf1ce24f1a3b850594eaa93d61d",
+            "67251004cede98024d69fff3b1bac02f7df956aca5422086f00a88825ad1366c",
+            selected_b0_addresses_,selected_b0_values_,selected_b0_packet_count_,selected_b0_family_counts_);
+        decode_selected(0x00bd,0x76e24,4,3,
+            "3c388d6dfefe53e270955f50b2cfe452bb072e0c0025c2bfef2cb4518d97f054",
+            "8dca78516efa8b24c5a195cd4427fe196b4e15759c00882aa1a229ae99edd173",
+            selected_bd_addresses_,selected_bd_values_,selected_bd_packet_count_,selected_bd_family_counts_);
     }
 
     void enter(std::uint64_t preceding_sequence, std::uint32_t graphics_library_base) {
@@ -2550,6 +2618,26 @@ public:
         return DeuterosAmigaTitlePostCommandDispatchSetupPlan{o,0x005c,descriptor,0x417a2,
             cell,offset,0x422faU+offset,0,0x00b8,0x1f3e,0x0028,o.observed_pointer,0x41c72,0x41c72};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandSelectedStreamPlan>
+    advance_post_command_selected_stream(){
+        if(!post_command_dispatch_destination_||post_command_selected_stream_advanced_)return std::nullopt;
+        const auto low=static_cast<std::uint8_t>(post_command_pointer_chain_->observed_word);
+        const auto descriptor=static_cast<std::uint16_t>(low!=0&&(low&0x40U)==0?0x00b0:0x00bd);
+        const auto is_b0=descriptor==0x00b0;
+        auto addresses=is_b0?selected_b0_addresses_:selected_bd_addresses_;
+        for(auto& address:addresses)address+=post_command_dispatch_destination_->observed_pointer;
+        post_command_selected_stream_advanced_=true;
+        return DeuterosAmigaTitlePostCommandSelectedStreamPlan{descriptor,0x000c,
+            static_cast<std::uint16_t>(is_b0?0x0010:0x8010),
+            is_b0?0x74576U:0x76e24U,is_b0?0x7457aU:0x76e28U,
+            is_b0?0x74aa1U:0x76e2bU,std::move(addresses),
+            is_b0?selected_b0_values_:selected_bd_values_,
+            is_b0?selected_b0_packet_count_:selected_bd_packet_count_,
+            is_b0?selected_b0_family_counts_:selected_bd_family_counts_,
+            is_b0?768U:192U,0x41be6,0x20c2c,descriptor,0x000b,0x20c4c,
+            is_b0?"67251004cede98024d69fff3b1bac02f7df956aca5422086f00a88825ad1366c":
+                "8dca78516efa8b24c5a195cd4427fe196b4e15759c00882aa1a229ae99edd173"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -2743,6 +2831,11 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_command_continuation_return_;
     std::optional<DeuterosAmigaObservedTitlePostCommandPointerChain> post_command_pointer_chain_;
     std::optional<DeuterosAmigaObservedTitlePostCommandDispatchDestination> post_command_dispatch_destination_;
+    bool post_command_selected_stream_advanced_=false;
+    std::vector<std::uint32_t> selected_b0_addresses_,selected_bd_addresses_;
+    std::vector<std::uint8_t> selected_b0_values_,selected_bd_values_;
+    std::uint32_t selected_b0_packet_count_=0,selected_bd_packet_count_=0;
+    std::array<std::uint32_t,4> selected_b0_family_counts_{},selected_bd_family_counts_{};
     struct PendingCommandCall {
         std::uint32_t address;
         std::uint32_t target;

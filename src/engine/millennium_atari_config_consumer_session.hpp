@@ -34,6 +34,8 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     gemdos_selector_61_boundary,
     jsr_2a5c2_boundary,
     fopen_failure_spin,
+    gemdos_selector_63_boundary,
+    gemdos_selector_62_boundary,
     revoked,
 };
 
@@ -94,6 +96,7 @@ struct MillenniumAtariGemdosSelector61Observation {
     std::uint32_t trap_address=0; std::uint16_t selector=0;
     std::int32_t result_d0=0;
 };
+using MillenniumAtariGemdosSelector63Observation = MillenniumAtariGemdosSelector61Observation;
 
 struct MillenniumAtariBchgObservation {
     std::uint64_t generation = 0;
@@ -262,6 +265,21 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t fopen_positive_d1=0;
     std::string gemdos_61_return_sha256;
     std::string fopen_caller_branch_sha256;
+    std::uint32_t gemdos_63_trap_address=0;
+    std::uint16_t gemdos_63_selector=0;
+    std::uint16_t gemdos_63_handle=0;
+    std::uint32_t gemdos_63_buffer=0;
+    std::uint32_t gemdos_63_count=0;
+    std::string gemdos_63_prefix_sha256;
+    bool gemdos_63_result_observed=false;
+    std::int32_t gemdos_63_result_d0=0;
+    std::uint32_t gemdos_63_stack_cleanup_bytes=0;
+    std::string gemdos_63_return_sha256;
+    std::string fread_caller_jump_sha256;
+    std::uint32_t gemdos_62_trap_address=0;
+    std::uint16_t gemdos_62_selector=0;
+    std::uint16_t gemdos_62_handle=0;
+    std::string gemdos_62_prefix_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -337,6 +355,9 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_gemdos_selector_61(
         const MillenniumAtariGemdosSelector61Observation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_gemdos_selector_61_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2a5c2();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_gemdos_selector_63(
+        const MillenniumAtariGemdosSelector63Observation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

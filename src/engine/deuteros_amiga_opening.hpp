@@ -127,6 +127,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandContinuationReturnPlan> observe_title_post_command_continuation_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_continuation_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandPointerChainPlan> observe_title_post_command_pointer_chain(const DeuterosAmigaObservedTitlePostCommandPointerChain& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_pointer_chain(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDispatchSetupPlan> observe_title_post_command_dispatch_destination(const DeuterosAmigaObservedTitlePostCommandDispatchDestination& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_dispatch_destination(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandSelectedStreamPlan> advance_title_post_command_selected_stream() { return title_stage_session_ ? title_stage_session_->advance_post_command_selected_stream() : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

@@ -14,8 +14,11 @@ class RecoveryMapTests(unittest.TestCase):
         self.assertEqual(function_map["schema"], "project-eon.function-map/v1")
         self.assertIn("not a hook table", function_map["purpose"])
         releases = {release["sha256"] for release in release_manifest["releases"]}
-        profiles = {(profile["release_sha256"], profile["id"])
-                    for profile in release_manifest["parser_profiles"]}
+        profile_rows = {
+            (profile["release_sha256"], profile["id"]): profile
+            for profile in release_manifest["parser_profiles"]
+        }
+        profiles = set(profile_rows)
         entries = function_map["entries"]
         self.assertEqual(len({entry["id"] for entry in entries}), len(entries))
         headings = re.findall(r"^#{2,6}\s+(.+)$",
@@ -30,6 +33,15 @@ class RecoveryMapTests(unittest.TestCase):
                 self.assertRegex(entry["source_asset_sha256"], r"^[0-9a-f]{64}$")
                 if "source_span_sha256" in entry:
                     self.assertRegex(entry["source_span_sha256"], r"^[0-9a-f]{64}$")
+                profile = profile_rows[(entry["release_sha256"], entry["parser_profile_id"])]
+                # A full-leaf parser profile has only one possible span hash.
+                # Catch accidental insertion of a local callee-prefix hash
+                # here, before runtime admission needs real media to expose it.
+                if profile["offset"] == 0 and profile["length"] == profile["leaf_size"]:
+                    self.assertEqual(
+                        entry.get("source_span_sha256", entry["source_asset_sha256"]),
+                        profile["leaf_sha256"],
+                    )
                 self.assertTrue(entry["source_offset"])
                 address_space = entry.get("address_space", "runtime")
                 self.assertIn(address_space, {"runtime", "image-relative-unrelocated"})

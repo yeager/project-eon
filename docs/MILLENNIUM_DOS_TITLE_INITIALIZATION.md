@@ -371,3 +371,18 @@ For AX=0, the verified entry count admits the route, the owned relocated
 directory and allocation pointers establish DS:SI and ES:DI, and execution
 stops before two external words are read at `$13aa`. The typed boundary names
 that exact far source; no descriptor contents are synthesized.
+For this admitted `TITLE.LIB`, that source is file offset `$4813` and the two
+words are exactly `$0006/$0000`. A contradictory observation fails before any
+checkpoint mutation. The `$13aa..$13cc` suffix (SHA-256
+`e8b21803c3739aac65b59a9919f03c97d0d55daf7fd2a35e7567973765724921`)
+stores normalized pointer `$3000:$0006` at `CS:$138c/$138e` and stops before
+the first external record word at `$3000:$001e`.
+That word is provenance-bound to `TITLE.LIB+$001e` and must equal `$0140`.
+The single-word observation contract rejects any other value atomically,
+retains the admitted raw word, and advances only to the second external word
+at `$13d0`, source `$3000:$001c` (known media value `$00c8`).
+That second word is now admitted with the same provenance check. The exact
+18-byte span through `$13e1` hashes to
+`787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`;
+it atomically stores `$00c8/$0140`, multiplies them to `$fa00`, and stops
+before subtracting the external word at `$13e2`, source `$3000:$001a`.

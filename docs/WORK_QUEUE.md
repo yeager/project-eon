@@ -16,6 +16,14 @@ the caller stops before `$1c17->$1725`; recover that callee next.
 The `$1725->$1390` route is now native through its exact pointer setup and
 stops at the typed two-word far read `$13aa`. Supply only the genuine words
 from the reported relocated source before continuing.
+The genuine `$0006/$0000` words are now provenance-checked and the normalized
+pointer is committed. Continue with the typed record word at `$13cd`, source
+`$3000:$001e`; do not infer loaded record contents.
+The first record word `$0140` is now admitted through the dedicated
+single-word facade. Continue at `$13d0` with genuine word `$00c8` from
+`TITLE.LIB+$001c`.
+That `$00c8` word and its exact multiplication effects are now native. Continue
+at `$13e2` with the external `$3000:$001a` word.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -36,6 +44,12 @@ The typed raw result is now admitted and stored exactly. Nonnegative results
 load the exact literal arguments and stop before `JSR $2a5c2` at `$2aa28`.
 Negative results reach the verified self-loop at `$2a632`. The positive callee
 is the next executable evidence job.
+The positive callee's argument setup is now native through GEMDOS selector
+`$3f`; the next boundary is `TRAP #1` at `$2a5d0`. Its return and any bytes
+written to `$7d42` require an explicit typed observation.
+The raw Fread result is now typed; because original code does not branch on
+it, no buffer observation is needed to reach Fclose. Execution now stops at
+selector `$3e` `TRAP #1` `$2a5e6`; its return is the next boundary.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -275,11 +289,12 @@ before `$20bd6 -> $41a68` (D0 `$0048`, D1 `$0010`); carry/zero skips at
 `$20bea`. Exact typed `$41a68` returns and local skip routes now complete all
 eight bounded iterations and return through `$20bf0`. The typed
 `$20bf4 -> $1f9b8` return and exact three-read pointer chain now select and
-atomically write `$00b0/$00bd` to `$417a2`. Selector `$005c` now follows the
-direct `$41c32` route, resolves the corresponding immutable resource pointer,
-and observes the required destination fallback at `$1f168`. It stops before
-the selected `$74576/$76e24` header read at `$41c72`; continue by proving each
-distinct low-height payload, never by substituting the prior high-path stream.
+atomically write `$00b0/$00bd` to `$417a2`. Selector `$005c` follows the
+direct `$41c32` route, and both distinct `$74576/$76e24` streams are now
+hash-bound, fully decoded, and atomically written through the typed `$1f168`
+destination. Continue at the first reachable `$20c4c->$41ad2` caller graphics
+helper with an exact typed return and the remaining descriptor-bit loop; do
+not re-observe bytes that the selected decoder overwrites.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

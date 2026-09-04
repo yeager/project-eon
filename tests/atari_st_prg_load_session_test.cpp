@@ -305,9 +305,27 @@ int main(const int argc, const char* const argv[]) {
         assert(bsr_memory.apply(user_consumer.make_gemdos_selector_61_effect_batch("fopen-positive")).accepted);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2a5fa})==0
             && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2a5fb})==7);
+        assert(user_consumer.execute_jsr_2a5c2().accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_63_boundary
+            && user_consumer.checkpoint().gemdos_63_trap_address==0x2a5d0
+            && user_consumer.checkpoint().gemdos_63_selector==0x3f
+            && user_consumer.checkpoint().gemdos_63_handle==7
+            && user_consumer.checkpoint().gemdos_63_buffer==0x7d42
+            && user_consumer.checkpoint().gemdos_63_count==0x2c24a);
+        assert(!user_consumer.execute_jsr_2a5c2().accepted);
+        assert(!user_consumer.observe_gemdos_selector_63({1,19,0x2a5d2,0x3f,0}).accepted);
+        assert(user_consumer.observe_gemdos_selector_63({1,19,0x2a5d0,0x3f,0x2c24a}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_62_boundary
+            && user_consumer.checkpoint().gemdos_63_result_d0==0x2c24a
+            && user_consumer.checkpoint().gemdos_63_stack_cleanup_bytes==12
+            && user_consumer.checkpoint().gemdos_62_trap_address==0x2a5e6
+            && user_consumer.checkpoint().gemdos_62_selector==0x3e
+            && user_consumer.checkpoint().gemdos_62_handle==7);
+        assert(!user_consumer.observe_gemdos_selector_63({1,20,0x2a5d0,0x3f,0}).accepted);
         assert(negative_fopen.observe_gemdos_selector_61({1,18,0x2a5b4,0x3d,-33}).accepted);
         assert(negative_fopen.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin
             && negative_fopen.checkpoint().fopen_branch_target==0x2a632);
+        assert(!negative_fopen.execute_jsr_2a5c2().accepted);
         assert(!negative_fopen.observe_gemdos_selector_61({1,19,0x2a5b4,0x3d,-1}).accepted);
         assert(!user_consumer.observe_status_register(
             {1, 2, 0x2aa88, 0, eon::MillenniumAtariObservedPrivilege::user}).accepted);
