@@ -293,6 +293,16 @@ public:
         const DeuterosAmigaObservedTitleCommandRepeatCallReturn& observation) {
         return service_batch_boundary_session_.observe_command_repeat_call_return(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandHighTableBytePlan>
+    observe_command_high_table_byte(
+        const DeuterosAmigaObservedTitleCommandHighTableByte& observation) {
+        return service_batch_boundary_session_.observe_command_high_table_byte(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandHighCallReturnPlan>
+    observe_command_high_call_return(
+        const DeuterosAmigaObservedTitleCommandHighCallReturn& observation) {
+        return service_batch_boundary_session_.observe_command_high_call_return(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

@@ -140,6 +140,8 @@ NativeSessionController::millennium_dos_startup_input() const {
         && state_ != NativeSessionState::millennium_dos_sound_driver_boundary) return std::nullopt;
     return runtime_.millennium_dos_startup_input();
 }
+MillenniumDosSoundDriverLoadObservationResult NativeSessionController::observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation o){if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return {false,"Sound-driver load requires the active selected-driver boundary"};return runtime_.observe_millennium_dos_sound_driver_load(std::move(o));}
+std::optional<MillenniumDosSoundDriverLoadCheckpoint> NativeSessionController::millennium_dos_sound_driver_load_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_sound_driver_boundary)return std::nullopt;return runtime_.millennium_dos_sound_driver_load_checkpoint();}
 
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_stack_word(o);}

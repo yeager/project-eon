@@ -87,3 +87,21 @@ atomically applies the 975th destination byte at `$66400`. A later-sequence
 is retained in the value-only relocator checkpoint but is not misclassified
 as RAM. Reset destroys the relocator generation and memory, while source
 revocation hides checkpoints and rejects both observations.
+
+## Millennium DOS selected sound-driver loading
+
+After the original English chooser selects an admitted SSBL or SCVX leaf,
+the coordinator admits its loader only from an explicit nonzero code-segment
+observation. It reopens the verified release read-only and matches the exact
+selected leaf. Original driver bytes remain transient until the exact
+successful full-read result; only then are they atomically applied as one
+generation-qualified DOS-segmented runtime-memory batch. Short reads, carry
+results, wrong handles, stale sequences, and duplicates change neither the
+session nor memory.
+
+The proven parent words form a separate batch after the exact stack
+observation. The final `$0336`, `AX=$4b00`, `DX=$068f`, parameter block
+`$067a` observation prepares an English title session but keeps the public
+runtime at the driver boundary: it proves an EXEC request, not DOS success or
+TITLES.EXE entry. Checkpoints omit driver bytes. Reset and host revocation
+destroy or hide the loader and its generation state.

@@ -288,6 +288,9 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_gx_startup_.reset();
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
+    millennium_dos_sound_driver_load_.reset();
+    millennium_dos_sound_driver_load_generation_ = 0;
+    millennium_dos_sound_driver_load_last_sequence_ = 0;
     millennium_dos_sound_selection_.reset();
     millennium_dos_title_.reset();
     millennium_dos_.reset();
@@ -371,6 +374,104 @@ ReleaseRuntimeCoordinator::millennium_dos_startup_input() const {
     return snapshot;
 }
 
+MillenniumDosSoundDriverLoadObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
+    const MillenniumDosSoundDriverLoadObservation observation) {
+    MillenniumDosSoundDriverLoadObservationResult rejected;
+    if (!active_ || !session_snapshot_ || !millennium_dos_ || !native_runtime_memory_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_sound_driver_boundary
+        || !millennium_dos_sound_selection_) {
+        rejected.error = "Sound-driver loading requires the active selected-driver boundary";
+        return rejected;
+    }
+    const auto sequence = std::visit([](const auto& value) { return value.sequence; }, observation);
+    if (sequence == 0 || sequence <= millennium_dos_sound_driver_load_last_sequence_) {
+        rejected.error = "Sound-driver observation sequence is stale or duplicated";
+        return rejected;
+    }
+    if (const auto* entry = std::get_if<MillenniumDosSoundDriverLoadEntryObservation>(&observation)) {
+        if (millennium_dos_sound_driver_load_ || !millennium_dos_sound_selection_->selected_driver_is_admitted()) {
+            rejected.error = "Sound-driver entry was already admitted or has no exact selected leaf";
+            return rejected;
+        }
+        try {
+            const auto selected = millennium_dos_sound_selection_->selected_driver();
+            if (!selected) throw std::runtime_error("Selected driver identity is unavailable");
+            const auto media = VerifiedReleaseMedia::open(active_->release);
+            const auto launcher = admit_native_code_image(media,
+                "millennium-dos-mill-com-linear", "millennium-dos-launcher");
+            const auto driver = media.borrow(selected->sha256);
+            if (!launcher.accepted() || !driver) throw std::runtime_error("Selected driver bytes are unavailable");
+            const char selected_character = selected->kind
+                    == MillenniumDosSoundDriverKind::sound_blaster ? '1' : '2';
+            MillenniumDosSoundDriverLoadSession next(launcher.view->bytes, *driver,
+                selected_character, entry->code_segment);
+            NativeRuntimeEffectBatch batch{
+                "millennium-dos-sound-driver-" + std::to_string(millennium_dos_sound_driver_load_generation_ + 1) + "-selection",
+                true, {}};
+            for (std::size_t i=0; i<next.runtime_byte_effects().size(); ++i) {
+                const auto& effect=next.runtime_byte_effects()[i];
+                batch.effects.push_back({i+1,{NativeRuntimeAddressSpace::linear,std::nullopt,effect.address},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::little_endian,effect.value});
+            }
+            auto memory=*native_runtime_memory_;
+            const auto applied=memory.apply(batch);
+            if(!applied.accepted) throw std::runtime_error(applied.error);
+            millennium_dos_sound_driver_load_=std::move(next);
+            *native_runtime_memory_=std::move(memory);
+            ++millennium_dos_sound_driver_load_generation_;
+            millennium_dos_sound_driver_load_last_sequence_=sequence;
+            return {true,{}};
+        } catch(const std::exception& e) { rejected.error=e.what(); return rejected; }
+    }
+    if (!millennium_dos_sound_driver_load_) {
+        rejected.error="Sound-driver entry observation is required first"; return rejected;
+    }
+    auto next=*millennium_dos_sound_driver_load_;
+    auto memory=*native_runtime_memory_;
+    const auto before_memory=next.memory_effects().size();
+    const auto before_words=next.runtime_word_effects().size();
+    try {
+        std::visit([&](const auto& value) {
+            using T=std::decay_t<decltype(value)>;
+            if constexpr(std::is_same_v<T,MillenniumDosSoundDriverOpenObservation>) next.observe_open_result(value.instruction,value.carry,value.ax);
+            else if constexpr(std::is_same_v<T,MillenniumDosSoundDriverSeekObservation>) {
+                if(next.state()==MillenniumDosSoundDriverLoadState::awaiting_seek_end_result) next.observe_seek_end_result(value.instruction,value.carry,value.bx,value.ax,value.dx);
+                else next.observe_seek_start_result(value.instruction,value.carry,value.bx,value.ax,value.dx);
+            } else if constexpr(std::is_same_v<T,MillenniumDosSoundDriverAllocationObservation>) next.observe_allocation_result(value.instruction,value.carry,value.ax);
+            else if constexpr(std::is_same_v<T,MillenniumDosSoundDriverReadObservation>) next.observe_read_result(value.instruction,value.carry,value.bx,value.ax);
+            else if constexpr(std::is_same_v<T,MillenniumDosSoundDriverCloseObservation>) next.observe_close_result(value.instruction,value.carry,value.bx);
+            else if constexpr(std::is_same_v<T,MillenniumDosSoundDriverVectorObservation>) next.observe_vector_install(value.instruction,value.ax,value.dx);
+            else if constexpr(std::is_same_v<T,MillenniumDosSoundDriverStackObservation>) next.observe_parent_stack(value.instruction,value.address,value.value);
+            else if constexpr(std::is_same_v<T,MillenniumDosSoundDriverTitleExecObservation>) next.observe_title_exec_request(value.instruction,value.ax,value.dx,value.parameter_block);
+            else throw std::runtime_error("Sound-driver entry observation is valid only before admission");
+        },observation);
+        if(next.memory_effects().size()!=before_memory){
+            NativeRuntimeEffectBatch batch{"millennium-dos-sound-driver-"+std::to_string(millennium_dos_sound_driver_load_generation_)+"-image",true,{}};
+            batch.effects.reserve(next.memory_effects().size());
+            for(std::size_t i=0;i<next.memory_effects().size();++i){const auto&e=next.memory_effects()[i];batch.effects.push_back({i+1,{NativeRuntimeAddressSpace::dos_segmented,e.segment,e.offset},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::little_endian,e.value});}
+            const auto applied=memory.apply(batch);if(!applied.accepted)throw std::runtime_error(applied.error);
+        }
+        if(next.runtime_word_effects().size()!=before_words){
+            NativeRuntimeEffectBatch batch{"millennium-dos-sound-driver-"+std::to_string(millennium_dos_sound_driver_load_generation_)+"-parent",true,{}};
+            for(std::size_t i=0;i<next.runtime_word_effects().size();++i){const auto&e=next.runtime_word_effects()[i];batch.effects.push_back({i+1,{NativeRuntimeAddressSpace::linear,std::nullopt,e.address},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,e.value});}
+            const auto applied=memory.apply(batch);if(!applied.accepted)throw std::runtime_error(applied.error);
+        }
+        if(next.state()==MillenniumDosSoundDriverLoadState::title_exec_requested){
+            if(!millennium_dos_->title_flow)throw std::runtime_error("English title flow is unavailable");
+            millennium_dos_title_=std::make_unique<MillenniumDosTitleSession>(*millennium_dos_->title_flow);
+        }
+    } catch(const std::exception&e){rejected.error=e.what();return rejected;}
+    millennium_dos_sound_driver_load_=std::move(next);*native_runtime_memory_=std::move(memory);
+    millennium_dos_sound_driver_load_last_sequence_=sequence;return {true,{}};
+}
+
+std::optional<MillenniumDosSoundDriverLoadCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_sound_driver_load_checkpoint()const{
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary||!millennium_dos_sound_driver_load_)return std::nullopt;
+    const auto&s=*millennium_dos_sound_driver_load_;
+    return MillenniumDosSoundDriverLoadCheckpoint{millennium_dos_sound_driver_load_generation_,millennium_dos_sound_driver_load_last_sequence_,s.state(),s.boundary(),s.driver().kind,s.memory_effects().size(),s.file_handle(),s.load_segment(),s.runtime_word_effects(),s.runtime_byte_effects()};
+}
+
 namespace {
 MillenniumDosTitleToGameObservationResult title_to_game_rejected(std::string error) {
     return {false, std::move(error)};
@@ -381,12 +482,35 @@ MillenniumDosTitleToGameObservationResult
 ReleaseRuntimeCoordinator::observe_millennium_dos_title_to_game_call_return(
     const MillenniumDosTitleToGameCallReturnObservation observation) {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title_handoff_boundary
-        || !millennium_dos_title_to_game_ || observation.sequence <= millennium_dos_title_to_game_last_sequence_)
+        || !millennium_dos_title_to_game_ || !native_runtime_memory_
+        || observation.sequence <= millennium_dos_title_to_game_last_sequence_)
         return title_to_game_rejected("Title-to-game call return requires the active boundary and a later sequence");
     auto next = *millennium_dos_title_to_game_;
+    auto next_memory = *native_runtime_memory_;
+    const auto old_effect_count = next.effects().size();
     try { next.observe_call_return(observation.call_address, observation.return_address); }
     catch (const std::exception& e) { return title_to_game_rejected(e.what()); }
+    if (next.effects().size() != old_effect_count) {
+        if (next.effects().size() != old_effect_count + 1) {
+            return title_to_game_rejected("Title-to-game call produced an unexpected effect count");
+        }
+        const auto& effect = next.effects().back();
+        NativeRuntimeEffectBatch batch{
+            "millennium-dos-title-to-game-"
+                + std::to_string(millennium_dos_title_to_game_generation_) + "-title-flag",
+            true,
+            {{1,
+                {NativeRuntimeAddressSpace::linear, std::nullopt, effect.address},
+                MemoryTransferElementWidth::byte,
+                NativeRuntimeByteOrder::little_endian,
+                effect.value}}};
+        const auto applied = next_memory.apply(batch);
+        if (!applied.accepted) {
+            return title_to_game_rejected("Runtime-memory application rejected: " + applied.error);
+        }
+    }
     millennium_dos_title_to_game_ = std::move(next);
+    *native_runtime_memory_ = std::move(next_memory);
     millennium_dos_title_to_game_last_sequence_ = observation.sequence;
     return {true, {}};
 }
@@ -1513,26 +1637,39 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
     if (!millennium_dos_title_) return RuntimeInputDisposition::rejected;
     if (!millennium_dos_title_->poll_console(true)) return RuntimeInputDisposition::ignored;
     if (!active_) return RuntimeInputDisposition::rejected;
-    constexpr std::string_view english_release =
-        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
-    if (active_->release.sha256 == english_release) {
-        try {
-            const auto media = VerifiedReleaseMedia::open(active_->release);
-            const auto launcher = admit_native_code_image(media,
-                "millennium-dos-mill-com-linear", "millennium-dos-launcher");
-            const auto titles = admit_native_code_image(media,
-                "millennium-dos-titles-exe-linear", "millennium-dos-title-flow");
-            if (!launcher.accepted() || !titles.accepted()) return RuntimeInputDisposition::rejected;
-            millennium_dos_title_to_game_.emplace(launcher.view->bytes, titles.view->bytes);
-            ++millennium_dos_title_to_game_generation_;
-            millennium_dos_title_to_game_last_sequence_ = 0;
-        } catch (...) {
-            return RuntimeInputDisposition::rejected;
-        }
+    if (active_->release.language == "en"
+        && !prepare_millennium_dos_title_to_game_after_handoff()) {
+        return RuntimeInputDisposition::rejected;
     }
     session_snapshot_ = make_runtime_session_snapshot(*active_,
         RuntimeSessionKind::millennium_dos_title_handoff_boundary);
     return RuntimeInputDisposition::boundary_reached;
+}
+
+bool ReleaseRuntimeCoordinator::prepare_millennium_dos_title_to_game_after_handoff() {
+    constexpr std::string_view english_release =
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123";
+    if (!active_ || !millennium_dos_title_ || !millennium_dos_title_->handed_off()
+        || active_->release.game != Game::millennium
+        || active_->release.platform != Platform::dos
+        || active_->release.language != "en"
+        || active_->release.sha256 != english_release
+        || millennium_dos_title_to_game_) return false;
+    try {
+        const auto media = VerifiedReleaseMedia::open(active_->release);
+        const auto launcher = admit_native_code_image(media,
+            "millennium-dos-mill-com-linear", "millennium-dos-launcher");
+        const auto titles = admit_native_code_image(media,
+            "millennium-dos-titles-exe-linear", "millennium-dos-title-flow");
+        if (!launcher.accepted() || !titles.accepted()) return false;
+        MillenniumDosTitleToGameSession prepared(launcher.view->bytes, titles.view->bytes);
+        millennium_dos_title_to_game_ = std::move(prepared);
+        ++millennium_dos_title_to_game_generation_;
+        millennium_dos_title_to_game_last_sequence_ = 0;
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_amiga_opening() {

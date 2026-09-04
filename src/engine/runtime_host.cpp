@@ -58,6 +58,8 @@ std::optional<MillenniumDosStartupInputSnapshot> RuntimeHost::millennium_dos_sta
     if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_dos_startup_input();
 }
+MillenniumDosSoundDriverLoadObservationResult RuntimeHost::observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation o){if(revoking())return {false,"Sound-driver load rejected during revocation"};return NativeSessionController::observe_millennium_dos_sound_driver_load(std::move(o));}
+std::optional<MillenniumDosSoundDriverLoadCheckpoint> RuntimeHost::millennium_dos_sound_driver_load_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_sound_driver_load_checkpoint();}
 
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_stack_word(o);}

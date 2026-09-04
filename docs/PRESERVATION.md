@@ -3783,6 +3783,14 @@ child status. Reset and host revocation hide and destroy it. Its final
 The current English startup still stops at the separately documented sound
 driver boundary, so this route remains fail-closed until that predecessor
 return is recovered; Spanish media cannot borrow the English continuation.
+When the second exact call return produces the instruction-defined
+`$1a0e := 0` byte effect, the coordinator applies it to `NativeRuntimeMemory`
+as one generation-qualified, fully admitted batch. Session and memory copies
+commit together, so a wrong site, stale/duplicate sequence, duplicate batch,
+or memory rejection changes neither side. Reset/revocation discard the batch
+with the owning generation. The private admission helper deliberately requires
+an already handed-off owned title session; it is the integration point for a
+future proven sound-driver-to-title chain, not a public ABI bypass.
 
 The local helper `$1917` is now independently byte-locked. Each of its five
 calls starts a fixed 15-iteration selector loop. Selector `$18f9` adds the
@@ -3979,6 +3987,33 @@ selector: no host hardware is inspected, and every selection stops at the
 still-unobserved driver-initialisation return boundary. That makes the first
 `MILL.COM` menu semantics recoverable without presenting a fabricated sound
 result or a false continuation into `TITLES.EXE`.
+
+The selected external-driver continuation is now a separate hash-admitted
+manual-recomp session. `MillenniumDosSoundDriverLoadSession` requires the
+complete English `MILL.COM` identity and either exact `SSBL.DRV` or
+`SCVX.DRV` identity; character `1` may bind only SSBL and character `2` only
+SCVX. It records the caller's instruction-defined byte write at `$068a`
+(`3` or `4`) and derives the original filename address `$0645` or `$064e`.
+It then admits only this ordered DOS loader path: open result at `$02d2`,
+seek-to-end at `$02eb` with the same observed handle and exact leaf length,
+paragraph allocation at `$02fa`, rewind at `$0309`, complete read at `$0313`
+with the same handle, and close at `$0319`. Carry set, a changed handle,
+nonzero rewind position, a short read, or a length different from the
+hash-identified leaf is rejected.
+
+Only after the exact read result does the session expose byte effects for the
+original leaf at observed allocation segment offset zero. These are transient
+runtime-memory effects, never writes to the archive or game-data directory.
+The following vector-install observation is exactly `$0239`, `AX=$2595`,
+`DX=0`; it records the original INT 95h vector request but does not claim DOS
+accepted it or execute driver code. The common EXEC helper then requires an
+explicit parent SP observation at `$032f/$05f7`, records the three original
+parameter-block segment words `$067e/$0682/$0686` from explicit CS, and stops
+at the literal title request `$0336`, `AX=$4b00`, `DX=$068f`, parameter block
+`$067a` (`TITLES.EXE`). Reaching `title_exec_requested` is the only safe point
+at which the production coordinator may construct the already hash-bound
+English title session. It is not an invented EXEC return, title frame, driver
+initialization callback, audio capability, or later game handoff.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -5913,8 +5948,7 @@ after a typed observation names the exact call address, target, return
 address, newer sequence, returned A4, D0 and SR. The observed A4 becomes the
 next stream address; Eon does not assume a callee preserved or advanced it.
 Returned registers remain value-only evidence and no unobserved callee memory
-or presentation effect is synthesized. Values at least `$90` stop before
-their first table read at `$1fada`.
+or presentation effect is synthesized.
 
 Opcode `$16` now continues through its complete 104-byte target
 `$1fb00..$1fb67`, SHA-256
@@ -5965,6 +5999,20 @@ address. Only after the exact final return does `$1fe4e` advance A4 once and
 the command interpreter admit the next opcode. Replays, early completion,
 wrong A4, and out-of-order returns fail closed; no graphics effect is inferred
 from the observed calls.
+
+Opcodes `$90..$ff` now own their complete two-call table dispatch
+`$1faca..$1fae8`. The low nibble selects one of 16 two-byte entries at
+`$1c47a + nibble*2`; the immutable original 32-byte table hashes to
+`876532af8a5aec1ac7f230c6ffaeec1d82ba3dec23feaa570ba2784924530149`,
+but active execution still requires each byte as an ordered typed memory
+observation. The first byte is read by `$1fada` and admitted to
+`$1fadc -> $1fbe6 -> $1fae0`; only that exact fresh return unlocks the second
+read at `$1fae0` and call `$1fae2 -> $1fbe6 -> $1fae6`. Both returns must
+report A4 at the second table byte, matching the original postincrement and
+nonincrementing reads. The saved command-stream A4 is restored only after the
+second return, then execution resumes at `$1fa0a` with exactly one opcode byte
+consumed. D0/SR remain value-only evidence and the service's graphics effects
+remain outside this state machine.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
