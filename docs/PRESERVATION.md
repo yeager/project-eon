@@ -1441,11 +1441,18 @@ the owned A5 into A6/A0, sets D5 to 4 and clears D2. Execution stops before
 A generation-owned observation admits exactly that byte. The 12-byte
 read/copy/mask/branch span hashes to
 `948e269d0e24d6ec05013d07ffe3d3ba66400189b98a30d676b44e5b39683fe6`.
-Bytes with no `$c0` bits stop before the next copy at `$2b2ec`; a bit-6-clear
+Bytes with no `$c0` bits reach the first pair copy at `$2b2ea`; a bit-6-clear
 value reaches `$2b3b8`, a bit-7-set value reaches `$2b376`, and bit 6 alone
 reaches the next source read at `$2b338`. The exact nonzero bit-gate span
 hashes to `4b98ca43cbf9af758b5d56087a8d113f23fedf107e1320a2a6ee137d6cfe92c3`.
-No subsequent buffer byte or branch-target effect is inferred.
+On that zero-bit path a second typed observation supplies exactly the two
+bytes at `$2c251..$2c252`. The exact eight-byte pair-copy/A5-advance/D6-
+decrement prefix at `$2b2ea..$2b2f1` hashes to
+`8b97786735b1f1be41f931a62098f2f1080b5067b2db2a9835125619ad3b7623`.
+Eon atomically retains those source bytes and copies them to the owned A5
+destination, advances A4 by two and A5 by eight, and decrements D6. Execution
+stops before the D6 branch at `$2b2f2`; its outcome, later loop counters, and
+all alternate branch-target effects remain unclaimed.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4434,6 +4441,16 @@ returns locally; the 39-byte caller suffix (SHA-256
 `d095399b2a968131f10112f1895b1449f6d1572052c032e48289218e5d07355b`)
 atomically builds the dimension request and reaches typed private INT `$91`
 function `$0006` at `$0127`. No result is inferred.
+The raw result is now accepted only as a fresh typed `$0127 -> $0129`
+observation and retained without interpretation. The verified wrapper
+epilogue and `$1767` helper return resume the caller at `$1c1a`; its three-byte
+call span hashes to
+`4d867f121cb96c5445f22218aa4b145e27c1ac41838994c348133aeba4c0d925`.
+The exact `$1004..$1013` callee prefix (file `+$0f04`, SHA-256
+`23f2112307ea2992920c08508de31bd2e689247c3444791c443823cab3c6438e`)
+atomically writes CS to request word `CS:$0fe7`, selects record `CS:$0fdf`
+and function `$001a`, and reaches the common private INT `$91` at `$0127`.
+The next raw result is not inferred.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6745,6 +6762,24 @@ byte, and atomically replaces word `$416b4` with the adjusted descriptor. D0
 is then overwritten with selector `$004b`; execution stops before
 `$20c7a->$41bb4`. This does not assume that a nonzero adjustment preserves
 the `$00bd` resource route.
+
+The adjusted route is now recovered for the genuine observed byte `$03`.
+It produces descriptor `$00c0`; Eon preserves the separately hash-bound
+12-byte suffix at runtime `$416b6` (SHA-256
+`d36e52f85876496cb0123b9c5d4c0ad2bce2b7ecfad168c1c1fe247507060c2d`)
+and never substitutes the `$00bd` descriptor or stream. The `$00c0` pointer
+table entry selects runtime header `$770a0`, whose `0044 00a8` dimensions
+(68 pairs by 168 rows) hash to
+`fbaaa7db8117a83718be8cea03749e455893d2e0feb5e72c74d1158749bc7095`.
+Its exact 6,659-byte compressed payload at `$770a4..$78aa6` hashes to
+`8b535aadc3aaa48055ffaf3ce03339455ebcee3951e737ddedfb62d8b690b840`.
+The bounded decoder consumes 1,271 packets (families 576/484/2/209) and
+produces 22,848 bytes at 22,848 unique destinations using the descriptor's
+X `$0000`, Y `$0088`, row advance `$0028`, and wrap `$1f3e` geometry.
+Only the dynamic zero-pointer fallback read at `$41c48` is externally typed;
+the complete decode commits atomically and returns to `$20c80`. These sparse
+runtime writes are recovered execution state, not a renderer-surface or
+visual-parity claim.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

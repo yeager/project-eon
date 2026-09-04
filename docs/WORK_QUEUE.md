@@ -61,7 +61,8 @@ are now typed and native. The next exact boundary is `JSR $2b2be` at `$2aaec`.
 The correctly mapped `$2b2be` setup is now native through its atomic D6/D7
 stores. The next boundary is `MOVE.B (A4)+,D0` at `$2b2de`, source `$2c250`.
 That first source byte and all four exact dispatch outcomes are now native.
-The normal path next needs buffer bytes at `$2c251`; alternate paths stop at
+The normal path now owns the typed pair at `$2c251..$2c252` and stops before
+the D6 branch at `$2b2f2`; alternate paths stop at
 `$2b338`, `$2b376`, or `$2b3b8`.
 
 This is the ordered execution queue for the completion plan. It is a
@@ -311,6 +312,10 @@ The mutable `$20a10` byte now has an exact typed observation; its low-byte
 addition atomically adjusts `$416b4`, and D0 becomes `$004b`. Continue at
 `$20c7a->$41bb4` by proving the adjusted descriptor route selected by that
 observed byte; do not reuse the unadjusted `$00bd` stream implicitly.
+The genuine `$03` observation now selects a separately hash-bound `$00c0`
+descriptor and completes its 68-by-168 decode as 22,848 atomic byte writes
+after one typed destination-pointer read. Continue at caller `$20c80`; do not
+treat the sparse decoded memory as a renderer surface.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

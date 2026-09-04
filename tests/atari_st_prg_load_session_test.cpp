@@ -352,10 +352,23 @@ int main(const int argc, const char* const argv[]) {
         assert(!user_consumer.observe_game_init_source_byte({1,22,0x2b2e0,0x2c250,0x12}).accepted);
         assert(user_consumer.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x12}).accepted);
         assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_zero_copy_boundary
-            && user_consumer.checkpoint().game_init_next_instruction==0x2b2ec
+            && user_consumer.checkpoint().game_init_next_instruction==0x2b2ea
             && user_consumer.checkpoint().game_init_source_address==0x2c251);
         assert(bsr_memory.apply(user_consumer.make_game_init_source_byte_effect_batch("game-init-byte")).accepted);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c250})==0x12);
+        const auto zero_destination=user_consumer.checkpoint().caller_a5;
+        assert(!user_consumer.observe_game_init_zero_pair({1,23,0x2b2ec,0x2c251,0x56,0x2c252,0x78}).accepted);
+        assert(user_consumer.observe_game_init_zero_pair({1,23,0x2b2ea,0x2c251,0x56,0x2c252,0x78}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_zero_counter_branch_boundary
+            && user_consumer.checkpoint().game_init_next_instruction==0x2b2f2
+            && user_consumer.checkpoint().game_init_source_address==0x2c253
+            && user_consumer.checkpoint().caller_a5==zero_destination+8
+            && user_consumer.checkpoint().game_init_d6==0x0448
+            && user_consumer.checkpoint().game_init_zero_pair_prefix_sha256=="8b97786735b1f1be41f931a62098f2f1080b5067b2db2a9835125619ad3b7623");
+        assert(bsr_memory.apply(user_consumer.make_game_init_zero_pair_effect_batch("game-init-zero-pair")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c251})==0x56
+            && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,zero_destination})==0x56
+            && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,zero_destination+1})==0x78);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted
             && bit6_clear.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_bit6_clear_boundary
             && bit6_clear.checkpoint().game_init_next_instruction==0x2b3b8);

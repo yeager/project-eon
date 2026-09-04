@@ -56,6 +56,7 @@ enum class MillenniumDosTitleInitializationState {
     graphics_record_byte_read_boundary,
     graphics_record_second_byte_read_boundary,
     graphics_record_private_interrupt_result_boundary,
+    post_descriptor_private_interrupt_result_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };
@@ -312,6 +313,8 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t continuation_address = 0;
     std::uint16_t post_video_observed_ax = 0;
     std::uint16_t post_video_observed_flags = 0;
+    std::uint16_t graphics_record_observed_ax = 0;
+    std::uint16_t graphics_record_observed_flags = 0;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -421,6 +424,8 @@ private:
     std::vector<MillenniumDosTitleFarByteObservation> far_byte_observations_;
     std::uint16_t post_video_observed_ax_ = 0;
     std::uint16_t post_video_observed_flags_ = 0;
+    std::uint16_t graphics_record_observed_ax_ = 0;
+    std::uint16_t graphics_record_observed_flags_ = 0;
 };
 
 } // namespace eon

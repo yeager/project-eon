@@ -260,6 +260,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_descriptor_call_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_descriptor_loop();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_descriptor_byte(DeuterosAmigaObservedTitlePostCommandDescriptorByte);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination(DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -311,6 +312,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_fread_prefix(MillenniumAtariFreadPrefixObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2b2be();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_source_byte(MillenniumAtariGameInitSourceByteObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_zero_pair(MillenniumAtariGameInitZeroPairObservation);
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

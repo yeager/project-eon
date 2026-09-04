@@ -224,9 +224,13 @@ unconsumed buffer bytes are materialized.
 The correctly mapped `$2b2be` callee executes 32 deterministic setup bytes,
 commits its D6/D7 words atomically, and stops before the source-byte read at
 `$2b2de`. The older file-`+0xde0` candidate is not executed.
-One typed byte at `$2c250` now drives the exact mask/bit dispatch. Eon stops
-before the next buffer access on copy paths or at `$2b376`/`$2b3b8` for the
-alternate branches, without admitting further bytes.
+One typed byte at `$2c250` drives the exact mask/bit dispatch. On the normal
+zero-bit path, one bounded pair observation admits `$2c251..$2c252`, copies
+the bytes atomically to the owned A5 destination, advances A4/A5 and
+decrements D6 through the exact eight-byte prefix whose SHA-256 is
+`8b97786735b1f1be41f931a62098f2f1080b5067b2db2a9835125619ad3b7623`.
+Execution stops before the D6 branch at `$2b2f2`. Alternate paths still stop
+at `$2b376`/`$2b3b8` without admitting further bytes.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

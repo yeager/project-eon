@@ -40,6 +40,7 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     jsr_2b2be_boundary,
     game_init_source_byte_boundary,
     game_init_zero_copy_boundary,
+    game_init_zero_counter_branch_boundary,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -114,6 +115,12 @@ struct MillenniumAtariGameInitSourceByteObservation {
     std::uint64_t generation=0; std::uint64_t sequence=0;
     std::uint32_t instruction_address=0; std::uint32_t source_address=0;
     std::uint8_t source_byte=0;
+};
+struct MillenniumAtariGameInitZeroPairObservation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t instruction_address=0;
+    std::uint32_t first_source_address=0; std::uint8_t first_source_byte=0;
+    std::uint32_t second_source_address=0; std::uint8_t second_source_byte=0;
 };
 
 struct MillenniumAtariBchgObservation {
@@ -322,6 +329,11 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_next_instruction=0;
     std::string game_init_source_dispatch_sha256;
     std::string game_init_nonzero_dispatch_sha256;
+    bool game_init_zero_pair_observed=false;
+    std::uint8_t game_init_zero_first_byte=0;
+    std::uint8_t game_init_zero_second_byte=0;
+    std::uint32_t game_init_zero_destination_address=0;
+    std::string game_init_zero_pair_prefix_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -410,6 +422,9 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_source_byte(
         const MillenniumAtariGameInitSourceByteObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_source_byte_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_zero_pair(
+        const MillenniumAtariGameInitZeroPairObservation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_zero_pair_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

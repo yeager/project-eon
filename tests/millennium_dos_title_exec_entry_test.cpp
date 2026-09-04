@@ -767,6 +767,40 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().memory_effects[18953].offset==0x1351
         &&other_success.checkpoint().memory_effects[18955].value==0x00c8
         &&other_success.checkpoint().memory_effects[18956].value==0x0140);
+    auto detached_graphics_result=other_success;
+    bool detached_graphics_result_rejected=false;
+    try { detached_graphics_result.observe_private_interrupt_result(
+        {90,0x0127,0x012a,0x1357,0x0246}); }
+    catch(const std::runtime_error&) { detached_graphics_result_rejected=true; }
+    assert(detached_graphics_result_rejected
+        &&detached_graphics_result.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
+        &&detached_graphics_result.checkpoint().memory_effects.size()==18957);
+    other_success.observe_private_interrupt_result(
+        {90,0x0127,0x0129,0x1357,0x0246});
+    const auto post_descriptor=other_success.checkpoint();
+    assert(post_descriptor.state==eon::MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary
+        &&post_descriptor.last_sequence==90
+        &&post_descriptor.graphics_record_observed_ax==0x1357
+        &&post_descriptor.graphics_record_observed_flags==0x0246
+        &&post_descriptor.continuation_address==0x0127
+        &&post_descriptor.boundary.call_address==0x1011
+        &&post_descriptor.boundary.wrapper_address==0x0122
+        &&post_descriptor.boundary.interrupt_address==0x0127
+        &&post_descriptor.boundary.function==0x001a
+        &&post_descriptor.boundary.record_segment==0x2468
+        &&post_descriptor.boundary.record_offset==0x0fdf
+        &&!post_descriptor.boundary.result_observed
+        &&post_descriptor.memory_effects.size()==18958
+        &&post_descriptor.memory_effects.back().instruction_address==0x100b
+        &&post_descriptor.memory_effects.back().offset==0x0fe7
+        &&post_descriptor.memory_effects.back().value==0x2468);
+    bool duplicate_graphics_result_rejected=false;
+    try { other_success.observe_private_interrupt_result(
+        {91,0x0127,0x0129,0,0}); }
+    catch(const std::runtime_error&) { duplicate_graphics_result_rejected=true; }
+    assert(duplicate_graphics_result_rejected
+        &&other_success.checkpoint().last_sequence==90
+        &&other_success.checkpoint().memory_effects.size()==18958);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state
