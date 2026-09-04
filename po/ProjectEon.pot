@@ -1,14 +1,53 @@
 # Project Eon user-interface catalog.
-# This file is deliberately independent of original game data: original in-game
-# text is rendered only from the verified media, never replaced by a translation.
+# Original game text remains hash-addressed in user media. Stable canonical
+# messages below localize its presentation in both Original and Modern mode.
 msgid ""
 msgstr ""
-
 "Project-Id-Version: Project Eon\n"
 "Report-Msgid-Bugs-To: https://github.com/yeager/project-eon/issues\n"
 "POT-Creation-Date: 2026-08-27 00:00+0000\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+#: src/game_text_localization.cpp
+msgid "Welcome to Millennium."
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Please select a sound system"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Type the corresponding number."
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "0 = IBM PC speaker"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "1 = Sound Blaster"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "2 = Covox Sound Master"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Thank you. Please wait…"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "IBM PC speaker"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Sound Blaster"
+msgstr ""
+
+#: src/game_text_localization.cpp
+msgid "Covox Sound Master"
+msgstr ""
 
 #: src/main.cpp
 msgid "GRAPHICS PRESET"

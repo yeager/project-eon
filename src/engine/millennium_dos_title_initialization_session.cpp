@@ -130,6 +130,67 @@ void MillenniumDosTitleInitializationSession::execute_selected_followup_start(
     state_=MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary;
 }
 
+void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
+    const MillenniumDosTitleBiosResultObservation& observation,
+    const std::span<const std::uint8_t> titles_executable) {
+    if(state_!=MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary
+        ||observation.sequence!=last_sequence_+1
+        ||observation.interrupt_address!=bios_boundary_.interrupt_address
+        ||observation.return_address
+            !=static_cast<std::uint16_t>(
+                selected_followup_call_target_==0x044c?0x046f:0x0499)
+        ||titles_executable.size()!=7022
+        ||to_hex(sha256(titles_executable))!=titles_sha
+        ||bios_results_.size()>=16){
+        throw std::runtime_error("Detached Millennium DOS title BIOS result");
+    }
+    bios_results_.push_back({observation.sequence,observation.interrupt_address,
+        observation.return_address,observation.ax,observation.flags});
+    bios_boundary_.result_observed=true;
+    last_sequence_=observation.sequence;
+    const auto next_index=bios_results_.size();
+    if(next_index<16){
+        if(selected_followup_call_target_==0x044c){
+            const auto source=static_cast<std::uint16_t>(0x014c+next_index*3);
+            const auto file_offset=static_cast<std::size_t>(source-0x0100);
+            const auto red=titles_executable[file_offset];
+            const auto green=titles_executable[file_offset+1];
+            const auto blue=titles_executable[file_offset+2];
+            bios_boundary_={selected_followup_call_address_,0x044c,0x046d,0x10,
+                0x1010,static_cast<std::uint16_t>(next_index),
+                static_cast<std::uint16_t>((green<<8U)|blue),0xff00,
+                static_cast<std::uint16_t>(red<<8U),source,false};
+        } else {
+            const auto source=static_cast<std::uint16_t>(0x0477+next_index);
+            const auto value=titles_executable[source-0x0100];
+            bios_boundary_={selected_followup_call_address_,0x0487,0x0497,0x10,
+                0x1000,static_cast<std::uint16_t>((value<<8U)|next_index),
+                static_cast<std::uint16_t>(16-next_index),0,0,source,false};
+        }
+        return;
+    }
+
+    if(selected_followup_call_target_==0x044c){
+        effects_.push_back({0x0472,"BL",0x000f});
+        effects_.push_back({0x1ad4,"AL",1});
+        memory_effects_.push_back({0x1ad6,0x0107,
+            MillenniumDosTitleInitializationEffectWidth::byte,1});
+    } else {
+        effects_.push_back({0x0499,"BL",0x0010});
+        effects_.push_back({0x1ae8,"AL",selected_mode_});
+        if(selected_mode_==2){
+            effects_.push_back({0x1aef,"AX",0xb800});
+            memory_effects_.push_back({0x1af2,0x010a,
+                MillenniumDosTitleInitializationEffectWidth::word,0xb800});
+        }
+    }
+    effects_.push_back({0x1bb6,"DS",child_code_segment_});
+    title_main_call_address_=0x1bb8;
+    title_main_call_target_=0x1b1f;
+    last_sequence_=observation.sequence;
+    state_=MillenniumDosTitleInitializationState::title_main_allocation_call_boundary;
+}
+
 void MillenniumDosTitleInitializationSession::execute_selected_callee_start(
     const std::uint64_t sequence, const std::uint16_t selected_call_address,
     const std::uint16_t selected_call_target) {
@@ -226,7 +287,8 @@ MillenniumDosTitleInitializationSession::checkpoint() const {
         selected_call_address_,selected_call_target_,selected_callee_boundary_,
         selected_callee_observed_ax_,selected_callee_observed_flags_,
         selected_followup_call_address_,selected_followup_call_target_,
-        bios_boundary_};
+        bios_boundary_,bios_results_,title_main_call_address_,
+        title_main_call_target_};
 }
 
 } // namespace eon

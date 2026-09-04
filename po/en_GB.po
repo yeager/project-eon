@@ -9,6 +9,36 @@ msgstr ""
 "Language: en_GB\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "Welcome to Millennium."
+msgstr "Welcome to Millennium."
+
+msgid "Please select a sound system"
+msgstr "Please select a sound system"
+
+msgid "Type the corresponding number."
+msgstr "Type the corresponding number."
+
+msgid "0 = IBM PC speaker"
+msgstr "0 = IBM PC speaker"
+
+msgid "1 = Sound Blaster"
+msgstr "1 = Sound Blaster"
+
+msgid "2 = Covox Sound Master"
+msgstr "2 = Covox Sound Master"
+
+msgid "Thank you. Please wait…"
+msgstr "Thank you. Please wait…"
+
+msgid "IBM PC speaker"
+msgstr "IBM PC speaker"
+
+msgid "Sound Blaster"
+msgstr "Sound Blaster"
+
+msgid "Covox Sound Master"
+msgstr "Covox Sound Master"
+
 msgid "GRAPHICS PRESET"
 msgstr "GRAPHICS PRESET"
 

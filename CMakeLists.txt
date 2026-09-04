@@ -106,6 +106,7 @@ add_executable(project-eon
     src/display_geometry.cpp
     src/launcher_text.cpp
     src/i18n.cpp
+    src/game_text_localization.cpp
     src/launcher.cpp
     src/presentation_preferences.cpp
     src/presentation/modern_presentation_pipeline.cpp
@@ -402,6 +403,14 @@ if(BUILD_TESTING)
     add_test(NAME native-data-detection COMMAND eon-native-tests)
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+    add_executable(eon-game-text-localization-tests
+        tests/game_text_localization_tests.cpp
+        src/game_text_localization.cpp
+        src/i18n.cpp)
+    target_include_directories(eon-game-text-localization-tests PRIVATE src)
+    target_compile_definitions(eon-game-text-localization-tests PRIVATE
+        EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
+    add_test(NAME game-text-localization COMMAND eon-game-text-localization-tests)
     add_executable(eon-native-runtime-memory-tests
         tests/native_runtime_memory_tests.cpp
         src/engine/bounded_memory_transfer.cpp

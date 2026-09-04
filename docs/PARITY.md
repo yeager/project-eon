@@ -35,7 +35,9 @@ selected game/platform, it is the default for both launcher and CLI. An
 explicit `--release-language` narrows media but does not identify a container.
 If multiple containers remain, the launcher inserts an **Original release**
 card page and the CLI requires `--release-sha256`. This does not translate or
-alter original in-game text.
+mutate original in-game text bytes. Both Original and Modern localize every
+player-visible game string through a stable presentation key and the selected
+PO catalog.
 
 The portable entry points are:
 

@@ -344,6 +344,24 @@ original controls.
 
 ## Original and Modern mode contract
 
+### Localized game-text presentation
+
+Original preserves game behavior, media identity, and source bytes; it does
+not require presenting English source bytes when the player selected another
+UI language. Every recovered player-visible string in either mode is resolved
+by `src/game_text_localization.*` from its exact game, platform, and source
+text to a stable key and canonical catalog message. Menus, item names,
+messages, help, and labels share this rule. Original and Modern call the same
+resolver, so Modern cannot acquire a different translation or fallback path.
+
+The source byte sequence remains owned by the hash-admitted parser or runtime
+snapshot and is returned in localization diagnostics unchanged. English uses
+the canonical English presentation. Every other selected language must contain
+a nonempty PO entry; an unknown source string or missing entry is rejected
+rather than silently displaying English or text from another release. The PO
+catalogs therefore alter presentation only: they never write game media,
+runtime state, original saves, or reconstructed pixel assets.
+
 Project Eon deliberately distinguishes a preservation result from an
 enhancement. **Original** is the preservation contract: a hash-admitted,
 recovered baseline is rendered and played without host-side feature
@@ -870,7 +888,7 @@ name as a semantic property of the original program.
 | --- | --- | --- | --- | --- |
 | Millennium Amiga | Six ADFs: five 901,120-byte images and one 698,368-byte image | `DOS\0` is present, but the usable program path is raw-sector data; the valid Razor filesystem has no game files. | The Defjam-family bootstrap requests `$24200..$923ff` to `$41000`, then `$16400..$423ff` to `$68000`; the shared resident span is hash-identified. | There is no live standalone manual recognised by the bounded filesystem readers.  Visible function-key trainer text occurs only in altered variants and is not original control evidence. |
 | Deuteros Amiga | Clean system/data ADFs plus comparative alternate, save, and modified images | The clean system disk is `DOS\0`; clean data disk is `DEU\0`, whose logical block 880 is custom raw data rather than an AmigaDOS root. | The clean system boot path loads `$5800` to `$20000` and has entry `$21734`; title-stage transfer remains separately bounded. | A genuine on-disk text block contains load/save prompts, but no caller-connected input binding is yet recovered. |
-| Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits a fully relocated native `MILENIUM.TOS` image and an exact read-only `MILL22A.inf` compatibility load. Native control follows `JSR $2a500`; an explicit typed SR observation selects either exact branch at `$2aa88`, and both stop before XBIOS selector 2 at `$2a520`. The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
+| Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits a fully relocated native `MILENIUM.TOS` image and an exact read-only `MILL22A.inf` compatibility load. Native control follows `JSR $2a500`; an explicit typed SR observation selects either exact branch at `$2aa88`. A typed XBIOS selector-2 result then advances both paths from `$2a520` through the exact result store to selector 3 at `$2a52e`. The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
 | Deuteros Atari ST | Eleven 737,280/1,056,768-byte `.st` images | The 737,280-byte game-media candidates have a BPB-shaped boot sector, but their apparent root records are not a live FAT12 namespace: entries carry impossible cluster/size combinations.  The raw protected boot chain is authoritative. | The hash-identified raw chain reaches the first and second stages through explicit nine-sector reads; its XBIOS callback and state selection remain boundaries. | The supplied game-media variants contain no standalone manual.  Embedded prompts are preserved as raw text only; a separate 1,056,768-byte development/tools disk is excluded from game-control evidence. |
 
 This protects two easy-to-make mistakes: a structurally plausible BPB does not
@@ -1234,8 +1252,12 @@ SHA-256 `dede20eddbd8015da1d1a4f2f5e53424c2bc2195bff238d830ea24c9f522ea59`)
 has an SR-dependent branch to `$2aaa4`; a typed SR observation selects the
 original branch. The supervisor path applies only the directly encoded
 `MOVEP.W`, `MOVE.B`, and SR effects; the user path bypasses them. Both execute
-`JSR $2a51c` and stop before its first XBIOS trap at `$2a520`. No XBIOS return,
-display, input, or other firmware effect is inferred.
+`JSR $2a51c` and stop before its first XBIOS trap at `$2a520`. A typed observed
+selector-2 D0 result admits the exact `ADDQ.L #2,A7`, big-endian store to
+`$2a50a`, and selector-3 stack prefix, stopping at the next trap at `$2a52e`.
+The 20-byte continuation hash is
+`751915c217471e4763ebeef2928dc4cca68bc481dae3113adabb441c2446ee2f`.
+No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
 is assigned to it. At runtime address `0x2a612` (file `+0x134`) the exact 24
@@ -4087,6 +4109,12 @@ prepares the first indexed-palette BIOS request at `$0497`. Both code spans
 and their original lookup tables are hash-bound. Only known register bits are
 published, and execution stops before the first `INT $10` result rather than
 assuming a BIOS palette effect or completing either loop.
+The typed BIOS continuation now admits all 16 ordered results per selected
+route. It rereads each next table element from the exact verified title image,
+retains every raw AX/FLAGS pair, and commits only the final proven `$0107`
+byte or mode-two `$010a := $b800` word. Both paths then join at the exact
+`$1bb8 -> $1b1f` DOS allocation call, which remains the next unknown service
+boundary.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6161,6 +6189,24 @@ effects. A mismatched signed mode, suppression claim, call address, target,
 return address or literal input rejects the complete transition without
 advancing live command state. The delay is retained as an original timing
 fact in the native plan; it is not implemented as a host busy-wait.
+
+After opcode zero returns to `$404fe`, the native state machine now follows
+the next two caller-connected services to the first post-command state
+effect. A typed observation must prove the opaque `$404fe -> $38912 ->
+$40504` return, the following `$40504 -> $2022a` call, and the byte test at
+`$20238` from `$1ffd8`. The `$2022a..$20275` routine remains independently
+bound to ADF `+$7b22a`, SHA-256
+`a7f7c0c3efa60284b3d292249b3560da4d832ff0c5dfa34711b72604760b39a9`.
+
+For a nonzero observed flag the local subroutine returns immediately, after
+which the caller clears byte `$1ffd9` and returns to `$4050a`; Eon applies
+that one byte atomically. For zero, the proven pre-call effects set longword
+`$2008e` to literal `$1ffe6` and byte `$1ffd8` to `$01`, then stop before the
+still-opaque graphics wrapper at `$200dc`. That branch does not yet clear
+`$1ffd9` or claim that `$2022a` returned. Contradictory call, flag or address
+evidence changes neither command nor runtime memory. No game text is exposed
+or altered by this transition; future localized user-facing text remains a
+separate presentation concern while original media text stays immutable.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

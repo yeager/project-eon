@@ -18,6 +18,7 @@ public:
         std::string_view language, const std::filesystem::path& executable_path = {});
 
     [[nodiscard]] std::string_view translate(std::string_view message) const;
+    [[nodiscard]] bool has_translation(std::string_view message) const;
     [[nodiscard]] bool empty() const noexcept { return messages_.empty(); }
 
 private:

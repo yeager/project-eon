@@ -318,6 +318,11 @@ public:
         const DeuterosAmigaObservedTitleCommandNegativeService& observation) {
         return service_batch_boundary_session_.observe_command_negative_service(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandPointerRoutePlan>
+    observe_post_command_pointer_route(
+        const DeuterosAmigaObservedTitlePostCommandPointerRoute& observation) {
+        return service_batch_boundary_session_.observe_post_command_pointer_route(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

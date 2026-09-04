@@ -107,3 +107,41 @@ route does not use a proven DX value and publishes a zero known-mask. Eon
 stops before either BIOS result and does not iterate the palette loops. The
 mode-one `$0107 := 1` write commits atomically with the state transition; the
 other route advances state without inventing an empty memory batch.
+
+## Complete palette request loops
+
+Each BIOS return is a typed, ordered observation. Mode one accepts only
+`$046d -> $046f`; the other route accepts only `$0497 -> $0499`. Raw AX and
+FLAGS are retained for all 16 observations, but the original loops do not use
+those returned values. They restore/decrement their own loop counter and read
+the next request directly from the still hash-verified `TITLES.EXE` view.
+Project Eon therefore retains no copied palette table in the session.
+
+For mode one, request index `i` has `BX=i`, reads the RGB triplet at
+`$014c + 3*i`, exposes its first byte as known DH and its next two bytes as
+CH/CL, and keeps DL explicitly unknown. For the other route, request index
+`i` reads the byte at `$0477+i`, uses it as BH with `BL=i`, and carries loop
+counter `16-i` in CX. An altered complete executable, wrong result address,
+duplicate sequence, seventeenth result, or mismatched active route is rejected.
+
+After result 16, exact local tails join at the main call `$1bb8 -> $1b1f`:
+
+- mode one repeats the instruction-defined `$0107 := 1` write;
+- the other route reads the already proven mode byte from `$0107`, and only
+  value two writes word `$b800` to `$010a`;
+- both restore DS from CS before the common call.
+
+The loop-tail hashes are `$046f..$0476`
+`aadfaf1699f751e5de79efcc064c37fedc7db9b0481e152777ba1435cc5b606e`
+and `$0499..$049d`
+`ddaf4f20a0a9ecce6f4c43aeb48a946177cf834214c1b2306012ec133b7c5fae`.
+The selected caller tails hash as `$1ad4..$1ad9`
+`ecdc5c4190c6e33928dc5cea98f891731bf3cd941b969f93e17f095ed7418f40`
+and `$1ae8..$1af5`
+`f3a5aece4755f80806f6f49ba070a03a3d5ae17a4a77496d58eeaeac5b3993dc`.
+The common `$1bb5..$1bba` span hashes to
+`076161dddab78341dd9a014e90cff175b9f76ea5d0184ec2f6c244f09f659bc6`.
+
+The next routine `$1b1f` begins DOS memory-resize/allocation services. No DOS
+result or process-memory layout is inferred, so the native title path stops at
+that call boundary.
