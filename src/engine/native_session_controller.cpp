@@ -275,6 +275,10 @@ NativeSessionController::millennium_dos_seventh_function_checkpoint() const {
     if (state_ != NativeSessionState::millennium_dos_seventh_function) return std::nullopt;
     return runtime_.millennium_dos_seventh_function_checkpoint();
 }
+#define EON_NATIVE_HELPER(name,type) MillenniumDosSharedHelperObservationResult NativeSessionController::name(const type o){if(state_!=NativeSessionState::millennium_dos_seventh_function)return{false,"Shared helper requires F7"};return runtime_.name(o);}
+EON_NATIVE_HELPER(observe_millennium_dos_shared_helper_entry,MillenniumDosSharedHelperEntryObservation) EON_NATIVE_HELPER(observe_millennium_dos_shared_helper_word,MillenniumDosSharedHelperWordObservation) EON_NATIVE_HELPER(observe_millennium_dos_shared_helper_far_word,MillenniumDosSharedHelperFarWordObservation) EON_NATIVE_HELPER(observe_millennium_dos_shared_helper_call_return,MillenniumDosSharedHelperCallReturnObservation) EON_NATIVE_HELPER(observe_millennium_dos_shared_helper_external_return,MillenniumDosSharedHelperExternalReturnObservation)
+#undef EON_NATIVE_HELPER
+std::optional<MillenniumDosSharedHelperCheckpoint>NativeSessionController::millennium_dos_shared_helper_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_seventh_function)return std::nullopt;return runtime_.millennium_dos_shared_helper_checkpoint();}
 
 MillenniumDosSixthFunctionObservationResult
 NativeSessionController::observe_millennium_dos_sixth_function_dispatch(
@@ -385,6 +389,8 @@ EON_NATIVE_F2_CALLBACK(observe_millennium_dos_second_function_callback_jump_entr
 EON_NATIVE_F2_CALLBACK(observe_millennium_dos_second_function_callback_external_return,MillenniumDosSecondFunctionCallbackExternalReturnObservation)
 #undef EON_NATIVE_F2_CALLBACK
 std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> NativeSessionController::millennium_dos_second_function_callback_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_second_function_callback)return std::nullopt;return runtime_.millennium_dos_second_function_callback_checkpoint();}
+std::optional<NativeRuntimeMemoryCheckpoint> NativeSessionController::native_runtime_memory_checkpoint()const{if(state_==NativeSessionState::menu)return std::nullopt;return runtime_.native_runtime_memory_checkpoint();}
+std::optional<NativeRuntimeMemoryDiagnostics> NativeSessionController::native_runtime_memory_diagnostics()const{if(state_==NativeSessionState::menu)return std::nullopt;return runtime_.native_runtime_memory_diagnostics();}
 #define EON_NATIVE_BDF(name,type) MillenniumDosBdfObservationResult NativeSessionController::name(type o){if(state_!=NativeSessionState::millennium_dos_second_function_callback)return{false,"Observation requires $0bdf continuation"};return runtime_.name(o);}
 EON_NATIVE_BDF(observe_millennium_dos_bdf_byte,MillenniumDosBdfByteObservation) EON_NATIVE_BDF(observe_millennium_dos_bdf_word,MillenniumDosBdfWordObservation) EON_NATIVE_BDF(observe_millennium_dos_bdf_poll_return,MillenniumDosBdfPollReturnObservation)
 EON_NATIVE_BDF(observe_millennium_dos_bdf_mapping_return,MillenniumDosBdfMappingReturnObservation)

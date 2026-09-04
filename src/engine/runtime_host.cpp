@@ -156,6 +156,10 @@ RuntimeHost::millennium_dos_seventh_function_checkpoint() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_dos_seventh_function_checkpoint();
 }
+#define EON_HOST_HELPER(name,type) MillenniumDosSharedHelperObservationResult RuntimeHost::name(const type o){if(revoking())return{false,"Shared helper observation rejected during source revocation"};return NativeSessionController::name(o);}
+EON_HOST_HELPER(observe_millennium_dos_shared_helper_entry,MillenniumDosSharedHelperEntryObservation) EON_HOST_HELPER(observe_millennium_dos_shared_helper_word,MillenniumDosSharedHelperWordObservation) EON_HOST_HELPER(observe_millennium_dos_shared_helper_far_word,MillenniumDosSharedHelperFarWordObservation) EON_HOST_HELPER(observe_millennium_dos_shared_helper_call_return,MillenniumDosSharedHelperCallReturnObservation) EON_HOST_HELPER(observe_millennium_dos_shared_helper_external_return,MillenniumDosSharedHelperExternalReturnObservation)
+#undef EON_HOST_HELPER
+std::optional<MillenniumDosSharedHelperCheckpoint>RuntimeHost::millennium_dos_shared_helper_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_shared_helper_checkpoint();}
 
 #define EON_HOST_SIXTH_PROXY(name, type) \
 MillenniumDosSixthFunctionObservationResult RuntimeHost::name(const type observation) { \
@@ -241,6 +245,8 @@ EON_HOST_F2_CALLBACK(observe_millennium_dos_second_function_callback_jump_entry,
 EON_HOST_F2_CALLBACK(observe_millennium_dos_second_function_callback_external_return,MillenniumDosSecondFunctionCallbackExternalReturnObservation)
 #undef EON_HOST_F2_CALLBACK
 std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> RuntimeHost::millennium_dos_second_function_callback_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_second_function_callback_checkpoint();}
+std::optional<NativeRuntimeMemoryCheckpoint> RuntimeHost::native_runtime_memory_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::native_runtime_memory_checkpoint();}
+std::optional<NativeRuntimeMemoryDiagnostics> RuntimeHost::native_runtime_memory_diagnostics()const{if(revoking())return std::nullopt;return NativeSessionController::native_runtime_memory_diagnostics();}
 #define EON_HOST_BDF(name,type) MillenniumDosBdfObservationResult RuntimeHost::name(type o){if(revoking())return{false,"$0bdf observation rejected during source revocation"};return NativeSessionController::name(o);}
 EON_HOST_BDF(observe_millennium_dos_bdf_byte,MillenniumDosBdfByteObservation) EON_HOST_BDF(observe_millennium_dos_bdf_word,MillenniumDosBdfWordObservation) EON_HOST_BDF(observe_millennium_dos_bdf_poll_return,MillenniumDosBdfPollReturnObservation)
 EON_HOST_BDF(observe_millennium_dos_bdf_mapping_return,MillenniumDosBdfMappingReturnObservation)

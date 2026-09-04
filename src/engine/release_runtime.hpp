@@ -15,6 +15,7 @@
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
 #include "engine/millennium_dos_external_transfer_admission.hpp"
 #include "engine/millennium_dos_title_session.hpp"
+#include "engine/native_runtime_memory.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -492,6 +493,13 @@ struct MillenniumDosSecondFunctionCallbackJumpEntryObservation { std::uint16_t i
 struct MillenniumDosSecondFunctionCallbackExternalReturnObservation { std::uint16_t return_instruction=0;std::uint16_t returned_to=0;std::uint64_t sequence=0; };
 struct MillenniumDosSecondFunctionCallbackObservationResult { bool accepted=false;std::string error; };
 struct MillenniumDosSecondFunctionCallbackCheckpoint { MillenniumDosSecondFunctionCallbackState state=MillenniumDosSecondFunctionCallbackState::awaiting_selection_byte;MillenniumDosSecondFunctionCallbackBoundary boundary;std::vector<MillenniumDosSecondFunctionCallbackEffect> effects;std::optional<MillenniumDosExternalTransferCheckpoint> external_transfer; };
+struct MillenniumDosSharedHelperEntryObservation{std::uint16_t call_instruction=0,target_address=0,caller_ax=0;std::uint64_t sequence=0;};
+struct MillenniumDosSharedHelperWordObservation{std::uint16_t instruction_address=0,address=0,value=0;};
+struct MillenniumDosSharedHelperFarWordObservation{std::uint16_t instruction_address=0,segment=0,offset=0,value=0;};
+struct MillenniumDosSharedHelperCallReturnObservation{std::uint16_t call_address=0,return_address=0;};
+struct MillenniumDosSharedHelperExternalReturnObservation{std::uint16_t return_instruction=0,returned_to=0;std::uint64_t sequence=0;};
+struct MillenniumDosSharedHelperObservationResult{bool accepted=false;std::string error;};
+struct MillenniumDosSharedHelperCheckpoint{MillenniumDosSharedHelperState state;MillenniumDosSharedHelperBoundary boundary;std::vector<MillenniumDosSharedHelperEffect>effects;std::uint16_t selected_offset=0;MillenniumDosSharedHelperEntryObservation entry;std::optional<MillenniumDosSharedHelperExternalReturnObservation>returned;};
 struct MillenniumDosBdfByteObservation{std::uint16_t instruction_address=0,runtime_address=0;std::uint8_t value=0;};struct MillenniumDosBdfWordObservation{std::uint16_t instruction_address=0,runtime_address=0,value=0;};struct MillenniumDosBdfFarByteObservation{std::uint16_t instruction_address=0,segment=0,offset=0;std::uint8_t value=0;};struct MillenniumDosBdfModeTwoFarWordObservation{std::uint16_t instruction_address=0,segment=0,offset=0,value=0;};struct MillenniumDosBdfModeTwoFarByteObservation{std::uint16_t instruction_address=0,segment=0,offset=0;std::uint8_t value=0;};struct MillenniumDosBdfPollReturnObservation{std::uint16_t call_address=0,return_address=0,cx=0,dx=0;};struct MillenniumDosBdfMappingReturnObservation{std::uint16_t call_address=0,return_address=0,ax=0;};struct MillenniumDosBdfExternalReturnObservation{std::uint16_t return_instruction=0,returned_to=0;std::uint64_t sequence=0;};struct MillenniumDosBdfTerminalJumpObservation{std::uint16_t instruction_address=0,target_address=0;std::uint64_t sequence=0;std::optional<std::uint16_t>entry_di;std::optional<std::uint8_t>entry_dl;};struct MillenniumDosBdfObservationResult{bool accepted=false;std::string error;};struct MillenniumDosBdfModeTwoCheckpoint{MillenniumDosBdfModeTwoState state;MillenniumDosBdfModeTwoBoundary boundary;std::vector<MillenniumDosBdfModeTwoFarEffect>far_effects;std::vector<MillenniumDosBdfModeTwoFarByteEffect>far_byte_effects;std::vector<MillenniumDosBdfModeTwoRuntimeEffect>runtime_effects;};struct MillenniumDosBdfOtherModeCheckpoint{MillenniumDosBdfOtherModeState state;MillenniumDosBdfOtherModeBoundary boundary;std::vector<MillenniumDosBdfOtherModeFarEffect>far_effects;std::vector<MillenniumDosBdfOtherModeFarByteEffect>far_byte_effects;std::vector<MillenniumDosBdfOtherModePortEffect>port_effects;std::vector<MillenniumDosBdfOtherModeRuntimeEffect>runtime_effects;std::vector<MillenniumDosBdfOtherModeRuntimeByteEffect>runtime_byte_effects;};struct MillenniumDosBdfCheckpoint{MillenniumDosBdfServiceState state=MillenniumDosBdfServiceState::awaiting_active_byte;MillenniumDosBdfServiceBoundary boundary;std::vector<MillenniumDosBdfServiceEffect>effects;std::vector<MillenniumDosBdfFarMemoryEffect>far_memory_effects;MillenniumDosExternalTransferCheckpoint transfer;std::optional<MillenniumDosExternalTransferCheckpoint> terminal_transfer;std::optional<MillenniumDosBdfModeTwoCheckpoint>mode_two;std::optional<MillenniumDosBdfOtherModeCheckpoint>other_mode;};
 
 // Owns the one immutable original-media identity that a runtime is permitted
@@ -685,6 +693,8 @@ public:
     [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_jump_entry(MillenniumDosSecondFunctionCallbackJumpEntryObservation);
     [[nodiscard]] MillenniumDosSecondFunctionCallbackObservationResult observe_millennium_dos_second_function_callback_external_return(MillenniumDosSecondFunctionCallbackExternalReturnObservation);
     [[nodiscard]] std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> millennium_dos_second_function_callback_checkpoint() const;
+    [[nodiscard]] std::optional<NativeRuntimeMemoryCheckpoint> native_runtime_memory_checkpoint() const;
+    [[nodiscard]] std::optional<NativeRuntimeMemoryDiagnostics> native_runtime_memory_diagnostics() const;
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_byte(MillenniumDosBdfByteObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_word(MillenniumDosBdfWordObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_far_byte(MillenniumDosBdfFarByteObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_poll_return(MillenniumDosBdfPollReturnObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_mapping_return(MillenniumDosBdfMappingReturnObservation);[[nodiscard]]std::optional<MillenniumDosBdfCheckpoint>millennium_dos_bdf_checkpoint()const;
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_external_return(MillenniumDosBdfExternalReturnObservation);
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_terminal_jump(MillenniumDosBdfTerminalJumpObservation);
@@ -698,6 +708,12 @@ public:
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_external_return(MillenniumDosBdfExternalReturnObservation);
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_far_word(MillenniumDosBdfModeTwoFarWordObservation);
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_far_byte(MillenniumDosBdfModeTwoFarByteObservation);
+    [[nodiscard]] MillenniumDosSharedHelperObservationResult observe_millennium_dos_shared_helper_entry(MillenniumDosSharedHelperEntryObservation);
+    [[nodiscard]] MillenniumDosSharedHelperObservationResult observe_millennium_dos_shared_helper_word(MillenniumDosSharedHelperWordObservation);
+    [[nodiscard]] MillenniumDosSharedHelperObservationResult observe_millennium_dos_shared_helper_far_word(MillenniumDosSharedHelperFarWordObservation);
+    [[nodiscard]] MillenniumDosSharedHelperObservationResult observe_millennium_dos_shared_helper_call_return(MillenniumDosSharedHelperCallReturnObservation);
+    [[nodiscard]] MillenniumDosSharedHelperObservationResult observe_millennium_dos_shared_helper_external_return(MillenniumDosSharedHelperExternalReturnObservation);
+    [[nodiscard]] std::optional<MillenniumDosSharedHelperCheckpoint> millennium_dos_shared_helper_checkpoint()const;
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics>
     millennium_dos_owned_function_diagnostics() const;
 
@@ -728,6 +744,10 @@ private:
     std::optional<MillenniumDosExternalTransferAdmission> millennium_dos_bdf_terminal_transfer_;
     std::optional<MillenniumDosBdfModeTwoSession> millennium_dos_bdf_mode_two_;
     std::optional<MillenniumDosBdfOtherModeSession> millennium_dos_bdf_other_mode_;
+    std::optional<MillenniumDosSharedHelperSession> millennium_dos_shared_helper_;
+    std::optional<MillenniumDosSharedHelperEntryObservation> millennium_dos_shared_helper_entry_;
+    std::optional<MillenniumDosSharedHelperExternalReturnObservation> millennium_dos_shared_helper_return_;
+    std::optional<NativeRuntimeMemory> native_runtime_memory_;
     std::optional<MillenniumDosTenthFunctionSession> millennium_dos_tenth_function_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
