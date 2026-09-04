@@ -253,6 +253,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_adjusted_caller_indirect();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_caller_indirect_return(DeuterosAmigaObservedTitlePostAdjustedIndirectReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_caller_37180_return(DeuterosAmigaObservedTitlePostAdjusted37180Return);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_mode_return(DeuterosAmigaObservedLocalCallReturn);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -316,6 +317,9 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_recurrence(MillenniumAtariGameInitPaletteRecurrenceObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_rts(MillenniumAtariGameInitPaletteRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fopen(MillenniumAtariGemdosSelector61Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fread(MillenniumAtariGemdosSelector63Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fclose(MillenniumAtariGemdosSelector62Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
     [[nodiscard]] const std::optional<ResolvedLaunchRequest>& active() const { return coordinator_.active(); }
     [[nodiscard]] ReleaseRuntimeAdmission admission() const { return coordinator_.admission(); }
     [[nodiscard]] ReleaseRuntimeRejection rejection() const { return coordinator_.rejection(); }

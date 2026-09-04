@@ -5197,8 +5197,8 @@ int main() {
                 && fread_user->config_consumer.gemdos_63_trap_address==0x2a5d0
                 && fread_user->config_consumer.gemdos_63_selector==0x3f
                 && fread_user->config_consumer.gemdos_63_handle==7
-                && fread_user->config_consumer.gemdos_63_buffer==0x7d42
-                && fread_user->config_consumer.gemdos_63_count==0x2c24a);
+                && fread_user->config_consumer.gemdos_63_buffer==0x2c24a
+                && fread_user->config_consumer.gemdos_63_count==0x7d42);
             assert(!all_release_runtime.execute_millennium_atari_jsr_2a5c2().accepted);
             assert(!all_release_runtime.observe_millennium_atari_gemdos_selector_63({1,19,0x2a5d2,0x3f,0}).accepted);
             assert(all_release_runtime.observe_millennium_atari_gemdos_selector_63({1,19,0x2a5d0,0x3f,0x2c24a}).accepted);
@@ -5372,6 +5372,12 @@ int main() {
                 {1,32,0x2b4c6,0x00ff0000,0x2ab04}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_second_config_fopen(
                 {1,33,0x2a5b4,0x3d,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_second_config_fread(
+                {1,34,0x2a5d0,0x3f,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_second_config_fclose(
+                {1,35,0x2a5e6,0x3e,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_second_config_rts(
+                {1,36,0x2a5ec,0x00fe0000,0x2ab10}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -6059,6 +6065,12 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_37180_return(bad_service_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_37180_return(service_return).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_37180_return(service_return).accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn mode_return{
+                runtime_copy_sequence+69,0x40566,0x36a8c,0x4056c,0,0};
+            auto bad_mode_return=mode_return;bad_mode_return.call_target=0x1fb9a;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_mode_return(bad_mode_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_mode_return(mode_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_mode_return(mode_return).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

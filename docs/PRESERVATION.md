@@ -1421,7 +1421,7 @@ is an exact failure spin; the 12-byte branch/JMP/spin path hashes to
 The positive `$2aa28->$2a5c2` call now executes five exact argument pushes.
 The 16-byte prefix `2f012f003f390002a5fa3f3c003f4e41` hashes to
 `6d2ddd7da4866769c78162433427fb37fe2f885926f429c098fca3062e282921`.
-It passes count `$2c24a`, buffer `$7d42`, the word previously stored at
+It passes count `$7d42`, buffer `$2c24a`, the word previously stored at
 `$2a5fa`, and selector `$3f`, then stops at `TRAP #1` `$2a5d0`. Eon neither
 reads a host file nor claims the buffer has been populated.
 A typed selector-`$3f` observation supplies only raw signed D0; buffer bytes
@@ -1543,6 +1543,17 @@ the proven `$2a632` failure spin. A nonnegative return loads D0 `$7d42` and D1
 `$2c24a` and reaches the existing `$2a5c2` Fread helper boundary. Reusing that
 path is justified by the identical `$2aa0c` call target; no open operation,
 file content, handle validity, or filesystem effect is inferred.
+On the success path, dedicated typed Fread and Fclose observations retain only
+their raw signed D0 results. The shared Fread helper uses the already proven
+handle slot, buffer `$2c24a`, and count `$7d42`; its exact cleanup then reaches
+the selector-`$3e` Fclose boundary. The six post-Fclose bytes hash to
+`1653b046f59ffdf7cdcdae81914ab08b45f9fd09915e21b1c27ea8c6021e0b2f`
+and reach RTS `$2a5ec`. A separate typed stack observation admits only its
+second-caller return `$2ab10`. The exact 22-byte caller span hashes to
+`eea2683953b1fe18e3e7b88e1744fa10a9684444fe183d283efee9f54302c1a0`;
+it restores A3 `$2a64c`, A4 `$2a66c`, pushes the PC-relative pointer `$2ab2c`
+and selector `$26`, and stops at XBIOS trap `$2ab24`. The selector result and
+all referenced-data meaning remain external.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4612,6 +4623,16 @@ to `$3c80:$0000`, and are atomically stored at `CS:$138c/$138e`. Execution
 stops at the typed `$13cd` runtime-word boundary, source `$3c80:$0018`.
 The complete `TITLE.LIB` remains read-only and hash-addressed; contradictory
 typed descriptor words fail before any state or memory effect is committed.
+The next `$1428` byte is now accepted only in sequence. The exact 31-byte
+dispatch span has SHA-256
+`dd7abdeaa64d537ee31fb6c4dffe319a7f824226ca44bb33e0f4cb3986560be7`.
+Its low nibble selects typed `$1437` word `$5050:$0020` for `$f`, typed
+`$144a` word at the same address for mode two plus `$e`, or typed `$1470`
+lookup byte at `$5050:($0008+nibble)`. No codec or graphics meaning is
+inferred. Independently, the second record's ordered `$13cd` word at
+`$3c80:$0018` is retained as raw AX and advances to typed `$13d0` word
+`$3c80:$0016`; the instruction retains its recorded SHA-256
+`30cefd61e3cc968dfe7b7f54ed07251f1fe9ec99fb33bad8b4ae24ce67b80704`.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -7005,7 +7026,15 @@ A typed longword at `$1378e` is copied atomically to `$1c26c`; a typed word at
 external `$40566->$36a8c`; every other word stops at `$4056e->$1fb9a`.
 The service result and both selected callees remain opaque, and neither route
 is assigned rendering or gameplay semantics.
-assigned, and execution does not continue beyond that caller address.
+
+The native runtime validates the two possible selected-call returns through
+the coordinator/controller/host/menu facades. For typed mode five it
+requires `$40566->$36a8c` to return at `$4056c`, then follows the exact
+two-byte branch to the join. For every other typed mode it requires
+`$4056e->$1fb9a` to return directly at `$40574`. Both paths converge only at
+`$40574` and stop before external `$40574->$222c0` (return `$4057a`). D0 and
+SR remain opaque. The transition is replay-safe, revoked with its owning
+session, and assigns no rendering or gameplay meaning.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

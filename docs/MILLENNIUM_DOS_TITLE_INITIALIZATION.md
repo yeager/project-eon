@@ -504,3 +504,17 @@ descriptor words `$c800/$4000`. The already hash-bound `$13aa..$13cc` suffix
 normalizes them to `$3c80:$0000`, atomically stores that far pointer at
 `CS:$138c/$138e`, and stops before `$13cd` reads the runtime word at
 `$3c80:$0018`. Contradictory descriptor data is rejected before mutation.
+
+At `$1428`, the next ordered raw byte is dispatched by the exact 31-byte
+instruction span with SHA-256
+`dd7abdeaa64d537ee31fb6c4dffe319a7f824226ca44bb33e0f4cb3986560be7`.
+On this first half-byte step, low nibble `$f` stops at typed word `$1437`
+from `$5050:$0020`; mode two with nibble `$e` stops at `$144a` from the same
+address; other combinations stop at typed lookup byte `$1470`, whose offset
+is `$0008 + nibble`. These are branch and address facts, not inferred codec
+or graphics semantics.
+
+The second record's runtime word at `$3c80:$0018` is now admitted at `$13cd`
+and retained only as raw `AX`. The same exact three-byte instruction already
+hash-bound for the first record advances to `$13d0`, where the next typed word
+is `$3c80:$0016`. Neither word is assigned a dimension or pixel meaning.
