@@ -259,6 +259,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_object_gate(DeuterosAmigaObservedTitlePostAdjustedObjectGate);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_first_helper_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_second_helper_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_rts_frame(DeuterosAmigaObservedTitlePostAdjustedRtsFrame);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -318,6 +319,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_return();
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_palette_copy_prefix();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_words(MillenniumAtariGameInitPaletteWordsObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_xbios_selector_6(MillenniumAtariGameInitPaletteXbios6Observation);
 
     // Begin before SDL destroys any source-derived object.  A monotonically
     // increasing generation lets a front end reject stale render/audio work

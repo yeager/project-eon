@@ -136,6 +136,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedObjectGatePlan> observe_title_post_adjusted_object_gate(const DeuterosAmigaObservedTitlePostAdjustedObjectGate& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_object_gate(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFirstHelperReturnPlan> observe_title_post_adjusted_first_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_first_helper_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedSecondHelperReturnPlan> observe_title_post_adjusted_second_helper_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_second_helper_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRtsFramePlan> observe_title_post_adjusted_rts_frame(const DeuterosAmigaObservedTitlePostAdjustedRtsFrame& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_rts_frame(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

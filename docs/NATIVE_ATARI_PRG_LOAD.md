@@ -245,7 +245,10 @@ The native palette loop now accepts the 16 existing destination words as one
 typed observation, performs all 16-by-3 byte additions and weighted carry
 updates, and commits its 48 byte plus 16 word effects atomically. Execution
 stops at `TRAP #14` `$2b4ac`, with XBIOS selector 6 and palette pointer
-`$2b428` retained; the firmware result and later timing remain external.
+`$2b428` retained. A typed raw D0 return now admits the exact stack cleanup
+and 20,000-iteration D0 delay loop. The following `DBF` changes D7 from 6 to
+5 and reaches `$2b44c`; Eon stops before recurrent palette processing and
+does not infer any XBIOS, display, or timing semantics from the raw result.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

@@ -45,6 +45,7 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_jsr_2b448_boundary,
     game_init_palette_transform_boundary,
     game_init_palette_xbios_selector_6_boundary,
+    game_init_palette_outer_recurrence_boundary,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -153,6 +154,11 @@ struct MillenniumAtariGameInitPaletteWordsObservation {
     std::uint32_t instruction_address=0;
     std::uint32_t source_address=0; std::uint32_t destination_address=0;
     std::array<std::uint16_t,16> destination_words{};
+};
+struct MillenniumAtariGameInitPaletteXbios6Observation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t trap_address=0; std::uint16_t selector=0;
+    std::uint32_t result_d0=0;
 };
 
 struct MillenniumAtariBchgObservation {
@@ -384,6 +390,14 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_palette_xbios_trap_address=0;
     std::uint16_t game_init_palette_xbios_selector=0;
     std::uint32_t game_init_palette_xbios_pointer=0;
+    bool game_init_palette_xbios_result_observed=false;
+    std::uint32_t game_init_palette_xbios_result_d0=0;
+    std::uint32_t game_init_palette_xbios_stack_cleanup_bytes=0;
+    std::string game_init_palette_post_xbios_sha256;
+    std::uint32_t game_init_palette_delay_initial_d0=0;
+    std::uint32_t game_init_palette_delay_iterations=0;
+    std::uint32_t game_init_palette_delay_final_d0=0;
+    std::uint32_t game_init_palette_outer_backedge_address=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -489,6 +503,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_words(
         const MillenniumAtariGameInitPaletteWordsObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_palette_arithmetic_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_xbios_selector_6(
+        const MillenniumAtariGameInitPaletteXbios6Observation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

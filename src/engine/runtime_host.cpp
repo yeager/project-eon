@@ -397,6 +397,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_caller_pointe
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_object_gate,(const DeuterosAmigaObservedTitlePostAdjustedObjectGate o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_first_helper_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_second_helper_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_rts_frame,(const DeuterosAmigaObservedTitlePostAdjustedRtsFrame o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -531,6 +532,7 @@ MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_i
 MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_game_init_return(){if(revoking())return{false,"Game-init return rejected during revocation"};return NativeSessionController::execute_millennium_atari_game_init_return();}
 MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_game_init_palette_copy_prefix(){if(revoking())return{false,"Palette-copy prefix rejected during revocation"};return NativeSessionController::execute_millennium_atari_game_init_palette_copy_prefix();}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_words(const MillenniumAtariGameInitPaletteWordsObservation o){if(revoking())return{false,"Palette arithmetic rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_words(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_xbios_selector_6(const MillenniumAtariGameInitPaletteXbios6Observation o){if(revoking())return{false,"Palette XBIOS selector-6 result rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_xbios_selector_6(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;
