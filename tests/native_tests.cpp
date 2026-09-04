@@ -62,6 +62,7 @@
 #include "data/modern_asset_pack.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_game_session.hpp"
+#include "engine/millennium_dos_native_process.hpp"
 #include "engine/millennium_dos_gx_startup_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -5510,6 +5511,116 @@ int main() {
     assert(gx_startup_four.selected_source_record_offset == 0x0088);
     assert((gx_startup_four.overlay_writes[4]
         == eon::MillenniumDosGxOverlayStartupWrite{0x006d, 1, 1}));
+    // The native process composes the existing hash-bound blocks as typed
+    // continuations. Its two recovery entries are intentionally independent:
+    // constructing the post-GX entry does not claim that startup reached it.
+    {
+        auto process = eon::MillenniumDosNativeProcess::startup(*game_executable);
+        assert(process.state()
+            == eon::MillenniumDosNativeProcessState::startup_first_private_interrupt);
+        assert((process.boundary() == eon::MillenniumDosNativeBoundary{
+            eon::MillenniumDosNativeBoundaryKind::private_interrupt,
+            0x0129, std::uint8_t{0x91}, std::nullopt, 0}));
+        process.observe_private_interrupt_return(0x0129, 0x0101);
+        assert(process.state()
+            == eon::MillenniumDosNativeProcessState::startup_selected_private_interrupt);
+        assert(process.runtime_byte(0xd128) == 0x01);
+        assert(process.runtime_byte(0xd129) == 0x01);
+        assert(process.runtime_byte(0x4368) == 0x01);
+        assert(process.runtime_byte(0xda05) == 0x01);
+        assert(process.runtime_byte(0xd12c) == 0x00);
+        assert(process.runtime_byte(0xd12d) == 0xda);
+        process.observe_private_interrupt_return(0x0129, 0x0000);
+        assert(process.state()
+            == eon::MillenniumDosNativeProcessState::startup_local_return_boundary);
+        assert(process.boundary().kind == eon::MillenniumDosNativeBoundaryKind::local_return);
+        assert(process.boundary().address == 0x0455);
+        assert(process.runtime_byte(0xda05) == 0x01);
+        bool rejected_terminal_return = false;
+        try {
+            process.observe_private_interrupt_return(0x0129, 0);
+        } catch (const std::runtime_error&) {
+            rejected_terminal_return = true;
+        }
+        assert(rejected_terminal_return);
+    }
+    {
+        auto process = eon::MillenniumDosNativeProcess::startup(*game_executable);
+        process.observe_private_interrupt_return(0x0129, 0x0201);
+        process.observe_private_interrupt_return(0x0129, 0);
+        assert(process.state()
+            == eon::MillenniumDosNativeProcessState::startup_palette_interrupt_boundary);
+        assert(process.boundary().kind == eon::MillenniumDosNativeBoundaryKind::bios_interrupt);
+        assert(process.boundary().interrupt == std::optional<std::uint8_t>{0x10});
+        assert(process.boundary().address == 0x0476);
+        assert(process.runtime_byte(0x0107) == 0x00);
+        assert(process.runtime_byte(0x0108) == 0xb8);
+    }
+    {
+        auto process = eon::MillenniumDosNativeProcess::post_gx_loader(
+            *game_executable, *gx_overlay);
+        assert(process.state() == eon::MillenniumDosNativeProcessState::gx_private_interrupt);
+        process.observe_private_interrupt_return(0x0129, 0);
+        assert((process.boundary() == eon::MillenniumDosNativeBoundary{
+            eon::MillenniumDosNativeBoundaryKind::runtime_byte,
+            0xd349, std::nullopt, std::uint16_t{0xda05}, 0}));
+        bool rejected_wrong_runtime_cell = false;
+        try {
+            process.observe_runtime_byte(0xd349, 0xda06, 3);
+        } catch (const std::runtime_error&) {
+            rejected_wrong_runtime_cell = true;
+        }
+        assert(rejected_wrong_runtime_cell);
+        process.observe_runtime_byte(0xd349, 0xda05, 3);
+        bool rejected_wrong_adapter_return = false;
+        try {
+            process.observe_native_call_return(0xd373, 0xd377);
+        } catch (const std::runtime_error&) {
+            rejected_wrong_adapter_return = true;
+        }
+        assert(rejected_wrong_adapter_return);
+        assert(process.state() == eon::MillenniumDosNativeProcessState::gx_adapter_return);
+        process.observe_native_call_return(0xd373, 0xd376);
+        assert(process.gx_overlay_byte(0x65) == 0x8f);
+        assert(process.gx_overlay_byte(0x66) == 0x1b);
+        for (std::size_t call = 0; call < 6; ++call) {
+            const auto boundary = process.boundary();
+            assert(boundary.kind == eon::MillenniumDosNativeBoundaryKind::native_call_return);
+            assert(boundary.ordinal == call);
+            process.observe_native_call_return(boundary.address,
+                static_cast<std::uint16_t>(boundary.address + 3));
+        }
+        assert((process.boundary() == eon::MillenniumDosNativeBoundary{
+            eon::MillenniumDosNativeBoundaryKind::runtime_byte,
+            0xd388, std::nullopt, std::uint16_t{0xda05}, 1}));
+        process.observe_runtime_byte(0xd388, 0xda05, 1);
+        assert(process.state()
+            == eon::MillenniumDosNativeProcessState::gx_post_overlay_private_interrupt);
+        assert(process.boundary().address == 0x0129);
+    }
+    {
+        auto altered_game = *game_executable;
+        altered_game[0xd2b0 - 0x100] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::MillenniumDosNativeProcess::startup(altered_game));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
+        auto altered_gx = *gx_overlay;
+        altered_gx[0x65] ^= 0x01;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::MillenniumDosNativeProcess::post_gx_loader(
+                *game_executable, altered_gx));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     eon::MillenniumDosGxStartupSession gx_session(*game_executable, *gx_overlay);
     assert(gx_session.state() == eon::MillenniumDosGxStartupSessionState::awaiting_private_return);
     bool rejected_gx_mode_before_private_return = false;
