@@ -1528,7 +1528,16 @@ seven, D7 becomes `$ffff` and falls through to the terminal selector-6 trap
 at `$2b4c2`. Its exact ten-byte path at file `+0xfbe` hashes to
 `876ea72e7f61e2604ffa34d0fae7a6c1b3f880aa43e88006af18e1f67677c967`.
 A final typed raw return owns the six-byte cleanup and local RTS at `$2b4c6`.
-The stack-supplied caller destination remains external.
+The RTS destination is now a generation-owned typed stack observation. Only
+the exact return `$2ab04` is admitted; the stack address is retained without
+reading or fabricating unrelated stack contents. The 12-byte caller span at
+file `+0x604`, runtime `$2ab04..$2ab0f`, hashes to
+`ae672762da7616abc67d0a1e5a5aaf3ab540b96b94b9689b31f8a11a8de256d7`.
+It loads D7 with the corrected second configuration filename pointer `$2a634`
+and calls the already bounded `$2aa0c` helper. That helper deterministically
+reaches the existing GEMDOS selector `$3d` boundary with open mode 2 and D7
+as its filename pointer. No open result, file content, or filesystem effect is
+inferred.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4574,6 +4583,16 @@ facades. Exact bytes `$13e9..$13f1` have SHA-256
 they apply the instruction-defined wrapping increment and atomically store it
 at `CS:$1389`. The next boundary is `$13f2`, source `$5050:$0007`. No field,
 mode, palette, or pixel meaning is assigned.
+The ordered `$13f2` observation now admits that raw byte and atomically stores
+it at `CS:$1388`. The exact 20-byte branch has SHA-256
+`172d30853354efec879699618dd36f3fbda28ddd07d8ea66bc2a23ace6ee6753`.
+Values one and two follow the exact `$1406..$1418` prefix (SHA-256
+`a38148b66817871d8731829b2a0703e48b2e7fecb0fee51112be1e8e3b0332d0`)
+and stop at the typed `$1419` payload-byte boundary, source `$5050:$001f`.
+All other values return to the caller, advance the loop output offsets to
+`$02e0`, select record index two, and stop at the typed `$13aa` two-word read
+from relocated `TITLE.LIB+$001b`. Detached observations fail before state
+changes. No record-field, encoding, rendering, or pixel semantics are claimed.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6952,6 +6971,13 @@ requires its own typed `$41a68` return; raw D0/SR are retained without helper
 effects. Counter changes at `$202bc` are applied atomically before session
 commit. After the eighth iteration, local RTS `$20bf0` returns to the
 caller-owned `$40536`. No service, counter, table, or display semantics are
+assigned. From `$40536`, the exact 28-byte span through `$40551` hashes to
+`58b17754e42e00bee2c320083fbe09c0fe79b0bda626b71f98fc043598033752`.
+It loads A0 with literal `$20cfe` and calls it indirectly at `$4053c`. Only a
+typed return to `$4053e` may continue. A typed long read from `$12fe4` is then
+shifted right three bits and its low word is atomically stored at `$1f42a`.
+Execution stops before external call `$4054c->$37180`; D0/SR from `$20cfe`
+remain opaque and no rendering or gameplay meaning is assigned.
 assigned, and execution does not continue beyond that caller address.
 
 The renderer-facing consequence remains bounded by known pixels rather than

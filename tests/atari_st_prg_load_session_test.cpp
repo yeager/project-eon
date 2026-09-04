@@ -470,6 +470,19 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().game_init_palette_terminal_result_d0==0x76543210
             && single_cell_planes.checkpoint().game_init_palette_terminal_sha256=="876ea72e7f61e2604ffa34d0fae7a6c1b3f880aa43e88006af18e1f67677c967"
             && single_cell_planes.checkpoint().game_init_palette_rts_address==0x2b4c6);
+        assert(!single_cell_planes.observe_game_init_palette_rts({1,114,0x2b4c6,0x00ff0000,0x2ab06}).accepted);
+        assert(single_cell_planes.observe_game_init_palette_rts({1,114,0x2b4c6,0x00ff0000,0x2ab04}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary
+            && single_cell_planes.checkpoint().game_init_palette_rts_stack_address==0x00ff0000
+            && single_cell_planes.checkpoint().game_init_palette_rts_return_address==0x2ab04
+            && single_cell_planes.checkpoint().game_init_palette_caller_continuation_sha256=="ae672762da7616abc67d0a1e5a5aaf3ab540b96b94b9689b31f8a11a8de256d7"
+            && single_cell_planes.checkpoint().caller_d7==0x2a634
+            && single_cell_planes.checkpoint().next_jsr_address==0x2ab0a
+            && single_cell_planes.checkpoint().next_jsr_target==0x2aa0c);
+        assert(single_cell_planes.execute_jsr_2aa0c().accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_61_boundary
+            && single_cell_planes.checkpoint().gemdos_filename_pointer==0x2a634
+            && single_cell_planes.checkpoint().gemdos_trap_address==0x2a5b4);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

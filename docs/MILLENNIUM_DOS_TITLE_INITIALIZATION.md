@@ -477,3 +477,15 @@ apply the original wrapping byte increment and atomically store the result at
 `CS:$1389`. Execution stops before `$13f2` reads the next raw byte at
 `$5050:$0007`. Neither byte receives inferred mode, palette, or graphics
 semantics.
+
+The byte at `$5050:$0007` is now an ordered raw observation at `$13f2`.
+The exact 20-byte record branch hashes to
+`172d30853354efec879699618dd36f3fbda28ddd07d8ea66bc2a23ace6ee6753`
+and atomically stores the byte at `CS:$1388`. Values one and two enter the
+hash-bound `$1406..$1418` prefix (SHA-256
+`a38148b66817871d8731829b2a0703e48b2e7fecb0fee51112be1e8e3b0332d0`)
+and stop before the encoded payload byte at `$1419`, source `$5050:$001f`.
+Other values return to the caller, execute the exact second loop setup with
+output offsets `$02e0`, and stop before `$13aa` reads the next two-word
+descriptor from relocated `TITLE.LIB+$001b`. These are control-flow facts;
+no field, encoding, pixel, or graphics meaning is inferred.

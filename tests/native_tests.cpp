@@ -5368,6 +5368,8 @@ int main() {
                 {1,30,0x2b4ac,6,0}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_palette_recurrence(
                 {1,31,0x2b46e,0x2b3c8,0x2b428,{},{}}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_palette_rts(
+                {1,32,0x2b4c6,0x00ff0000,0x2ab04}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -6036,6 +6038,18 @@ int main() {
                 assert(opening_controller.advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop().accepted);
             }
             assert(!opening_controller.advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop().accepted);
+            assert(opening_controller.advance_deuteros_amiga_title_post_adjusted_caller_indirect().accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_post_adjusted_caller_indirect().accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedIndirectReturn indirect_return{
+                runtime_copy_sequence+67,0x4053c,0x20cfe,0x4053e,
+                0x12fe4,0x12345678,0xabcdef01,0x2004};
+            auto bad_indirect_return=indirect_return;bad_indirect_return.call_target+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_indirect_return(
+                bad_indirect_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_indirect_return(
+                indirect_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_indirect_return(
+                indirect_return).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -6046,6 +6060,10 @@ int main() {
             assert(std::any_of(post_command_memory->initialized_bytes.begin(),
                 post_command_memory->initialized_bytes.end(),[](const auto& byte){
                     return byte.location.offset==0x60000 && byte.value==0;
+                }));
+            assert(std::any_of(post_command_memory->initialized_bytes.begin(),
+                post_command_memory->initialized_bytes.end(),[](const auto& byte){
+                    return byte.location.offset==0x1f42a && byte.value==0x8a;
                 }));
             assert(std::any_of(post_command_memory->initialized_bytes.begin(),
                 post_command_memory->initialized_bytes.end(),[](const auto& byte){

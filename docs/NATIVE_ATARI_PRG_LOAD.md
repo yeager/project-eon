@@ -250,9 +250,12 @@ and 20,000-iteration D0 delay loop. The following `DBF` changes D7 from 6 to
 5 and reaches the corrected loaded address `$2b46e`. Six further passes use
 typed current source bytes and destination words, commit each complete pass
 atomically, and require a fresh typed selector-6 return. The final D7 fallthrough
-owns the terminal selector-6 return and local RTS at `$2b4c6`; only the caller
-destination remains external. Eon does not infer any XBIOS, display, or
-wall-clock timing semantics from the raw results.
+owns the terminal selector-6 return and reaches local RTS `$2b4c6`. A typed
+stack observation admits the exact return `$2ab04`. Its hash-bound caller
+loads D7 `$2a634`, calls the reused
+`$2aa0c` helper, and reaches its existing GEMDOS selector-`$3d` boundary.
+Eon does not infer any XBIOS, GEMDOS, display, or wall-clock timing semantics
+from the raw results.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash
