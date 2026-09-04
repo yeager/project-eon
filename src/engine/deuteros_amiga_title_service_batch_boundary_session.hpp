@@ -142,6 +142,42 @@ struct DeuterosAmigaTitleTailCopyLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaObservedTailSelectionWords {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::array<std::uint32_t, 8> source_addresses{};
+    std::array<std::uint16_t, 8> observed_words{};
+};
+
+struct DeuterosAmigaTitleTailSelectionLocalPlan {
+    DeuterosAmigaObservedTailSelectionWords observation;
+    std::array<std::uint16_t, 2> selected_words{};
+    std::array<std::uint32_t, 2> destination_addresses{};
+    std::uint16_t graphics_d0 = 0;
+    std::uint16_t graphics_d1 = 0;
+    std::uint32_t a0_value = 0;
+    std::uint32_t a1_value = 0;
+    std::uint32_t library_base_source_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::int16_t next_vector = 0;
+    std::uint32_t next_return_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
+struct DeuterosAmigaTitleTailSecondGraphicsLocalPlan {
+    DeuterosAmigaObservedGraphicsVectorReturn observed_return;
+    std::uint32_t register_restore_address = 0;
+    std::uint32_t wrapper_rts_address = 0;
+    std::uint32_t caller_resume_address = 0;
+    std::array<std::uint32_t, 2> literal_destination_addresses{};
+    std::array<std::uint16_t, 2> literal_values{};
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_call_target = 0;
+    std::uint32_t unresolved_read_address = 0;
+    std::uint32_t unresolved_read_source = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -309,7 +345,7 @@ public:
         return DeuterosAmigaTitleTailFirstGraphicsLocalPlan{observation,
             tail_first_callee_.vector_return_address, 0x201da,
             third_service_.dispatcher_a6_literal, 0x1ffc8, 0x1f372,
-            0x201e6, 0x201e6};
+            0x201e4, 0x201e4};
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailCopyLocalPlan>
@@ -318,7 +354,7 @@ public:
             return std::nullopt;
         }
         if (observation.trace_sequence <= observed_tail_first_graphics_->trace_sequence
-            || observation.instruction_address != 0x201e6
+            || observation.instruction_address != 0x201e4
             || observation.source_address != third_service_.dispatcher_a6_literal) {
             throw std::runtime_error("Deuteros tail word-copy observation does not match boundary");
         }
@@ -328,6 +364,65 @@ public:
             {{0x1ee12, 0x1ee10}}, {{0xffff, 0xffff}},
             tail_second_callee_.caller_address, tail_second_callee_.entry_address,
             tail_second_callee_.entry_address, 0x1ffc8, tail_second_callee_.entry_address};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSelectionLocalPlan>
+    observe_tail_selection_words(
+        const DeuterosAmigaObservedTailSelectionWords& observation) {
+        constexpr std::array<std::uint32_t, 8> sources{{
+            0x1ffc8, 0x1ee10, 0x1ffca, 0x1ffcc,
+            0x1ffce, 0x1ee12, 0x1ffd0, 0x1ffd2}};
+        if (!observed_tail_copy_words_ || observed_tail_selection_words_) {
+            return std::nullopt;
+        }
+        if (observation.trace_sequence <= observed_tail_copy_words_->trace_sequence
+            || observation.instruction_address != tail_second_callee_.entry_address
+            || observation.source_addresses != sources) {
+            throw std::runtime_error("Deuteros tail selection observation does not match boundary");
+        }
+        observed_tail_selection_words_ = observation;
+        const auto select = [](std::uint16_t current, std::uint16_t adjustment,
+                               std::uint16_t lower, std::uint16_t upper) {
+            const auto sum = static_cast<std::uint16_t>(current + adjustment);
+            if (static_cast<std::int16_t>(adjustment) < 0) {
+                return static_cast<std::int16_t>(sum) < 0 || sum < lower ? lower : sum;
+            }
+            return sum < upper ? sum : upper;
+        };
+        const auto first = select(observation.observed_words[0], observation.observed_words[1],
+                                  observation.observed_words[2], observation.observed_words[3]);
+        const auto second = select(observation.observed_words[4], observation.observed_words[5],
+                                   observation.observed_words[6], observation.observed_words[7]);
+        return DeuterosAmigaTitleTailSelectionLocalPlan{observation, {{first, second}},
+            {{0x1ffc8, 0x1ffce}},
+            static_cast<std::uint16_t>(static_cast<std::uint16_t>(first - 0x10U) >> 1U),
+            static_cast<std::uint16_t>(second - 6U),
+            tail_second_callee_.a0_literal, tail_second_callee_.a1_literal,
+            tail_second_callee_.graphics_library_base_address,
+            0x201b6, tail_second_callee_.graphics_library_vector,
+            tail_second_callee_.vector_return_address, 0x201b6};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSecondGraphicsLocalPlan>
+    observe_tail_second_graphics_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        if (!observed_tail_selection_words_ || observed_tail_second_graphics_) {
+            return std::nullopt;
+        }
+        if (observation.trace_sequence <= observed_tail_selection_words_->trace_sequence
+            || observation.library_base_source_address
+                != tail_second_callee_.graphics_library_base_address
+            || observation.observed_library_base != graphics_library_base_
+            || observation.call_address != 0x201b6
+            || observation.vector != tail_second_callee_.graphics_library_vector
+            || observation.return_address != tail_second_callee_.vector_return_address) {
+            throw std::runtime_error("Deuteros tail second graphics return does not match boundary");
+        }
+        observed_tail_second_graphics_ = observation;
+        return DeuterosAmigaTitleTailSecondGraphicsLocalPlan{observation,
+            0x201ba, 0x201be, tail_second_callee_.caller_continuation_address,
+            {{0x1ee12, 0x1ee10}}, {{1, 1}}, 0x20212, 0x20118,
+            0x20118, 0x1ffc8, 0x20118};
     }
 
 private:
@@ -349,6 +444,10 @@ private:
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_tail_first_graphics_;
     std::optional<DeuterosAmigaObservedTailCopyWords> observed_tail_copy_words_;
+    std::optional<DeuterosAmigaObservedTailSelectionWords>
+        observed_tail_selection_words_;
+    std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
+        observed_tail_second_graphics_;
 };
 
 } // namespace eon

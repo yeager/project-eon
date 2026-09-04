@@ -25,3 +25,12 @@ cannot become executable runtime spans until a separate load map and entry
 are proved. Image-relative Atari files remain in the preservation manifest;
 only ranges with a corresponding exact mapped parser profile enter the native
 admission registry. No candidate status is upgraded by this API.
+
+The release coordinator now uses this boundary for the Millennium DOS
+`2200AD.EXE` native-process startup instead of repeating its executable hash.
+The Deuteros Amiga factory requires both mapped main/title ranges, and the
+Deuteros Atari factory requires both mapped Replicants stages, before it
+constructs the existing adapter. These changes do not alter presentation or
+execution. Adapters that require a complete mutable parsing context retain
+their prior private disk ownership; the admitted views are temporary
+provenance gates and never outlive `VerifiedReleaseMedia`.

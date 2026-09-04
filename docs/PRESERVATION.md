@@ -5647,12 +5647,28 @@ preceding return sequence. D0 and SR remain value-only evidence. The wrapper
 RTS resumes at `$201da`, restoring the instruction-saved A6 value `$1f372`.
 The following code derives destination A0 `$1ffc8`, but its four source words
 are runtime memory reads at `$1f372..$1f379`; Eon therefore requires a second
-typed observation at instruction `$201e6`. It then records only the literal
+typed observation at the first copy instruction `$201e4`. It then records only the literal
 copy layout to `$1ffca/$1ffcc/$1ffd0/$1ffd2` and the two encoded `$ffff`
 writes to `$1ee12/$1ee10`. The next BSR at `$201fe` enters `$20118`, whose
 first instruction reads runtime word `$1ffc8`; execution stops there without
 inventing that value, choosing its branches, or invoking the later `-$1aa`
 graphics vector.
+
+At the `$20118` re-entry, the session requires all eight words used by the two
+mirrored selection blocks, with exact source addresses
+`$1ffc8/$1ee10/$1ffca/$1ffcc` and
+`$1ffce/$1ee12/$1ffd0/$1ffd2`. It applies the original 16-bit wrapping add,
+signed tests and unsigned bound comparisons, then records the selected words
+back to `$1ffc8` and `$1ffce`. The graphics arguments are derived exactly as
+`D0 = (selected_first - $10) >> 1` and
+`D1 = selected_second - 6`, with word-width wrapping. Literal A0 `$12e12`
+and A1 `$1ffda` precede the same-library `-$1aa` call at `$201b6`.
+
+An exact typed return from that call advances through the register restore and
+RTS to caller `$20202`, records literal word one at `$1ee12` and `$1ee10`, and
+follows BSR `$20212` back to `$20118`. The repeated first read from `$1ffc8`
+is the next genuine runtime boundary; Eon does not reuse the previous value,
+choose a new branch, or infer any graphics result.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
@@ -5951,6 +5967,11 @@ binds the continuation. At `$11f7` it observes `CS:$07d8`. For the zero branch,
 `ES:DI` word effects. Four words form each of 16 rows. The next row applies the
 literal `+0x2000`; when bit 15 becomes set it applies
 `(value & 0x7fff) + 0x00a0`. The state ends at the proven RET `$12cb`.
-The nonzero branch stops at `$1203`; its far reads and later read/modify/write
-loop remain unowned. No framebuffer, plane, pixel, or display meaning is
-inferred from these addresses.
+For the nonzero branch, `$1203` explicitly observes the same segment cell and
+the runtime then accepts exactly 64 `DS:SI` word observations at `$1218`.
+Their segment, offset and value are retained, while the instruction-defined
+copies are recorded consecutively at `CS:$07fa..$0879`. Source offsets use the
+same four-word rows and plane/wrap calculation as the zero path. The state
+stops at `$1237`, before the `$1245..$1296` read/modify/write loop; that loop's
+masking effects remain unowned. No framebuffer, plane, pixel, or display
+meaning is inferred from these addresses.
