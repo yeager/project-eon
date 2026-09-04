@@ -365,6 +365,7 @@ enum class DeuterosAmigaTitleCommandOpcodeOutcome {
     pointer_copy_boundary,
     runtime_long_boundary,
     local_no_op,
+    repeat_byte_boundary,
     unresolved_boundary,
 };
 
@@ -523,6 +524,43 @@ struct DeuterosAmigaTitleCommandTwoOperandLocalPlan {
     std::uint32_t destination_value = 0;
     std::uint32_t next_stream_address = 0;
     std::uint32_t next_opcode_read_address = 0;
+};
+
+struct DeuterosAmigaObservedTitleCommandRepeatBytes {
+    std::uint64_t trace_sequence = 0;
+    std::array<std::uint32_t, 2> instruction_addresses{};
+    std::array<std::uint32_t, 2> source_addresses{};
+    std::uint8_t count_value = 0;
+    std::uint8_t repeated_value = 0;
+};
+
+struct DeuterosAmigaTitleCommandRepeatBytesPlan {
+    DeuterosAmigaObservedTitleCommandRepeatBytes observation;
+    std::uint16_t iteration_count = 0;
+    std::uint32_t call_address = 0;
+    std::uint32_t call_target = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
+struct DeuterosAmigaObservedTitleCommandRepeatCallReturn {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t call_address = 0;
+    std::uint32_t call_target = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t result_a4 = 0;
+    std::uint32_t result_d0 = 0;
+    std::uint16_t result_sr = 0;
+};
+
+struct DeuterosAmigaTitleCommandRepeatCallReturnPlan {
+    DeuterosAmigaObservedTitleCommandRepeatCallReturn observation;
+    std::uint16_t completed_iterations = 0;
+    std::uint16_t remaining_iterations = 0;
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_stream_address = 0;
+    std::uint32_t next_opcode_read_address = 0;
+    std::uint32_t stop_before_address = 0;
 };
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
@@ -1111,8 +1149,14 @@ public:
                 next_command_address_, 0x1fb00, 0x1fa1c,
                 command_interpreter_.two_operand_target, 0, 0, 0, 0x1fb00};
         }
+        if (opcode == 0x12) {
+            pending_command_opcode_ = opcode;
+            return DeuterosAmigaTitleCommandOpcodePlan{observation,
+                DeuterosAmigaTitleCommandOpcodeOutcome::repeat_byte_boundary,
+                next_command_address_, 0x1fe40, 0x1fa52, 0x1fe3c,
+                0, 0, 0, 0x1fe40};
+        }
         else if (opcode == 0x1a) { call_address = 0x1fa46; call_target = 0x1fde6; }
-        else if (opcode == 0x12) { call_address = 0x1fa52; call_target = 0x1fe3c; }
         else if (opcode == 0x04) { call_address = 0x1faaa; call_target = 0x402ac; }
         else if (opcode < 0x20) {
             return DeuterosAmigaTitleCommandOpcodePlan{observation,
@@ -1225,6 +1269,57 @@ public:
         command_two_operands_.reset();
         return DeuterosAmigaTitleCommandTwoOperandLocalPlan{observation,
             0x1f974, value, next_command_address_,
+            command_interpreter_.opcode_read_address};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandRepeatBytesPlan>
+    observe_command_repeat_bytes(
+        const DeuterosAmigaObservedTitleCommandRepeatBytes& observation) {
+        if (!pending_command_opcode_ || *pending_command_opcode_ != 0x12
+            || command_repeat_iterations_ != 0) return std::nullopt;
+        if (next_command_address_ > std::numeric_limits<std::uint32_t>::max() - 2U
+            || observation.trace_sequence <= last_command_sequence_
+            || observation.instruction_addresses
+                != std::array<std::uint32_t, 2>{{0x1fe40, 0x1fe44}}
+            || observation.source_addresses
+                != std::array<std::uint32_t, 2>{{next_command_address_,
+                    next_command_address_ + 1U}}) {
+            throw std::runtime_error("Deuteros repeated command bytes do not match boundary");
+        }
+        last_command_sequence_ = observation.trace_sequence;
+        command_repeat_character_address_ = next_command_address_ + 1U;
+        command_repeat_iterations_ = observation.count_value == 0
+            ? 256U : observation.count_value;
+        command_repeat_initial_iterations_ = command_repeat_iterations_;
+        return DeuterosAmigaTitleCommandRepeatBytesPlan{observation,
+            command_repeat_iterations_, 0x1fe46, 0x1fbe6, 0x1fe4a, 0x1fe46};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandRepeatCallReturnPlan>
+    observe_command_repeat_call_return(
+        const DeuterosAmigaObservedTitleCommandRepeatCallReturn& observation) {
+        if (!pending_command_opcode_ || *pending_command_opcode_ != 0x12
+            || command_repeat_iterations_ == 0) return std::nullopt;
+        if (observation.trace_sequence <= last_command_sequence_
+            || observation.call_address != 0x1fe46
+            || observation.call_target != 0x1fbe6
+            || observation.return_address != 0x1fe4a
+            || observation.result_a4 != command_repeat_character_address_) {
+            throw std::runtime_error("Deuteros repeated command call return does not match boundary");
+        }
+        last_command_sequence_ = observation.trace_sequence;
+        --command_repeat_iterations_;
+        const auto completed = static_cast<std::uint16_t>(
+            command_repeat_initial_iterations_ - command_repeat_iterations_);
+        if (command_repeat_iterations_ != 0) {
+            return DeuterosAmigaTitleCommandRepeatCallReturnPlan{observation,
+                completed, command_repeat_iterations_, 0x1fe46, 0, 0, 0x1fe46};
+        }
+        next_command_address_ = command_repeat_character_address_ + 1U;
+        pending_command_opcode_.reset();
+        return DeuterosAmigaTitleCommandRepeatCallReturnPlan{observation,
+            completed, 0, 0, next_command_address_,
+            command_interpreter_.opcode_read_address,
             command_interpreter_.opcode_read_address};
     }
 
@@ -1394,6 +1489,9 @@ private:
         command_two_operand_mode_;
     std::optional<DeuterosAmigaObservedTitleCommandTwoOperands>
         command_two_operands_;
+    std::uint32_t command_repeat_character_address_ = 0;
+    std::uint16_t command_repeat_iterations_ = 0;
+    std::uint16_t command_repeat_initial_iterations_ = 0;
 };
 
 } // namespace eon

@@ -74,3 +74,16 @@ no fabricated memory effect. Exact call returns are forwarded to the local
 interpreter but likewise produce no write unless its typed plan contains one.
 Malformed, duplicate, out-of-order, post-halt, and revocation observations
 fail closed without changing the published memory checkpoint.
+
+The direct English Defjam ADF also owns the recovered Millennium bootstrap
+relocator. Admission is restricted to the release whose bootstrap range has
+its own complete-disassembly image and runtime address basis; the nested
+carrier remains excluded. The coordinator applies the 974 authenticated
+`$70032..$703ff` bytes to `$66032..$663ff` as generation 1 during the same
+transaction that admits the release. The original DBRA over-read at `$70400`
+is never inferred: an explicit `$70036` observation supplies its byte and
+atomically applies the 975th destination byte at `$66400`. A later-sequence
+`$7003c->$6629e` observation alone completes transfer. The custom-chip write
+is retained in the value-only relocator checkpoint but is not misclassified
+as RAM. Reset destroys the relocator generation and memory, while source
+revocation hides checkpoints and rejects both observations.

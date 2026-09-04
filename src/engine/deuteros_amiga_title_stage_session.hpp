@@ -283,6 +283,16 @@ public:
         return service_batch_boundary_session_.observe_command_two_operand_runtime_long(
             observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandRepeatBytesPlan>
+    observe_command_repeat_bytes(
+        const DeuterosAmigaObservedTitleCommandRepeatBytes& observation) {
+        return service_batch_boundary_session_.observe_command_repeat_bytes(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandRepeatCallReturnPlan>
+    observe_command_repeat_call_return(
+        const DeuterosAmigaObservedTitleCommandRepeatCallReturn& observation) {
+        return service_batch_boundary_session_.observe_command_repeat_call_return(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

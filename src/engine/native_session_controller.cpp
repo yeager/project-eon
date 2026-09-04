@@ -141,6 +141,13 @@ NativeSessionController::millennium_dos_startup_input() const {
     return runtime_.millennium_dos_startup_input();
 }
 
+MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_call_return(o);}
+MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_stack_word(o);}
+MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_title_termination(o);}
+MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_parent_exec_return(MillenniumDosTitleToGameInterruptObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_parent_exec_return(o);}
+MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_child_status(MillenniumDosTitleToGameInterruptObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_child_status(o);}
+std::optional<MillenniumDosTitleToGameCheckpoint> NativeSessionController::millennium_dos_title_to_game_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return std::nullopt;return runtime_.millennium_dos_title_to_game_checkpoint();}
+
 std::optional<MillenniumDosStaticDispatchDiagnostics>
 NativeSessionController::millennium_dos_static_dispatch_diagnostics() const {
     if (state_ != NativeSessionState::millennium_dos_title) return std::nullopt;
@@ -567,6 +574,9 @@ NativeSessionController::millennium_amiga_bootstrap_presentation() const {
     if (state_ != NativeSessionState::millennium_amiga_bootstrap) return std::nullopt;
     return runtime_.millennium_amiga_bootstrap_presentation();
 }
+MillenniumAmigaBootstrapRelocatorObservationResult NativeSessionController::observe_millennium_amiga_bootstrap_relocator_overread(const MillenniumAmigaBootstrapRelocatorObservation o){if(state_!=NativeSessionState::millennium_amiga_bootstrap)return{false,"Relocator observation requires Millennium Amiga bootstrap"};return runtime_.observe_millennium_amiga_bootstrap_relocator_overread(o);}
+MillenniumAmigaBootstrapRelocatorObservationResult NativeSessionController::observe_millennium_amiga_bootstrap_relocator_terminal_jump(const MillenniumAmigaBootstrapRelocatorObservation o){if(state_!=NativeSessionState::millennium_amiga_bootstrap)return{false,"Relocator observation requires Millennium Amiga bootstrap"};return runtime_.observe_millennium_amiga_bootstrap_relocator_terminal_jump(o);}
+std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> NativeSessionController::millennium_amiga_bootstrap_relocator_checkpoint()const{if(state_!=NativeSessionState::millennium_amiga_bootstrap)return std::nullopt;return runtime_.millennium_amiga_bootstrap_relocator_checkpoint();}
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>
 NativeSessionController::millennium_atari_bootstrap_presentation() const {

@@ -59,6 +59,13 @@ std::optional<MillenniumDosStartupInputSnapshot> RuntimeHost::millennium_dos_sta
     return NativeSessionController::millennium_dos_startup_input();
 }
 
+MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_call_return(o);}
+MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_stack_word(o);}
+MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_title_termination(o);}
+MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_parent_exec_return(MillenniumDosTitleToGameInterruptObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_parent_exec_return(o);}
+MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_child_status(MillenniumDosTitleToGameInterruptObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_child_status(o);}
+std::optional<MillenniumDosTitleToGameCheckpoint> RuntimeHost::millennium_dos_title_to_game_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_title_to_game_checkpoint();}
+
 std::optional<MillenniumDosStaticDispatchDiagnostics>
 RuntimeHost::millennium_dos_static_dispatch_diagnostics() const {
     if (revoking()) return std::nullopt;
@@ -372,6 +379,9 @@ RuntimeHost::millennium_amiga_bootstrap_presentation() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_amiga_bootstrap_presentation();
 }
+MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_bootstrap_relocator_overread(const MillenniumAmigaBootstrapRelocatorObservation o){if(revoking())return{false,"Relocator observation rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_bootstrap_relocator_overread(o);}
+MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_bootstrap_relocator_terminal_jump(const MillenniumAmigaBootstrapRelocatorObservation o){if(revoking())return{false,"Relocator observation rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_bootstrap_relocator_terminal_jump(o);}
+std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> RuntimeHost::millennium_amiga_bootstrap_relocator_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_amiga_bootstrap_relocator_checkpoint();}
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>
 RuntimeHost::millennium_atari_bootstrap_presentation() const {
