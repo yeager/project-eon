@@ -354,6 +354,17 @@ text to a stable key and canonical catalog message. Menus, item names,
 messages, help, and labels share this rule. Original and Modern call the same
 resolver, so Modern cannot acquire a different translation or fallback path.
 
+Each registry row additionally records the original leaf name, complete leaf
+SHA-256, byte offset, and byte length. `verify_game_text_source` rehashes the
+whole supplied leaf and compares that exact range before a row can be treated
+as preservation evidence. The first admitted set is the English DOS
+`MILL.COM` sound-selection text at offsets 775, 799, 832, 868, 885, 904 and
+933, plus the three displayed driver-table names at 1322, 1349 and 1358. Its
+complete leaf SHA-256 is
+`4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`.
+The genuine-media test reopens that installed leaf, verifies every range, and
+proves that a one-byte alteration revokes admission.
+
 The source byte sequence remains owned by the hash-admitted parser or runtime
 snapshot and is returned in localization diagnostics unchanged. English uses
 the canonical English presentation. Every other selected language must contain
@@ -1257,6 +1268,35 @@ selector-2 D0 result admits the exact `ADDQ.L #2,A7`, big-endian store to
 `$2a50a`, and selector-3 stack prefix, stopping at the next trap at `$2a52e`.
 The 20-byte continuation hash is
 `751915c217471e4763ebeef2928dc4cca68bc481dae3113adabb441c2446ee2f`.
+The following typed selector-3 result admits three more exact instructions:
+stack cleanup, an atomic big-endian D0 store at `$2a50e`, and the selector-4
+stack prefix. The bytes `$2a52e..$2a53d` hash to
+`f4a7b019591ccff43e4478ac1549e262387ebfb22c16ded18457fe2aca6bbcc2`.
+Execution stops before selector 4 at `$2a53c`; its result remains external.
+A typed selector-4 D0 result admits only the exact low-word store at `$2a512`.
+The enclosing 12 bytes hash to
+`42c6d7ede7609ced9c859e6222d678edf861018b86ee80be2cfe6f8a23010e44`;
+execution now stops before Line-A initialization opcode `$a000` at `$2a546`.
+No Line-A registers, pointers, display state, or firmware effects are inferred.
+A typed observation may provide returned A0 plus the exact values read at
+`8(A0)` and `12(A0)`. The local 24-byte block hashes to
+`1705523f57debe7644c3a874cd76e42464f1f34f227c9ee1247026afdb2f3539`;
+the values are committed together at `$2a514/$2a518`. RTS reaches `$2aaaa`,
+whose eight deterministic bytes hash to
+`37f9fb95e45dc6c4807821ac79189a2d764fffe6bbbef6196ee17f3ad1a18684`,
+then stop before XBIOS selector `$15` at `$2aab0`. No Line-A firmware state or
+selector-$15 result is invented.
+A typed selector-`$15` observation records the unused D0 return. The 16-byte
+continuation hashes to
+`de3f0996c3b76c20c1e83a686f9a97f7a5ad8f9575a03d8f01b7f4cadf45a233`;
+it cleans six stack bytes, pushes pointer `$2a612` and selector 6, and stops
+before `TRAP #14` at `$2aabe`. Selector 6 remains the external boundary.
+A typed selector-6 observation records its unused D0. The 10-byte continuation
+hash is `ba614a28f861921a263225ef85209b20dc2673ea3444cb556b88ca29b2b23163`;
+after six-byte stack cleanup, execution stops before `JSR $2b55a` at `$2aac2`.
+The separately inventoried eight bytes at file `+$107c` map to `$2b57c` under
+the exact `$2a500` load, not `$2b55a`. The runtime rejects the proposed callee
+observation and stops at the JSR until this 22-byte disagreement is resolved.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4113,8 +4153,36 @@ The typed BIOS continuation now admits all 16 ordered results per selected
 route. It rereads each next table element from the exact verified title image,
 retains every raw AX/FLAGS pair, and commits only the final proven `$0107`
 byte or mode-two `$010a := $b800` word. Both paths then join at the exact
-`$1bb8 -> $1b1f` DOS allocation call, which remains the next unknown service
-boundary.
+`$1bb8 -> $1b1f` DOS allocation call. The native continuation now observes
+the exact ordered `INT $21` services `$4a`, `$48`, `$49`, `$48`, and `$48`,
+retaining raw AX/BX/FLAGS/carry results. It commits only the original writes
+to child words `$1aa2`, `$010e`, and `$0112`. Either buffer-allocation carry
+follows the proven error return and caller write before stopping at `$1c6a`;
+two carry-clear results continue through DS/DX setup and stop at the next DOS
+file-open request `$1af9`. The `$1b1f..$1b61` span hash is
+`62bb857bf927ca3392900f9a8f26b9ab23f0780cd84c0ccf248f084e17c02ba7`.
+No DOS allocator, file result, PSP, or memory-control block is inferred.
+The next typed continuation verifies the original NUL-terminated `title.lib`
+name at `$0e4e`, observes open `$3d00`, seek-to-end `$4202`, and close `$3e00`
+results, and retains every raw AX/BX/CX/DX/FLAGS/carry value. Open or seek carry
+stops at the proven `$05a3` error target. On success the exact helper computes
+`(seek_AX + $0f) >> 4` with 16-bit arithmetic, ignores the close result as the
+original does, and reaches the sized allocation request at `$1b64`. The helper
+hash is `4fd3a9694c9ea36d7baf33607ed0b70ac764bb1f27bb6b686c3401bce5ef6b3d`.
+No host file operation, file bytes, DOS handle, read call, or allocation return
+is synthesized.
+The sized-allocation result now connects to the exact `$1b62..$1b7f` tail.
+Only its carry-clear segment is admitted as the `TITLE.LIB` buffer; the
+following one-paragraph and temporary allocate/free results remain raw typed
+observations because the original does not test their carry flags. The loader
+then observes its own `$3d02` open, nine bounded `$3f` reads and `$3e` close.
+Carry-clear reads copy only the corresponding bytes from the independently
+manifest-verified 18,907-byte English `TITLE.LIB`; returned length is bounded
+by request, remaining source, and observed paragraph capacity. No bytes are
+invented for carry-set or zero-byte reads. After a loaded six-byte header, the
+exact relocation stores count `$0026` and the normalized directory pointer
+`base+$0481:$0003`. The loader/relocation code hash is
+`63d5b5a645879a0a79ed0a7c880051e98ddf62b91f07616c0a72d035ee9581cf`.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6207,6 +6275,104 @@ still-opaque graphics wrapper at `$200dc`. That branch does not yet clear
 evidence changes neither command nor runtime memory. No game text is exposed
 or altered by this transition; future localized user-facing text remains a
 separate presentation concern while original media text stays immutable.
+
+The zero-flag branch now continues across its same-library graphics return.
+The wrapper `$200dc..$200f9` is independently fixed to the genuine clean ADF
+at `+$7b0dc` (30 bytes, SHA-256
+`6e36c860c280c651947ad0ea6ef868759fbc7bfac67d89af219135e4751e6e6f`).
+Its typed observation requires the session's already observed graphics base
+from `$12fec`, call `$200f4`, vector `-$1a4`, and return `$200f8`. The local
+RTS then unwinds to `$2022e`, which clears byte `$1ffd9`, returns through
+`$20236` to `$4050a`, loads D0 literal `$004d`, and stops before the next
+opaque call `$4050e -> $41bb4`.
+
+The clear is committed to owned runtime memory only after previewing the full
+transition, so a wrong base, vector, call, return, sequence, or revoked title
+session leaves both memory and lifecycle state unchanged. The graphics
+vector's internal effect is not reproduced or inferred, and `$41bb4` is not
+entered. This transition presents no text and does not modify the localized
+presentation contract or original in-media strings.
+
+The first `$41bb4` dispatch for literal D0 `$004d` is now executed through
+its complete deterministic prefix. The dispatcher code remains bound by its
+existing `$41bb4..$41c31` hash
+`fba4dff4da954290d970f5ec129220c179a2ef73f010def6512401380b8640cc`.
+Three genuine title-stage table leaves are independently locked before use:
+the 14-byte `$416d0` entry hashes to
+`dd1ef0e747524f3b48c3cca3e81f9601b7f19587cfdb841064e4072324e8c3d7`,
+the 12-byte `$4128e` descriptor to
+`f1e6aa704e116355d7475b93167fb52fb8b9ae8310db046c230e74cf83aa5da5`,
+and the four-byte `$422ae` pointer cell to
+`08512d1c9cc7d8b5d700c917e2b750cddc6816bd7946ef45cc44c486ec2919ff`.
+
+`$004d * $000e` selects `$416d0`; its `$00c1` high-bit descriptor redirects
+through nested index `$00c1`. Pointer offset `$000367ae` plus base `$422fa`
+yields compressed source `$00078aa8`. The fixed descriptor selects
+destination `$000256dc`, wrap address `$0002bfc0`, wrap subtraction
+`$000068fe`, and row advance `$0038`. Native execution stops at `$41c72`
+before reading the first source width word. No byte at `$78aa8`, decoded
+dimension, decompression write, or visual meaning is fabricated. Repeating
+the local advance or invoking it after session revocation fails closed.
+
+The first two external reads are now a narrow typed header observation. They
+must occur in order at `$41c72` and `$41c7e`, from `$78aa8` and `$78aaa`, as
+big-endian words. The original stores them unchanged at `$410c8` (width) and
+`$410ca` (height); Eon applies both word writes atomically. It also retains
+the exact 16-bit `width-1` counter behavior, including wrap for a zero width.
+Height below `$00c8` selects the low-height packet decoder at `$41c98` with
+next source `$78aac`; height `$00c8` or above selects `$41d44`. These are
+control-flow and width facts, not assertions that either observed dimension
+is safe or visually meaningful.
+
+The genuine header is `$0044/$8010`, so this release selects `$41d44`. The
+seven-byte source prefix `$78aa8..$78aae` is inside the immutable loaded title
+stage (ADF `+$d3aa8`) and hashes to
+`96c277c906c4179741d1de3383fa161bc415b93771dad9b8377f9d9190491ce9`.
+The high decoder derives 17 two-byte column groups and 16 rows, stores those
+values at `$410cc/$410ce`, and reads first control byte `$01`. That literal
+packet copies genuine bytes `$0f,$ff` to `$256dc,$256dd`, leaving source
+`$78aaf`, destination `$256de`, 16 column groups, 16 rows and four planes at
+the next packet dispatch `$41d60`. All four writes—the two decoder geometry
+words and two literal bytes—commit atomically, and replay is rejected.
+
+The following four command families are
+statically visible—literal pairs, repeated duplicated bytes, repeated
+byte-swapped pairs, and extended-count byte-swapped pairs—but their counts,
+payloads, destination writes, and completion after `$78aaf` remain unowned.
+The runtime does not allocate or render an inferred surface; the two admitted
+destination bytes are sparse original memory effects only.
+
+The remainder of this first high-path decode is now complete. The exact
+453-byte compressed span `$78aac..$78c70` (ADF `+$d3aac`) hashes to
+`684e83c90a64bd8829ad01f3b7615b5d686d4d054e25c7483d29b7b50046fb1d`.
+It contains 130 packets: 65 literal-pair packets, 64 duplicated-byte fill
+packets, one extended-count swapped-pair packet, and no short swapped-pair
+packet. The original loops produce 1,088 pairs / 2,176 bytes across four
+planes, 16 rows and 17 two-byte groups. The final extended packet terminates
+through the plane counter at `$41e40`; no unused repetitions are emitted.
+
+Eon decodes the immutable span with explicit source exhaustion, output-count,
+32-bit address-overflow, row, column and plane bounds. The already committed
+first pair is excluded from the follow-up effect batch, so the remaining
+2,174 byte writes commit exactly once and atomically. Completion leaves the
+original routine at RTS `$41e40`. These bytes remain sparse recovered runtime
+memory: no width-to-pixel interpretation, palette, planar layout, complete
+frame, or renderer surface is claimed merely because decompression finished.
+
+After RTS `$41e40`, the nested `$41c32` call resumes at `$41be6`. The outer
+`$004d` entry supplies X word `$0003` and Y word `$00b8`; the caller derives
+destination `$27f06`, mask base `$256dc`, three outer iterations and eleven
+words per iteration. Its four first mask reads are already-owned decoded
+words at `$256dc`, `$2711c`, `$28b5c` and `$2a59c`. Eon validates their
+presence in the sparse decode and computes the exact combined mask, then
+stops at `$41ed8` before reading the first pre-existing destination word at
+`$27f06`.
+
+No merge write is admitted at this boundary because the destination word is
+not yet owned. The caller-tail advance is replay-proof and session-scoped;
+revocation discards it with the title state. This preserves the precise
+read-before-write dependency of `$41eb0..$41f30` without treating zero-filled
+host storage as original display memory.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

@@ -3149,7 +3149,7 @@ int main() {
     }
     const auto deuteros_amiga_functions = eon::function_map_for_release(
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
-    assert(deuteros_amiga_functions.size() == 15);
+    assert(deuteros_amiga_functions.size() == 17);
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-exec-boundary";
     }));
@@ -3166,6 +3166,14 @@ int main() {
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-post-command-pointer-route"
             && entry.runtime_status == "native trace-gated post-command state";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-title-post-command-graphics-return"
+            && entry.runtime_status == "native trace-gated post-command state";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-title-first-paired-dispatch"
+            && entry.runtime_status == "native complete first decompression";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
@@ -4712,11 +4720,18 @@ int main() {
     assert(title_entry&&title_entry->title_initialization
         &&title_entry->title_initialization->state
             ==eon::MillenniumDosTitleInitializationState::
-                title_main_allocation_call_boundary
-        &&title_entry->title_initialization->last_sequence==34
+                dos_resize_result_boundary
+        &&title_entry->title_initialization->last_sequence==35
         &&title_entry->title_initialization->bios_results.size()==16
         &&title_entry->title_initialization->title_main_call_address==0x1bb8
-        &&title_entry->title_initialization->title_main_call_target==0x1b1f);
+        &&title_entry->title_initialization->title_main_call_target==0x1b1f
+        &&title_entry->title_initialization->dos_boundary.interrupt_address==0x1b26
+        &&title_entry->title_initialization->dos_boundary.return_address==0x1b28
+        &&title_entry->title_initialization->dos_boundary.interrupt==0x21
+        &&title_entry->title_initialization->dos_boundary.service==0x4a
+        &&title_entry->title_initialization->dos_boundary.ax_known_value==0x4a01
+        &&title_entry->title_initialization->dos_boundary.bx==0x1000
+        &&title_entry->title_initialization->dos_boundary.segment==0xe33f);
     const auto after_bios_loop=
         admitted_dos_runtime.native_runtime_memory_diagnostics();
     assert(before_bios_loop&&after_bios_loop
@@ -4726,9 +4741,147 @@ int main() {
             ==before_bios_loop->applied_batch_count+1);
     const auto completed_bios_checksum=after_bios_loop->checksum;
     assert(!admitted_dos_runtime.observe_millennium_dos_title_bios_result(
-        {35,0x046d,0x046f,0,0}).accepted);
+        {36,0x046d,0x046f,0,0}).accepted);
     assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
         ==completed_bios_checksum);
+    const auto before_dos_memory_chain=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {36,0x1b26,0x1b28,true,0x1203,0x4567,0x0001}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {37,0x1b2d,0x1b2f,false,0x3004,0x5678,0x0202}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {38,0x1b38,0x1b3a,false,0x0005,0,0x0202}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {39,0x1b3f,0x1b41,false,0x4006,0,0x0202}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {40,0x1b4f,0x1b51,false,0x5007,0,0x0202}).accepted);
+    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
+    assert(title_entry&&title_entry->title_initialization
+        &&title_entry->title_initialization->state
+            ==eon::MillenniumDosTitleInitializationState::dos_file_open_result_boundary
+        &&title_entry->title_initialization->last_sequence==40
+        &&title_entry->title_initialization->dos_results.size()==5
+        &&title_entry->title_initialization->dos_boundary.interrupt_address==0x1af9
+        &&title_entry->title_initialization->dos_boundary.return_address==0x1afb
+        &&title_entry->title_initialization->dos_boundary.interrupt==0x21
+        &&title_entry->title_initialization->dos_boundary.service==0x3d
+        &&title_entry->title_initialization->dos_boundary.ax_known_value==0x3d00
+        &&title_entry->title_initialization->dos_boundary.segment==0xe33f
+        &&title_entry->title_initialization->dos_boundary.dx==0x0e4e);
+    const auto after_dos_memory_chain=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    const auto dos_memory=
+        admitted_dos_runtime.native_runtime_memory_checkpoint();
+    const auto has_dos_title_byte=[&](const std::uint16_t offset,
+                                      const std::uint8_t value){
+        return dos_memory&&std::ranges::any_of(dos_memory->initialized_bytes,
+            [&](const auto& cell){return cell.location.address_space
+                    ==eon::NativeRuntimeAddressSpace::dos_segmented
+                &&cell.location.segment==0xe33f&&cell.location.offset==offset
+                &&cell.value==value;});
+    };
+    assert(before_dos_memory_chain&&after_dos_memory_chain
+        &&after_dos_memory_chain->initialized_byte_count
+            ==before_dos_memory_chain->initialized_byte_count
+        &&after_dos_memory_chain->applied_batch_count
+            ==before_dos_memory_chain->applied_batch_count+3
+        &&has_dos_title_byte(0x1aa2,0x78)&&has_dos_title_byte(0x1aa3,0x56)
+        &&has_dos_title_byte(0x010e,0x06)&&has_dos_title_byte(0x010f,0x40)
+        &&has_dos_title_byte(0x0112,0x07)&&has_dos_title_byte(0x0113,0x50));
+    const auto completed_dos_memory_checksum=after_dos_memory_chain->checksum;
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {41,0x1b4f,0x1b51,false,0,0,0}).accepted);
+    assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
+        ==completed_dos_memory_checksum);
+    const auto before_dos_file_chain=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {41,0x1af9,0x1afb,false,0x0042,0xabcd,0x1234,0x5678,0x0202}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {42,0x1b09,0x1b0b,false,0x49db,0x0042,0,0,0x0202}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {43,0x1b12,0x1b14,true,0x0006,0x0042,0,0xbeef,0x0001}).accepted);
+    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
+    assert(title_entry&&title_entry->title_initialization
+        &&title_entry->title_initialization->state
+            ==eon::MillenniumDosTitleInitializationState::
+                dos_file_sized_allocation_result_boundary
+        &&title_entry->title_initialization->last_sequence==43
+        &&title_entry->title_initialization->dos_file_results.size()==3
+        &&title_entry->title_initialization->dos_file_results[0].ax==0x0042
+        &&title_entry->title_initialization->dos_file_results[1].ax==0x49db
+        &&title_entry->title_initialization->dos_file_results[1].dx==0
+        &&title_entry->title_initialization->dos_file_results[2].carry
+        &&title_entry->title_initialization->dos_boundary.interrupt_address==0x1b64
+        &&title_entry->title_initialization->dos_boundary.return_address==0x1b66
+        &&title_entry->title_initialization->dos_boundary.service==0x48
+        &&title_entry->title_initialization->dos_boundary.ax_known_value==0x489e
+        &&title_entry->title_initialization->dos_boundary.bx==0x049e);
+    const auto after_dos_file_chain=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(before_dos_file_chain&&after_dos_file_chain
+        &&after_dos_file_chain->initialized_byte_count
+            ==before_dos_file_chain->initialized_byte_count
+        &&after_dos_file_chain->applied_batch_count
+            ==before_dos_file_chain->applied_batch_count
+        &&after_dos_file_chain->checksum==before_dos_file_chain->checksum);
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {44,0x1b12,0x1b14,false,0,0,0,0,0}).accepted);
+    const auto before_library_load=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {44,0x1b64,0x1b66,false,0x3000,0,0x0202}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {45,0x1b74,0x1b76,true,0x4000,0,0x0001}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {46,0x1bca,0x1bcc,true,0x5000,0x6000,0x0001}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_memory_result(
+        {47,0x1bd5,0x1bd7,true,7,0,0x0001}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {48,0x0549,0x054b,false,0x0055,0,0,0,0x0202}).accepted);
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {49,0x057c,0x057e,false,0x49db,0x0055,0x8000,0,0x0202}).accepted);
+    for(std::uint64_t sequence=50;sequence<=57;++sequence){
+        assert(admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+            {sequence,0x057c,0x057e,false,0,0x0055,0,0,0x0202}).accepted);
+    }
+    assert(admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {58,0x059e,0x05a0,true,6,0x0055,0,0,0x0001}).accepted);
+    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
+    assert(title_entry&&title_entry->title_initialization
+        &&title_entry->title_initialization->state
+            ==eon::MillenniumDosTitleInitializationState::library_relocation_complete
+        &&title_entry->title_initialization->last_sequence==58
+        &&title_entry->title_initialization->continuation_address==0x0f6b
+        &&title_entry->title_initialization->dos_file_results.size()==14);
+    const auto after_library_load=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(before_library_load&&after_library_load
+        &&after_library_load->initialized_byte_count
+            ==before_library_load->initialized_byte_count+18907
+        &&after_library_load->applied_batch_count
+            ==before_library_load->applied_batch_count+6);
+    const auto loaded_library_memory=
+        admitted_dos_runtime.native_runtime_memory_checkpoint();
+    const auto has_loaded_byte=[&](const std::uint16_t segment,
+                                   const std::uint16_t offset,
+                                   const std::uint8_t value){
+        return loaded_library_memory&&std::ranges::any_of(
+            loaded_library_memory->initialized_bytes,[&](const auto& cell){
+                return cell.location.address_space
+                        ==eon::NativeRuntimeAddressSpace::dos_segmented
+                    &&cell.location.segment==segment&&cell.location.offset==offset
+                    &&cell.value==value;
+            });
+    };
+    assert(has_loaded_byte(0x3000,0,0x26)
+        &&has_loaded_byte(0x3000,0x49da,0x00)
+        &&has_loaded_byte(0xe33f,0x0e5d,0x26)
+        &&has_loaded_byte(0xe33f,0x0e5e,0)
+        &&has_loaded_byte(0xe33f,0x0e4a,3)
+        &&has_loaded_byte(0xe33f,0x0e4c,0x81)
+        &&has_loaded_byte(0xe33f,0x0e4d,0x34));
     assert(!admitted_dos_runtime.observe_millennium_dos_title_child_process_entry(
         {14,0x0336,0x4b00,0x068f,0x067a,0x0100,0xe33f,
             eon::MillenniumDosTitleExecEntryProvenance::observed_process_entry}).accepted);
@@ -4878,6 +5031,44 @@ int main() {
                 && selector_three_user->config_consumer.xbios_selector == 3
                 && selector_three_user->config_consumer.selector_two_result_d0 == 0x12345678);
             assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count == 3);
+            assert(all_release_runtime.observe_millennium_atari_xbios_selector_three(
+                {1, 3, 0x2a52e, 3, 0xa1b2c3d4}).accepted);
+            const auto selector_four_user =
+                all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(selector_four_user && selector_four_user->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::xbios_selector_four_boundary
+                && selector_four_user->config_consumer.xbios_trap_address == 0x2a53c
+                && selector_four_user->config_consumer.xbios_selector == 4);
+            assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count == 4);
+            assert(all_release_runtime.observe_millennium_atari_xbios_selector_four(
+                {1, 4, 0x2a53c, 4, 0x1234beef}).accepted);
+            const auto line_a_user = all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(line_a_user && line_a_user->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::line_a_init_boundary
+                && line_a_user->config_consumer.line_a_init_address == 0x2a546
+                && line_a_user->config_consumer.line_a_init_opcode == 0xa000);
+            assert(all_release_runtime.observe_millennium_atari_line_a(
+                {1, 5, 0x2a546, 0x00f00000, 0x11223344, 0x55667788}).accepted);
+            const auto selector_21_user =
+                all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(selector_21_user && selector_21_user->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::xbios_selector_21_boundary
+                && selector_21_user->config_consumer.xbios_trap_address == 0x2aab0
+                && selector_21_user->config_consumer.xbios_selector == 0x15);
+            assert(all_release_runtime.observe_millennium_atari_xbios_selector_21(
+                {1, 6, 0x2aab0, 0x15, 0xabcdef01}).accepted);
+            const auto selector_6_user = all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(selector_6_user && selector_6_user->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::xbios_selector_6_boundary
+                && selector_6_user->config_consumer.xbios_trap_address == 0x2aabe);
+            assert(all_release_runtime.observe_millennium_atari_xbios_selector_6(
+                {1, 7, 0x2aabe, 6, 0x12345678}).accepted);
+            const auto jsr_user = all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(jsr_user && jsr_user->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::jsr_2b55a_boundary
+                && jsr_user->config_consumer.next_jsr_target == 0x2b55a);
+            assert(!all_release_runtime.observe_millennium_atari_bchg_2b55a(
+                {1, 8, 0x2b55a, 1, 0x2a500, 0x4e}).accepted);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -4922,6 +5113,14 @@ int main() {
             assert(selector_three_memory && selector_three_memory->applied_batch_count == 5
                 && selector_three_memory->initialized_byte_count
                     == presentation->native_prg_image.image_byte_count + 2);
+            assert(atari_host.observe_millennium_atari_xbios_selector_three(
+                {1, 9, 0x2a52e, 3, 0x10203040}).accepted);
+            const auto selector_four = atari_host.millennium_atari_bootstrap_presentation();
+            assert(selector_four && selector_four->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::xbios_selector_four_boundary
+                && selector_four->config_consumer.xbios_trap_address == 0x2a53c);
+            assert(atari_host.observe_millennium_atari_xbios_selector_four(
+                {1, 10, 0x2a53c, 4, 0x50607080}).accepted);
             atari_host.begin_source_revocation();
             assert(!atari_host.active() && !atari_host.session_snapshot()
                 && !atari_host.millennium_atari_bootstrap_presentation());
@@ -4930,6 +5129,18 @@ int main() {
                     eon::MillenniumAtariObservedPrivilege::supervisor}).accepted);
             assert(!atari_host.observe_millennium_atari_xbios_selector_two(
                 {1, 9, 0x2a520, 2, 0}).accepted);
+            assert(!atari_host.observe_millennium_atari_xbios_selector_three(
+                {1, 10, 0x2a52e, 3, 0}).accepted);
+            assert(!atari_host.observe_millennium_atari_xbios_selector_four(
+                {1, 11, 0x2a53c, 4, 0}).accepted);
+            assert(!atari_host.observe_millennium_atari_line_a(
+                {1, 12, 0x2a546, 0, 0, 0}).accepted);
+            assert(!atari_host.observe_millennium_atari_xbios_selector_21(
+                {1, 13, 0x2aab0, 0x15, 0}).accepted);
+            assert(!atari_host.observe_millennium_atari_xbios_selector_6(
+                {1, 14, 0x2aabe, 6, 0}).accepted);
+            assert(!atari_host.observe_millennium_atari_bchg_2b55a(
+                {1, 15, 0x2b55a, 1, 0x2a500, 0x4e}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5278,13 +5489,56 @@ int main() {
                 {runtime_copy_sequence+21,0x1fa0a,0x2ff0b,0}).accepted);
             eon::DeuterosAmigaObservedTitlePostCommandPointerRoute post_command_route{
                 runtime_copy_sequence+22,0x404fe,0x38912,0x40504,
-                0x40504,0x2022a,0x20238,0x1ffd8,1};
+                0x40504,0x2022a,0x20238,0x1ffd8,0};
             auto bad_post_command_route=post_command_route;
             bad_post_command_route.pointer_call_target++;
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_pointer_route(
                 bad_post_command_route).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_command_pointer_route(
                 post_command_route).accepted);
+            eon::DeuterosAmigaObservedGraphicsVectorReturn post_command_graphics{
+                runtime_copy_sequence+23,0x12fec,0x00abcdef,
+                0x200f4,-0x1a4,0x200f8,0,0};
+            auto bad_post_command_graphics=post_command_graphics;
+            bad_post_command_graphics.vector=-0x1a2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_graphics_return(
+                bad_post_command_graphics).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_graphics_return(
+                post_command_graphics).accepted);
+            assert(opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch()
+                .accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch()
+                .accepted);
+            eon::DeuterosAmigaObservedTitleFirstDispatchHeader dispatch_header{
+                runtime_copy_sequence+24,{{0x41c72,0x41c7e}},
+                {{0x78aa8,0x78aaa}},{{0x44,0x8010}}};
+            auto bad_dispatch_header=dispatch_header;
+            bad_dispatch_header.source_addresses[1]++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_command_first_dispatch_header(
+                bad_dispatch_header).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_command_first_dispatch_header(
+                dispatch_header).accepted);
+            assert(opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_packet()
+                .accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_packet()
+                .accepted);
+            const auto first_packet_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(first_packet_memory
+                && std::any_of(first_packet_memory->initialized_bytes.begin(),
+                    first_packet_memory->initialized_bytes.end(),[](const auto& byte){
+                        return byte.location.offset==0x256dc && byte.value==0x0f;
+                    }));
+            assert(opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_decode()
+                .accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_decode()
+                .accepted);
+            const auto decoded_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(decoded_memory && decoded_memory->initialized_bytes.size()
+                >= first_packet_memory->initialized_bytes.size()+2174U);
+            assert(opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail()
+                .accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail()
+                .accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

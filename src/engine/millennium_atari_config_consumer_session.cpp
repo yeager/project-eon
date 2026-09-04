@@ -45,6 +45,65 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
             throw std::runtime_error("Unexpected Millennium Atari XBIOS continuation bytes");
         }
     }
+    constexpr std::array<std::uint8_t, 16> selector_three_continuation{
+        0x4e, 0x4e, 0x54, 0x8f, 0x23, 0xc0, 0x00, 0x02,
+        0xa5, 0x0e, 0x3f, 0x3c, 0x00, 0x04, 0x4e, 0x4e,
+    };
+    for (std::size_t index = 0; index < selector_three_continuation.size(); ++index) {
+        if (require_byte(memory, 0x2a52eU + static_cast<std::uint32_t>(index))
+            != selector_three_continuation[index]) {
+            throw std::runtime_error("Unexpected Millennium Atari selector-3 continuation bytes");
+        }
+    }
+    constexpr std::array<std::uint8_t, 12> selector_four_continuation{
+        0x4e, 0x4e, 0x54, 0x8f, 0x33, 0xc0,
+        0x00, 0x02, 0xa5, 0x12, 0xa0, 0x00,
+    };
+    for (std::size_t index = 0; index < selector_four_continuation.size(); ++index) {
+        if (require_byte(memory, 0x2a53cU + static_cast<std::uint32_t>(index))
+            != selector_four_continuation[index]) {
+            throw std::runtime_error("Unexpected Millennium Atari selector-4 continuation bytes");
+        }
+    }
+    constexpr std::array<std::uint8_t, 24> line_a_continuation{
+        0xa0, 0x00, 0x26, 0x68, 0x00, 0x08, 0x28, 0x68,
+        0x00, 0x0c, 0x23, 0xcb, 0x00, 0x02, 0xa5, 0x14,
+        0x23, 0xcc, 0x00, 0x02, 0xa5, 0x18, 0x4e, 0x75,
+    };
+    for (std::size_t index = 0; index < line_a_continuation.size(); ++index) {
+        if (require_byte(memory, 0x2a546U + static_cast<std::uint32_t>(index))
+            != line_a_continuation[index]) {
+            throw std::runtime_error("Unexpected Millennium Atari Line-A continuation bytes");
+        }
+    }
+    constexpr std::array<std::uint8_t, 8> caller_continuation{
+        0x42, 0xa7, 0x3f, 0x3c, 0x00, 0x15, 0x4e, 0x4e,
+    };
+    for (std::size_t index = 0; index < caller_continuation.size(); ++index) {
+        if (require_byte(memory, 0x2aaaaU + static_cast<std::uint32_t>(index))
+            != caller_continuation[index]) {
+            throw std::runtime_error("Unexpected Millennium Atari Line-A caller bytes");
+        }
+    }
+    constexpr std::array<std::uint8_t, 16> selector_21_continuation{
+        0x4e, 0x4e, 0x5c, 0x8f, 0x2f, 0x3c, 0x00, 0x02,
+        0xa6, 0x12, 0x3f, 0x3c, 0x00, 0x06, 0x4e, 0x4e,
+    };
+    for (std::size_t index = 0; index < selector_21_continuation.size(); ++index) {
+        if (require_byte(memory, 0x2aab0U + static_cast<std::uint32_t>(index))
+            != selector_21_continuation[index]) {
+            throw std::runtime_error("Unexpected Millennium Atari selector-21 continuation bytes");
+        }
+    }
+    constexpr std::array<std::uint8_t, 10> selector_6_continuation{
+        0x4e, 0x4e, 0x5c, 0x8f, 0x4e, 0xb9, 0x00, 0x02, 0xb5, 0x5a,
+    };
+    for (std::size_t index = 0; index < selector_6_continuation.size(); ++index) {
+        if (require_byte(memory, 0x2aabeU + static_cast<std::uint32_t>(index))
+            != selector_6_continuation[index]) {
+            throw std::runtime_error("Unexpected Millennium Atari selector-6 continuation bytes");
+        }
+    }
     if (generation == 0 || gemdos.generation != generation
         || gemdos.state != MillenniumAtariReadOnlyGemdosState::config_jsr_boundary
         || gemdos.config_jsr_instruction_address != jsr_instruction
@@ -76,6 +135,18 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
     checkpoint_.mapped_prelude_sha256 = std::string(prelude_sha256);
     checkpoint_.selector_two_continuation_sha256 =
         "751915c217471e4763ebeef2928dc4cca68bc481dae3113adabb441c2446ee2f";
+    checkpoint_.selector_three_continuation_sha256 =
+        "f4a7b019591ccff43e4478ac1549e262387ebfb22c16ded18457fe2aca6bbcc2";
+    checkpoint_.selector_four_continuation_sha256 =
+        "42c6d7ede7609ced9c859e6222d678edf861018b86ee80be2cfe6f8a23010e44";
+    checkpoint_.line_a_continuation_sha256 =
+        "1705523f57debe7644c3a874cd76e42464f1f34f227c9ee1247026afdb2f3539";
+    checkpoint_.line_a_caller_continuation_sha256 =
+        "37f9fb95e45dc6c4807821ac79189a2d764fffe6bbbef6196ee17f3ad1a18684";
+    checkpoint_.selector_21_continuation_sha256 =
+        "de3f0996c3b76c20c1e83a686f9a97f7a5ad8f9575a03d8f01b7f4cadf45a233";
+    checkpoint_.selector_6_continuation_sha256 =
+        "ba614a28f861921a263225ef85209b20dc2673ea3444cb556b88ca29b2b23163";
     checkpoint_.local_control_transfers_executed = 2;
 }
 
@@ -195,6 +266,195 @@ MillenniumAtariConfigConsumerSession::make_selector_two_result_effect_batch(
             checkpoint_.selector_two_store_address},
         MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian,
         checkpoint_.selector_two_result_d0}}};
+}
+
+MillenniumAtariConfigConsumerResult
+MillenniumAtariConfigConsumerSession::observe_xbios_selector_three(
+    const MillenniumAtariXbiosSelectorThreeObservation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::xbios_selector_three_boundary) {
+        return {false, "Millennium Atari config consumer is not at XBIOS selector 3"};
+    }
+    if (observation.generation != checkpoint_.generation
+        || observation.sequence <= checkpoint_.last_sequence
+        || observation.trap_address != 0x2a52e || observation.selector != 3) {
+        return {false, "Millennium Atari XBIOS selector-3 observation is stale or mismatched"};
+    }
+    auto next = checkpoint_;
+    next.state = MillenniumAtariConfigConsumerState::xbios_selector_four_boundary;
+    next.last_sequence = observation.sequence;
+    next.selector_three_result_observed = true;
+    next.selector_three_result_d0 = observation.result_d0;
+    next.selector_three_store_address = 0x2a50e;
+    next.selector_four_stack_cleanup_bytes = 2;
+    next.xbios_trap_address = 0x2a53c;
+    next.xbios_selector = 4;
+    next.local_instruction_count += 3;
+    checkpoint_ = std::move(next);
+    return {true, {}};
+}
+
+NativeRuntimeEffectBatch
+MillenniumAtariConfigConsumerSession::make_selector_three_result_effect_batch(
+    std::string id) const {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::xbios_selector_four_boundary
+        || !checkpoint_.selector_three_result_observed || checkpoint_.generation == 0
+        || checkpoint_.selector_three_store_address != 0x2a50e || id.empty()) {
+        throw std::runtime_error("Millennium Atari selector-3 result effect is not admitted");
+    }
+    return {std::move(id), true, {{1,
+        {NativeRuntimeAddressSpace::linear, std::nullopt,
+            checkpoint_.selector_three_store_address},
+        MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian,
+        checkpoint_.selector_three_result_d0}}};
+}
+
+MillenniumAtariConfigConsumerResult
+MillenniumAtariConfigConsumerSession::observe_xbios_selector_four(
+    const MillenniumAtariXbiosSelectorFourObservation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::xbios_selector_four_boundary) {
+        return {false, "Millennium Atari config consumer is not at XBIOS selector 4"};
+    }
+    if (observation.generation != checkpoint_.generation
+        || observation.sequence <= checkpoint_.last_sequence
+        || observation.trap_address != 0x2a53c || observation.selector != 4) {
+        return {false, "Millennium Atari XBIOS selector-4 observation is stale or mismatched"};
+    }
+    auto next = checkpoint_;
+    next.state = MillenniumAtariConfigConsumerState::line_a_init_boundary;
+    next.last_sequence = observation.sequence;
+    next.selector_four_result_observed = true;
+    next.selector_four_result_d0_word = static_cast<std::uint16_t>(observation.result_d0);
+    next.selector_four_store_address = 0x2a512;
+    next.selector_three_stack_cleanup_bytes = 2;
+    next.line_a_init_address = 0x2a546;
+    next.line_a_init_opcode = 0xa000;
+    next.local_instruction_count += 2;
+    checkpoint_ = std::move(next);
+    return {true, {}};
+}
+
+NativeRuntimeEffectBatch
+MillenniumAtariConfigConsumerSession::make_selector_four_result_effect_batch(
+    std::string id) const {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::line_a_init_boundary
+        || !checkpoint_.selector_four_result_observed || checkpoint_.generation == 0
+        || checkpoint_.selector_four_store_address != 0x2a512 || id.empty()) {
+        throw std::runtime_error("Millennium Atari selector-4 result effect is not admitted");
+    }
+    return {std::move(id), true, {{1,
+        {NativeRuntimeAddressSpace::linear, std::nullopt,
+            checkpoint_.selector_four_store_address},
+        MemoryTransferElementWidth::word, NativeRuntimeByteOrder::big_endian,
+        checkpoint_.selector_four_result_d0_word}}};
+}
+
+MillenniumAtariConfigConsumerResult
+MillenniumAtariConfigConsumerSession::observe_line_a(
+    const MillenniumAtariLineAObservation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::line_a_init_boundary) {
+        return {false, "Millennium Atari config consumer is not at Line-A init"};
+    }
+    if (observation.generation != checkpoint_.generation
+        || observation.sequence <= checkpoint_.last_sequence
+        || observation.instruction_address != 0x2a546
+        || observation.returned_a0 > 0xfffffff3U) {
+        return {false, "Millennium Atari Line-A observation is stale or mismatched"};
+    }
+    auto next = checkpoint_;
+    next.state = MillenniumAtariConfigConsumerState::xbios_selector_21_boundary;
+    next.last_sequence = observation.sequence;
+    next.line_a_result_observed = true;
+    next.line_a_returned_a0 = observation.returned_a0;
+    next.line_a_result_a3 = observation.value_at_a0_plus_8;
+    next.line_a_result_a4 = observation.value_at_a0_plus_12;
+    next.line_a_a3_store_address = 0x2a514;
+    next.line_a_a4_store_address = 0x2a518;
+    next.xbios_trap_address = 0x2aab0;
+    next.xbios_selector = 0x15;
+    next.local_instruction_count += 7;
+    checkpoint_ = std::move(next);
+    return {true, {}};
+}
+
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_line_a_result_effect_batch(
+    std::string id) const {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::xbios_selector_21_boundary
+        || !checkpoint_.line_a_result_observed || checkpoint_.generation == 0 || id.empty()) {
+        throw std::runtime_error("Millennium Atari Line-A result effect is not admitted");
+    }
+    return {std::move(id), true, {
+        {1, {NativeRuntimeAddressSpace::linear, std::nullopt, 0x2a514},
+            MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian,
+            checkpoint_.line_a_result_a3},
+        {2, {NativeRuntimeAddressSpace::linear, std::nullopt, 0x2a518},
+            MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian,
+            checkpoint_.line_a_result_a4},
+    }};
+}
+
+MillenniumAtariConfigConsumerResult
+MillenniumAtariConfigConsumerSession::observe_xbios_selector_21(
+    const MillenniumAtariXbiosSelector21Observation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::xbios_selector_21_boundary) {
+        return {false, "Millennium Atari config consumer is not at XBIOS selector 21"};
+    }
+    if (observation.generation != checkpoint_.generation
+        || observation.sequence <= checkpoint_.last_sequence
+        || observation.trap_address != 0x2aab0 || observation.selector != 0x15) {
+        return {false, "Millennium Atari XBIOS selector-21 observation is stale or mismatched"};
+    }
+    auto next = checkpoint_;
+    next.state = MillenniumAtariConfigConsumerState::xbios_selector_6_boundary;
+    next.last_sequence = observation.sequence;
+    next.selector_21_result_observed = true;
+    next.selector_21_result_d0 = observation.result_d0;
+    next.selector_21_stack_cleanup_bytes = 6;
+    next.selector_6_pointer_argument = 0x2a612;
+    next.xbios_trap_address = 0x2aabe;
+    next.xbios_selector = 6;
+    next.local_instruction_count += 3;
+    checkpoint_ = std::move(next);
+    return {true, {}};
+}
+
+MillenniumAtariConfigConsumerResult
+MillenniumAtariConfigConsumerSession::observe_xbios_selector_6(
+    const MillenniumAtariXbiosSelector6Observation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::xbios_selector_6_boundary) {
+        return {false, "Millennium Atari config consumer is not at XBIOS selector 6"};
+    }
+    if (observation.generation != checkpoint_.generation
+        || observation.sequence <= checkpoint_.last_sequence
+        || observation.trap_address != 0x2aabe || observation.selector != 6) {
+        return {false, "Millennium Atari XBIOS selector-6 observation is stale or mismatched"};
+    }
+    auto next = checkpoint_;
+    next.state = MillenniumAtariConfigConsumerState::jsr_2b55a_boundary;
+    next.last_sequence = observation.sequence;
+    next.selector_6_result_observed = true;
+    next.selector_6_result_d0 = observation.result_d0;
+    next.selector_6_stack_cleanup_bytes = 6;
+    next.next_jsr_address = 0x2aac2;
+    next.next_jsr_target = 0x2b55a;
+    next.local_instruction_count += 1;
+    checkpoint_ = std::move(next);
+    return {true, {}};
+}
+
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::observe_bchg_2b55a(
+    const MillenniumAtariBchgObservation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::jsr_2b55a_boundary) {
+        return {false, "Millennium Atari consumer is not at JSR $2b55a"};
+    }
+    static_cast<void>(observation);
+    return {false, "JSR $2b55a is outside the exact $2a500-loaded config mapping"};
+}
+
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_bchg_effect_batch(
+    std::string id) const {
+    static_cast<void>(id);
+    throw std::runtime_error(
+        "Millennium Atari JSR $2b55a has no admitted memory effect");
 }
 
 MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::revoke(

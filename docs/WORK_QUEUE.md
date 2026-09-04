@@ -11,6 +11,35 @@ behind the first proven input-to-frame-to-state loop.
 
 ## 2026-09-04 native execution checkpoint
 
+### Later native batch
+
+The English Millennium DOS title path now continues past its BIOS palette
+loops through the exact DOS memory allocation sequence and the complete
+`title.lib` loader helper. It opens the hash-verified original leaf, admits
+nine bounded reads into observed allocated segments, closes it, applies the
+recovered header relocation fields, and stops at `$0f6b` for mode 1 or
+`$0f6a` for other modes. Raw DOS returns and failure paths remain explicit.
+
+The clean Deuteros Amiga title path now executes the first `$41bb4` paired
+dispatcher from genuine ADF bytes. Its high-height decoder consumes all 130
+packets and atomically materializes 2,176 bytes across the four recovered
+planes. The caller tail reaches `$41ed8` and stops before reading the unknown
+existing destination word at `$27f06`; decoded sparse memory is not yet a
+renderer or parity claim.
+
+The Millennium Atari Equinox path now crosses XBIOS selectors 2, 3, 4, Line-A,
+selector `$15`, and selector 6 through typed observations and deterministic
+local continuations. It stops at `JSR $2b55a`. A previously considered byte
+sequence maps to `$2b57c` under the exact admitted `$2a500` load, so Eon now
+rejects that 22-byte-shifted candidate instead of executing it.
+
+Player-visible game-text presentation now has a declarative, source-parity
+tested map with complete leaf SHA-256, offset, and length. The first ten
+English DOS launcher strings are verified directly against installed genuine
+media and localized through every shipped PO catalog in both presentation
+modes. This is infrastructure and current-string coverage, not a claim that
+unrecovered game text has already been extracted.
+
 The mechanical disassembly inventory is complete for all eight declared
 releases: 19 code images, 21 admitted ranges, and 1,124,867 source bytes are
 accounted for. This is byte coverage, not semantic recovery or parity.

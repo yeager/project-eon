@@ -15,6 +15,24 @@ enum class MillenniumDosTitleInitializationState {
     selected_followup_call_boundary,
     bios_palette_interrupt_boundary,
     title_main_allocation_call_boundary,
+    dos_resize_result_boundary,
+    dos_large_allocation_result_boundary,
+    dos_free_result_boundary,
+    dos_first_buffer_allocation_result_boundary,
+    dos_second_buffer_allocation_result_boundary,
+    dos_file_open_result_boundary,
+    dos_file_seek_result_boundary,
+    dos_file_close_result_boundary,
+    dos_file_sized_allocation_result_boundary,
+    dos_single_paragraph_allocation_result_boundary,
+    dos_scratch_allocation_result_boundary,
+    dos_scratch_free_result_boundary,
+    dos_library_open_result_boundary,
+    dos_library_read_result_boundary,
+    dos_library_close_result_boundary,
+    library_relocation_complete,
+    dos_file_failure_boundary,
+    allocation_failure_boundary,
 };
 
 enum class MillenniumDosTitleInitializationEffectWidth { byte, word };
@@ -66,12 +84,73 @@ struct MillenniumDosTitleBiosResultRecord {
     std::uint16_t flags = 0;
 };
 
+struct MillenniumDosTitleDosResultObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    bool carry = false;
+    std::uint16_t ax = 0;
+    std::uint16_t bx = 0;
+    std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleDosResultRecord {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    bool carry = false;
+    std::uint16_t ax = 0;
+    std::uint16_t bx = 0;
+    std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleDosFileResultObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    bool carry = false;
+    std::uint16_t ax = 0;
+    std::uint16_t bx = 0;
+    std::uint16_t cx = 0;
+    std::uint16_t dx = 0;
+    std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleDosFileResultRecord {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    bool carry = false;
+    std::uint16_t ax = 0;
+    std::uint16_t bx = 0;
+    std::uint16_t cx = 0;
+    std::uint16_t dx = 0;
+    std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleDosBoundary {
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    std::uint8_t interrupt = 0;
+    std::uint8_t service = 0;
+    std::uint16_t ax_known_mask = 0;
+    std::uint16_t ax_known_value = 0;
+    std::uint16_t bx = 0;
+    std::uint16_t segment = 0;
+    std::uint16_t dx = 0;
+    bool result_observed = false;
+    std::uint16_t cx = 0;
+    std::uint16_t source_address = 0;
+    std::uint16_t source_size = 0;
+};
+
 struct MillenniumDosTitleInitializationMemoryEffect {
     std::uint16_t instruction_address = 0;
     std::uint16_t offset = 0;
     MillenniumDosTitleInitializationEffectWidth width =
         MillenniumDosTitleInitializationEffectWidth::byte;
     std::uint16_t value = 0;
+    std::uint16_t segment = 0;
 };
 
 struct MillenniumDosTitleInitializationRegisterEffect {
@@ -114,6 +193,11 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results;
     std::uint16_t title_main_call_address = 0;
     std::uint16_t title_main_call_target = 0;
+    MillenniumDosTitleDosBoundary dos_boundary;
+    std::vector<MillenniumDosTitleDosResultRecord> dos_results;
+    std::vector<MillenniumDosTitleDosFileResultRecord> dos_file_results;
+    std::uint16_t failure_address = 0;
+    std::uint16_t continuation_address = 0;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -142,6 +226,13 @@ public:
     void observe_bios_palette_result(
         const MillenniumDosTitleBiosResultObservation&,
         std::span<const std::uint8_t> titles_executable);
+    void execute_title_main_allocation_start(std::uint64_t sequence,
+        std::uint16_t call_address, std::uint16_t call_target);
+    void observe_dos_memory_result(
+        const MillenniumDosTitleDosResultObservation&);
+    void observe_dos_file_result(
+        const MillenniumDosTitleDosFileResultObservation&,
+        std::span<const std::uint8_t> title_library = {});
 
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
@@ -167,6 +258,19 @@ private:
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results_;
     std::uint16_t title_main_call_address_ = 0;
     std::uint16_t title_main_call_target_ = 0;
+    MillenniumDosTitleDosBoundary dos_boundary_;
+    std::vector<MillenniumDosTitleDosResultRecord> dos_results_;
+    std::vector<MillenniumDosTitleDosFileResultRecord> dos_file_results_;
+    std::uint16_t dos_file_handle_ = 0;
+    std::uint16_t dos_file_length_low_ = 0;
+    std::uint16_t title_library_segment_ = 0;
+    std::uint16_t title_library_paragraphs_ = 0;
+    std::uint16_t title_library_handle_ = 0;
+    std::uint32_t title_library_cursor_ = 0;
+    std::uint8_t title_library_read_index_ = 0;
+    std::uint16_t title_library_first_read_count_ = 0;
+    std::uint16_t failure_address_ = 0;
+    std::uint16_t continuation_address_ = 0;
 };
 
 } // namespace eon

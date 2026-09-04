@@ -67,6 +67,8 @@ std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> RuntimeHost::millenn
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_private_interrupt_result(MillenniumDosTitlePrivateInterruptResultObservation o){if(revoking())return {false,"Title private-interrupt result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_private_interrupt_result(o);}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_selected_callee_result(MillenniumDosTitleSelectedCalleeResultObservation o){if(revoking())return {false,"Selected title-callee result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_selected_callee_result(o);}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_bios_result(MillenniumDosTitleBiosResultObservation o){if(revoking())return {false,"Title BIOS result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_bios_result(o);}
+MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_dos_memory_result(MillenniumDosTitleDosResultObservation o){if(revoking())return {false,"Title DOS-memory result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_dos_memory_result(o);}
+MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_dos_file_result(MillenniumDosTitleDosFileResultObservation o){if(revoking())return {false,"Title DOS-file result rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_dos_file_result(o);}
 
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_call_return(o);}
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_stack_word(o);}
@@ -361,6 +363,12 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_write,(const
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_variant_write,(const DeuterosAmigaObservedTitleCommandPlanarVariantWrite o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_negative_service,(const DeuterosAmigaObservedTitleCommandNegativeService o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_pointer_route,(const DeuterosAmigaObservedTitlePostCommandPointerRoute o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_graphics_return,(const DeuterosAmigaObservedGraphicsVectorReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_first_dispatch,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_first_dispatch_header,(const DeuterosAmigaObservedTitleFirstDispatchHeader o),(o))
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_first_dispatch_packet,(),())
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_first_dispatch_decode,(),())
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail,(),())
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -412,6 +420,39 @@ MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_xbios_
     const MillenniumAtariXbiosSelectorTwoObservation observation) {
     if (revoking()) return {false, "XBIOS selector-2 result rejected during source revocation"};
     return NativeSessionController::observe_millennium_atari_xbios_selector_two(observation);
+}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_xbios_selector_three(
+    const MillenniumAtariXbiosSelectorThreeObservation observation) {
+    if (revoking()) return {false, "XBIOS selector-3 result rejected during source revocation"};
+    return NativeSessionController::observe_millennium_atari_xbios_selector_three(observation);
+}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_xbios_selector_four(
+    const MillenniumAtariXbiosSelectorFourObservation observation) {
+    if (revoking()) return {false, "XBIOS selector-4 result rejected during source revocation"};
+    return NativeSessionController::observe_millennium_atari_xbios_selector_four(observation);
+}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_line_a(
+    const MillenniumAtariLineAObservation observation) {
+    if (revoking()) return {false, "Line-A result rejected during source revocation"};
+    return NativeSessionController::observe_millennium_atari_line_a(observation);
+}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_xbios_selector_21(
+    const MillenniumAtariXbiosSelector21Observation observation) {
+    if (revoking()) return {false, "XBIOS selector-21 result rejected during source revocation"};
+    return NativeSessionController::observe_millennium_atari_xbios_selector_21(observation);
+}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_xbios_selector_6(
+    const MillenniumAtariXbiosSelector6Observation observation) {
+    if (revoking()) return {false, "XBIOS selector-6 result rejected during source revocation"};
+    return NativeSessionController::observe_millennium_atari_xbios_selector_6(observation);
+}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_bchg_2b55a(
+    const MillenniumAtariBchgObservation observation) {
+    if (revoking()) return {false, "BCHG rejected during source revocation"};
+    return NativeSessionController::observe_millennium_atari_bchg_2b55a(observation);
 }
 
 void RuntimeHost::begin_source_revocation() {
