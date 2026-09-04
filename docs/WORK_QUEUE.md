@@ -168,6 +168,9 @@ remaining `$403f4` batch; do not infer its graphics/service behavior.
 The first `$20094` graphics return now advances to `$200b0`. Continue only
 with the exact `-$198` return using the same observed library base; do not
 invent its D0 byte or descriptor effect.
+The exact `-$198` return now advances the literal descriptor setup to
+`$200f4`. Continue only with the same-library `-$1a4` return; do not infer its
+copy result or display output.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

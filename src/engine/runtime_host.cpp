@@ -237,7 +237,9 @@ std::optional<MillenniumDosSecondFunctionCallbackCheckpoint> RuntimeHost::millen
 #define EON_HOST_BDF(name,type) MillenniumDosBdfObservationResult RuntimeHost::name(type o){if(revoking())return{false,"$0bdf observation rejected during source revocation"};return NativeSessionController::name(o);}
 EON_HOST_BDF(observe_millennium_dos_bdf_byte,MillenniumDosBdfByteObservation) EON_HOST_BDF(observe_millennium_dos_bdf_word,MillenniumDosBdfWordObservation) EON_HOST_BDF(observe_millennium_dos_bdf_poll_return,MillenniumDosBdfPollReturnObservation)
 EON_HOST_BDF(observe_millennium_dos_bdf_mapping_return,MillenniumDosBdfMappingReturnObservation)
+EON_HOST_BDF(observe_millennium_dos_bdf_far_byte,MillenniumDosBdfFarByteObservation)
 EON_HOST_BDF(observe_millennium_dos_bdf_external_return,MillenniumDosBdfExternalReturnObservation)
+EON_HOST_BDF(observe_millennium_dos_bdf_terminal_jump,MillenniumDosBdfTerminalJumpObservation)
 #undef EON_HOST_BDF
 std::optional<MillenniumDosBdfCheckpoint>RuntimeHost::millennium_dos_bdf_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_bdf_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
