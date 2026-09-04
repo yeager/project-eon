@@ -70,7 +70,12 @@ for package in "$@"; do
         exit 1
       fi
       rpmspec --parse "$spec_file" >/dev/null
-      rpmlint --strict "$package"
+      # Keep rpmlint strict for every actionable diagnostic.  The config only
+      # records three properties of this non-release CPack artifact which the
+      # package cannot truthfully change: it is deliberately unsigned, CPack
+      # emits Vendor/Contact but no Packager header, and Ubuntu's rpmlint 2.5
+      # license table predates the valid SPDX MIT identifier.
+      rpmlint --strict -c "$(dirname "$0")/rpmlintrc" "$package"
       ;;
     *)
       echo "unsupported package: $package" >&2

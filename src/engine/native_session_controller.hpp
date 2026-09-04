@@ -275,6 +275,8 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_mode_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_222c0_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_timer_state(DeuterosAmigaObservedTitlePostAdjustedTimerState);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_4069a_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_join_byte(DeuterosAmigaObservedTitlePostAdjustedJoinByte);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -343,6 +345,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_xbios_38(MillenniumAtariXbiosSelector38Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_config_final_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_post_config_fopen(MillenniumAtariGemdosSelector61Observation);
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

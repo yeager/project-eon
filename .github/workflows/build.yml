@@ -731,6 +731,15 @@ jobs:
             assets/fonts/NotoSansKR-Regular.otf assets/fonts/NotoSansSC-Regular.otf \
             assets/fonts/OFL-1.1.txt "$APP/Resources/assets/fonts/"
           cp po/{ar,de,el,en_GB,es,fi,fr,hi,it,ja,ko,nl,no,pl,pt_BR,ru,sv,tr,uk,zh_CN}.po "$APP/Resources/po/"
+          # Ninja may also flatten MACOSX_PACKAGE_LOCATION sources beside the
+          # executable. Remove only those known generated duplicates after
+          # staging the canonical Resources tree; the IPA verifier continues
+          # to reject every other undeclared file or directory.
+          for DUPLICATE in "$APP/assets" "$APP/po"; do
+            if [ -d "$DUPLICATE" ]; then
+              find "$DUPLICATE" -depth -delete
+            fi
+          done
           bash packaging/ios/package-ipa.sh "$APP" "$GITHUB_WORKSPACE/project-eon-ipados-arm64-unsigned.ipa"
           # Validate the finished archive, not only the app bundle passed to
           # the packager, before it can enter the artifact manifest/upload.

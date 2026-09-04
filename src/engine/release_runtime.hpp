@@ -83,6 +83,7 @@ struct DeuterosAmigaOpeningPresentationSnapshot {
     std::size_t active_channel_count = 0;
     bool frame_composed_on_last_tick = false;
     std::optional<std::vector<std::uint8_t>> rgba_frame;
+    std::vector<AdmittedGameText> admitted_game_text;
 };
 
 // The narrow, immutable facts that are safe to show after the opening has
@@ -96,6 +97,7 @@ struct DeuterosAmigaTitleStageBoundarySnapshot {
     bool local_prefix_executed = false;
     std::array<RgbColor, 20> graphics_setup_palette{};
     std::optional<DeuterosAmigaAlternateRendererTrace> alternate_renderer_trace;
+    std::vector<AdmittedGameText> admitted_game_text;
 };
 
 // Copy-only diagnostics for the currently owned title dependency chain. It
@@ -794,6 +796,8 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_mode_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_222c0_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_timer_state(DeuterosAmigaObservedTitlePostAdjustedTimerState);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_4069a_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_join_byte(DeuterosAmigaObservedTitlePostAdjustedJoinByte);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -866,6 +870,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_xbios_38(MillenniumAtariXbiosSelector38Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_config_final_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_post_config_fopen(MillenniumAtariGemdosSelector61Observation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

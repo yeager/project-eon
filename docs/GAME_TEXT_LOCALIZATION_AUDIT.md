@@ -22,6 +22,14 @@ overlapping, mixed-source, forged, uncatalogued, or incompletely translated
 tables before returning any text. Every non-English shipped language must
 contain a non-empty PO entry; English uses the canonical English message.
 
+The Deuteros Amiga native opening and title-stage presentation snapshots now
+carry only the six copy-only admitted provenance tokens, never their source
+ADF. This closes a runtime lifecycle gap: a prompt can be resolved by stable
+ID through the same selected catalog before and after the opening-to-title
+handoff, and Original and Modern receive identical localized text. No prompt
+is displayed merely because it is present in the table; the recovered runtime
+must still prove the state in which that prompt is actually requested.
+
 ## Current audited coverage
 
 The compiled registry and `docs/game-text-map.json` currently admit 98 exact

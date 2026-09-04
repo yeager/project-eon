@@ -543,9 +543,21 @@ if(UNIX AND NOT APPLE)
     # original archive, data path, or mutable save location.
     install(FILES packaging/project-eon.desktop
         DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
-    install(FILES assets/branding/project-eon-logo-v1.png
-        DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps"
-        RENAME "project-eon.png")
+    # Keep one copy of the generated branding asset in the package.  The
+    # freedesktop icon lookup path is a relative link to the runtime resource,
+    # so it remains valid under CPack's staging root and after installation.
+    install(CODE [[
+file(MAKE_DIRECTORY
+  "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps")
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -E create_symlink
+    "../../../../project-eon/assets/branding/project-eon-logo-v1.png"
+    "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps/project-eon.png"
+  RESULT_VARIABLE eon_icon_link_result)
+if(NOT eon_icon_link_result EQUAL 0)
+  message(FATAL_ERROR "Unable to create the Project Eon desktop icon link")
+endif()
+]])
 endif()
 if(UNIX AND NOT APPLE)
     # Installed Linux applications use shared data, never /usr/bin/assets.
@@ -643,7 +655,7 @@ set(CPACK_PACKAGE_NAME "project-eon")
 set(CPACK_PACKAGE_VENDOR "Project Eon contributors")
 set(CPACK_PACKAGE_CONTACT "https://github.com/yeager/project-eon")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-    "SDL3 reimplementation project for Millennium 2.2 and Deuteros")
+    "SDL3 re-implementation project for Millennium 2.2 and Deuteros")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 # Project Eon ships a preservation runtime but no game data.  Debian's
 # archive policy rightfully rejects an empty ``games`` package, so classify
@@ -670,7 +682,18 @@ set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/yeager/project-eon")
 set(CPACK_RPM_PACKAGE_DESCRIPTION
-    "Preservation-first SDL3 reimplementation launcher for Millennium 2.2 and Deuteros. Project Eon reads user-supplied original media in place and never distributes game data.")
+    "Preservation-first SDL3 re-implementation launcher for Millennium 2.2 and Deuteros.\n Project Eon reads user-supplied original media in place.\n It never distributes game data.")
 set(CPACK_RPM_PACKAGE_RELEASE "1")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+# Match the package payload compressor to the policy-compressed manual page.
+# CPack's distribution default may otherwise select bzip2 while the shared
+# Debian/RPM staging rule has correctly produced project-eon.6.gz.
+set(CPACK_RPM_COMPRESSION_TYPE "gzip")
+# These standard filesystem paths are owned by the distribution filesystem
+# package.  CPack must list Project Eon's children without claiming the parent
+# directories themselves.
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION
+    "/usr/share/icons"
+    "/usr/share/man"
+    "/usr/share/man/man6")
 include(CPack)

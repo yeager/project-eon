@@ -1092,8 +1092,10 @@ struct DeuterosAmigaTitlePostAdjusted222c0ReturnPlan {
 struct DeuterosAmigaObservedTitlePostAdjustedTimerState {
     std::uint64_t trace_sequence=0;
     DeuterosAmigaObservedLocalCallReturn service_return;
-    std::array<std::uint32_t,4> source_addresses{};
-    std::uint16_t current_word=0,previous_word=0,inhibit_word=0;
+    std::array<std::uint32_t,3> source_addresses{};
+    std::optional<std::uint32_t> inhibit_source_address;
+    std::optional<std::uint16_t> inhibit_word;
+    std::uint16_t current_word=0,previous_word=0;
     std::uint32_t timer_long=0;
 };
 struct DeuterosAmigaTitlePostAdjustedTimerStatePlan {
@@ -1102,6 +1104,20 @@ struct DeuterosAmigaTitlePostAdjustedTimerStatePlan {
     std::uint32_t word_destination=0,timer_destination=0,join_address=0;
     std::uint16_t word_value=0;
     std::uint32_t timer_value=0,call_address=0,call_target=0,return_address=0;
+};
+struct DeuterosAmigaTitlePostAdjusted4069aReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t timer_destination=0,timer_value=0,join_address=0;
+};
+struct DeuterosAmigaObservedTitlePostAdjustedJoinByte {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,source_address=0;
+    std::uint8_t observed_value=0;
+};
+struct DeuterosAmigaTitlePostAdjustedJoinBytePlan {
+    DeuterosAmigaObservedTitlePostAdjustedJoinByte observation;
+    bool zero_branch=false;
+    std::uint32_t zero_target=0,next_call_address=0,next_call_target=0;
 };
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
@@ -3067,14 +3083,44 @@ public:
         if(o.trace_sequence<=last_command_sequence_||o.service_return.trace_sequence!=o.trace_sequence
             ||o.service_return.call_address!=0x4057a||o.service_return.call_target!=0x23e4e
             ||o.service_return.return_address!=0x40580
-            ||o.source_addresses!=std::array<std::uint32_t,4>{{0x1ffc8,0x40414,0x40410,0x22d34}})
+            ||o.source_addresses!=std::array<std::uint32_t,3>{{0x1ffc8,0x40414,0x40410}})
             throw std::runtime_error("Deuteros post-adjusted timer state does not match caller boundary");
         const bool changed=o.current_word!=o.previous_word;
         const auto timer=changed?0U:o.timer_long;
-        const bool due=timer>=0xea60U&&o.inhibit_word!=0x11U;
+        const bool checks_inhibit=timer>=0xea60U;
+        if(checks_inhibit!=(o.inhibit_source_address.has_value()&&o.inhibit_word.has_value())
+            ||(checks_inhibit&&*o.inhibit_source_address!=0x22d34U))
+            throw std::runtime_error("Deuteros post-adjusted inhibit read does not match executed branch");
+        const bool due=checks_inhibit&&*o.inhibit_word!=0x11U;
         post_adjusted_timer_state_=o;last_command_sequence_=o.trace_sequence;
         return DeuterosAmigaTitlePostAdjustedTimerStatePlan{o,changed,changed,due,0x40414,0x40410,
             due?0x405b6U:0x405c6U,o.current_word,timer,due?0x405b6U:0U,due?0x4069aU:0U,due?0x405bcU:0U};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted4069aReturnPlan> observe_post_adjusted_4069a_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!post_adjusted_timer_state_||post_adjusted_4069a_return_)return std::nullopt;
+        const auto timer=post_adjusted_timer_state_->current_word!=post_adjusted_timer_state_->previous_word
+            ?0U:post_adjusted_timer_state_->timer_long;
+        const bool due=timer>=0xea60U&&post_adjusted_timer_state_->inhibit_word
+            &&*post_adjusted_timer_state_->inhibit_word!=0x11U;
+        if(!due)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x405b6||o.call_target!=0x4069a||o.return_address!=0x405bc)
+            throw std::runtime_error("Deuteros $4069a return does not match caller boundary");
+        post_adjusted_4069a_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjusted4069aReturnPlan{o,0x40410,0,0x405c6};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedJoinBytePlan> observe_post_adjusted_join_byte(const DeuterosAmigaObservedTitlePostAdjustedJoinByte&o){
+        if(!post_adjusted_timer_state_||post_adjusted_join_byte_)return std::nullopt;
+        const auto timer=post_adjusted_timer_state_->current_word!=post_adjusted_timer_state_->previous_word
+            ?0U:post_adjusted_timer_state_->timer_long;
+        const bool due=timer>=0xea60U&&post_adjusted_timer_state_->inhibit_word
+            &&*post_adjusted_timer_state_->inhibit_word!=0x11U;
+        if(due&&!post_adjusted_4069a_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x405c6||o.source_address!=0x1bf36)
+            throw std::runtime_error("Deuteros post-adjusted join byte does not match boundary");
+        post_adjusted_join_byte_=o;last_command_sequence_=o.trace_sequence;
+        const bool zero=o.observed_value==0;
+        return DeuterosAmigaTitlePostAdjustedJoinBytePlan{o,zero,zero?0x40638U:0U,
+            zero?0U:0x405d0U,zero?0U:0x1f9a4U};
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
@@ -3294,6 +3340,8 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_mode_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_222c0_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedTimerState> post_adjusted_timer_state_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_4069a_return_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedJoinByte> post_adjusted_join_byte_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};
