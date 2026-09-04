@@ -2,6 +2,7 @@
 
 #include "data/atari_st_prg.hpp"
 #include "data/fat12.hpp"
+#include "engine/atari_st_prg_load_session.hpp"
 
 #include <span>
 
@@ -18,6 +19,9 @@ public:
         std::span<const std::uint8_t> program);
 
     [[nodiscard]] const MillenniumAtariBootstrap& bootstrap() const { return bootstrap_; }
+    [[nodiscard]] const AtariStPrgLoadCheckpoint& native_prg_image() const {
+        return prg_load_.checkpoint();
+    }
     [[nodiscard]] const MillenniumAtariBssEntry& bss_entry() const { return bss_entry_; }
     [[nodiscard]] const MillenniumAtariBssSource& bss_source() const { return bss_source_; }
     [[nodiscard]] const MillenniumAtariMaterializedTarget& target() const { return target_; }
@@ -52,6 +56,7 @@ public:
     }
 
 private:
+    MillenniumAtariPrgLoadSession prg_load_;
     MillenniumAtariBootstrap bootstrap_;
     MillenniumAtariBssEntry bss_entry_;
     MillenniumAtariBssSource bss_source_;

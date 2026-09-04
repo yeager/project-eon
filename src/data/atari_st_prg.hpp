@@ -18,6 +18,7 @@ namespace eon {
 struct AtariStRelocation {
     std::uint32_t offset = 0;
     std::uint32_t original_value = 0;
+    constexpr bool operator==(const AtariStRelocation&) const = default;
 };
 
 // Layout recovered from an Atari ST GEMDOS executable (the 0x601a PRG

@@ -231,6 +231,8 @@ public:
     deuteros_amiga_title_display_trace_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitlePlanarPatchSnapshot>
     deuteros_amiga_title_planar_patch() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePlanarSurfaceSnapshot>
+    deuteros_amiga_title_planar_surface() const;
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
     deuteros_atari_bootstrap_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAtariBootstrapPresentationSnapshot>

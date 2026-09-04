@@ -572,6 +572,14 @@ NativeSessionController::deuteros_amiga_title_planar_patch() const {
     return runtime_.deuteros_amiga_title_planar_patch();
 }
 
+std::optional<DeuterosAmigaTitlePlanarSurfaceSnapshot>
+NativeSessionController::deuteros_amiga_title_planar_surface() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_display_trace_boundary) {
+        return std::nullopt;
+    }
+    return runtime_.deuteros_amiga_title_planar_surface();
+}
+
 std::optional<DeuterosAtariBootstrapCheckpoint>
 NativeSessionController::deuteros_atari_bootstrap_checkpoint() const {
     if (state_ != NativeSessionState::deuteros_atari_bootstrap) return std::nullopt;

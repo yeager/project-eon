@@ -4067,6 +4067,13 @@ parent return result. Diagnostics expose `psp_modeled=false`,
 of filling those gaps. The child segment is a deterministic Eon address-space
 key, not a claimed historical DOS allocation address.
 
+The next deterministic native continuation is documented in
+[Millennium DOS native title initialization](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
+It executes the exact `$1b80..$1b95` register setup and collapses the
+byte-verified `$0122` preservation wrapper into its known function-$00
+`INT $91` request. The owned checkpoint stops before the private interrupt
+returns and explicitly leaves the original stack storage unmodelled.
+
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
 terminator) is 155 bytes with SHA-256
@@ -6090,16 +6097,27 @@ so a register-only return cannot bypass the recovered writes. Nonzero mode
 routes remain explicit evidence boundaries. No host renderer, glyph meaning,
 colour assignment, or unseen memory effect is inferred from these writes.
 
-The renderer-facing consequence is deliberately narrower than a title
-frame. After the existing v4/v5 trace independently admits four contiguous
-320x200 planes (`$b5f0`, `$d530`, `$f470`, `$113b0`), `$28` bytes per row and
-the palette at `$1ed24`, Eon may decode the most recent 32-byte command result
-as one immutable 8x8 Original patch. Every index is reconstructed by reading
-the four applied plane bytes back from native runtime memory, most-significant
-bit first, and every RGBA value comes from the original RGB4 palette. No
-uninitialized surrounding pixel is exposed as black or transparent, and a
-trace boundary without a fully initialized in-layout patch exposes no
-surface.
+The renderer-facing consequence remains bounded by known pixels rather than
+claiming a complete title frame. After the existing v4/v5 trace independently
+admits four contiguous 320x200 planes (`$b5f0`, `$d530`, `$f470`, `$113b0`),
+`$28` bytes per row and the palette at `$1ed24`, Eon can still expose the most
+recent 32-byte command result as one immutable 8x8 Original patch. Every index
+is reconstructed from its four plane bytes, most-significant bit first, and
+every RGBA value comes from the original RGB4 palette.
+
+The native runtime now also owns a session-scoped sparse planar surface. Each
+accepted `$20..$8f` command is applied atomically only after a second check of
+all 32 addresses against the recovered row/plane order. Successive commands
+therefore accumulate into the proven 320x200 geometry, including legitimate
+overwrites, instead of discarding every patch except the newest one. The
+surface reports its last command generation, patch count, unique initialized
+plane-byte count, decoded-pixel count and the matching runtime-memory
+checksum. A pixel becomes valid only when all four of its plane bytes came
+from admitted command effects. Unwritten pixels retain a zero validity byte
+and zero alpha; their zero-filled storage is not asserted to be original
+black. Both the 64,000-byte validity map and RGBA buffer are revoked with the
+source session. Before display-trace admission, after revocation, or without
+one complete command, no surface is published.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
