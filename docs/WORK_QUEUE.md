@@ -8,6 +8,14 @@ verified `TITLE.LIB`. The repeated `$1ada` call now consumes a fresh typed
 INT `$91` result and sixteen fresh typed BIOS palette results, returns through
 the caller setup, and stops before `$1c0e->$135e`. The next DOS evidence job
 is recovering that callee without inventing setup or driver behaviour.
+The `$135e` callee is now native and atomically binds its selected allocation
+pointer into title state. The `$1c11->$0ff3` request now reaches typed private
+INT `$91` function `$0019` at `$0127`. Continue only with its raw result;
+its setup ABI remains unproven. The raw result is now retained separately and
+the caller stops before `$1c17->$1725`; recover that callee next.
+The `$1725->$1390` route is now native through its exact pointer setup and
+stops at the typed two-word far read `$13aa`. Supply only the genuine words
+from the reported relocated source before continuing.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -20,6 +28,14 @@ RTS. The next exact boundary is the saved-register `MOVEM.L (A7)+` at
 The typed frame now restores all 15 registers and returns through `$2aac8`.
 The caller-connected `$2aa68` prefix is native through XBIOS selector `$26`;
 the next exact boundary is `TRAP #14` at `$2aa72`.
+Selector `$26` now has a typed return; cleanup, RTS, and caller D7 setup are
+native. The absolute `$2aa0c->$2a5aa` call and its argument pushes are native.
+The next exact boundary is GEMDOS selector `$3d` `TRAP #1` at `$2a5b4`;
+continue only with a generation-owned typed Fopen result.
+The typed raw result is now admitted and stored exactly. Nonnegative results
+load the exact literal arguments and stop before `JSR $2a5c2` at `$2aa28`.
+Negative results reach the verified self-loop at `$2a632`. The positive callee
+is the next executable evidence job.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -255,8 +271,15 @@ Its typed `$20e6a -> $1fb9a` return now reloads the owned selector, adds
 longword `$127a3980` and commits it to `$1378e`. Its typed
 `$20e96 -> $22bca` return now enters `$20ba8`; ordered observations of
 `$13008/$202bc` resolve the first loop branch. The clear-carry route stops
-before `$20bd6 -> $41a68` (D0 `$0048`, D1 `$0010`); carry/zero stops at
-`$20bea`. Continue only with the selected exact branch/call return.
+before `$20bd6 -> $41a68` (D0 `$0048`, D1 `$0010`); carry/zero skips at
+`$20bea`. Exact typed `$41a68` returns and local skip routes now complete all
+eight bounded iterations and return through `$20bf0`. The typed
+`$20bf4 -> $1f9b8` return and exact three-read pointer chain now select and
+atomically write `$00b0/$00bd` to `$417a2`. Selector `$005c` now follows the
+direct `$41c32` route, resolves the corresponding immutable resource pointer,
+and observes the required destination fallback at `$1f168`. It stops before
+the selected `$74576/$76e24` header read at `$41c72`; continue by proving each
+distinct low-height payload, never by substituting the prior high-path stream.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

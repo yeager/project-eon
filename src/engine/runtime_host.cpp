@@ -381,6 +381,11 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_first_
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_second_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_service_third_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_nested_words,(const DeuterosAmigaObservedTitlePostCommandNestedWords o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_nested_call_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_nested_loop,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_continuation_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_pointer_chain,(const DeuterosAmigaObservedTitlePostCommandPointerChain o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_dispatch_destination,(const DeuterosAmigaObservedTitlePostCommandDispatchDestination o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -496,6 +501,11 @@ MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_loop_e
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_movem_frame(const MillenniumAtariMovemFrameObservation o){if(revoking())return{false,"MOVEM frame rejected during revocation"};return NativeSessionController::observe_millennium_atari_movem_frame(o);}
 
 MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_jsr_2aa68(){if(revoking())return{false,"JSR $2aa68 rejected during revocation"};return NativeSessionController::execute_millennium_atari_jsr_2aa68();}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_xbios_selector_38(const MillenniumAtariXbiosSelector38Observation o){if(revoking())return{false,"Selector 38 rejected during revocation"};return NativeSessionController::observe_millennium_atari_xbios_selector_38(o);}
+
+MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_jsr_2aa0c(){if(revoking())return{false,"JSR $2aa0c rejected during revocation"};return NativeSessionController::execute_millennium_atari_jsr_2aa0c();}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_gemdos_selector_61(const MillenniumAtariGemdosSelector61Observation o){if(revoking())return{false,"GEMDOS selector 61 rejected during revocation"};return NativeSessionController::observe_millennium_atari_gemdos_selector_61(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;

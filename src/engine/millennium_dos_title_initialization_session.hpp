@@ -46,6 +46,10 @@ enum class MillenniumDosTitleInitializationState {
     video_vector_far_read_boundary,
     post_video_hook_mode_call_boundary,
     post_video_setup_call_boundary,
+    post_video_graphics_call_boundary,
+    post_video_private_interrupt_result_boundary,
+    post_video_followup_call_boundary,
+    graphics_descriptor_far_read_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };
@@ -277,6 +281,8 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations;
     std::uint16_t failure_address = 0;
     std::uint16_t continuation_address = 0;
+    std::uint16_t post_video_observed_ax = 0;
+    std::uint16_t post_video_observed_flags = 0;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -329,6 +335,12 @@ public:
         std::uint16_t call_address, std::uint16_t call_target);
     void execute_post_video_mode_call(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
+    void execute_post_video_setup(std::uint64_t sequence,
+        std::uint16_t call_address, std::uint16_t call_target);
+    void execute_post_video_graphics_call(std::uint64_t sequence,
+        std::uint16_t call_address, std::uint16_t call_target);
+    void execute_post_video_followup(std::uint64_t sequence,
+        std::uint16_t call_address, std::uint16_t call_target);
 
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
@@ -373,6 +385,8 @@ private:
     std::vector<MillenniumDosTitleSetupBiosResultObservation> setup_bios_results_;
     MillenniumDosTitleFarReadBoundary far_read_boundary_;
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations_;
+    std::uint16_t post_video_observed_ax_ = 0;
+    std::uint16_t post_video_observed_flags_ = 0;
 };
 
 } // namespace eon

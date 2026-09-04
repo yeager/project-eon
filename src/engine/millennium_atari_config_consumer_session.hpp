@@ -30,6 +30,10 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     movem_restore_boundary,
     jsr_2aa68_boundary,
     xbios_selector_38_boundary,
+    jsr_2aa0c_boundary,
+    gemdos_selector_61_boundary,
+    jsr_2a5c2_boundary,
+    fopen_failure_spin,
     revoked,
 };
 
@@ -84,6 +88,12 @@ struct MillenniumAtariXbiosSelector21Observation {
     std::uint32_t result_d0 = 0;
 };
 using MillenniumAtariXbiosSelector6Observation = MillenniumAtariXbiosSelector21Observation;
+using MillenniumAtariXbiosSelector38Observation = MillenniumAtariXbiosSelector21Observation;
+struct MillenniumAtariGemdosSelector61Observation {
+    std::uint64_t generation=0; std::uint64_t sequence=0;
+    std::uint32_t trap_address=0; std::uint16_t selector=0;
+    std::int32_t result_d0=0;
+};
 
 struct MillenniumAtariBchgObservation {
     std::uint64_t generation = 0;
@@ -230,6 +240,28 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::string movem_rts_sha256; std::string caller_jsr_2aa68_sha256;
     std::uint32_t selector_38_pointer_argument = 0;
     std::string jsr_2aa68_prefix_sha256;
+    bool selector_38_result_observed = false;
+    std::uint32_t selector_38_result_d0 = 0;
+    std::uint32_t selector_38_stack_cleanup_bytes = 0;
+    std::uint32_t caller_d7 = 0;
+    std::string selector_38_return_sha256;
+    std::string selector_38_caller_sha256;
+    std::uint32_t gemdos_trap_address = 0;
+    std::uint16_t gemdos_selector = 0;
+    std::uint16_t gemdos_open_mode = 0;
+    std::uint32_t gemdos_filename_pointer = 0;
+    std::string caller_jsr_2a5aa_sha256;
+    std::string gemdos_61_prefix_sha256;
+    bool gemdos_61_result_observed=false;
+    std::int32_t gemdos_61_result_d0=0;
+    std::uint32_t gemdos_handle_store_address=0;
+    std::uint32_t gemdos_stack_cleanup_bytes=0;
+    std::uint32_t fopen_branch_address=0;
+    std::uint32_t fopen_branch_target=0;
+    std::uint32_t fopen_positive_d0=0;
+    std::uint32_t fopen_positive_d1=0;
+    std::string gemdos_61_return_sha256;
+    std::string fopen_caller_branch_sha256;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -299,6 +331,12 @@ public:
     [[nodiscard]] NativeRuntimeEffectBatch make_loop_epilogue_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_movem_frame(const MillenniumAtariMovemFrameObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2aa68();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_38(
+        const MillenniumAtariXbiosSelector38Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2aa0c();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_gemdos_selector_61(
+        const MillenniumAtariGemdosSelector61Observation& observation);
+    [[nodiscard]] NativeRuntimeEffectBatch make_gemdos_selector_61_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

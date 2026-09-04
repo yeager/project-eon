@@ -361,6 +361,20 @@ std::vector<LocalizedGameText> localize_all_game_text_from_source(
     const Game game, const Platform platform, const std::string_view source_leaf,
     const std::span<const std::uint8_t> source_bytes,
     const std::string_view selected_language, const Translator& translator) {
+    const auto admitted = admit_all_game_text_from_source(
+        game, platform, source_leaf, source_bytes);
+    std::vector<LocalizedGameText> localized;
+    localized.reserve(admitted.size());
+    for (const auto& token : admitted) {
+        localized.push_back(localize_admitted_game_text(
+            game, platform, token, selected_language, translator));
+    }
+    return localized;
+}
+
+std::vector<AdmittedGameText> admit_all_game_text_from_source(
+    const Game game, const Platform platform, const std::string_view source_leaf,
+    const std::span<const std::uint8_t> source_bytes) {
     const auto source_sha256 = to_hex(sha256(source_bytes));
     std::vector<const GameTextDefinition*> matches;
     for (const auto& definition : definitions) {
@@ -371,17 +385,39 @@ std::vector<LocalizedGameText> localize_all_game_text_from_source(
     if (matches.empty()) throw std::runtime_error("Uncatalogued original game-text source leaf");
     std::ranges::sort(matches, {}, &GameTextDefinition::source_offset);
     std::size_t preceding_end = 0;
-    std::vector<LocalizedGameText> localized;
-    localized.reserve(matches.size());
+    std::vector<AdmittedGameText> admitted;
+    admitted.reserve(matches.size());
     for (const auto* definition : matches) {
         if (!game_text_range_matches(*definition, source_bytes))
             throw std::runtime_error("Recovered game-text source range is invalid");
-        if (!localized.empty() && definition->source_offset < preceding_end)
+        if (!admitted.empty() && definition->source_offset < preceding_end)
             throw std::runtime_error("Recovered game-text source ranges overlap");
         preceding_end = definition->source_offset + definition->source_size;
-        localized.push_back(localize_definition(*definition, selected_language, translator));
+        admitted.push_back({std::string(definition->id), std::string(definition->original_text),
+            std::string(definition->canonical_english), std::string(definition->source_leaf),
+            std::string(definition->source_sha256), definition->source_offset,
+            definition->source_size, std::string(definition->source_language)});
     }
-    return localized;
+    return admitted;
+}
+
+LocalizedGameText localize_admitted_game_text(const Game game, const Platform platform,
+    const AdmittedGameText& admitted, const std::string_view selected_language,
+    const Translator& translator) {
+    for (const auto& definition : definitions) {
+        if (definition.game == game && definition.platform == platform
+            && definition.id == admitted.id
+            && definition.original_text == admitted.original_text
+            && definition.canonical_english == admitted.canonical_english
+            && definition.source_leaf == admitted.source_leaf
+            && definition.source_sha256 == admitted.source_sha256
+            && definition.source_offset == admitted.source_offset
+            && definition.source_size == admitted.source_size
+            && definition.source_language == admitted.source_language) {
+            return localize_definition(definition, selected_language, translator);
+        }
+    }
+    throw std::runtime_error("Invalid admitted game-text provenance token");
 }
 
 } // namespace eon

@@ -41,6 +41,20 @@ struct LocalizedGameText {
     bool catalog_translation_used = false;
 };
 
+// Copy-only capability created while the complete source leaf is still
+// available for hashing. Runtime snapshots may retain this provenance token,
+// but never the commercial source leaf itself.
+struct AdmittedGameText {
+    std::string id;
+    std::string original_text;
+    std::string canonical_english;
+    std::string source_leaf;
+    std::string source_sha256;
+    std::size_t source_offset = 0;
+    std::size_t source_size = 0;
+    std::string source_language;
+};
+
 [[nodiscard]] std::span<const GameTextDefinition> game_text_definitions();
 
 // Rehashes the complete original leaf and checks the exact source range. This
@@ -75,6 +89,17 @@ struct LocalizedGameText {
 [[nodiscard]] std::vector<LocalizedGameText> localize_all_game_text_from_source(
     Game game, Platform platform, std::string_view source_leaf,
     std::span<const std::uint8_t> source_bytes,
+    std::string_view selected_language, const Translator& translator);
+
+[[nodiscard]] std::vector<AdmittedGameText> admit_all_game_text_from_source(
+    Game game, Platform platform, std::string_view source_leaf,
+    std::span<const std::uint8_t> source_bytes);
+
+// Revalidates every token field against the compiled source map before using
+// it. A forged or stale runtime snapshot therefore cannot acquire a semantic
+// key merely by presenting plausible original text.
+[[nodiscard]] LocalizedGameText localize_admitted_game_text(
+    Game game, Platform platform, const AdmittedGameText& admitted,
     std::string_view selected_language, const Translator& translator);
 
 } // namespace eon
