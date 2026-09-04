@@ -4972,7 +4972,15 @@ int main() {
         launch.request.platform = release.platform;
         launch.request.release_language = release.language;
         launch.request.release_sha256 = release.sha256;
-        assert(all_release_runtime.acquire(launch));
+        const auto acquired = all_release_runtime.acquire(launch);
+        if (!acquired) {
+            std::cerr << "All-release acquisition rejected " << release.sha256
+                      << " (" << eon::release_runtime_rejection_label(
+                             all_release_runtime.rejection()) << "): "
+                      << all_release_runtime.rejection_detail() << '\n';
+        }
+        assert(acquired);
+        assert(all_release_runtime.rejection_detail().empty());
         assert(all_release_runtime.session_snapshot());
         const auto& session_snapshot = *all_release_runtime.session_snapshot();
         assert(session_snapshot.game == release.game && session_snapshot.platform == release.platform
@@ -5352,6 +5360,8 @@ int main() {
             assert(!atari_host.observe_millennium_atari_game_init_replicated_byte({1,26,0x2b338,0x2c251,0}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_swapped_pair({1,27,0x2b37a,0x2c251,0,0x2c252,0}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_extended_run({1,28,0x2b3c0,0x2c251,0,0x2c252,0,0x2c253,0}).accepted);
+            assert(!atari_host.execute_millennium_atari_game_init_return().accepted);
+            assert(!atari_host.execute_millennium_atari_game_init_palette_copy_prefix().accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5961,6 +5971,15 @@ int main() {
                 object_gate).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_object_gate(
                 object_gate).accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn first_object_helper{
+                runtime_copy_sequence+55,0x20ca8,0x41ad2,0x20cae,0x12345678,0x2004};
+            auto bad_first_object_helper=first_object_helper;bad_first_object_helper.call_target++;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_first_helper_return(
+                bad_first_object_helper).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_first_helper_return(
+                first_object_helper).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_first_helper_return(
+                first_object_helper).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

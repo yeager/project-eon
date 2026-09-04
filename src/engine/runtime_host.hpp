@@ -257,6 +257,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination(DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_caller_pointer(DeuterosAmigaObservedTitlePostAdjustedCallerPointer);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_object_gate(DeuterosAmigaObservedTitlePostAdjustedObjectGate);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_first_helper_return(DeuterosAmigaObservedLocalCallReturn);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -313,6 +314,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_replicated_byte(MillenniumAtariGameInitReplicatedByteObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_swapped_pair(MillenniumAtariGameInitSwappedPairObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_extended_run(MillenniumAtariGameInitExtendedRunObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_return();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_game_init_palette_copy_prefix();
 
     // Begin before SDL destroys any source-derived object.  A monotonically
     // increasing generation lets a front end reject stale render/audio work

@@ -583,6 +583,7 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_descriptor_b
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_adjusted_dispatch_destination,(const DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_caller_pointer,(const DeuterosAmigaObservedTitlePostAdjustedCallerPointer o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_object_gate,(const DeuterosAmigaObservedTitlePostAdjustedObjectGate o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_first_helper_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 #undef EON_NATIVE_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -750,6 +751,8 @@ MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_replicated_byte(const MillenniumAtariGameInitReplicatedByteObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Replicated-byte run requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_replicated_byte(o);}
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_swapped_pair(const MillenniumAtariGameInitSwappedPairObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Swapped-pair run requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_swapped_pair(o);}
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_extended_run(const MillenniumAtariGameInitExtendedRunObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Extended run requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_extended_run(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_atari_game_init_return(){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Game-init return requires Millennium Atari bootstrap"};return runtime_.execute_millennium_atari_game_init_return();}
+MillenniumAtariConfigConsumerResult NativeSessionController::execute_millennium_atari_game_init_palette_copy_prefix(){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Palette-copy prefix requires Millennium Atari bootstrap"};return runtime_.execute_millennium_atari_game_init_palette_copy_prefix();}
 
 void NativeSessionController::begin_return_to_menu() {
     deuteros_amiga_opening_runner_.reset();

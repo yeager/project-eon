@@ -36,6 +36,9 @@ typed two-word `$13aa` read from relocated `TITLE.LIB+$000f`. The genuine
 `$0503/$1f02` pair is now provenance-checked and normalized to
 `$5050:$0003`. Continue with the typed runtime word at `$13cd`, source
 `$5050:$001b`; do not infer its value from unrelated archive offsets.
+That raw word is now admitted through all typed single-word facades and the
+exact `$13cd` load. Continue at `$13d0` with the typed runtime word from
+`$5050:$0019`; its value and graphics meaning remain unproven.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
 iteration-one setup through `$2b5de` (hash
@@ -73,7 +76,10 @@ It stops only when the next pair/token needs source bytes or at the routine
 RTS. The repeated-byte, swapped-pair, and extended 14-bit run paths at
 `$2b338`, `$2b376`, and `$2b3b8` are now native with typed payload bytes and
 atomic destination effects. The next large Atari job begins with the caller
-continuation after `$2b2be` returns.
+continuation after `$2b2be` returns. That caller and the `$2b448` clear/copy
+prefix are now native through `$2b486`, with the 96-byte original source and
+all 32 longword writes hash-bound and atomic. The palette arithmetic loop and
+its first XBIOS selector-6 boundary are the next large Atari job.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -327,7 +333,8 @@ descriptor and completes its 68-by-168 decode as 22,848 atomic byte writes
 after one typed destination-pointer read. Caller `$20c80` now owns the typed
 `$19d1e` pointer and exact zero branch. The qualifying nonzero object gate
 now owns typed `$ee`/`$f0` bytes and immutable table loads through the first
-`$20ca8->$41ad2` call boundary; continue with its typed return. Do not
+`$20ca8->$41ad2` call. Its typed return and second table pair are now owned;
+continue at the second `$20cb2->$41ad2` return. Do not
 treat the sparse decoded memory as a renderer surface.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

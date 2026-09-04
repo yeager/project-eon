@@ -42,6 +42,8 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_zero_copy_boundary,
     game_init_zero_counter_branch_boundary,
     game_init_complete,
+    game_init_jsr_2b448_boundary,
+    game_init_palette_transform_boundary,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -363,6 +365,12 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::vector<std::uint32_t> game_init_alternate_source_addresses;
     std::vector<std::uint8_t> game_init_alternate_source_bytes;
     std::vector<MillenniumAtariGameInitAlternateWrite> game_init_alternate_writes;
+    std::string game_init_caller_2b448_sha256;
+    std::string game_init_palette_copy_prefix_sha256;
+    std::string game_init_palette_source_sha256;
+    std::array<std::uint32_t,24> game_init_palette_source_longs{};
+    std::uint32_t game_init_palette_clear_destination=0;
+    std::uint32_t game_init_palette_copy_destination=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -462,6 +470,9 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_extended_run(
         const MillenniumAtariGameInitExtendedRunObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_alternate_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_return();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_palette_copy_prefix();
+    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_palette_copy_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

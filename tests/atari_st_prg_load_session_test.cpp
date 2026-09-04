@@ -395,6 +395,27 @@ int main(const int argc, const char* const argv[]) {
         assert(single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_complete
             && single_cell_planes.checkpoint().game_init_next_instruction==0x2b3c6
             && single_cell_planes.checkpoint().game_init_completed_planes==4);
+        const auto palette_clear_destination=single_cell_planes.checkpoint().caller_a5;
+        assert(single_cell_planes.execute_game_init_return().accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_jsr_2b448_boundary
+            && single_cell_planes.checkpoint().game_init_a3==0x2a64c
+            && single_cell_planes.checkpoint().game_init_a0==0x2a66c
+            && single_cell_planes.checkpoint().next_jsr_address==0x2aafe
+            && single_cell_planes.checkpoint().next_jsr_target==0x2b448
+            && single_cell_planes.checkpoint().game_init_caller_2b448_sha256=="155575e295ad1e7831c0eef9809316db6f68321beb0661c03b7c14bb141f793e");
+        assert(single_cell_planes.execute_game_init_palette_copy_prefix().accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_transform_boundary
+            && single_cell_planes.checkpoint().game_init_palette_clear_destination==palette_clear_destination
+            && single_cell_planes.checkpoint().game_init_palette_copy_destination==0x2b3c8
+            && single_cell_planes.checkpoint().game_init_palette_source_sha256=="a2263d35c251e787a9a5705a5277bcf641321817f825e7689081280fbd157dfe"
+            && single_cell_planes.checkpoint().game_init_palette_copy_prefix_sha256=="748d9b2df05839b68583069e29ff34954477ce7a367b0a88ef9e9bad7abfa0ca"
+            && single_cell_planes.checkpoint().game_init_next_instruction==0x2b486);
+        auto palette_memory=bsr_memory;
+        assert(palette_memory.apply(single_cell_planes.make_game_init_palette_copy_effect_batch("palette-copy-prefix")).accepted
+            && palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,palette_clear_destination})==0
+            && palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b3c8})==static_cast<std::uint8_t>(single_cell_planes.checkpoint().game_init_palette_source_longs[0]>>24U));
+        assert(!single_cell_planes.execute_game_init_return().accepted
+            && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted
             && bit6_clear.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_bit6_clear_boundary
             && bit6_clear.checkpoint().game_init_next_instruction==0x2b3b8);

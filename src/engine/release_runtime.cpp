@@ -244,9 +244,17 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
                 millennium_atari->fread_config_load_address_boundary(),
                 millennium_atari->fread_mapped_config_prelude());
         }
+    } catch (const std::exception& error) {
+        const std::string detail = error.what();
+        reset(); admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::child_session;
+        rejection_detail_ = detail;
+        return false;
     } catch (...) {
         reset(); admission_ = ReleaseRuntimeAdmission::adapter_rejected;
-        rejection_ = ReleaseRuntimeRejection::child_session; return false;
+        rejection_ = ReleaseRuntimeRejection::child_session;
+        rejection_detail_ = "Unknown child-session construction failure";
+        return false;
     }
     millennium_dos_ = std::move(millennium_dos);
     millennium_dos_sound_selection_ = std::move(millennium_dos_sound_selection);
@@ -265,6 +273,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     native_runtime_memory_=std::move(runtime_memory);
     admission_ = ReleaseRuntimeAdmission::active;
     rejection_ = ReleaseRuntimeRejection::none;
+    rejection_detail_.clear();
     return true;
 }
 
@@ -343,6 +352,7 @@ void ReleaseRuntimeCoordinator::reset() {
     active_.reset();
     admission_ = ReleaseRuntimeAdmission::unselected;
     rejection_ = ReleaseRuntimeRejection::none;
+    rejection_detail_.clear();
 }
 
 MillenniumDosPostOverlayObservationResult ReleaseRuntimeCoordinator::complete_millennium_dos_handler(
@@ -3156,6 +3166,21 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_post_adjusted_object_gat
     return r;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_post_adjusted_first_helper_return(
+    const DeuterosAmigaObservedLocalCallReturn o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros post-adjusted first helper return requires active title session";return r;}
+    try{auto preview=*deuteros_amiga_->title_stage_session();
+        if(!preview.observe_post_adjusted_first_helper_return(o)){
+            r.error="Deuteros post-adjusted first helper return did not match boundary";return r;}
+        if(!deuteros_amiga_->observe_title_post_adjusted_first_helper_return(o)){
+            r.error="Deuteros post-adjusted first helper return disappeared before commit";return r;}
+        r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
     DeuterosAmigaTitleDependencyObservationResult result;
@@ -3593,6 +3618,8 @@ MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::execute_millenniu
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_game_init_replicated_byte(const MillenniumAtariGameInitReplicatedByteObservation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Replicated-byte run requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_game_init_replicated_byte(o);if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_game_init_alternate_effect_batch("millennium-atari-game-init-replicated-"+std::to_string(o.sequence)));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_game_init_swapped_pair(const MillenniumAtariGameInitSwappedPairObservation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Swapped-pair run requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_game_init_swapped_pair(o);if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_game_init_alternate_effect_batch("millennium-atari-game-init-swapped-"+std::to_string(o.sequence)));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_game_init_extended_run(const MillenniumAtariGameInitExtendedRunObservation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Extended run requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_game_init_extended_run(o);if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_game_init_alternate_effect_batch("millennium-atari-game-init-extended-"+std::to_string(o.sequence)));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
+MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::execute_millennium_atari_game_init_return(){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_)return{false,"Game-init return requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.execute_game_init_return();if(result.accepted)*millennium_atari_config_consumer_=std::move(next);return result;}
+MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::execute_millennium_atari_game_init_palette_copy_prefix(){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Palette-copy prefix requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.execute_game_init_palette_copy_prefix();if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_game_init_palette_copy_effect_batch("millennium-atari-palette-copy-prefix"));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {

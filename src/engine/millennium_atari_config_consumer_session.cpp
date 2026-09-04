@@ -1,4 +1,5 @@
 #include "engine/millennium_atari_config_consumer_session.hpp"
+#include "data/sha256.hpp"
 
 #include <array>
 #include <stdexcept>
@@ -216,6 +217,17 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
     for(std::size_t i=0;i<game_init_replicated_run.size();++i)if(require_byte(memory,0x2b332U+static_cast<std::uint32_t>(i))!=game_init_replicated_run[i])throw std::runtime_error("Unexpected replicated-run continuation");
     for(std::size_t i=0;i<game_init_swapped_run.size();++i)if(require_byte(memory,0x2b376U+static_cast<std::uint32_t>(i))!=game_init_swapped_run[i])throw std::runtime_error("Unexpected swapped-run continuation");
     for(std::size_t i=0;i<game_init_extended_prefix.size();++i)if(require_byte(memory,0x2b3b8U+static_cast<std::uint32_t>(i))!=game_init_extended_prefix[i])throw std::runtime_error("Unexpected extended-run prefix");
+    constexpr std::array<std::uint8_t,18> game_init_caller_2b448{0x26,0x7c,0x00,0x02,0xa6,0x4c,0x28,0x7c,0x00,0x02,0xa6,0x6c,0x4e,0xb9,0x00,0x02,0xb4,0x48};
+    constexpr std::array<std::uint8_t,62> game_init_palette_copy_prefix{0x20,0x3c,0x00,0x00,0x00,0x00,0x32,0x3c,0x00,0x07,0x2a,0xc0,0x51,0xc9,0xff,0xfc,0x2f,0x0b,0x2a,0x7c,0x00,0x02,0xb3,0xc8,0x30,0x3c,0x00,0x17,0x2a,0xdc,0x51,0xc8,0xff,0xfc,0x3e,0x3c,0x00,0x06,0x2a,0x7c,0x00,0x02,0xb4,0x28,0x28,0x7c,0x00,0x02,0xb3,0xc8,0x3c,0x3c,0x00,0x0f,0x3a,0x3c,0x00,0x02,0x38,0x3c,0x01,0x00};
+    for(std::size_t i=0;i<game_init_caller_2b448.size();++i){
+        const auto address=0x2aaf2U+static_cast<std::uint32_t>(i);
+        const auto actual=require_byte(memory,address);
+        if(actual!=game_init_caller_2b448[i])throw std::runtime_error(
+            "Unexpected post-game-init caller byte at $"+std::to_string(address)
+            +": expected "+std::to_string(game_init_caller_2b448[i])
+            +", observed "+std::to_string(actual));
+    }
+    for(std::size_t i=0;i<game_init_palette_copy_prefix.size();++i)if(require_byte(memory,0x2b448U+static_cast<std::uint32_t>(i))!=game_init_palette_copy_prefix[i])throw std::runtime_error("Unexpected palette-copy prefix");
     if (generation == 0 || gemdos.generation != generation
         || gemdos.state != MillenniumAtariReadOnlyGemdosState::config_jsr_boundary
         || gemdos.config_jsr_instruction_address != jsr_instruction
@@ -278,6 +290,17 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
     checkpoint_.selector_38_caller_sha256="7218804023c2ec3e694e19b581efeb17703f7bfe78d77b6da330354cc23a18f2";
     checkpoint_.caller_jsr_2a5aa_sha256="25939d2a8a98420749b181f742081cc576f302cffd0bea5b8008765af3b5d9f0";
     checkpoint_.gemdos_61_prefix_sha256="bdfb77219a19903ee730f3361af0958841aae3570ef3ed0d2ea60c3b56a3491e";
+    std::vector<std::uint8_t> palette_source_bytes;
+    palette_source_bytes.reserve(checkpoint_.game_init_palette_source_longs.size()*4U);
+    for(std::size_t i=0;i<checkpoint_.game_init_palette_source_longs.size();++i){
+        const auto address=0x2a66cU+static_cast<std::uint32_t>(i*4U);
+        const auto first=require_byte(memory,address),second=require_byte(memory,address+1U),third=require_byte(memory,address+2U),fourth=require_byte(memory,address+3U);
+        palette_source_bytes.insert(palette_source_bytes.end(),{first,second,third,fourth});
+        checkpoint_.game_init_palette_source_longs[i]=(static_cast<std::uint32_t>(first)<<24U)|(static_cast<std::uint32_t>(second)<<16U)|(static_cast<std::uint32_t>(third)<<8U)|fourth;
+    }
+    checkpoint_.game_init_palette_source_sha256=to_hex(sha256(palette_source_bytes));
+    if(checkpoint_.game_init_palette_source_sha256!="a2263d35c251e787a9a5705a5277bcf641321817f825e7689081280fbd157dfe")
+        throw std::runtime_error("Unexpected palette-copy source SHA-256 "+checkpoint_.game_init_palette_source_sha256);
     checkpoint_.local_control_transfers_executed = 2;
 }
 
@@ -802,6 +825,9 @@ NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_game_init_al
     for(const auto&w:checkpoint_.game_init_alternate_writes)batch.effects.push_back({order++,{NativeRuntimeAddressSpace::linear,std::nullopt,w.address},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,w.value});
     return batch;
 }
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_game_init_return(){if(checkpoint_.state!=MillenniumAtariConfigConsumerState::game_init_complete)return{false,"Game-init return is unavailable"};checkpoint_.state=MillenniumAtariConfigConsumerState::game_init_jsr_2b448_boundary;checkpoint_.game_init_a3=0x2a64c;checkpoint_.game_init_a0=0x2a66c;checkpoint_.next_jsr_address=0x2aafe;checkpoint_.next_jsr_target=0x2b448;checkpoint_.game_init_caller_2b448_sha256="155575e295ad1e7831c0eef9809316db6f68321beb0661c03b7c14bb141f793e";checkpoint_.local_instruction_count+=4;return{true,{}};}
+MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::execute_game_init_palette_copy_prefix(){if(checkpoint_.state!=MillenniumAtariConfigConsumerState::game_init_jsr_2b448_boundary)return{false,"Palette-copy prefix is unavailable"};checkpoint_.state=MillenniumAtariConfigConsumerState::game_init_palette_transform_boundary;checkpoint_.game_init_palette_clear_destination=checkpoint_.caller_a5;checkpoint_.game_init_palette_copy_destination=0x2b3c8;checkpoint_.caller_a5=0x2b428;checkpoint_.game_init_a0=0x2b3c8;checkpoint_.game_init_d7=6;checkpoint_.game_init_d6=15;checkpoint_.game_init_d5=2;checkpoint_.game_init_palette_copy_prefix_sha256="748d9b2df05839b68583069e29ff34954477ce7a367b0a88ef9e9bad7abfa0ca";checkpoint_.game_init_next_instruction=0x2b486;checkpoint_.local_instruction_count+=41;return{true,{}};}
+NativeRuntimeEffectBatch MillenniumAtariConfigConsumerSession::make_game_init_palette_copy_effect_batch(std::string id)const{if(checkpoint_.state!=MillenniumAtariConfigConsumerState::game_init_palette_transform_boundary||id.empty())throw std::runtime_error("Palette-copy effects are unavailable");NativeRuntimeEffectBatch batch{std::move(id),true,{}};std::size_t order=1;for(std::size_t i=0;i<8;++i)batch.effects.push_back({order++,{NativeRuntimeAddressSpace::linear,std::nullopt,checkpoint_.game_init_palette_clear_destination+static_cast<std::uint32_t>(i*4U)},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,0});for(std::size_t i=0;i<checkpoint_.game_init_palette_source_longs.size();++i)batch.effects.push_back({order++,{NativeRuntimeAddressSpace::linear,std::nullopt,checkpoint_.game_init_palette_copy_destination+static_cast<std::uint32_t>(i*4U)},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,checkpoint_.game_init_palette_source_longs[i]});return batch;}
 
 MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::revoke(
     const std::uint64_t generation) {
