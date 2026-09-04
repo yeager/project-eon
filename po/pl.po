@@ -516,3 +516,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "GRANICA URUCHAMIANIA"
 msgid "REDUCED MOTION"
 msgstr "OGRANICZONY RUCH"
+
+msgid "CODE IMAGES"
+msgstr "OBRAZY KODU"
+
+msgid "EXCLUDED"
+msgstr "WYKLUCZONE"
+
+msgid "ACTIVE"
+msgstr "AKTYWNY"

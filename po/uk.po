@@ -505,3 +505,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "МЕЖА ПОЧАТКОВОГО ЗАВАНТАЖЕННЯ"
 msgid "REDUCED MOTION"
 msgstr "ЗМЕНШЕННЯ РУХУ"
+
+msgid "CODE IMAGES"
+msgstr "ОБРАЗИ КОДУ"
+
+msgid "EXCLUDED"
+msgstr "ВИКЛЮЧЕНО"
+
+msgid "ACTIVE"
+msgstr "АКТИВНИЙ"

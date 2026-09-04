@@ -505,3 +505,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "부트스트랩 경계"
 msgid "REDUCED MOTION"
 msgstr "움직임 줄이기"
+
+msgid "CODE IMAGES"
+msgstr "코드 이미지"
+
+msgid "EXCLUDED"
+msgstr "제외됨"
+
+msgid "ACTIVE"
+msgstr "활성"

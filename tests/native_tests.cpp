@@ -1109,6 +1109,7 @@ int main() {
         assert(!other_mode.observe_return({51,0x0caa,0xd40d}).accepted);
         assert(other_mode.checkpoint().entry
             && !other_mode.checkpoint().returned);
+        assert(other_mode.observe_return({51,0x0d67,0xd40d}).accepted);
     }
     {
         const auto empty = eon::native_code_image_registry_diagnostics(std::nullopt);
@@ -6963,6 +6964,15 @@ int main() {
         }
         assert(nonzero_mode_two.state()==eon::MillenniumDosBdfModeTwoState::returned&&nonzero_mode_two.boundary().instruction_address==0x129c);
         assert(nonzero_mode_two.far_byte_effects().size()==128&&(nonzero_mode_two.far_byte_effects().front()==eon::MillenniumDosBdfModeTwoFarByteEffect{0x127e,0xa000,0x6100,0xab})&&nonzero_mode_two.far_byte_effects()[8].offset==0x01a0);
+        eon::MillenniumDosBdfOtherModeSession other_zero(*game_executable,3,0x6200);
+        other_zero.observe_runtime_byte(0x0cb2,0x07d8,0);
+        other_zero.observe_runtime_word(0x0d3e,0x0107,0xa000);
+        for(std::uint16_t n=0;n<64;++n)other_zero.observe_runtime_word(0x0d56,std::uint16_t(0x07fa+n*2),std::uint16_t(0x6000+n));
+        assert(other_zero.state()==eon::MillenniumDosBdfOtherModeState::returned&&other_zero.boundary().instruction_address==0x0d67);
+        assert(other_zero.far_effects().size()==64&&(other_zero.far_effects().front()==eon::MillenniumDosBdfOtherModeFarEffect{0x0d56,0xa000,0x6200,0x6000})&&other_zero.far_effects()[16].offset==0x6200);
+        assert(other_zero.port_effects().size()==4&&other_zero.port_effects().back().value==8);
+        eon::MillenniumDosBdfOtherModeSession other_four(*game_executable,4,0x6200);
+        assert(other_four.state()==eon::MillenniumDosBdfOtherModeState::mode_four_jump&&(other_four.boundary()==eon::MillenniumDosBdfOtherModeBoundary{0x0caf,0x0d68}));
         eon::MillenniumDosExternalTransferAdmission busy_transfer(eon::MillenniumDosExternalTransferKind::f2_tail_active_return);
         assert(busy_transfer.observe_entry({40,0x7253,0x0bdf}).accepted);
         assert(busy_transfer.observe_return({41,busy_bdf.boundary().instruction_address,0xcafe}).accepted);
@@ -10806,6 +10816,59 @@ int main() {
     assert(repeated_wrapper->unresolved_read_address == 0x404da);
     assert(repeated_wrapper->unresolved_read_source == 0x12ff4);
     assert(repeated_wrapper->stop_before_address == 0x404da);
+    bool rejected_tail_source_table = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_source_table(
+            {36, 0x404da, {{0x12ff4, 0x12ffc}},
+                {{0x11223344, 0x55667788}}}));
+    } catch (const std::runtime_error&) {
+        rejected_tail_source_table = true;
+    }
+    assert(rejected_tail_source_table);
+    const auto tail_source_table = title_stage_session.observe_tail_source_table(
+        {36, 0x404da, {{0x12ff4, 0x12ff8}},
+            {{0x11223344, 0x55667788}}});
+    assert(tail_source_table);
+    assert((tail_source_table->destination_addresses
+        == std::array<std::uint32_t, 2>{{0x37ef2, 0x37ef6}}));
+    assert((tail_source_table->destination_values
+        == std::array<std::uint32_t, 2>{{0x11223344, 0x55667788}}));
+    assert(tail_source_table->local_call_address == 0x404ea);
+    assert(tail_source_table->local_call_target == 0x204c8);
+    assert(tail_source_table->descriptor_address == 0x204aa);
+    assert((tail_source_table->descriptor_offsets
+        == std::array<std::uint16_t, 4>{{8, 9, 0x0e, 0x12}}));
+    assert((tail_source_table->descriptor_values
+        == std::array<std::uint32_t, 4>{{2, 0xc4, 0x204c0, 0x202ca}}));
+    assert(tail_source_table->exec_base_source_address == 4);
+    assert(tail_source_table->next_call_address == 0x204f4);
+    assert(tail_source_table->next_vector == -0xa8);
+    assert(tail_source_table->next_return_address == 0x204f8);
+    assert(tail_source_table->stop_before_address == 0x204f4);
+    bool rejected_tail_exec = false;
+    try {
+        static_cast<void>(title_stage_session.observe_tail_exec_return(
+            {37, 4, 0, 0x204f4, -0xa8, 0x204f8, 0xaabbccdd, 0x2030}));
+    } catch (const std::runtime_error&) {
+        rejected_tail_exec = true;
+    }
+    assert(rejected_tail_exec);
+    const auto tail_exec = title_stage_session.observe_tail_exec_return(
+        {37, 4, 0x00fedcba, 0x204f4, -0xa8, 0x204f8,
+            0xaabbccdd, 0x2030});
+    assert(tail_exec);
+    assert(tail_exec->observation.observed_exec_base == 0x00fedcba);
+    assert(tail_exec->observation.result_d0 == 0xaabbccdd);
+    assert(tail_exec->observation.result_sr == 0x2030);
+    assert(tail_exec->local_rts_address == 0x204f8);
+    assert(tail_exec->caller_resume_address == 0x404f0);
+    assert(tail_exec->next_call_address == 0x404f0);
+    assert(tail_exec->next_call_target == 0x389e2);
+    assert(tail_exec->stop_before_address == 0x404f0);
+    assert(!title_stage_session.observe_tail_exec_return(
+        {38, 4, 0x00fedcba, 0x204f4, -0xa8, 0x204f8, 0, 0}));
+    assert(!title_stage_session.observe_tail_source_table(
+        {37, 0x404da, {{0x12ff4, 0x12ff8}}, {{0, 0}}}));
     assert(!title_stage_session.observe_tail_repeated_wrapper_graphics_return(
         {36, 0x12fec, 0x00abcdef, 0x200f4, -0x1a4, 0x200f8, 0, 0}));
     assert(!title_stage_session.observe_tail_repeated_graphics_return(

@@ -477,3 +477,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "ΟΡΙΟ ΕΚΚΙΝΗΣΗΣ"
 msgid "REDUCED MOTION"
 msgstr "ΜΕΙΩΜΕΝΗ ΚΙΝΗΣΗ"
+
+msgid "CODE IMAGES"
+msgstr "ΕΙΚΟΝΕΣ ΚΩΔΙΚΑ"
+
+msgid "EXCLUDED"
+msgstr "ΕΞΑΙΡΕΘΗΚΑΝ"
+
+msgid "ACTIVE"
+msgstr "ΕΝΕΡΓΟ"

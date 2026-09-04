@@ -466,3 +466,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "ブートストラップ境界"
 msgid "REDUCED MOTION"
 msgstr "モーション軽減"
+
+msgid "CODE IMAGES"
+msgstr "コードイメージ"
+
+msgid "EXCLUDED"
+msgstr "除外"
+
+msgid "ACTIVE"
+msgstr "有効"

@@ -146,6 +146,7 @@ add_executable(project-eon
     src/engine/millennium_dos_second_function_callback_session.cpp
     src/engine/millennium_dos_bdf_service_session.cpp
     src/engine/millennium_dos_bdf_mode_two_session.cpp
+    src/engine/millennium_dos_bdf_other_mode_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp

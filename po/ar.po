@@ -466,3 +466,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "حد التمهيد"
 msgid "REDUCED MOTION"
 msgstr "تقليل الحركة"
+
+msgid "CODE IMAGES"
+msgstr "صور الشفرة"
+
+msgid "EXCLUDED"
+msgstr "مستبعد"
+
+msgid "ACTIVE"
+msgstr "نشط"

@@ -5692,6 +5692,21 @@ and executes tail RTS `$2021c`. The original call stack returns to batch edge
 address `$12ff4`, then stops before the first runtime longword read at
 `$404da`. No table contents, Exec result, or later service effect is supplied.
 
+The `$404da` boundary now accepts exactly two ordered longword observations
+from `$12ff4` and `$12ff8`. It records their instruction-defined copies to
+`$37ef2` and `$37ef6`, then follows JSR `$404ea` to the hash-locked `$204c8`
+wrapper. That local code writes byte `$02`/`$c4` at descriptor `$204aa`
+offsets 8/9, longwords `$204c0`/`$202ca` at offsets `$0e`/`$12`, and sets D0
+to five. It reads Exec base from address `$4` and stops before vector `-$a8`
+at `$204f4`.
+
+A separate typed Exec observation must provide a nonzero base, exact call and
+return addresses, vector, monotonically newer sequence, and the returned D0
+and SR values. Those results remain value-only evidence. The local RTS at
+`$204f8` resumes the caller at `$404f0`, where the next direct call targets
+`$389e2`; the session stops before entering it because its result and effects
+are not established by this boundary.
+
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
 `b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its
@@ -6013,3 +6028,18 @@ The destination is retained in the transfer checkpoint. No static evidence
 currently proves which caller instruction receives these RETs, so accepting
 the event does not resume or synthesize any caller state. Revocation clears
 the session and transfer together, making late return observations invalid.
+
+### Millennium DOS BDF other-mode `$0caa` zero branch
+
+The independently admitted `$0c4e -> $0caa` terminal edge now creates a
+hash-bound session from explicit entry `DL` and `DI` observations. Entry
+`DL == 4` is retained as the exact `$0caf -> $0d68` boundary and is not
+followed here. Other values observe `CS:$07d8` at `$0cb2`. Its zero branch
+observes the segment at `$0d3e` / `CS:$0107`, then consumes exactly 64 words
+from `CS:$07fa..$0879` at `$0d56`. The four instruction-defined output-port
+writes to `$03c5` retain values 1, 2, 4, and 8. Each group of 16 words records
+far writes to the explicit segment at entry `DI + row * $28`; `DI` is restored
+between groups exactly as the push/pop sequence specifies. The session ends
+at RET `$0d67`, whose external-return contract requires a later sequence and
+explicit destination. The `$0cbe` nonzero branch remains an explicit boundary;
+no display-plane meaning is inferred from the ports or addresses.

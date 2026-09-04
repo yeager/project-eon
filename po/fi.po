@@ -477,3 +477,12 @@ msgid "BOOTSTRAP BOUNDARY"
 msgstr "KÄYNNISTYSRAJA"
 msgid "REDUCED MOTION"
 msgstr "VÄHENNETTY LIIKE"
+
+msgid "CODE IMAGES"
+msgstr "KOODIKUVAT"
+
+msgid "EXCLUDED"
+msgstr "POISSULJETTU"
+
+msgid "ACTIVE"
+msgstr "AKTIIVINEN"

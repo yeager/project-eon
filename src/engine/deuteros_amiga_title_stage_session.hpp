@@ -203,6 +203,14 @@ public:
         return service_batch_boundary_session_.observe_tail_repeated_wrapper_graphics_return(
             observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSourceTableLocalPlan>
+    observe_tail_source_table(const DeuterosAmigaObservedTailSourceTable& observation) {
+        return service_batch_boundary_session_.observe_tail_source_table(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecReturnLocalPlan>
+    observe_tail_exec_return(const DeuterosAmigaObservedTailExecReturn& observation) {
+        return service_batch_boundary_session_.observe_tail_exec_return(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;
