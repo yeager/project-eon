@@ -1471,6 +1471,33 @@ trackdisk over-read/allocation convention, or fabricate the missing value.
 Recovering an emulator trace or a fully documented device-buffer contract for
 that byte is required before this relocation can become executable evidence.
 
+The relocator now also has a hash-admitted manual-recomp session, without
+weakening that boundary. `MillenniumAmigaBootstrapRelocatorSession` accepts
+only the complete Defjam ADF SHA-256
+`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`
+and the exact 1024-byte bootstrap range at disk `+$400`, SHA-256
+`c31e59f83d6825a2da7a6fd5e3297a322993b0483105794fca449d97d3861e06`.
+It records the instruction-defined word write `$70000: $dff104 := $0024`
+and reconstructs only the 974 copy iterations whose sources
+`$70032..$703ff` are inside that authenticated load. Each copy effect retains
+instruction `$70036`, source address, destination address, and exact byte.
+The 975th iteration remains an explicit typed observation of source `$70400`;
+the session never reads adjacent disk offset `+$800` as a substitute. Only
+after that observation does it expose the exact terminal-jump boundary
+`$7003c -> $6629e`. Wrong order or addresses are rejected, and no OS/device
+result, post-jump behavior, or meaning of the hardware write is inferred.
+
+This was selected from the remaining Millennium `discovered-unmapped`
+candidates because it is the largest candidate with a declared runtime base
+and a direct, instruction-complete path. The nested Defjam release still
+lists this 1024-byte stage as unmapped in older generated candidate sidecars;
+the direct-container inventory already records its byte-complete span. The
+session establishes semantic coverage of the relocator, not a claim that the
+nested report metadata has been regenerated and not active runtime
+reachability. Spanish DOS and Atari boot sectors retain unproven runtime entry
+bases, while aggregate disk-container candidates are containers rather than
+additional executable images.
+
 The latter hand-off places `0xa8d398fb` in `d6` immediately before the jump.
 `MillenniumAmigaLoadPlan` recognizes the actual instruction sequence, derives
 the two lengths from its immediate values (`0x1600 * 0x50` and
@@ -5848,6 +5875,26 @@ Returned registers remain value-only evidence and no unobserved callee memory
 or presentation effect is synthesized. Opcode `$16` instead stops before its
 first nested stream read at `$1fb0c`; values at least `$90` stop before their
 first table read at `$1fada`.
+
+Opcode `$16` now continues through its complete 104-byte target
+`$1fb00..$1fb67`, SHA-256
+`a431f810a110c1640f0f99460a7685054406b0312260cdc400a52e62ee4da2ac`.
+The session first requires the branch byte at `$1f98e`, then the two ordered
+stream bytes read at `$1fb0c` and `$1fb10`. On the zero branch it additionally
+requires the longword at `$1f168`, clamps the second byte to `$30`, applies
+the literal word/unsigned-multiply sequence and writes the exact resulting
+longword to `$1f974`. On the nonzero branch it requires `$1f994`, performs
+the original low-word shift/multiply and low-word addition, adds literal
+`$256c0`, and writes that result to `$1f974`. Both branches consume exactly
+two stream bytes and return to `$1fa0a`. Every runtime value is explicit;
+word operations discard carries exactly as the 68000 does, and no command
+meaning is assigned.
+
+The complete-disassembly ledger currently reports zero discovered-unmapped
+scanner candidates for both recognized Deuteros releases. This continuation
+therefore closes a previously unimplemented caller-connected function inside
+the already mapped Amiga clean title-stage image; it does not manufacture a
+new code image or change the byte-complete inventory.
 
 Those four return-admitted targets are themselves bound to the clean title
 stage, not trusted merely because a caller names them. Their exact spans and

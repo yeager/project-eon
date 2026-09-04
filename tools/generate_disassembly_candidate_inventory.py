@@ -16,9 +16,16 @@ class CandidateError(ValueError):
 
 def generate(releases: dict, inventory: dict) -> dict:
     profiles = {row["id"]: row for row in releases.get("parser_profiles", [])}
-    result = {"schema": "project-eon.disassembly-candidates/v2", "releases": []}
+    release_metadata = {row["sha256"]: row for row in releases.get("releases", [])}
+    result = {"schema": "project-eon.disassembly-candidates/v3", "releases": []}
     for release in inventory.get("releases", []):
         release_hash = release["release_sha256"]
+        for profile_id in release.get("coverage", []):
+            if profile_id in profiles and profiles[profile_id].get("release_sha256") != release_hash:
+                raise CandidateError(f"cross-release parser profile {profile_id}")
+        identity = release_metadata.get(release_hash)
+        if not identity:
+            raise CandidateError(f"unknown recognized release {release_hash}")
         candidates = []
         spans = release.get("static_spans", [])
         for profile_id in release.get("coverage", []):
@@ -58,16 +65,51 @@ def generate(releases: dict, inventory: dict) -> dict:
                 kind = "container-with-mapped-members"
             else:
                 kind = "raw-stage"
+            exact_images = sorted(set(mapped))
+            member_images = sorted(set(member_spans))
+            if exact_images:
+                mapped_rows = [span for span in spans if span["id"] in exact_images]
+                bases = {segment.get("address_space", "runtime")
+                         for span in mapped_rows for segment in span.get("segments", [])}
+                if len(bases) != 1:
+                    address_basis = "mixed-declared"
+                elif next(iter(bases)) != "runtime":
+                    address_basis = next(iter(bases))
+                else:
+                    cpus = {span.get("cpu") for span in mapped_rows}
+                    address_basis = ("dos-com-linear-0x100" if cpus == {"i8086"}
+                                     else "runtime-absolute" if cpus == {"m68000"}
+                                     else "mixed-declared")
+                evidence = "exact-source-interval-and-leaf-hash"
+                coverage_claim = "byte-range-mapped"
+            elif member_images:
+                address_basis = "unproven"
+                evidence = "container-profile-with-hash-bound-member-images-only"
+                coverage_claim = "container-members-only"
+            else:
+                address_basis = "unproven"
+                evidence = "parser-profile-range-and-leaf-hash-only"
+                coverage_claim = "discovered-range-only"
             candidates.append({"profile_id": profile_id,
+                               "game": identity["game"],
+                               "platform": identity["platform"],
+                               "language": identity["language"],
                                "leaf_sha256": profile["leaf_sha256"],
                                "source_offset": start, "length": length,
                                "code_candidate_kind": kind,
+                               "classification": "code-candidate-unclassified",
+                               "address_basis": address_basis,
+                               "coverage_claim": coverage_claim,
+                               "evidence": evidence,
                                "status": "mapped" if mapped else "discovered-unmapped",
                                "load_status": ("unproven" if kind == "boot" or not mapped
                                                else "address-basis-declared"),
-                               "mapped_span_ids": sorted(set(mapped)),
-                               "member_span_ids": sorted(set(member_spans))})
+                               "mapped_span_ids": exact_images,
+                               "member_span_ids": member_images})
         result["releases"].append({"release_sha256": release_hash,
+                                   "game": identity["game"],
+                                   "platform": identity["platform"],
+                                   "language": identity["language"],
                                    "candidates": candidates})
     return result
 

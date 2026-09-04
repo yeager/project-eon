@@ -267,6 +267,22 @@ public:
         const DeuterosAmigaObservedTitleCommandCallReturn& observation) {
         return service_batch_boundary_session_.observe_command_call_return(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandTwoOperandModePlan>
+    observe_command_two_operand_mode(
+        const DeuterosAmigaObservedTitleCommandTwoOperandMode& observation) {
+        return service_batch_boundary_session_.observe_command_two_operand_mode(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandTwoOperandsPlan>
+    observe_command_two_operands(
+        const DeuterosAmigaObservedTitleCommandTwoOperands& observation) {
+        return service_batch_boundary_session_.observe_command_two_operands(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandTwoOperandLocalPlan>
+    observe_command_two_operand_runtime_long(
+        const DeuterosAmigaObservedTitleCommandTwoOperandRuntimeLong& observation) {
+        return service_batch_boundary_session_.observe_command_two_operand_runtime_long(
+            observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

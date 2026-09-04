@@ -15,6 +15,7 @@
 #include "engine/native_code_image_diagnostics.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
+#include "engine/millennium_amiga_bootstrap_relocator_session.hpp"
 #include "data/zip_archive.hpp"
 #include "data/native_code_image_admission.hpp"
 #include "data/amiga_adf.hpp"
@@ -3336,6 +3337,41 @@ int main() {
     const eon::AmigaAdf defjam_loader_disk(*defjam_adf);
     const auto defjam_plan = eon::parse_millennium_amiga_load_plan(defjam_loader_disk);
     const eon::MillenniumAmigaBootstrapSession defjam_session(*defjam_adf);
+    eon::MillenniumAmigaBootstrapRelocatorSession defjam_relocator(*defjam_adf);
+    assert(defjam_relocator.state()
+        == eon::MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x70036,0x70400,0x66400}));
+    assert((defjam_relocator.custom_chip_effect()
+        == eon::MillenniumAmigaBootstrapCustomChipEffect{0x70000,0xdff104,0x0024}));
+    assert(defjam_relocator.copy_effects().size() == 0x3ce);
+    assert(defjam_relocator.copy_effects().front().source_address == 0x70032);
+    assert(defjam_relocator.copy_effects().front().destination_address == 0x66032);
+    assert(defjam_relocator.copy_effects().front().value == (*defjam_adf)[0x432]);
+    assert(defjam_relocator.copy_effects().back().source_address == 0x703ff);
+    assert(defjam_relocator.copy_effects().back().destination_address == 0x663ff);
+    assert(defjam_relocator.copy_effects().back().value == (*defjam_adf)[0x7ff]);
+    assert(defjam_relocator.final_a3() == 0x66400
+        && defjam_relocator.final_a5() == 0x70400 && defjam_relocator.final_d1() == 0);
+    defjam_relocator.observe_overread_byte(0x70036,0x70400,0xa5);
+    assert(defjam_relocator.copy_effects().size() == 0x3cf);
+    assert((defjam_relocator.copy_effects().back()
+        == eon::MillenniumAmigaBootstrapRelocationByteEffect{0x70036,0x70400,0x66400,0xa5}));
+    assert(defjam_relocator.final_a3() == 0x66401
+        && defjam_relocator.final_a5() == 0x70401 && defjam_relocator.final_d1() == 0xffff);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x7003c,0,0x6629e}));
+    defjam_relocator.observe_terminal_jump(0x7003c,0x6629e);
+    assert(defjam_relocator.state()
+        == eon::MillenniumAmigaBootstrapRelocatorState::transferred);
+    {
+        bool rejected = false;
+        try {
+            eon::MillenniumAmigaBootstrapRelocatorSession detached(*defjam_adf);
+            detached.observe_terminal_jump(0x7003c,0x6629e);
+        } catch (const std::runtime_error&) { rejected = true; }
+        assert(rejected);
+    }
     const auto& defjam_resident_evidence = defjam_session.resident_evidence();
     assert(&defjam_session.resident_entry() == &defjam_resident_evidence.entry);
     assert(defjam_resident_evidence.splitter.entry_address == 0x68016);
@@ -3367,6 +3403,16 @@ int main() {
         } catch (const std::runtime_error&) {
             rejected = true;
         }
+        assert(rejected);
+    }
+    {
+        auto altered = *defjam_adf;
+        altered[0x436] ^= 1;
+        bool rejected = false;
+        try {
+            static_cast<void>(
+                eon::MillenniumAmigaBootstrapRelocatorSession(altered));
+        } catch (const std::runtime_error&) { rejected = true; }
         assert(rejected);
     }
     assert(defjam_plan.bootstrap_loader.disk_offset == 0x400);
@@ -11290,8 +11336,34 @@ int main() {
     assert(command_call_return->observation.result_sr == 0x2000);
     assert(command_call_return->next_stream_address == 0x2ff0e);
     assert(command_call_return->next_opcode_read_address == 0x1fa0a);
+    const auto command_16 = title_stage_session.observe_command_opcode(
+        {copy_sequence + 21, 0x1fa0a, 0x2ff0e, 0x16});
+    assert(command_16);
+    assert(command_16->unresolved_call_address == 0x1fa1c);
+    assert(command_16->unresolved_call_target == 0x1fb00);
+    assert(command_16->stop_before_address == 0x1fb00);
+    const auto command_16_mode = title_stage_session.observe_command_two_operand_mode(
+        {copy_sequence + 22, 0x1fb00, 0x1f98e, 1});
+    assert(command_16_mode);
+    assert((command_16_mode->operand_source_addresses
+        == std::array<std::uint32_t, 2>{{0x2ff0f, 0x2ff10}}));
+    const auto command_16_operands = title_stage_session.observe_command_two_operands(
+        {copy_sequence + 23, {{0x1fb0c, 0x1fb10}},
+            {{0x2ff0f, 0x2ff10}}, {{3, 2}}});
+    assert(command_16_operands);
+    assert(command_16_operands->runtime_instruction_address == 0x1fb46);
+    assert(command_16_operands->runtime_source_address == 0x1f994);
+    assert(command_16_operands->next_stream_address == 0x2ff11);
+    const auto command_16_result =
+        title_stage_session.observe_command_two_operand_runtime_long(
+            {copy_sequence + 24, 0x1fb46, 0x1f994, 0x00000005});
+    assert(command_16_result);
+    assert(command_16_result->destination_address == 0x1f974);
+    assert(command_16_result->destination_value == 0x256eb);
+    assert(command_16_result->next_stream_address == 0x2ff11);
+    assert(command_16_result->next_opcode_read_address == 0x1fa0a);
     const auto command_end = title_stage_session.observe_command_opcode(
-        {copy_sequence + 21, 0x1fa0a, 0x2ff0e, 0});
+        {copy_sequence + 25, 0x1fa0a, 0x2ff11, 0});
     assert(command_end);
     assert(command_end->outcome
         == eon::DeuterosAmigaTitleCommandOpcodeOutcome::complete);
@@ -11300,7 +11372,7 @@ int main() {
     assert(command_end->caller_resume_address == 0x404fe);
     assert(command_end->stop_before_address == 0x404fe);
     assert(!title_stage_session.observe_command_opcode(
-        {copy_sequence + 22, 0x1fa0a, 0x2ff0f, 0}));
+        {copy_sequence + 26, 0x1fa0a, 0x2ff12, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_word(
         {copy_sequence + 2, 0x1fba4, 0x30002, 0}));
     assert(!title_stage_session.observe_load_dispatch_table_base(
@@ -12054,6 +12126,10 @@ int main() {
         == "7cfbdbe94faf764157dbe22bc9003fc4362a5657a7d7b7c34b0413d4391783be");
     assert(command_interpreter.returned_call_sha256[3]
         == "66dd6a4297fdfd52c1b81b7bd00f3f54611597bf31551939cf0f40bf9fd8d13e");
+    assert(command_interpreter.two_operand_target == 0x1fb00);
+    assert(command_interpreter.two_operand_length == 0x68);
+    assert(command_interpreter.two_operand_sha256
+        == "a431f810a110c1640f0f99460a7685054406b0312260cdc400a52e62ee4da2ac");
     assert(post_exec_tail_return.service_a1_literal == 0x204aa);
     assert((post_exec_tail_return.service_a1_offsets
         == std::array<std::uint16_t, 4>{{0x0008, 0x0009, 0x000e, 0x0012}}));
