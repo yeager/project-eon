@@ -2,7 +2,7 @@
 
 Project Eon's complete-disassembly manifest enumerates every executable or
 code image currently identified for all eight recognised release identities.
-It covers 16 hash-bound images, 18 non-overlapping source ranges, and 1,122,819
+It covers 18 hash-bound images, 20 non-overlapping source ranges, and 1,124,355
 original bytes. “Complete” here means complete mechanical byte coverage of
 those declared ranges. It does not mean that code/data classification,
 reachability, relocations, operating-system calls, or gameplay semantics are
@@ -20,10 +20,18 @@ unsupported address bases, gaps, and overlaps fail closed.
 metadata-only view from the release manifest's parser profiles named by the
 disassembly inventory. It classifies only whether each already-declared
 candidate range is connected to a mapped static span. The current ledger has
-14 mapped parser candidates and six `discovered-unmapped` candidates. Those
-six profile IDs are committed per release in the complete manifest, so a
+12 exactly mapped parser candidates and eight `discovered-unmapped`
+candidates. Those eight profile IDs and candidate kinds are committed per
+release in the complete manifest, so a
 missing load map cannot disappear merely because no listing was produced.
 This status is not a new code/data or reachability classification.
+
+A candidate is mapped only when ranges carrying the same source SHA-256 cover
+its complete source interval. An embedded file therefore never maps its
+whole-disk carrier. Such a carrier is reported as
+`container-with-mapped-members`; 512-byte candidates are `boot`, and other
+exact candidate ranges are `raw-stage`. These labels describe ledger
+structure, not execution proof.
 
 ```sh
 python3 tools/verify_complete_disassembly.py

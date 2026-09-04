@@ -14,6 +14,7 @@ class DeuterosDisassemblyReproductionTests(unittest.TestCase):
             capture_output=True, check=False)
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("--atari-replicants-archive", completed.stdout)
+        self.assertIn("--atari-killer-archive", completed.stdout)
 
     def test_external_report_identity_is_content_bound(self):
         cache = Path("/home/yeager/.cache/project-eon-tools/tests")
