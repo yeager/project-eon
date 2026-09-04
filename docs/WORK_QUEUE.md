@@ -132,9 +132,11 @@ candidate provenance and the retained negative observation.
 
 The Deuteros title chain now advances from its dedicated fail-closed
 OpenLibrary return boundary through the proven nonzero local call chain and
-stops at `$1eda6`. The next large coding increment requires genuine evidence
-for the external display-base value read from `$12ff4`; do not substitute a
-host library, framebuffer, or invented value.
+stops at `$1eda6`. A typed genuine observation can now supply the external
+display-base value read from `$12ff4`; the engine advances the local
+palette/clear plan and stops at `$40498`. The next increment must preserve the
+custom-chip write boundary—do not substitute host hardware or claim display
+output from the bounded plan.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

@@ -223,6 +223,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_seventh_function_.reset();
     millennium_dos_sixth_function_.reset();
     millennium_dos_eighth_function_.reset();
+    millennium_dos_ninth_function_.reset();
     millennium_dos_gx_startup_.reset();
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
@@ -861,6 +862,104 @@ ReleaseRuntimeCoordinator::millennium_dos_eighth_function_checkpoint() const {
     const auto& session = *millennium_dos_eighth_function_;
     return MillenniumDosEighthFunctionCheckpoint{session.state(), session.boundary(),
         session.effects(), session.shifted_bl_values()};
+}
+
+MillenniumDosNinthFunctionObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_ninth_function_dispatch(const MillenniumDosNinthFunctionDispatchObservation o) {
+    MillenniumDosNinthFunctionObservationResult r;
+    if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop||!millennium_dos_post_overlay_loop_||!millennium_dos_native_process_) { r.error="Ninth-function dispatch requires the active post-overlay loop"; return r; }
+    const auto b=millennium_dos_post_overlay_loop_->boundary();
+    if(millennium_dos_post_overlay_loop_->state()!=MillenniumDosPostOverlayLoopState::dispatch_call_boundary||b.kind!=MillenniumDosPostOverlayLoopBoundaryKind::dispatch_call||b.instruction_address!=0xd40a||b.call_target!=std::optional<std::uint16_t>{0x76f1}||millennium_dos_post_overlay_loop_->function_key_index()!=std::optional<std::size_t>{8}||o.scaled_call_address!=b.instruction_address||o.dispatcher_address!=*b.call_target||o.function_key_index!=8||o.handler_address!=0x7339) { r.error="Ninth-function handler observation is detached from scaled dispatch index 8"; return r; }
+    try { millennium_dos_ninth_function_.emplace(millennium_dos_native_process_->make_ninth_function_session()); session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::millennium_dos_ninth_function); r.accepted=true; } catch(const std::exception& e) { r.error=std::string("Ninth-function dispatch rejected: ")+e.what(); } return r;
+}
+#define EON_NINTH_FORWARD(name,type,expr,label) MillenniumDosNinthFunctionObservationResult ReleaseRuntimeCoordinator::name(const type o) { MillenniumDosNinthFunctionObservationResult r; if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_ninth_function||!millennium_dos_ninth_function_) { r.error=label " requires the active ninth-function session"; return r; } try { millennium_dos_ninth_function_->expr; r.accepted=true; } catch(const std::exception& e) { r.error=std::string(label " rejected: ")+e.what(); } return r; }
+EON_NINTH_FORWARD(observe_millennium_dos_ninth_function_word,MillenniumDosNinthFunctionWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value),"Ninth-function word observation")
+EON_NINTH_FORWARD(observe_millennium_dos_ninth_function_byte,MillenniumDosNinthFunctionByteObservation,observe_runtime_byte(o.instruction_address,o.runtime_address,o.value),"Ninth-function byte observation")
+EON_NINTH_FORWARD(observe_millennium_dos_ninth_function_call_return,MillenniumDosNinthFunctionCallReturnObservation,observe_call_return(o.call_address,o.return_address),"Ninth-function call return")
+#undef EON_NINTH_FORWARD
+std::optional<MillenniumDosNinthFunctionCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_ninth_function_checkpoint() const { if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_ninth_function||!millennium_dos_ninth_function_) return std::nullopt; const auto& s=*millennium_dos_ninth_function_; return MillenniumDosNinthFunctionCheckpoint{s.state(),s.boundary(),s.loop_count(),s.effects()}; }
+
+std::optional<MillenniumDosOwnedFunctionDiagnostics>
+ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
+    if (!session_snapshot_) return std::nullopt;
+    constexpr std::string_view game_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    MillenniumDosOwnedFunctionDiagnosticInput input{
+        .session = *session_snapshot_,
+        .game_executable_sha256 = std::string(game_sha256),
+        .function_key_index = 0,
+        .handler_address = 0,
+        .boundary = {},
+    };
+    const auto assign = [&input](const auto& boundary,
+                            const MillenniumDosOwnedFunctionBoundaryKind kind) {
+        input.boundary.kind = kind;
+        input.boundary.instruction_address = boundary.instruction_address;
+        input.boundary.runtime_address = boundary.runtime_address;
+        if (boundary.call_target) input.boundary.call_target = *boundary.call_target;
+    };
+    switch (session_snapshot_->kind) {
+    case RuntimeSessionKind::millennium_dos_sixth_function: {
+        if (!millennium_dos_sixth_function_) return std::nullopt;
+        input.function_key_index = 5; input.handler_address = 0x7415;
+        const auto boundary = millennium_dos_sixth_function_->boundary();
+        MillenniumDosOwnedFunctionBoundaryKind kind;
+        switch (boundary.kind) {
+        case MillenniumDosSixthFunctionBoundaryKind::runtime_word: kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_word; break;
+        case MillenniumDosSixthFunctionBoundaryKind::runtime_byte: kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_byte; break;
+        case MillenniumDosSixthFunctionBoundaryKind::call_return: kind=MillenniumDosOwnedFunctionBoundaryKind::call_return; break;
+        case MillenniumDosSixthFunctionBoundaryKind::register_bl: kind=MillenniumDosOwnedFunctionBoundaryKind::register_value; break;
+        case MillenniumDosSixthFunctionBoundaryKind::local_return: kind=MillenniumDosOwnedFunctionBoundaryKind::local_return; break;
+        }
+        assign(boundary, kind); break;
+    }
+    case RuntimeSessionKind::millennium_dos_seventh_function: {
+        if (!millennium_dos_seventh_function_) return std::nullopt;
+        input.function_key_index = 6; input.handler_address = 0x7521;
+        const auto boundary = millennium_dos_seventh_function_->boundary();
+        auto kind = MillenniumDosOwnedFunctionBoundaryKind::register_value;
+        if (boundary.kind == MillenniumDosSeventhFunctionBoundaryKind::runtime_word) kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_word;
+        else if (boundary.kind == MillenniumDosSeventhFunctionBoundaryKind::runtime_byte) kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_byte;
+        else if (boundary.kind == MillenniumDosSeventhFunctionBoundaryKind::call_return) kind=MillenniumDosOwnedFunctionBoundaryKind::call_return;
+        else if (boundary.kind == MillenniumDosSeventhFunctionBoundaryKind::local_return) kind=MillenniumDosOwnedFunctionBoundaryKind::local_return;
+        assign(boundary, kind); break;
+    }
+    case RuntimeSessionKind::millennium_dos_eighth_function: {
+        if (!millennium_dos_eighth_function_) return std::nullopt;
+        input.function_key_index = 7; input.handler_address = 0x7306;
+        const auto boundary = millennium_dos_eighth_function_->boundary();
+        const auto kind = boundary.kind == MillenniumDosEighthFunctionBoundaryKind::call_return
+            ? MillenniumDosOwnedFunctionBoundaryKind::call_return
+            : boundary.kind == MillenniumDosEighthFunctionBoundaryKind::local_return
+                ? MillenniumDosOwnedFunctionBoundaryKind::local_return
+                : MillenniumDosOwnedFunctionBoundaryKind::register_value;
+        input.boundary.kind=kind; input.boundary.instruction_address=boundary.instruction_address;
+        if(boundary.call_target) input.boundary.call_target=*boundary.call_target;
+        break;
+    }
+    case RuntimeSessionKind::millennium_dos_ninth_function: {
+        if (!millennium_dos_ninth_function_) return std::nullopt;
+        input.function_key_index = 8; input.handler_address = 0x7339;
+        const auto boundary = millennium_dos_ninth_function_->boundary();
+        auto kind=MillenniumDosOwnedFunctionBoundaryKind::local_return;
+        if(boundary.kind==MillenniumDosNinthFunctionBoundaryKind::runtime_word) kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_word;
+        else if(boundary.kind==MillenniumDosNinthFunctionBoundaryKind::runtime_byte) kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_byte;
+        else if(boundary.kind==MillenniumDosNinthFunctionBoundaryKind::call_return) kind=MillenniumDosOwnedFunctionBoundaryKind::call_return;
+        assign(boundary,kind); break;
+    }
+    case RuntimeSessionKind::millennium_dos_tenth_function: {
+        if (!millennium_dos_tenth_function_) return std::nullopt;
+        input.function_key_index=9; input.handler_address=0x7384;
+        const auto boundary=millennium_dos_tenth_function_->boundary();
+        auto kind=MillenniumDosOwnedFunctionBoundaryKind::register_value;
+        if(boundary.kind==MillenniumDosTenthFunctionBoundaryKind::runtime_word) kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_word;
+        else if(boundary.kind==MillenniumDosTenthFunctionBoundaryKind::runtime_byte) kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_byte;
+        else if(boundary.kind==MillenniumDosTenthFunctionBoundaryKind::call_return) kind=MillenniumDosOwnedFunctionBoundaryKind::call_return;
+        else if(boundary.kind==MillenniumDosTenthFunctionBoundaryKind::local_return) kind=MillenniumDosOwnedFunctionBoundaryKind::local_return;
+        assign(boundary,kind); break;
+    }
+    default: return std::nullopt;
+    }
+    return make_millennium_dos_owned_function_diagnostics(input);
 }
 
 RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(

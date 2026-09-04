@@ -157,6 +157,17 @@ std::optional<MillenniumDosEighthFunctionCheckpoint>
 LauncherRuntimeController::millennium_dos_eighth_function_checkpoint() const {
     return coordinator_.millennium_dos_eighth_function_checkpoint();
 }
+#define EON_LAUNCHER_NINTH(name,type) MillenniumDosNinthFunctionObservationResult LauncherRuntimeController::name(const type o) { return coordinator_.name(o); }
+EON_LAUNCHER_NINTH(observe_millennium_dos_ninth_function_dispatch,MillenniumDosNinthFunctionDispatchObservation)
+EON_LAUNCHER_NINTH(observe_millennium_dos_ninth_function_word,MillenniumDosNinthFunctionWordObservation)
+EON_LAUNCHER_NINTH(observe_millennium_dos_ninth_function_byte,MillenniumDosNinthFunctionByteObservation)
+EON_LAUNCHER_NINTH(observe_millennium_dos_ninth_function_call_return,MillenniumDosNinthFunctionCallReturnObservation)
+#undef EON_LAUNCHER_NINTH
+std::optional<MillenniumDosNinthFunctionCheckpoint> LauncherRuntimeController::millennium_dos_ninth_function_checkpoint() const { return coordinator_.millennium_dos_ninth_function_checkpoint(); }
+std::optional<MillenniumDosOwnedFunctionDiagnostics>
+LauncherRuntimeController::millennium_dos_owned_function_diagnostics() const {
+    return coordinator_.millennium_dos_owned_function_diagnostics();
+}
 
 std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_amiga_opening() {
     return coordinator_.tick_deuteros_amiga_opening();

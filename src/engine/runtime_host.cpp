@@ -184,6 +184,18 @@ RuntimeHost::millennium_dos_eighth_function_checkpoint() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_dos_eighth_function_checkpoint();
 }
+#define EON_HOST_NINTH(name,type) MillenniumDosNinthFunctionObservationResult RuntimeHost::name(const type o) { if(revoking()) return {false,"Ninth-function observation rejected during source revocation"}; return NativeSessionController::name(o); }
+EON_HOST_NINTH(observe_millennium_dos_ninth_function_dispatch,MillenniumDosNinthFunctionDispatchObservation)
+EON_HOST_NINTH(observe_millennium_dos_ninth_function_word,MillenniumDosNinthFunctionWordObservation)
+EON_HOST_NINTH(observe_millennium_dos_ninth_function_byte,MillenniumDosNinthFunctionByteObservation)
+EON_HOST_NINTH(observe_millennium_dos_ninth_function_call_return,MillenniumDosNinthFunctionCallReturnObservation)
+#undef EON_HOST_NINTH
+std::optional<MillenniumDosNinthFunctionCheckpoint> RuntimeHost::millennium_dos_ninth_function_checkpoint() const { if(revoking()) return std::nullopt; return NativeSessionController::millennium_dos_ninth_function_checkpoint(); }
+std::optional<MillenniumDosOwnedFunctionDiagnostics>
+RuntimeHost::millennium_dos_owned_function_diagnostics() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_owned_function_diagnostics();
+}
 
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {

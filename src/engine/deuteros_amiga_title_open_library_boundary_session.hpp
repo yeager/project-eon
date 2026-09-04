@@ -3,6 +3,8 @@
 #include "engine/deuteros_amiga_title_exec_boundary_session.hpp"
 
 #include <cstdint>
+#include <array>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 
@@ -13,6 +15,29 @@ enum class DeuterosAmigaTitleOpenLibraryBoundaryState {
     zero_result_original_loop,
     before_graphics_dependent_setup,
     awaiting_external_display_base_read,
+    before_custom_chip_boundary,
+};
+
+struct DeuterosAmigaObservedDisplayBaseRead {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t observed_value = 0;
+};
+
+struct DeuterosAmigaTitleDisplayLocalAdvance {
+    DeuterosAmigaObservedDisplayBaseRead observation;
+    std::array<std::uint32_t, 2> base_pointer_destinations{};
+    std::uint32_t palette_destination_address = 0;
+    std::array<std::uint16_t, 20> palette_words{};
+    std::uint32_t derived_pointer_destination_address = 0;
+    std::uint32_t derived_pointer_value = 0;
+    std::uint32_t cleared_word_address = 0;
+    std::array<std::uint32_t, 2> caller_pointer_copy_destinations{};
+    std::uint32_t clear_destination = 0;
+    std::uint32_t clear_byte_count = 0;
+    std::uint8_t clear_write_width = 0;
+    std::uint32_t stop_before_address = 0;
 };
 
 struct DeuterosAmigaTitlePostOpenLibraryLocalAdvance {
@@ -60,7 +85,8 @@ public:
     DeuterosAmigaTitleOpenLibraryBoundarySession(
         const DeuterosAmigaTitleExecBoundaryCheckpoint& exec,
         const DeuterosAmigaTitleGraphicsSetupProfile& setup,
-        const DeuterosAmigaTitleStageProfile& stage) {
+        const DeuterosAmigaTitleStageProfile& stage,
+        const DeuterosAmigaTitleDisplayClearProfile& clear) {
         if (exec.state != DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary
             || exec.stop_before_address != 0x4046c || !exec.observed_returns[0]
             || !exec.observed_returns[1]
@@ -79,6 +105,13 @@ public:
                 != "d6b37bc6431a1fe9145ae9403a5165028ccfd856a6529d1752f824b166807223"
             || stage.initialization_internal_calls[0] != 0x1ed80
             || stage.initialization_internal_calls[1] != 0x1f172
+            || stage.initialization_internal_calls[2] != 0x1f182
+            || clear.entry_address != 0x1f182
+            || clear.destination_pointer_address != 0x1f168
+            || clear.iteration_count != 0x1f40 || clear.value != 0
+            || clear.write_width_bytes != 4 || clear.return_address != 0x1f194
+            || clear.sha256
+                != "9b02afb723e201cacb93d18d87613dee0f56369707867989209a41d9430ec5f3"
             || setup.first_callee_sha256
                 != "42c96aa502e36711ed274b9ddf4d2d1de53abfebb4ebdf88fa99346d2b03e30b") {
             throw std::runtime_error("Invalid Deuteros OpenLibrary boundary provenance");
@@ -87,6 +120,8 @@ public:
         checkpoint_.stop_before_address = 0x1ed8c;
         checkpoint_.caller_return_address = 0x40472;
         checkpoint_.result_store_address = setup.nonzero_result_destination_address;
+        setup_ = setup;
+        clear_ = clear;
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint>
@@ -135,6 +170,36 @@ public:
             0x1ed70, 1, 0x40472, 0x1f172, 0x1f172, 0x1eda6, 0x1eda6};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayLocalAdvance>
+    observe_display_base_and_advance(const DeuterosAmigaObservedDisplayBaseRead& observation) {
+        if (checkpoint_.state
+            != DeuterosAmigaTitleOpenLibraryBoundaryState::awaiting_external_display_base_read) {
+            return std::nullopt;
+        }
+        if (!checkpoint_.observed_return
+            || observation.trace_sequence <= checkpoint_.observed_return->trace_sequence
+            || observation.instruction_address != 0x1eda6
+            || observation.source_address != setup_.external_display_base_source_address
+            || observation.observed_value
+                > std::numeric_limits<std::uint32_t>::max() - setup_.derived_pointer_addend
+            || clear_.iteration_count
+                > std::numeric_limits<std::uint32_t>::max() / clear_.write_width_bytes
+            || observation.observed_value > std::numeric_limits<std::uint32_t>::max()
+                - clear_.iteration_count * clear_.write_width_bytes) {
+            throw std::runtime_error("Deuteros display-base observation does not match boundary");
+        }
+        checkpoint_.state =
+            DeuterosAmigaTitleOpenLibraryBoundaryState::before_custom_chip_boundary;
+        checkpoint_.stop_before_address = 0x40498;
+        return DeuterosAmigaTitleDisplayLocalAdvance{observation,
+            setup_.external_display_base_destinations, setup_.palette_destination_address,
+            setup_.palette_words, setup_.derived_pointer_destination_address,
+            observation.observed_value + setup_.derived_pointer_addend, 0x1f16c,
+            {0x1f974, 0x410d8}, observation.observed_value,
+            clear_.iteration_count * clear_.write_width_bytes,
+            clear_.write_width_bytes, 0x40498};
+    }
+
     [[nodiscard]] const DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint& checkpoint() const noexcept {
         return checkpoint_;
     }
@@ -142,6 +207,8 @@ public:
 private:
     std::uint64_t preceding_trace_sequence_ = 0;
     DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint checkpoint_;
+    DeuterosAmigaTitleGraphicsSetupProfile setup_;
+    DeuterosAmigaTitleDisplayClearProfile clear_;
 };
 
 } // namespace eon

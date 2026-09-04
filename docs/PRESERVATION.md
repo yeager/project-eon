@@ -29,6 +29,13 @@ for `$7306..$7319`. It can only be created from the authenticated post-overlay
 the runtime does not turn separately recovered static preflight evaluators
 into invented call results. See `MILLENNIUM_DOS_EIGHTH_FUNCTION.md`.
 
+### Millennium DOS ninth-function runtime boundary
+
+The hash-bound `$7339..$7381` continuation is admitted only from the active
+`$d40a -> $76f1` dispatch at scaled index 8. It publishes exact runtime reads,
+writes, calls, loop count, and the terminal `$73cc` jump as typed checkpoints.
+It does not execute or infer `$73cc`; see `MILLENNIUM_DOS_NINTH_FUNCTION.md`.
+
 ### External replay checkpoints
 
 Canonical frame, audio, state, and physical-input checkpoint bytes remain
@@ -2814,6 +2821,17 @@ and follows the exact direct calls `$40472 -> $1f172 -> $1eda6`. Execution then
 stops before `$1eda6` reads the unresolved external display-base cell `$12ff4`.
 No palette copy, derived framebuffer pointer, display clear, or graphics ABI
 call is performed by this continuation.
+
+The following boundary accepts a strictly later, explicitly addressed read
+observation only at instruction `$1eda6` from cell `$12ff4`. With that raw
+value, the engine can describe the hash-proven local effects: copies to
+`$1f168/$1f164`, the twenty original RGB4 words at `$12ecc`, the checked
+`+$7d00` pointer at `$1f16e`, zero at `$1f16c`, caller copies to
+`$1f974/$410d8`, and the `$1f182` clear plan of `$7d00` bytes in four-byte
+writes. These remain sparse values and a bounded write plan; the host does not
+allocate or clear that address range. The session stops at `$40498` before the
+first custom-chip write and therefore claims neither display output nor a
+graphics/hardware ABI implementation.
 
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
