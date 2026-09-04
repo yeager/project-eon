@@ -148,6 +148,9 @@ do not infer either Exec service or manufacture its result.
 The exact `-$162` return and its local pointer/link setup now reach `$2072e`.
 Continue with a typed `-$1bc` return only; its service and branch result remain
 unresolved.
+The `-$1bc` return is now an explicit branch boundary: nonzero stops at the
+original loop, while zero reaches `$20776` with the earlier observed D0 value.
+Continue only through an exact second `-$162` return at `$2077a`.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

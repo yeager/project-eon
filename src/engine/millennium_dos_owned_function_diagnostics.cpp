@@ -16,6 +16,8 @@ struct Profile {
 constexpr std::array profiles{
     Profile{RuntimeSessionKind::millennium_dos_first_function, 0, 0x6f9a,
         "millennium-dos-en-f1-handler"},
+    Profile{RuntimeSessionKind::millennium_dos_second_function, 1, 0x71ca,
+        "millennium-dos-en-f2-handler"},
     Profile{RuntimeSessionKind::millennium_dos_third_function, 2, 0x6faa,
         "millennium-dos-en-f3-handler"},
     Profile{RuntimeSessionKind::millennium_dos_fourth_function, 3, 0x72f9,

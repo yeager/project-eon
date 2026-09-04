@@ -2895,6 +2895,16 @@ they establish the literal `$205e4` pointer at `$20698`, link `$2061c` at
 offset `$0e`, and clear local D0/D1. The session stops at `$2072e` before the
 next Exec-base read and vector `-$1bc` call at `$20732`.
 
+The `-$1bc` boundary bytes at `$2072e` hash to
+`0a982fb16e92100a04d3528d727297363de61d99ac61f8a193c4ee6c55ac4888`.
+An exact later return at `$20736` retains D0/SR and follows the original test:
+nonzero stops at the `$2073a` self-loop. Zero admits the next 64 local bytes
+(SHA-256 `e5f6841f53d99f63a4c4de84abc98d334f2a376cea4acbf279f5534c4e79b063`),
+which mark the first `$205e4` descriptor inactive, restore the genuinely
+observed first `-$126` D0 value, and place it in the literal `$20676`
+descriptor. The session stops at `$20776` before another `-$162` Exec call at
+`$2077a`; it does not infer why either branch occurs.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -5729,6 +5739,18 @@ or writing those cells, executing the transfer or delay loop, choosing its
 branch, or assuming a return.
 
 # Millennium DOS sixth-function runtime boundary
+
+# Millennium DOS second-function runtime boundary
+
+The exact English `2200AD.EXE` F2 handler `$71ca..$7220` is owned only after
+the authenticated post-overlay dispatcher admits table index 1 and handler
+`$71ca`. The native session observes byte `$da26`; values below two enter the
+original `$09fa`/BL wait boundary. The admitted path records the literal
+callback/list-mode stores, observes calls `$4d2c` and `$4d36`, and only then
+reconstructs the original `(availability-1)` word list at `$6e99`, starting at
+`$1384` with stride `$00c0`. Calls `$72b5` and `$0b76` remain externally
+observed boundaries. The callback beginning at `$7221` is excluded: Eon does
+not invent its runtime table values, call returns, selection, or game meaning.
 
 The exact English `2200AD.EXE` sixth-table handler `$7415..$7454` is available
 through the native runtime only after the active post-overlay state machine has

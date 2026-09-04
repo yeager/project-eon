@@ -25,6 +25,7 @@ std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
     case RuntimeSessionKind::millennium_dos_fifth_function:return "MILLENNIUM DOS FIFTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_third_function:return "MILLENNIUM DOS THIRD-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_first_function:return "MILLENNIUM DOS FIRST-FUNCTION HANDLER";
+    case RuntimeSessionKind::millennium_dos_second_function:return "MILLENNIUM DOS SECOND-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_tenth_function:
         return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
@@ -65,6 +66,7 @@ RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind
     case RuntimeSessionKind::millennium_dos_fifth_function:
     case RuntimeSessionKind::millennium_dos_third_function:
     case RuntimeSessionKind::millennium_dos_first_function:
+    case RuntimeSessionKind::millennium_dos_second_function:
     case RuntimeSessionKind::millennium_dos_tenth_function:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
@@ -130,6 +132,7 @@ bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
     case RuntimeSessionKind::millennium_dos_fifth_function:
     case RuntimeSessionKind::millennium_dos_third_function:
     case RuntimeSessionKind::millennium_dos_first_function:
+    case RuntimeSessionKind::millennium_dos_second_function:
     case RuntimeSessionKind::millennium_dos_tenth_function:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
@@ -172,6 +175,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
     case RuntimeSessionKind::millennium_dos_fifth_function:
     case RuntimeSessionKind::millennium_dos_third_function:
     case RuntimeSessionKind::millennium_dos_first_function:
+    case RuntimeSessionKind::millennium_dos_second_function:
     case RuntimeSessionKind::millennium_dos_tenth_function:
         // Neither original transition has a recovered return/ABI contract.
         // Preserve its terminal observation without forwarding another host

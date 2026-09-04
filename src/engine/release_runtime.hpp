@@ -98,6 +98,7 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
     bool service_setup_boundary_armed = false;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> service_setup_local_plan;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> second_service_local_plan;
+    std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> third_service_local_plan;
     std::uint32_t stop_before_address = 0;
 };
 struct DeuterosAmigaTitleDependencyObservationResult { bool accepted=false; std::string error; };
@@ -469,6 +470,12 @@ struct MillenniumDosFirstFunctionCheckpoint {
     MillenniumDosFirstFunctionBoundary boundary;
     std::vector<MillenniumDosFirstFunctionEffect> effects;
 };
+struct MillenniumDosSecondFunctionDispatchObservation { std::uint16_t scaled_call_address=0; std::uint16_t dispatcher_address=0; std::size_t function_key_index=0; std::uint16_t handler_address=0; };
+struct MillenniumDosSecondFunctionRuntimeByteObservation { std::uint16_t instruction_address=0; std::uint16_t runtime_address=0; std::uint8_t value=0; };
+struct MillenniumDosSecondFunctionCallReturnObservation { std::uint16_t call_address=0; std::uint16_t return_address=0; };
+struct MillenniumDosSecondFunctionBlObservation { std::uint16_t instruction_address=0; std::uint8_t value=0; };
+struct MillenniumDosSecondFunctionObservationResult { bool accepted=false; std::string error; };
+struct MillenniumDosSecondFunctionCheckpoint { MillenniumDosSecondFunctionState state=MillenniumDosSecondFunctionState::awaiting_availability; MillenniumDosSecondFunctionBoundary boundary; std::vector<MillenniumDosSecondFunctionEffect> effects; };
 
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
@@ -531,6 +538,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_callback_exec_return(DeuterosAmigaObservedCallbackExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_service_setup_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_second_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_third_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     // Active-session transition for a complete, already validated v4/v5
     // trace. The owned result is metadata only and grants no host capability.
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -642,6 +650,11 @@ public:
     [[nodiscard]] MillenniumDosFirstFunctionObservationResult observe_millennium_dos_first_function_call_return(MillenniumDosFirstFunctionCallReturnObservation);
     [[nodiscard]] MillenniumDosFirstFunctionObservationResult observe_millennium_dos_first_function_bl(MillenniumDosFirstFunctionBlObservation);
     [[nodiscard]] std::optional<MillenniumDosFirstFunctionCheckpoint> millennium_dos_first_function_checkpoint() const;
+    [[nodiscard]] MillenniumDosSecondFunctionObservationResult observe_millennium_dos_second_function_dispatch(MillenniumDosSecondFunctionDispatchObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionObservationResult observe_millennium_dos_second_function_runtime_byte(MillenniumDosSecondFunctionRuntimeByteObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionObservationResult observe_millennium_dos_second_function_call_return(MillenniumDosSecondFunctionCallReturnObservation);
+    [[nodiscard]] MillenniumDosSecondFunctionObservationResult observe_millennium_dos_second_function_bl(MillenniumDosSecondFunctionBlObservation);
+    [[nodiscard]] std::optional<MillenniumDosSecondFunctionCheckpoint> millennium_dos_second_function_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics>
     millennium_dos_owned_function_diagnostics() const;
 
@@ -663,12 +676,14 @@ private:
     std::optional<MillenniumDosFifthFunctionSession> millennium_dos_fifth_function_;
     std::optional<MillenniumDosThirdFunctionSession> millennium_dos_third_function_;
     std::optional<MillenniumDosFirstFunctionSession> millennium_dos_first_function_;
+    std::optional<MillenniumDosSecondFunctionSession> millennium_dos_second_function_;
     std::optional<MillenniumDosTenthFunctionSession> millennium_dos_tenth_function_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> deuteros_amiga_title_second_service_plan_;
+    std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> deuteros_amiga_title_third_service_plan_;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula_;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;

@@ -411,6 +411,7 @@ def main() -> int:
                     "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57",
             }
             or runtime_diagnostics_payload.get("atari_bootstrap_checkpoint") is not None
+            or runtime_diagnostics_payload.get("deuteros_amiga_title_dependency_chain") is not None
             or recovery.get("coverage") != launch_check_payload["coverage"]
             or recovery.get("trace_admission") != "not-loaded"
             or not recovery.get("startup_boundary")

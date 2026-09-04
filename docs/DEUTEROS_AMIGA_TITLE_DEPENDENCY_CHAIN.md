@@ -35,4 +35,12 @@ The coordinator retains value-only copies of each resulting local plan, so a
 dependency checkpoint after the callback, first return, or second return
 respectively stops at `$206d4`, `$20708`, or `$2072e`. Reset and source
 revocation erase or hide these copies. No API invokes Exec, identifies either
-service, manufactures D0/SR, or crosses the still unresolved `-$1bc` boundary.
+service, or manufactures D0/SR.
+
+The following typed API now admits that `-$1bc` return only at call `$20732`
+and return `$20736`, after both preceding service observations. Its D0 value
+selects the already recovered local branch: nonzero stops at the original
+loop boundary `$2073a`; zero exposes the bounded local descriptor updates and
+stops at `$20776` before a new `-$162` call. The copy-only checkpoint retains
+this third plan and its exact stop without performing either branch's writes
+or crossing the next Exec boundary.
