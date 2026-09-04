@@ -88,6 +88,29 @@ struct DeuterosAmigaTitleGraphicsServiceSecondLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+// The third graphics return completes `$20094`. The original caller then
+// installs its literal local A6 value, tail-jumps to `$201d2`, and enters the
+// first local setup wrapper. Keep pointer cells as addresses only: their
+// runtime contents and the next graphics result are external observations.
+struct DeuterosAmigaTitleGraphicsServiceThirdLocalPlan {
+    DeuterosAmigaObservedGraphicsVectorReturn observed_return;
+    std::uint32_t service_rts_address = 0;
+    std::uint32_t dispatcher_return_address = 0;
+    std::uint32_t dispatcher_a6_value = 0;
+    std::uint32_t dispatcher_jump_address = 0;
+    std::uint32_t tail_entry_address = 0;
+    std::uint32_t first_call_address = 0;
+    std::uint32_t first_call_target = 0;
+    std::uint32_t next_a0_value = 0;
+    std::uint32_t next_a1_value = 0;
+    std::uint32_t next_a2_pointer_cell = 0;
+    std::uint32_t next_library_base_source_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::int16_t next_vector = 0;
+    std::uint32_t next_return_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -100,6 +123,10 @@ public:
             disk, plan);
         third_service_ = parse_deuteros_amiga_title_post_exec_third_service_profile(
             disk, plan);
+        tail_dispatch_ = parse_deuteros_amiga_title_post_exec_tail_dispatch_profile(
+            disk, plan);
+        tail_first_callee_ =
+            parse_deuteros_amiga_title_post_exec_tail_first_callee_profile(disk, plan);
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
             || to_hex(sha256(at(0x20510, 38)))
@@ -202,6 +229,34 @@ public:
             0x200f4, third_service_.graphics_library_vectors[2], 0x200f8, 0x200f4};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleGraphicsServiceThirdLocalPlan>
+    observe_graphics_service_third_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        if (!observed_graphics_service_second_ || observed_graphics_service_third_) {
+            return std::nullopt;
+        }
+        if (observation.trace_sequence
+                <= observed_graphics_service_second_->trace_sequence
+            || observation.library_base_source_address
+                != third_service_.graphics_library_base_address
+            || observation.observed_library_base != graphics_library_base_
+            || observation.call_address != 0x200f4
+            || observation.vector != third_service_.graphics_library_vectors[2]
+            || observation.return_address != 0x200f8) {
+            throw std::runtime_error("Deuteros third graphics-service return does not match boundary");
+        }
+        observed_graphics_service_third_ = observation;
+        return DeuterosAmigaTitleGraphicsServiceThirdLocalPlan{observation,
+            0x200f8, 0x1f380, third_service_.dispatcher_a6_literal,
+            third_service_.dispatcher_tail_jump_address, tail_dispatch_.entry_address,
+            tail_first_callee_.caller_address, tail_first_callee_.entry_address,
+            tail_first_callee_.a0_literal, tail_first_callee_.a1_literal,
+            tail_first_callee_.a2_pointer_cell_address,
+            tail_first_callee_.graphics_library_base_address,
+            0x20112, tail_first_callee_.graphics_library_vector,
+            tail_first_callee_.vector_return_address, 0x20112};
+    }
+
 private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
@@ -209,10 +264,14 @@ private:
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn> observed_;
     std::optional<DeuterosAmigaObservedServiceWordRead> observed_word_;
     DeuterosAmigaTitlePostExecThirdServiceProfile third_service_;
+    DeuterosAmigaTitlePostExecTailDispatchProfile tail_dispatch_;
+    DeuterosAmigaTitlePostExecTailFirstCalleeProfile tail_first_callee_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_graphics_service_first_;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
         observed_graphics_service_second_;
+    std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
+        observed_graphics_service_third_;
 };
 
 } // namespace eon

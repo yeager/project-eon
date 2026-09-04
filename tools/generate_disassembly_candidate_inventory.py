@@ -63,6 +63,8 @@ def generate(releases: dict, inventory: dict) -> dict:
                                "source_offset": start, "length": length,
                                "code_candidate_kind": kind,
                                "status": "mapped" if mapped else "discovered-unmapped",
+                               "load_status": ("unproven" if kind == "boot" or not mapped
+                                               else "address-basis-declared"),
                                "mapped_span_ids": sorted(set(mapped)),
                                "member_span_ids": sorted(set(member_spans))})
         result["releases"].append({"release_sha256": release_hash,

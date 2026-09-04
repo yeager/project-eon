@@ -10507,8 +10507,41 @@ int main() {
     assert(second_graphics_service->next_vector == -0x1a4);
     assert(second_graphics_service->next_return_address == 0x200f8);
     assert(second_graphics_service->stop_before_address == 0x200f4);
+    bool rejected_third_graphics_service = false;
+    try {
+        static_cast<void>(title_stage_session.observe_graphics_service_third_return(
+            {28, 0x12fec, 0x00abcdee, 0x200f4, -0x1a4, 0x200f8,
+                0x11223344, 0x2008}));
+    } catch (const std::runtime_error&) {
+        rejected_third_graphics_service = true;
+    }
+    assert(rejected_third_graphics_service);
+    const auto third_graphics_service =
+        title_stage_session.observe_graphics_service_third_return(
+            {28, 0x12fec, 0x00abcdef, 0x200f4, -0x1a4, 0x200f8,
+                0x11223344, 0x2008});
+    assert(third_graphics_service);
+    assert(third_graphics_service->observed_return.result_d0 == 0x11223344);
+    assert(third_graphics_service->observed_return.result_sr == 0x2008);
+    assert(third_graphics_service->service_rts_address == 0x200f8);
+    assert(third_graphics_service->dispatcher_return_address == 0x1f380);
+    assert(third_graphics_service->dispatcher_a6_value == 0x1f372);
+    assert(third_graphics_service->dispatcher_jump_address == 0x201d2);
+    assert(third_graphics_service->tail_entry_address == 0x201d2);
+    assert(third_graphics_service->first_call_address == 0x201d6);
+    assert(third_graphics_service->first_call_target == 0x200fa);
+    assert(third_graphics_service->next_a0_value == 0x12e12);
+    assert(third_graphics_service->next_a1_value == 0x1ffda);
+    assert(third_graphics_service->next_a2_pointer_cell == 0x2008e);
+    assert(third_graphics_service->next_library_base_source_address == 0x12fec);
+    assert(third_graphics_service->next_call_address == 0x20112);
+    assert(third_graphics_service->next_vector == -0x1a4);
+    assert(third_graphics_service->next_return_address == 0x20116);
+    assert(third_graphics_service->stop_before_address == 0x20112);
+    assert(!title_stage_session.observe_graphics_service_third_return(
+        {29, 0x12fec, 0x00abcdef, 0x200f4, -0x1a4, 0x200f8, 0, 0}));
     assert(!title_stage_session.observe_graphics_service_second_return(
-        {28, 0x12fec, 0x00abcdef, 0x200b0, -0x198, 0x200b4, 0, 0}));
+        {29, 0x12fec, 0x00abcdef, 0x200b0, -0x198, 0x200b4, 0, 0}));
     assert(!title_stage_session.observe_graphics_service_first_return(
         {27, 0x12fec, 0x00abcdef, 0x2009c, -0x19e, 0x200a0, 0, 0}));
     assert(!title_stage_session.observe_service_batch_runtime_word(

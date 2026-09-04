@@ -158,6 +158,12 @@ public:
         return service_batch_boundary_session_.observe_graphics_service_second_return(
             observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleGraphicsServiceThirdLocalPlan>
+    observe_graphics_service_third_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        return service_batch_boundary_session_.observe_graphics_service_third_return(
+            observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

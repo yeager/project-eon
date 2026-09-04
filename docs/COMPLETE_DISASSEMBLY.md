@@ -2,7 +2,7 @@
 
 Project Eon's complete-disassembly manifest enumerates every executable or
 code image currently identified for all eight recognised release identities.
-It covers 18 hash-bound images, 20 non-overlapping source ranges, and 1,124,355
+It covers 19 hash-bound images, 21 non-overlapping source ranges, and 1,124,867
 original bytes. “Complete” here means complete mechanical byte coverage of
 those declared ranges. It does not mean that code/data classification,
 reachability, relocations, operating-system calls, or gameplay semantics are
@@ -20,8 +20,8 @@ unsupported address bases, gaps, and overlaps fail closed.
 metadata-only view from the release manifest's parser profiles named by the
 disassembly inventory. It classifies only whether each already-declared
 candidate range is connected to a mapped static span. The current ledger has
-12 exactly mapped parser candidates and eight `discovered-unmapped`
-candidates. Those eight profile IDs and candidate kinds are committed per
+13 exactly mapped parser candidates and seven `discovered-unmapped`
+candidates. Those seven profile IDs and candidate kinds are committed per
 release in the complete manifest, so a
 missing load map cannot disappear merely because no listing was produced.
 This status is not a new code/data or reachability classification.
@@ -32,6 +32,13 @@ whole-disk carrier. Such a carrier is reported as
 `container-with-mapped-members`; 512-byte candidates are `boot`, and other
 exact candidate ranges are `raw-stage`. These labels describe ledger
 structure, not execution proof.
+
+Boot-sector listings use the `disk-relative` address basis. A complete
+512-byte listing proves byte coverage at an offset in the original disk image,
+not a runtime address, transfer of control, or load map. Both the span's entry
+and the manifest image's `load_status` must therefore remain `unproven`; the
+verifier rejects any attempt to upgrade either field merely because all bytes
+were decoded.
 
 ```sh
 python3 tools/verify_complete_disassembly.py

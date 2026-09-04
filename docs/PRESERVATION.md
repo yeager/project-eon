@@ -5630,6 +5630,17 @@ result, write any title-stage cell, or execute the tail jump. Reaching this
 third edge requires the earlier graphics vector, state-init routine, and all
 prior original calls to return.
 
+The active title session now accepts the third typed, same-library return only
+at `$200f4`, vector `-$1a4`, returning to `$200f8`, and only after the first
+two graphics returns. It retains D0 and SR as value-only evidence. The exact
+local continuation executes the RTS, resumes at `$1f380`, loads literal A6
+`$1f372`, tail-jumps at `$1f386` to `$201d2`, and enters the first BSR target
+`$200fa`. That wrapper supplies literal A0 `$12e12` and A1 `$1ffda`, reads A2
+only from pointer cell `$2008e`, and reloads the same graphics-library base
+from `$12fec`. Execution stops before its next graphics.library vector
+`-$1a4` at `$20112`; Eon records neither pointer-cell contents nor a graphics
+effect or rendered output.
+
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
 `b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606`. Its

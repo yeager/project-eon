@@ -34,6 +34,18 @@ open original media, generated reports, captures, or saves.
 
 ## External report identity verification
 
+The exact Equinox boot sector is also reproducible as a disk-relative
+byte-complete candidate: 512 bytes, source SHA-256
+`fbe9e43b9c4e3e80dbb13c0e4616c949501de69cc7377b0b383cc695d10c0d95`,
+143 report lines, report SHA-256
+`d402c44727fc209eb468e1c2c111fec10fed9ad2d371a3538ce440375fe89b4e`.
+Runtime load and entry remain unproven. Direct and nested carriers share the
+disk bytes, but carrier-specific report provenance remains distinct.
+The Spanish DOS boot span is already source-bounded to the first 512 bytes of
+the hash-identified FAT12 image, but neither its carrier nor a retained report
+identity is present locally. It remains an explicit disk-relative candidate
+gap; no BIOS load address or entry is inferred.
+
 ### Locally available direct-media Millennium set
 
 `tools/reproduce_millennium_disassembly.py` renders the largest complete
