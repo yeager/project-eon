@@ -1044,6 +1044,17 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
             if (index != 0) std::cout << ',';
             write_json_string(std::cout, hex(millennium_dispatch->handler_addresses[index]));
         }
+        std::cout << "],\"handlers\":[";
+        for (std::size_t index = 0; index < millennium_dispatch->handlers.size(); ++index) {
+            if (index != 0) std::cout << ',';
+            const auto& handler = millennium_dispatch->handlers[index];
+            std::cout << "{\"function_id\":";
+            write_json_string(std::cout, handler.function_id);
+            std::cout << ",\"action\":" << static_cast<unsigned>(handler.action)
+                << ",\"handler_address\":";
+            write_json_string(std::cout, hex(handler.handler_address));
+            std::cout << '}';
+        }
         std::cout << "]}";
     } else {
         std::cout << "null";

@@ -385,6 +385,16 @@ def main() -> int:
                 "dispatch_address": "$76f0",
                 "handler_addresses": ["$6f9a", "$71ca", "$6faa", "$72f9", "$7597",
                     "$7415", "$7521", "$7306", "$7339", "$7384"],
+                "handlers": [
+                    {"function_id": f"millennium-dos-en-f{index}-handler",
+                     "action": 58 + index, "handler_address": address}
+                    if index != 8 else
+                    {"function_id": "millennium-dos-en-f8-prefix",
+                     "action": 58 + index, "handler_address": address}
+                    for index, address in enumerate(
+                        ["$6f9a", "$71ca", "$6faa", "$72f9", "$7597",
+                         "$7415", "$7521", "$7306", "$7339", "$7384"], start=1)
+                ],
             }
             or runtime_diagnostics_payload.get("atari_bootstrap_checkpoint") is not None
             or recovery.get("coverage") != launch_check_payload["coverage"]

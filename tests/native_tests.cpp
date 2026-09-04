@@ -3957,6 +3957,12 @@ int main() {
         && dos_static_dispatch->table_address == 0x2fbf && dos_static_dispatch->table_stride == 8
         && dos_static_dispatch->dispatch_address == 0x76f0
         && dos_static_dispatch->handler_addresses == expected_dos_handlers);
+    assert(dos_static_dispatch->handlers.front().function_id == "millennium-dos-en-f1-handler"
+        && dos_static_dispatch->handlers.front().action == 0x3b
+        && dos_static_dispatch->handlers.front().handler_address == 0x6f9a);
+    assert(dos_static_dispatch->handlers.back().function_id == "millennium-dos-en-f10-handler"
+        && dos_static_dispatch->handlers.back().action == 0x44
+        && dos_static_dispatch->handlers.back().handler_address == 0x7384);
     assert(admitted_dos_runtime.session_snapshot());
     const auto& dos_session_snapshot = *admitted_dos_runtime.session_snapshot();
     assert(dos_session_snapshot.game == eon::Game::millennium

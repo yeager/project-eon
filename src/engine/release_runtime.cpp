@@ -265,6 +265,14 @@ ReleaseRuntimeCoordinator::millennium_dos_static_dispatch_diagnostics() const {
         const auto mapped = function_map_runtime_address_for(release_sha256, handler_ids[index]);
         if (!mapped || *mapped != handler_addresses[index]) return std::nullopt;
     }
+    std::array<MillenniumDosStaticDispatchEntry, 10> handlers;
+    for (std::size_t index = 0; index < handlers.size(); ++index) {
+        handlers[index] = {
+            .function_id = std::string(handler_ids[index]),
+            .action = static_cast<std::uint8_t>(flow.function_key_first_action + index),
+            .handler_address = handler_addresses[index],
+        };
+    }
     return MillenniumDosStaticDispatchDiagnostics{
         .action_poll_address = flow.action_poll_address,
         .first_action = flow.function_key_first_action,
@@ -273,6 +281,7 @@ ReleaseRuntimeCoordinator::millennium_dos_static_dispatch_diagnostics() const {
         .table_stride = flow.function_key_table_stride,
         .dispatch_address = flow.function_key_dispatch_address,
         .handler_addresses = handler_addresses,
+        .handlers = std::move(handlers),
     };
 }
 

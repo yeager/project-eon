@@ -179,6 +179,12 @@ struct MillenniumDosStartupInputSnapshot {
 // describes the table encoded in the admitted executable, not a playable
 // game session: no action has been observed, no handler has executed, and
 // no native runtime cells are exposed or reconstructed here.
+struct MillenniumDosStaticDispatchEntry {
+    std::string function_id;
+    std::uint8_t action = 0;
+    std::uint16_t handler_address = 0;
+};
+
 struct MillenniumDosStaticDispatchDiagnostics {
     std::uint32_t action_poll_address = 0;
     std::uint8_t first_action = 0;
@@ -187,6 +193,7 @@ struct MillenniumDosStaticDispatchDiagnostics {
     std::size_t table_stride = 0;
     std::uint32_t dispatch_address = 0;
     std::array<std::uint16_t, 10> handler_addresses{};
+    std::array<MillenniumDosStaticDispatchEntry, 10> handlers{};
 };
 
 // Owns the one immutable original-media identity that a runtime is permitted

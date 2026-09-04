@@ -4168,8 +4168,11 @@ action-dispatch range.
 For the live, hash-admitted English DOS title session only, the Modern F10
 diagnostics readout and `--runtime-diagnostics-json` may additionally report
 the immutable F1–F10 table address, stride, dispatcher address and handler
-entry addresses. The JSON object is named `millennium_dos_static_dispatch`
-and declares `static_only: true`. It is coordinator-owned, revoked with the
+entry addresses. The JSON object is named `millennium_dos_static_dispatch`;
+its ordered `handlers` records join each raw `$3b..$44` action to the stable
+declarative function-map ID and verified handler address while retaining the
+flat `handler_addresses` list for schema-v1 consumers. The object declares
+`static_only: true`. It is coordinator-owned, revoked with the
 title adapter, and has no input observer, handler invocation, runtime-cell,
 save, media-byte, or guest-execution surface. It is a preservation navigation
 aid for the verified code table—not a control map or evidence that the title
