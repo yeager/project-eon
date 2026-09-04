@@ -28,7 +28,8 @@ struct MillenniumAtariReadOnlyGemdosCheckpoint {
     std::uint32_t fread_request_bytes = 0;
     std::uint32_t fread_return_bytes = 0;
     std::uint32_t fread_destination_address = 0;
-    std::uint32_t stop_before_jsr_address = 0;
+    std::uint32_t config_jsr_instruction_address = 0;
+    std::uint32_t config_jsr_target_address = 0;
     bool source_opened_read_only = false;
     bool source_mutated = false;
     bool fclose_modeled = false;

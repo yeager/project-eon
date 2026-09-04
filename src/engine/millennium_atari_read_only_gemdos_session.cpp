@@ -41,7 +41,9 @@ MillenniumAtariReadOnlyGemdosSession::MillenniumAtariReadOnlyGemdosSession(
         std::string(disk_sha256), std::string(filename), std::string(payload_sha256),
         static_cast<std::uint32_t>(payload_.size()), fopen.fopen_access_mode, 1,
         fread.byte_count_argument, static_cast<std::uint32_t>(payload_.size()),
-        fread.buffer_address, fread.buffer_address, true, false, false};
+        fread.buffer_address,
+        transfer.target_address + static_cast<std::uint32_t>(transfer.entry_offset) + 8U,
+        transfer.config_buffer_address, true, false, false};
 }
 
 NativeRuntimeEffectBatch MillenniumAtariReadOnlyGemdosSession::make_fread_effect_batch(

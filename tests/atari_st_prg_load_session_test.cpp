@@ -3,6 +3,7 @@
 #include "data/sha256.hpp"
 #include "engine/atari_st_prg_load_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
+#include "engine/millennium_atari_config_consumer_session.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -64,6 +65,8 @@ int main(const int argc, const char* const argv[]) {
             exact, "millennium-atari-1-prg"));
         assert(image_result.accepted);
         const auto& gemdos = session.read_only_gemdos();
+        assert(gemdos.checkpoint().config_jsr_instruction_address == 0x7703c
+            && gemdos.checkpoint().config_jsr_target_address == 0x2a500);
         const auto config_result = memory.apply(
             gemdos.make_fread_effect_batch("millennium-atari-1-config"));
         assert(config_result.accepted);
@@ -74,6 +77,34 @@ int main(const int argc, const char* const argv[]) {
             std::nullopt, 0x2a500}) == 0x4e);
         assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
             std::nullopt, 0x2a501}) == 0xf9);
+        eon::MillenniumAtariConfigConsumerSession consumer(1, memory,
+            gemdos.checkpoint(), session.fread_config_load_address_boundary(),
+            session.fread_mapped_config_prelude());
+        const auto& consumer_checkpoint = consumer.checkpoint();
+        assert(consumer_checkpoint.state
+                == eon::MillenniumAtariConfigConsumerState::status_register_boundary
+            && consumer_checkpoint.jsr_instruction_address == 0x7703c
+            && consumer_checkpoint.jsr_return_address == 0x77042
+            && consumer_checkpoint.jsr_target_address == 0x2a500
+            && consumer_checkpoint.entry_jump_target_address == 0x2aa88
+            && consumer_checkpoint.boundary_instruction_address == 0x2aa88
+            && consumer_checkpoint.boundary_opcode == 0x40c0
+            && consumer_checkpoint.local_control_transfers_executed == 2
+            && !consumer_checkpoint.return_address_materialized
+            && !consumer_checkpoint.status_register_read
+            && !consumer_checkpoint.hardware_write_executed);
+        assert(!consumer.revoke(2).accepted && consumer.revoke(1).accepted);
+        rejects([&] {
+            const eon::NativeRuntimeMemory empty_memory(0x01000000U);
+            static_cast<void>(eon::MillenniumAtariConfigConsumerSession(1, empty_memory,
+                gemdos.checkpoint(), session.fread_config_load_address_boundary(),
+                session.fread_mapped_config_prelude()));
+        });
+        rejects([&] {
+            static_cast<void>(eon::MillenniumAtariConfigConsumerSession(2, memory,
+                gemdos.checkpoint(), session.fread_config_load_address_boundary(),
+                session.fread_mapped_config_prelude()));
+        });
         eon::MillenniumAtariReadOnlyGemdosSession mutable_gemdos(1, disk,
             session.fopen_boundary(), session.fread_frame_prefix(),
             session.fread_config_transfer());

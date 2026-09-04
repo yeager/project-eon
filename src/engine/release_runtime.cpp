@@ -106,6 +106,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     std::optional<MillenniumAmigaBootstrapRelocatorSession> millennium_amiga_relocator;
     NativeRuntimeMemory runtime_memory;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari;
+    std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari;
@@ -238,6 +239,10 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
                 millennium_atari->read_only_gemdos().make_fread_effect_batch(
                     "millennium-atari-1-config"));
             if (!config_applied.accepted) throw std::runtime_error(config_applied.error);
+            millennium_atari_config_consumer.emplace(1, runtime_memory,
+                millennium_atari->read_only_gemdos().checkpoint(),
+                millennium_atari->fread_config_load_address_boundary(),
+                millennium_atari->fread_mapped_config_prelude());
         }
     } catch (...) {
         reset(); admission_ = ReleaseRuntimeAdmission::adapter_rejected;
@@ -251,6 +256,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     millennium_amiga_relocator_=std::move(millennium_amiga_relocator);
     millennium_amiga_relocator_generation_=millennium_amiga_relocator_?1:0;
     millennium_atari_ = std::move(millennium_atari);
+    millennium_atari_config_consumer_ = std::move(millennium_atari_config_consumer);
     deuteros_amiga_ = std::move(deuteros_amiga);
     deuteros_amiga_paula_ = std::move(deuteros_amiga_paula);
     deuteros_atari_ = std::move(deuteros_atari);
@@ -264,6 +270,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 
 void ReleaseRuntimeCoordinator::reset() {
     native_runtime_memory_.reset();
+    millennium_atari_config_consumer_.reset();
     millennium_dos_title_to_game_.reset();
     millennium_dos_title_to_game_generation_ = 0;
     millennium_dos_title_to_game_last_sequence_ = 0;
@@ -736,7 +743,12 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
     }
     auto next=*millennium_dos_title_initialization_;
     auto memory=*native_runtime_memory_;
-    try { next.observe_private_interrupt_result(observation); }
+    try {
+        next.observe_private_interrupt_result(observation);
+        const auto selected=next.checkpoint();
+        next.execute_selected_callee_start(selected.last_sequence+1,
+            selected.selected_call_address,selected.selected_call_target);
+    }
     catch(const std::exception& e){result.error=e.what();return result;}
     const auto checkpoint=next.checkpoint();
     NativeRuntimeEffectBatch batch{
@@ -2305,6 +2317,97 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_planar_write(
 }
 
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_planar_variant_write(
+    const DeuterosAmigaObservedTitleCommandPlanarVariantWrite observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !native_runtime_memory_
+        || deuteros_amiga_title_command_generation_ == 0) {
+        result.error = "Deuteros planar variant requires an active owned command generation";
+        return result;
+    }
+    try {
+        if (!deuteros_amiga_->title_stage_session()) {
+            result.error = "Deuteros planar variant requires the owned title-stage session";
+            return result;
+        }
+        auto preview_session = *deuteros_amiga_->title_stage_session();
+        const auto plan = preview_session.observe_command_planar_variant_write(observation);
+        if (!plan) {
+            result.error = "Deuteros planar variant did not match its owned boundary";
+            return result;
+        }
+        auto next_memory = *native_runtime_memory_;
+        if (plan->variant == DeuterosAmigaTitlePlanarVariant::positive_clear
+            || plan->variant == DeuterosAmigaTitlePlanarVariant::positive_set) {
+            for (std::size_t index = 0; index < plan->destination_addresses.size(); ++index) {
+                const NativeRuntimeLocation location{NativeRuntimeAddressSpace::linear,
+                    std::nullopt, plan->destination_addresses[index]};
+                const auto known = next_memory.read_byte(location);
+                if (known && *known != static_cast<std::uint8_t>(
+                        observation.observed_base_values[index])) {
+                    result.error = "Deuteros planar destination read contradicts owned runtime memory";
+                    return result;
+                }
+            }
+        }
+        NativeRuntimeEffectBatch batch{
+            "deuteros-amiga-title-command-planar-variant-"
+                + std::to_string(deuteros_amiga_title_command_generation_),
+            true, {}};
+        batch.effects.reserve(plan->destination_addresses.size() + 1U);
+        for (std::size_t index = 0; index < plan->destination_addresses.size(); ++index) {
+            batch.effects.push_back({index + 1U,
+                {NativeRuntimeAddressSpace::linear, std::nullopt,
+                    plan->destination_addresses[index]},
+                MemoryTransferElementWidth::byte,
+                NativeRuntimeByteOrder::big_endian,
+                plan->destination_values[index]});
+        }
+        batch.effects.push_back({batch.effects.size() + 1U,
+            {NativeRuntimeAddressSpace::linear, std::nullopt,
+                plan->destination_pointer_cell_address},
+            MemoryTransferElementWidth::longword,
+            NativeRuntimeByteOrder::big_endian,
+            plan->destination_pointer_value});
+        const auto applied = next_memory.apply(batch);
+        if (!applied.accepted) {
+            result.error = "Runtime-memory application rejected: " + applied.error;
+            return result;
+        }
+
+        auto next_surface = deuteros_amiga_title_planar_surface_;
+        if (plan->recovered_title_surface_layout) {
+            auto candidate = next_surface.value_or(DeuterosAmigaTitlePlanarSurface{});
+            const auto surface_applied = candidate.apply(plan->destination_addresses,
+                plan->destination_values, deuteros_amiga_title_command_generation_);
+            if (!surface_applied.accepted) {
+                result.error = "Native planar-surface application rejected: "
+                    + surface_applied.error;
+                return result;
+            }
+            next_surface = std::move(candidate);
+        }
+        if (!deuteros_amiga_->observe_title_command_planar_variant_write(observation)) {
+            result.error = "Deuteros planar variant disappeared before commit";
+            return result;
+        }
+        *native_runtime_memory_ = std::move(next_memory);
+        deuteros_amiga_title_planar_surface_ = std::move(next_surface);
+        if (plan->recovered_title_surface_layout) {
+            deuteros_amiga_title_planar_base_ = plan->destination_addresses[0];
+            deuteros_amiga_title_planar_generation_ =
+                deuteros_amiga_title_command_generation_;
+        }
+        result.accepted = true;
+    } catch (const std::exception& e) {
+        result.error = std::string("Deuteros planar variant rejected: ") + e.what();
+    }
+    return result;
+}
+
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
     DeuterosAmigaTitleDependencyObservationResult result;
@@ -2466,10 +2569,11 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>
 ReleaseRuntimeCoordinator::millennium_atari_bootstrap_presentation() const {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::millennium_atari_bootstrap
-        || !millennium_atari_) return std::nullopt;
+        || !millennium_atari_ || !millennium_atari_config_consumer_) return std::nullopt;
     return MillenniumAtariBootstrapPresentationSnapshot{
         atari_st_prg_load_diagnostics(millennium_atari_->native_prg_image()),
         millennium_atari_->read_only_gemdos().checkpoint(),
+        millennium_atari_config_consumer_->checkpoint(),
         millennium_atari_->bootstrap(), millennium_atari_->bss_entry(),
         millennium_atari_->bss_source(), millennium_atari_->target(),
         millennium_atari_->execution(), millennium_atari_->fopen_boundary(),

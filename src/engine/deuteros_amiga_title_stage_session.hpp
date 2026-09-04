@@ -308,6 +308,11 @@ public:
         const DeuterosAmigaObservedTitleCommandPlanarWrite& observation) {
         return service_batch_boundary_session_.observe_command_planar_write(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPlanarVariantWritePlan>
+    observe_command_planar_variant_write(
+        const DeuterosAmigaObservedTitleCommandPlanarVariantWrite& observation) {
+        return service_batch_boundary_session_.observe_command_planar_variant_write(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

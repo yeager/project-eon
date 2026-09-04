@@ -66,7 +66,7 @@ an immutable FAT12 snapshot of the exact requested file:
 | Destination | `$2a500` |
 | Source access | read-only FAT-chain snapshot |
 | Source mutation | never |
-| Terminal boundary | before the encoded `JSR $2a500` |
+| Config callsite / target | `$7703c` / `$2a500` |
 
 The 7,506 bytes form a second atomic runtime-memory batch. Their destination
 overlaps the PRG's zeroed BSS by design; publication replaces precisely those
@@ -80,15 +80,42 @@ as captured TOS register values. No general path lookup, create, write, seek,
 close, directory service, basepage, error mapping, or additional GEMDOS
 selector is implemented.
 
+## Config consumer entry
+
+The caller-connected instruction at `$7703c` is `JSR $2a500`. With the exact
+Fread batch present in native memory, `$2a500` contains the file's original
+`JMP $2aa88`. `MillenniumAtariConfigConsumerSession` executes those two local
+control transfers and records `$77042` as the encoded JSR return address. It
+does not synthesize an A7 value or write that return address into an invented
+stack.
+
+Execution then stops before the first instruction at `$2aa88`:
+
+| Property | Exact evidence |
+| --- | --- |
+| Mapped file offset | `+$588` |
+| 34-byte prelude SHA-256 | `dede20eddbd8015da1d1a4f2f5e53424c2bc2195bff238d830ea24c9f522ea59` |
+| Boundary opcode | `$40c0` (`MOVE SR,D0`) |
+| Unresolved input | original 68000 privilege/status register value |
+| Local control transfers completed | 2 (`JSR`, absolute `JMP`) |
+| Status reads / hardware writes completed | 0 / 0 |
+
+The following `BCLR #13,D0` and conditional branch depend on that SR value.
+One path would touch `$ffff8800` and change SR before both paths converge at
+`JSR $2a51c`. Choosing either path, executing a privileged instruction, or
+writing the hardware address would invent original runtime state. They remain
+outside the native session until independently evidenced. The config-consumer
+checkpoint is generation-owned and disappears with the same coordinator
+revocation as its PRG and Fread memory.
+
 ## Remaining boundary
 
 The materialized image and exact configuration now occupy native runtime
-memory, but control execution stops before `JSR $2a500`. The next high-impact
-Atari task is to execute the already hash-identified mapped configuration
-prelude and its converged direct JSR while retaining its condition-code and
-Line-A dependencies. TOS basepage fields, XBIOS results, Line-A state, input,
-timing, and every unclassified indirect target remain explicit preservation
-boundaries.
+memory, and native control reaches `$2aa88`. The next Atari task requires
+evidence for the entry SR value; only then can the conditional hardware setup
+and converged `JSR $2a51c` be selected. TOS basepage fields, XBIOS results,
+Line-A state, input, timing, and every unclassified indirect target remain
+explicit preservation boundaries.
 
 No original bytes are written to disk, copied into a package, or committed.
 The structural unit fixture checks loader arithmetic only; the canonical

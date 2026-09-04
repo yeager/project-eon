@@ -3149,7 +3149,7 @@ int main() {
     }
     const auto deuteros_amiga_functions = eon::function_map_for_release(
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
-    assert(deuteros_amiga_functions.size() == 10);
+    assert(deuteros_amiga_functions.size() == 13);
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-exec-boundary";
     }));
@@ -3163,6 +3163,15 @@ int main() {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
             && entry.runtime_status == "native trace-gated planar writes";
     }));
+    for (const auto id : {"deuteros-amiga-en-title-planar-positive-clear",
+             "deuteros-amiga-en-title-planar-zero-set",
+             "deuteros-amiga-en-title-planar-positive-set"}) {
+        assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(),
+            [id](const auto& entry) {
+                return entry.id == id
+                    && entry.runtime_status == "native trace-gated planar writes";
+            }));
+    }
     const auto millennium_dos_functions = eon::function_map_for_release(
         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123");
     assert(millennium_dos_functions.size() == 21);
@@ -4586,14 +4595,28 @@ int main() {
     title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
     assert(title_entry&&title_entry->title_initialization
         &&title_entry->title_initialization->state
-            ==eon::MillenniumDosTitleInitializationState::selected_local_call_boundary
-        &&title_entry->title_initialization->last_sequence==15
+            ==eon::MillenniumDosTitleInitializationState::
+                selected_callee_private_interrupt_result_boundary
+        &&title_entry->title_initialization->last_sequence==16
         &&title_entry->title_initialization->observed_ax==0x0101
         &&title_entry->title_initialization->observed_flags==0x7202
         &&title_entry->title_initialization->selected_mode==1
         &&title_entry->title_initialization->selected_call_address==0x1bad
         &&title_entry->title_initialization->selected_call_target==0x1ac6
-        &&title_entry->title_initialization->memory_effects.size()==4);
+        &&title_entry->title_initialization->memory_effects.size()==4
+        &&title_entry->title_initialization->selected_callee_boundary.call_address
+            ==0x1ace
+        &&title_entry->title_initialization->selected_callee_boundary.wrapper_address
+            ==0x0122
+        &&title_entry->title_initialization->selected_callee_boundary.interrupt_address
+            ==0x0127
+        &&title_entry->title_initialization->selected_callee_boundary.interrupt==0x91
+        &&title_entry->title_initialization->selected_callee_boundary.function==4
+        &&title_entry->title_initialization->selected_callee_boundary.record_segment
+            ==0xe33f
+        &&title_entry->title_initialization->selected_callee_boundary.record_offset
+            ==0x1ac5
+        &&!title_entry->title_initialization->selected_callee_boundary.result_observed);
     const auto after_title_result=
         admitted_dos_runtime.native_runtime_memory_diagnostics();
     assert(before_title_result&&after_title_result
@@ -4734,7 +4757,14 @@ int main() {
                 && presentation->native_prg_image.relocation_count == 227
                 && presentation->read_only_gemdos.generation == 1
                 && presentation->read_only_gemdos.fread_return_bytes == 7506
-                && presentation->read_only_gemdos.stop_before_jsr_address == 0x2a500);
+                && presentation->read_only_gemdos.config_jsr_instruction_address == 0x7703c
+                && presentation->read_only_gemdos.config_jsr_target_address == 0x2a500
+                && presentation->config_consumer.generation == 1
+                && presentation->config_consumer.jsr_instruction_address == 0x7703c
+                && presentation->config_consumer.entry_jump_target_address == 0x2aa88
+                && presentation->config_consumer.boundary_opcode == 0x40c0
+                && !presentation->config_consumer.status_register_read
+                && !presentation->config_consumer.hardware_write_executed);
             const auto atari_memory = all_release_runtime.native_runtime_memory_diagnostics();
             assert(atari_memory && atari_memory->applied_batch_count == 2
                 && atari_memory->initialized_byte_count
@@ -5053,7 +5083,44 @@ int main() {
             assert(!opening_controller.deuteros_amiga_title_planar_patch());
             assert(!opening_controller.deuteros_amiga_title_planar_surface());
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
-                {runtime_copy_sequence+15,0x1fa0a,0x2ff08,0}).accepted);
+                {runtime_copy_sequence+15,0x1fa0a,0x2ff08,0x21}).accepted);
+            eon::DeuterosAmigaObservedTitleCommandPlanarVariantWrite runtime_variant;
+            runtime_variant.trace_sequence=runtime_copy_sequence+16;
+            runtime_variant.mode_instruction_addresses={{0x1fbe6,0x1fc9c}};
+            runtime_variant.mode_source_addresses={{0x1f98c,0x1f98e}};
+            runtime_variant.observed_mode_values={{1,0}};
+            runtime_variant.pointer_source_addresses={0x1f99c,0x1f974,0x1f96c};
+            runtime_variant.observed_pointer_values={0x50000,0xb5f4,0x70000};
+            for(std::uint32_t row=0;row<8;++row){
+                runtime_variant.glyph_source_addresses[row]=0x50008+row;
+                runtime_variant.observed_glyph_values[row]=
+                    static_cast<std::uint8_t>(row*0x11U);
+                for(std::uint32_t plane=0;plane<4;++plane){
+                    const auto index=row*4U+plane;
+                    const auto destination=0xb5f4+row*0x28U+plane*0x1f40U;
+                    runtime_variant.base_source_addresses[index]=destination;
+                    runtime_variant.observed_base_values[index]=
+                        static_cast<std::uint16_t>(0xa0U+plane);
+                    runtime_variant.blend_word_source_addresses[index]=0x70000+plane*2U;
+                    runtime_variant.observed_blend_words[index]=
+                        static_cast<std::uint16_t>(0x3450U+plane);
+                }
+            }
+            auto bad_runtime_variant=runtime_variant;
+            bad_runtime_variant.base_source_addresses[7]++;
+            assert(!opening_controller.observe_deuteros_amiga_title_command_planar_variant_write(
+                bad_runtime_variant).accepted);
+            assert(opening_controller.native_runtime_memory_diagnostics()->checksum
+                == planar_memory->checksum);
+            assert(opening_controller.observe_deuteros_amiga_title_command_planar_variant_write(
+                runtime_variant).accepted);
+            const auto variant_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(variant_memory
+                && variant_memory->initialized_bytes.size()==0xa20*4+81
+                && variant_memory->applied_batch_count==8
+                && variant_memory->checksum!=planar_memory->checksum);
+            assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
+                {runtime_copy_sequence+17,0x1fa0a,0x2ff09,0}).accepted);
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
@@ -5119,11 +5186,11 @@ int main() {
                 && trace_checkpoint->event_sha256 == title_trace.event_sha256);
             const auto planar_patch =
                 opening_controller.deuteros_amiga_title_planar_patch();
-            assert(planar_patch && planar_patch->command_generation==6
-                && planar_patch->plane_zero_address==0xb782
-                && planar_patch->pixel_x==16 && planar_patch->pixel_y==10
+            assert(planar_patch && planar_patch->command_generation==7
+                && planar_patch->plane_zero_address==0xb5f4
+                && planar_patch->pixel_x==32 && planar_patch->pixel_y==0
                 && planar_patch->width==8 && planar_patch->height==8
-                && planar_patch->runtime_memory_checksum==planar_memory->checksum
+                && planar_patch->runtime_memory_checksum==variant_memory->checksum
                 && planar_patch->display_trace_bitplanes_sha256
                     == "fad588ff5f6e0ec471cb4889987dab4a40c11d7da6e532564d48475149c68490"
                 && planar_patch->palette_rgb4_sha256
@@ -5140,14 +5207,14 @@ int main() {
                 && planar_patch->rgba[6]==0 && planar_patch->rgba[7]==0xff);
             const auto planar_surface =
                 opening_controller.deuteros_amiga_title_planar_surface();
-            const auto planar_surface_pixel = static_cast<std::size_t>(10*320+16);
+            const auto planar_surface_pixel = static_cast<std::size_t>(32);
             assert(planar_surface && planar_surface->width==320
                 && planar_surface->height==200
-                && planar_surface->last_command_generation==6
-                && planar_surface->applied_patch_count==1
-                && planar_surface->initialized_plane_byte_count==32
-                && planar_surface->decoded_pixel_count==64
-                && planar_surface->runtime_memory_checksum==planar_memory->checksum
+                && planar_surface->last_command_generation==7
+                && planar_surface->applied_patch_count==2
+                && planar_surface->initialized_plane_byte_count==64
+                && planar_surface->decoded_pixel_count==128
+                && planar_surface->runtime_memory_checksum==variant_memory->checksum
                 && planar_surface->valid_pixels.size()==320*200
                 && planar_surface->color_indices.size()==320*200
                 && planar_surface->rgba.size()==320*200*4
@@ -9388,7 +9455,8 @@ int main() {
         && atari_session.read_only_gemdos().checkpoint().source_opened_read_only
         && !atari_session.read_only_gemdos().checkpoint().source_mutated
         && atari_session.read_only_gemdos().checkpoint().fread_return_bytes == 7506
-        && atari_session.read_only_gemdos().checkpoint().stop_before_jsr_address == 0x2a500);
+        && atari_session.read_only_gemdos().checkpoint().config_jsr_instruction_address == 0x7703c
+        && atari_session.read_only_gemdos().checkpoint().config_jsr_target_address == 0x2a500);
     {
         auto altered = *atari_image;
         altered.back() ^= 0x01;
@@ -11896,6 +11964,100 @@ int main() {
     assert(planar_write->command_return_address == 0x1fac6);
     assert(planar_write->next_stream_address == 0x2ff0f);
     assert(planar_write->next_opcode_read_address == 0x1fa0a);
+
+    const auto make_planar_variant = [](const std::uint64_t sequence,
+            const std::uint8_t opcode,
+            const std::uint8_t primary_mode, const std::uint8_t secondary_mode,
+            const std::uint32_t destination) {
+        eon::DeuterosAmigaObservedTitleCommandPlanarVariantWrite observation;
+        observation.trace_sequence = sequence;
+        const bool positive = primary_mode != 0;
+        const bool set = secondary_mode != 0;
+        observation.mode_instruction_addresses =
+            {{0x1fbe6, positive ? 0x1fc9cU : 0x1fc22U}};
+        observation.mode_source_addresses = {{0x1f98c, 0x1f98e}};
+        observation.observed_mode_values = {{primary_mode, secondary_mode}};
+        std::uint32_t glyph_pointer = 0x50000;
+        std::uint32_t blend_words = 0x70000;
+        std::uint32_t base_words = 0x80000;
+        std::uint32_t row_stride = 0x28;
+        std::uint32_t plane_stride = 0x1f40;
+        if (!positive) {
+            observation.pointer_source_addresses =
+                {0x1f994,0x1f998,0x1f99c,0x1f974,0x1f96c,0x1f970};
+            observation.observed_pointer_values =
+                {row_stride,plane_stride,glyph_pointer,destination,blend_words,base_words};
+        } else if (!set) {
+            observation.pointer_source_addresses = {0x1f99c,0x1f974,0x1f96c};
+            observation.observed_pointer_values = {glyph_pointer,destination,blend_words};
+        } else {
+            observation.pointer_source_addresses =
+                {0x1f994,0x1f998,0x1f99c,0x1f974,0x1f96c};
+            observation.observed_pointer_values =
+                {row_stride,plane_stride,glyph_pointer,destination,blend_words};
+        }
+        for (std::uint32_t row=0;row<8;++row) {
+            observation.glyph_source_addresses[row]=glyph_pointer
+                + static_cast<std::uint32_t>(opcode-0x20U)*8U+row;
+            observation.observed_glyph_values[row]=static_cast<std::uint8_t>(row*0x11U);
+            for (std::uint32_t plane=0;plane<4;++plane) {
+                const auto index=row*4U+plane;
+                const auto target=destination+row*row_stride+plane*plane_stride;
+                observation.base_source_addresses[index]=positive
+                    ? target : base_words+plane*2U;
+                observation.observed_base_values[index]=
+                    static_cast<std::uint16_t>(0x12a0U+plane);
+                observation.blend_word_source_addresses[index]=blend_words+plane*2U;
+                observation.observed_blend_words[index]=
+                    static_cast<std::uint16_t>(0x3450U+plane);
+            }
+        }
+        return observation;
+    };
+    assert(title_stage_session.observe_command_opcode(
+        {copy_sequence+23,0x1fa0a,0x2ff0f,0x21}));
+    const auto positive_clear=title_stage_session.observe_command_planar_variant_write(
+        make_planar_variant(copy_sequence+24,0x21,1,0,0xb5f0));
+    assert(positive_clear
+        && positive_clear->variant==eon::DeuterosAmigaTitlePlanarVariant::positive_clear
+        && positive_clear->destination_addresses[0]==0xb5f0
+        && positive_clear->destination_addresses[1]==0xd530
+        && positive_clear->destination_pointer_value==0xb5f1
+        && positive_clear->row_stride==0x28
+        && positive_clear->plane_stride==0x1f40
+        && positive_clear->recovered_title_surface_layout
+        && positive_clear->routine_return_address==0x1fd08
+        && positive_clear->next_stream_address==0x2ff10);
+    assert(title_stage_session.observe_command_opcode(
+        {copy_sequence+25,0x1fa0a,0x2ff10,0x22}));
+    const auto zero_set=title_stage_session.observe_command_planar_variant_write(
+        make_planar_variant(copy_sequence+26,0x22,0,1,0xb618));
+    assert(zero_set
+        && zero_set->variant==eon::DeuterosAmigaTitlePlanarVariant::zero_set
+        && zero_set->destination_pointer_value==0xb619
+        && zero_set->routine_return_address==0x1fd78
+        && zero_set->recovered_title_surface_layout);
+    assert(title_stage_session.observe_command_opcode(
+        {copy_sequence+27,0x1fa0a,0x2ff11,0x23}));
+    auto positive_set_observation=make_planar_variant(
+        copy_sequence+28,0x23,1,1,0xb640);
+    auto bad_positive_set=positive_set_observation;
+    bad_positive_set.base_source_addresses[5]++;
+    bool rejected_planar_variant=false;
+    try {
+        static_cast<void>(title_stage_session.observe_command_planar_variant_write(
+            bad_positive_set));
+    } catch (const std::runtime_error&) {
+        rejected_planar_variant=true;
+    }
+    assert(rejected_planar_variant);
+    const auto positive_set=title_stage_session.observe_command_planar_variant_write(
+        positive_set_observation);
+    assert(positive_set
+        && positive_set->variant==eon::DeuterosAmigaTitlePlanarVariant::positive_set
+        && positive_set->destination_pointer_value==0xb641
+        && positive_set->routine_return_address==0x1fde2
+        && positive_set->next_stream_address==0x2ff12);
     const auto command_16 = title_stage_session.observe_command_opcode(
         {copy_sequence + 23, 0x1fa0a, 0x2ff0f, 0x16});
     assert(command_16);

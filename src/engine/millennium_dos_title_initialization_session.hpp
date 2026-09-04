@@ -11,6 +11,7 @@ enum class MillenniumDosTitleInitializationState {
     awaiting_entry,
     private_interrupt_result_boundary,
     selected_local_call_boundary,
+    selected_callee_private_interrupt_result_boundary,
 };
 
 enum class MillenniumDosTitleInitializationEffectWidth { byte, word };
@@ -62,6 +63,7 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint8_t selected_mode = 0;
     std::uint16_t selected_call_address = 0;
     std::uint16_t selected_call_target = 0;
+    MillenniumDosTitlePrivateInterruptBoundary selected_callee_boundary;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -80,6 +82,8 @@ public:
         std::uint16_t wrapper_address, std::uint8_t interrupt);
     void observe_private_interrupt_result(
         const MillenniumDosTitlePrivateInterruptResultObservation&);
+    void execute_selected_callee_start(std::uint64_t sequence,
+        std::uint16_t selected_call_address, std::uint16_t selected_call_target);
 
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
@@ -91,6 +95,7 @@ private:
     std::vector<MillenniumDosTitleInitializationRegisterEffect> effects_;
     std::vector<MillenniumDosTitleInitializationMemoryEffect> memory_effects_;
     MillenniumDosTitlePrivateInterruptBoundary boundary_;
+    MillenniumDosTitlePrivateInterruptBoundary selected_callee_boundary_;
     std::uint16_t observed_ax_ = 0;
     std::uint16_t observed_flags_ = 0;
     std::uint8_t selected_mode_ = 0;

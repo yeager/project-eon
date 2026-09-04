@@ -10,6 +10,7 @@
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_relocator_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
+#include "engine/millennium_atari_config_consumer_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
@@ -153,6 +154,7 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
 struct MillenniumAtariBootstrapPresentationSnapshot {
     AtariStPrgLoadDiagnostics native_prg_image;
     MillenniumAtariReadOnlyGemdosCheckpoint read_only_gemdos;
+    MillenniumAtariConfigConsumerCheckpoint config_consumer;
     MillenniumAtariBootstrap bootstrap;
     MillenniumAtariBssEntry bss_entry;
     MillenniumAtariBssSource bss_source;
@@ -723,6 +725,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_eight_scale(DeuterosAmigaObservedTitleCommandEightScale);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_write(DeuterosAmigaObservedTitleCommandPlanarWrite);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_variant_write(DeuterosAmigaObservedTitleCommandPlanarVariantWrite);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -957,6 +960,7 @@ private:
     std::optional<std::uint64_t> millennium_amiga_relocator_overread_sequence_;
     std::optional<std::uint64_t> millennium_amiga_relocator_terminal_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
+    std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> deuteros_amiga_title_second_service_plan_;

@@ -130,12 +130,39 @@ int main(int argc, char** argv) {
         &&selected.memory_effects[2].value==1
         &&selected.memory_effects[3].offset==0x1aa0
         &&selected.memory_effects[3].value==0xda00);
+    initialization.execute_selected_callee_start(5,0x1bad,0x1ac6);
+    const auto mode_one_boundary=initialization.checkpoint();
+    assert(mode_one_boundary.state==eon::MillenniumDosTitleInitializationState::
+            selected_callee_private_interrupt_result_boundary
+        &&mode_one_boundary.last_sequence==5
+        &&mode_one_boundary.register_effects.size()==12
+        &&mode_one_boundary.register_effects[9].instruction_address==0x1ac6
+        &&mode_one_boundary.register_effects[9].register_name=="AX"
+        &&mode_one_boundary.register_effects[9].value==4
+        &&mode_one_boundary.register_effects[10].instruction_address==0x1ac9
+        &&mode_one_boundary.register_effects[10].register_name=="ES"
+        &&mode_one_boundary.register_effects[10].value==0x2468
+        &&mode_one_boundary.register_effects[11].instruction_address==0x1acb
+        &&mode_one_boundary.register_effects[11].register_name=="BX"
+        &&mode_one_boundary.register_effects[11].value==0x1ac5
+        &&mode_one_boundary.selected_callee_boundary.call_address==0x1ace
+        &&mode_one_boundary.selected_callee_boundary.interrupt_address==0x0127
+        &&mode_one_boundary.selected_callee_boundary.function==4
+        &&mode_one_boundary.selected_callee_boundary.record_segment==0x2468
+        &&mode_one_boundary.selected_callee_boundary.record_offset==0x1ac5
+        &&!mode_one_boundary.selected_callee_boundary.result_observed);
     eon::MillenniumDosTitleInitializationSession other_mode(titles,0x2468,2);
     other_mode.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
     other_mode.observe_private_interrupt_result({4,0x0127,0x0129,0x00ff,0});
     assert(other_mode.checkpoint().selected_mode==0
         &&other_mode.checkpoint().selected_call_address==0x1bb2
         &&other_mode.checkpoint().selected_call_target==0x1ada);
+    other_mode.execute_selected_callee_start(5,0x1bb2,0x1ada);
+    assert(other_mode.checkpoint().state==eon::MillenniumDosTitleInitializationState::
+            selected_callee_private_interrupt_result_boundary
+        &&other_mode.checkpoint().selected_callee_boundary.call_address==0x1ae2
+        &&other_mode.checkpoint().selected_callee_boundary.function==4
+        &&other_mode.checkpoint().selected_callee_boundary.record_offset==0x1ac5);
     bool detached_initialization_rejected=false;
     try {
         eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
@@ -149,4 +176,12 @@ int main(int argc, char** argv) {
         detached.observe_private_interrupt_result({4,0x0128,0x0129,0,0});
     } catch(const std::runtime_error&) { detached_result_rejected=true; }
     assert(detached_result_rejected);
+    bool detached_callee_rejected=false;
+    try {
+        eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
+        detached.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
+        detached.observe_private_interrupt_result({4,0x0127,0x0129,0x0101,0});
+        detached.execute_selected_callee_start(5,0x1bb2,0x1ada);
+    } catch(const std::runtime_error&) { detached_callee_rejected=true; }
+    assert(detached_callee_rejected);
 }
