@@ -77,6 +77,9 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_encoded_high_mode_two_second_escape_word_boundary,
     post_descriptor_first_loop_encoded_high_xlat_byte_boundary,
     post_descriptor_first_loop_encoded_record_complete,
+    post_descriptor_first_loop_mode_one_header_byte_boundary,
+    post_descriptor_first_loop_other_header_byte_boundary,
+    post_descriptor_first_loop_mode_two_header_byte_boundary,
     post_descriptor_second_loop_far_read_boundary,
     post_descriptor_second_loop_record_word_read_boundary,
     post_descriptor_second_loop_second_word_read_boundary,
@@ -413,6 +416,7 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
 private:
+    void advance_encoded_record_complete();
     MillenniumDosTitleInitializationState state_ =
         MillenniumDosTitleInitializationState::awaiting_entry;
     std::uint64_t last_sequence_ = 0;

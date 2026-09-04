@@ -56,6 +56,7 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_post_config_gemdos_63_boundary,
     game_init_post_config_gemdos_62_boundary,
     game_init_post_config_rts_boundary,
+    game_init_post_config_complete,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -459,6 +460,8 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::array<std::uint32_t,2> game_init_post_config_write_addresses{};
     std::uint32_t game_init_post_config_write_value=0;
     std::uint32_t game_init_post_config_rts_address=0;
+    std::uint32_t game_init_post_config_rts_stack_address=0;
+    std::uint32_t game_init_post_config_rts_return_address=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -589,6 +592,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_post_config_fclose(
         const MillenniumAtariGemdosSelector62Observation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_post_config_effect_batch(std::string id) const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_post_config_rts(
+        const MillenniumAtariGameInitSecondConfigRtsObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

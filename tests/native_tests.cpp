@@ -5388,6 +5388,8 @@ int main() {
                 {1,40,0x77074,0x3f,0x20000}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_post_config_fclose(
                 {1,41,0x7707c,0x3e,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_post_config_rts(
+                {1,42,0x770ba,0x00fd0000,0x123456}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -6138,6 +6140,17 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_1fe88_return(bad_return_1fe88).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_1fe88_return(return_1fe88).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_1fe88_return(return_1fe88).accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedFinalGate final_gate{
+                runtime_copy_sequence+79,
+                {{{runtime_copy_sequence+76,0x405f0,0x1fe6c,0x405f6,0,0},
+                  {runtime_copy_sequence+77,0x405fc,0x1fe6c,0x40602,0,0},
+                  {runtime_copy_sequence+78,0x40608,0x1fe7a,0x4060e,0,0}}},
+                {0x1ffc8,0x1ffce,0x22d34},{1,2,3},0x1ffc8,0,
+                0x1ffce,0x00b4,0x1ffd4,1};
+            auto bad_final_gate=final_gate;bad_final_gate.service_returns[1].call_target+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(bad_final_gate).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(final_gate).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(final_gate).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

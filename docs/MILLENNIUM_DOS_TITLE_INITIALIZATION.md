@@ -541,6 +541,15 @@ rejected before any session or native-memory effect is committed. Stream
 bytes and produced bytes remain raw observations; this does not name an
 encoding, pixel layout, or graphics meaning.
 
+Record completion now continues through the exact 23-byte `$1488..$149e`
+mode dispatch (SHA-256
+`7967c8650f118732cc5c884ea6d332a8dbe6dc060e5736088e7b5d0f1fb081ad`).
+The stored mode selects the original `$149f`, `$14e3`, or `$163b` prefix;
+each prefix restores the hash-bound descriptor pointer and stops before its
+first source byte at `$14a9`, `$14f0`, or `$1647`. For the genuine first
+descriptor that typed address is `$5050:$0003`. No header, palette, lookup,
+or rendering interpretation is assigned to the byte.
+
 The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
 bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
 the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution

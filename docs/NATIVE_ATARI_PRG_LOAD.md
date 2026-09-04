@@ -283,8 +283,11 @@ GEMDOS trap `$7707c`. A typed Fclose result then admits the exact cleanup and
 branch to `$770a2`, two atomic longword writes of `$361436a7` to `$2ab2c` and
 `$11dfc`, and local RTS `$770ba`. The concatenated executed bytes hash to
 `aa177208872c4125af13601feb4566003e5fb01c851c44f8b7f4904fb5f52b52`.
-The RTS destination remains external; no service or target-data meaning is
-assigned.
+Because the staged target was entered by the bootstrap's absolute `JMP $77000`,
+no caller return is encoded in the program bytes. The RTS destination
+is therefore accepted only as a typed, even 24-bit address and retained as the
+terminal preservation boundary; no caller continuation, service, or
+target-data meaning is invented.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

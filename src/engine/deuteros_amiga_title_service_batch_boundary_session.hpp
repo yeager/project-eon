@@ -1135,6 +1135,23 @@ struct DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan {
     std::uint32_t next_word_instruction=0,next_word_source=0;
     std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
 };
+struct DeuterosAmigaObservedTitlePostAdjustedFinalGate {
+    std::uint64_t trace_sequence=0;
+    std::array<DeuterosAmigaObservedLocalCallReturn,3> service_returns{};
+    std::array<std::uint32_t,3> service_word_sources{};
+    std::array<std::uint16_t,3> service_words{};
+    std::uint32_t gate_current_source=0;
+    std::uint16_t gate_current_word=0;
+    std::optional<std::uint32_t> gate_secondary_source;
+    std::optional<std::uint16_t> gate_secondary_word;
+    std::optional<std::uint32_t> gate_tertiary_source;
+    std::optional<std::uint16_t> gate_tertiary_word;
+};
+struct DeuterosAmigaTitlePostAdjustedFinalGatePlan {
+    DeuterosAmigaObservedTitlePostAdjustedFinalGate observation;
+    bool branches_to_join=false,jumps_to_external=false;
+    std::uint32_t join_address=0,jump_instruction=0,jump_target=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3159,6 +3176,38 @@ public:
         return DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan{o,0x405ea,0x1ffc8,
             0x405f0,0x1fe6c,0x405f6};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFinalGatePlan> observe_post_adjusted_final_gate(const DeuterosAmigaObservedTitlePostAdjustedFinalGate&o){
+        if(!post_adjusted_1fe88_return_||post_adjusted_final_gate_)return std::nullopt;
+        const std::array<DeuterosAmigaObservedLocalCallReturn,3> expected{{
+            {o.service_returns[0].trace_sequence,0x405f0,0x1fe6c,0x405f6,0,0},
+            {o.service_returns[1].trace_sequence,0x405fc,0x1fe6c,0x40602,0,0},
+            {o.service_returns[2].trace_sequence,0x40608,0x1fe7a,0x4060e,0,0}}};
+        if(o.trace_sequence<=last_command_sequence_
+            ||o.service_returns[0].trace_sequence<=last_command_sequence_
+            ||o.service_returns[1].trace_sequence<=o.service_returns[0].trace_sequence
+            ||o.service_returns[2].trace_sequence<=o.service_returns[1].trace_sequence
+            ||o.trace_sequence<o.service_returns[2].trace_sequence
+            ||o.service_word_sources!=std::array<std::uint32_t,3>{{0x1ffc8,0x1ffce,0x22d34}}
+            ||o.gate_current_source!=0x1ffc8)
+            throw std::runtime_error("Deuteros final caller gate ordering does not match boundary");
+        for(std::size_t i=0;i<expected.size();++i)
+            if(o.service_returns[i].call_address!=expected[i].call_address
+                ||o.service_returns[i].call_target!=expected[i].call_target
+                ||o.service_returns[i].return_address!=expected[i].return_address)
+                throw std::runtime_error("Deuteros final caller service return does not match boundary");
+        const bool needs_secondary=o.gate_current_word==0;
+        if(needs_secondary!=(o.gate_secondary_source.has_value()&&o.gate_secondary_word.has_value())
+            ||(needs_secondary&&*o.gate_secondary_source!=0x1ffceU))
+            throw std::runtime_error("Deuteros final caller secondary read does not match executed branch");
+        const bool needs_tertiary=needs_secondary&&static_cast<std::uint8_t>(*o.gate_secondary_word)>=0xb4U;
+        if(needs_tertiary!=(o.gate_tertiary_source.has_value()&&o.gate_tertiary_word.has_value())
+            ||(needs_tertiary&&*o.gate_tertiary_source!=0x1ffd4U))
+            throw std::runtime_error("Deuteros final caller tertiary read does not match executed branch");
+        const bool jump=needs_tertiary&&(static_cast<std::uint8_t>(*o.gate_tertiary_word)&1U)!=0;
+        post_adjusted_final_gate_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjustedFinalGatePlan{o,!jump,jump,
+            jump?0U:0x40638U,jump?0x4062cU:0U,jump?0x37f56U:0U};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3381,6 +3430,7 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostAdjustedJoinByte> post_adjusted_join_byte_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_1f9a4_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjusted1fe88Return> post_adjusted_1fe88_return_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjustedFinalGate> post_adjusted_final_gate_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};
