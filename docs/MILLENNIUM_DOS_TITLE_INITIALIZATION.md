@@ -78,3 +78,32 @@ record `CS:$1ac5`, `INT $91` at `$0127` as the next boundary. It does not
 execute the later `$044c` or `$0487` call, read `$0107`, or apply the optional
 `$b800` write because all of those depend on the still-unobserved function-four
 return.
+
+## Function-four return and BIOS boundary
+
+The second typed result requires the same `$0127` / `$0129` wrapper pair and
+also the selected caller return: `$1ad1` for mode one or `$1ae5` otherwise.
+Raw AX and FLAGS are retained without assigning them graphics semantics. The
+following direct targets are then executed only through their first BIOS
+request:
+
+| route | exact code span | SHA-256 | resulting boundary |
+|---|---|---|---|
+| `$1ad1 -> $044c` | `$044c..$046e` | `1c2afa83de99564ceb8e9168f7d6fa586ef7ba21ec2b7d1bdaad9291ec3efc0a` | `INT $10` at `$046d`, `AX=$1010`, `BX=0`, `CX=0`, known `DH=0` |
+| `$1ae5 -> $0487` | `$0487..$0498` | `111aabbae0194a132060f1acd6cc5d6c100ccb9c64facdb64c90785a845e6c6b` | `INT $10` at `$0497`, `AX=$1000`, `BX=0`, `CX=$0010` |
+
+The mode-one path reads its first RGB triplet from the exact 48-byte table at
+`$014c` (SHA-256
+`9d1fdeadf710e7f0a6736f172415e15d7db87480588ec771327f30128afb43e9`)
+and writes byte one to child cell `$0107`. The other path reads the first
+index byte from the exact 16-byte table at `$0477` (SHA-256
+`ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a`);
+that byte is zero and the prefix has no memory write.
+
+For mode one, only the high byte of DX is known at the BIOS boundary because
+the code writes DH but retains the incoming DL. The checkpoint therefore
+publishes a DX known-mask of `$ff00` rather than fabricating DL. The other
+route does not use a proven DX value and publishes a zero known-mask. Eon
+stops before either BIOS result and does not iterate the palette loops. The
+mode-one `$0107 := 1` write commits atomically with the state transition; the
+other route advances state without inventing an empty memory batch.

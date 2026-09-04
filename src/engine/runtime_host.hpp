@@ -73,6 +73,7 @@ public:
     [[nodiscard]] MillenniumDosTitleExecEntryObservationResult advance_millennium_dos_title_entry_prefix(MillenniumDosTitleExecPrefixObservation);
     [[nodiscard]] std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint> millennium_dos_title_exec_entry_checkpoint() const;
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_private_interrupt_result(MillenniumDosTitlePrivateInterruptResultObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_selected_callee_result(MillenniumDosTitleSelectedCalleeResultObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation);
@@ -219,6 +220,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_write(DeuterosAmigaObservedTitleCommandPlanarWrite);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_variant_write(DeuterosAmigaObservedTitleCommandPlanarVariantWrite);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_negative_service(DeuterosAmigaObservedTitleCommandNegativeService);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -241,6 +243,8 @@ public:
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
     millennium_atari_bootstrap_presentation() const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult
+    observe_millennium_atari_status_register(MillenniumAtariStatusRegisterObservation);
 
     // Begin before SDL destroys any source-derived object.  A monotonically
     // increasing generation lets a front end reject stale render/audio work
