@@ -60,7 +60,9 @@ int main(const int argc, const char* const argv[]) {
         assert(exact.relocation_effects.size() == 227);
         assert(exact.materialized_image_sha256
             == "92eac35edb2b5db721dd5353cfc3260dfb5fb4120026b76788659aaa342f887c");
-        eon::NativeRuntimeMemory memory(0x01000000U);
+        // The PRG image itself is bounded to 24-bit ST RAM. The runtime map
+        // additionally admits the original sign-extended hardware address.
+        eon::NativeRuntimeMemory memory;
         const auto image_result = memory.apply(eon::make_atari_st_prg_load_effect_batch(
             exact, "millennium-atari-1-prg"));
         assert(image_result.accepted);
@@ -94,6 +96,45 @@ int main(const int argc, const char* const argv[]) {
             && !consumer_checkpoint.status_register_read
             && !consumer_checkpoint.hardware_write_executed);
         assert(!consumer.revoke(2).accepted && consumer.revoke(1).accepted);
+        eon::MillenniumAtariConfigConsumerSession user_consumer(1, memory,
+            gemdos.checkpoint(), session.fread_config_load_address_boundary(),
+            session.fread_mapped_config_prelude());
+        assert(!user_consumer.observe_status_register(
+            {1, 1, 0x2aa88, 0x2000, eon::MillenniumAtariObservedPrivilege::user}).accepted);
+        assert(user_consumer.observe_status_register(
+            {1, 1, 0x2aa88, 0x0000, eon::MillenniumAtariObservedPrivilege::user}).accepted);
+        const auto& user_path = user_consumer.checkpoint();
+        assert(user_path.state == eon::MillenniumAtariConfigConsumerState::xbios_trap_boundary
+            && user_path.branch_taken && user_path.status_register_read
+            && !user_path.hardware_write_executed && user_path.hardware_writes.empty()
+            && user_path.resulting_status_register == 0x0004
+            && user_path.converged_jsr_target == 0x2a51c
+            && user_path.xbios_trap_address == 0x2a520
+            && user_path.xbios_selector == 2 && user_path.local_instruction_count == 5);
+        assert(user_consumer.make_hardware_effect_batches("user").empty());
+        assert(!user_consumer.observe_status_register(
+            {1, 2, 0x2aa88, 0, eon::MillenniumAtariObservedPrivilege::user}).accepted);
+
+        eon::MillenniumAtariConfigConsumerSession supervisor_consumer(1, memory,
+            gemdos.checkpoint(), session.fread_config_load_address_boundary(),
+            session.fread_mapped_config_prelude());
+        assert(supervisor_consumer.observe_status_register(
+            {1, 8, 0x2aa88, 0x2700,
+                eon::MillenniumAtariObservedPrivilege::supervisor}).accepted);
+        const auto& supervisor_path = supervisor_consumer.checkpoint();
+        assert(!supervisor_path.branch_taken && supervisor_path.hardware_write_executed
+            && supervisor_path.hardware_writes.size() == 3
+            && supervisor_path.resulting_status_register == 0x0300
+            && supervisor_path.local_instruction_count == 10);
+        auto hardware_memory = memory;
+        const auto hardware_batches =
+            supervisor_consumer.make_hardware_effect_batches("supervisor");
+        assert(hardware_batches.size() == 2);
+        for (const auto& batch : hardware_batches) assert(hardware_memory.apply(batch).accepted);
+        assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0xffff8800U}) == 0x0e);
+        assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+            std::nullopt, 0xffff8802U}) == 0xff);
         rejects([&] {
             const eon::NativeRuntimeMemory empty_memory(0x01000000U);
             static_cast<void>(eon::MillenniumAtariConfigConsumerSession(1, empty_memory,

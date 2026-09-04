@@ -772,6 +772,50 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
     return result;
 }
 
+MillenniumDosTitleInitializationObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_selected_callee_result(
+    const MillenniumDosTitleSelectedCalleeResultObservation observation) {
+    MillenniumDosTitleInitializationObservationResult result;
+    if(!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title
+        ||!millennium_dos_title_initialization_||!native_runtime_memory_){
+        result.error="Selected title-callee result requires the active native title boundary";
+        return result;
+    }
+    auto next=*millennium_dos_title_initialization_;
+    auto memory=*native_runtime_memory_;
+    const auto prior_effect_count=next.checkpoint().memory_effects.size();
+    try {
+        next.observe_selected_callee_private_interrupt_result(observation);
+        const auto selected=next.checkpoint();
+        next.execute_selected_followup_start(selected.last_sequence+1,
+            selected.selected_followup_call_address,
+            selected.selected_followup_call_target);
+    } catch(const std::exception& e){result.error=e.what();return result;}
+    const auto checkpoint=next.checkpoint();
+    if(checkpoint.memory_effects.size()>prior_effect_count){
+        NativeRuntimeEffectBatch batch{
+            "millennium-dos-title-followup-"
+                +std::to_string(millennium_dos_sound_driver_load_generation_)
+                +"-"+std::to_string(observation.sequence),true,{}};
+        for(std::size_t i=prior_effect_count;i<checkpoint.memory_effects.size();++i){
+            const auto& effect=checkpoint.memory_effects[i];
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::dos_segmented,
+                    checkpoint.child_code_segment,effect.offset},
+                effect.width==MillenniumDosTitleInitializationEffectWidth::byte
+                    ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
+                NativeRuntimeByteOrder::little_endian,effect.value});
+        }
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+    }
+    millennium_dos_title_initialization_=std::move(next);
+    *native_runtime_memory_=std::move(memory);
+    result.accepted=true;
+    return result;
+}
+
 namespace {
 MillenniumDosTitleToGameObservationResult title_to_game_rejected(std::string error) {
     return {false, std::move(error)};
@@ -2408,6 +2452,38 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_planar_variant_w
 }
 
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_negative_service(
+    const DeuterosAmigaObservedTitleCommandNegativeService observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || deuteros_amiga_title_command_generation_ == 0) {
+        result.error = "Deuteros negative service requires an active owned command generation";
+        return result;
+    }
+    try {
+        if (!deuteros_amiga_->title_stage_session()) {
+            result.error = "Deuteros negative service requires the owned title-stage session";
+            return result;
+        }
+        auto preview_session = *deuteros_amiga_->title_stage_session();
+        const auto plan = preview_session.observe_command_negative_service(observation);
+        if (!plan) {
+            result.error = "Deuteros negative service did not match its owned boundary";
+            return result;
+        }
+        if (!deuteros_amiga_->observe_title_command_negative_service(observation)) {
+            result.error = "Deuteros negative service disappeared before commit";
+            return result;
+        }
+        result.accepted = true;
+    } catch (const std::exception& e) {
+        result.error = std::string("Deuteros negative service rejected: ") + e.what();
+    }
+    return result;
+}
+
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
     DeuterosAmigaTitleDependencyObservationResult result;
@@ -2583,6 +2659,36 @@ ReleaseRuntimeCoordinator::millennium_atari_bootstrap_presentation() const {
         millennium_atari_->config_entry(), millennium_atari_->fread_config_load_address_boundary(),
         millennium_atari_->fread_mapped_config_prelude(),
     };
+}
+
+MillenniumAtariConfigConsumerResult
+ReleaseRuntimeCoordinator::observe_millennium_atari_status_register(
+    const MillenniumAtariStatusRegisterObservation observation) {
+    if (!session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_atari_bootstrap
+        || !millennium_atari_config_consumer_ || !native_runtime_memory_) {
+        return {false, "Atari SR observation requires the active Millennium config consumer"};
+    }
+    try {
+        auto next_consumer = *millennium_atari_config_consumer_;
+        auto result = next_consumer.observe_status_register(observation);
+        if (!result.accepted) return result;
+        auto next_memory = *native_runtime_memory_;
+        const auto batches = next_consumer.make_hardware_effect_batches(
+            "millennium-atari-" + std::to_string(observation.generation) + "-sr-"
+                + std::to_string(observation.sequence));
+        for (const auto& batch : batches) {
+            const auto applied = next_memory.apply(batch);
+            if (!applied.accepted) {
+                return {false, "Atari hardware effect rejected: " + applied.error};
+            }
+        }
+        *millennium_atari_config_consumer_ = std::move(next_consumer);
+        *native_runtime_memory_ = std::move(next_memory);
+        return {true, {}};
+    } catch (const std::exception& error) {
+        return {false, std::string("Atari SR observation rejected: ") + error.what()};
+    }
 }
 
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,

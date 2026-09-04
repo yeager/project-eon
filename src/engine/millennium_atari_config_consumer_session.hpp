@@ -7,12 +7,32 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace eon {
 
 enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     status_register_boundary,
+    xbios_trap_boundary,
     revoked,
+};
+
+enum class MillenniumAtariObservedPrivilege : std::uint8_t { user, supervisor };
+
+struct MillenniumAtariStatusRegisterObservation {
+    std::uint64_t generation = 0;
+    std::uint64_t sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint16_t status_register = 0;
+    MillenniumAtariObservedPrivilege privilege = MillenniumAtariObservedPrivilege::user;
+};
+
+struct MillenniumAtariConfigHardwareWrite {
+    std::size_t order = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t address = 0;
+    std::uint8_t value = 0;
+    constexpr bool operator==(const MillenniumAtariConfigHardwareWrite&) const = default;
 };
 
 struct MillenniumAtariConfigConsumerCheckpoint {
@@ -33,6 +53,20 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     bool return_address_materialized = false;
     bool status_register_read = false;
     bool hardware_write_executed = false;
+    std::uint64_t last_sequence = 0;
+    std::uint16_t observed_status_register = 0;
+    MillenniumAtariObservedPrivilege observed_privilege =
+        MillenniumAtariObservedPrivilege::user;
+    bool supervisor_bit_was_set = false;
+    bool branch_taken = false;
+    std::uint16_t resulting_status_register = 0;
+    std::uint32_t converged_jsr_address = 0;
+    std::uint32_t converged_jsr_target = 0;
+    std::uint32_t converged_jsr_return_address = 0;
+    std::uint32_t xbios_trap_address = 0;
+    std::uint16_t xbios_selector = 0;
+    std::size_t local_instruction_count = 0;
+    std::vector<MillenniumAtariConfigHardwareWrite> hardware_writes;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -55,6 +89,10 @@ public:
     [[nodiscard]] const MillenniumAtariConfigConsumerCheckpoint& checkpoint() const noexcept {
         return checkpoint_;
     }
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_status_register(
+        const MillenniumAtariStatusRegisterObservation& observation);
+    [[nodiscard]] std::vector<NativeRuntimeEffectBatch> make_hardware_effect_batches(
+        std::string id_prefix) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

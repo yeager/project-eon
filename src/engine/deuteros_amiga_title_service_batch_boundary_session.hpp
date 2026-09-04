@@ -670,6 +670,32 @@ struct DeuterosAmigaTitleCommandPlanarVariantWritePlan {
     std::uint32_t next_opcode_read_address = 0;
 };
 
+// Completion evidence for the signed-negative `$1fbe6` dispatch. The nested
+// service is deliberately retained as an opaque call boundary; only its
+// exact call ABI and return are admitted here.
+struct DeuterosAmigaObservedTitleCommandNegativeService {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t mode_instruction_address = 0;
+    std::uint32_t mode_source_address = 0;
+    std::uint8_t observed_mode_value = 0;
+    bool service_called = false;
+    std::uint32_t service_call_address = 0;
+    std::uint32_t service_target = 0;
+    std::uint32_t service_return_address = 0;
+    std::uint32_t service_d0 = 0;
+    std::uint32_t service_d1 = 0;
+};
+
+struct DeuterosAmigaTitleCommandNegativeServicePlan {
+    DeuterosAmigaObservedTitleCommandNegativeService observation;
+    bool service_suppressed = false;
+    std::uint32_t delay_iterations = 0;
+    std::uint32_t routine_return_address = 0;
+    std::uint32_t command_return_address = 0;
+    std::uint32_t next_stream_address = 0;
+    std::uint32_t next_opcode_read_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -716,6 +742,10 @@ public:
             || to_hex(sha256(at(0x1fd7a, 102)))
                 != "bd6bfbd42d3b6471a8166e14228fe177f5afe3a7ff3c8372cf291b0c37c44f82") {
             throw std::runtime_error("Unsupported Deuteros planar variant routines");
+        }
+        if (to_hex(sha256(at(0x1fbe6, 60)))
+                != "cbddd93eb43c498079e7e2175f8f7d6178c357aa6b5241631e717f9037cff414") {
+            throw std::runtime_error("Unsupported Deuteros negative title service route");
         }
     }
 
@@ -1308,8 +1338,8 @@ public:
         const DeuterosAmigaObservedTitleCommandCallReturn& observation) {
         if (!pending_command_call_ || command_halted_) return std::nullopt;
         // `$1fbe6` has observable, route-dependent memory effects. A plain
-        // register return must never bypass the recovered zero/zero route.
-        // Other mode combinations remain at an explicit evidence boundary.
+        // register return must never bypass any recovered dispatch route.
+        // Every mode now has a dedicated typed observation.
         if (pending_command_call_->address == 0x1fac2
             && pending_command_call_->target == 0x1fbe6
             && pending_command_call_->opcode >= 0x20
@@ -1686,6 +1716,42 @@ public:
             destination + pointer_advance, row_stride, plane_stride,
             row_stride == 0x28 && plane_stride == 0x1f40,
             routine_return, 0x1fac6, next_command_address_,
+            command_interpreter_.opcode_read_address};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandNegativeServicePlan>
+    observe_command_negative_service(
+        const DeuterosAmigaObservedTitleCommandNegativeService& observation) {
+        if (!pending_command_call_ || pending_command_call_->address != 0x1fac2
+            || pending_command_call_->target != 0x1fbe6
+            || pending_command_call_->opcode < 0x20
+            || pending_command_call_->opcode >= 0x90) return std::nullopt;
+        if (observation.trace_sequence <= last_command_sequence_
+            || observation.mode_instruction_address != 0x1fbe6
+            || observation.mode_source_address != 0x1f98c
+            || observation.observed_mode_value < 0x80) {
+            throw std::runtime_error("Deuteros negative service gate does not match boundary");
+        }
+        const bool suppressed = pending_command_call_->opcode == 0x20;
+        if (suppressed) {
+            if (observation.service_called || observation.service_call_address != 0
+                || observation.service_target != 0
+                || observation.service_return_address != 0
+                || observation.service_d0 != 0 || observation.service_d1 != 0) {
+                throw std::runtime_error("Deuteros space command must suppress the negative service");
+            }
+        } else if (!observation.service_called
+            || observation.service_call_address != 0x1fc08
+            || observation.service_target != 0x3fbf8
+            || observation.service_return_address != 0x1fc0e
+            || observation.service_d0 != 0x13
+            || observation.service_d1 != 0x0c) {
+            throw std::runtime_error("Deuteros negative nested service does not match boundary");
+        }
+        last_command_sequence_ = observation.trace_sequence;
+        pending_command_call_.reset();
+        return DeuterosAmigaTitleCommandNegativeServicePlan{observation,
+            suppressed, 0x4e20, 0x1fc20, 0x1fac6, next_command_address_,
             command_interpreter_.opcode_read_address};
     }
 

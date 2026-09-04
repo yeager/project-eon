@@ -3,6 +3,7 @@
 #include <array>
 #include <stdexcept>
 #include <string_view>
+#include <utility>
 
 namespace eon {
 namespace {
@@ -49,11 +50,98 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
             0x4e, 0xf9, 0x00, 0x02, 0xaa, 0x88, 0x40, 0xc0}) {
         throw std::runtime_error("Unexpected Millennium Atari config consumer entry");
     }
-    checkpoint_ = {generation, MillenniumAtariConfigConsumerState::status_register_boundary,
-        jsr_instruction, jsr_return, jsr_target, load_boundary.payload_initial_jump_opcode,
-        jump_target, load_boundary.payload_initial_jump_target_file_offset_from_destination,
-        jump_target, move_sr_d0, "68000 SR privilege/status value",
-        std::string(prelude_sha256), 2, false, false, false};
+    checkpoint_.generation = generation;
+    checkpoint_.state = MillenniumAtariConfigConsumerState::status_register_boundary;
+    checkpoint_.jsr_instruction_address = jsr_instruction;
+    checkpoint_.jsr_return_address = jsr_return;
+    checkpoint_.jsr_target_address = jsr_target;
+    checkpoint_.entry_jump_opcode = load_boundary.payload_initial_jump_opcode;
+    checkpoint_.entry_jump_target_address = jump_target;
+    checkpoint_.entry_jump_file_offset =
+        load_boundary.payload_initial_jump_target_file_offset_from_destination;
+    checkpoint_.boundary_instruction_address = jump_target;
+    checkpoint_.boundary_opcode = move_sr_d0;
+    checkpoint_.boundary_dependency = "68000 SR privilege/status value";
+    checkpoint_.mapped_prelude_sha256 = std::string(prelude_sha256);
+    checkpoint_.local_control_transfers_executed = 2;
+}
+
+MillenniumAtariConfigConsumerResult
+MillenniumAtariConfigConsumerSession::observe_status_register(
+    const MillenniumAtariStatusRegisterObservation& observation) {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::status_register_boundary) {
+        return {false, "Millennium Atari config consumer is not at the SR boundary"};
+    }
+    if (observation.generation != checkpoint_.generation || observation.sequence == 0
+        || observation.sequence <= checkpoint_.last_sequence
+        || observation.instruction_address != checkpoint_.boundary_instruction_address) {
+        return {false, "Millennium Atari SR observation is stale or at the wrong instruction"};
+    }
+    constexpr std::uint16_t supervisor_mask = 0x2000;
+    const bool supervisor = (observation.status_register & supervisor_mask) != 0;
+    if (supervisor != (observation.privilege == MillenniumAtariObservedPrivilege::supervisor)) {
+        return {false, "Millennium Atari SR value contradicts observed privilege"};
+    }
+
+    auto next = checkpoint_;
+    next.state = MillenniumAtariConfigConsumerState::xbios_trap_boundary;
+    next.last_sequence = observation.sequence;
+    next.status_register_read = true;
+    next.observed_status_register = observation.status_register;
+    next.observed_privilege = observation.privilege;
+    next.supervisor_bit_was_set = supervisor;
+    // BCLR #13,D0 sets Z when the observed S bit was clear. BEQ therefore
+    // bypasses hardware setup for an observed user-mode SR.
+    next.branch_taken = !supervisor;
+    next.converged_jsr_address = 0x2aaa4;
+    next.converged_jsr_target = 0x2a51c;
+    next.converged_jsr_return_address = 0x2aaaa;
+    next.xbios_trap_address = 0x2a520;
+    next.xbios_selector = 2;
+    next.local_instruction_count = supervisor ? 10U : 5U;
+    next.local_control_transfers_executed = supervisor ? 3U : 4U;
+    if (supervisor) {
+        next.hardware_write_executed = true;
+        next.resulting_status_register = 0x0300;
+        next.hardware_writes = {
+            {1, 0x2aa98, 0xffff8800U, 0x07},
+            {2, 0x2aa98, 0xffff8802U, 0xff},
+            {3, 0x2aa9c, 0xffff8800U, 0x0e},
+        };
+    } else {
+        // BCLR found a clear bit and therefore sets CCR.Z before BEQ.
+        next.resulting_status_register =
+            static_cast<std::uint16_t>(observation.status_register | 0x0004U);
+    }
+    checkpoint_ = std::move(next);
+    return {true, {}};
+}
+
+std::vector<NativeRuntimeEffectBatch>
+MillenniumAtariConfigConsumerSession::make_hardware_effect_batches(
+    std::string id_prefix) const {
+    if (checkpoint_.state != MillenniumAtariConfigConsumerState::xbios_trap_boundary
+        || checkpoint_.generation == 0 || id_prefix.empty()) {
+        throw std::runtime_error("Millennium Atari hardware effects are not admitted");
+    }
+    if (!checkpoint_.hardware_write_executed) return {};
+    if (checkpoint_.observed_privilege != MillenniumAtariObservedPrivilege::supervisor
+        || checkpoint_.hardware_writes.size() != 3) {
+        throw std::runtime_error("Millennium Atari hardware effects lack supervisor evidence");
+    }
+    // MOVEP writes two non-contiguous bytes. MOVE.B then intentionally
+    // overwrites the first address, so it is a separate atomic batch.
+    NativeRuntimeEffectBatch movep{id_prefix + "-movep", true, {}};
+    movep.effects = {
+        {1, {NativeRuntimeAddressSpace::linear, std::nullopt, 0xffff8800U},
+            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, 0x07},
+        {2, {NativeRuntimeAddressSpace::linear, std::nullopt, 0xffff8802U},
+            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, 0xff},
+    };
+    NativeRuntimeEffectBatch move_byte{id_prefix + "-move-byte", true, {{1,
+        {NativeRuntimeAddressSpace::linear, std::nullopt, 0xffff8800U},
+        MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, 0x0e}}};
+    return {std::move(movep), std::move(move_byte)};
 }
 
 MillenniumAtariConfigConsumerResult MillenniumAtariConfigConsumerSession::revoke(

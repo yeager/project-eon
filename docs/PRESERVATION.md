@@ -870,7 +870,7 @@ name as a semantic property of the original program.
 | --- | --- | --- | --- | --- |
 | Millennium Amiga | Six ADFs: five 901,120-byte images and one 698,368-byte image | `DOS\0` is present, but the usable program path is raw-sector data; the valid Razor filesystem has no game files. | The Defjam-family bootstrap requests `$24200..$923ff` to `$41000`, then `$16400..$423ff` to `$68000`; the shared resident span is hash-identified. | There is no live standalone manual recognised by the bounded filesystem readers.  Visible function-key trainer text occurs only in altered variants and is not original control evidence. |
 | Deuteros Amiga | Clean system/data ADFs plus comparative alternate, save, and modified images | The clean system disk is `DOS\0`; clean data disk is `DEU\0`, whose logical block 880 is custom raw data rather than an AmigaDOS root. | The clean system boot path loads `$5800` to `$20000` and has entry `$21734`; title-stage transfer remains separately bounded. | A genuine on-disk text block contains load/save prompts, but no caller-connected input binding is yet recovered. |
-| Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits a fully relocated native `MILENIUM.TOS` image and an exact read-only `MILL22A.inf` compatibility load. Native control follows `JSR $2a500` and its absolute jump, then stops before the SR-dependent instruction at `$2aa88`. The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
+| Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits a fully relocated native `MILENIUM.TOS` image and an exact read-only `MILL22A.inf` compatibility load. Native control follows `JSR $2a500`; an explicit typed SR observation selects either exact branch at `$2aa88`, and both stop before XBIOS selector 2 at `$2a520`. The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
 | Deuteros Atari ST | Eleven 737,280/1,056,768-byte `.st` images | The 737,280-byte game-media candidates have a BPB-shaped boot sector, but their apparent root records are not a live FAT12 namespace: entries carry impossible cluster/size combinations.  The raw protected boot chain is authoritative. | The hash-identified raw chain reaches the first and second stages through explicit nine-sector reads; its XBIOS callback and state selection remain boundaries. | The supplied game-media variants contain no standalone manual.  Embedded prompts are preserved as raw text only; a separate 1,056,768-byte development/tools disk is excluded from game-control evidence. |
 
 This protects two easy-to-make mistakes: a structurally plausible BPB does not
@@ -1157,10 +1157,10 @@ If file byte zero occupied the `$2a500` Fread/JSR destination, this jump would
 name file `+$588`. Native Fread establishes exactly that mapping. The
 independently hash-validated candidate entry is file `+$5aa`, 34 bytes later;
 the intervening bytes are retained as executable original code, not discarded
-as a load-address disagreement. Native control reaches `$2aa88` and stops
-before opcode `$40c0` (`MOVE SR,D0`), because its result depends on the
-unobserved original status/privilege register. No conditional hardware setup,
-SR change, or converged `JSR $2a51c` is executed.
+as a load-address disagreement. Native control reaches `$2aa88`; only an
+explicit generation-owned SR/privilege observation may select its branch.
+Both exact branches converge at `JSR $2a51c` and stop before XBIOS `TRAP #14`
+selector 2 at `$2a520`.
 
 The live Millennium Atari bootstrap session now executes a deliberately tiny
 local interpreter for only the two proven in-memory copy loops from
@@ -1169,7 +1169,8 @@ local interpreter for only the two proven in-memory copy loops from
 The execution record pins entry PC `$0`, branch PC `$24`, BSS entry `$1d636`,
 and first trap address `$7700e`. Production acquisition additionally owns the
 exact PRG relocation image and narrow read-only config service described
-above. It reaches `$2aa88` and stops before reading SR. There is no general
+above. It reaches `$2aa88` autonomously and `$2a520` after a typed SR
+observation. There is no general
 68000 decoder, host stack, or GEMDOS implementation, and no Atari display
 state is fabricated.
 
@@ -1225,17 +1226,16 @@ name or emulate trap effects, execute the JSRs, synthesize a configuration,
 or write any disk data.
 
 The preceding loader bytes independently name an Fread destination of `$2a500`
-and then encode `JSR $2a500`; neither GEMDOS call is invoked by Project Eon.
-Conditionally, if that native Fread returned with original file byte zero at
-the literal destination, the supplied leading `JMP $2aa88` maps to file
+and then encode `JSR $2a500`; the exact read-only compatibility service now
+supplies that buffer. The supplied leading `JMP $2aa88` maps to file
 `+$588`, rather than the separately bounded `+$5aa` candidate block. The
 intervening 34-byte original prefix `$2aa88..$2aaa9` (file `+$588..+$5a9`,
 SHA-256 `dede20eddbd8015da1d1a4f2f5e53424c2bc2195bff238d830ea24c9f522ea59`)
-has an SR-dependent branch to `$2aaa4`; both local paths converge at `JSR
-$2a51c`, and its return site falls through to `$2aaaa` / file `+$5aa`.
-This establishes a conditional byte/address relationship only. Project Eon
-does not make Fread return, choose the SR branch, execute the JSR, write its
-memory operands, or infer display, input, or firmware effects.
+has an SR-dependent branch to `$2aaa4`; a typed SR observation selects the
+original branch. The supervisor path applies only the directly encoded
+`MOVEP.W`, `MOVE.B`, and SR effects; the user path bypasses them. Both execute
+`JSR $2a51c` and stop before its first XBIOS trap at `$2a520`. No XBIOS return,
+display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
 is assigned to it. At runtime address `0x2a612` (file `+0x134`) the exact 24
@@ -4081,6 +4081,12 @@ Both selected callees then have exact native prefixes: `$1ac6..$1ad0` and
 `$1ada..$1ae4` load function `$0004` with record `CS:$1ac5` through the same
 private wrapper. Eon automatically reaches that second `INT $91` boundary and
 stops before its result; the following `$044c`/`$0487` calls remain unknown.
+An exact second result can now enter those calls: `$044c` writes `$0107 := 1`
+and prepares the first RGB-triplet BIOS request at `$046d`, while `$0487`
+prepares the first indexed-palette BIOS request at `$0497`. Both code spans
+and their original lookup tables are hash-bound. Only known register bits are
+published, and execution stops before the first `INT $10` result rather than
+assuming a BIOS palette effect or completing either loop.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6136,6 +6142,25 @@ they enter the 320x200 renderer surface only when the observed strides are
 exactly `$28` and `$1f40` and every derived address passes the surface's own
 bounds/order check. No mode value, pointer, glyph, existing destination byte,
 or source word is synthesized.
+
+The signed-negative dispatch is now a separately owned command completion,
+not a planar write. Its exact `$1fbe6..$1fc21` span is 60 bytes (ADF
+`+$7abe6`, SHA-256
+`cbddd93eb43c498079e7e2175f8f7d6178c357aa6b5241631e717f9037cff414`).
+A typed observation must prove the read at `$1fbe6` from `$1f98c` is
+`$80..$ff`. Character `$20` suppresses the nested service. Every other
+character must additionally prove the exact `$1fc08 -> $3fbf8 -> $1fc0e`
+call/return with literal D0/D1 inputs `$13`/`$0c`. Both paths execute the
+literal `$4e20` (20,000 iteration) decrement delay and return through
+`$1fc20` and caller continuation `$1fac6`; Eon advances the command stream
+without claiming a graphics write.
+
+The `$3fbf8` service's internal reads, writes and meaning remain opaque. Eon
+therefore requires its observed return but does not emulate or invent its
+effects. A mismatched signed mode, suppression claim, call address, target,
+return address or literal input rejects the complete transition without
+advancing live command state. The delay is retained as an original timing
+fact in the native plan; it is not implemented as a host busy-wait.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

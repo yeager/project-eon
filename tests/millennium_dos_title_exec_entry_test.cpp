@@ -151,6 +151,36 @@ int main(int argc, char** argv) {
         &&mode_one_boundary.selected_callee_boundary.record_segment==0x2468
         &&mode_one_boundary.selected_callee_boundary.record_offset==0x1ac5
         &&!mode_one_boundary.selected_callee_boundary.result_observed);
+    initialization.observe_selected_callee_private_interrupt_result(
+        {6,0x0127,0x0129,0x1ad1,0xabcd,0x1234});
+    const auto mode_one_followup=initialization.checkpoint();
+    assert(mode_one_followup.state
+        ==eon::MillenniumDosTitleInitializationState::selected_followup_call_boundary
+        &&mode_one_followup.selected_callee_observed_ax==0xabcd
+        &&mode_one_followup.selected_callee_observed_flags==0x1234
+        &&mode_one_followup.selected_followup_call_address==0x1ad1
+        &&mode_one_followup.selected_followup_call_target==0x044c
+        &&mode_one_followup.selected_callee_boundary.result_observed);
+    initialization.execute_selected_followup_start(7,0x1ad1,0x044c);
+    const auto mode_one_bios=initialization.checkpoint();
+    assert(mode_one_bios.state
+        ==eon::MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary
+        &&mode_one_bios.last_sequence==7
+        &&mode_one_bios.memory_effects.size()==5
+        &&mode_one_bios.memory_effects.back().instruction_address==0x044e
+        &&mode_one_bios.memory_effects.back().offset==0x0107
+        &&mode_one_bios.memory_effects.back().value==1
+        &&mode_one_bios.bios_boundary.selected_followup_call_address==0x1ad1
+        &&mode_one_bios.bios_boundary.selected_followup_call_target==0x044c
+        &&mode_one_bios.bios_boundary.interrupt_address==0x046d
+        &&mode_one_bios.bios_boundary.interrupt==0x10
+        &&mode_one_bios.bios_boundary.ax==0x1010
+        &&mode_one_bios.bios_boundary.bx==0
+        &&mode_one_bios.bios_boundary.cx==0
+        &&mode_one_bios.bios_boundary.dx_known_mask==0xff00
+        &&mode_one_bios.bios_boundary.dx_known_value==0
+        &&mode_one_bios.bios_boundary.source_address==0x014c
+        &&!mode_one_bios.bios_boundary.result_observed);
     eon::MillenniumDosTitleInitializationSession other_mode(titles,0x2468,2);
     other_mode.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
     other_mode.observe_private_interrupt_result({4,0x0127,0x0129,0x00ff,0});
@@ -163,6 +193,23 @@ int main(int argc, char** argv) {
         &&other_mode.checkpoint().selected_callee_boundary.call_address==0x1ae2
         &&other_mode.checkpoint().selected_callee_boundary.function==4
         &&other_mode.checkpoint().selected_callee_boundary.record_offset==0x1ac5);
+    other_mode.observe_selected_callee_private_interrupt_result(
+        {6,0x0127,0x0129,0x1ae5,0x9876,0x0202});
+    other_mode.execute_selected_followup_start(7,0x1ae5,0x0487);
+    const auto other_bios=other_mode.checkpoint();
+    assert(other_bios.state
+        ==eon::MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary
+        &&other_bios.memory_effects.size()==4
+        &&other_bios.selected_callee_observed_ax==0x9876
+        &&other_bios.selected_callee_observed_flags==0x0202
+        &&other_bios.bios_boundary.selected_followup_call_address==0x1ae5
+        &&other_bios.bios_boundary.selected_followup_call_target==0x0487
+        &&other_bios.bios_boundary.interrupt_address==0x0497
+        &&other_bios.bios_boundary.ax==0x1000
+        &&other_bios.bios_boundary.bx==0
+        &&other_bios.bios_boundary.cx==0x0010
+        &&other_bios.bios_boundary.dx_known_mask==0
+        &&other_bios.bios_boundary.source_address==0x0477);
     bool detached_initialization_rejected=false;
     try {
         eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
@@ -184,4 +231,14 @@ int main(int argc, char** argv) {
         detached.execute_selected_callee_start(5,0x1bb2,0x1ada);
     } catch(const std::runtime_error&) { detached_callee_rejected=true; }
     assert(detached_callee_rejected);
+    bool detached_second_result_rejected=false;
+    try {
+        eon::MillenniumDosTitleInitializationSession detached(titles,0x2468,2);
+        detached.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
+        detached.observe_private_interrupt_result({4,0x0127,0x0129,0x0101,0});
+        detached.execute_selected_callee_start(5,0x1bad,0x1ac6);
+        detached.observe_selected_callee_private_interrupt_result(
+            {6,0x0127,0x0129,0x1ae5,0,0});
+    } catch(const std::runtime_error&) { detached_second_result_rejected=true; }
+    assert(detached_second_result_rejected);
 }

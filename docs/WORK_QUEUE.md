@@ -9,6 +9,33 @@ The queue is deliberately organized by its contribution to the first genuine,
 playable vertical slice. Presentation, packaging, and broad platform work stay
 behind the first proven input-to-frame-to-state loop.
 
+## 2026-09-04 native execution checkpoint
+
+The mechanical disassembly inventory is complete for all eight declared
+releases: 19 code images, 21 admitted ranges, and 1,124,867 source bytes are
+accounted for. This is byte coverage, not semantic recovery or parity.
+
+The active English Millennium DOS path now owns the selected sound-driver
+load in a bounded native paragraph arena, admits the exact `TITLES.EXE` child,
+executes its entry and initialization prefixes, consumes one explicitly typed
+private-`INT 91h` function-0 result, and reaches the second function-4 request.
+It still requires an observed result before executing either selected title
+callee beyond that request; no DOS PSP, parent `EXEC` return, display result,
+or game-state transition is inferred.
+
+The clean Deuteros Amiga path now accumulates the zero/zero route and all three
+remaining deterministic non-negative `$1fbe6` planar routes into a sparse
+320x200 four-plane Original surface. SDL presents only pixels whose four source
+plane bytes are admitted; every other pixel remains invalid and transparent.
+This is not a complete title frame and supplies no title-input semantics.
+
+The Millennium Atari Equinox path now materializes the complete exact
+`MILENIUM.TOS` TEXT+DATA+BSS image at an Eon-owned address, applies all 227
+relocations, reads the exact `MILL22A.inf` payload through a narrow read-only
+GEMDOS compatibility service, and follows its native JSR/JMP chain to
+`$2aa88`. It stops before `MOVE SR,D0`; the original status/privilege value and
+the resulting branch remain explicit observations.
+
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
 | 1 | Millennium DOS: capture the launcher/title/`2200AD.EXE` handoff and private DOS ABI | English DOS release `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`; CLI-validated diagnostics-only title-init v2 profile binds the `MILL.COM:0x02cf` driver-load, setup-site `0x0209`/actual-`INT` `0x020c`, `TITLES.EXE:0x0127` request, and two raw returns at `$0129`; v6 additionally binds `svga_s3`/`ega` machine-profile selection to its exact config, while the genuine EGA diagnostic still requested `mcga.bin` and hit the console-capped `INT 6` boundary; v7 records IVT `INT 91h` endpoint `087e:0000`, v8 records a normal-core transfer to it, v9 binds the first raw caller re-entry (`AX=$0101`, `FLAGS=$7202`), v11 terminates the host recorder only after the complete twice-observed `INT 6` diagnostic receipt matches byte-for-byte, and v12 independently repeats an immediate predecessor at `f000:ca60` outside the recognised original-image map. The verified v13 no-input preflight ends at the same eight-record `INT 6` receipt (SHA-256 `8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`) with no host-key receipt or title poll; [read-only physical capture runner](MILLENNIUM_DOS_CAPTURE.md#safe-capture-procedure); [external recorder status](MILLENNIUM_DOS_DOSBOX_X_RECORDER.md#prototype-status) | Hash-bound genuine trace of each interrupt, EXEC/far-return and driver result through one navigable state | The title-init prefix and physical capture route have strict contracts. The v12 predecessor is an emulator callback boundary, and the v13 preflight has no physical receipt; neither is guest-code input, rendering, audio, EXEC, or game-state evidence. |

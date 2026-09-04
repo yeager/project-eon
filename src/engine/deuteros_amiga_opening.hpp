@@ -105,6 +105,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandCallReturnPlan> observe_title_command_call_return(const DeuterosAmigaObservedTitleCommandCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_command_call_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPlanarWritePlan> observe_title_command_planar_write(const DeuterosAmigaObservedTitleCommandPlanarWrite& o) { return title_stage_session_ ? title_stage_session_->observe_command_planar_write(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPlanarVariantWritePlan> observe_title_command_planar_variant_write(const DeuterosAmigaObservedTitleCommandPlanarVariantWrite& o) { return title_stage_session_ ? title_stage_session_->observe_command_planar_variant_write(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandNegativeServicePlan> observe_title_command_negative_service(const DeuterosAmigaObservedTitleCommandNegativeService& o) { return title_stage_session_ ? title_stage_session_->observe_command_negative_service(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

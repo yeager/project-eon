@@ -637,6 +637,9 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult
     observe_millennium_dos_title_private_interrupt_result(
         MillenniumDosTitlePrivateInterruptResultObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult
+    observe_millennium_dos_title_selected_callee_result(
+        MillenniumDosTitleSelectedCalleeResultObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_call_return(
         MillenniumDosTitleToGameCallReturnObservation observation);
@@ -726,6 +729,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_write(DeuterosAmigaObservedTitleCommandPlanarWrite);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_variant_write(DeuterosAmigaObservedTitleCommandPlanarVariantWrite);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_negative_service(DeuterosAmigaObservedTitleCommandNegativeService);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -752,6 +756,8 @@ public:
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
     millennium_atari_bootstrap_presentation() const;
+    [[nodiscard]] MillenniumAtariConfigConsumerResult
+    observe_millennium_atari_status_register(MillenniumAtariStatusRegisterObservation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

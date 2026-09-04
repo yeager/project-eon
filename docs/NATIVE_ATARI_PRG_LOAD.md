@@ -89,7 +89,7 @@ control transfers and records `$77042` as the encoded JSR return address. It
 does not synthesize an A7 value or write that return address into an invented
 stack.
 
-Execution then stops before the first instruction at `$2aa88`:
+The initial checkpoint stops before the first instruction at `$2aa88`:
 
 | Property | Exact evidence |
 | --- | --- |
@@ -100,22 +100,37 @@ Execution then stops before the first instruction at `$2aa88`:
 | Local control transfers completed | 2 (`JSR`, absolute `JMP`) |
 | Status reads / hardware writes completed | 0 / 0 |
 
-The following `BCLR #13,D0` and conditional branch depend on that SR value.
-One path would touch `$ffff8800` and change SR before both paths converge at
-`JSR $2a51c`. Choosing either path, executing a privileged instruction, or
-writing the hardware address would invent original runtime state. They remain
-outside the native session until independently evidenced. The config-consumer
-checkpoint is generation-owned and disappears with the same coordinator
-revocation as its PRG and Fread memory.
+Advancement requires `MillenniumAtariStatusRegisterObservation`: generation,
+monotonic sequence, exact `$2aa88` PC, the complete observed SR word, and an
+independent typed `user`/`supervisor` classification. The value's S bit must
+agree with that classification. A mismatch or stale observation is rejected
+without changing session or native memory.
+
+`BCLR #13,D0` makes the original `BEQ` take the direct path when S was clear.
+That path performs no hardware write and sets CCR.Z as defined by BCLR. When S was set, the fall-through
+executes these instruction-defined effects:
+
+| Instruction | Exact effect |
+| --- | --- |
+| `MOVEP.W D0,0(A0)` at `$2aa98` | `$07 -> $ffff8800`, `$ff -> $ffff8802` |
+| `MOVE.B #$0e,(A0)` at `$2aa9c` | `$0e -> $ffff8800`, intentionally overwriting `$07` |
+| `MOVE #$0300,SR` at `$2aaa0` | resulting observed-path SR `$0300` |
+
+The two hardware instructions become two ordered atomic memory batches so
+the deliberate overwrite remains explicit. They are admitted only for an
+observed supervisor SR. Both branches converge at `JSR $2a51c`; the native
+session records return `$2aaaa`, executes the local selector-2 stack prefix,
+and stops before XBIOS `TRAP #14` at `$2a520`. It does not synthesize an A7
+address or invoke XBIOS. The checkpoint is generation-owned and disappears
+with the same coordinator revocation as its PRG and Fread memory.
 
 ## Remaining boundary
 
-The materialized image and exact configuration now occupy native runtime
-memory, and native control reaches `$2aa88`. The next Atari task requires
-evidence for the entry SR value; only then can the conditional hardware setup
-and converged `JSR $2a51c` be selected. TOS basepage fields, XBIOS results,
-Line-A state, input, timing, and every unclassified indirect target remain
-explicit preservation boundaries.
+The materialized image and exact configuration occupy native runtime memory.
+With an explicit SR observation, both entry branches reach XBIOS selector 2
+at `$2a520`. Its return value is the next boundary. TOS basepage fields, other
+XBIOS results, Line-A state, input, timing, and every unclassified indirect
+target remain explicit preservation boundaries.
 
 No original bytes are written to disk, copied into a package, or committed.
 The structural unit fixture checks loader arithmetic only; the canonical

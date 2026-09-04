@@ -12,6 +12,8 @@ enum class MillenniumDosTitleInitializationState {
     private_interrupt_result_boundary,
     selected_local_call_boundary,
     selected_callee_private_interrupt_result_boundary,
+    selected_followup_call_boundary,
+    bios_palette_interrupt_boundary,
 };
 
 enum class MillenniumDosTitleInitializationEffectWidth { byte, word };
@@ -22,6 +24,29 @@ struct MillenniumDosTitlePrivateInterruptResultObservation {
     std::uint16_t return_address = 0;
     std::uint16_t ax = 0;
     std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleSelectedCalleeResultObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t wrapper_return_address = 0;
+    std::uint16_t selected_callee_return_address = 0;
+    std::uint16_t ax = 0;
+    std::uint16_t flags = 0;
+};
+
+struct MillenniumDosTitleBiosInterruptBoundary {
+    std::uint16_t selected_followup_call_address = 0;
+    std::uint16_t selected_followup_call_target = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint8_t interrupt = 0;
+    std::uint16_t ax = 0;
+    std::uint16_t bx = 0;
+    std::uint16_t cx = 0;
+    std::uint16_t dx_known_mask = 0;
+    std::uint16_t dx_known_value = 0;
+    std::uint16_t source_address = 0;
+    bool result_observed = false;
 };
 
 struct MillenniumDosTitleInitializationMemoryEffect {
@@ -64,6 +89,11 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t selected_call_address = 0;
     std::uint16_t selected_call_target = 0;
     MillenniumDosTitlePrivateInterruptBoundary selected_callee_boundary;
+    std::uint16_t selected_callee_observed_ax = 0;
+    std::uint16_t selected_callee_observed_flags = 0;
+    std::uint16_t selected_followup_call_address = 0;
+    std::uint16_t selected_followup_call_target = 0;
+    MillenniumDosTitleBiosInterruptBoundary bios_boundary;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -84,6 +114,11 @@ public:
         const MillenniumDosTitlePrivateInterruptResultObservation&);
     void execute_selected_callee_start(std::uint64_t sequence,
         std::uint16_t selected_call_address, std::uint16_t selected_call_target);
+    void observe_selected_callee_private_interrupt_result(
+        const MillenniumDosTitleSelectedCalleeResultObservation&);
+    void execute_selected_followup_start(std::uint64_t sequence,
+        std::uint16_t selected_followup_call_address,
+        std::uint16_t selected_followup_call_target);
 
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
@@ -101,6 +136,11 @@ private:
     std::uint8_t selected_mode_ = 0;
     std::uint16_t selected_call_address_ = 0;
     std::uint16_t selected_call_target_ = 0;
+    std::uint16_t selected_callee_observed_ax_ = 0;
+    std::uint16_t selected_callee_observed_flags_ = 0;
+    std::uint16_t selected_followup_call_address_ = 0;
+    std::uint16_t selected_followup_call_target_ = 0;
+    MillenniumDosTitleBiosInterruptBoundary bios_boundary_;
 };
 
 } // namespace eon
