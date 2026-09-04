@@ -15,6 +15,10 @@ constexpr auto wrapper_request_sha =
     "f7dee937ac756b0aa6c9b287ba8dcf985d7a6fe539612de66cd4871184d85680";
 constexpr auto result_continuation_sha =
     "4ffa7a86b6e398183f251b7de848cefe76ed4e10fd9ddd95b5c8548539fb2704";
+constexpr auto mode_one_callee_sha =
+    "a4db63f6cc6d8ba1004340b3f25b1d21299bd14a3466189d0bb495434c5849a2";
+constexpr auto other_mode_callee_sha =
+    "0dab61c355813642910e49ec8fecc80def19a584a51a8323b3ad0e644468a5fe";
 }
 
 MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession(
@@ -27,6 +31,9 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
     constexpr std::size_t wrapper_request_size = 7;
     constexpr std::size_t result_continuation_offset = 0x1a98;
     constexpr std::size_t result_continuation_size = 29;
+    constexpr std::size_t mode_one_callee_offset = 0x19c6;
+    constexpr std::size_t other_mode_callee_offset = 0x19da;
+    constexpr std::size_t selected_callee_prefix_size = 11;
     if (titles_executable.size() != 7022
         || to_hex(sha256(titles_executable)) != titles_sha
         || child_code_segment == 0 || entry_sequence == 0
@@ -35,9 +42,40 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
         || to_hex(sha256(titles_executable.subspan(
                wrapper_offset, wrapper_request_size))) != wrapper_request_sha
         || to_hex(sha256(titles_executable.subspan(result_continuation_offset,
-               result_continuation_size))) != result_continuation_sha) {
+               result_continuation_size))) != result_continuation_sha
+        || to_hex(sha256(titles_executable.subspan(mode_one_callee_offset,
+               selected_callee_prefix_size))) != mode_one_callee_sha
+        || to_hex(sha256(titles_executable.subspan(other_mode_callee_offset,
+               selected_callee_prefix_size))) != other_mode_callee_sha) {
         throw std::runtime_error("Unsupported Millennium DOS title initialization media");
     }
+}
+
+void MillenniumDosTitleInitializationSession::execute_selected_callee_start(
+    const std::uint64_t sequence, const std::uint16_t selected_call_address,
+    const std::uint16_t selected_call_target) {
+    if(state_!=MillenniumDosTitleInitializationState::selected_local_call_boundary
+        ||sequence!=last_sequence_+1||selected_call_address!=selected_call_address_
+        ||selected_call_target!=selected_call_target_){
+        throw std::runtime_error("Detached Millennium DOS selected title callee");
+    }
+    const bool mode_one=selected_call_target_==0x1ac6;
+    if((mode_one&&(selected_call_address_!=0x1bad))
+        ||(!mode_one&&(selected_call_address_!=0x1bb2
+            ||selected_call_target_!=0x1ada))){
+        throw std::runtime_error("Unsupported Millennium DOS selected title callee");
+    }
+    const auto entry=selected_call_target_;
+    const auto wrapper_call=static_cast<std::uint16_t>(mode_one?0x1ace:0x1ae2);
+    effects_.push_back({entry,"AX",0x0004});
+    effects_.push_back({static_cast<std::uint16_t>(entry+3),"ES",
+        child_code_segment_});
+    effects_.push_back({static_cast<std::uint16_t>(entry+5),"BX",0x1ac5});
+    selected_callee_boundary_={wrapper_call,0x0122,0x0127,0x91,0x0004,
+        child_code_segment_,0x1ac5,false,false};
+    last_sequence_=sequence;
+    state_=MillenniumDosTitleInitializationState::
+        selected_callee_private_interrupt_result_boundary;
 }
 
 void MillenniumDosTitleInitializationSession::observe_private_interrupt_result(
@@ -106,7 +144,7 @@ MillenniumDosTitleInitializationCheckpoint
 MillenniumDosTitleInitializationSession::checkpoint() const {
     return {state_,last_sequence_,child_code_segment_,effects_,memory_effects_,
         boundary_,observed_ax_,observed_flags_,selected_mode_,
-        selected_call_address_,selected_call_target_};
+        selected_call_address_,selected_call_target_,selected_callee_boundary_};
 }
 
 } // namespace eon

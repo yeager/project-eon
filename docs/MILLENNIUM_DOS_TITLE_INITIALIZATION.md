@@ -60,3 +60,21 @@ the direct call at `$1bad` to `$1ac6`; every other byte selects the call at
 A wrong address, duplicate sequence, stale session, rejected memory batch, or
 revoked release changes neither state nor memory. Eon stops before the
 selected callee: its effects and return remain unobserved.
+
+## Selected mode callees
+
+The two selected callees share the same next external contract:
+
+| selected mode | entry | exact 11-byte span SHA-256 | wrapper call |
+|---|---:|---|---:|
+| `1` | `$1ac6` | `a4db63f6cc6d8ba1004340b3f25b1d21299bd14a3466189d0bb495434c5849a2` | `$1ace` |
+| every other byte | `$1ada` | `0dab61c355813642910e49ec8fecc80def19a584a51a8323b3ad0e644468a5fe` | `$1ae2` |
+
+Each exact prefix loads `AX=$0004`, sets `ES=CS`, sets `BX=$1ac5`, and
+directly calls the same `$0122` wrapper. The runtime executes the selected
+prefix automatically after atomically accepting the preceding function-zero
+result. It records the three register effects and publishes function `$0004`,
+record `CS:$1ac5`, `INT $91` at `$0127` as the next boundary. It does not
+execute the later `$044c` or `$0487` call, read `$0107`, or apply the optional
+`$b800` write because all of those depend on the still-unobserved function-four
+return.

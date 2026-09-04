@@ -870,7 +870,7 @@ name as a semantic property of the original program.
 | --- | --- | --- | --- | --- |
 | Millennium Amiga | Six ADFs: five 901,120-byte images and one 698,368-byte image | `DOS\0` is present, but the usable program path is raw-sector data; the valid Razor filesystem has no game files. | The Defjam-family bootstrap requests `$24200..$923ff` to `$41000`, then `$16400..$423ff` to `$68000`; the shared resident span is hash-identified. | There is no live standalone manual recognised by the bounded filesystem readers.  Visible function-key trainer text occurs only in altered variants and is not original control evidence. |
 | Deuteros Amiga | Clean system/data ADFs plus comparative alternate, save, and modified images | The clean system disk is `DOS\0`; clean data disk is `DEU\0`, whose logical block 880 is custom raw data rather than an AmigaDOS root. | The clean system boot path loads `$5800` to `$20000` and has entry `$21734`; title-stage transfer remains separately bounded. | A genuine on-disk text block contains load/save prompts, but no caller-connected input binding is yet recovered. |
-| Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits `MILENIUM.TOS` and the `$77000` bootstrap only; its initial `MILL22A.inf` `Fopen` remains a GEMDOS boundary.  The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes.  A recognised standalone Equinox archive that does not contain that STX reports its absence; it never borrows physical-media evidence from the larger corpus. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
+| Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits a fully relocated native `MILENIUM.TOS` image and an exact read-only `MILL22A.inf` compatibility load. Native control follows `JSR $2a500` and its absolute jump, then stops before the SR-dependent instruction at `$2aa88`. The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
 | Deuteros Atari ST | Eleven 737,280/1,056,768-byte `.st` images | The 737,280-byte game-media candidates have a BPB-shaped boot sector, but their apparent root records are not a live FAT12 namespace: entries carry impossible cluster/size combinations.  The raw protected boot chain is authoritative. | The hash-identified raw chain reaches the first and second stages through explicit nine-sector reads; its XBIOS callback and state selection remain boundaries. | The supplied game-media variants contain no standalone manual.  Embedded prompts are preserved as raw text only; a separate 1,056,768-byte development/tools disk is excluded from game-control evidence. |
 
 This protects two easy-to-make mistakes: a structurally plausible BPB does not
@@ -1130,15 +1130,16 @@ written anywhere. This makes later
 user-save preservation work auditable without confusing file-format validity
 with an assertion of original-media identity or save compatibility.
 
-The nonnegative fall-through after the self-loop is also byte-verified, but
-is not executed. At reconstructed target `+$1a`, 26 original bytes have
+The nonnegative fall-through after the self-loop is byte-verified. At
+reconstructed target `+$1a`, 26 original bytes have
 SHA-256 `663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0`.
 They push literal buffer `$2a500`, count `$20000`, the OS-owned `D0` handle,
 and selector `$003f`, then issue `TRAP #1`; `ADDA.L #12,A7` immediately
 cleans the prepared arguments. `$003f` is the documented GEMDOS `Fread`
-interface. This proves only the static fall-through preparation: Project Eon
-does not decide whether `Fopen` succeeds, invoke either GEMDOS service,
-model a handle/result, or read/fill the target buffer.
+interface. Eon's exact-media compatibility path owns a private read-only
+handle, reads all 7,506 bytes of the matching FAT entry into `$2a500`, and
+never exposes create/write semantics even though the original access mode is
+write-capable. This native result is not claimed as an observed TOS D0 value.
 
 The immediate 14-byte suffix after that static Fread boundary is now
 hash-locked as the loader-to-configuration-buffer transfer boundary. At
@@ -1146,38 +1147,36 @@ reconstructed target `+$34` (address `$77034`) its SHA-256 is
 `845d677c7c17d2152f0e89e0a396b6bbfb1ed6a75479a325b39310bbf0d99e58`.
 The original words are `TRAP #1`, `ADDA.L #12,SP`, and `JSR $2a500`; `$2a500`
 is exactly the Fread destination previously prepared in the same immutable
-target. This is an instruction-edge fact, not a successful loader model:
-Project Eon does not invoke Fread or the following trap, decide either return
-value, populate `$2a500`, or execute its JSR. The separately read FAT-chain
-configuration payload is preservation evidence only and is not substituted
-for the native buffer.
+target. The production runtime applies the exact configuration as one atomic
+memory batch and follows this JSR plus the payload's leading absolute JMP.
 
-The transfer target is deliberately **not** promoted to a proven configuration
-load base. The exact first six bytes of the supplied `MILL22A.INF` are
+The exact first six bytes of the supplied `MILL22A.INF` are
 `JMP $2aa88` (`4ef90002aa88`, SHA-256
 `5c2fb1d412ca66ba8928a77c22eb0351ab5d3d6fd9c04cff1b037f25a94c7829`).
 If file byte zero occupied the `$2a500` Fread/JSR destination, this jump would
-name file `+$588`. The independently hash-validated static candidate entry
-used elsewhere in this document is file `+$5aa` at `$2a4de`: a literal
-34-byte disagreement. Project Eon records both address calculations and
-rejects altered bytes, but does not choose an alternate destination, apply a
-hidden prebuffer adjustment, or claim that either entry is dynamically
-reached. Resolving this boundary requires native GEMDOS load-address evidence
-and remains outside the current non-executing recovery.
+name file `+$588`. Native Fread establishes exactly that mapping. The
+independently hash-validated candidate entry is file `+$5aa`, 34 bytes later;
+the intervening bytes are retained as executable original code, not discarded
+as a load-address disagreement. Native control reaches `$2aa88` and stops
+before opcode `$40c0` (`MOVE SR,D0`), because its result depends on the
+unobserved original status/privilege register. No conditional hardware setup,
+SR change, or converged `JSR $2a51c` is executed.
 
 The live Millennium Atari bootstrap session now executes a deliberately tiny
 local interpreter for only the two proven in-memory copy loops from
 `MILENIUM.TOS`: 54 original longword copies to the BSS bootstrap, followed by
 257 original word copies that materialize the 514-byte target at `$77000`.
 The execution record pins entry PC `$0`, branch PC `$24`, BSS entry `$1d636`,
-and stop address `$7700e`, immediately before the original `TRAP #1`. It has
-no general 68000 decoder, host stack, relocation result, or GEMDOS
-implementation. It resolves
-the same read-only FAT12 entry and retains its independently verified candidate
-entry plus the explicit 34-byte Fread/load-address disagreement for diagnostics.
-That source read is never represented as a native Fread buffer. The session
-stops before `TRAP #1`: no host file handle, D0 result, config execution, or
-Atari display state is fabricated.
+and first trap address `$7700e`. Production acquisition additionally owns the
+exact PRG relocation image and narrow read-only config service described
+above. It reaches `$2aa88` and stops before reading SR. There is no general
+68000 decoder, host stack, or GEMDOS implementation, and no Atari display
+state is fabricated.
+
+The static evidence records below are the contracts used to validate that
+narrow service. Statements that a parser does not select a result describe
+the parser in isolation; production selects only the exact, hash-bound
+read-only compatibility result documented above.
 
 The caller-connected local path also executes the target's complete 14-byte
 Fopen prefix before that boundary. Its three original pre-decrement writes—
@@ -4078,6 +4077,10 @@ An exact typed return at `$0129` can continue through the 29-byte
 word/byte writes commit atomically to the compatibility child, and AH selects
 the `$1bad->$1ac6` or `$1bb2->$1ada` call boundary. Neither callee executes
 without separate evidence.
+Both selected callees then have exact native prefixes: `$1ac6..$1ad0` and
+`$1ada..$1ae4` load function `$0004` with record `CS:$1ac5` through the same
+private wrapper. Eon automatically reaches that second `INT $91` boundary and
+stops before its result; the following `$044c`/`$0487` calls remain unknown.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6101,6 +6104,38 @@ next command byte. The generic call-return API rejects this opcode family,
 so a register-only return cannot bypass the recovered writes. Nonzero mode
 routes remain explicit evidence boundaries. No host renderer, glyph meaning,
 colour assignment, or unseen memory effect is inferred from these writes.
+
+The other three non-negative dispatch variants are now owned by the same
+typed command state machine instead of being collapsed into a register-only
+return. Their complete routines are independently locked to the clean ADF:
+
+- positive/clear `$1fca6..$1fd09`, ADF `+$7aca6`, 100 bytes, SHA-256
+  `806ad8916bbcdd2b6e01806f56cde2905cd8f9d2af63c877c2242371e2659141`;
+- zero/set `$1fd0a..$1fd79`, ADF `+$7ad0a`, 104 bytes, SHA-256
+  `13e86b16e732da32a9cbdcd1b0b387c042b6a6bedd9b46cb5664d0a4a121318a`;
+- positive/set `$1fd7a..$1fde3`, ADF `+$7ad7a`, 102 bytes, SHA-256
+  `bd6bfbd42d3b6471a8166e14228fe177f5afe3a7ff3c8372cf291b0c37c44f82`.
+
+Positive means the signed byte at `$1f98c` is `$01..$7f`; `$80..$ff` remains
+the separately documented negative service/timing path. Set means the byte at
+`$1f98e` is nonzero. All three variants select the same eight glyph bytes by
+`[$1f99c] + (opcode-$20)*8`. Positive variants use each current destination
+byte as the first blend input; zero/set uses the low byte of the word at
+`[$1f970] + plane*2`. The second input is always the low byte of the word at
+`[$1f96c] + plane*2`, and the exact written expression remains
+`(first & ~glyph) | (second & glyph)`. The clear variant uses literal row and
+plane strides `$28`/`$1f40`; set variants read longword strides from `$1f994`
+and `$1f998`. Each advances `$1f974` by one after its 32 writes.
+
+Admission retains the width distinction: positive destination reads must be
+bytes, while table inputs retain their observed 16-bit words. If an already
+owned native-memory byte contradicts a positive-route destination
+observation, the whole command is rejected without changing command, memory,
+or surface state. Dynamic-stride effects remain valid sparse native memory;
+they enter the 320x200 renderer surface only when the observed strides are
+exactly `$28` and `$1f40` and every derived address passes the surface's own
+bounds/order check. No mode value, pointer, glyph, existing destination byte,
+or source word is synthesized.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently
