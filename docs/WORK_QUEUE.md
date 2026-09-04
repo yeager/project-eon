@@ -159,6 +159,9 @@ pointer effect.
 The fully local `$206be` controller transfer and `$403e6` literal pointer seed
 now advance to `$404ce`. The next boundary is the `$403f4` service batch; each
 opaque callee must return through explicit evidence before later setup runs.
+The first batch graphics return and `$20510` literal prefix now reach the
+runtime read at `$2052a`. Continue with an exact typed `$20276` observation;
+do not infer the word or claim the graphics vector copied pixels.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

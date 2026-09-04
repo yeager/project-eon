@@ -137,6 +137,7 @@ add_executable(project-eon
     src/engine/millennium_dos_sixth_function_session.cpp
     src/engine/millennium_dos_eighth_function_session.cpp
     src/engine/millennium_dos_ninth_function_session.cpp
+    src/engine/millennium_dos_ninth_function_handoff_session.cpp
     src/engine/millennium_dos_fourth_function_session.cpp
     src/engine/millennium_dos_fifth_function_session.cpp
     src/engine/millennium_dos_third_function_session.cpp

@@ -225,6 +225,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_sixth_function_.reset();
     millennium_dos_eighth_function_.reset();
     millennium_dos_ninth_function_.reset();
+    millennium_dos_ninth_handoff_.reset();
     millennium_dos_fourth_function_.reset();
     millennium_dos_fifth_function_.reset();
     millennium_dos_third_function_.reset();
@@ -921,6 +922,11 @@ EON_NINTH_FORWARD(observe_millennium_dos_ninth_function_byte,MillenniumDosNinthF
 EON_NINTH_FORWARD(observe_millennium_dos_ninth_function_call_return,MillenniumDosNinthFunctionCallReturnObservation,observe_call_return(o.call_address,o.return_address),"Ninth-function call return")
 #undef EON_NINTH_FORWARD
 std::optional<MillenniumDosNinthFunctionCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_ninth_function_checkpoint() const { if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_ninth_function||!millennium_dos_ninth_function_) return std::nullopt; const auto& s=*millennium_dos_ninth_function_; return MillenniumDosNinthFunctionCheckpoint{s.state(),s.boundary(),s.loop_count(),s.effects()}; }
+MillenniumDosNinthHandoffObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_ninth_handoff_entry(const MillenniumDosNinthHandoffEntryObservation o){MillenniumDosNinthHandoffObservationResult r;if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_ninth_function||!millennium_dos_ninth_function_||!millennium_dos_native_process_||millennium_dos_ninth_function_->boundary().kind!=MillenniumDosNinthFunctionBoundaryKind::jump_handoff){r.error="F9 continuation requires exact active $7381 -> $73cc handoff";return r;}MillenniumDosExternalTransferAdmission transfer(MillenniumDosExternalTransferKind::f9_short_return);if(!transfer.observe_entry({o.sequence,o.instruction_address,o.target_address}).accepted){r.error="F9 continuation entry rejected by external-transfer contract";return r;}try{millennium_dos_ninth_handoff_.emplace(millennium_dos_native_process_->make_ninth_function_handoff_session());session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::millennium_dos_ninth_function_handoff);r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+#define EON_F9_HANDOFF(name,type,body) MillenniumDosNinthHandoffObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosNinthHandoffObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_ninth_function_handoff||!millennium_dos_ninth_handoff_){r.error="No active F9 handoff session";return r;}try{millennium_dos_ninth_handoff_->body;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+EON_F9_HANDOFF(observe_millennium_dos_ninth_handoff_byte,MillenniumDosNinthHandoffByteObservation,observe_runtime_byte(o.instruction_address,o.runtime_address,o.value)) EON_F9_HANDOFF(observe_millennium_dos_ninth_handoff_word,MillenniumDosNinthHandoffWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value)) EON_F9_HANDOFF(observe_millennium_dos_ninth_handoff_call_return,MillenniumDosNinthHandoffCallReturnObservation,observe_call_return(o.call_address,o.return_address)) EON_F9_HANDOFF(observe_millennium_dos_ninth_handoff_zero_flag,MillenniumDosNinthHandoffZeroFlagObservation,observe_zero_flag(o.instruction_address,o.set)) EON_F9_HANDOFF(observe_millennium_dos_ninth_handoff_bl,MillenniumDosNinthHandoffBlObservation,observe_bl(o.instruction_address,o.value))
+#undef EON_F9_HANDOFF
+std::optional<MillenniumDosNinthHandoffCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_ninth_handoff_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_ninth_function_handoff||!millennium_dos_ninth_handoff_)return std::nullopt;const auto&s=*millennium_dos_ninth_handoff_;return MillenniumDosNinthHandoffCheckpoint{s.state(),s.boundary(),s.effects()};}
 MillenniumDosFourthFunctionObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_fourth_function_dispatch(const MillenniumDosFourthFunctionDispatchObservation o){MillenniumDosFourthFunctionObservationResult r;if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop||!millennium_dos_post_overlay_loop_||!millennium_dos_native_process_){r.error="Fourth-function dispatch requires the active post-overlay loop";return r;}auto d=millennium_dos_native_process_->admit_function_dispatch(*millennium_dos_post_overlay_loop_,{o.scaled_call_address,o.dispatcher_address,o.function_key_index,o.handler_address});if(!d.accepted||o.function_key_index!=3||o.handler_address!=0x72f9){r.error="Fourth-function observation is detached from dispatch index 3";return r;}try{millennium_dos_fourth_function_.emplace(millennium_dos_native_process_->make_fourth_function_session());session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::millennium_dos_fourth_function);r.accepted=true;}catch(const std::exception& e){r.error=e.what();}return r;}
 #define EON_FOURTH_FORWARD(name,type,expr) MillenniumDosFourthFunctionObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosFourthFunctionObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_fourth_function||!millennium_dos_fourth_function_){r.error="Observation requires active fourth-function session";return r;}try{millennium_dos_fourth_function_->expr;r.accepted=true;}catch(const std::exception& e){r.error=e.what();}return r;}
 EON_FOURTH_FORWARD(observe_millennium_dos_fourth_function_word,MillenniumDosFourthFunctionWordObservation,observe_runtime_word(o.instruction_address,o.runtime_address,o.value))
@@ -1208,6 +1214,27 @@ ReleaseRuntimeCoordinator::millennium_dos_owned_function_diagnostics() const {
         else if(boundary.kind==MillenniumDosNinthFunctionBoundaryKind::runtime_byte) kind=MillenniumDosOwnedFunctionBoundaryKind::runtime_byte;
         else if(boundary.kind==MillenniumDosNinthFunctionBoundaryKind::call_return) kind=MillenniumDosOwnedFunctionBoundaryKind::call_return;
         assign(boundary,kind); break;
+    }
+    case RuntimeSessionKind::millennium_dos_ninth_function_handoff: {
+        if (!millennium_dos_ninth_handoff_) return std::nullopt;
+        input.function_key_index = 8;
+        input.handler_address = 0x7339;
+        const auto boundary = millennium_dos_ninth_handoff_->boundary();
+        auto kind = MillenniumDosOwnedFunctionBoundaryKind::register_value;
+        if (boundary.kind == MillenniumDosNinthHandoffBoundaryKind::runtime_byte) {
+            kind = MillenniumDosOwnedFunctionBoundaryKind::runtime_byte;
+        } else if (boundary.kind == MillenniumDosNinthHandoffBoundaryKind::runtime_word) {
+            kind = MillenniumDosOwnedFunctionBoundaryKind::runtime_word;
+        } else if (boundary.kind == MillenniumDosNinthHandoffBoundaryKind::call_return) {
+            kind = MillenniumDosOwnedFunctionBoundaryKind::call_return;
+        } else if (boundary.kind == MillenniumDosNinthHandoffBoundaryKind::local_return) {
+            kind = MillenniumDosOwnedFunctionBoundaryKind::local_return;
+        }
+        input.boundary.kind = kind;
+        input.boundary.instruction_address = boundary.instruction_address;
+        input.boundary.runtime_address = boundary.runtime_address;
+        if (boundary.call_target) input.boundary.call_target = *boundary.call_target;
+        break;
     }
     case RuntimeSessionKind::millennium_dos_tenth_function: {
         if (!millennium_dos_tenth_function_) return std::nullopt;

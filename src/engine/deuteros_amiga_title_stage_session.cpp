@@ -20,7 +20,8 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
       callback_registration_(
           parse_deuteros_amiga_title_callback_registration_profile(disk, plan)),
       exec_boundary_session_(disk, plan, exec_prelude_, profile_),
-      service_setup_boundary_session_(disk, plan) {
+      service_setup_boundary_session_(disk, plan),
+      service_batch_boundary_session_(disk, plan) {
     if (stage_.length == 0 || stage_.disk_offset > AmigaAdf::standard_size
         || stage_.length > AmigaAdf::standard_size - stage_.disk_offset
         || stage_.entry_address < stage_.destination
@@ -167,6 +168,20 @@ DeuterosAmigaTitleStageSession::observe_callback_exec_return(
     if (!custom_chip_boundary_session_) return std::nullopt;
     const auto advanced = custom_chip_boundary_session_->observe_exec_return(observation);
     if (advanced) service_setup_boundary_session_.enter(observation.trace_sequence);
+    return advanced;
+}
+
+std::optional<DeuterosAmigaTitleControllerPointerSeedPlan>
+DeuterosAmigaTitleStageSession::advance_controller_pointer_seed() {
+    const auto advanced = service_setup_boundary_session_.advance_controller_pointer_seed();
+    if (advanced) {
+        const auto* library = open_library_boundary();
+        if (!library || !library->observed_return || library->observed_return->result_d0 == 0) {
+            throw std::runtime_error("Missing Deuteros graphics-library observation");
+        }
+        service_batch_boundary_session_.enter(
+            advanced->preceding_trace_sequence, library->observed_return->result_d0);
+    }
     return advanced;
 }
 

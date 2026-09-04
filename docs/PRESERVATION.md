@@ -36,6 +36,15 @@ The hash-bound `$7339..$7381` continuation is admitted only from the active
 writes, calls, loop count, and the terminal `$73cc` jump as typed checkpoints.
 It does not execute or infer `$73cc`; see `MILLENNIUM_DOS_NINTH_FUNCTION.md`.
 
+The F9 jump target `$73cc..$740e` is now a separate exact-identity native
+continuation. Active ownership requires the existing F9 session to expose its
+`$7381 -> $73cc` handoff and a separate matching entry observation. The session
+then observes calls `$7bcb`/`$a2a0`, byte `$da41`, the `$09fa` ZF/BL loop, and
+either the short `$4111`/RET `$73e6` path or the guarded long path through
+`$4111`, `$be28`, `$0b9d`, word `$07da`, `$0ae3`, and `$4bf7`. Only the literal
+terminal writes `$da41=0` and `$da42=$80` are reconstructed. Call returns,
+runtime values, flags, loop exits, and gameplay meaning are never invented.
+
 ### Millennium DOS fourth-function runtime boundary
 
 The `$72f9 -> $ba5e` continuation requires authenticated dispatch index 3.
@@ -2935,6 +2944,17 @@ separately hash-locked `$404c2 -> $403e6` pointer seed, which records literal
 `$1c482` at `$1f97c`. The native session stops at `$404ce` before the opaque
 `$403f4` service batch. These are sparse local effects only; no pointer target
 is dereferenced and no service return is assumed.
+
+The first `$403f4` batch target `$403c8..$403e5` is independently hash-locked
+(SHA-256 `3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f`).
+It supplies `$1ed24`, `$12e12`, and D0 `$14` to graphics vector `-$c0` at
+`$403e0`. Admission requires the exact observed library base previously
+returned by OpenLibrary at cell `$12fec`, an ordered return at `$403e4`, and
+retains D0/SR verbatim. The batch then reaches `$20510`; its complete 38 bytes
+hash to `60ee2fcb4a18f62cd2066aba2429e760a64f14cd3f07f3cfe8467972030008bc`.
+Only the three literal writes before its runtime read are exposed. Execution
+stops at `$2052a` before reading unresolved word `$20276`; no graphics copy or
+runtime word value is fabricated.
 
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small

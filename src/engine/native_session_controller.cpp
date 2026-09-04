@@ -24,6 +24,7 @@ std::string_view native_session_state_label(const NativeSessionState state) {
         return "MILLENNIUM DOS EIGHTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_ninth_function:
         return "MILLENNIUM DOS NINTH-FUNCTION HANDLER";
+    case NativeSessionState::millennium_dos_ninth_function_handoff:return "MILLENNIUM DOS NINTH-FUNCTION CONTINUATION";
     case NativeSessionState::millennium_dos_fourth_function:return "MILLENNIUM DOS FOURTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_fifth_function:return "MILLENNIUM DOS FIFTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_third_function:return "MILLENNIUM DOS THIRD-FUNCTION HANDLER";
@@ -70,6 +71,7 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
         return NativeSessionState::millennium_dos_eighth_function;
     case RuntimeSessionKind::millennium_dos_ninth_function:
         return NativeSessionState::millennium_dos_ninth_function;
+    case RuntimeSessionKind::millennium_dos_ninth_function_handoff:return NativeSessionState::millennium_dos_ninth_function_handoff;
     case RuntimeSessionKind::millennium_dos_fourth_function:return NativeSessionState::millennium_dos_fourth_function;
     case RuntimeSessionKind::millennium_dos_fifth_function:return NativeSessionState::millennium_dos_fifth_function;
     case RuntimeSessionKind::millennium_dos_third_function:return NativeSessionState::millennium_dos_third_function;
@@ -336,6 +338,11 @@ EON_NATIVE_NINTH(observe_millennium_dos_ninth_function_byte,MillenniumDosNinthFu
 EON_NATIVE_NINTH(observe_millennium_dos_ninth_function_call_return,MillenniumDosNinthFunctionCallReturnObservation)
 #undef EON_NATIVE_NINTH
 std::optional<MillenniumDosNinthFunctionCheckpoint> NativeSessionController::millennium_dos_ninth_function_checkpoint() const { if(state_!=NativeSessionState::millennium_dos_ninth_function) return std::nullopt; return runtime_.millennium_dos_ninth_function_checkpoint(); }
+MillenniumDosNinthHandoffObservationResult NativeSessionController::observe_millennium_dos_ninth_handoff_entry(MillenniumDosNinthHandoffEntryObservation o){if(state_!=NativeSessionState::millennium_dos_ninth_function)return{false,"F9 handoff entry requires ninth-function session"};auto r=runtime_.observe_millennium_dos_ninth_handoff_entry(o);synchronize_after_runtime_change();return r;}
+#define EON_NATIVE_F9H(name,type) MillenniumDosNinthHandoffObservationResult NativeSessionController::name(type o){if(state_!=NativeSessionState::millennium_dos_ninth_function_handoff)return{false,"Observation requires F9 continuation"};return runtime_.name(o);}
+EON_NATIVE_F9H(observe_millennium_dos_ninth_handoff_byte,MillenniumDosNinthHandoffByteObservation) EON_NATIVE_F9H(observe_millennium_dos_ninth_handoff_word,MillenniumDosNinthHandoffWordObservation) EON_NATIVE_F9H(observe_millennium_dos_ninth_handoff_call_return,MillenniumDosNinthHandoffCallReturnObservation) EON_NATIVE_F9H(observe_millennium_dos_ninth_handoff_zero_flag,MillenniumDosNinthHandoffZeroFlagObservation) EON_NATIVE_F9H(observe_millennium_dos_ninth_handoff_bl,MillenniumDosNinthHandoffBlObservation)
+#undef EON_NATIVE_F9H
+std::optional<MillenniumDosNinthHandoffCheckpoint> NativeSessionController::millennium_dos_ninth_handoff_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_ninth_function_handoff)return std::nullopt;return runtime_.millennium_dos_ninth_handoff_checkpoint();}
 MillenniumDosFourthFunctionObservationResult NativeSessionController::observe_millennium_dos_fourth_function_dispatch(MillenniumDosFourthFunctionDispatchObservation o){if(state_!=NativeSessionState::millennium_dos_post_overlay_loop)return{false,"Fourth-function dispatch requires post-overlay loop"};auto r=runtime_.observe_millennium_dos_fourth_function_dispatch(o);synchronize_after_runtime_change();return r;}
 #define EON_NATIVE_FOURTH(n,t) MillenniumDosFourthFunctionObservationResult NativeSessionController::n(t o){if(state_!=NativeSessionState::millennium_dos_fourth_function)return{false,"Observation requires fourth-function session"};return runtime_.n(o);}
 EON_NATIVE_FOURTH(observe_millennium_dos_fourth_function_word,MillenniumDosFourthFunctionWordObservation)
@@ -390,6 +397,7 @@ NativeSessionController::millennium_dos_owned_function_diagnostics() const {
     case NativeSessionState::millennium_dos_seventh_function:
     case NativeSessionState::millennium_dos_eighth_function:
     case NativeSessionState::millennium_dos_ninth_function:
+    case NativeSessionState::millennium_dos_ninth_function_handoff:
     case NativeSessionState::millennium_dos_tenth_function:
         return runtime_.millennium_dos_owned_function_diagnostics();
     default: return std::nullopt;

@@ -13,6 +13,7 @@
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_native_process_admission.hpp"
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
+#include "engine/millennium_dos_external_transfer_admission.hpp"
 #include "engine/millennium_dos_title_session.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
@@ -423,6 +424,7 @@ struct MillenniumDosNinthFunctionByteObservation { std::uint16_t instruction_add
 struct MillenniumDosNinthFunctionCallReturnObservation { std::uint16_t call_address=0; std::uint16_t return_address=0; };
 struct MillenniumDosNinthFunctionObservationResult { bool accepted=false; std::string error; };
 struct MillenniumDosNinthFunctionCheckpoint { MillenniumDosNinthFunctionState state=MillenniumDosNinthFunctionState::awaiting_guard; MillenniumDosNinthFunctionBoundary boundary; std::size_t loop_count=0; std::vector<MillenniumDosNinthFunctionByteEffect> effects; };
+struct MillenniumDosNinthHandoffEntryObservation{std::uint64_t sequence=0;std::uint16_t instruction_address=0,target_address=0;};struct MillenniumDosNinthHandoffByteObservation{std::uint16_t instruction_address=0,runtime_address=0;std::uint8_t value=0;};struct MillenniumDosNinthHandoffWordObservation{std::uint16_t instruction_address=0,runtime_address=0,value=0;};struct MillenniumDosNinthHandoffCallReturnObservation{std::uint16_t call_address=0,return_address=0;};struct MillenniumDosNinthHandoffZeroFlagObservation{std::uint16_t instruction_address=0;bool set=false;};struct MillenniumDosNinthHandoffBlObservation{std::uint16_t instruction_address=0;std::uint8_t value=0;};struct MillenniumDosNinthHandoffObservationResult{bool accepted=false;std::string error;};struct MillenniumDosNinthHandoffCheckpoint{MillenniumDosNinthHandoffState state=MillenniumDosNinthHandoffState::first_call;MillenniumDosNinthHandoffBoundary boundary;std::vector<MillenniumDosNinthHandoffEffect> effects;};
 struct MillenniumDosFourthFunctionDispatchObservation { std::uint16_t scaled_call_address=0; std::uint16_t dispatcher_address=0; std::size_t function_key_index=0; std::uint16_t handler_address=0; };
 struct MillenniumDosFourthFunctionWordObservation { std::uint16_t instruction_address=0; std::uint16_t runtime_address=0; std::uint16_t value=0; };
 struct MillenniumDosFourthFunctionCallReturnObservation { std::uint16_t call_address=0; std::uint16_t return_address=0; };
@@ -653,6 +655,7 @@ public:
     [[nodiscard]] MillenniumDosNinthFunctionObservationResult observe_millennium_dos_ninth_function_byte(MillenniumDosNinthFunctionByteObservation);
     [[nodiscard]] MillenniumDosNinthFunctionObservationResult observe_millennium_dos_ninth_function_call_return(MillenniumDosNinthFunctionCallReturnObservation);
     [[nodiscard]] std::optional<MillenniumDosNinthFunctionCheckpoint> millennium_dos_ninth_function_checkpoint() const;
+    [[nodiscard]] MillenniumDosNinthHandoffObservationResult observe_millennium_dos_ninth_handoff_entry(MillenniumDosNinthHandoffEntryObservation);[[nodiscard]] MillenniumDosNinthHandoffObservationResult observe_millennium_dos_ninth_handoff_byte(MillenniumDosNinthHandoffByteObservation);[[nodiscard]] MillenniumDosNinthHandoffObservationResult observe_millennium_dos_ninth_handoff_word(MillenniumDosNinthHandoffWordObservation);[[nodiscard]] MillenniumDosNinthHandoffObservationResult observe_millennium_dos_ninth_handoff_call_return(MillenniumDosNinthHandoffCallReturnObservation);[[nodiscard]] MillenniumDosNinthHandoffObservationResult observe_millennium_dos_ninth_handoff_zero_flag(MillenniumDosNinthHandoffZeroFlagObservation);[[nodiscard]] MillenniumDosNinthHandoffObservationResult observe_millennium_dos_ninth_handoff_bl(MillenniumDosNinthHandoffBlObservation);[[nodiscard]] std::optional<MillenniumDosNinthHandoffCheckpoint> millennium_dos_ninth_handoff_checkpoint()const;
     [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_dispatch(MillenniumDosFourthFunctionDispatchObservation);
     [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_word(MillenniumDosFourthFunctionWordObservation);
     [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_call_return(MillenniumDosFourthFunctionCallReturnObservation);
@@ -697,6 +700,7 @@ private:
     std::optional<MillenniumDosSixthFunctionSession> millennium_dos_sixth_function_;
     std::optional<MillenniumDosEighthFunctionSession> millennium_dos_eighth_function_;
     std::optional<MillenniumDosNinthFunctionSession> millennium_dos_ninth_function_;
+    std::optional<MillenniumDosNinthFunctionHandoffSession> millennium_dos_ninth_handoff_;
     std::optional<MillenniumDosFourthFunctionSession> millennium_dos_fourth_function_;
     std::optional<MillenniumDosFifthFunctionSession> millennium_dos_fifth_function_;
     std::optional<MillenniumDosThirdFunctionSession> millennium_dos_third_function_;
