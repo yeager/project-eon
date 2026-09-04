@@ -73,6 +73,8 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_encoded_high_nibble_byte_boundary,
     post_descriptor_first_loop_encoded_high_escape_word_boundary,
     post_descriptor_first_loop_encoded_high_mode_two_word_boundary,
+    post_descriptor_first_loop_encoded_high_mode_two_escape_word_boundary,
+    post_descriptor_first_loop_encoded_high_mode_two_second_escape_word_boundary,
     post_descriptor_first_loop_encoded_high_xlat_byte_boundary,
     post_descriptor_first_loop_encoded_record_complete,
     post_descriptor_second_loop_far_read_boundary,

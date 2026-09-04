@@ -559,6 +559,32 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().gemdos_selector==0x3f
             && single_cell_planes.checkpoint().game_init_post_config_fread_buffer==0x11e00
             && single_cell_planes.checkpoint().game_init_post_config_fread_count==0x20000);
+        auto post_config_short_read=single_cell_planes;
+        assert(!post_config_short_read.observe_game_init_post_config_fread({1,122,0x77076,0x3f,-1}).accepted);
+        assert(post_config_short_read.observe_game_init_post_config_fread({1,122,0x77074,0x3f,-1}).accepted
+            && post_config_short_read.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_post_config_gemdos_62_boundary
+            && post_config_short_read.checkpoint().game_init_post_config_fread_result_d0==-1
+            && post_config_short_read.checkpoint().game_init_post_config_fread_cleanup_bytes==12
+            && post_config_short_read.checkpoint().game_init_post_config_fread_return_sha256=="368338a18784d37b5867fa551121703b2fb0ab613db51cbc5b2c08e14f474558"
+            && post_config_short_read.checkpoint().gemdos_trap_address==0x7707c
+            && post_config_short_read.checkpoint().gemdos_selector==0x3e);
+        assert(single_cell_planes.observe_game_init_post_config_fread({1,122,0x77074,0x3f,0x20000}).accepted);
+        assert(!single_cell_planes.observe_game_init_post_config_fclose({1,123,0x7707e,0x3e,-1}).accepted);
+        assert(single_cell_planes.observe_game_init_post_config_fclose({1,123,0x7707c,0x3e,-1}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_post_config_rts_boundary
+            && single_cell_planes.checkpoint().game_init_post_config_fclose_result_d0==-1
+            && single_cell_planes.checkpoint().game_init_post_config_fclose_cleanup_bytes==12
+            && single_cell_planes.checkpoint().game_init_post_config_fclose_return_sha256=="aa177208872c4125af13601feb4566003e5fb01c851c44f8b7f4904fb5f52b52"
+            && single_cell_planes.checkpoint().game_init_post_config_write_addresses[0]==0x2ab2c
+            && single_cell_planes.checkpoint().game_init_post_config_write_addresses[1]==0x11dfc
+            && single_cell_planes.checkpoint().game_init_post_config_write_value==0x361436a7
+            && single_cell_planes.checkpoint().game_init_post_config_rts_address==0x770ba);
+        const auto post_config_effects=single_cell_planes.make_game_init_post_config_effect_batch("post-config");
+        assert(post_config_effects.fully_admitted && post_config_effects.effects.size()==2
+            && post_config_effects.effects[0].location.offset==0x2ab2c
+            && post_config_effects.effects[1].location.offset==0x11dfc
+            && post_config_effects.effects[0].value==0x361436a7
+            && post_config_effects.effects[1].value==0x361436a7);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

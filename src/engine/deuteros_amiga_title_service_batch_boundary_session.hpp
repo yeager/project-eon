@@ -1119,6 +1119,22 @@ struct DeuterosAmigaTitlePostAdjustedJoinBytePlan {
     bool zero_branch=false;
     std::uint32_t zero_target=0,next_call_address=0,next_call_target=0;
 };
+struct DeuterosAmigaTitlePostAdjusted1f9a4ReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t inline_stream_begin=0,inline_stream_end=0,next_word_instruction=0;
+    std::uint32_t next_word_source=0,next_call_address=0,next_call_target=0,next_return_address=0;
+};
+struct DeuterosAmigaObservedTitlePostAdjusted1fe88Return {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t word_instruction=0,word_source=0;
+    std::uint16_t observed_word=0;
+    DeuterosAmigaObservedLocalCallReturn service_return;
+};
+struct DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan {
+    DeuterosAmigaObservedTitlePostAdjusted1fe88Return observation;
+    std::uint32_t next_word_instruction=0,next_word_source=0;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3122,6 +3138,27 @@ public:
         return DeuterosAmigaTitlePostAdjustedJoinBytePlan{o,zero,zero?0x40638U:0U,
             zero?0U:0x405d0U,zero?0U:0x1f9a4U};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1f9a4ReturnPlan> observe_post_adjusted_1f9a4_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!post_adjusted_join_byte_||post_adjusted_join_byte_->observed_value==0
+            ||post_adjusted_1f9a4_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x405d0
+            ||o.call_target!=0x1f9a4||o.return_address!=0x405de)
+            throw std::runtime_error("Deuteros $1f9a4 inline-stream return does not match boundary");
+        post_adjusted_1f9a4_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjusted1f9a4ReturnPlan{o,0x405d6,0x405de,
+            0x405de,0x22a0,0x405e4,0x1fe88,0x405ea};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan> observe_post_adjusted_1fe88_return(const DeuterosAmigaObservedTitlePostAdjusted1fe88Return&o){
+        if(!post_adjusted_1f9a4_return_||post_adjusted_1fe88_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.service_return.trace_sequence!=o.trace_sequence
+            ||o.word_instruction!=0x405de||o.word_source!=0x22a0
+            ||o.service_return.call_address!=0x405e4||o.service_return.call_target!=0x1fe88
+            ||o.service_return.return_address!=0x405ea)
+            throw std::runtime_error("Deuteros $1fe88 return does not match caller boundary");
+        post_adjusted_1fe88_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan{o,0x405ea,0x1ffc8,
+            0x405f0,0x1fe6c,0x405f6};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3342,6 +3379,8 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostAdjustedTimerState> post_adjusted_timer_state_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_4069a_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedJoinByte> post_adjusted_join_byte_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_1f9a4_return_;
+    std::optional<DeuterosAmigaObservedTitlePostAdjusted1fe88Return> post_adjusted_1fe88_return_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};
