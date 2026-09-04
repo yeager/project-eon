@@ -221,6 +221,8 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 
 void ReleaseRuntimeCoordinator::reset() {
     native_runtime_memory_.reset();
+    deuteros_amiga_title_load_copy_.reset();
+    deuteros_amiga_title_load_copy_generation_ = 0;
     millennium_dos_handler_completion_.reset();
     millennium_dos_tenth_function_.reset();
     millennium_dos_seventh_function_.reset();
@@ -240,6 +242,8 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_shared_helper_.reset();
     millennium_dos_shared_helper_entry_.reset();
     millennium_dos_shared_helper_return_.reset();
+    millennium_dos_special_action_.reset();
+    millennium_dos_special_action_return_.reset();
     millennium_dos_bdf_service_.reset();
     millennium_dos_second_function_callback_transfer_.reset();
     millennium_dos_gx_startup_.reset();
@@ -775,14 +779,16 @@ ReleaseRuntimeCoordinator::millennium_dos_seventh_function_checkpoint() const {
         session.returned_by_guard(), session.runtime_effects()};
 }
 
-MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_shared_helper_entry(const MillenniumDosSharedHelperEntryObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_seventh_function_||!millennium_dos_native_process_||millennium_dos_shared_helper_){r.error="Shared helper entry requires one active F7 call boundary";return r;}const auto b=millennium_dos_seventh_function_->boundary();if(o.sequence==0||o.call_instruction!=0x7537||o.target_address!=0x0666||o.caller_ax!=0x012a||b.kind!=MillenniumDosSeventhFunctionBoundaryKind::call_return||b.instruction_address!=o.call_instruction||b.call_target!=o.target_address||b.known_ax!=o.caller_ax){r.error="Shared helper entry does not match the exact F7 call";return r;}try{millennium_dos_shared_helper_.emplace(millennium_dos_native_process_->make_shared_helper_session(o.caller_ax));millennium_dos_shared_helper_entry_=o;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
-#define EON_SHARED_HELPER_FORWARD(name,type,body) MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_shared_helper_||millennium_dos_shared_helper_return_){r.error="No active shared helper";return r;}try{millennium_dos_shared_helper_->body;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_shared_helper_entry(const MillenniumDosSharedHelperEntryObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||(session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function&&session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop)||!millennium_dos_seventh_function_||!millennium_dos_native_process_||millennium_dos_shared_helper_){r.error="Shared helper entry requires one active F7 call boundary";return r;}const auto b=millennium_dos_seventh_function_->boundary();if(o.sequence==0||o.call_instruction!=0x7537||o.target_address!=0x0666||o.caller_ax!=0x012a||b.kind!=MillenniumDosSeventhFunctionBoundaryKind::call_return||b.instruction_address!=o.call_instruction||b.call_target!=o.target_address||b.known_ax!=o.caller_ax){r.error="Shared helper entry does not match the exact F7 call";return r;}try{millennium_dos_shared_helper_.emplace(millennium_dos_native_process_->make_shared_helper_session(o.caller_ax));millennium_dos_shared_helper_entry_=o;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_special_action_helper_entry(const MillenniumDosSpecialActionHelperEntryObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop||!millennium_dos_post_overlay_loop_||!millennium_dos_native_process_||millennium_dos_shared_helper_){r.error="Special-action helper requires its active dispatch boundary";return r;}const auto b=millennium_dos_post_overlay_loop_->boundary();if(o.sequence==0||o.dispatch_call!=0xd40e||o.dispatch_target!=0x11a4||o.runtime_address!=0x07f9||o.helper_call!=0x11b7||o.helper_target!=0x0666||b.kind!=MillenniumDosPostOverlayLoopBoundaryKind::dispatch_call||b.instruction_address!=o.dispatch_call||b.call_target!=o.dispatch_target){r.error="Special-action helper entry does not match exact dispatch";return r;}try{auto game=millennium_dos_native_process_->make_game_session();const auto action=game.observe_action({0x0f05,0x0b});const auto prefix=game.observe_first_special_action({o.runtime_address,o.runtime_value});if(prefix.selected_ax_value!=o.caller_ax)throw std::runtime_error("Explicit AX differs from prefix");const auto helper_prefix=game.observe_first_special_action_shared_helper_prefix();(void)action;(void)helper_prefix;millennium_dos_shared_helper_.emplace(millennium_dos_native_process_->make_shared_helper_session(o.caller_ax));millennium_dos_shared_helper_entry_=MillenniumDosSharedHelperEntryObservation{o.helper_call,o.helper_target,o.caller_ax,o.sequence};millennium_dos_special_action_=std::move(game);r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+#define EON_SHARED_HELPER_FORWARD(name,type,body) MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::name(const type o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||(session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function&&session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop)||!millennium_dos_shared_helper_||millennium_dos_shared_helper_return_){r.error="No active shared helper";return r;}try{millennium_dos_shared_helper_->body;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
 EON_SHARED_HELPER_FORWARD(observe_millennium_dos_shared_helper_word,MillenniumDosSharedHelperWordObservation,observe_runtime_word(o.instruction_address,o.address,o.value))
 EON_SHARED_HELPER_FORWARD(observe_millennium_dos_shared_helper_far_word,MillenniumDosSharedHelperFarWordObservation,observe_far_word(o.instruction_address,o.segment,o.offset,o.value))
 EON_SHARED_HELPER_FORWARD(observe_millennium_dos_shared_helper_call_return,MillenniumDosSharedHelperCallReturnObservation,observe_call_return(o.call_address,o.return_address))
+MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_shared_helper_external_return(const MillenniumDosSharedHelperExternalReturnObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||!millennium_dos_shared_helper_||!millennium_dos_shared_helper_entry_||millennium_dos_shared_helper_return_||millennium_dos_shared_helper_->state()!=MillenniumDosSharedHelperState::returned||o.sequence<=millennium_dos_shared_helper_entry_->sequence||o.return_instruction!=0x0681){r.error="Shared helper return does not match entered call";return r;}const bool special=millennium_dos_shared_helper_entry_->call_instruction==0x11b7;const auto destination=std::uint16_t(special?0x11ba:0x753a);if(o.returned_to!=destination){r.error="Shared helper return destination is not exact";return r;}try{if(!special){if(!millennium_dos_seventh_function_)throw std::runtime_error("Missing F7 parent");millennium_dos_seventh_function_->observe_call_return(0x7537,0x753a);}millennium_dos_shared_helper_return_=o;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_special_action_external_return(const MillenniumDosSharedHelperExternalReturnObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop||!millennium_dos_post_overlay_loop_||!millennium_dos_special_action_||!millennium_dos_shared_helper_return_||millennium_dos_special_action_return_||o.sequence<=millennium_dos_shared_helper_return_->sequence||o.return_instruction!=0x11c1||o.returned_to!=0xd411){r.error="Special-action return does not match exact parent RET";return r;}try{millennium_dos_post_overlay_loop_->observe_dispatch_return(0xd40e,0xd411);millennium_dos_special_action_return_=o;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
 #undef EON_SHARED_HELPER_FORWARD
-MillenniumDosSharedHelperObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_shared_helper_external_return(const MillenniumDosSharedHelperExternalReturnObservation o){MillenniumDosSharedHelperObservationResult r;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_seventh_function_||!millennium_dos_shared_helper_||!millennium_dos_shared_helper_entry_||millennium_dos_shared_helper_return_||millennium_dos_shared_helper_->state()!=MillenniumDosSharedHelperState::returned||o.sequence<=millennium_dos_shared_helper_entry_->sequence||o.return_instruction!=0x0681||o.returned_to!=0x753a){r.error="Shared helper return does not match the exact entered F7 call";return r;}try{millennium_dos_seventh_function_->observe_call_return(0x7537,0x753a);millennium_dos_shared_helper_return_=o;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
-std::optional<MillenniumDosSharedHelperCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_shared_helper_checkpoint()const{if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function||!millennium_dos_shared_helper_||!millennium_dos_shared_helper_entry_)return std::nullopt;const auto&s=*millennium_dos_shared_helper_;return MillenniumDosSharedHelperCheckpoint{s.state(),s.boundary(),s.effects(),s.selected_offset(),*millennium_dos_shared_helper_entry_,millennium_dos_shared_helper_return_};}
+std::optional<MillenniumDosSharedHelperCheckpoint>ReleaseRuntimeCoordinator::millennium_dos_shared_helper_checkpoint()const{if(!session_snapshot_||(session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_seventh_function&&session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop)||!millennium_dos_shared_helper_||!millennium_dos_shared_helper_entry_)return std::nullopt;const auto&s=*millennium_dos_shared_helper_;return MillenniumDosSharedHelperCheckpoint{s.state(),s.boundary(),s.effects(),s.selected_offset(),*millennium_dos_shared_helper_entry_,millennium_dos_shared_helper_return_,millennium_dos_special_action_return_};}
 
 MillenniumDosSixthFunctionObservationResult
 ReleaseRuntimeCoordinator::observe_millennium_dos_sixth_function_dispatch(
@@ -1569,6 +1575,55 @@ DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::method(
 EON_DEUTEROS_LATE_SERVICE(observe_deuteros_amiga_title_fourth_service_exec_return,deuteros_amiga_title_third_service_plan_,deuteros_amiga_title_fourth_service_plan_,observe_title_fourth_service_exec_return,"fourth-service")
 EON_DEUTEROS_LATE_SERVICE(observe_deuteros_amiga_title_fifth_service_exec_return,deuteros_amiga_title_fourth_service_plan_,deuteros_amiga_title_fifth_service_plan_,observe_title_fifth_service_exec_return,"fifth-service")
 #undef EON_DEUTEROS_LATE_SERVICE
+
+#define EON_DEUTEROS_BATCH_FORWARD(method, opening_method, type) \
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::method(const type observation){DeuterosAmigaTitleDependencyObservationResult result;if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage||!deuteros_amiga_||!deuteros_amiga_title_fifth_service_plan_){result.error="Deuteros service-batch observation requires the active fifth-service boundary";return result;}try{if(!deuteros_amiga_->opening_method(observation)){result.error="Deuteros service-batch observation did not match the next owned boundary";return result;}result.accepted=true;}catch(const std::exception&e){result.error=std::string("Deuteros service-batch observation rejected: ")+e.what();}return result;}
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_controller_pointer_seed(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage||!deuteros_amiga_||!deuteros_amiga_title_fifth_service_plan_){result.error="Deuteros controller seed requires the active fifth-service boundary";return result;}
+    try{if(!deuteros_amiga_->advance_title_controller_pointer_seed()){result.error="Deuteros controller seed did not match the next owned boundary";return result;}result.accepted=true;}catch(const std::exception&e){result.error=std::string("Deuteros controller seed rejected: ")+e.what();}return result;
+}
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_service_batch_graphics_return,observe_title_service_batch_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_service_batch_runtime_word,observe_title_service_batch_runtime_word,DeuterosAmigaObservedServiceWordRead)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_graphics_service_first_return,observe_title_graphics_service_first_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_graphics_service_second_return,observe_title_graphics_service_second_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_graphics_service_third_return,observe_title_graphics_service_third_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_first_graphics_return,observe_title_tail_first_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_copy_words,observe_title_tail_copy_words,DeuterosAmigaObservedTailCopyWords)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_selection_words,observe_title_tail_selection_words,DeuterosAmigaObservedTailSelectionWords)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_second_graphics_return,observe_title_tail_second_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_repeated_selection_words,observe_title_tail_repeated_selection_words,DeuterosAmigaObservedTailSelectionWords)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_repeated_graphics_return,observe_title_tail_repeated_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_repeated_wrapper_graphics_return,observe_title_tail_repeated_wrapper_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_source_table,observe_title_tail_source_table,DeuterosAmigaObservedTailSourceTable)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_exec_return,observe_title_tail_exec_return,DeuterosAmigaObservedTailExecReturn)
+EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_load_service_return,observe_title_load_service_return,DeuterosAmigaObservedLocalCallReturn)
+#undef EON_DEUTEROS_BATCH_FORWARD
+
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_load_selector(const DeuterosAmigaObservedLoadSelector observation){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage||!deuteros_amiga_||deuteros_amiga_title_load_copy_){result.error="Deuteros load selector requires its active service boundary";return result;}
+    try{auto plan=deuteros_amiga_->observe_title_load_selector(observation);if(!plan){result.error="Deuteros load selector did not match the next owned boundary";return result;}if(plan->outcome==DeuterosAmigaTitleLoadServiceOutcome::copy_boundary){deuteros_amiga_title_load_copy_.emplace(BoundedMemoryTransferContract{0x38a28,plan->copy_source_address,plan->copy_destination_address,4,4,plan->copy_longword_count,256,MemoryTransferElementWidth::longword,0x1000000});++deuteros_amiga_title_load_copy_generation_;}result.accepted=true;}catch(const std::exception&e){result.error=std::string("Deuteros load selector rejected: ")+e.what();}return result;
+}
+
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_load_copy_chunk(const DeuterosAmigaObservedLoadCopyChunk observation){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage||!deuteros_amiga_||!deuteros_amiga_title_load_copy_||!native_runtime_memory_){result.error="Deuteros load-copy chunk requires its active owned copy boundary";return result;}
+    try{
+        auto next_transfer=*deuteros_amiga_title_load_copy_;
+        const auto admitted=next_transfer.observe_chunk({observation.trace_sequence,observation.instruction_address,observation.first_longword_index,observation.source_address,observation.destination_address,observation.observed_longwords});
+        if(!admitted.accepted){result.error=admitted.error;return result;}
+        auto next_memory=*native_runtime_memory_;
+        if(next_transfer.checkpoint().complete){const auto batch=make_bounded_memory_transfer_batch(next_transfer.checkpoint(),"deuteros-amiga-title-load-copy-"+std::to_string(deuteros_amiga_title_load_copy_generation_));if(!batch){result.error="Completed Deuteros load copy did not produce an admitted batch";return result;}const auto applied=next_memory.apply(*batch);if(!applied.accepted){result.error="Runtime-memory application rejected: "+applied.error;return result;}}
+        if(!deuteros_amiga_->observe_title_load_copy_chunk(observation)){result.error="Deuteros load-copy chunk did not match the next owned boundary";return result;}
+        *deuteros_amiga_title_load_copy_=std::move(next_transfer);
+        *native_runtime_memory_=std::move(next_memory);
+        result.accepted=true;
+    }catch(const std::exception&e){result.error=std::string("Deuteros load-copy chunk rejected: ")+e.what();}
+    return result;
+}
 
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(

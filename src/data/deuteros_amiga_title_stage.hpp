@@ -640,6 +640,9 @@ struct DeuterosAmigaTitleCommandInterpreterProfile {
     std::array<std::uint32_t, 6> unresolved_call_targets{};
     std::string interpreter_sha256;
     std::array<std::string, 2> operand_helper_sha256{};
+    std::uint32_t no_op_call_address = 0;
+    std::uint32_t no_op_target = 0;
+    std::string no_op_sha256;
 };
 
 [[nodiscard]] DeuterosAmigaTitleCommandInterpreterProfile

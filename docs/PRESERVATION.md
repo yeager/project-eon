@@ -4686,6 +4686,17 @@ revocation destroy or hide both child ownership and checkpoint. The separate
 `$11b7` special-action caller remains static evidence until its parent action
 has an active runtime session; it is not silently substituted for F7.
 
+That parent is now admitted only from the active post-overlay loop's exact
+raw-`$0b` dispatch boundary `$d40e -> $11a4`. A single typed entry observation
+supplies the original `$07f9` byte, explicit caller `AX`, exact helper edge
+`$11b7 -> $0666`, and a nonzero sequence. The coordinator replays the existing
+hash-bound game-session prefix and rejects `AX` unless it equals the prefix's
+instruction-selected `$018f` or `$018e`. The helper RET must explicitly name
+`$0681 -> $11ba`; the following call-free decrement loop is retained only as
+the proven parent RET `$11c1`, whose later explicit return must be `$d411`.
+Only then does the post-overlay owner resume its four-call poll tail. Reset and
+source revocation discard the parent, child, sequences, and checkpoints.
+
 The next English-only special action `$0c` is likewise bounded. Its admission
 prefix `$d3e8..$d3f6` (15 bytes at `+$d2e8`, SHA-256
 `e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3`)
@@ -5780,7 +5791,7 @@ The byte-complete command dispatcher `$1fa00..$1faeb` hashes to
 `9f3ee558ee309d4f8b5f73ee11ac085fa9d11510c7536180ee515f40b01546ef`.
 Its active state machine admits every opcode only at the exact next A4 source
 address through instruction `$1fa0a`, with a strictly newer sequence. It does
-not assign semantic command names. Four paths are currently wholly local:
+not assign semantic command names. The first four recovered paths are local:
 zero returns through `$1fa26`, `$1fbae` and `$1fbb0` to caller `$404fe`; byte
 `$07` copies an explicitly observed longword from `$1f974` to `$1f978`; and
 bytes `$10`/`$11` consume one explicit operand byte and store the address
@@ -5792,12 +5803,32 @@ and
 After each admitted nonterminal local path the next opcode must come from the
 advanced command pointer; pending operands prevent opcode re-entry.
 
+Opcode `$08` is also recovered without assigning a meaning. It requires the
+longword at `$1f978` and byte at `$1f98e` as separately sequenced
+observations. A zero byte adds literal `$140`; a nonzero byte additionally
+requires the longword at `$1f994`, applies the original `LSL.W #3` to only
+its low word, and adds the resulting longword. Both exact branches write the
+result to `$1f978` and `$1f974` before returning to the next stream byte;
+32-bit arithmetic wraps exactly as the 68000 instructions do. The otherwise
+unmatched below-`$20` opcodes enter `$1fde4`, whose entire body is the
+hash-proven `RTS` (`1ceeabf0c6a5a30bad12cdac0e3ab015a7188a42e6aebb556aad00bb9cd693ad`),
+so those paths also return to the loop without an invented effect.
+
 All remaining byte values stop fail-closed at their first unresolved fact:
-the local calls `$1fb00`, `$1fde6`, `$1fe3c`, `$402ac`, `$1fde4` or `$1fbe6`,
-the runtime pointer reads in byte `$08`, or the fixed-table byte reads used by
-values at least `$90`. Their addresses and branch selection are retained as
+the local calls `$1fb00`, `$1fde6`, `$1fe3c`, `$402ac` or `$1fbe6`,
+the fixed-table byte reads used by values at least `$90`. Their addresses and branch selection are retained as
 raw instruction facts only. No call return, display effect, command meaning,
 or further stream advancement is fabricated.
+
+For direct call boundaries that occur before any further command-stream read
+(`$1fde6`, `$1fe3c`, `$402ac`, and `$1fbe6`), the session may continue only
+after a typed observation names the exact call address, target, return
+address, newer sequence, returned A4, D0 and SR. The observed A4 becomes the
+next stream address; Eon does not assume a callee preserved or advanced it.
+Returned registers remain value-only evidence and no unobserved callee memory
+or presentation effect is synthesized. Opcode `$16` instead stops before its
+first nested stream read at `$1fb0c`; values at least `$90` stop before their
+first table read at `$1fada`.
 
 The fourth and final batch edge `$40406..$4040b` / ADF `+0x9b406` is a direct
 call to `$40698` and hashes to
