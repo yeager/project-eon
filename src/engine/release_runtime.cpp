@@ -289,6 +289,8 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
     millennium_dos_sound_driver_load_.reset();
+    millennium_dos_compatibility_runner_.reset();
+    millennium_dos_title_exec_entry_.reset();
     millennium_dos_sound_driver_load_generation_ = 0;
     millennium_dos_sound_driver_load_last_sequence_ = 0;
     millennium_dos_sound_selection_.reset();
@@ -390,7 +392,8 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
         return rejected;
     }
     if (const auto* entry = std::get_if<MillenniumDosSoundDriverLoadEntryObservation>(&observation)) {
-        if (millennium_dos_sound_driver_load_ || !millennium_dos_sound_selection_->selected_driver_is_admitted()) {
+        if (sequence != 1 || millennium_dos_sound_driver_load_
+            || !millennium_dos_sound_selection_->selected_driver_is_admitted()) {
             rejected.error = "Sound-driver entry was already admitted or has no exact selected leaf";
             return rejected;
         }
@@ -420,14 +423,21 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
             *native_runtime_memory_=std::move(memory);
             ++millennium_dos_sound_driver_load_generation_;
             millennium_dos_sound_driver_load_last_sequence_=sequence;
+            millennium_dos_compatibility_runner_.emplace(
+                millennium_dos_sound_driver_load_generation_, sequence, entry->code_segment);
             return {true,{}};
         } catch(const std::exception& e) { rejected.error=e.what(); return rejected; }
     }
-    if (!millennium_dos_sound_driver_load_) {
+    if (!millennium_dos_sound_driver_load_ || !millennium_dos_compatibility_runner_) {
         rejected.error="Sound-driver entry observation is required first"; return rejected;
+    }
+    if (!millennium_dos_compatibility_runner_->accepts(sequence)) {
+        rejected.error="Compatibility runner requires the exact next observation sequence";
+        return rejected;
     }
     auto next=*millennium_dos_sound_driver_load_;
     auto memory=*native_runtime_memory_;
+    auto runner=*millennium_dos_compatibility_runner_;
     const auto before_memory=next.memory_effects().size();
     const auto before_words=next.runtime_word_effects().size();
     try {
@@ -458,10 +468,21 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
         }
         if(next.state()==MillenniumDosSoundDriverLoadState::title_exec_requested){
             if(!millennium_dos_->title_flow)throw std::runtime_error("English title flow is unavailable");
+            constexpr std::string_view mill_sha =
+                "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+            constexpr std::string_view titles_sha =
+                "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+            const auto media=VerifiedReleaseMedia::open(active_->release);
+            const auto mill=media.borrow(mill_sha);
+            const auto titles=media.borrow(titles_sha);
+            if(!mill||!titles)throw std::runtime_error("Exact TITLES.EXE process media is unavailable");
+            millennium_dos_title_exec_entry_.emplace(*mill,*titles);
             millennium_dos_title_=std::make_unique<MillenniumDosTitleSession>(*millennium_dos_->title_flow);
         }
     } catch(const std::exception&e){rejected.error=e.what();return rejected;}
+    runner.commit(sequence);
     millennium_dos_sound_driver_load_=std::move(next);*native_runtime_memory_=std::move(memory);
+    millennium_dos_compatibility_runner_=std::move(runner);
     millennium_dos_sound_driver_load_last_sequence_=sequence;return {true,{}};
 }
 
@@ -470,6 +491,134 @@ ReleaseRuntimeCoordinator::millennium_dos_sound_driver_load_checkpoint()const{
     if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary||!millennium_dos_sound_driver_load_)return std::nullopt;
     const auto&s=*millennium_dos_sound_driver_load_;
     return MillenniumDosSoundDriverLoadCheckpoint{millennium_dos_sound_driver_load_generation_,millennium_dos_sound_driver_load_last_sequence_,s.state(),s.boundary(),s.driver().kind,s.memory_effects().size(),s.file_handle(),s.load_segment(),s.runtime_word_effects(),s.runtime_byte_effects()};
+}
+
+std::optional<MillenniumDosCompatibilityRunnerCheckpoint>
+ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary
+        ||!millennium_dos_sound_driver_load_||!millennium_dos_compatibility_runner_
+        ||!native_runtime_memory_)return std::nullopt;
+    auto next=*millennium_dos_sound_driver_load_;
+    auto runner=*millennium_dos_compatibility_runner_;
+    auto memory=*native_runtime_memory_;
+    try {
+        // These results are properties of the admitted immutable leaf and of
+        // Eon's private one-leaf compatibility service. No guest DOS state is
+        // inferred. Run until the next operation needs external process state.
+        while (true) {
+            switch (next.state()) {
+            case MillenniumDosSoundDriverLoadState::awaiting_open_result:
+                next.observe_open_result(0x02d2,false,runner.compatibility_file_handle());
+                runner.record_automatic_operation();
+                continue;
+            case MillenniumDosSoundDriverLoadState::awaiting_seek_end_result:
+                next.observe_seek_end_result(0x02eb,false,
+                    runner.compatibility_file_handle(),
+                    static_cast<std::uint16_t>(next.driver().byte_size),0);
+                runner.record_automatic_operation();
+                continue;
+            case MillenniumDosSoundDriverLoadState::awaiting_seek_start_result:
+                next.observe_seek_start_result(0x0309,false,
+                    runner.compatibility_file_handle(),0,0);
+                runner.record_automatic_operation();
+                continue;
+            case MillenniumDosSoundDriverLoadState::awaiting_read_result: {
+                next.observe_read_result(0x0313,false,
+                    runner.compatibility_file_handle(),
+                    static_cast<std::uint16_t>(next.driver().byte_size));
+                NativeRuntimeEffectBatch batch{
+                    "millennium-dos-sound-driver-"
+                        + std::to_string(millennium_dos_sound_driver_load_generation_)
+                        + "-image",true,{}};
+                batch.effects.reserve(next.memory_effects().size());
+                for(std::size_t i=0;i<next.memory_effects().size();++i){
+                    const auto&e=next.memory_effects()[i];
+                    batch.effects.push_back({i+1,
+                        {NativeRuntimeAddressSpace::dos_segmented,e.segment,e.offset},
+                        MemoryTransferElementWidth::byte,
+                        NativeRuntimeByteOrder::little_endian,e.value});
+                }
+                const auto applied=memory.apply(batch);
+                if(!applied.accepted)throw std::runtime_error(applied.error);
+                runner.record_automatic_operation();
+                continue;
+            }
+            case MillenniumDosSoundDriverLoadState::awaiting_close_result:
+                next.observe_close_result(0x0319,false,
+                    runner.compatibility_file_handle());
+                runner.record_automatic_operation();
+                continue;
+            default:
+                millennium_dos_sound_driver_load_=std::move(next);
+                millennium_dos_compatibility_runner_=std::move(runner);
+                *native_runtime_memory_=std::move(memory);
+                millennium_dos_sound_driver_load_last_sequence_=
+                    millennium_dos_compatibility_runner_->checkpoint(
+                        millennium_dos_sound_driver_load_->state(),
+                        millennium_dos_sound_driver_load_->boundary()).last_sequence;
+                return millennium_dos_compatibility_runner_->checkpoint(
+                    millennium_dos_sound_driver_load_->state(),
+                    millennium_dos_sound_driver_load_->boundary());
+            }
+        }
+    } catch(const std::exception& e) {
+        return millennium_dos_compatibility_runner_->checkpoint(
+            millennium_dos_sound_driver_load_->state(),
+            millennium_dos_sound_driver_load_->boundary(),e.what());
+    }
+}
+
+MillenniumDosTitleExecEntryObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_child_process_entry(
+    const MillenniumDosTitleExecProcessEntry observation) {
+    MillenniumDosTitleExecEntryObservationResult result;
+    if(!active_||!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary
+        ||!millennium_dos_sound_driver_load_||!millennium_dos_title_exec_entry_
+        ||millennium_dos_sound_driver_load_->state()
+            !=MillenniumDosSoundDriverLoadState::title_exec_requested){
+        result.error="TITLES.EXE child entry requires the exact preceding EXEC request";
+        return result;
+    }
+    auto next=*millennium_dos_title_exec_entry_;
+    try { next.observe_child_process_entry(observation); }
+    catch(const std::exception& e){result.error=e.what();return result;}
+    millennium_dos_title_exec_entry_=std::move(next);
+    result.accepted=true;
+    return result;
+}
+
+MillenniumDosTitleExecEntryObservationResult
+ReleaseRuntimeCoordinator::advance_millennium_dos_title_entry_prefix(
+    const MillenniumDosTitleExecPrefixObservation observation) {
+    MillenniumDosTitleExecEntryObservationResult result;
+    if(!active_||!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary
+        ||!millennium_dos_title_exec_entry_
+        ||millennium_dos_title_exec_entry_->state()
+            !=MillenniumDosTitleExecEntryState::entry_prefix_boundary){
+        result.error="TITLES.EXE local prefix requires an explicit child-process entry";
+        return result;
+    }
+    auto next=*millennium_dos_title_exec_entry_;
+    try { next.execute_exact_entry_prefix(observation.sequence,
+        observation.prefix_address,observation.jump_address,
+        observation.jump_destination); }
+    catch(const std::exception& e){result.error=e.what();return result;}
+    millennium_dos_title_exec_entry_=std::move(next);
+    session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::millennium_dos_title);
+    result.accepted=true;
+    return result;
+}
+
+std::optional<MillenniumDosTitleExecEntryRuntimeCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_title_exec_entry_checkpoint() const {
+    if(!session_snapshot_||!millennium_dos_title_exec_entry_
+        ||(session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary
+            &&session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title))return std::nullopt;
+    return MillenniumDosTitleExecEntryRuntimeCheckpoint{
+        millennium_dos_sound_driver_load_generation_,
+        millennium_dos_title_exec_entry_->checkpoint()};
 }
 
 namespace {
@@ -1937,6 +2086,71 @@ EON_DEUTEROS_COMMAND_EIGHT_WRITE(observe_deuteros_amiga_title_command_eight_scal
 #undef EON_DEUTEROS_COMMAND_EIGHT_WRITE
 
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_call_return(const DeuterosAmigaObservedTitleCommandCallReturn observation){DeuterosAmigaTitleDependencyObservationResult result;if(!deuteros_amiga_){result.error="Deuteros command call return requires active title runtime";return result;}try{if(!deuteros_amiga_->observe_title_command_call_return(observation)){result.error="Deuteros command call return did not match boundary";return result;}result.accepted=true;}catch(const std::exception&e){result.error=e.what();}return result;}
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_command_planar_write(
+    const DeuterosAmigaObservedTitleCommandPlanarWrite observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !native_runtime_memory_
+        || deuteros_amiga_title_command_generation_ == 0) {
+        result.error = "Deuteros planar command requires an active owned command generation";
+        return result;
+    }
+    try {
+        // Validate and derive all effects against a private title-session
+        // copy first. The live command state is advanced only after the
+        // complete memory copy passes overlap/order/bounds admission.
+        if (!deuteros_amiga_->title_stage_session()) {
+            result.error = "Deuteros planar command requires the owned title-stage session";
+            return result;
+        }
+        auto preview_session = *deuteros_amiga_->title_stage_session();
+        const auto plan = preview_session.observe_command_planar_write(observation);
+        if (!plan) {
+            result.error = "Deuteros planar command did not match its owned boundary";
+            return result;
+        }
+        NativeRuntimeEffectBatch batch{
+            "deuteros-amiga-title-command-planar-"
+                + std::to_string(deuteros_amiga_title_command_generation_),
+            true,
+            {}};
+        batch.effects.reserve(plan->destination_addresses.size() + 1U);
+        for (std::size_t index = 0; index < plan->destination_addresses.size(); ++index) {
+            batch.effects.push_back({index + 1U,
+                {NativeRuntimeAddressSpace::linear, std::nullopt,
+                    plan->destination_addresses[index]},
+                MemoryTransferElementWidth::byte,
+                NativeRuntimeByteOrder::big_endian,
+                plan->destination_values[index]});
+        }
+        batch.effects.push_back({batch.effects.size() + 1U,
+            {NativeRuntimeAddressSpace::linear, std::nullopt,
+                plan->destination_pointer_cell_address},
+            MemoryTransferElementWidth::longword,
+            NativeRuntimeByteOrder::big_endian,
+            plan->destination_pointer_value});
+        auto next_memory = *native_runtime_memory_;
+        const auto applied = next_memory.apply(batch);
+        if (!applied.accepted) {
+            result.error = "Runtime-memory application rejected: " + applied.error;
+            return result;
+        }
+        // The same observation was fully validated without touching live
+        // state. Committing it now is deterministic and allocation-free.
+        if (!deuteros_amiga_->observe_title_command_planar_write(observation)) {
+            result.error = "Deuteros planar command disappeared before commit";
+            return result;
+        }
+        *native_runtime_memory_ = std::move(next_memory);
+        result.accepted = true;
+    } catch (const std::exception& e) {
+        result.error = std::string("Deuteros planar command rejected: ") + e.what();
+    }
+    return result;
+}
 
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(

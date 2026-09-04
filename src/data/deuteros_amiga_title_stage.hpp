@@ -652,6 +652,9 @@ struct DeuterosAmigaTitleCommandInterpreterProfile {
     std::uint32_t high_opcode_table_address = 0;
     std::uint32_t high_opcode_table_length = 0;
     std::string high_opcode_table_sha256;
+    std::uint32_t planar_zero_route_address = 0;
+    std::uint32_t planar_zero_route_length = 0;
+    std::string planar_zero_route_sha256;
 };
 
 [[nodiscard]] DeuterosAmigaTitleCommandInterpreterProfile

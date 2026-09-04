@@ -75,6 +75,16 @@ interpreter but likewise produce no write unless its typed plan contains one.
 Malformed, duplicate, out-of-order, post-halt, and revocation observations
 fail closed without changing the published memory checkpoint.
 
+The recovered `$20..$8f` zero/zero planar route extends that contract with
+one generation-bound 33-effect batch. Effects 1–32 are the original
+byte-width bitplane writes in row/plane order; effect 33 is the big-endian
+longword update of `$1f974`. The coordinator advances a private title-session
+copy and applies the batch to a private memory copy, publishing both only
+after ordering, overlap and address admission succeeds. A rejected batch
+therefore leaves both the command boundary and memory checksum unchanged.
+Reset destroys the memory; host source revocation hides it and rejects later
+planar observations.
+
 The direct English Defjam ADF also owns the recovered Millennium bootstrap
 relocator. Admission is restricted to the release whose bootstrap range has
 its own complete-disassembly image and runtime address basis; the nested
@@ -105,3 +115,17 @@ observation. The final `$0336`, `AX=$4b00`, `DX=$068f`, parameter block
 runtime at the driver boundary: it proves an EXEC request, not DOS success or
 TITLES.EXE entry. Checkpoints omit driver bytes. Reset and host revocation
 destroy or hide the loader and its generation state.
+
+`MillenniumDosCompatibilityRunner` is the production native file service for
+this chain. Its process context contains the explicitly observed nonzero CS,
+generation, and one engine-private handle for the already admitted immutable
+driver leaf. The private handle is an Eon implementation detail, not a claim
+about the handle DOS assigned in an original run. A tick opens that leaf and
+derives its exact length, then stops before paragraph allocation because the
+destination segment is process state. After an explicit successful allocation
+result, the next tick rewinds, performs the exact full read, applies all driver
+bytes as one atomic runtime-memory batch, closes the private handle, and stops
+before interrupt-vector installation. It cannot fabricate an allocation
+segment, interrupt-vector state, parent stack word, EXEC result, or program
+entry. Exact sequencing includes both native service operations and explicit
+observations. Reset and source revocation discard or hide its checkpoint.

@@ -128,6 +128,8 @@ add_executable(project-eon
     src/engine/deuteros_atari_bootstrap_session.cpp
     src/engine/millennium_dos_sound_selection_session.cpp
     src/engine/millennium_dos_sound_driver_load_session.cpp
+    src/engine/millennium_dos_compatibility_runner.cpp
+    src/engine/millennium_dos_title_exec_entry_session.cpp
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_title_to_game_session.cpp
     src/engine/millennium_dos_game_session.cpp
@@ -433,6 +435,18 @@ if(BUILD_TESTING)
             TIMEOUT 180)
     endif()
     if(EON_DIRECT_DATA_DIR)
+        add_executable(eon-millennium-dos-title-exec-entry-test
+            tests/millennium_dos_title_exec_entry_test.cpp
+            src/engine/millennium_dos_title_exec_entry_session.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-title-exec-entry-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-title-exec-entry-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-title-exec-entry-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-title-exec-entry-real-media
+            COMMAND eon-millennium-dos-title-exec-entry-test "${EON_DIRECT_DATA_DIR}")
         add_test(NAME cli-real-direct-directory-start
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_direct_directory_test.py"
