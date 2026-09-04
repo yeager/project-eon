@@ -116,4 +116,14 @@ struct AdmittedGameText {
     std::string_view original_text, std::string_view selected_language,
     const Translator& translator);
 
+// Localizes a complete admitted runtime table in its preserved source order.
+// This is the mode-independent presentation path for object/item names,
+// messages, help, labels, and menus after media admission. It validates the
+// entire table before returning any text and rejects duplicate, reordered, or
+// mixed-source tokens. Original and Modern must call this same API with the
+// same selected language; presentation mode is deliberately not an input.
+[[nodiscard]] std::vector<LocalizedGameText> localize_admitted_game_text_table(
+    Game game, Platform platform, std::span<const AdmittedGameText> admitted,
+    std::string_view selected_language, const Translator& translator);
+
 } // namespace eon

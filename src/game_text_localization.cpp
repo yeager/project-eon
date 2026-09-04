@@ -458,4 +458,30 @@ LocalizedGameText localize_admitted_game_text_by_original(const Game game,
         [](const AdmittedGameText& token) -> std::string_view { return token.original_text; });
 }
 
+std::vector<LocalizedGameText> localize_admitted_game_text_table(
+    const Game game, const Platform platform,
+    const std::span<const AdmittedGameText> admitted,
+    const std::string_view selected_language, const Translator& translator) {
+    if (admitted.empty())
+        throw std::runtime_error("Player-visible game-text table is empty");
+
+    const auto& first = admitted.front();
+    std::size_t preceding_end = 0;
+    std::vector<LocalizedGameText> localized;
+    localized.reserve(admitted.size());
+    for (const auto& token : admitted) {
+        if (token.source_leaf != first.source_leaf
+            || token.source_sha256 != first.source_sha256
+            || token.source_language != first.source_language) {
+            throw std::runtime_error("Player-visible game-text table mixes original sources");
+        }
+        if (!localized.empty() && token.source_offset < preceding_end)
+            throw std::runtime_error("Player-visible game-text table is reordered or overlaps");
+        preceding_end = token.source_offset + token.source_size;
+        localized.push_back(localize_admitted_game_text(
+            game, platform, token, selected_language, translator));
+    }
+    return localized;
+}
+
 } // namespace eon

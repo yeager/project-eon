@@ -239,7 +239,8 @@ original text bytes remain immutable and hash-addressed, and localization
 never changes the selected release, simulation, or saved data. All 20 UTF-8 catalogs are rendered through the
 bundled, hash-reviewed SDL_ttf/Noto fallback chain; Project Eon never selects a
 host font or transliterates a translation. See [the localization rendering
-contract](po/README.md#unicode-rendering).
+contract](po/README.md#unicode-rendering) and the
+[game-text coverage audit](docs/GAME_TEXT_LOCALIZATION_AUDIT.md).
 
 By default, Project Eon reads user-supplied media from `~/.projecteon` on
 Linux/macOS and `<install directory>\data` on Windows. On iPadOS, use the
