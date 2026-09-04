@@ -65,9 +65,13 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_second_byte_read_boundary,
     post_descriptor_first_loop_encoded_payload_byte_boundary,
     post_descriptor_first_loop_encoded_stream_byte_boundary,
+    post_descriptor_first_loop_encoded_escape_word_boundary,
+    post_descriptor_first_loop_encoded_mode_two_word_boundary,
+    post_descriptor_first_loop_encoded_xlat_byte_boundary,
     post_descriptor_first_loop_encoded_record_complete,
     post_descriptor_second_loop_far_read_boundary,
     post_descriptor_second_loop_record_word_read_boundary,
+    post_descriptor_second_loop_second_word_read_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };

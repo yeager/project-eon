@@ -259,6 +259,11 @@ branch reaches `$2a632`; its nonnegative branch reaches the bounded Fread
 helper with the exact `$7d42`/`$2c24a` arguments. Eon does not infer any
 XBIOS, GEMDOS, filesystem, display, or wall-clock timing semantics from the
 raw results.
+The second-config success route also owns typed raw Fread and Fclose returns.
+Fclose reaches RTS `$2a5ec`; only a typed stack destination `$2ab10` admits
+the separate caller. Its exact 22 bytes restore A3/A4 and reach XBIOS selector
+`$26` at `$2ab24`, with PC-relative pointer `$2ab2c`. No bytes read,
+filesystem operation, or firmware result is synthesized.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

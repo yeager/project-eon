@@ -48,6 +48,8 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
     game_init_palette_outer_recurrence_boundary,
     game_init_palette_terminal_xbios_selector_6_boundary,
     game_init_palette_rts_boundary,
+    game_init_second_config_rts_boundary,
+    game_init_post_second_config_xbios_38_boundary,
     game_init_bit6_clear_boundary,
     game_init_bit7_set_boundary,
     game_init_second_source_boundary,
@@ -174,6 +176,7 @@ struct MillenniumAtariGameInitPaletteRtsObservation {
     std::uint32_t instruction_address=0;
     std::uint32_t stack_address=0; std::uint32_t return_address=0;
 };
+using MillenniumAtariGameInitSecondConfigRtsObservation = MillenniumAtariGameInitPaletteRtsObservation;
 
 struct MillenniumAtariBchgObservation {
     std::uint64_t generation = 0;
@@ -422,6 +425,11 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_palette_rts_return_address=0;
     std::string game_init_palette_caller_continuation_sha256;
     bool game_init_second_config_open=false;
+    std::uint32_t game_init_second_config_rts_address=0;
+    std::uint32_t game_init_second_config_rts_stack_address=0;
+    std::uint32_t game_init_second_config_rts_return_address=0;
+    std::string game_init_second_config_caller_sha256;
+    std::uint32_t game_init_second_config_xbios_pointer=0;
 };
 
 struct MillenniumAtariConfigConsumerResult {
@@ -535,6 +543,12 @@ public:
         const MillenniumAtariGameInitPaletteRtsObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fopen(
         const MillenniumAtariGemdosSelector61Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fread(
+        const MillenniumAtariGemdosSelector63Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fclose(
+        const MillenniumAtariGemdosSelector62Observation& observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_rts(
+        const MillenniumAtariGameInitSecondConfigRtsObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult revoke(std::uint64_t generation);
 
 private:

@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 78> entries{{
+constexpr std::array<FunctionMapEntry, 81> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -94,6 +94,13 @@ constexpr std::array<FunctionMapEntry, 78> entries{{
      "the signed Fopen result is typed and stored atomically; failure reaches the proven $2a632 spin while success reaches the existing Fread boundary; no filesystem access or file bytes are inferred",
      "native second-config Fopen success and failure dispatch", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
      "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", "runtime"},
+    {"millennium-atari-second-config-read-return", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+     "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
+     "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6",
+     "MILL22A.INF+0x00c2, +0x00dc and +0x0610", "$2a5c2", "verified-static",
+     "Fread and Fclose results and the helper RTS destination are typed without filesystem semantics; exact post-Fclose SHA-256 1653b046f59ffdf7cdcdae81914ab08b45f9fd09915e21b1c27ea8c6021e0b2f and 22-byte caller SHA-256 eea2683953b1fe18e3e7b88e1744fa10a9684444fe183d283efee9f54302c1a0; selector-$26 result remains external",
+     "native second-config Fread/Fclose through caller XBIOS boundary", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
+     "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", "runtime"},
     {"millennium-amiga-en-resident-independent-entry", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
      "millennium-amiga-shared-resident", Game::millennium, Platform::amiga, "en", "m68000",
      "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e",
@@ -136,7 +143,9 @@ constexpr std::array<FunctionMapEntry, 78> entries{{
     {"millennium-dos-en-title-first-render-byte-increment", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x12e9", "$13e9", "verified-static", "exact nine-byte span SHA-256 ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf; raw input has no inferred field semantics and byte $5050:$0007 remains external", "native typed byte-increment boundary", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-first-render-record-branch", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x12f2", "$13f2", "verified-static", "exact 20-byte branch SHA-256 172d30853354efec879699618dd36f3fbda28ddd07d8ea66bc2a23ace6ee6753 and exact encoded prefix SHA-256 a38148b66817871d8731829b2a0703e48b2e7fecb0fee51112be1e8e3b0332d0; encoded payload byte $5050:$001f and second descriptor TITLE.LIB+$001b remain typed boundaries", "native typed record branch", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-first-render-encoded-prefix", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x1319", "$1419", "verified-static", "exact 15-byte prefix SHA-256 912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b; subsequent encoded byte $5050:$0020 remains typed and no encoding semantics are inferred", "native typed encoded-prefix boundary", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
+    {"millennium-dos-en-title-first-render-nibble-dispatch", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x1328", "$1428", "verified-static", "exact 31-byte dispatch span SHA-256 dd7abdeaa64d537ee31fb6c4dffe319a7f824226ca44bb33e0f4cb3986560be7; escape word, mode-two word, or lookup byte remain typed boundaries and no codec semantics are inferred", "native typed nibble dispatch", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-second-render-descriptor-pointer", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x12aa", "$13aa", "verified-static", "exact pointer suffix SHA-256 e8b21803c3739aac65b59a9919f03c97d0d55daf7fd2a35e7567973765724921; genuine TITLE.LIB+$001b words $c800/$4000 normalize to $3c80:$0000 and runtime word $3c80:$0018 remains typed", "native second title-loop record boundary", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
+    {"millennium-dos-en-title-second-render-first-word", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6", "TITLES.EXE+0x12cd", "$13cd", "verified-static", "exact three-byte span SHA-256 30cefd61e3cc968dfe7b7f54ed07251f1fe9ec99fb33bad8b4ae24ce67b80704; raw runtime word is retained without inferred meaning and $3c80:$0016 remains typed", "native typed second-record word", "PRESERVATION.md#title-to-game-hand-off", "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6"},
     {"millennium-dos-en-title-private-wrapper", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-title-flow", Game::millennium, Platform::dos, "en", "i8086",
      "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6",
@@ -377,10 +386,10 @@ constexpr std::array<FunctionMapEntry, 78> entries{{
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
     {"deuteros-amiga-en-title-post-adjusted-caller", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
-     "a208f64d43c08c1363f67586f924a5a7ae8143a8b40e691097ef3c29503666c3",
-     "ADF+0x9b552", "$40552", "verified-static",
-     "the $37180 return, source long and mode word are typed observations; execution stops at the selected external call",
-     "native caller copy and mode dispatch", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
+     "730768e24b76a7064b4c6bea98368079510d783b5e4f338851c0529192eaf07f",
+     "ADF+0x9b564", "$40564", "verified-static",
+     "both selected service returns are typed; execution stops before $40574->$222c0",
+     "native selected-call join", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
     {"deuteros-amiga-en-title-repeated-local-service", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",

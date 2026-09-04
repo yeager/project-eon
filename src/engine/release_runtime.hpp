@@ -791,6 +791,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_adjusted_caller_indirect();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_caller_indirect_return(DeuterosAmigaObservedTitlePostAdjustedIndirectReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_caller_37180_return(DeuterosAmigaObservedTitlePostAdjusted37180Return);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_mode_return(DeuterosAmigaObservedLocalCallReturn);
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -858,6 +859,9 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_recurrence(MillenniumAtariGameInitPaletteRecurrenceObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_rts(MillenniumAtariGameInitPaletteRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fopen(MillenniumAtariGemdosSelector61Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fread(MillenniumAtariGemdosSelector63Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fclose(MillenniumAtariGemdosSelector62Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

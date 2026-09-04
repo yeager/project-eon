@@ -310,8 +310,8 @@ int main(const int argc, const char* const argv[]) {
             && user_consumer.checkpoint().gemdos_63_trap_address==0x2a5d0
             && user_consumer.checkpoint().gemdos_63_selector==0x3f
             && user_consumer.checkpoint().gemdos_63_handle==7
-            && user_consumer.checkpoint().gemdos_63_buffer==0x7d42
-            && user_consumer.checkpoint().gemdos_63_count==0x2c24a);
+            && user_consumer.checkpoint().gemdos_63_buffer==0x2c24a
+            && user_consumer.checkpoint().gemdos_63_count==0x7d42);
         assert(!user_consumer.execute_jsr_2a5c2().accepted);
         assert(!user_consumer.observe_gemdos_selector_63({1,19,0x2a5d2,0x3f,0}).accepted);
         assert(user_consumer.observe_gemdos_selector_63({1,19,0x2a5d0,0x3f,0x2c24a}).accepted);
@@ -497,6 +497,28 @@ int main(const int argc, const char* const argv[]) {
         assert(second_config_failure.observe_game_init_second_config_fopen({1,115,0x2a5b4,0x3d,-1}).accepted
             && second_config_failure.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin
             && second_config_failure.checkpoint().fopen_branch_target==0x2a632);
+        assert(single_cell_planes.execute_jsr_2a5c2().accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_63_boundary);
+        assert(!single_cell_planes.observe_game_init_second_config_fread({1,116,0x2a5d2,0x3f,0x7d42}).accepted);
+        assert(single_cell_planes.observe_game_init_second_config_fread({1,116,0x2a5d0,0x3f,0x7d42}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_62_boundary
+            && single_cell_planes.checkpoint().gemdos_63_result_d0==0x7d42);
+        assert(!single_cell_planes.observe_game_init_second_config_fclose({1,117,0x2a5e8,0x3e,0}).accepted);
+        assert(single_cell_planes.observe_game_init_second_config_fclose({1,117,0x2a5e6,0x3e,0}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_second_config_rts_boundary
+            && single_cell_planes.checkpoint().gemdos_62_result_d0==0
+            && single_cell_planes.checkpoint().game_init_second_config_rts_address==0x2a5ec);
+        assert(!single_cell_planes.observe_game_init_second_config_rts({1,118,0x2a5ec,0x00fe0000,0x2ab12}).accepted);
+        assert(single_cell_planes.observe_game_init_second_config_rts({1,118,0x2a5ec,0x00fe0000,0x2ab10}).accepted
+            && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_post_second_config_xbios_38_boundary
+            && single_cell_planes.checkpoint().game_init_second_config_rts_stack_address==0x00fe0000
+            && single_cell_planes.checkpoint().game_init_second_config_rts_return_address==0x2ab10
+            && single_cell_planes.checkpoint().game_init_second_config_caller_sha256=="eea2683953b1fe18e3e7b88e1744fa10a9684444fe183d283efee9f54302c1a0"
+            && single_cell_planes.checkpoint().game_init_a3==0x2a64c
+            && single_cell_planes.checkpoint().game_init_a0==0x2a66c
+            && single_cell_planes.checkpoint().game_init_second_config_xbios_pointer==0x2ab2c
+            && single_cell_planes.checkpoint().xbios_trap_address==0x2ab24
+            && single_cell_planes.checkpoint().xbios_selector==0x26);
         assert(!single_cell_planes.execute_game_init_return().accepted
             && !single_cell_planes.execute_game_init_palette_copy_prefix().accepted);
         assert(bit6_clear.observe_game_init_source_byte({1,22,0x2b2de,0x2c250,0x80}).accepted

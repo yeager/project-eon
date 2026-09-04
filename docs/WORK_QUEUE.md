@@ -41,9 +41,10 @@ The third typed runtime word from `$5050:$0017`, the byte from `$5050:$0004`,
 and their exact arithmetic/store sequences are native. The typed byte at
 `$13f2`, source `$5050:$0007`, and both deterministic branch continuations
 are also native. The one/two branch owns its first payload byte and exact
-prefix through `$1427`; continue at `$1428`, source `$5050:$0020`. The
-other-value branch owns the genuine second descriptor and normalization;
-continue at `$13cd`, source `$3c80:$0018`. Do not assign graphics or codec
+prefix through `$1427` and the first low-nibble dispatch at `$1428`; continue
+at its typed `$1437`, `$144a`, or `$1470` source boundary. The other-value
+branch owns the genuine second descriptor, normalization, and first raw word;
+continue at `$13d0`, source `$3c80:$0016`. Do not assign graphics or codec
 semantics to these fields.
 
 The Millennium Atari config loop now owns the first taken DBF edge and its
@@ -100,8 +101,11 @@ with that typed Fopen result and its bounded success/failure caller path. Both
 are now native: negative returns reach `$2a632`, while nonnegative returns
 atomically retain the handle and reach the existing `$2a5c2` Fread boundary.
 Continue with the second-config Fread/Fclose results and prove its caller
-return separately from the first configuration path. Do not infer filesystem,
-firmware, or wall-clock effects from static bytes.
+return separately from the first configuration path. Typed Fread and Fclose
+results now reach helper RTS `$2a5ec`; a typed `$2ab10` return owns the exact
+caller through XBIOS selector `$26` at `$2ab24`. Continue with that typed
+firmware result and the deterministic cleanup/RTS continuation. Do not infer
+filesystem, firmware, or wall-clock effects from static bytes.
 
 This is the ordered execution queue for the completion plan. It is a
 preservation tracker, not a list of compatibility claims. A task moves only
@@ -367,6 +371,9 @@ three bits, and atomically stores the low word at `$1f42a`. A typed return from
 typed `$4040e` mode selects `$40566->$36a8c` or `$4056e->$1fb9a`. Continue
 from that selected external call; do not
 treat the sparse decoded memory as a renderer surface.
+Both selected returns and their join at `$40574` are now exposed through every
+runtime facade with replay and revocation checks. Continue only from external
+`$40574->$222c0`; its return and effects remain typed boundaries.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
