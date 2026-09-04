@@ -133,6 +133,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandDescriptorBytePlan> observe_title_post_command_descriptor_byte(const DeuterosAmigaObservedTitlePostCommandDescriptorByte& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_descriptor_byte(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandAdjustedDispatchPlan> observe_title_post_command_adjusted_dispatch_destination(const DeuterosAmigaObservedTitlePostCommandAdjustedDispatchDestination& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_adjusted_dispatch_destination(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedCallerPointerPlan> observe_title_post_adjusted_caller_pointer(const DeuterosAmigaObservedTitlePostAdjustedCallerPointer& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_caller_pointer(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedObjectGatePlan> observe_title_post_adjusted_object_gate(const DeuterosAmigaObservedTitlePostAdjustedObjectGate& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_object_gate(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

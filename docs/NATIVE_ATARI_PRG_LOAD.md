@@ -232,8 +232,12 @@ decrements D6 through the exact eight-byte prefix whose SHA-256 is
 The normal-path counter continuation `$2b2f2..$2b321` is hash-bound as
 `9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef`
 and natively dispatches the remaining run, row and four-plane counters back
-to the next pair/token boundary or to RTS. Alternate token paths still stop
-at `$2b338`, `$2b376`, or `$2b3b8` without admitting further bytes.
+to the next pair/token boundary or to RTS. The three alternate token paths
+are also native: repeated-byte `$2b332..$2b375` hashes to `6429d7b0...6701`,
+swapped-pair `$2b376..$2b3b7` to `dbf80460...a9b9`, and the extended 14-bit
+run prefix `$2b3b8..$2b3c5` to `72fa6338...b0c5`. Each requires exactly its
+consumed payload bytes as a generation-owned typed observation and commits
+all derived destination words atomically.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

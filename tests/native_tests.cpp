@@ -5236,6 +5236,26 @@ int main() {
                 && zero_counter_user->config_consumer.game_init_d2==0x11
                 && zero_counter_user->config_consumer.game_init_zero_counter_continuation_sha256=="9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef");
             assert(!all_release_runtime.execute_millennium_atari_game_init_zero_counter_branch().accepted);
+            std::uint32_t continued_source=0x2c253;
+            for(std::uint64_t sequence=24;sequence<=40;++sequence){
+                assert(all_release_runtime.observe_millennium_atari_game_init_zero_pair(
+                    {1,sequence,0x2b2ea,continued_source,0x11,continued_source+1U,0x22}).accepted);
+                assert(all_release_runtime.execute_millennium_atari_game_init_zero_counter_branch().accepted);
+                continued_source+=2U;
+            }
+            const auto next_token_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(next_token_user && next_token_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::game_init_source_byte_boundary
+                && next_token_user->config_consumer.game_init_source_address==continued_source);
+            assert(all_release_runtime.observe_millennium_atari_game_init_source_byte(
+                {1,41,0x2b2de,continued_source,0x42}).accepted);
+            const auto replicated_destination=all_release_runtime.millennium_atari_bootstrap_presentation()->config_consumer.caller_a5;
+            assert(all_release_runtime.observe_millennium_atari_game_init_replicated_byte(
+                {1,42,0x2b338,continued_source+1U,0x9a}).accepted);
+            const auto replicated_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(replicated_user && replicated_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::game_init_source_byte_boundary
+                && replicated_user->config_consumer.game_init_alternate_writes.size()==2
+                && replicated_user->config_consumer.game_init_alternate_writes.front().address==replicated_destination
+                && replicated_user->config_consumer.game_init_alternate_writes.front().value==0x9a9a);
             assert(!all_release_runtime.execute_millennium_atari_jsr_2b2be().accepted);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
@@ -5329,6 +5349,9 @@ int main() {
             assert(!atari_host.observe_millennium_atari_fread_prefix({1,24,0x2c24c,0,0x2c24e,0}).accepted);
             assert(!atari_host.execute_millennium_atari_jsr_2b2be().accepted);
             assert(!atari_host.observe_millennium_atari_game_init_source_byte({1,25,0x2b2de,0x2c250,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_replicated_byte({1,26,0x2b338,0x2c251,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_swapped_pair({1,27,0x2b37a,0x2c251,0,0x2c252,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_extended_run({1,28,0x2b3c0,0x2c251,0,0x2c252,0,0x2c253,0}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5929,6 +5952,15 @@ int main() {
                 caller_pointer).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_caller_pointer(
                 caller_pointer).accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedObjectGate object_gate{
+                runtime_copy_sequence+54,0x20c8a,0x620ee,8,0x620f0,2};
+            auto bad_object_gate=object_gate;bad_object_gate.first_value=7;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_object_gate(
+                bad_object_gate).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_object_gate(
+                object_gate).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_object_gate(
+                object_gate).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -5951,6 +5983,14 @@ int main() {
             assert(std::any_of(post_command_memory->initialized_bytes.begin(),
                 post_command_memory->initialized_bytes.end(),[](const auto& byte){
                     return byte.location.offset==0x19d20 && byte.value==0x20;
+                }));
+            assert(std::any_of(post_command_memory->initialized_bytes.begin(),
+                post_command_memory->initialized_bytes.end(),[](const auto& byte){
+                    return byte.location.offset==0x620ee && byte.value==8;
+                }));
+            assert(std::any_of(post_command_memory->initialized_bytes.begin(),
+                post_command_memory->initialized_bytes.end(),[](const auto& byte){
+                    return byte.location.offset==0x620f0 && byte.value==2;
                 }));
             assert(std::any_of(post_command_memory->initialized_bytes.begin(),
                 post_command_memory->initialized_bytes.end(),[](const auto& byte){

@@ -840,6 +840,35 @@ int main(int argc, char** argv) {
         &&first_title_loop.memory_effects[18968].value==0x0170
         &&first_title_loop.memory_effects[18969].offset==0x0110
         &&first_title_loop.memory_effects[18969].value==0x0170);
+    auto contradictory_first_loop_descriptor=other_success;
+    bool contradictory_first_loop_descriptor_rejected=false;
+    try { contradictory_first_loop_descriptor.observe_far_words(
+        {92,0x13aa,0x3481,0x000f,0x0502,0x1f02}); }
+    catch(const std::runtime_error&) {
+        contradictory_first_loop_descriptor_rejected=true;
+    }
+    assert(contradictory_first_loop_descriptor_rejected
+        &&contradictory_first_loop_descriptor.checkpoint().state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
+        &&contradictory_first_loop_descriptor.checkpoint().memory_effects.size()==18970);
+    other_success.observe_far_words(
+        {92,0x13aa,0x3481,0x000f,0x0503,0x1f02});
+    const auto first_title_record=other_success.checkpoint();
+    assert(first_title_record.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
+        &&first_title_record.last_sequence==92
+        &&first_title_record.continuation_address==0x13cd
+        &&first_title_record.far_read_boundary.instruction_address==0x13cd
+        &&first_title_record.far_read_boundary.source_segment==0x5050
+        &&first_title_record.far_read_boundary.source_offset==0x001b
+        &&first_title_record.far_read_boundary.word_count==1
+        &&first_title_record.far_read_boundary.destination_segment==0x2468
+        &&first_title_record.far_read_boundary.destination_offset==0x1359
+        &&first_title_record.memory_effects.size()==18972
+        &&first_title_record.memory_effects[18970].offset==0x138c
+        &&first_title_record.memory_effects[18970].value==0x0003
+        &&first_title_record.memory_effects[18971].offset==0x138e
+        &&first_title_record.memory_effects[18971].value==0x5050);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state
