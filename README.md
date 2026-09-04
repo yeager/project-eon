@@ -288,7 +288,9 @@ without creating SDL resources.
 plus the exact release's hash-bound startup boundary, recovery map, and
 declarative function map. For the admitted English Millennium DOS title it
 also emits `millennium_dos_static_dispatch`: the fixed F1–F10 table's code
-addresses as hash-bound, `static_only` provenance. It is not an input binding,
+addresses plus ordered `{function_id, action, handler_address}` records as
+hash-bound, `static_only` provenance. The stable IDs join directly to the
+declarative function map; the numeric actions remain original raw values. It is not an input binding,
 gameplay-control map, observed action, or executed handler. It exits before SDL, timing, input, audio, saves,
 guest execution, or emulator activity and never serializes paths or original
 media bytes. Its `runtime_session.input_contract` is a machine-readable
