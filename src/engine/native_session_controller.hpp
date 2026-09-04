@@ -21,6 +21,7 @@ enum class NativeSessionState {
     millennium_dos_title_handoff_boundary,
     millennium_dos_gx_startup_boundary,
     millennium_dos_post_overlay_loop,
+    millennium_dos_tenth_function,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,
     deuteros_amiga_opening,
@@ -71,6 +72,13 @@ public:
         MillenniumDosPostOverlayRuntimeByteObservation observation);
     [[nodiscard]] std::optional<MillenniumDosPostOverlayLoopCheckpoint>
     millennium_dos_post_overlay_loop_checkpoint() const;
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult observe_millennium_dos_tenth_function_dispatch(MillenniumDosTenthFunctionDispatchObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult observe_millennium_dos_tenth_function_word(MillenniumDosTenthFunctionWordObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult observe_millennium_dos_tenth_function_byte(MillenniumDosTenthFunctionByteObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult observe_millennium_dos_tenth_function_call_return(MillenniumDosTenthFunctionCallReturnObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult observe_millennium_dos_tenth_function_zero_flag(MillenniumDosTenthFunctionZeroFlagObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult observe_millennium_dos_tenth_function_bl(MillenniumDosTenthFunctionBlObservation observation);
+    [[nodiscard]] std::optional<MillenniumDosTenthFunctionCheckpoint> millennium_dos_tenth_function_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     // The 50 Hz opening scheduler is native-session lifecycle state. SDL
     // supplies a monotonic timestamp, receives only immutable VM events, and

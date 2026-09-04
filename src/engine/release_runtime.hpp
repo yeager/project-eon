@@ -253,6 +253,51 @@ struct MillenniumDosPostOverlayLoopCheckpoint {
     std::vector<MillenniumDosPostOverlayRuntimeByteEffect> runtime_effects;
 };
 
+// The post-overlay loop proves only the scaled dispatcher call and its index.
+// A transition into a concrete handler additionally requires this independent,
+// address-bound observation of the original dispatcher resolution.
+struct MillenniumDosTenthFunctionDispatchObservation {
+    std::uint16_t scaled_call_address = 0;
+    std::uint16_t dispatcher_address = 0;
+    std::size_t function_key_index = 0;
+    std::uint16_t handler_address = 0;
+};
+
+struct MillenniumDosTenthFunctionWordObservation {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t runtime_address = 0;
+    std::uint16_t value = 0;
+};
+struct MillenniumDosTenthFunctionByteObservation {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t runtime_address = 0;
+    std::uint8_t value = 0;
+};
+struct MillenniumDosTenthFunctionCallReturnObservation {
+    std::uint16_t call_address = 0;
+    std::uint16_t return_address = 0;
+};
+struct MillenniumDosTenthFunctionZeroFlagObservation {
+    std::uint16_t branch_address = 0;
+    bool set = false;
+};
+struct MillenniumDosTenthFunctionBlObservation {
+    std::uint16_t shift_address = 0;
+    std::uint8_t value = 0;
+};
+struct MillenniumDosTenthFunctionObservationResult {
+    bool accepted = false;
+    std::string error;
+};
+struct MillenniumDosTenthFunctionCheckpoint {
+    MillenniumDosTenthFunctionState state =
+        MillenniumDosTenthFunctionState::awaiting_initialization_guard;
+    MillenniumDosTenthFunctionBoundary boundary;
+    std::size_t limit_loop_count = 0;
+    std::size_t wait_loop_count = 0;
+    std::vector<MillenniumDosTenthFunctionByteEffect> runtime_effects;
+};
+
 // Owns the one immutable original-media identity that a runtime is permitted
 // to consume. SDL textures, audio devices, and recovered game objects remain
 // outside this class; this is the common source boundary for every platform
@@ -346,6 +391,23 @@ public:
         MillenniumDosPostOverlayRuntimeByteObservation observation);
     [[nodiscard]] std::optional<MillenniumDosPostOverlayLoopCheckpoint>
     millennium_dos_post_overlay_loop_checkpoint() const;
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult
+    observe_millennium_dos_tenth_function_dispatch(
+        MillenniumDosTenthFunctionDispatchObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult
+    observe_millennium_dos_tenth_function_word(MillenniumDosTenthFunctionWordObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult
+    observe_millennium_dos_tenth_function_byte(MillenniumDosTenthFunctionByteObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult
+    observe_millennium_dos_tenth_function_call_return(
+        MillenniumDosTenthFunctionCallReturnObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult
+    observe_millennium_dos_tenth_function_zero_flag(
+        MillenniumDosTenthFunctionZeroFlagObservation observation);
+    [[nodiscard]] MillenniumDosTenthFunctionObservationResult
+    observe_millennium_dos_tenth_function_bl(MillenniumDosTenthFunctionBlObservation observation);
+    [[nodiscard]] std::optional<MillenniumDosTenthFunctionCheckpoint>
+    millennium_dos_tenth_function_checkpoint() const;
 
 private:
     std::optional<ResolvedLaunchRequest> active_;
@@ -357,6 +419,7 @@ private:
     // This span-based session is destroyed before its preceding admission,
     // whose exact verified game buffer is its sole backing owner.
     std::optional<MillenniumDosPostOverlayLoopSession> millennium_dos_post_overlay_loop_;
+    std::optional<MillenniumDosTenthFunctionSession> millennium_dos_tenth_function_;
     std::unique_ptr<MillenniumAmigaBootstrapSession> millennium_amiga_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

@@ -16,6 +16,8 @@ std::string_view native_session_state_label(const NativeSessionState state) {
         return "MILLENNIUM DOS GX STARTUP BOUNDARY";
     case NativeSessionState::millennium_dos_post_overlay_loop:
         return "MILLENNIUM DOS POST-OVERLAY LOOP";
+    case NativeSessionState::millennium_dos_tenth_function:
+        return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
     case NativeSessionState::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case NativeSessionState::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
@@ -46,6 +48,8 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
         return NativeSessionState::millennium_dos_gx_startup_boundary;
     case RuntimeSessionKind::millennium_dos_post_overlay_loop:
         return NativeSessionState::millennium_dos_post_overlay_loop;
+    case RuntimeSessionKind::millennium_dos_tenth_function:
+        return NativeSessionState::millennium_dos_tenth_function;
     case RuntimeSessionKind::millennium_amiga_bootstrap: return NativeSessionState::millennium_amiga_bootstrap;
     case RuntimeSessionKind::millennium_atari_bootstrap: return NativeSessionState::millennium_atari_bootstrap;
     case RuntimeSessionKind::deuteros_amiga_opening: return NativeSessionState::deuteros_amiga_opening;
@@ -180,6 +184,36 @@ std::optional<MillenniumDosPostOverlayLoopCheckpoint>
 NativeSessionController::millennium_dos_post_overlay_loop_checkpoint() const {
     if (state_ != NativeSessionState::millennium_dos_post_overlay_loop) return std::nullopt;
     return runtime_.millennium_dos_post_overlay_loop_checkpoint();
+}
+
+MillenniumDosTenthFunctionObservationResult
+NativeSessionController::observe_millennium_dos_tenth_function_dispatch(
+    const MillenniumDosTenthFunctionDispatchObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_post_overlay_loop)
+        return {false, "Tenth-function dispatch requires the post-overlay loop"};
+    const auto result = runtime_.observe_millennium_dos_tenth_function_dispatch(observation);
+    synchronize_after_runtime_change();
+    return result;
+}
+
+#define EON_NATIVE_TENTH_PROXY(name, type) \
+MillenniumDosTenthFunctionObservationResult NativeSessionController::name( \
+    const type observation) { \
+    if (state_ != NativeSessionState::millennium_dos_tenth_function) \
+        return {false, "Observation requires the tenth-function session"}; \
+    return runtime_.name(observation); \
+}
+EON_NATIVE_TENTH_PROXY(observe_millennium_dos_tenth_function_word, MillenniumDosTenthFunctionWordObservation)
+EON_NATIVE_TENTH_PROXY(observe_millennium_dos_tenth_function_byte, MillenniumDosTenthFunctionByteObservation)
+EON_NATIVE_TENTH_PROXY(observe_millennium_dos_tenth_function_call_return, MillenniumDosTenthFunctionCallReturnObservation)
+EON_NATIVE_TENTH_PROXY(observe_millennium_dos_tenth_function_zero_flag, MillenniumDosTenthFunctionZeroFlagObservation)
+EON_NATIVE_TENTH_PROXY(observe_millennium_dos_tenth_function_bl, MillenniumDosTenthFunctionBlObservation)
+#undef EON_NATIVE_TENTH_PROXY
+
+std::optional<MillenniumDosTenthFunctionCheckpoint>
+NativeSessionController::millennium_dos_tenth_function_checkpoint() const {
+    if (state_ != NativeSessionState::millennium_dos_tenth_function) return std::nullopt;
+    return runtime_.millennium_dos_tenth_function_checkpoint();
 }
 
 std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amiga_opening() {

@@ -131,6 +131,7 @@ add_executable(project-eon
     src/engine/millennium_dos_native_process_admission.cpp
     src/engine/millennium_dos_post_overlay_loop_session.cpp
     src/engine/millennium_dos_tenth_function_session.cpp
+    src/engine/millennium_dos_seventh_function_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp

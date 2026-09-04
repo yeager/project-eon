@@ -111,6 +111,25 @@ RuntimeHost::millennium_dos_post_overlay_loop_checkpoint() const {
     return NativeSessionController::millennium_dos_post_overlay_loop_checkpoint();
 }
 
+#define EON_HOST_TENTH_PROXY(name, type) \
+MillenniumDosTenthFunctionObservationResult RuntimeHost::name(const type observation) { \
+    if (revoking()) return {false, "Tenth-function observation rejected during source revocation"}; \
+    return NativeSessionController::name(observation); \
+}
+EON_HOST_TENTH_PROXY(observe_millennium_dos_tenth_function_dispatch, MillenniumDosTenthFunctionDispatchObservation)
+EON_HOST_TENTH_PROXY(observe_millennium_dos_tenth_function_word, MillenniumDosTenthFunctionWordObservation)
+EON_HOST_TENTH_PROXY(observe_millennium_dos_tenth_function_byte, MillenniumDosTenthFunctionByteObservation)
+EON_HOST_TENTH_PROXY(observe_millennium_dos_tenth_function_call_return, MillenniumDosTenthFunctionCallReturnObservation)
+EON_HOST_TENTH_PROXY(observe_millennium_dos_tenth_function_zero_flag, MillenniumDosTenthFunctionZeroFlagObservation)
+EON_HOST_TENTH_PROXY(observe_millennium_dos_tenth_function_bl, MillenniumDosTenthFunctionBlObservation)
+#undef EON_HOST_TENTH_PROXY
+
+std::optional<MillenniumDosTenthFunctionCheckpoint>
+RuntimeHost::millennium_dos_tenth_function_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::millennium_dos_tenth_function_checkpoint();
+}
+
 std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_audio(
     const std::size_t frames) {
     if (revoking()) return std::nullopt;

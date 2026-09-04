@@ -2,6 +2,7 @@
 
 #include "engine/millennium_dos_native_process.hpp"
 #include "engine/millennium_dos_post_overlay_loop_session.hpp"
+#include "engine/millennium_dos_tenth_function_session.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -64,6 +65,7 @@ public:
     // within this admission. The exact backing bytes never cross the API.
     [[nodiscard]] MillenniumDosPostOverlayLoopSession make_post_overlay_loop_session(
         std::uint8_t selected_mode_byte) const;
+    [[nodiscard]] MillenniumDosTenthFunctionSession make_tenth_function_session() const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
     void observe_runtime_byte(std::uint16_t instruction_address,
