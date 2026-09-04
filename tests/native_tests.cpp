@@ -74,6 +74,7 @@
 #include "engine/millennium_dos_fourth_function_session.hpp"
 #include "engine/millennium_dos_fifth_function_session.hpp"
 #include "engine/millennium_dos_third_function_session.hpp"
+#include "engine/millennium_dos_first_function_session.hpp"
 #include "engine/millennium_dos_gx_startup_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_save_session.hpp"
@@ -1039,6 +1040,12 @@ int main() {
         assert(!eon::make_millennium_dos_owned_function_diagnostics(input));
         input.handler_address=0x7521; input.session.capabilities.decoded_presentation=true;
         assert(!eon::make_millennium_dos_owned_function_diagnostics(input));
+        input.session=eon::make_runtime_session_snapshot(launch,eon::RuntimeSessionKind::millennium_dos_first_function);
+        input.session.capabilities.decoded_presentation=false;
+        input.function_key_index=0; input.handler_address=0x6f9a;
+        input.boundary={eon::MillenniumDosOwnedFunctionBoundaryKind::call_return,0x6f9c,std::nullopt,std::uint32_t{0xd0c9}};
+        const auto first=eon::make_millennium_dos_owned_function_diagnostics(input);
+        assert(first && first->function_id=="millennium-dos-en-f1-handler");
         input.session=eon::make_runtime_session_snapshot(launch,eon::RuntimeSessionKind::millennium_dos_ninth_function);
         input.function_key_index=8; input.handler_address=0x7339;
         input.boundary={eon::MillenniumDosOwnedFunctionBoundaryKind::runtime_word,0x7339,std::uint16_t{0xa19e},std::nullopt};
@@ -1086,6 +1093,7 @@ int main() {
         std::pair{eon::RuntimeSessionKind::millennium_dos_fourth_function,eon::NativeSessionState::millennium_dos_fourth_function},
         std::pair{eon::RuntimeSessionKind::millennium_dos_fifth_function,eon::NativeSessionState::millennium_dos_fifth_function},
         std::pair{eon::RuntimeSessionKind::millennium_dos_third_function,eon::NativeSessionState::millennium_dos_third_function},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_first_function,eon::NativeSessionState::millennium_dos_first_function},
         std::pair{eon::RuntimeSessionKind::millennium_dos_tenth_function,
             eon::NativeSessionState::millennium_dos_tenth_function},
         std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
@@ -1126,6 +1134,7 @@ int main() {
         std::pair{eon::RuntimeSessionKind::millennium_dos_fourth_function,eon::RuntimePresentationKind::millennium_dos_fourth_function},
         std::pair{eon::RuntimeSessionKind::millennium_dos_fifth_function,eon::RuntimePresentationKind::millennium_dos_fifth_function},
         std::pair{eon::RuntimeSessionKind::millennium_dos_third_function,eon::RuntimePresentationKind::millennium_dos_third_function},
+        std::pair{eon::RuntimeSessionKind::millennium_dos_first_function,eon::RuntimePresentationKind::millennium_dos_first_function},
         std::pair{eon::RuntimeSessionKind::millennium_dos_tenth_function,
             eon::RuntimePresentationKind::millennium_dos_tenth_function},
         std::pair{eon::RuntimeSessionKind::millennium_amiga_bootstrap,
@@ -4398,10 +4407,29 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_custom_chip_write({16,0x404a4,0x00dff000,0x9a,0xc000}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_custom_chip_write({17,0x404aa,0x00dff000,0x96,0x87ff}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_callback_exec_return({18,4,0x1f04e,-0x1ce,0x1f052,0x12345678,0x2000}).accepted);
-            const auto completed_chain=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
-            assert(completed_chain && completed_chain->custom_chip_complete
-                && completed_chain->observed_custom_chip_write_count==4
-                && completed_chain->callback_exec_return_observed);
+            const auto callback_chain=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(callback_chain && callback_chain->custom_chip_complete
+                && callback_chain->observed_custom_chip_write_count==4
+                && callback_chain->callback_exec_return_observed
+                && callback_chain->service_setup_boundary_armed
+                && !callback_chain->service_setup_local_plan
+                && callback_chain->stop_before_address==0x206d4);
+            assert(!opening_controller.observe_deuteros_amiga_title_second_service_exec_return(
+                {19,4,0x2070c,-0x162,0x20710,0,0x2000}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_service_setup_exec_return(
+                {19,4,0x206de,-0x126,0x206e2,0x00fedcba,0x2000}).accepted);
+            const auto first_service_chain=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(first_service_chain && first_service_chain->service_setup_local_plan
+                && first_service_chain->service_setup_local_plan->result_value==0x00fedcba
+                && !first_service_chain->second_service_local_plan
+                && first_service_chain->stop_before_address==0x20708);
+            assert(opening_controller.observe_deuteros_amiga_title_second_service_exec_return(
+                {20,4,0x2070c,-0x162,0x20710,0x13579bdf,0x2000}).accepted);
+            const auto second_service_chain=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(second_service_chain && second_service_chain->service_setup_local_plan
+                && second_service_chain->second_service_local_plan
+                && second_service_chain->second_service_local_plan->observed_return.result_d0==0x13579bdf
+                && second_service_chain->stop_before_address==0x2072e);
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);
@@ -4536,6 +4564,10 @@ int main() {
         assert(!revocation_host.observe_deuteros_amiga_title_exec_return(
             {1,4,0x4045a,-0x96,0x4045e,0,0}).accepted);
         assert(!revocation_host.advance_deuteros_amiga_title_local_prefix().accepted);
+        assert(!revocation_host.observe_deuteros_amiga_title_service_setup_exec_return(
+            {19,4,0x206de,-0x126,0x206e2,0,0}).accepted);
+        assert(!revocation_host.observe_deuteros_amiga_title_second_service_exec_return(
+            {20,4,0x2070c,-0x162,0x20710,0,0}).accepted);
         assert(revocation_host.revoking()
             && !revocation_host.millennium_dos_presentation()
             && !revocation_host.millennium_dos_startup_input()
@@ -6256,6 +6288,9 @@ int main() {
         assert(!active_trace_gate.observe_millennium_dos_third_function_dispatch(
             {0xd40a, 0x76f1, 2, 0x6faa}).accepted);
         assert(!active_trace_gate.millennium_dos_third_function_checkpoint());
+        assert(!active_trace_gate.observe_millennium_dos_first_function_dispatch(
+            {0xd40a, 0x76f1, 0, 0x6f9a}).accepted);
+        assert(!active_trace_gate.millennium_dos_first_function_checkpoint());
         assert(!active_trace_gate.millennium_dos_fifth_function_checkpoint());
         eon::RuntimeHost revoking_trace_host;
         assert(revoking_trace_host.launch_direct(controlled_dos_request, releases).accepted());
@@ -6319,6 +6354,13 @@ int main() {
         assert(!revoking_trace_host.observe_millennium_dos_third_function_bl(
             {0x6fc1, 0}).accepted);
         assert(!revoking_trace_host.millennium_dos_third_function_checkpoint());
+        assert(!revoking_trace_host.observe_millennium_dos_first_function_dispatch(
+            {0xd40a, 0x76f1, 0, 0x6f9a}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_first_function_call_return(
+            {0x6f9c, 0x6f9f}).accepted);
+        assert(!revoking_trace_host.observe_millennium_dos_first_function_bl(
+            {0x7785, 0}).accepted);
+        assert(!revoking_trace_host.millennium_dos_first_function_checkpoint());
         assert(!revoking_trace_host.observe_millennium_dos_ninth_function_word(
             {0x7339, 0xa19e, 0}).accepted);
         assert(!revoking_trace_host.millennium_dos_ninth_function_checkpoint());
@@ -6609,6 +6651,25 @@ int main() {
     assert(game_flow.first_function_key.setup_first_call_address == 0x5b1f);
     assert(game_flow.first_function_key.selected_record_byte_2 == 0x11);
     assert(game_flow.first_function_key.selected_record_byte_36 == 0);
+    {
+        eon::MillenniumDosFirstFunctionSession session(*game_executable);
+        session.observe_call_return(0x6f9c, 0x6f9f);
+        assert(session.effects().size() == 4 && session.boundary().known_ax == 1);
+        session.observe_call_return(0x774d, 0x7750);
+        session.observe_call_return(0x7750, 0x7753);
+        assert(session.effects().size() == 7);
+        session.observe_call_return(0x777f, 0x7782);
+        session.observe_call_return(0x7782, 0x7785);
+        session.observe_bl(0x7785, 1);
+        session.observe_call_return(0x7782, 0x7785);
+        session.observe_bl(0x7785, 2);
+        assert(session.state() == eon::MillenniumDosFirstFunctionState::returned);
+        auto altered = *game_executable; altered[0x6f9a - 0x100] ^= 1U;
+        bool rejected = false;
+        try { static_cast<void>(eon::MillenniumDosFirstFunctionSession(altered)); }
+        catch (const std::runtime_error&) { rejected = true; }
+        assert(rejected);
+    }
     assert(game_flow.second_function_key.handler_address == 0x71ca);
     assert(game_flow.second_function_key.availability_address == 0xda26);
     assert(game_flow.second_function_key.minimum_availability == 2);
@@ -9992,6 +10053,33 @@ int main() {
     assert(service_setup->next_call_address == 0x2070c);
     assert(service_setup->next_vector == -0x162);
     assert(service_setup->stop_before_address == 0x20708);
+    bool rejected_second_service_return = false;
+    try {
+        static_cast<void>(title_stage_session.observe_second_service_exec_return(
+            {20, 4, 0x2070c, -0x160, 0x20710, 0x76543210, 0x2004}));
+    } catch (const std::runtime_error&) {
+        rejected_second_service_return = true;
+    }
+    assert(rejected_second_service_return);
+    const auto second_service = title_stage_session.observe_second_service_exec_return(
+        {20, 4, 0x2070c, -0x162, 0x20710, 0x76543210, 0x2004});
+    assert(second_service);
+    assert(second_service->observed_return.result_d0 == 0x76543210);
+    assert(second_service->observed_return.result_sr == 0x2004);
+    assert(second_service->a0_value == 0x206ac);
+    assert(second_service->a1_value == 0x205e4);
+    assert(second_service->global_pointer_address == 0x20698);
+    assert(second_service->global_pointer_value == 0x205e4);
+    assert(second_service->descriptor_link_offset == 0x0e);
+    assert(second_service->descriptor_link_value == 0x2061c);
+    assert(second_service->local_d0_value == 0);
+    assert(second_service->local_d1_value == 0);
+    assert(second_service->next_exec_base_read_address == 0x2072e);
+    assert(second_service->next_call_address == 0x20732);
+    assert(second_service->next_vector == -0x1bc);
+    assert(second_service->stop_before_address == 0x2072e);
+    assert(!title_stage_session.observe_second_service_exec_return(
+        {21, 4, 0x2070c, -0x162, 0x20710, 0, 0}));
     assert(!title_stage_session.observe_service_setup_exec_return(
         {20, 4, 0x206de, -0x126, 0x206e2, 0, 0}));
     assert(!title_stage_session.observe_callback_exec_return(

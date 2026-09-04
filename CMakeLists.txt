@@ -140,6 +140,7 @@ add_executable(project-eon
     src/engine/millennium_dos_fourth_function_session.cpp
     src/engine/millennium_dos_fifth_function_session.cpp
     src/engine/millennium_dos_third_function_session.cpp
+    src/engine/millennium_dos_first_function_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp

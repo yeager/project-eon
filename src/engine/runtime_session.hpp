@@ -36,6 +36,7 @@ enum class RuntimeSessionKind {
     millennium_dos_fourth_function,
     millennium_dos_fifth_function,
     millennium_dos_third_function,
+    millennium_dos_first_function,
     // The scaled dispatcher was explicitly observed resolving index 9 to the
     // exact English $7384 handler. The handler remains observation-driven and
     // grants no host presentation, audio, or input capability.
