@@ -205,6 +205,12 @@ EON_HOST_THIRD(observe_millennium_dos_third_function_call_return,MillenniumDosTh
 EON_HOST_THIRD(observe_millennium_dos_third_function_bl,MillenniumDosThirdFunctionBlObservation)
 #undef EON_HOST_THIRD
 std::optional<MillenniumDosThirdFunctionCheckpoint> RuntimeHost::millennium_dos_third_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_third_function_checkpoint();}
+#define EON_HOST_FIRST(name,type) MillenniumDosFirstFunctionObservationResult RuntimeHost::name(type o){if(revoking())return{false,"First-function observation rejected during source revocation"};return NativeSessionController::name(o);}
+EON_HOST_FIRST(observe_millennium_dos_first_function_dispatch,MillenniumDosFirstFunctionDispatchObservation)
+EON_HOST_FIRST(observe_millennium_dos_first_function_call_return,MillenniumDosFirstFunctionCallReturnObservation)
+EON_HOST_FIRST(observe_millennium_dos_first_function_bl,MillenniumDosFirstFunctionBlObservation)
+#undef EON_HOST_FIRST
+std::optional<MillenniumDosFirstFunctionCheckpoint> RuntimeHost::millennium_dos_first_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_first_function_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 RuntimeHost::millennium_dos_owned_function_diagnostics() const {
     if (revoking()) return std::nullopt;
@@ -242,6 +248,8 @@ EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_open_library_local_pat
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_display_base,(const DeuterosAmigaObservedDisplayBaseRead o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_custom_chip_write,(const DeuterosAmigaObservedCustomChipWrite o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_callback_exec_return,(const DeuterosAmigaObservedCallbackExecReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_service_setup_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_second_service_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission

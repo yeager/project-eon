@@ -71,6 +71,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayLocalAdvance> observe_title_display_base(const DeuterosAmigaObservedDisplayBaseRead& o) { return title_stage_session_ ? title_stage_session_->observe_display_base_and_advance(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCallbackRegistrationLocalPlan> observe_title_custom_chip_write(const DeuterosAmigaObservedCustomChipWrite& o) { return title_stage_session_ ? title_stage_session_->observe_custom_chip_write(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCallbackRegistrationAdvance> observe_title_callback_exec_return(const DeuterosAmigaObservedCallbackExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_callback_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> observe_title_service_setup_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_service_setup_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> observe_title_second_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_second_service_exec_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

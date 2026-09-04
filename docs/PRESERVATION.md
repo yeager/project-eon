@@ -54,6 +54,12 @@ The hash-bound `$6faa..$6fee` continuation is admitted only for dispatch index
 2. It stops before dereferencing original far pointer cell `$0112`; see
 `MILLENNIUM_DOS_THIRD_FUNCTION.md`.
 
+### Millennium DOS first-function boundary
+
+The authenticated `$6f9a` handler and local `$771d..$7789` setup are admitted
+only for scaled dispatch index 0. Original calls remain explicit return
+boundaries; see `MILLENNIUM_DOS_FIRST_FUNCTION.md`.
+
 ### External replay checkpoints
 
 Canonical frame, audio, state, and physical-input checkpoint bytes remain
@@ -2879,6 +2885,15 @@ save observed D0 and describe the literal `$2061c` descriptor fields, including
 pointer `$206ac`. Execution stops at `$20708`, before another Exec-base read
 and vector `-$162` call at `$2070c`; neither Exec service is identified or
 implemented.
+
+The next eight-byte Exec boundary at `$20708` hashes to
+`913043cfe14c05c8e74c79915e6922eb2ccd071169a85e1ab0b47f85925ff795`.
+Only an exact later return from call `$2070c`, vector `-$162`, to `$20710` is
+admitted, with D0/SR retained as uninterpreted values. The following 30 local
+bytes hash to `f4312fcc6e66dd97c124f167ac5634d69bd32071fada15f48194324bb1b29dd7`:
+they establish the literal `$205e4` pointer at `$20698`, link `$2061c` at
+offset `$0e`, and clear local D0/D1. The session stops at `$2072e` before the
+next Exec-base read and vector `-$1bc` call at `$20732`.
 
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small

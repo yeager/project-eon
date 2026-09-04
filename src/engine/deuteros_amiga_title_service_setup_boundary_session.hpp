@@ -37,12 +37,28 @@ struct DeuterosAmigaTitleServiceSetupLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaTitleSecondServiceLocalPlan {
+    DeuterosAmigaObservedServiceSetupExecReturn observed_return;
+    std::uint32_t a0_value = 0;
+    std::uint32_t a1_value = 0;
+    std::uint32_t global_pointer_address = 0;
+    std::uint32_t global_pointer_value = 0;
+    std::uint16_t descriptor_link_offset = 0;
+    std::uint32_t descriptor_link_value = 0;
+    std::uint32_t local_d0_value = 0;
+    std::uint32_t local_d1_value = 0;
+    std::uint32_t next_exec_base_read_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::int16_t next_vector = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceSetupBoundarySession {
 public:
     DeuterosAmigaTitleServiceSetupBoundarySession(
         const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
         constexpr std::uint32_t address = 0x206d4;
-        constexpr std::size_t length = 52;
+        constexpr std::size_t length = 90;
         if (address < plan.title_stage.destination
             || address - plan.title_stage.destination > plan.title_stage.length
             || length > plan.title_stage.length - (address - plan.title_stage.destination)) {
@@ -54,12 +70,32 @@ public:
                 != "a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001"
             || to_hex(sha256(bytes.subspan(14, 38)))
                 != "b1cc2be3a282d4a49fdc161f1d6b8c74a03be4a7aa5b13b8f2300f179dbb8cde"
+            || to_hex(sha256(bytes.subspan(52, 8)))
+                != "913043cfe14c05c8e74c79915e6922eb2ccd071169a85e1ab0b47f85925ff795"
+            || to_hex(sha256(bytes.subspan(60, 30)))
+                != "f4312fcc6e66dd97c124f167ac5634d69bd32071fada15f48194324bb1b29dd7"
             || bytes[0] != 0x22 || bytes[1] != 0x7c
             || bytes[6] != 0x2c || bytes[7] != 0x78 || bytes[9] != 0x04
             || bytes[10] != 0x4e || bytes[11] != 0xae
             || bytes[12] != 0xfe || bytes[13] != 0xda) {
             throw std::runtime_error("Unsupported Deuteros service setup prefix");
         }
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSecondServiceLocalPlan>
+    observe_second_exec_return(
+        const DeuterosAmigaObservedServiceSetupExecReturn& observation) {
+        if (!observed_ || observed_second_) return std::nullopt;
+        if (observation.trace_sequence <= observed_->trace_sequence
+            || observation.exec_base_source_address != 4
+            || observation.call_address != 0x2070c || observation.vector != -0x162
+            || observation.return_address != 0x20710) {
+            throw std::runtime_error("Deuteros second service Exec return does not match boundary");
+        }
+        observed_second_ = observation;
+        return DeuterosAmigaTitleSecondServiceLocalPlan{observation,
+            0x206ac, 0x205e4, 0x20698, 0x205e4, 0x0e, 0x2061c,
+            0, 0, 0x2072e, 0x20732, -0x1bc, 0x2072e};
     }
 
     void enter(std::uint64_t preceding_sequence) {
@@ -89,6 +125,7 @@ private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
     std::optional<DeuterosAmigaObservedServiceSetupExecReturn> observed_;
+    std::optional<DeuterosAmigaObservedServiceSetupExecReturn> observed_second_;
 };
 
 } // namespace eon

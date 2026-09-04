@@ -145,6 +145,9 @@ observe the `$206d4` boundary rather than assigning it invented behavior.
 The `$206d4` prefix and its explicit `-$126` return now advance the first local
 descriptor plan to `$20708`. Continue only with an exact `-$162` observation;
 do not infer either Exec service or manufacture its result.
+The exact `-$162` return and its local pointer/link setup now reach `$2072e`.
+Continue with a typed `-$1bc` return only; its service and branch result remain
+unresolved.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
