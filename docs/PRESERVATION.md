@@ -1553,7 +1553,15 @@ second-caller return `$2ab10`. The exact 22-byte caller span hashes to
 `eea2683953b1fe18e3e7b88e1744fa10a9684444fe183d283efee9f54302c1a0`;
 it restores A3 `$2a64c`, A4 `$2a66c`, pushes the PC-relative pointer `$2ab2c`
 and selector `$26`, and stops at XBIOS trap `$2ab24`. The selector result and
-all referenced-data meaning remain external.
+all referenced-data meaning remain external until supplied as a typed raw D0
+observation. The exact four-byte cleanup/RTS suffix hashes to
+`2b1d33a613d225ccb932ee7c7ad5efb29dcdd736ba28ad3c4b75162694bc09ed`
+and reaches RTS `$2ab28`. Its typed stack destination is fixed to the original
+staged PRG caller `$77042`. The exact 22-byte caller continuation, SHA-256
+`dc2a50400e22fdbe4870f790d4f70c7446caa379dc68281a0445db4ee027fe4d`,
+retains the literal stack longword `$11e00`, pushes open mode 2 and filename
+pointer `$1d6d8`, and stops at GEMDOS selector `$3d` trap `$77056`. No meaning
+is assigned to the preserved longword, filename, or service result.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4576,6 +4584,16 @@ The `$5050:$001b` word now enters through the same ordered typed single-word
 facades used by earlier record fields. Exact instruction `$13cd`, bytes
 `8b 44 18`, has SHA-256
 `30cefd61e3cc968dfe7b7f54ed07251f1fe9ec99fb33bad8b4ae24ce67b80704`.
+The typed `$1437`, `$144a`, and `$1470` continuations now apply only their
+instruction-defined shifts, run copies, lookup arithmetic, counter changes,
+and atomic output writes. Ordinary escape/run paths resume at typed `$1428`
+next-byte boundaries; the mode-two `$ff` extension stops at typed `$1452`;
+the lookup path stops at a separate high-nibble `$1428` state for the same
+source byte. No compression or pixel interpretation is asserted. The second
+record's `$13d0` word at `$3c80:$0016` is also native through the exact
+18-byte multiplication/store span (SHA-256
+`787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
+and stops at typed `$13e2`, source `$3c80:$0014`.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7033,6 +7051,16 @@ requires `$40566->$36a8c` to return at `$4056c`, then follows the exact
 two-byte branch to the join. For every other typed mode it requires
 `$4056e->$1fb9a` to return directly at `$40574`. Both paths converge only at
 `$40574` and stop before external `$40574->$222c0` (return `$4057a`). D0 and
+SR from the selected callees remain opaque. The next exact 82-byte span at ADF
+`$9b574` / runtime `$40574` hashes to
+`8050e7583fcee0b88783cfc53ad35b934145507c59ba23d746c598e4645ed98d`.
+Typed returns are required for `$40574->$222c0` and `$4057a->$23e4e`. The
+caller then compares typed words at `$1ffc8` and `$40414`; a change atomically
+writes the new word to `$40414` and clears longword `$40410`. Otherwise the
+typed `$40410` value is compared with `$ea60`; values below it join at
+`$405c6`, as does typed inhibit word `$11` at `$22d34`. The remaining due path
+stops before external `$405b6->$4069a` (return `$405bc`). No meaning is assigned
+to either service or to these state cells.
 SR remain opaque. The transition is replay-safe, revoked with its owning
 session, and assigns no rendering or gameplay meaning.
 

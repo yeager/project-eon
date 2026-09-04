@@ -263,7 +263,11 @@ The second-config success route also owns typed raw Fread and Fclose returns.
 Fclose reaches RTS `$2a5ec`; only a typed stack destination `$2ab10` admits
 the separate caller. Its exact 22 bytes restore A3/A4 and reach XBIOS selector
 `$26` at `$2ab24`, with PC-relative pointer `$2ab2c`. No bytes read,
-filesystem operation, or firmware result is synthesized.
+filesystem operation, or firmware result is synthesized. A typed raw XBIOS
+return owns its exact cleanup and RTS `$2ab28`; a second typed stack return is
+fixed to the staged PRG caller `$77042`. Its hash-bound 22-byte continuation
+reaches GEMDOS selector `$3d` at `$77056`, with mode 2 and filename pointer
+`$1d6d8`. That service result remains external.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash

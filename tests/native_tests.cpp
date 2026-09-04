@@ -5378,6 +5378,10 @@ int main() {
                 {1,35,0x2a5e6,0x3e,0}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_second_config_rts(
                 {1,36,0x2a5ec,0x00fe0000,0x2ab10}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_second_config_xbios_38(
+                {1,37,0x2ab24,0x26,0}).accepted);
+            assert(!atari_host.observe_millennium_atari_game_init_config_final_rts(
+                {1,38,0x2ab28,0x00fd0000,0x77042}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -6071,6 +6075,20 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_mode_return(bad_mode_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_mode_return(mode_return).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_mode_return(mode_return).accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn return_222c0{
+                runtime_copy_sequence+70,0x40574,0x222c0,0x4057a,0,0};
+            auto bad_return_222c0=return_222c0;bad_return_222c0.return_address+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_222c0_return(bad_return_222c0).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_222c0_return(return_222c0).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_222c0_return(return_222c0).accepted);
+            eon::DeuterosAmigaObservedTitlePostAdjustedTimerState timer_state{
+                runtime_copy_sequence+71,
+                {runtime_copy_sequence+71,0x4057a,0x23e4e,0x40580,0,0},
+                {0x1ffc8,0x40414,0x40410,0x22d34},0x3344,0x1122,0,0xea60};
+            auto bad_timer_state=timer_state;bad_timer_state.source_addresses[3]+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_timer_state(bad_timer_state).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_timer_state(timer_state).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_timer_state(timer_state).accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

@@ -518,3 +518,19 @@ The second record's runtime word at `$3c80:$0018` is now admitted at `$13cd`
 and retained only as raw `AX`. The same exact three-byte instruction already
 hash-bound for the first record advances to `$13d0`, where the next typed word
 is `$3c80:$0016`. Neither word is assigned a dimension or pixel meaning.
+
+All three typed nibble continuations now preserve their exact instruction
+effects. `$1437` shifts the observed word, writes its low byte at `CS:$0171`,
+and resumes at `$1428` from the next source byte. The ordinary `$144a`
+mode-two case repeats the prior raw output byte for the instruction-derived
+count and resumes there; its `$ff` subcase stops at the additional `$1452`
+typed word. `$1470` consumes the addressed raw lookup byte, applies the
+original byte arithmetic against `CS:$1389`, writes `CS:$0171`, and stops at
+a distinct high-nibble `$1428` boundary for the same source byte. These names
+describe control flow only, not a recovered codec.
+
+The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
+bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
+the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution
+stops at typed `$13e2`, source `$3c80:$0014`; no dimensions or graphics
+meaning are inferred.
