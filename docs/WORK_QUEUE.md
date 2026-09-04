@@ -136,7 +136,10 @@ stops at `$1eda6`. A typed genuine observation can now supply the external
 display-base value read from `$12ff4`; the engine advances the local
 palette/clear plan and stops at `$40498`. The next increment must preserve the
 custom-chip write boundary—do not substitute host hardware or claim display
-output from the bounded plan.
+output from the bounded plan. Four exact custom-chip observations now advance
+the local callback-registration plan to `$1f04a`; the next increment requires
+an explicit return observation for its Exec vector `-$1ce` and must not infer
+the service or callback semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

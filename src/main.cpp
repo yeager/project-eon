@@ -592,6 +592,7 @@ struct ModernRuntimeDiagnostics {
     // It is deliberately absent after title handoff/revocation and cannot be
     // interpreted as an active input mapping or executed game path.
     std::string millennium_dos_static_dispatch;
+    std::string millennium_dos_owned_function;
     // This comes only from the launcher preflight object. It does not expose
     // a local path, decode an external asset, or imply the renderer loaded it.
     std::string modern_pack = "NOT SELECTED";
@@ -984,6 +985,7 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     const eon::ReleaseRuntimeAdmission admission, const eon::ReleaseRuntimeRejection rejection,
     const std::optional<eon::RuntimeSessionSnapshot>& session,
     const std::optional<eon::MillenniumDosStaticDispatchDiagnostics>& millennium_dispatch,
+    const std::optional<eon::MillenniumDosOwnedFunctionDiagnostics>& owned_function,
     const std::optional<eon::MillenniumDosNativeProcessCheckpoint>& millennium_process,
     const std::optional<eon::DeuterosAtariBootstrapCheckpoint>& atari_checkpoint,
     const eon::Presentation presentation,
@@ -1084,6 +1086,23 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     } else {
         std::cout << "null";
     }
+    std::cout << ",\"millennium_dos_owned_function\":";
+    if (owned_function) {
+        const auto hex=[](const auto value){ std::ostringstream out; out << '$' << std::hex << value; return out.str(); };
+        std::cout << "{\"release_sha256\":"; write_json_string(std::cout,owned_function->release_sha256);
+        std::cout << ",\"game_executable_sha256\":"; write_json_string(std::cout,owned_function->game_executable_sha256);
+        std::cout << ",\"session\":"; write_json_string(std::cout,eon::runtime_session_kind_label(owned_function->session_kind));
+        std::cout << ",\"mode\":"; write_json_string(std::cout,owned_function->mode);
+        std::cout << ",\"function_id\":"; write_json_string(std::cout,owned_function->function_id);
+        std::cout << ",\"index\":" << owned_function->function_key_index << ",\"handler\":";
+        write_json_string(std::cout,hex(owned_function->handler_address));
+        std::cout << ",\"boundary\":{\"instruction\":"; write_json_string(std::cout,hex(owned_function->boundary.instruction_address));
+        std::cout << ",\"runtime\":";
+        if(owned_function->boundary.runtime_address) write_json_string(std::cout,hex(*owned_function->boundary.runtime_address)); else std::cout << "null";
+        std::cout << ",\"call_target\":";
+        if(owned_function->boundary.call_target) write_json_string(std::cout,hex(*owned_function->boundary.call_target)); else std::cout << "null";
+        std::cout << "}}";
+    } else std::cout << "null";
     // Atari's bootstrap profile has an additional media-safe checkpoint. It
     // is optional because every other adapter deliberately has no equivalent
     // inferred machine-state record. The controller returns it only while
@@ -1457,7 +1476,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
         {"STATIC CONTROL FLOW", static_control_flow_diagnostics_summary(
             diagnostics.static_control_flow, translator)
             + (diagnostics.millennium_dos_static_dispatch.empty() ? ""
-                : " / " + diagnostics.millennium_dos_static_dispatch)},
+                : " / " + diagnostics.millennium_dos_static_dispatch)
+            + (diagnostics.millennium_dos_owned_function.empty() ? ""
+                : " / " + diagnostics.millennium_dos_owned_function)},
         {"MODERN PACK", diagnostics.modern_pack},
         {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -4280,6 +4301,7 @@ int main(int argc, char** argv) {
         if (request.runtime_diagnostics_json) {
             report_runtime_diagnostics_json(*active_launch(), runtime.admission(), runtime.rejection(),
                 runtime.session_snapshot(), runtime.millennium_dos_static_dispatch_diagnostics(),
+                runtime.millennium_dos_owned_function_diagnostics(),
                 runtime.millennium_dos_native_process_checkpoint(),
                 runtime.deuteros_atari_bootstrap_checkpoint(),
                 request.presentation, request.display,
@@ -5131,6 +5153,14 @@ int main(int argc, char** argv) {
                     << " DISPATCH=$" << std::hex << dispatch->dispatch_address
                     << " (STATIC ONLY)";
             diagnostics.millennium_dos_static_dispatch = summary.str();
+        }
+        if (const auto owned = runtime.millennium_dos_owned_function_diagnostics()) {
+            std::ostringstream summary;
+            summary << owned->function_id << " INDEX=" << owned->function_key_index
+                << " HANDLER=$" << std::hex << owned->handler_address
+                << " BOUNDARY=$" << owned->boundary.instruction_address
+                << " " << owned->mode;
+            diagnostics.millennium_dos_owned_function = summary.str();
         }
         diagnostics.modern_pack = tr(modern_pack_admission == ModernPackAdmission::ready ? "READY"
             : modern_pack_admission == ModernPackAdmission::rejected ? "REJECTED" : "NOT SELECTED");

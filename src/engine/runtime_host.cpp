@@ -191,6 +191,12 @@ EON_HOST_NINTH(observe_millennium_dos_ninth_function_byte,MillenniumDosNinthFunc
 EON_HOST_NINTH(observe_millennium_dos_ninth_function_call_return,MillenniumDosNinthFunctionCallReturnObservation)
 #undef EON_HOST_NINTH
 std::optional<MillenniumDosNinthFunctionCheckpoint> RuntimeHost::millennium_dos_ninth_function_checkpoint() const { if(revoking()) return std::nullopt; return NativeSessionController::millennium_dos_ninth_function_checkpoint(); }
+#define EON_HOST_FOURTH(n,t) MillenniumDosFourthFunctionObservationResult RuntimeHost::n(t o){if(revoking())return{false,"Fourth-function observation rejected during source revocation"};return NativeSessionController::n(o);}
+EON_HOST_FOURTH(observe_millennium_dos_fourth_function_dispatch,MillenniumDosFourthFunctionDispatchObservation)
+EON_HOST_FOURTH(observe_millennium_dos_fourth_function_word,MillenniumDosFourthFunctionWordObservation)
+EON_HOST_FOURTH(observe_millennium_dos_fourth_function_call_return,MillenniumDosFourthFunctionCallReturnObservation)
+#undef EON_HOST_FOURTH
+std::optional<MillenniumDosFourthFunctionCheckpoint> RuntimeHost::millennium_dos_fourth_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_fourth_function_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 RuntimeHost::millennium_dos_owned_function_diagnostics() const {
     if (revoking()) return std::nullopt;

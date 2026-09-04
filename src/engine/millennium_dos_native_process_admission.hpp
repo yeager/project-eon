@@ -7,6 +7,7 @@
 #include "engine/millennium_dos_sixth_function_session.hpp"
 #include "engine/millennium_dos_eighth_function_session.hpp"
 #include "engine/millennium_dos_ninth_function_session.hpp"
+#include "engine/millennium_dos_fourth_function_session.hpp"
 #include "engine/millennium_dos_tenth_function_session.hpp"
 
 #include <cstdint>
@@ -78,6 +79,7 @@ public:
         MillenniumDosFunctionDispatchObservation observation) const;
     [[nodiscard]] MillenniumDosEighthFunctionSession make_eighth_function_session() const;
     [[nodiscard]] MillenniumDosNinthFunctionSession make_ninth_function_session() const;
+    [[nodiscard]] MillenniumDosFourthFunctionSession make_fourth_function_session() const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
     void observe_runtime_byte(std::uint16_t instruction_address,
