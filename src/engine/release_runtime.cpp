@@ -198,6 +198,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_.reset();
     millennium_atari_.reset();
     deuteros_amiga_paula_.reset();
+    deuteros_amiga_title_display_trace_.reset();
     deuteros_amiga_.reset();
     deuteros_amiga_opening_input_held_ = false;
     deuteros_atari_.reset();
@@ -516,6 +517,38 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_stage_boundary() const {
         title_stage.graphics_setup_palette_evidence(),
         deuteros_amiga_->alternate_renderer_trace(),
     };
+}
+
+DeuterosAmigaTitleDisplayTraceAdmission
+ReleaseRuntimeCoordinator::admit_active_deuteros_amiga_title_display_trace(
+    const ReferenceTrace& trace) {
+    DeuterosAmigaTitleDisplayTraceAdmission rejected;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || active_->release.game != Game::deuteros
+        || active_->release.platform != Platform::amiga
+        || active_->release.language != "en"
+        || active_->release.sha256 != trace.source_release.sha256) {
+        rejected.error = "Active session has not reached the exact Deuteros Amiga title stage";
+        return rejected;
+    }
+    auto admission = admit_deuteros_amiga_title_display_trace(trace);
+    if (!admission.session) return admission;
+    // Publish only after every external file has been consumed and rehashed.
+    // The stored session has no paths or borrows into the external capture.
+    deuteros_amiga_title_display_trace_ = *admission.session;
+    session_snapshot_ = make_runtime_session_snapshot(*active_,
+        RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary);
+    return admission;
+}
+
+std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>
+ReleaseRuntimeCoordinator::deuteros_amiga_title_display_trace_checkpoint() const {
+    if (!session_snapshot_
+        || session_snapshot_->kind
+            != RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary
+        || !deuteros_amiga_title_display_trace_) return std::nullopt;
+    return deuteros_amiga_title_display_trace_->checkpoint();
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>

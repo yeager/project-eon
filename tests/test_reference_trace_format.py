@@ -136,13 +136,16 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertNotIn("active_ =", gate[gate.index(
             "ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace"):])
 
-    def test_versioned_adapter_registry_has_one_explicit_transient_policy(self):
+    def test_versioned_adapter_registry_has_explicit_runtime_policies(self):
         registry = TRACE_REGISTRY.read_text(encoding="utf-8")
         registry_rows = [line for line in registry.splitlines() if line.lstrip().startswith('{"')]
         self.assertEqual(sum("ReferenceTraceRuntimePolicy::transient_call_free_gx_startup" in row
                              for row in registry_rows), 1)
         self.assertEqual(sum("ReferenceTraceRuntimePolicy::diagnostics_only" in row
-                             for row in registry_rows), 9)
+                             for row in registry_rows), 7)
+        self.assertEqual(sum(
+            "ReferenceTraceRuntimePolicy::immutable_deuteros_title_display_checkpoint" in row
+            for row in registry_rows), 2)
         validator = TRACE_VALIDATOR.read_text(encoding="utf-8")
         self.assertIn("reference_trace_adapter_descriptor(fields.at(\"adapter\"))", validator)
         self.assertIn("Reference trace disagrees with the declared adapter registry", validator)

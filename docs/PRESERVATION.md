@@ -4150,11 +4150,15 @@ map. This second factory is a recovery entry, not a transition from `startup()`:
 no title handoff, DOS EXEC result, GX load result, call return, input, frame,
 audio, or gameplay reachability is inferred.
 
-The process holds non-owning read-only spans and is not constructed by the
-release runtime, SDL launcher, CLI launch path, or input router. It therefore
-does not broaden the current runtime capability manifest. A later coordinator
-integration must first retain the verified-media owner for the spans' complete
-lifetime and admit the missing transition using genuine hash-bound evidence.
+The process itself holds non-owning read-only spans. The registered
+`MillenniumDosNativeProcessAdmission` owner closes that lifetime boundary by
+independently hashing the exact English release leaves, retaining private
+in-memory backing, destroying the process before that backing, and exposing
+only a copy-only static recovery checkpoint plus typed observations. Move and
+reset lifetimes and altered GX bytes are tested against genuine supplied
+media. The owner is not yet constructed by the release runtime, SDL launcher,
+CLI launch path, or input router, so it does not broaden the current runtime
+capability manifest or claim the missing title/driver transition.
 
 #### Main-loop action dispatch
 
@@ -4989,6 +4993,28 @@ can verify a downloaded artifact directory without unpacking it.
 - **Unknown:** undecoded material; no compatibility claim is made.
 
 Plausibility alone never promotes an inference to verified behaviour.
+
+### Deuteros Amiga title-display trace ownership
+
+The native runtime has a fail-closed successor to the exact Deuteros Amiga
+title-stage boundary for the strict v4 and v5 title-display trace contracts.
+Admission is possible only after the live clean English release has reached
+that boundary. At consumption time the engine reopens and rehashes the event
+file, reruns the complete ordered title-bridge/display grammar, and, for v5,
+reopens and rehashes all seven declared artifacts. It publishes the successor
+atomically only after every check succeeds; a failure leaves the existing
+title-stage boundary unchanged.
+
+The owned checkpoint contains hashes, formats, sizes and observation counts
+only. It retains no capture path, event or artifact bytes, emulator state,
+original-media span, pixel buffer, sample buffer, callback value or input
+event. Its runtime declaration therefore remains a bootstrap boundary with
+`decoded_presentation`, `audio_observations` and `admitted_input` all false.
+Reset and source revocation remove the checkpoint. This is evidence lifecycle
+infrastructure, not title execution or parity: a genuine complete capture and
+a separately reviewed compatibility/presentation bridge are still required
+before any observed frame, audio or input semantics can become runtime
+capabilities.
 
 ## Reproduction
 

@@ -19,6 +19,8 @@ std::string_view native_session_state_label(const NativeSessionState state) {
     case NativeSessionState::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
     case NativeSessionState::deuteros_amiga_title_stage_boundary:
         return "DEUTEROS AMIGA TITLE STAGE BOUNDARY";
+    case NativeSessionState::deuteros_amiga_title_display_trace_boundary:
+        return "DEUTEROS AMIGA TITLE DISPLAY TRACE BOUNDARY";
     case NativeSessionState::deuteros_atari_bootstrap: return "DEUTEROS ATARI ST BOOTSTRAP";
     case NativeSessionState::returning_to_menu: return "RETURNING TO MENU";
     }
@@ -45,6 +47,8 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
     case RuntimeSessionKind::deuteros_amiga_opening: return NativeSessionState::deuteros_amiga_opening;
     case RuntimeSessionKind::deuteros_amiga_title_stage:
         return NativeSessionState::deuteros_amiga_title_stage_boundary;
+    case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
+        return NativeSessionState::deuteros_amiga_title_display_trace_boundary;
     case RuntimeSessionKind::deuteros_atari_bootstrap: return NativeSessionState::deuteros_atari_bootstrap;
     }
     return NativeSessionState::admission_rejected;
@@ -170,6 +174,25 @@ std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
 NativeSessionController::deuteros_amiga_title_stage_boundary() const {
     if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
     return runtime_.deuteros_amiga_title_stage_boundary();
+}
+
+DeuterosAmigaTitleDisplayTraceAdmission
+NativeSessionController::admit_active_deuteros_amiga_title_display_trace(
+    const ReferenceTrace& trace) {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) {
+        return {{}, "Title-display trace requires the active Deuteros Amiga title-stage boundary"};
+    }
+    auto result = runtime_.admit_active_deuteros_amiga_title_display_trace(trace);
+    synchronize_after_runtime_change();
+    return result;
+}
+
+std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>
+NativeSessionController::deuteros_amiga_title_display_trace_checkpoint() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_display_trace_boundary) {
+        return std::nullopt;
+    }
+    return runtime_.deuteros_amiga_title_display_trace_checkpoint();
 }
 
 std::optional<DeuterosAtariBootstrapCheckpoint>

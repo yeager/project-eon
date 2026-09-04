@@ -30,6 +30,9 @@ enum class RuntimeSessionKind {
     // The verified opening handed one exact original title stage to its first
     // unresolved Exec boundary. It is not a rendered title or input session.
     deuteros_amiga_title_stage,
+    // A v4/v5 trace was revalidated at consumption time. This remains an
+    // immutable provenance checkpoint with no renderer, audio or input right.
+    deuteros_amiga_title_display_trace_boundary,
     deuteros_atari_bootstrap,
 };
 

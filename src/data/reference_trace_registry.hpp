@@ -11,7 +11,11 @@ namespace eon {
 
 // The one declarative inventory of versioned trace adapters. It is a
 // preservation map, never a guest-code dispatch table.
-enum class ReferenceTraceRuntimePolicy { diagnostics_only, transient_call_free_gx_startup };
+enum class ReferenceTraceRuntimePolicy {
+    diagnostics_only,
+    transient_call_free_gx_startup,
+    immutable_deuteros_title_display_checkpoint,
+};
 
 // An aggregate renderer-neutral trace report shape. It does not select an
 // event parser, execute source bytes, or admit runtime behavior.

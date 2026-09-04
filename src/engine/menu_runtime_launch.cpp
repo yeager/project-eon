@@ -86,6 +86,17 @@ LauncherRuntimeController::deuteros_amiga_title_stage_boundary() const {
     return coordinator_.deuteros_amiga_title_stage_boundary();
 }
 
+DeuterosAmigaTitleDisplayTraceAdmission
+LauncherRuntimeController::admit_active_deuteros_amiga_title_display_trace(
+    const ReferenceTrace& trace) {
+    return coordinator_.admit_active_deuteros_amiga_title_display_trace(trace);
+}
+
+std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>
+LauncherRuntimeController::deuteros_amiga_title_display_trace_checkpoint() const {
+    return coordinator_.deuteros_amiga_title_display_trace_checkpoint();
+}
+
 std::optional<DeuterosAtariBootstrapCheckpoint>
 LauncherRuntimeController::deuteros_atari_bootstrap_checkpoint() const {
     return coordinator_.deuteros_atari_bootstrap_checkpoint();

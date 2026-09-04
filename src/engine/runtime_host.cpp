@@ -89,6 +89,20 @@ RuntimeHost::deuteros_amiga_title_stage_boundary() const {
     return NativeSessionController::deuteros_amiga_title_stage_boundary();
 }
 
+DeuterosAmigaTitleDisplayTraceAdmission
+RuntimeHost::admit_active_deuteros_amiga_title_display_trace(const ReferenceTrace& trace) {
+    if (revoking()) {
+        return {{}, "Title-display trace rejected during source revocation"};
+    }
+    return NativeSessionController::admit_active_deuteros_amiga_title_display_trace(trace);
+}
+
+std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>
+RuntimeHost::deuteros_amiga_title_display_trace_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::deuteros_amiga_title_display_trace_checkpoint();
+}
+
 std::optional<DeuterosAtariBootstrapCheckpoint>
 RuntimeHost::deuteros_atari_bootstrap_checkpoint() const {
     if (revoking()) return std::nullopt;
