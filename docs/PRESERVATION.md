@@ -2915,6 +2915,16 @@ they establish `$2063e` at `$2069c`, link descriptor `$20676`, and set literal
 D0/D1 to 1/0. Execution stops at `$2079c` before the next `-$1bc` call at
 `$207a0`.
 
+The final eight-byte Exec boundary in `$206d4` starts at `$2079c` and hashes
+to `0a982fb16e92100a04d3528d727297363de61d99ac61f8a193c4ee6c55ac4888`.
+An exact later `-$1bc` return at `$207a4` selects one of two paths in the next
+40 bytes (SHA-256
+`cdf3332e5b071d102231d45ecf0b05a87728df49a7f08ff27ffc2e92f055e416`):
+nonzero copies the first pointer cell `$20698` to `$2069c`; zero marks the
+second descriptor reached through `$2069c` inactive at offsets `$30/$1e`.
+Both join at RTS `$207ca`, return to `$404bc`, and stop before the unresolved
+call to `$206be`. No pointer target is dereferenced by the host model.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -5767,9 +5777,12 @@ from `$7221` through the tail jump at `$7253`. It requires observations for
 `$6e93`, the computed word cell `$27c4 + 2*(selection+1)`, each native call
 return, and the `$09fa` BL loop. The `$ff` wrap route stops at jump `$702c`;
 the normal route stops at jump `$0bdf`. Merely storing `$7221` in `$6f98` does
-not prove invocation, so the active runtime does not automatically enter this
-continuation. No record content, menu selection meaning, callee result, input,
-rendering, or destination-jump behavior is manufactured.
+not prove invocation. Runtime ownership requires both the retained completion
+checkpoint for F2 index 1 (`$71ca`, terminal RET `$7220`, dispatcher return
+`$d40d`) and a separate exact entry-IP observation at `$7221`. Wrong,
+premature, stale, and source-revoking observations are rejected. No record
+content, menu selection meaning, callee result, input, rendering, or
+destination-jump behavior is manufactured.
 
 The exact English `2200AD.EXE` sixth-table handler `$7415..$7454` is available
 through the native runtime only after the active post-overlay state machine has

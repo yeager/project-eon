@@ -128,6 +128,11 @@ public:
         const DeuterosAmigaObservedServiceSetupExecReturn& observation) {
         return service_setup_boundary_session_.observe_fourth_exec_return(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleFifthServiceLocalPlan>
+    observe_fifth_service_exec_return(
+        const DeuterosAmigaObservedServiceSetupExecReturn& observation) {
+        return service_setup_boundary_session_.observe_fifth_exec_return(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

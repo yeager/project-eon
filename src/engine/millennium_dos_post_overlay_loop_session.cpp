@@ -199,6 +199,7 @@ void MillenniumDosPostOverlayLoopSession::observe_runtime_byte(
 void MillenniumDosPostOverlayLoopSession::finish_dispatch(
     const std::uint16_t call_address, const std::uint16_t call_target,
     const std::optional<std::size_t> function_key_index) {
+    ++dispatch_generation_;
     dispatch_call_address_ = call_address;
     dispatch_call_target_ = call_target;
     function_key_index_ = function_key_index;
