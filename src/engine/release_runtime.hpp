@@ -3,6 +3,7 @@
 #include "launcher.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
+#include "engine/deuteros_amiga_title_display_trace_session.hpp"
 #include "engine/runtime_session.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -259,6 +260,12 @@ public:
     deuteros_amiga_opening_presentation() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
     deuteros_amiga_title_stage_boundary() const;
+    // Active-session transition for a complete, already validated v4/v5
+    // trace. The owned result is metadata only and grants no host capability.
+    [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
+    admit_active_deuteros_amiga_title_display_trace(const ReferenceTrace& trace);
+    [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>
+    deuteros_amiga_title_display_trace_checkpoint() const;
     // Query only: this reports static, hash-gated Atari bootstrap facts. It
     // neither selects a runtime state nor invokes an Atari service.
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
@@ -294,6 +301,8 @@ private:
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula_;
+    std::optional<DeuterosAmigaTitleDisplayTraceSession>
+        deuteros_amiga_title_display_trace_;
     bool deuteros_amiga_opening_input_held_ = false;
     std::unique_ptr<DeuterosAtariBootstrapSession> deuteros_atari_;
     std::optional<RuntimeSessionSnapshot> session_snapshot_;

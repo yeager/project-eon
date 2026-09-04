@@ -22,6 +22,8 @@ std::optional<RuntimePresentationKind> presentation_kind_for(const RuntimeSessio
         return RuntimePresentationKind::deuteros_amiga_opening;
     case RuntimeSessionKind::deuteros_amiga_title_stage:
         return RuntimePresentationKind::deuteros_amiga_title_stage_boundary;
+    case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
+        return RuntimePresentationKind::deuteros_amiga_title_display_trace_boundary;
     case RuntimeSessionKind::deuteros_atari_bootstrap:
         return RuntimePresentationKind::deuteros_atari_bootstrap;
     }
@@ -50,6 +52,8 @@ std::string_view runtime_presentation_kind_label(const RuntimePresentationKind k
     case RuntimePresentationKind::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
     case RuntimePresentationKind::deuteros_amiga_title_stage_boundary:
         return "DEUTEROS AMIGA TITLE STAGE BOUNDARY";
+    case RuntimePresentationKind::deuteros_amiga_title_display_trace_boundary:
+        return "DEUTEROS AMIGA TITLE DISPLAY TRACE BOUNDARY";
     case RuntimePresentationKind::deuteros_atari_bootstrap: return "DEUTEROS ATARI ST BOOTSTRAP";
     }
     return "UNAVAILABLE";

@@ -15,8 +15,8 @@ constexpr std::array<ReferenceTraceAdapterDescriptor, 10> registry{{
     {"deuteros-amiga-en-title-stage-v1", "project-eon-reference-trace-v2", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03", ReferenceTraceRuntimePolicy::diagnostics_only, {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
     {"deuteros-amiga-en-main-copy-loop-v3", "project-eon-reference-trace-v3", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6", ReferenceTraceRuntimePolicy::diagnostics_only, {"deuteros-amiga-main-stage", "", ""}, 1},
     {"deuteros-amiga-en-title-bridge-v3", "project-eon-reference-trace-v3", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03", ReferenceTraceRuntimePolicy::diagnostics_only, {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
-    {"deuteros-amiga-en-title-display-v4", "project-eon-reference-trace-v4", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03", ReferenceTraceRuntimePolicy::diagnostics_only, {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
-    {"deuteros-amiga-en-title-display-artifacts-v5", "project-eon-reference-trace-v5", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03", ReferenceTraceRuntimePolicy::diagnostics_only, {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
+    {"deuteros-amiga-en-title-display-v4", "project-eon-reference-trace-v4", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03", ReferenceTraceRuntimePolicy::immutable_deuteros_title_display_checkpoint, {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
+    {"deuteros-amiga-en-title-display-artifacts-v5", "project-eon-reference-trace-v5", Game::deuteros, Platform::amiga, "en", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04", "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38", "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03", ReferenceTraceRuntimePolicy::immutable_deuteros_title_display_checkpoint, {"deuteros-amiga-main-stage", "deuteros-amiga-title-handoff", ""}, 2},
 }};
 
 constexpr bool lowercase_sha256(const std::string_view value) {
@@ -57,6 +57,8 @@ std::string_view reference_trace_runtime_policy_label(const ReferenceTraceRuntim
     case ReferenceTraceRuntimePolicy::diagnostics_only: return "diagnostics-only";
     case ReferenceTraceRuntimePolicy::transient_call_free_gx_startup:
         return "transient-call-free-gx-startup";
+    case ReferenceTraceRuntimePolicy::immutable_deuteros_title_display_checkpoint:
+        return "immutable-deuteros-title-display-checkpoint";
     }
     return "diagnostics-only";
 }

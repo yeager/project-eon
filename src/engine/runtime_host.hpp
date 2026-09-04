@@ -76,6 +76,10 @@ public:
     deuteros_amiga_opening_presentation() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
     deuteros_amiga_title_stage_boundary() const;
+    [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
+    admit_active_deuteros_amiga_title_display_trace(const ReferenceTrace& trace);
+    [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>
+    deuteros_amiga_title_display_trace_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAtariBootstrapCheckpoint>
     deuteros_atari_bootstrap_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAtariBootstrapPresentationSnapshot>

@@ -1015,7 +1015,13 @@ def main() -> int:
                     or trace_json.get("adapter") != adapter
                     or trace_json.get("runtime_policy") != (
                         "transient-call-free-gx-startup"
-                        if adapter == "millennium-dos-en-gx-startup-v2" else "diagnostics-only")
+                        if adapter == "millennium-dos-en-gx-startup-v2"
+                        else "immutable-deuteros-title-display-checkpoint"
+                        if adapter in {
+                            "deuteros-amiga-en-title-display-v4",
+                            "deuteros-amiga-en-title-display-artifacts-v5",
+                        }
+                        else "diagnostics-only")
                     or trace_json.get("events", {}).get("sha256") != hashlib.sha256(events.encode("ascii")).hexdigest()
                     or not trace_json.get("recovery_boundaries")
                     or str(manifest) in trace_json_report.stdout

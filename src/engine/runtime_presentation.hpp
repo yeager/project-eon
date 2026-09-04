@@ -24,6 +24,7 @@ enum class RuntimePresentationKind {
     millennium_atari_bootstrap,
     deuteros_amiga_opening,
     deuteros_amiga_title_stage_boundary,
+    deuteros_amiga_title_display_trace_boundary,
     deuteros_atari_bootstrap,
 };
 
