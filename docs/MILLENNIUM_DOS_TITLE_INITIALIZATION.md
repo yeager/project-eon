@@ -386,3 +386,7 @@ That second word is now admitted with the same provenance check. The exact
 `787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`;
 it atomically stores `$00c8/$0140`, multiplies them to `$fa00`, and stops
 before subtracting the external word at `$13e2`, source `$3000:$001a`.
+That genuine word is `$0000`. The 7-byte subtraction/store span hashes to
+`0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`,
+keeps `$fa00`, atomically stores it at `CS:$138a`, and stops before the first
+external byte read at `$13e9`, source `$3000:$0007`.

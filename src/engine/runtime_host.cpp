@@ -510,6 +510,8 @@ MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_jsr_2a
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_gemdos_selector_61(const MillenniumAtariGemdosSelector61Observation o){if(revoking())return{false,"GEMDOS selector 61 rejected during revocation"};return NativeSessionController::observe_millennium_atari_gemdos_selector_61(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::execute_millennium_atari_jsr_2a5c2(){if(revoking())return{false,"JSR $2a5c2 rejected during revocation"};return NativeSessionController::execute_millennium_atari_jsr_2a5c2();}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_gemdos_selector_63(const MillenniumAtariGemdosSelector63Observation o){if(revoking())return{false,"GEMDOS selector 63 rejected during revocation"};return NativeSessionController::observe_millennium_atari_gemdos_selector_63(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_gemdos_selector_62(const MillenniumAtariGemdosSelector62Observation o){if(revoking())return{false,"GEMDOS selector 62 rejected during revocation"};return NativeSessionController::observe_millennium_atari_gemdos_selector_62(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_fread_prefix(const MillenniumAtariFreadPrefixObservation o){if(revoking())return{false,"Fread prefix rejected during revocation"};return NativeSessionController::observe_millennium_atari_fread_prefix(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;

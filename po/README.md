@@ -50,6 +50,9 @@ New parsers should use `localize_game_text_at_source` for one exact range or
 the atomic `localize_all_game_text_from_source` batch API for a complete table.
 Both authenticate the source leaf before localization, preventing item names
 and other game vocabulary from silently falling back across releases.
+Runtime snapshots retain only revalidated copy-only tokens. Renderers resolve
+those tokens rather than trusting bare original strings after the media leaf
+has been released; Original and Modern use the same token resolver.
 
 ## Unicode rendering
 

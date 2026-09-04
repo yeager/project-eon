@@ -322,6 +322,21 @@ int main(const int argc, const char* const argv[]) {
             && user_consumer.checkpoint().gemdos_62_selector==0x3e
             && user_consumer.checkpoint().gemdos_62_handle==7);
         assert(!user_consumer.observe_gemdos_selector_63({1,20,0x2a5d0,0x3f,0}).accepted);
+        assert(!user_consumer.observe_gemdos_selector_62({1,20,0x2a5e8,0x3e,0}).accepted);
+        assert(user_consumer.observe_gemdos_selector_62({1,20,0x2a5e6,0x3e,0}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fread_prefix_boundary
+            && user_consumer.checkpoint().fread_prefix_a4==0x2c24c);
+        assert(!user_consumer.observe_fread_prefix({1,21,0x2c24a,0x1122,0x2c24e,0x3344}).accepted);
+        assert(user_consumer.observe_fread_prefix({1,21,0x2c24c,0x1122,0x2c24e,0x3344}).accepted);
+        assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2b2be_boundary
+            && user_consumer.checkpoint().fread_prefix_d6==0x1122
+            && user_consumer.checkpoint().fread_prefix_d7==0x3344
+            && user_consumer.checkpoint().caller_a5==user_consumer.checkpoint().selector_three_result_d0
+            && user_consumer.checkpoint().next_jsr_address==0x2aaec
+            && user_consumer.checkpoint().next_jsr_target==0x2b2be);
+        assert(bsr_memory.apply(user_consumer.make_fread_prefix_effect_batch("fread-prefix")).accepted);
+        assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c24c})==0x11
+            && bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2c24f})==0x44);
         assert(negative_fopen.observe_gemdos_selector_61({1,18,0x2a5b4,0x3d,-33}).accepted);
         assert(negative_fopen.checkpoint().state==eon::MillenniumAtariConfigConsumerState::fopen_failure_spin
             && negative_fopen.checkpoint().fopen_branch_target==0x2a632);

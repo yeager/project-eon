@@ -190,6 +190,10 @@ struct MillenniumDosRuntimeAssets {
     // complete original leaf was available. No commercial leaf bytes survive
     // in this presentation snapshot.
     std::vector<AdmittedGameText> admitted_celestial_text;
+    // Source-bound launcher/menu strings admitted while the exact MILL.COM
+    // image is available. Presentation must resolve these tokens in both
+    // Original and Modern; retaining a token never retains executable bytes.
+    std::vector<AdmittedGameText> admitted_launcher_text;
     // Exact original VOC catalogue metadata. Its presence does not permit
     // playback: event mapping, driver ABI and timing remain unrecovered.
     std::optional<MillenniumDosVoiceBankEvidence> voice_bank;
@@ -821,6 +825,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_61(MillenniumAtariGemdosSelector61Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2a5c2();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_63(MillenniumAtariGemdosSelector63Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_62(MillenniumAtariGemdosSelector62Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_fread_prefix(MillenniumAtariFreadPrefixObservation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

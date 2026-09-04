@@ -3516,6 +3516,8 @@ MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::execute_millenniu
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_gemdos_selector_61(const MillenniumAtariGemdosSelector61Observation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"GEMDOS selector 61 requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_gemdos_selector_61(o);if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_gemdos_selector_61_effect_batch("millennium-atari-gemdos-61-"+std::to_string(o.sequence)));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::execute_millennium_atari_jsr_2a5c2(){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_)return{false,"JSR $2a5c2 requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.execute_jsr_2a5c2();if(result.accepted)*millennium_atari_config_consumer_=std::move(next);return result;}
 MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_gemdos_selector_63(const MillenniumAtariGemdosSelector63Observation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_)return{false,"GEMDOS selector 63 requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_gemdos_selector_63(o);if(result.accepted)*millennium_atari_config_consumer_=std::move(next);return result;}
+MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_gemdos_selector_62(const MillenniumAtariGemdosSelector62Observation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_)return{false,"GEMDOS selector 62 requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_gemdos_selector_62(o);if(result.accepted)*millennium_atari_config_consumer_=std::move(next);return result;}
+MillenniumAtariConfigConsumerResult ReleaseRuntimeCoordinator::observe_millennium_atari_fread_prefix(const MillenniumAtariFreadPrefixObservation o){if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_atari_bootstrap||!millennium_atari_config_consumer_||!native_runtime_memory_)return{false,"Fread prefix requires active Millennium Atari consumer"};auto next=*millennium_atari_config_consumer_;auto result=next.observe_fread_prefix(o);if(!result.accepted)return result;auto memory=*native_runtime_memory_;auto applied=memory.apply(next.make_fread_prefix_effect_batch("millennium-atari-fread-prefix-"+std::to_string(o.sequence)));if(!applied.accepted)return{false,applied.error};*millennium_atari_config_consumer_=std::move(next);*native_runtime_memory_=std::move(memory);return{true,{}};}
 
 RuntimeLaunchAdmission admit_runtime_launch(ReleaseRuntimeCoordinator& coordinator,
     const std::optional<LaunchRequest>& candidate, const std::vector<ReleaseArchive>& releases) {
@@ -3676,6 +3678,7 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
                 .static_data_evidence = parse_millennium_dos_static_data_evidence(static_data),
                 .admitted_celestial_text = admit_all_game_text_from_source(
                     Game::millennium, Platform::dos, "2200AD4.BIN", static_data),
+                .admitted_launcher_text = {},
                 .voice_bank = std::nullopt,
                 .title_flow = std::nullopt,
                 .sound_selection = std::nullopt,
@@ -3735,6 +3738,8 @@ std::optional<MillenniumDosRuntimeAssets> load_millennium_dos_runtime(
             .static_data_evidence = parse_millennium_dos_static_data_evidence(*static_data),
             .admitted_celestial_text = admit_all_game_text_from_source(
                 Game::millennium, Platform::dos, "2200AD4.BIN", *static_data),
+            .admitted_launcher_text = admit_all_game_text_from_source(
+                Game::millennium, Platform::dos, "MILL.COM", launcher_code.view->bytes),
             .voice_bank = parse_millennium_dos_voice_bank(media),
             .title_flow = title_flow,
             .sound_selection = sound_selection,
