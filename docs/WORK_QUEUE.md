@@ -151,6 +151,8 @@ unresolved.
 The `-$1bc` return is now an explicit branch boundary: nonzero stops at the
 original loop, while zero reaches `$20776` with the earlier observed D0 value.
 Continue only through an exact second `-$162` return at `$2077a`.
+That return and its local second-pointer setup now reach `$2079c`; the next
+required boundary is the exact `-$1bc` return from `$207a0`.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

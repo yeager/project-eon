@@ -120,6 +120,7 @@ MillenniumDosFifthFunctionSession MillenniumDosNativeProcessAdmission::make_fift
 MillenniumDosThirdFunctionSession MillenniumDosNativeProcessAdmission::make_third_function_session() const { require_admitted(); return MillenniumDosThirdFunctionSession(game_executable_); }
 MillenniumDosFirstFunctionSession MillenniumDosNativeProcessAdmission::make_first_function_session() const { require_admitted(); return MillenniumDosFirstFunctionSession(game_executable_); }
 MillenniumDosSecondFunctionSession MillenniumDosNativeProcessAdmission::make_second_function_session() const { require_admitted(); return MillenniumDosSecondFunctionSession(game_executable_); }
+MillenniumDosSecondFunctionCallbackSession MillenniumDosNativeProcessAdmission::make_second_function_callback_session() const { require_admitted(); return MillenniumDosSecondFunctionCallbackSession(game_executable_); }
 
 void MillenniumDosNativeProcessAdmission::require_admitted() const {
     if (!admitted()) {

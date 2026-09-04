@@ -219,6 +219,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    millennium_dos_handler_completion_.reset();
     millennium_dos_tenth_function_.reset();
     millennium_dos_seventh_function_.reset();
     millennium_dos_sixth_function_.reset();
@@ -250,6 +251,38 @@ void ReleaseRuntimeCoordinator::reset() {
     admission_ = ReleaseRuntimeAdmission::unselected;
     rejection_ = ReleaseRuntimeRejection::none;
 }
+
+MillenniumDosPostOverlayObservationResult ReleaseRuntimeCoordinator::complete_millennium_dos_handler(
+    const MillenniumDosHandlerCompletionObservation observation) {
+    MillenniumDosPostOverlayObservationResult result;
+    if (!active_ || !session_snapshot_ || !millennium_dos_post_overlay_loop_
+        || observation.function_key_index >= 10 || observation.dispatch_call_address != 0xd40a
+        || observation.return_address != 0xd40d) {
+        result.error = "Handler completion requires an active owned dispatch and exact return"; return result;
+    }
+    bool terminal=false;
+    switch(observation.function_key_index) {
+    case 0: terminal=millennium_dos_first_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_first_function && millennium_dos_first_function_->boundary().kind==MillenniumDosFirstFunctionBoundaryKind::local_return && millennium_dos_first_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 1: terminal=millennium_dos_second_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_second_function && millennium_dos_second_function_->boundary().kind==MillenniumDosSecondFunctionBoundaryKind::local_return && millennium_dos_second_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 2: terminal=millennium_dos_third_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_third_function && millennium_dos_third_function_->boundary().kind==MillenniumDosThirdFunctionBoundaryKind::local_return && millennium_dos_third_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 3: terminal=millennium_dos_fourth_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_fourth_function && millennium_dos_fourth_function_->boundary().kind==MillenniumDosFourthFunctionBoundaryKind::local_return && millennium_dos_fourth_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 4: terminal=millennium_dos_fifth_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_fifth_function && millennium_dos_fifth_function_->boundary().kind==MillenniumDosFifthFunctionBoundaryKind::local_return && millennium_dos_fifth_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 5: terminal=millennium_dos_sixth_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_sixth_function && millennium_dos_sixth_function_->boundary().kind==MillenniumDosSixthFunctionBoundaryKind::local_return && millennium_dos_sixth_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 6: terminal=millennium_dos_seventh_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_seventh_function && millennium_dos_seventh_function_->boundary().kind==MillenniumDosSeventhFunctionBoundaryKind::local_return && millennium_dos_seventh_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 7: terminal=millennium_dos_eighth_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_eighth_function && millennium_dos_eighth_function_->boundary().kind==MillenniumDosEighthFunctionBoundaryKind::local_return && millennium_dos_eighth_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 8: terminal=millennium_dos_ninth_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_ninth_function && millennium_dos_ninth_function_->boundary().kind==MillenniumDosNinthFunctionBoundaryKind::local_return && millennium_dos_ninth_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    case 9: terminal=millennium_dos_tenth_function_ && session_snapshot_->kind==RuntimeSessionKind::millennium_dos_tenth_function && millennium_dos_tenth_function_->boundary().kind==MillenniumDosTenthFunctionBoundaryKind::local_return && millennium_dos_tenth_function_->boundary().instruction_address==observation.terminal_instruction_address; break;
+    }
+    if(!terminal){result.error="Handler completion is not at a proven local RET boundary";return result;}
+    try { millennium_dos_post_overlay_loop_->observe_dispatch_return(observation.dispatch_call_address,observation.return_address); }
+    catch(const std::exception&e){result.error=e.what();return result;}
+    constexpr std::array<std::uint16_t,10> handlers{0x6f9a,0x71ca,0x6faa,0x72f9,0x7597,0x7415,0x7521,0x7306,0x7339,0x7384};
+    millennium_dos_handler_completion_=MillenniumDosHandlerCompletionCheckpoint{observation.function_key_index,handlers[observation.function_key_index],observation.terminal_instruction_address,observation.return_address};
+    millennium_dos_first_function_.reset(); millennium_dos_second_function_.reset(); millennium_dos_third_function_.reset(); millennium_dos_fourth_function_.reset(); millennium_dos_fifth_function_.reset(); millennium_dos_sixth_function_.reset(); millennium_dos_seventh_function_.reset(); millennium_dos_eighth_function_.reset(); millennium_dos_ninth_function_.reset(); millennium_dos_tenth_function_.reset();
+    session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::millennium_dos_post_overlay_loop); result.accepted=true; return result;
+}
+
+std::optional<MillenniumDosHandlerCompletionCheckpoint> ReleaseRuntimeCoordinator::millennium_dos_handler_completion_checkpoint() const { if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_post_overlay_loop)return std::nullopt;return millennium_dos_handler_completion_; }
 
 std::optional<MillenniumDosPresentationSnapshot>
 ReleaseRuntimeCoordinator::millennium_dos_presentation() const {

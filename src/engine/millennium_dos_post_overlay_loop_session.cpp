@@ -94,6 +94,21 @@ void MillenniumDosPostOverlayLoopSession::observe_private_interrupt_return(
     enter_call(0);
 }
 
+void MillenniumDosPostOverlayLoopSession::observe_dispatch_return(
+    const std::uint16_t call_address, const std::uint16_t return_address) {
+    if (state_ != MillenniumDosPostOverlayLoopState::dispatch_call_boundary
+        || !dispatch_call_address_ || !dispatch_call_target_
+        || call_address != *dispatch_call_address_ || call_address != 0xd40a
+        || return_address != 0xd40d || !function_key_index_) {
+        throw std::runtime_error("Millennium DOS handler return is detached from dispatch call");
+    }
+    dispatch_call_address_.reset();
+    dispatch_call_target_.reset();
+    function_key_index_.reset();
+    // The verified instruction at $d40d jumps back to the four-call poll tail.
+    enter_call(11);
+}
+
 void MillenniumDosPostOverlayLoopSession::observe_call_return(
     const std::uint16_t call_address, const std::uint16_t return_address) {
     if (state_ != MillenniumDosPostOverlayLoopState::awaiting_call_return
