@@ -251,6 +251,11 @@ without discarding the broader source-object provenance. It retains no
 instruction, edge, sidecar path, or media byte. This is a provenance check
 only: neither result classifies bytes as code nor establishes reachability,
 load state, ABI, timing, input semantics, or execution.
+For a parser profile that spans its complete leaf, `source_span_sha256` must
+equal that profile's declared leaf hash. The source-tree test enforces this
+without needing original media, preventing a local callee-prefix hash from
+being confused with the media-attested profile span. Local routine hashes
+remain documented independently by their recovery implementation and ledger.
 
 On 2026-09-01, external sidecars were generated from the exact Millennium DOS
 English, Millennium DOS Spanish FAT12, Millennium Amiga Defjam, Deuteros

@@ -1399,6 +1399,21 @@ handle. At `$2aa12`, nonnegative D0 takes BPL to `$2aa1c`, loads literal D0
 Negative D0 executes the original JMP to `$2a632`, whose `BRA.S $2a632`
 is an exact failure spin; the 12-byte branch/JMP/spin path hashes to
 `3a06cb0af877cc363d5ad25b670d680c77b4abcd00955b260c2139270b57426c`.
+The positive `$2aa28->$2a5c2` call now executes five exact argument pushes.
+The 16-byte prefix `2f012f003f390002a5fa3f3c003f4e41` hashes to
+`6d2ddd7da4866769c78162433427fb37fe2f885926f429c098fca3062e282921`.
+It passes count `$2c24a`, buffer `$7d42`, the word previously stored at
+`$2a5fa`, and selector `$3f`, then stops at `TRAP #1` `$2a5d0`. Eon neither
+reads a host file nor claims the buffer has been populated.
+A typed selector-`$3f` observation supplies only raw signed D0; buffer bytes
+are deliberately not required because the following original `TST.L D0`
+does not branch. The 10-byte cleanup/test/RTS body hashes to
+`9f590fdbc6197d898da37312cddcb27a0411bf687877778f77320cb5c61f8ed3`.
+The caller's absolute JMP to `$2a5dc` hashes to
+`a3bf89946746662879548e7a74f8f77c8d107c234cae2908c9b94abe94b19f89`.
+There the exact 12-byte handle/selector-`$3e` prefix hashes to
+`e815352850ca1cb7dffb7fa6d7e46d7775e82146695009e790e525daac17a2e9`
+and stops at Fclose `TRAP #1` `$2a5e6`. No file bytes or host I/O are inferred.
 No selector-3 return, display, input, or other firmware effect is inferred.
 
 The second literal `TRAP #14` argument is not a palette and no service meaning
@@ -4357,6 +4372,21 @@ uses only the verified entry count and owned relocated directory/allocation
 pointers. Execution stops before the two `LODSW` source words at `$13aa`;
 the precise far source is exposed as a typed boundary and no descriptor bytes
 are invented.
+The admitted `TITLE.LIB` resolves the `$13aa` source to file `+$4813`, words
+`$0006/$0000`; contradictions fail before mutation. The 35-byte suffix
+through `$13cc` hashes to
+`e8b21803c3739aac65b59a9919f03c97d0d55daf7fd2a35e7567973765724921`,
+atomically stores normalized pointer `$3000:$0006`, and stops before external
+word read `$3000:$001e` at `$13cd`.
+The typed single-word facade admits that source only when it equals genuine
+`TITLE.LIB+$001e` word `$0140`; contradictory provenance leaves state
+unchanged. The retained observation advances to the next exact external read
+at `$13d0`, source `$3000:$001c`, whose media word is `$00c8`.
+The second typed word is provenance-checked before the exact `$13d0..$13e1`
+span (SHA-256
+`787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
+atomically stores the dimensions and their `$fa00` product. The next boundary
+is external word `$3000:$001a` at `$13e2`; no subtraction result is inferred.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`
@@ -6632,6 +6662,24 @@ nonzero pointer observation is required at `$41c48`. Execution then stops
 before the selected header read at `$41c72`; no earlier high-path payload is
 silently substituted. Replay and revocation reject the boundary. No service,
 object, display, or gameplay meaning is inferred.
+
+That selected-header boundary is now crossed from original bytes. Descriptor
+`$00b0` binds header `$74576` (`000c 0010`, SHA-256
+`5b5f874b3e3dcaf3ab874493a0483ce5be66dbf1ce24f1a3b850594eaa93d61d`)
+and payload `$7457a..$74aa1` (1,320 bytes, SHA-256
+`67251004cede98024d69fff3b1bac02f7df956aca5422086f00a88825ad1366c`),
+which yields 768 pairs across 12 words, 16 rows, and four planes. Descriptor
+`$00bd` binds header `$76e24` (`000c 8010`, SHA-256
+`3c388d6dfefe53e270955f50b2cfe452bb072e0c0025c2bfef2cb4518d97f054`)
+and payload `$76e28..$76e2b` (four bytes, SHA-256
+`8dca78516efa8b24c5a195cd4427fe196b4e15759c00882aa1a229ae99edd173`),
+which yields 192 zero pairs across three words, 16 rows, and four planes.
+Both use row stride `$28`, plane stride `$1a40`, and the already observed
+destination pointer. Since every byte is overwritten, no destination-state
+observation is needed; the writes commit as one atomic effect batch. `$41be6`
+returns to `$20c2c`, loads D5 from the descriptor and D6=`$000b`, and stops
+before the first reachable opaque `$20c4c->$41ad2` graphics helper (immediate
+for `$00b0`, after one carry skip for `$00bd`).
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

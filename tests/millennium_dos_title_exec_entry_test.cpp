@@ -661,7 +661,58 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().continuation_address==0x13aa
         &&other_success.checkpoint().far_read_boundary.instruction_address==0x13aa
         &&other_success.checkpoint().far_read_boundary.word_count==2
+        &&other_success.checkpoint().far_read_boundary.source_segment==0x3481
+        &&other_success.checkpoint().far_read_boundary.source_offset==0x0003
         &&other_success.checkpoint().far_read_boundary.destination_offset==0x138c);
+    auto contradictory_descriptor=other_success;
+    bool contradictory_descriptor_rejected=false;
+    try {
+        contradictory_descriptor.observe_far_words({84,0x13aa,0x3481,0x0003,7,0});
+    } catch(const std::runtime_error&) { contradictory_descriptor_rejected=true; }
+    assert(contradictory_descriptor_rejected
+        &&contradictory_descriptor.checkpoint().far_word_observations.size()==2
+        &&contradictory_descriptor.checkpoint().memory_effects.size()==18945);
+    other_success.observe_far_words({84,0x13aa,0x3481,0x0003,6,0});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_word_read_boundary
+        &&other_success.checkpoint().continuation_address==0x13cd
+        &&other_success.checkpoint().far_read_boundary.source_segment==0x3000
+        &&other_success.checkpoint().far_read_boundary.source_offset==0x001e
+        &&other_success.checkpoint().far_read_boundary.word_count==1
+        &&other_success.checkpoint().memory_effects.size()==18947
+        &&other_success.checkpoint().memory_effects[18945].offset==0x138c
+        &&other_success.checkpoint().memory_effects[18945].value==6
+        &&other_success.checkpoint().memory_effects[18946].offset==0x138e
+        &&other_success.checkpoint().memory_effects[18946].value==0x3000);
+    auto contradictory_record=other_success;
+    bool contradictory_record_rejected=false;
+    try { contradictory_record.observe_far_word({85,0x13cd,0x3000,0x001e,0x0141}); }
+    catch(const std::runtime_error&) { contradictory_record_rejected=true; }
+    assert(contradictory_record_rejected
+        &&contradictory_record.checkpoint().far_single_word_observations.empty());
+    other_success.observe_far_word({85,0x13cd,0x3000,0x001e,0x0140});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary
+        &&other_success.checkpoint().continuation_address==0x13d0
+        &&other_success.checkpoint().far_single_word_observations.size()==1
+        &&other_success.checkpoint().far_single_word_observations[0].word==0x0140
+        &&other_success.checkpoint().far_read_boundary.source_segment==0x3000
+        &&other_success.checkpoint().far_read_boundary.source_offset==0x001c
+        &&other_success.checkpoint().far_read_boundary.word_count==1);
+    auto contradictory_second_record=other_success;
+    bool contradictory_second_record_rejected=false;
+    try { contradictory_second_record.observe_far_word({86,0x13d0,0x3000,0x001c,0x00c9}); }
+    catch(const std::runtime_error&) { contradictory_second_record_rejected=true; }
+    assert(contradictory_second_record_rejected
+        &&contradictory_second_record.checkpoint().far_single_word_observations.size()==1);
+    other_success.observe_far_word({86,0x13d0,0x3000,0x001c,0x00c8});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_third_word_read_boundary
+        &&other_success.checkpoint().continuation_address==0x13e2
+        &&other_success.checkpoint().far_single_word_observations.size()==2
+        &&other_success.checkpoint().far_read_boundary.source_offset==0x001a
+        &&other_success.checkpoint().memory_effects.size()==18950
+        &&other_success.checkpoint().memory_effects[18947].offset==0x1357
+        &&other_success.checkpoint().memory_effects[18947].value==0x00c8
+        &&other_success.checkpoint().memory_effects[18948].value==0x0140
+        &&other_success.checkpoint().memory_effects[18949].value==0xfa00);
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state

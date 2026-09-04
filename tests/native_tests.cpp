@@ -3181,7 +3181,7 @@ int main() {
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-post-command-service-prefix"
-            && entry.runtime_status == "native selector-5c dispatch setup";
+            && entry.runtime_status == "native selector-5c complete selected stream decode";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-title-planar-zero-route"
@@ -5171,6 +5171,23 @@ int main() {
                 && fopen_user->config_consumer.fopen_branch_target==0x2aa1c
                 && fopen_user->config_consumer.next_jsr_target==0x2a5c2);
             assert(!all_release_runtime.observe_millennium_atari_gemdos_selector_61({1,19,0x2a5b4,0x3d,-1}).accepted);
+            assert(all_release_runtime.execute_millennium_atari_jsr_2a5c2().accepted);
+            const auto fread_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(fread_user && fread_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_63_boundary
+                && fread_user->config_consumer.gemdos_63_trap_address==0x2a5d0
+                && fread_user->config_consumer.gemdos_63_selector==0x3f
+                && fread_user->config_consumer.gemdos_63_handle==7
+                && fread_user->config_consumer.gemdos_63_buffer==0x7d42
+                && fread_user->config_consumer.gemdos_63_count==0x2c24a);
+            assert(!all_release_runtime.execute_millennium_atari_jsr_2a5c2().accepted);
+            assert(!all_release_runtime.observe_millennium_atari_gemdos_selector_63({1,19,0x2a5d2,0x3f,0}).accepted);
+            assert(all_release_runtime.observe_millennium_atari_gemdos_selector_63({1,19,0x2a5d0,0x3f,0x2c24a}).accepted);
+            const auto fclose_user=all_release_runtime.millennium_atari_bootstrap_presentation();
+            assert(fclose_user && fclose_user->config_consumer.state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_62_boundary
+                && fclose_user->config_consumer.gemdos_63_result_d0==0x2c24a
+                && fclose_user->config_consumer.gemdos_62_trap_address==0x2a5e6
+                && fclose_user->config_consumer.gemdos_62_selector==0x3e
+                && fclose_user->config_consumer.gemdos_62_handle==7);
             assert(session_snapshot.kind == eon::RuntimeSessionKind::millennium_atari_bootstrap
                 && !session_snapshot.capabilities.decoded_presentation
                 && !session_snapshot.capabilities.admitted_input);
@@ -5257,6 +5274,8 @@ int main() {
             assert(!atari_host.observe_millennium_atari_xbios_selector_38({1,20,0x2aa72,0x26,0}).accepted);
             assert(!atari_host.execute_millennium_atari_jsr_2aa0c().accepted);
             assert(!atari_host.observe_millennium_atari_gemdos_selector_61({1,21,0x2a5b4,0x3d,-1}).accepted);
+            assert(!atari_host.execute_millennium_atari_jsr_2a5c2().accepted);
+            assert(!atari_host.observe_millennium_atari_gemdos_selector_63({1,22,0x2a5d0,0x3f,0}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -5802,6 +5821,8 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_dispatch_destination(bad_dispatch_destination).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_command_dispatch_destination(dispatch_destination).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_command_dispatch_destination(dispatch_destination).accepted);
+            assert(opening_controller.advance_deuteros_amiga_title_post_command_selected_stream().accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_post_command_selected_stream().accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -5809,6 +5830,10 @@ int main() {
                     post_command_memory->initialized_bytes.end(),[](const auto& byte){
                         return byte.location.offset==0x1ffd9 && byte.value==0;
                     }));
+            assert(std::any_of(post_command_memory->initialized_bytes.begin(),
+                post_command_memory->initialized_bytes.end(),[](const auto& byte){
+                    return byte.location.offset==0x60000 && byte.value==0;
+                }));
             assert(opening_controller.observe_input(
                 eon::RuntimeInputObservation::opening_input_held(true))
                 == eon::RuntimeInputDisposition::rejected);

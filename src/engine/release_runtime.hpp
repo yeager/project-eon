@@ -657,6 +657,7 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_dos_vector_result(MillenniumDosTitleDosVectorResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_setup_bios_result(MillenniumDosTitleSetupBiosResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_word(MillenniumDosTitleFarWordObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_call_return(
         MillenniumDosTitleToGameCallReturnObservation observation);
@@ -768,6 +769,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_continuation_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_pointer_chain(DeuterosAmigaObservedTitlePostCommandPointerChain);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_dispatch_destination(DeuterosAmigaObservedTitlePostCommandDispatchDestination);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_selected_stream();
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -817,6 +819,8 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_38(MillenniumAtariXbiosSelector38Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2aa0c();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_61(MillenniumAtariGemdosSelector61Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_millennium_atari_jsr_2a5c2();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_gemdos_selector_63(MillenniumAtariGemdosSelector63Observation);
     // This is a transient, trace-gated exception for the proven GX suffix.
     // It does not acquire or publish a game runtime. Its result privately
     // owns the exact transient parser bytes required by its span-based

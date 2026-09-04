@@ -209,6 +209,14 @@ A typed raw GEMDOS return can advance without host filesystem inference. The
 and atomically stores D0.W at `$2a5fa`. Its signed test either loads literal
 D0 `$7d42` and D1 `$2c24a` before the `$2aa28->$2a5c2` call boundary, or
 reaches the exact failure self-loop at `$2a632`. No host handle is created.
+The positive call then hash-binds the 16-byte `$2a5c2` prefix as
+`6d2ddd7da4866769c78162433427fb37fe2f885926f429c098fca3062e282921`.
+It pushes the exact count, buffer, owned handle word, and selector `$3f`, and
+stops at GEMDOS `TRAP #1` `$2a5d0` without performing host I/O.
+The typed raw Fread return advances through exact cleanup, test, RTS, and
+caller JMP instructions without observing buffer bytes, because no branch
+consults the result. The close wrapper pushes the same owned handle and
+selector `$3e`, then stops at `TRAP #1` `$2a5e6` without host I/O.
 
 The named recovery map binds `millennium-atari-config-xbios-3` to runtime
 `$2a52e..$2a53b`, immutable `MILL22A.inf` hash
