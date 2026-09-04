@@ -7,6 +7,7 @@
 #include "engine/deuteros_amiga_title_exec_boundary_session.hpp"
 #include "engine/deuteros_amiga_title_custom_chip_boundary_session.hpp"
 #include "engine/deuteros_amiga_title_service_setup_boundary_session.hpp"
+#include "engine/deuteros_amiga_title_service_batch_boundary_session.hpp"
 #include "engine/deuteros_amiga_title_open_library_boundary_session.hpp"
 
 #include <span>
@@ -134,8 +135,11 @@ public:
         return service_setup_boundary_session_.observe_fifth_exec_return(observation);
     }
     [[nodiscard]] std::optional<DeuterosAmigaTitleControllerPointerSeedPlan>
-    advance_controller_pointer_seed() {
-        return service_setup_boundary_session_.advance_controller_pointer_seed();
+    advance_controller_pointer_seed();
+    [[nodiscard]] std::optional<DeuterosAmigaTitleServiceBatchLocalPlan>
+    observe_service_batch_graphics_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        return service_batch_boundary_session_.observe_graphics_return(observation);
     }
 
 private:
@@ -154,6 +158,7 @@ private:
     std::optional<DeuterosAmigaTitleCustomChipBoundarySession>
         custom_chip_boundary_session_;
     DeuterosAmigaTitleServiceSetupBoundarySession service_setup_boundary_session_;
+    DeuterosAmigaTitleServiceBatchBoundarySession service_batch_boundary_session_;
     std::string original_sha256_;
     bool local_prefix_executed_ = false;
 };

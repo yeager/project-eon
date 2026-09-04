@@ -24,6 +24,7 @@ std::optional<RuntimePresentationKind> presentation_kind_for(const RuntimeSessio
         return RuntimePresentationKind::millennium_dos_eighth_function;
     case RuntimeSessionKind::millennium_dos_ninth_function:
         return RuntimePresentationKind::millennium_dos_ninth_function;
+    case RuntimeSessionKind::millennium_dos_ninth_function_handoff:return RuntimePresentationKind::millennium_dos_ninth_function_handoff;
     case RuntimeSessionKind::millennium_dos_fourth_function:return RuntimePresentationKind::millennium_dos_fourth_function;
     case RuntimeSessionKind::millennium_dos_fifth_function:return RuntimePresentationKind::millennium_dos_fifth_function;
     case RuntimeSessionKind::millennium_dos_third_function:return RuntimePresentationKind::millennium_dos_third_function;
@@ -71,6 +72,7 @@ std::string_view runtime_presentation_kind_label(const RuntimePresentationKind k
     case RuntimePresentationKind::millennium_dos_sixth_function:
     case RuntimePresentationKind::millennium_dos_eighth_function:
     case RuntimePresentationKind::millennium_dos_ninth_function:
+    case RuntimePresentationKind::millennium_dos_ninth_function_handoff:
     case RuntimePresentationKind::millennium_dos_fourth_function:
     case RuntimePresentationKind::millennium_dos_fifth_function:
     case RuntimePresentationKind::millennium_dos_third_function:

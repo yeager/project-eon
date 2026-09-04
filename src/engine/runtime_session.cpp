@@ -21,6 +21,7 @@ std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
         return "MILLENNIUM DOS EIGHTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_ninth_function:
         return "MILLENNIUM DOS NINTH-FUNCTION HANDLER";
+    case RuntimeSessionKind::millennium_dos_ninth_function_handoff:return "MILLENNIUM DOS NINTH-FUNCTION CONTINUATION";
     case RuntimeSessionKind::millennium_dos_fourth_function:return "MILLENNIUM DOS FOURTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_fifth_function:return "MILLENNIUM DOS FIFTH-FUNCTION HANDLER";
     case RuntimeSessionKind::millennium_dos_third_function:return "MILLENNIUM DOS THIRD-FUNCTION HANDLER";
@@ -63,6 +64,7 @@ RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind
     case RuntimeSessionKind::millennium_dos_sixth_function:
     case RuntimeSessionKind::millennium_dos_eighth_function:
     case RuntimeSessionKind::millennium_dos_ninth_function:
+    case RuntimeSessionKind::millennium_dos_ninth_function_handoff:
     case RuntimeSessionKind::millennium_dos_fourth_function:
     case RuntimeSessionKind::millennium_dos_fifth_function:
     case RuntimeSessionKind::millennium_dos_third_function:
@@ -130,6 +132,7 @@ bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
     case RuntimeSessionKind::millennium_dos_sixth_function:
     case RuntimeSessionKind::millennium_dos_eighth_function:
     case RuntimeSessionKind::millennium_dos_ninth_function:
+    case RuntimeSessionKind::millennium_dos_ninth_function_handoff:
     case RuntimeSessionKind::millennium_dos_fourth_function:
     case RuntimeSessionKind::millennium_dos_fifth_function:
     case RuntimeSessionKind::millennium_dos_third_function:
@@ -174,6 +177,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
     case RuntimeSessionKind::millennium_dos_sixth_function:
     case RuntimeSessionKind::millennium_dos_eighth_function:
     case RuntimeSessionKind::millennium_dos_ninth_function:
+    case RuntimeSessionKind::millennium_dos_ninth_function_handoff:
     case RuntimeSessionKind::millennium_dos_fourth_function:
     case RuntimeSessionKind::millennium_dos_fifth_function:
     case RuntimeSessionKind::millennium_dos_third_function:

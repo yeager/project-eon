@@ -25,6 +25,7 @@ enum class RuntimePresentationKind {
     millennium_dos_sixth_function,
     millennium_dos_eighth_function,
     millennium_dos_ninth_function,
+    millennium_dos_ninth_function_handoff,
     millennium_dos_fourth_function,
     millennium_dos_fifth_function,
     millennium_dos_third_function,

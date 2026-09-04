@@ -7,6 +7,7 @@
 #include "engine/millennium_dos_sixth_function_session.hpp"
 #include "engine/millennium_dos_eighth_function_session.hpp"
 #include "engine/millennium_dos_ninth_function_session.hpp"
+#include "engine/millennium_dos_ninth_function_handoff_session.hpp"
 #include "engine/millennium_dos_fourth_function_session.hpp"
 #include "engine/millennium_dos_fifth_function_session.hpp"
 #include "engine/millennium_dos_third_function_session.hpp"
@@ -84,6 +85,7 @@ public:
         MillenniumDosFunctionDispatchObservation observation) const;
     [[nodiscard]] MillenniumDosEighthFunctionSession make_eighth_function_session() const;
     [[nodiscard]] MillenniumDosNinthFunctionSession make_ninth_function_session() const;
+    [[nodiscard]] MillenniumDosNinthFunctionHandoffSession make_ninth_function_handoff_session() const;
     [[nodiscard]] MillenniumDosFourthFunctionSession make_fourth_function_session() const;
     [[nodiscard]] MillenniumDosFifthFunctionSession make_fifth_function_session() const;
     [[nodiscard]] MillenniumDosThirdFunctionSession make_third_function_session() const;

@@ -34,6 +34,8 @@ constexpr std::array profiles{
         "millennium-dos-en-f8-prefix"},
     Profile{RuntimeSessionKind::millennium_dos_ninth_function, 8, 0x7339,
         "millennium-dos-en-f9-handler"},
+    Profile{RuntimeSessionKind::millennium_dos_ninth_function_handoff,8,0x7339,
+        "millennium-dos-en-f9-handler"},
     Profile{RuntimeSessionKind::millennium_dos_tenth_function, 9, 0x7384,
         "millennium-dos-en-f10-handler"},
 };

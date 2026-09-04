@@ -131,6 +131,7 @@ struct DeuterosAmigaTitleControllerPointerSeedPlan {
     std::uint32_t next_call_address = 0;
     std::uint32_t next_call_target = 0;
     std::uint32_t stop_before_address = 0;
+    std::uint64_t preceding_trace_sequence = 0;
 };
 
 class DeuterosAmigaTitleServiceSetupBoundarySession {
@@ -269,7 +270,8 @@ public:
             0x206be, 0x20698, 0x205e4, 0x206a0, 0x206d2,
             pointer_seed_.caller_d1_literal, pointer_seed_.call_site_address,
             pointer_seed_.callee_address, pointer_seed_.literal_value,
-            pointer_seed_.destination_address, 0x404ce, 0x403f4, 0x404ce};
+            pointer_seed_.destination_address, 0x404ce, 0x403f4, 0x404ce,
+            observed_fifth_->trace_sequence};
     }
 
     void enter(std::uint64_t preceding_sequence) {
