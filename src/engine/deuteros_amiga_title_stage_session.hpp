@@ -104,6 +104,12 @@ public:
         if (!custom_chip_boundary_session_) return std::nullopt;
         return custom_chip_boundary_session_->observe_write(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitlePostCallbackRegistrationAdvance>
+    observe_callback_exec_return(
+        const DeuterosAmigaObservedCallbackExecReturn& observation) {
+        if (!custom_chip_boundary_session_) return std::nullopt;
+        return custom_chip_boundary_session_->observe_exec_return(observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;

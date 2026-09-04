@@ -42,6 +42,12 @@ The `$72f9 -> $ba5e` continuation requires authenticated dispatch index 3.
 Its three literal writes are emitted only after their preceding exact call
 returns; see `MILLENNIUM_DOS_FOURTH_FUNCTION.md`.
 
+### Millennium DOS fifth-function boundary
+
+The complete `$7597..$75a5` four-call chain is hash-bound and admits only
+dispatch index 4. Each callee remains opaque; see
+`MILLENNIUM_DOS_FIFTH_FUNCTION.md`.
+
 ### External replay checkpoints
 
 Canonical frame, audio, state, and physical-input checkpoint bytes remain
@@ -2848,6 +2854,14 @@ retains the local descriptor/request plan (`$1ef48`, callback `$1f056`, request
 `$1eefa`, command 9). It stops at `$1f04a`, before reading Exec base `$4` and
 calling vector `-$1ce` at `$1f04e`. The descriptor plan does not establish the
 service, callback ABI, device, or a callback invocation.
+
+The callback-registration Exec boundary now accepts a return only when its
+sequence follows all four admitted custom-chip observations and its identity
+matches base source `$4`, call `$1f04e`, vector `-$1ce`, and return `$1f052`.
+D0 and SR are retained verbatim without interpreting the service result. The
+hash-proven `$1f052` RTS then returns to `$404b6`, where the session stops
+before the next unresolved direct call to `$206d4`. This does not assert that
+a callback was installed, invoked, or associated with a host input/device.
 
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small

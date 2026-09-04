@@ -26,6 +26,7 @@ enum class RuntimePresentationKind {
     millennium_dos_eighth_function,
     millennium_dos_ninth_function,
     millennium_dos_fourth_function,
+    millennium_dos_fifth_function,
     millennium_dos_tenth_function,
     millennium_amiga_bootstrap,
     millennium_atari_bootstrap,

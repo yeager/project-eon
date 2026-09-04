@@ -170,6 +170,7 @@ EON_LAUNCHER_FOURTH(observe_millennium_dos_fourth_function_word,MillenniumDosFou
 EON_LAUNCHER_FOURTH(observe_millennium_dos_fourth_function_call_return,MillenniumDosFourthFunctionCallReturnObservation)
 #undef EON_LAUNCHER_FOURTH
 std::optional<MillenniumDosFourthFunctionCheckpoint> LauncherRuntimeController::millennium_dos_fourth_function_checkpoint()const{return coordinator_.millennium_dos_fourth_function_checkpoint();}
+MillenniumDosFifthFunctionObservationResult LauncherRuntimeController::observe_millennium_dos_fifth_function_dispatch(MillenniumDosFifthFunctionDispatchObservation o){return coordinator_.observe_millennium_dos_fifth_function_dispatch(o);} MillenniumDosFifthFunctionObservationResult LauncherRuntimeController::observe_millennium_dos_fifth_function_call_return(MillenniumDosFifthFunctionCallReturnObservation o){return coordinator_.observe_millennium_dos_fifth_function_call_return(o);} std::optional<MillenniumDosFifthFunctionCheckpoint> LauncherRuntimeController::millennium_dos_fifth_function_checkpoint()const{return coordinator_.millennium_dos_fifth_function_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 LauncherRuntimeController::millennium_dos_owned_function_diagnostics() const {
     return coordinator_.millennium_dos_owned_function_diagnostics();
@@ -197,6 +198,11 @@ LauncherRuntimeController::deuteros_amiga_opening_presentation() const {
 std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
 LauncherRuntimeController::deuteros_amiga_title_stage_boundary() const {
     return coordinator_.deuteros_amiga_title_stage_boundary();
+}
+
+std::optional<DeuterosAmigaTitleDependencyChainCheckpoint>
+LauncherRuntimeController::deuteros_amiga_title_dependency_chain_checkpoint() const {
+    return coordinator_.deuteros_amiga_title_dependency_chain_checkpoint();
 }
 
 DeuterosAmigaTitleDisplayTraceAdmission

@@ -25,6 +25,7 @@ std::string_view native_session_state_label(const NativeSessionState state) {
     case NativeSessionState::millennium_dos_ninth_function:
         return "MILLENNIUM DOS NINTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_fourth_function:return "MILLENNIUM DOS FOURTH-FUNCTION HANDLER";
+    case NativeSessionState::millennium_dos_fifth_function:return "MILLENNIUM DOS FIFTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_dos_tenth_function:
         return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case NativeSessionState::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
@@ -66,6 +67,7 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
     case RuntimeSessionKind::millennium_dos_ninth_function:
         return NativeSessionState::millennium_dos_ninth_function;
     case RuntimeSessionKind::millennium_dos_fourth_function:return NativeSessionState::millennium_dos_fourth_function;
+    case RuntimeSessionKind::millennium_dos_fifth_function:return NativeSessionState::millennium_dos_fifth_function;
     case RuntimeSessionKind::millennium_dos_tenth_function:
         return NativeSessionState::millennium_dos_tenth_function;
     case RuntimeSessionKind::millennium_amiga_bootstrap: return NativeSessionState::millennium_amiga_bootstrap;
@@ -330,10 +332,12 @@ EON_NATIVE_FOURTH(observe_millennium_dos_fourth_function_word,MillenniumDosFourt
 EON_NATIVE_FOURTH(observe_millennium_dos_fourth_function_call_return,MillenniumDosFourthFunctionCallReturnObservation)
 #undef EON_NATIVE_FOURTH
 std::optional<MillenniumDosFourthFunctionCheckpoint> NativeSessionController::millennium_dos_fourth_function_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_fourth_function)return std::nullopt;return runtime_.millennium_dos_fourth_function_checkpoint();}
+MillenniumDosFifthFunctionObservationResult NativeSessionController::observe_millennium_dos_fifth_function_dispatch(MillenniumDosFifthFunctionDispatchObservation o){if(state_!=NativeSessionState::millennium_dos_post_overlay_loop)return{false,"Fifth-function dispatch requires post-overlay loop"};auto r=runtime_.observe_millennium_dos_fifth_function_dispatch(o);synchronize_after_runtime_change();return r;} MillenniumDosFifthFunctionObservationResult NativeSessionController::observe_millennium_dos_fifth_function_call_return(MillenniumDosFifthFunctionCallReturnObservation o){if(state_!=NativeSessionState::millennium_dos_fifth_function)return{false,"Observation requires fifth-function session"};return runtime_.observe_millennium_dos_fifth_function_call_return(o);} std::optional<MillenniumDosFifthFunctionCheckpoint> NativeSessionController::millennium_dos_fifth_function_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_fifth_function)return std::nullopt;return runtime_.millennium_dos_fifth_function_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 NativeSessionController::millennium_dos_owned_function_diagnostics() const {
     switch (state_) {
     case NativeSessionState::millennium_dos_fourth_function:
+    case NativeSessionState::millennium_dos_fifth_function:
     case NativeSessionState::millennium_dos_sixth_function:
     case NativeSessionState::millennium_dos_seventh_function:
     case NativeSessionState::millennium_dos_eighth_function:
@@ -392,6 +396,12 @@ std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
 NativeSessionController::deuteros_amiga_title_stage_boundary() const {
     if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
     return runtime_.deuteros_amiga_title_stage_boundary();
+}
+
+std::optional<DeuterosAmigaTitleDependencyChainCheckpoint>
+NativeSessionController::deuteros_amiga_title_dependency_chain_checkpoint() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
+    return runtime_.deuteros_amiga_title_dependency_chain_checkpoint();
 }
 
 DeuterosAmigaTitleDisplayTraceAdmission

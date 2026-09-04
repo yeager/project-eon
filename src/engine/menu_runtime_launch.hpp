@@ -103,6 +103,7 @@ public:
     [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_word(MillenniumDosFourthFunctionWordObservation);
     [[nodiscard]] MillenniumDosFourthFunctionObservationResult observe_millennium_dos_fourth_function_call_return(MillenniumDosFourthFunctionCallReturnObservation);
     [[nodiscard]] std::optional<MillenniumDosFourthFunctionCheckpoint> millennium_dos_fourth_function_checkpoint() const;
+    [[nodiscard]] MillenniumDosFifthFunctionObservationResult observe_millennium_dos_fifth_function_dispatch(MillenniumDosFifthFunctionDispatchObservation); [[nodiscard]] MillenniumDosFifthFunctionObservationResult observe_millennium_dos_fifth_function_call_return(MillenniumDosFifthFunctionCallReturnObservation); [[nodiscard]] std::optional<MillenniumDosFifthFunctionCheckpoint> millennium_dos_fifth_function_checkpoint()const;
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics> millennium_dos_owned_function_diagnostics() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] std::optional<std::vector<float>>
@@ -113,6 +114,7 @@ public:
     deuteros_amiga_opening_presentation() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
     deuteros_amiga_title_stage_boundary() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleDependencyChainCheckpoint> deuteros_amiga_title_dependency_chain_checkpoint() const;
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
     admit_active_deuteros_amiga_title_display_trace(const ReferenceTrace& trace);
     [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayTraceCheckpoint>

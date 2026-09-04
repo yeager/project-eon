@@ -197,6 +197,7 @@ EON_HOST_FOURTH(observe_millennium_dos_fourth_function_word,MillenniumDosFourthF
 EON_HOST_FOURTH(observe_millennium_dos_fourth_function_call_return,MillenniumDosFourthFunctionCallReturnObservation)
 #undef EON_HOST_FOURTH
 std::optional<MillenniumDosFourthFunctionCheckpoint> RuntimeHost::millennium_dos_fourth_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_fourth_function_checkpoint();}
+MillenniumDosFifthFunctionObservationResult RuntimeHost::observe_millennium_dos_fifth_function_dispatch(MillenniumDosFifthFunctionDispatchObservation o){if(revoking())return{false,"Fifth-function observation rejected during source revocation"};return NativeSessionController::observe_millennium_dos_fifth_function_dispatch(o);} MillenniumDosFifthFunctionObservationResult RuntimeHost::observe_millennium_dos_fifth_function_call_return(MillenniumDosFifthFunctionCallReturnObservation o){if(revoking())return{false,"Fifth-function observation rejected during source revocation"};return NativeSessionController::observe_millennium_dos_fifth_function_call_return(o);} std::optional<MillenniumDosFifthFunctionCheckpoint> RuntimeHost::millennium_dos_fifth_function_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_fifth_function_checkpoint();}
 std::optional<MillenniumDosOwnedFunctionDiagnostics>
 RuntimeHost::millennium_dos_owned_function_diagnostics() const {
     if (revoking()) return std::nullopt;
@@ -219,6 +220,12 @@ std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
 RuntimeHost::deuteros_amiga_title_stage_boundary() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_amiga_title_stage_boundary();
+}
+
+std::optional<DeuterosAmigaTitleDependencyChainCheckpoint>
+RuntimeHost::deuteros_amiga_title_dependency_chain_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::deuteros_amiga_title_dependency_chain_checkpoint();
 }
 
 DeuterosAmigaTitleDisplayTraceAdmission
