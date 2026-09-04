@@ -2368,6 +2368,14 @@ either RAM address/value has a game meaning.
 The supplied unlabelled Disk 2
 (`5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193`)
 branches to `$22` and carries the literal `KILLER_BOOT\0` marker.  Its
+complete 512-byte boot sector is now a separate static-disassembly image at
+the established boot address `$1000`; its first instruction branches to
+`$1022`, and that location branches to `$1030`. The exact sector SHA-256 is
+`169991a2e9f6210b3285f8bf0afcdcccf9b652f87bce52ac44a57b0490a1329f`.
+Its byte-complete external listing has 191 lines and SHA-256
+`3ed535b76b5f73b66c9a097813a50aef732fc38f2a571ef2246046ffbc29c2be`.
+This mapping does not make the reset vector at RAM `$4` known.
+Its
 post-BPB setup copies ten longwords from boot offset `$f0` (the `LEA
 $000e(PC)` at `$de` resolves from its extension word at `$e2`) to RAM `$8`,
 then jumps to relocated address `$12`. The 40 copied bytes have SHA-256
@@ -2415,6 +2423,12 @@ It neither modifies the supplied boot bytes nor invokes GEMDOS, displays the
 decoded protection text, emulates a condition selecting this caller, or
 assigns any title/game meaning. The `TRAP #1` service/frame and all later
 boot-entry control remain explicit preservation boundaries.
+
+Static inspection finds no next disk-stage load in the Killer Boot vector
+route. The route copies only boot-sector bytes `$f0..$117` to RAM `$8..$2f`;
+the direct `$12` continuation enters the proven local clear loop, while the
+separate relocated `$10` path reads RAM `$4` and jumps indirectly. Neither
+path contains a caller-connected disk read before those respective boundaries.
 
 ### Deuteros Amiga execution chain
 

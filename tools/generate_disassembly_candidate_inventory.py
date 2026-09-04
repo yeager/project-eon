@@ -16,7 +16,7 @@ class CandidateError(ValueError):
 
 def generate(releases: dict, inventory: dict) -> dict:
     profiles = {row["id"]: row for row in releases.get("parser_profiles", [])}
-    result = {"schema": "project-eon.disassembly-candidates/v1", "releases": []}
+    result = {"schema": "project-eon.disassembly-candidates/v2", "releases": []}
     for release in inventory.get("releases", []):
         release_hash = release["release_sha256"]
         candidates = []
@@ -32,23 +32,39 @@ def generate(releases: dict, inventory: dict) -> dict:
             if not isinstance(start, int) or start < 0 or not isinstance(length, int) or length <= 0:
                 raise CandidateError(f"invalid parser range {profile_id}")
             mapped = []
+            member_spans = []
             for span in spans:
                 if span.get("source_provenance_profile_id") == profile_id:
-                    mapped.append(span["id"])
+                    member_spans.append(span["id"])
                     continue
                 if span.get("leaf_sha256") != profile.get("leaf_sha256"):
                     continue
-                for segment in span.get("segments", []):
-                    seg_start = segment["source_offset"]
-                    seg_end = seg_start + segment["length"]
-                    if seg_start < start + length and start < seg_end:
+                intervals = sorted((segment["source_offset"],
+                                    segment["source_offset"] + segment["length"])
+                                   for segment in span.get("segments", []))
+                cursor = start
+                for seg_start, seg_end in intervals:
+                    if seg_end <= cursor:
+                        continue
+                    if seg_start > cursor:
+                        break
+                    cursor = max(cursor, seg_end)
+                    if cursor >= start + length:
                         mapped.append(span["id"])
                         break
+            if length == 512:
+                kind = "boot"
+            elif member_spans:
+                kind = "container-with-mapped-members"
+            else:
+                kind = "raw-stage"
             candidates.append({"profile_id": profile_id,
                                "leaf_sha256": profile["leaf_sha256"],
                                "source_offset": start, "length": length,
+                               "code_candidate_kind": kind,
                                "status": "mapped" if mapped else "discovered-unmapped",
-                               "mapped_span_ids": sorted(set(mapped))})
+                               "mapped_span_ids": sorted(set(mapped)),
+                               "member_span_ids": sorted(set(member_spans))})
         result["releases"].append({"release_sha256": release_hash,
                                    "candidates": candidates})
     return result

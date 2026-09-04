@@ -69,6 +69,19 @@ remain explicit executable-candidate gaps rather than being silently decoded
 at the DOS COM convention. `2200AD4.BIN` is an established data/pointer-table
 leaf and is not promoted to code merely because it contains code-like bytes.
 
+The direct Defjam Amiga profile additionally renders the entire boot-loaded
+ADF range `+$400..+$7ff` at its parser-proven destination `$70000`, with entry
+`$70000`: 1,024 bytes, 257 report lines, source-range SHA-256
+`c31e59f83d6825a2da7a6fd5e3297a322993b0483105794fca449d97d3861e06`,
+report SHA-256 `282920708f52065f2b8e28e0a54d46c6a84f5652239750757ccce14452cda4e1`.
+This does not materialize the later relocation: its byte-copy loop requests
+one byte beyond the proven boot buffer, so relocated execution remains an
+explicit boundary. The aggregate Defjam release contains the identical ADF
+range but cannot be freshly report-identified from the currently supplied
+direct carrier. The Equinox Atari boot sector is hash-inventoried but has no
+parser-proven load address or executable entry and is not promoted to a code
+span.
+
 The complete linear candidate reports remain outside the repository because
 they mechanically render copyrighted executable bytes. Their committed SHA-256
 and line-count identities can nevertheless be checked without opening any
@@ -131,7 +144,8 @@ mkdir /home/user/.cache/project-eon-tools/deuteros-full-disassembly
 python3 tools/reproduce_deuteros_disassembly.py \
   --output-directory /home/user/.cache/project-eon-tools/deuteros-full-disassembly \
   --amiga-archive '/home/user/.projecteon/Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).zip' \
-  --atari-replicants-archive '/home/user/.projecteon/Deuteros (1991)(Activision)(M3)(Disk 1 of 2)[cr Replicants].zip'
+  --atari-replicants-archive '/home/user/.projecteon/Deuteros (1991)(Activision)(M3)(Disk 1 of 2)[cr Replicants].zip' \
+  --atari-killer-archive '/home/user/.projecteon/Deuteros (1991)(Activision)(M3)(Disk 2 of 2).zip'
 ```
 
 This is complete byte coverage of every currently proven Deuteros load map,
@@ -141,6 +155,11 @@ stage on every recognised media variant. The second Atari stage is the exact
 SHA-256 is `2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7`.
 Execution after that stage and independently unmapped variant images remain
 explicit preservation gaps.
+The same pass also renders the complete 512-byte Disk 2 Killer Boot sector at
+its established `$1000` boot address. Its range SHA-256 is
+`169991a2e9f6210b3285f8bf0afcdcccf9b652f87bce52ac44a57b0490a1329f`;
+the 191-line external listing has SHA-256
+`3ed535b76b5f73b66c9a097813a50aef732fc38f2a571ef2246046ffbc29c2be`.
 
 ## External static control-flow sidecars
 

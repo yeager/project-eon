@@ -107,10 +107,18 @@ def verify(manifest: dict, inventory: dict, releases: dict) -> dict:
         if not images and not declared.get("unmapped_boundary"):
             raise ManifestError(f"{release_hash} has neither images nor an explicit unmapped boundary")
         candidates = generated_candidates[release_hash]
-        generated_unmapped = sorted(row["profile_id"] for row in candidates
+        generated_unmapped = sorted((row["profile_id"], row["code_candidate_kind"])
+                                    for row in candidates
                                     if row["status"] == "discovered-unmapped")
-        declared_unmapped = declared.get("discovered_unmapped_profile_ids")
-        if not isinstance(declared_unmapped, list) or sorted(declared_unmapped) != generated_unmapped:
+        declared_unmapped_rows = declared.get("discovered_unmapped_candidates")
+        if not isinstance(declared_unmapped_rows, list):
+            raise ManifestError(f"{release_hash} has no discovered-unmapped candidate ledger")
+        try:
+            declared_unmapped = sorted((row["profile_id"], row["code_candidate_kind"])
+                                       for row in declared_unmapped_rows)
+        except (KeyError, TypeError) as error:
+            raise ManifestError(f"{release_hash} has an invalid discovered-unmapped candidate") from error
+        if declared_unmapped != generated_unmapped:
             raise ManifestError(f"{release_hash} discovered-unmapped candidate set differs from scanner ledgers")
         for candidate in candidates:
             if candidate["status"] == "mapped":
@@ -169,8 +177,9 @@ def render_index(manifest: dict, totals: dict) -> str:
                 lines.append(f"- `{image['span_id']}` — {image['architecture']}, {image['address_basis']}")
         else:
             lines.append(f"- Unmapped preservation boundary: {release['unmapped_boundary']}")
-        for profile_id in release["discovered_unmapped_profile_ids"]:
-            lines.append(f"- Discovered but unmapped: `{profile_id}`")
+        for candidate in release["discovered_unmapped_candidates"]:
+            lines.append(f"- Discovered but unmapped: `{candidate['profile_id']}` "
+                         f"({candidate['code_candidate_kind']})")
         lines.append("")
     return "\n".join(lines)
 

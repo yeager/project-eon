@@ -35,12 +35,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-directory", type=Path, required=True)
     parser.add_argument("--amiga-archive", type=Path, required=True)
     parser.add_argument("--atari-replicants-archive", type=Path, required=True)
+    parser.add_argument("--atari-killer-archive", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         output = require_output_directory(args.output_directory)
         amiga = output / "deuteros-amiga-clean-loaded-spans.md"
         atari = output / "deuteros-atari-replicants-first-stage.md"
         atari_second = output / "deuteros-atari-replicants-second-stage.md"
+        atari_killer = output / "deuteros-atari-killer-boot.md"
         run(["tools/analyze_m68k.py", "--archive", str(args.amiga_archive),
              "--archive-sha256", "7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533",
              "--member", "Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).adf",
@@ -62,11 +64,20 @@ def main(argv: list[str] | None = None) -> int:
              "--offset", "0x4800", "--length", "0x1200", "--address", "0x70000",
              "--sha256", "2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7",
              "--output", str(atari_second)])
+        run(["tools/disassemble_m68k_range.py", "--archive",
+             str(args.atari_killer_archive), "--archive-sha256",
+             "7842adb599dbc4cf79827e31e912740f259af45718c124d5806e1c8860f2253d",
+             "--member", "Deuteros (1991)(Activision)(M3)(Disk 2 of 2).st",
+             "--member-sha256", "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193",
+             "--offset", "0", "--length", "0x200", "--address", "0x1000",
+             "--sha256", "169991a2e9f6210b3285f8bf0afcdcccf9b652f87bce52ac44a57b0490a1329f",
+             "--output", str(atari_killer)])
         index = {
             "schema": "project-eon.deuteros-full-disassembly/v1",
             "classification": "linear-candidate-unclassified",
-            "reports": [identity(amiga), identity(atari), identity(atari_second)],
-            "mapped_source_bytes": {"amiga": 467456, "atari_st": 9216},
+            "reports": [identity(amiga), identity(atari), identity(atari_second),
+                        identity(atari_killer)],
+            "mapped_source_bytes": {"amiga": 467456, "atari_st": 9728},
             "gaps": [
                 "Atari ST execution after the mapped 0x1200-byte second stage remains runtime-dependent",
                 "Other recognized Amiga and Atari media variants have no independently proven code-image mapping",
