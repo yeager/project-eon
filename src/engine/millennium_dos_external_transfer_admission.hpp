@@ -11,6 +11,7 @@ enum class MillenniumDosExternalTransferKind {
     f9_long_return,
     f2_reset_wrap_return,
     f2_tail_jump,
+    f2_tail_active_return,
 };
 
 struct MillenniumDosExternalTransferContract {
@@ -47,6 +48,7 @@ millennium_dos_external_transfer_contract(const MillenniumDosExternalTransferKin
     case MillenniumDosExternalTransferKind::f9_long_return: return {kind,0x7381,0x73cc,0x740e};
     case MillenniumDosExternalTransferKind::f2_reset_wrap_return: return {kind,0x7228,0x702c,0x7040};
     case MillenniumDosExternalTransferKind::f2_tail_jump: return {kind,0x7253,0x0bdf,std::nullopt};
+    case MillenniumDosExternalTransferKind::f2_tail_active_return: return {kind,0x7253,0x0bdf,0x0be6};
     }
     return {kind,0,0,std::nullopt};
 }

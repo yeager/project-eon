@@ -58,6 +58,17 @@ struct DeuterosAmigaTitlePostServiceWordLocalPlan {
     std::uint32_t stop_before_address = 0;
 };
 
+struct DeuterosAmigaTitleGraphicsServiceFirstLocalPlan {
+    DeuterosAmigaObservedGraphicsVectorReturn observed_return;
+    std::uint32_t local_d0_value = 0;
+    std::uint32_t descriptor_a0_value = 0;
+    std::uint32_t next_library_base_source_address = 0;
+    std::uint32_t next_call_address = 0;
+    std::int16_t next_vector = 0;
+    std::uint32_t next_return_address = 0;
+    std::uint32_t stop_before_address = 0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -67,6 +78,8 @@ public:
                 + address - plan.title_stage.destination, length);
         };
         const auto batch = parse_deuteros_amiga_title_post_exec_service_batch_profile(
+            disk, plan);
+        third_service_ = parse_deuteros_amiga_title_post_exec_third_service_profile(
             disk, plan);
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
@@ -122,12 +135,34 @@ public:
             0x40400, 0x1f37a, 0x1f37a, 0x20094, 0x1f37a};
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleGraphicsServiceFirstLocalPlan>
+    observe_graphics_service_first_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        if (!observed_word_ || observed_graphics_service_first_) return std::nullopt;
+        if (observation.trace_sequence <= observed_word_->trace_sequence
+            || observation.library_base_source_address != third_service_.graphics_library_base_address
+            || observation.observed_library_base != graphics_library_base_
+            || observation.call_address != 0x2009c
+            || observation.vector != third_service_.graphics_library_vectors[0]
+            || observation.return_address != 0x200a0) {
+            throw std::runtime_error("Deuteros first graphics-service return does not match boundary");
+        }
+        observed_graphics_service_first_ = observation;
+        return DeuterosAmigaTitleGraphicsServiceFirstLocalPlan{observation,
+            0xffffffff, third_service_.descriptor_address,
+            third_service_.graphics_library_base_address,
+            0x200b0, third_service_.graphics_library_vectors[1], 0x200b4, 0x200b0};
+    }
+
 private:
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
     std::uint32_t graphics_library_base_ = 0;
     std::optional<DeuterosAmigaObservedGraphicsVectorReturn> observed_;
     std::optional<DeuterosAmigaObservedServiceWordRead> observed_word_;
+    DeuterosAmigaTitlePostExecThirdServiceProfile third_service_;
+    std::optional<DeuterosAmigaObservedGraphicsVectorReturn>
+        observed_graphics_service_first_;
 };
 
 } // namespace eon

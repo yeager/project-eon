@@ -24,3 +24,10 @@ destination. The callback checkpoint returns a copy of this transfer state;
 reset destroys it and host revocation rejects both entry and return. The
 runtime does not guess the caller destination or treat the normal one-way
 `$7253 -> $0bdf` tail jump as returning.
+
+The tail's first caller-connected exit is modeled separately. After explicit
+entry at `$7253 -> $0bdf`, an observed nonzero `$07d8` reaches the hash-proven
+RET at `$0be6`. Only there may the host submit a later return observation with
+its explicit nonzero destination. The BDF checkpoint retains the transfer by
+value; source revocation rejects the return and hides that checkpoint. No
+destination, service effect, or subsequent caller behavior is inferred.

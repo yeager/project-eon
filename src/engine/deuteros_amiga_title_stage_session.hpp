@@ -146,6 +146,12 @@ public:
         const DeuterosAmigaObservedServiceWordRead& observation) {
         return service_batch_boundary_session_.observe_runtime_word(observation);
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleGraphicsServiceFirstLocalPlan>
+    observe_graphics_service_first_return(
+        const DeuterosAmigaObservedGraphicsVectorReturn& observation) {
+        return service_batch_boundary_session_.observe_graphics_service_first_return(
+            observation);
+    }
 
 private:
     const AmigaAdf* disk_ = nullptr;
