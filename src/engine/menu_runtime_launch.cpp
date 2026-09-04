@@ -95,6 +95,8 @@ std::optional<MillenniumDosPostOverlayLoopCheckpoint>
 LauncherRuntimeController::millennium_dos_post_overlay_loop_checkpoint() const {
     return coordinator_.millennium_dos_post_overlay_loop_checkpoint();
 }
+MillenniumDosPostOverlayObservationResult LauncherRuntimeController::complete_millennium_dos_handler(const MillenniumDosHandlerCompletionObservation o){return coordinator_.complete_millennium_dos_handler(o);}
+std::optional<MillenniumDosHandlerCompletionCheckpoint> LauncherRuntimeController::millennium_dos_handler_completion_checkpoint()const{return coordinator_.millennium_dos_handler_completion_checkpoint();}
 
 #define EON_LAUNCHER_TENTH_PROXY(name, type) \
 MillenniumDosTenthFunctionObservationResult LauncherRuntimeController::name( \

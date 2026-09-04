@@ -211,6 +211,8 @@ NativeSessionController::millennium_dos_post_overlay_loop_checkpoint() const {
     if (state_ != NativeSessionState::millennium_dos_post_overlay_loop) return std::nullopt;
     return runtime_.millennium_dos_post_overlay_loop_checkpoint();
 }
+MillenniumDosPostOverlayObservationResult NativeSessionController::complete_millennium_dos_handler(const MillenniumDosHandlerCompletionObservation o){auto r=runtime_.complete_millennium_dos_handler(o);synchronize_after_runtime_change();return r;}
+std::optional<MillenniumDosHandlerCompletionCheckpoint> NativeSessionController::millennium_dos_handler_completion_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_post_overlay_loop)return std::nullopt;return runtime_.millennium_dos_handler_completion_checkpoint();}
 
 MillenniumDosTenthFunctionObservationResult
 NativeSessionController::observe_millennium_dos_tenth_function_dispatch(

@@ -80,6 +80,7 @@ public:
     void observe_al(std::uint16_t test_address, std::uint8_t value);
     void observe_runtime_byte(std::uint16_t load_address,
         std::uint16_t runtime_address, std::uint8_t value);
+    void observe_dispatch_return(std::uint16_t call_address, std::uint16_t return_address);
 
 private:
     void enter_call(std::size_t ordinal);

@@ -40,3 +40,13 @@ function-key names, gameplay meaning, input mapping, handler return, frame,
 audio, save mutation, or parity claim. It holds a non-owning read-only source
 span, so a future runtime owner must retain authenticated backing bytes and
 must revoke this session before releasing them.
+
+An owned F1-F10 session may now return to this loop only after reaching a
+typed `local_return` boundary and receiving a separate completion observation
+for dispatch call `$d40a` and its machine-code return address `$d40d`. The
+coordinator verifies the active session kind, table index, and exact terminal
+RET address, retains a value-only completion checkpoint, destroys the handler,
+and resumes at the existing action-poll boundary. A handler still at an
+external call, F9's jump handoff, a mismatched index/address, reset, or source
+revocation fails closed. This models control flow only: it does not reconstruct
+the handler's calls, effects, input, frame, audio, or gameplay meaning.

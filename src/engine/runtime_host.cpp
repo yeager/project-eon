@@ -110,6 +110,8 @@ RuntimeHost::millennium_dos_post_overlay_loop_checkpoint() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::millennium_dos_post_overlay_loop_checkpoint();
 }
+MillenniumDosPostOverlayObservationResult RuntimeHost::complete_millennium_dos_handler(const MillenniumDosHandlerCompletionObservation o){if(revoking())return{false,"Handler completion rejected during source revocation"};return NativeSessionController::complete_millennium_dos_handler(o);}
+std::optional<MillenniumDosHandlerCompletionCheckpoint> RuntimeHost::millennium_dos_handler_completion_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_handler_completion_checkpoint();}
 
 #define EON_HOST_TENTH_PROXY(name, type) \
 MillenniumDosTenthFunctionObservationResult RuntimeHost::name(const type observation) { \

@@ -259,6 +259,8 @@ struct MillenniumDosPostOverlayObservationResult {
     bool accepted = false;
     std::string error;
 };
+struct MillenniumDosHandlerCompletionObservation { std::size_t function_key_index=0; std::uint16_t terminal_instruction_address=0, dispatch_call_address=0, return_address=0; };
+struct MillenniumDosHandlerCompletionCheckpoint { std::size_t function_key_index=0; std::uint16_t handler_address=0, terminal_instruction_address=0, return_address=0; };
 
 struct MillenniumDosPostOverlayLoopCheckpoint {
     MillenniumDosPostOverlayLoopState state =
@@ -582,6 +584,8 @@ public:
         MillenniumDosPostOverlayRuntimeByteObservation observation);
     [[nodiscard]] std::optional<MillenniumDosPostOverlayLoopCheckpoint>
     millennium_dos_post_overlay_loop_checkpoint() const;
+    [[nodiscard]] MillenniumDosPostOverlayObservationResult complete_millennium_dos_handler(MillenniumDosHandlerCompletionObservation);
+    [[nodiscard]] std::optional<MillenniumDosHandlerCompletionCheckpoint> millennium_dos_handler_completion_checkpoint() const;
     [[nodiscard]] MillenniumDosTenthFunctionObservationResult
     observe_millennium_dos_tenth_function_dispatch(
         MillenniumDosTenthFunctionDispatchObservation observation);
@@ -668,6 +672,7 @@ private:
     // This span-based session is destroyed before its preceding admission,
     // whose exact verified game buffer is its sole backing owner.
     std::optional<MillenniumDosPostOverlayLoopSession> millennium_dos_post_overlay_loop_;
+    std::optional<MillenniumDosHandlerCompletionCheckpoint> millennium_dos_handler_completion_;
     std::optional<MillenniumDosSeventhFunctionSession> millennium_dos_seventh_function_;
     std::optional<MillenniumDosSixthFunctionSession> millennium_dos_sixth_function_;
     std::optional<MillenniumDosEighthFunctionSession> millennium_dos_eighth_function_;

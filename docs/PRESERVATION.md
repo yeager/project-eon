@@ -2905,6 +2905,16 @@ observed first `-$126` D0 value, and place it in the literal `$20676`
 descriptor. The session stops at `$20776` before another `-$162` Exec call at
 `$2077a`; it does not infer why either branch occurs.
 
+On the admitted zero path, the repeated eight-byte `-$162` boundary at
+`$20776` has SHA-256
+`913043cfe14c05c8e74c79915e6922eb2ccd071169a85e1ab0b47f85925ff795`.
+An exact later return at `$2077e` retains D0/SR without interpretation. The
+following 30 local bytes hash to
+`ee1c0c590b6037a7e59608bb83dae26c4ffc510fd53e3a8b05ccff78fab8c2c0`;
+they establish `$2063e` at `$2069c`, link descriptor `$20676`, and set literal
+D0/D1 to 1/0. Execution stops at `$2079c` before the next `-$1bc` call at
+`$207a0`.
+
 After the verified opening handoff, the launcher may show the first sixteen
 raw RGB4 words at the independently hash-validated `$1ed24` source as a small
 palette-evidence strip. `DeuterosAmigaTitleStageSession` decodes only those
@@ -5751,6 +5761,15 @@ reconstructs the original `(availability-1)` word list at `$6e99`, starting at
 `$1384` with stride `$00c0`. Calls `$72b5` and `$0b76` remain externally
 observed boundaries. The callback beginning at `$7221` is excluded: Eon does
 not invent its runtime table values, call returns, selection, or game meaning.
+
+The callback itself is now independently modeled as a hash-gated continuation
+from `$7221` through the tail jump at `$7253`. It requires observations for
+`$6e93`, the computed word cell `$27c4 + 2*(selection+1)`, each native call
+return, and the `$09fa` BL loop. The `$ff` wrap route stops at jump `$702c`;
+the normal route stops at jump `$0bdf`. Merely storing `$7221` in `$6f98` does
+not prove invocation, so the active runtime does not automatically enter this
+continuation. No record content, menu selection meaning, callee result, input,
+rendering, or destination-jump behavior is manufactured.
 
 The exact English `2200AD.EXE` sixth-table handler `$7415..$7454` is available
 through the native runtime only after the active post-overlay state machine has
