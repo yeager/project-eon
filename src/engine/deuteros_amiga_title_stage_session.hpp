@@ -6,6 +6,7 @@
 #include "data/deuteros_amiga_title_stage.hpp"
 #include "engine/deuteros_amiga_title_exec_boundary_session.hpp"
 #include "engine/deuteros_amiga_title_custom_chip_boundary_session.hpp"
+#include "engine/deuteros_amiga_title_service_setup_boundary_session.hpp"
 #include "engine/deuteros_amiga_title_open_library_boundary_session.hpp"
 
 #include <span>
@@ -106,9 +107,11 @@ public:
     }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCallbackRegistrationAdvance>
     observe_callback_exec_return(
-        const DeuterosAmigaObservedCallbackExecReturn& observation) {
-        if (!custom_chip_boundary_session_) return std::nullopt;
-        return custom_chip_boundary_session_->observe_exec_return(observation);
+        const DeuterosAmigaObservedCallbackExecReturn& observation);
+    [[nodiscard]] std::optional<DeuterosAmigaTitleServiceSetupLocalPlan>
+    observe_service_setup_exec_return(
+        const DeuterosAmigaObservedServiceSetupExecReturn& observation) {
+        return service_setup_boundary_session_.observe_exec_return(observation);
     }
 
 private:
@@ -126,6 +129,7 @@ private:
         open_library_boundary_session_;
     std::optional<DeuterosAmigaTitleCustomChipBoundarySession>
         custom_chip_boundary_session_;
+    DeuterosAmigaTitleServiceSetupBoundarySession service_setup_boundary_session_;
     std::string original_sha256_;
     bool local_prefix_executed_ = false;
 };
