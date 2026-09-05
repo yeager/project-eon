@@ -22,6 +22,7 @@ enum class MillenniumDosSixthFunctionState {
     awaiting_wait_bl,
     returned_by_guard,
     returned,
+    restoration_caller_call_return,
     restoration_first_call_return,
     restoration_second_call_return,
     restoration_third_call_return,

@@ -64,6 +64,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f6_table_offset = 0x2fe7 - load_bias;
     constexpr std::size_t f6_handler_offset = 0x7415 - load_bias;
     constexpr std::size_t f6_restoration_offset = 0x7455 - load_bias;
+    constexpr std::size_t f6_restoration_caller_offset = 0x74c1 - load_bias;
     constexpr std::size_t f7_table_offset = 0x2fef - load_bias;
     constexpr std::size_t f7_handler_offset = 0x7521 - load_bias;
     constexpr std::size_t f8_table_offset = 0x2ff7 - load_bias;
@@ -264,6 +265,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         0x06,0x3a,0x61,0x00,0xb8,0xe6,0x5f,0xa3,0x32,0x61,0xe8,0xe7,
         0xf5,0xe8,0x54,0xe7,0xe8,0x46,0x9a,0xe8,0xcf,0x96,0xe8,0x35,
         0x97,0xc3});
+    // $74c1 is the statically proved caller: after the opaque $cc4e call
+    // returns it discards one stack word and tail-jumps to $7455.
+    constexpr auto f6_restoration_caller = std::to_array<std::uint8_t>({
+        0xe8, 0x8a, 0x57, 0x58, 0xeb, 0x8e});
     // Record six (raw F7 / $41) uses the same native $a19e gate. On its
     // admitted path it reads words at $da17/$da18/$da27/$da26/$da35/$da37,
     // calls the observed helper sequence, and returns. The values and helper
@@ -384,6 +389,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f6_table_offset, f6_table)
         || !has_bytes(game_executable, f6_handler_offset, f6_handler)
         || !has_bytes(game_executable, f6_restoration_offset, f6_restoration)
+        || !has_bytes(game_executable, f6_restoration_caller_offset,
+            f6_restoration_caller)
         || !has_bytes(game_executable, f7_table_offset, f7_table)
         || !has_bytes(game_executable, f7_handler_offset, f7_handler)
         || !has_bytes(game_executable, f8_table_offset, f8_table)
@@ -538,6 +545,10 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             .restoration_second_source_address = 0x7412,
             .restoration_second_destination_address = 0x75a8,
             .restoration_first_call_address = 0x0b0c,
+            .restoration_caller_address = 0x74c1,
+            .restoration_caller_call_address = 0x74c1,
+            .restoration_caller_target_address = 0xcc4e,
+            .restoration_caller_jump_address = 0x7455,
         },
         .seventh_function_key = {
             .handler_address = 0x7521,

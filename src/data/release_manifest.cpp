@@ -102,7 +102,7 @@ constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
     {"deuteros-atari-replicants-second-stage", "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653", "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee", 737'280, 0x4800, 0x1200},
     {"deuteros-atari-killer-boot", "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653", "5501ce3fd79c9b37cf695692a8012267db23dacd8a2cc64c0c7b7e4305971193", 737'280, 0x0, 0x200},
     {"millennium-amiga-defjam-bootstrap", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x400, 0x400},
-    {"millennium-amiga-defjam-first-stage-entry", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x6e000, 0xe0},
+    {"millennium-amiga-defjam-first-stage-entry", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x6e000, 0xfe},
     {"millennium-atari-equinox-bootstrap", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 0x200},
     {"millennium-atari-equinox-root-inventory", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
     {"millennium-atari-equinox-prg-chain", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", 819'200, 0x0, 819'200},
@@ -131,7 +131,7 @@ constexpr std::array<ParserProfileManifestEntry, 42> profiles{{
     {"millennium-dos-spanish-static-text", "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d", 737'280, 0x0, 737'280},
     {"millennium-dos-spanish-launch-manual", "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d", 737'280, 0x0, 737'280},
     {"millennium-amiga-defjam-direct-bootstrap", "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x400, 0x400},
-    {"millennium-amiga-defjam-direct-first-stage-entry", "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x6e000, 0xe0},
+    {"millennium-amiga-defjam-direct-first-stage-entry", "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c", 901'120, 0x6e000, 0xfe},
 }};
 
 } // namespace

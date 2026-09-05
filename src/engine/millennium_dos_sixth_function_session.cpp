@@ -24,7 +24,11 @@ MillenniumDosSixthFunctionSession::MillenniumDosSixthFunctionSession(
         || trace_.restoration_word_destination_address != 0x75ac
         || trace_.restoration_second_source_address != 0x7412
         || trace_.restoration_second_destination_address != 0x75a8
-        || trace_.restoration_first_call_address != 0x0b0c) {
+        || trace_.restoration_first_call_address != 0x0b0c
+        || trace_.restoration_caller_address != 0x74c1
+        || trace_.restoration_caller_call_address != 0x74c1
+        || trace_.restoration_caller_target_address != 0xcc4e
+        || trace_.restoration_caller_jump_address != 0x7455) {
         throw std::runtime_error("Unsupported Millennium DOS sixth-function profile");
     }
 }
@@ -179,6 +183,29 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
     case MillenniumDosSixthFunctionState::awaiting_wait_call_return:
         state_ = MillenniumDosSixthFunctionState::awaiting_wait_bl;
         return;
+    case MillenniumDosSixthFunctionState::restoration_caller_call_return: {
+        std::optional<std::uint16_t> first;
+        std::optional<std::uint16_t> word;
+        std::optional<std::uint16_t> second;
+        for (auto it = effects_.rbegin(); it != effects_.rend(); ++it) {
+            if (!first && it->address == trace_.saved_first_byte_address) first = it->value;
+            if (!word && it->address == trace_.saved_word_address) word = it->value;
+            if (!second && it->address == trace_.saved_second_byte_address) second = it->value;
+        }
+        if (!first || !word || !second) {
+            throw std::runtime_error(
+                "Millennium DOS sixth-function restoration lacks saved state");
+        }
+        record_effect(trace_.restoration_first_destination_address, 1,
+            std::nullopt, *second);
+        record_effect(trace_.restoration_word_destination_address, 2,
+            std::nullopt, *word);
+        record_effect(trace_.restoration_second_destination_address, 1,
+            std::nullopt, *first);
+        enter_call(MillenniumDosSixthFunctionState::restoration_first_call_return,
+            0x7467, trace_.restoration_first_call_address);
+        return;
+    }
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,
             0x746e, 0x7b47);
@@ -237,22 +264,9 @@ void MillenniumDosSixthFunctionSession::begin_restoration() {
     if (state_ != MillenniumDosSixthFunctionState::returned) {
         throw std::runtime_error("Millennium DOS sixth-function restoration is detached");
     }
-    std::optional<std::uint16_t> first;
-    std::optional<std::uint16_t> word;
-    std::optional<std::uint16_t> second;
-    for (auto it = effects_.rbegin(); it != effects_.rend(); ++it) {
-        if (!first && it->address == trace_.saved_first_byte_address) first = it->value;
-        if (!word && it->address == trace_.saved_word_address) word = it->value;
-        if (!second && it->address == trace_.saved_second_byte_address) second = it->value;
-    }
-    if (!first || !word || !second) {
-        throw std::runtime_error("Millennium DOS sixth-function restoration lacks saved state");
-    }
-    record_effect(trace_.restoration_first_destination_address, 1, std::nullopt, *second);
-    record_effect(trace_.restoration_word_destination_address, 2, std::nullopt, *word);
-    record_effect(trace_.restoration_second_destination_address, 1, std::nullopt, *first);
-    enter_call(MillenniumDosSixthFunctionState::restoration_first_call_return,
-        0x7467, trace_.restoration_first_call_address);
+    enter_call(MillenniumDosSixthFunctionState::restoration_caller_call_return,
+        trace_.restoration_caller_call_address,
+        trace_.restoration_caller_target_address);
 }
 
 void MillenniumDosSixthFunctionSession::observe_bl(

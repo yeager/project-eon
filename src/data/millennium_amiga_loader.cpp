@@ -170,11 +170,11 @@ parse_millennium_amiga_first_stage_entry_boundary(
     constexpr std::size_t source_offset = 0x6e000;
     constexpr std::size_t source_size = 0x24200;
     constexpr std::uint32_t destination = 0x41000;
-    constexpr std::size_t entry_size = 0xe0;
+    constexpr std::size_t entry_size = 0xfe;
     constexpr std::string_view source_hash =
         "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c";
     constexpr std::string_view entry_hash =
-        "943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77";
+        "0b24024d8af46ad2a9207b18962397bc2ba44f0019a6503cd46823af6221213e";
     if (plan.first_stage.disk_offset != source_offset
         || plan.first_stage.length != source_size
         || plan.first_stage.destination != destination
@@ -188,11 +188,14 @@ parse_millennium_amiga_first_stage_entry_boundary(
         || entry[0] != 0x60 || entry[1] != 0x00
         || entry[2] != 0x00 || entry[3] != 0xba
         || entry[0xbc] != 0x2f || entry[0xbd] != 0x0e
-        || entry[0xde] != 0x4a || entry[0xdf] != 0xfc) {
+        || entry[0xde] != 0x4a || entry[0xdf] != 0xfc
+        || entry[0xe0] != 0x23 || entry[0xe1] != 0xc0
+        || entry[0xfc] != 0x4a || entry[0xfd] != 0xfc) {
         throw std::runtime_error("Unexpected Millennium Amiga first-stage entry");
     }
     return {source_offset, source_size, destination, std::string(source_hash),
-        entry_size, std::string(entry_hash), 0x410bc, 0x410de, 0x10};
+        entry_size, std::string(entry_hash), 0x410bc, 0x410de, 0x10,
+        0x410e0, 0x410fc};
 }
 
 MillenniumAmigaBootstrapRelocationBoundary
