@@ -439,8 +439,10 @@ reach `$2197a/$2197e`. The `$217d8->$20994` edge now follows its exact
 hash-bound local prefix, clears A1, reloads the Exec base from `$0004`, and
 types the `$2099e` vector `-$126` return, atomically applies its five exact
 big-endian writes, and stops at the `$209ca` vector `-$162` boundary (return
-`$209ce`). Continue only from that typed return; do not assign audio cadence,
-vector purpose, or pointer semantics.
+`$209ce`). Its return is now typed; two exact longword writes commit atomically
+before the next boundary at `$209f0`, vector `-$1bc`, return `$209f4`.
+Continue only from that typed return; do not assign audio cadence, vector
+purpose, or pointer semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

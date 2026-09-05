@@ -20,6 +20,7 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_first_stage_trace_exception,
     awaiting_first_stage_decrypted_instruction,
     awaiting_first_stage_decrypted_memory_write,
+    awaiting_first_stage_custom_chip_write,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -171,6 +172,27 @@ struct MillenniumAmigaTraceRegisterPrefixExecution {
     std::uint32_t pending_destination_address=0;
     std::uint8_t pending_value=0;
 };
+// Externally observed MC68000 group-0 bus-error frame.  The effective address
+// is reduced to the processor's 24-bit physical bus before this frame exists;
+// Eon neither performs the failed cycle nor synthesizes its exception.
+struct MillenniumAmigaBusErrorObservation {
+    std::uint32_t handler_entry_address=0;
+    std::uint32_t exception_frame_address=0;
+    std::uint16_t saved_status_register=0;
+    std::uint32_t saved_program_counter=0;
+    std::uint16_t instruction_register=0;
+    std::uint32_t fault_address=0;
+    std::uint16_t special_status_word=0;
+};
+struct MillenniumAmigaBusErrorPrefixExecution {
+    std::uint32_t exception_frame_address=0;
+    std::uint32_t logical_address=0, physical_address=0;
+    std::uint32_t handler_jump_target=0;
+    std::uint32_t saved_a1_address=0, saved_a1_value=0;
+    std::uint32_t resulting_a0=0, resulting_a1=0;
+    std::uint32_t pending_instruction_address=0, pending_destination_address=0;
+    std::uint16_t pending_value=0;
+};
 
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
 // $70000..$70041. The original DBRA reads one byte beyond the authenticated
@@ -228,6 +250,10 @@ public:
     execute_trace_register_prefix(const MillenniumAmigaTraceRegisterPrefixObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaTraceRegisterPrefixExecution>&
     trace_register_prefix_execution() const { return trace_register_prefix_execution_; }
+    [[nodiscard]] MillenniumAmigaBusErrorPrefixExecution
+    execute_bus_error_prefix(const MillenniumAmigaBusErrorObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaBusErrorPrefixExecution>&
+    bus_error_prefix_execution() const { return bus_error_prefix_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -245,6 +271,7 @@ private:
     std::optional<MillenniumAmigaFirstTraceExecution> first_trace_execution_;
     std::optional<MillenniumAmigaTraceBranchChainExecution> trace_branch_chain_execution_;
     std::optional<MillenniumAmigaTraceRegisterPrefixExecution> trace_register_prefix_execution_;
+    std::optional<MillenniumAmigaBusErrorPrefixExecution> bus_error_prefix_execution_;
 };
 
 } // namespace eon

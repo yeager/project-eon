@@ -276,6 +276,34 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
         record_effect(0xcbe1, 2, std::nullopt, 0x0000);
         state_ = MillenniumDosSixthFunctionState::caller_helper_far_offset;
         return;
+    case MillenniumDosSixthFunctionState::caller_helper_external_continuation:
+        record_effect(0xdae1, 1, std::nullopt, 1);
+        caller_helper_bulk_effects_.push_back({
+            MillenniumDosSixthFunctionBulkEffectKind::copy,
+            0xca38, 0x12cc, 0x0060, 2, 2, 2, 0});
+        caller_helper_bulk_effects_.push_back({
+            MillenniumDosSixthFunctionBulkEffectKind::fill,
+            0, 0x1384, 0x0a20, 2, 0, 2, 0});
+        record_effect(0x2802, 2, std::nullopt, 5);
+        record_effect(0x280a, 2, std::nullopt, 2);
+        record_effect(0x280e, 2, std::nullopt, 2);
+        caller_helper_bulk_effects_.push_back({
+            MillenniumDosSixthFunctionBulkEffectKind::strided_copy,
+            0xcaf0, 0x2822, 0x0017, 2, 2, 0x001c, 0});
+        record_effect(0x2aa0, 2, std::nullopt, 1);
+        record_effect(0x2aa2, 1, std::nullopt, 0x81);
+        record_effect(0x2aa3, 1, std::nullopt, 0);
+        record_effect(0x2aa4, 1, std::nullopt, 8);
+        caller_helper_bulk_effects_.push_back({
+            MillenniumDosSixthFunctionBulkEffectKind::fill,
+            0, 0x2aac, 0x0027, 2, 0, 0x001c, 0});
+        record_effect(0x2b01, 1, std::nullopt, 0x65);
+        record_effect(0x2b17, 1, std::nullopt, 0x47);
+        record_effect(0x2b33, 1, std::nullopt, 0x47);
+        record_effect(0x2b4f, 1, std::nullopt, 0x47);
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_post_initialization_call_return,
+            0xcd4d, 0x40af);
+        return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,
             0x746e, 0x7b47);

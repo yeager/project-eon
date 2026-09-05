@@ -31,6 +31,7 @@ enum class MillenniumDosSixthFunctionState {
     caller_helper_far_segment,
     caller_helper_saved_byte,
     caller_helper_external_continuation,
+    caller_helper_post_initialization_call_return,
     restoration_first_call_return,
     restoration_second_call_return,
     restoration_third_call_return,
@@ -92,6 +93,19 @@ struct MillenniumDosSixthFunctionStateClearEffect {
     constexpr bool operator==(const MillenniumDosSixthFunctionStateClearEffect&) const = default;
 };
 
+enum class MillenniumDosSixthFunctionBulkEffectKind { copy, fill, strided_copy };
+struct MillenniumDosSixthFunctionBulkEffect {
+    MillenniumDosSixthFunctionBulkEffectKind kind{};
+    std::uint16_t source = 0;
+    std::uint16_t destination = 0;
+    std::uint16_t count = 0;
+    std::uint16_t element_bytes = 0;
+    std::uint16_t source_stride = 0;
+    std::uint16_t destination_stride = 0;
+    std::uint16_t value = 0;
+    constexpr bool operator==(const MillenniumDosSixthFunctionBulkEffect&) const = default;
+};
+
 // Typed manual recompilation of the exact English $7415..$7454 handler and
 // its separately entered complete $7455..$74aa restoration routine.
 class MillenniumDosSixthFunctionSession {
@@ -119,6 +133,8 @@ public:
     }
     [[nodiscard]] std::optional<MillenniumDosSixthFunctionStateClearEffect>
     caller_helper_state_clear_effect() const { return caller_helper_state_clear_effect_; }
+    [[nodiscard]] const std::vector<MillenniumDosSixthFunctionBulkEffect>&
+    caller_helper_bulk_effects() const { return caller_helper_bulk_effects_; }
 
     void observe_runtime_word(std::uint16_t instruction_address,
         std::uint16_t runtime_address, std::uint16_t value);
@@ -154,6 +170,7 @@ private:
     std::optional<std::uint8_t> caller_helper_saved_byte_;
     std::optional<MillenniumDosSixthFunctionStateClearEffect>
         caller_helper_state_clear_effect_;
+    std::vector<MillenniumDosSixthFunctionBulkEffect> caller_helper_bulk_effects_;
 };
 
 } // namespace eon
