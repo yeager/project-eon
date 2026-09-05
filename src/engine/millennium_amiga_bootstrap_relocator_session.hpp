@@ -17,8 +17,8 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_opaque_first_stage,
     awaiting_first_stage_illegal_exception,
     awaiting_second_first_stage_illegal_exception,
-    awaiting_first_stage_fline_exception,
-    awaiting_first_stage_decrypted_block,
+    awaiting_first_stage_trace_exception,
+    awaiting_first_stage_decrypted_instruction,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -113,13 +113,13 @@ struct MillenniumAmigaSecondIllegalExecution {
     std::uint32_t transformed_value = 0;
     std::uint32_t resulting_stack_pointer = 0;
     std::uint32_t branch_target = 0;
-    std::uint32_t fline_instruction_address = 0;
+    std::uint32_t trace_resume_address = 0;
 };
 
-// Complete externally observed format-0 Line-F exception entry. The live SR
+// Complete externally observed format-0 trace exception entry. The live SR
 // is distinct from the saved user frame and is therefore supplied explicitly;
 // Eon does not synthesize the processor's exception transition.
-struct MillenniumAmigaFirstFlineObservation {
+struct MillenniumAmigaFirstTraceObservation {
     std::uint32_t handler_entry_address = 0;
     std::uint32_t exception_frame_address = 0;
     std::uint16_t handler_status_register = 0;
@@ -127,7 +127,7 @@ struct MillenniumAmigaFirstFlineObservation {
     std::uint32_t saved_program_counter = 0;
 };
 
-struct MillenniumAmigaFirstFlineExecution {
+struct MillenniumAmigaFirstTraceExecution {
     std::uint32_t exception_frame_address = 0;
     std::uint16_t resulting_handler_status_register = 0;
     std::uint16_t saved_status_register = 0;
@@ -146,6 +146,17 @@ struct MillenniumAmigaFirstFlineExecution {
     std::uint32_t transformed_address = 0;
     std::uint32_t transformed_value = 0;
     std::uint32_t resulting_stack_pointer = 0;
+};
+
+struct MillenniumAmigaTraceBranchChainObservation {
+    std::array<MillenniumAmigaFirstTraceObservation,10> exceptions{};
+};
+struct MillenniumAmigaTraceBranchChainExecution {
+    std::uint32_t addx_instruction_address=0;
+    std::uint32_t resulting_d2=0;
+    std::uint16_t resulting_status_register=0;
+    std::array<MillenniumAmigaFirstTraceExecution,10> decryptions{};
+    std::uint32_t terminal_trace_program_counter=0;
 };
 
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
@@ -192,10 +203,14 @@ public:
     execute_second_illegal_handler(const MillenniumAmigaSecondIllegalObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaSecondIllegalExecution>&
     second_illegal_execution() const { return second_illegal_execution_; }
-    [[nodiscard]] MillenniumAmigaFirstFlineExecution
-    execute_first_fline_handler(const MillenniumAmigaFirstFlineObservation&);
-    [[nodiscard]] const std::optional<MillenniumAmigaFirstFlineExecution>&
-    first_fline_execution() const { return first_fline_execution_; }
+    [[nodiscard]] MillenniumAmigaFirstTraceExecution
+    execute_first_trace_handler(const MillenniumAmigaFirstTraceObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaFirstTraceExecution>&
+    first_trace_execution() const { return first_trace_execution_; }
+    [[nodiscard]] MillenniumAmigaTraceBranchChainExecution
+    execute_trace_branch_chain(const MillenniumAmigaTraceBranchChainObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaTraceBranchChainExecution>&
+    trace_branch_chain_execution() const { return trace_branch_chain_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -210,7 +225,8 @@ private:
     std::optional<MillenniumAmigaFirstStageEntryExecution> first_stage_entry_execution_;
     std::optional<MillenniumAmigaFirstStageIllegalExecution> first_stage_illegal_execution_;
     std::optional<MillenniumAmigaSecondIllegalExecution> second_illegal_execution_;
-    std::optional<MillenniumAmigaFirstFlineExecution> first_fline_execution_;
+    std::optional<MillenniumAmigaFirstTraceExecution> first_trace_execution_;
+    std::optional<MillenniumAmigaTraceBranchChainExecution> trace_branch_chain_execution_;
 };
 
 } // namespace eon

@@ -66,9 +66,14 @@ MillenniumDosSixthFunctionBoundary MillenniumDosSixthFunctionSession::boundary()
         result.instruction_address = 0xcc73;
         result.runtime_address = 0x0114;
         break;
+    case MillenniumDosSixthFunctionState::caller_helper_saved_byte:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_byte;
+        result.instruction_address = 0xcc80;
+        result.runtime_address = 0xda05;
+        break;
     case MillenniumDosSixthFunctionState::caller_helper_external_continuation:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::external_continuation;
-        result.instruction_address = 0xcc77;
+        result.instruction_address = 0xcc84;
         break;
     case MillenniumDosSixthFunctionState::awaiting_word:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
@@ -142,8 +147,16 @@ void MillenniumDosSixthFunctionSession::observe_runtime_word(
         if (!caller_helper_far_offset_) {
             throw std::runtime_error("Millennium DOS F6 helper far pointer is detached");
         }
+        constexpr std::uint16_t word_count = 0x0528;
+        constexpr std::uint32_t byte_count = static_cast<std::uint32_t>(word_count) * 2U;
+        if (static_cast<std::uint32_t>(*caller_helper_far_offset_) + byte_count
+            > 0x10000U) {
+            throw std::runtime_error("Millennium DOS F6 helper far clear would wrap");
+        }
         caller_helper_far_segment_ = value;
-        state_ = MillenniumDosSixthFunctionState::caller_helper_external_continuation;
+        caller_helper_far_clear_effect_ = MillenniumDosSixthFunctionFarClearEffect{
+            value, *caller_helper_far_offset_, word_count, 0};
+        state_ = MillenniumDosSixthFunctionState::caller_helper_saved_byte;
         return;
     }
     if (state_ == MillenniumDosSixthFunctionState::awaiting_word) {
@@ -170,6 +183,11 @@ void MillenniumDosSixthFunctionSession::observe_runtime_byte(
     if (state_ == MillenniumDosSixthFunctionState::restoration_runtime_byte) {
         enter_call(MillenniumDosSixthFunctionState::restoration_fifth_call_return,
             0x7487, 0x6178);
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_saved_byte) {
+        caller_helper_saved_byte_ = value;
+        state_ = MillenniumDosSixthFunctionState::caller_helper_external_continuation;
         return;
     }
     if (state_ == MillenniumDosSixthFunctionState::awaiting_first_byte) {

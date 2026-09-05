@@ -153,9 +153,13 @@ struct MillenniumAmigaSecondIllegalHandlerObservation {
     std::uint64_t sequence=0;
     MillenniumAmigaSecondIllegalObservation exception;
 };
-struct MillenniumAmigaFirstFlineHandlerObservation {
+struct MillenniumAmigaFirstTraceHandlerObservation {
     std::uint64_t sequence=0;
-    MillenniumAmigaFirstFlineObservation exception;
+    MillenniumAmigaFirstTraceObservation exception;
+};
+struct MillenniumAmigaTraceBranchChainRuntimeObservation {
+    std::uint64_t sequence=0;
+    MillenniumAmigaTraceBranchChainObservation trace;
 };
 struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::uint64_t generation=0;
@@ -169,7 +173,8 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::optional<MillenniumAmigaFirstStageEntryExecution> first_stage_entry_execution;
     std::optional<MillenniumAmigaFirstStageIllegalExecution> first_stage_illegal_execution;
     std::optional<MillenniumAmigaSecondIllegalExecution> second_illegal_execution;
-    std::optional<MillenniumAmigaFirstFlineExecution> first_fline_execution;
+    std::optional<MillenniumAmigaFirstTraceExecution> first_trace_execution;
+    std::optional<MillenniumAmigaTraceBranchChainExecution> trace_branch_chain_execution;
 };
 
 // Immutable Millennium Atari ST bootstrap provenance.  It reports only the
@@ -521,6 +526,8 @@ struct MillenniumDosSixthFunctionCheckpoint {
     MillenniumDosSixthFunctionBoundary boundary;
     std::vector<MillenniumDosSixthFunctionEffect> effects;
     std::vector<std::uint8_t> shifted_bl_values;
+    std::optional<MillenniumDosSixthFunctionFarClearEffect> caller_helper_far_clear_effect;
+    std::optional<std::uint8_t> caller_helper_saved_byte;
 };
 struct MillenniumDosEighthFunctionDispatchObservation {
     std::uint16_t scaled_call_address = 0;
@@ -839,6 +846,8 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_second_exec_return(DeuterosAmigaObservedMainStageExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_first_local_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_pointer_service_return(DeuterosAmigaObservedMainStagePointerServiceReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_audio_setup(DeuterosAmigaObservedMainStageAudioSetup);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_main_stage_20994_exec_entry();
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -866,7 +875,8 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_stage_entry(MillenniumAmigaFirstStageEntryObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_stage_illegal_handler(MillenniumAmigaFirstStageIllegalHandlerObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_second_illegal_handler(MillenniumAmigaSecondIllegalHandlerObservation);
-    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_fline_handler(MillenniumAmigaFirstFlineHandlerObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_trace_handler(MillenniumAmigaFirstTraceHandlerObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_trace_branch_chain(MillenniumAmigaTraceBranchChainRuntimeObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
@@ -1135,7 +1145,8 @@ private:
     std::optional<std::uint64_t> millennium_amiga_first_stage_entry_sequence_;
     std::optional<std::uint64_t> millennium_amiga_first_stage_illegal_sequence_;
     std::optional<std::uint64_t> millennium_amiga_second_illegal_sequence_;
-    std::optional<std::uint64_t> millennium_amiga_first_fline_sequence_;
+    std::optional<std::uint64_t> millennium_amiga_first_trace_sequence_;
+    std::optional<std::uint64_t> millennium_amiga_trace_branch_chain_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

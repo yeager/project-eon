@@ -1,6 +1,7 @@
 #include "game_text_localization.hpp"
 #include "data/sha256.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -49,6 +50,26 @@ int main() {
     }
 
 #ifdef EON_DIRECT_DATA_DIR
+    const auto load_hash_bound_source_leaf = [](const eon::GameTextDefinition& definition) {
+        std::vector<std::filesystem::path> candidates;
+        const auto root = std::filesystem::path(EON_DIRECT_DATA_DIR);
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
+            std::error_code error;
+            if (!entry.is_regular_file(error) || error || entry.is_symlink(error) || error
+                || entry.path().filename() != definition.source_leaf) continue;
+            candidates.push_back(entry.path());
+        }
+        std::ranges::sort(candidates);
+        for (const auto& candidate : candidates) {
+            std::ifstream source_file(candidate, std::ios::binary);
+            if (!source_file) continue;
+            std::vector<std::uint8_t> bytes{
+                std::istreambuf_iterator<char>(source_file),
+                std::istreambuf_iterator<char>()};
+            if (eon::to_hex(eon::sha256(bytes)) == definition.source_sha256) return bytes;
+        }
+        throw std::runtime_error("hash-bound game-text source leaf was not found");
+    };
     std::map<std::string, std::vector<std::uint8_t>> source_leaves;
     for (const auto& definition : definitions) {
         // This configured installed directory is the exact English DOS set.
@@ -59,12 +80,7 @@ int main() {
             || definition.platform != eon::Platform::dos) continue;
         auto& source_bytes = source_leaves[std::string(definition.source_leaf)];
         if (source_bytes.empty()) {
-            const auto source_path = std::filesystem::path(EON_DIRECT_DATA_DIR)
-                / definition.source_leaf;
-            std::ifstream source_file(source_path, std::ios::binary);
-            assert(source_file);
-            source_bytes.assign(std::istreambuf_iterator<char>(source_file),
-                std::istreambuf_iterator<char>());
+            source_bytes = load_hash_bound_source_leaf(definition);
         }
         assert(eon::verify_game_text_source(definition, source_bytes));
     }

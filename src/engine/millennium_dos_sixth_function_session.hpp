@@ -29,6 +29,7 @@ enum class MillenniumDosSixthFunctionState {
     caller_helper_fourth_call_return,
     caller_helper_far_offset,
     caller_helper_far_segment,
+    caller_helper_saved_byte,
     caller_helper_external_continuation,
     restoration_first_call_return,
     restoration_second_call_return,
@@ -74,6 +75,14 @@ struct MillenniumDosSixthFunctionEffect {
     constexpr bool operator==(const MillenniumDosSixthFunctionEffect&) const = default;
 };
 
+struct MillenniumDosSixthFunctionFarClearEffect {
+    std::uint16_t segment = 0;
+    std::uint16_t offset = 0;
+    std::uint16_t word_count = 0;
+    std::uint16_t value = 0;
+    constexpr bool operator==(const MillenniumDosSixthFunctionFarClearEffect&) const = default;
+};
+
 // Typed manual recompilation of the exact English $7415..$7454 handler and
 // its separately entered complete $7455..$74aa restoration routine.
 class MillenniumDosSixthFunctionSession {
@@ -93,6 +102,11 @@ public:
     }
     [[nodiscard]] std::optional<std::uint16_t> caller_helper_far_segment() const {
         return caller_helper_far_segment_;
+    }
+    [[nodiscard]] std::optional<MillenniumDosSixthFunctionFarClearEffect>
+    caller_helper_far_clear_effect() const { return caller_helper_far_clear_effect_; }
+    [[nodiscard]] std::optional<std::uint8_t> caller_helper_saved_byte() const {
+        return caller_helper_saved_byte_;
     }
 
     void observe_runtime_word(std::uint16_t instruction_address,
@@ -125,6 +139,8 @@ private:
     std::vector<std::uint8_t> shifted_bl_values_;
     std::optional<std::uint16_t> caller_helper_far_offset_;
     std::optional<std::uint16_t> caller_helper_far_segment_;
+    std::optional<MillenniumDosSixthFunctionFarClearEffect> caller_helper_far_clear_effect_;
+    std::optional<std::uint8_t> caller_helper_saved_byte_;
 };
 
 } // namespace eon

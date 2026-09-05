@@ -200,10 +200,9 @@ the resulting branch remain explicit observations.
 
 The corrected Millennium Amiga first stage is native from `$41000` through
 its register-save/vector setup, two typed frame-complete ILLEGAL exception
-entries, and the first typed Line-F handler. That handler advances the unpacker
-cursor and transforms the genuine long at `$41110` to `$d545d545`. Continue
-with the largest deterministic part of the decrypted block without inventing
-its register-derived memory effects or its next exception.
+entries. Vector-9 tracing decrypts and executes the exact ADDX plus ten
+unconditional branch steps through `$411d8`. Continue with the complete trace
+frame at that address.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
@@ -433,8 +432,13 @@ controller and typed D0 stores before the first main-stage service boundary;
 do not assign a gameplay meaning to profile two. That entry prefix is now
 atomic; typed Exec `-$96` and `-$9c` returns now advance through literal
 `$7fff0`, followed by ordered typed returns from `$20068` and `$2013a`. The
-recovered pointer copies reach `$20510/$20c20`; continue at the caller's
-`$2177c->$22a5a` service without assigning semantics to the observed pointer.
+recovered pointer copies reach `$20510/$20c20`. Ordered `$22a5a/$22bea/$22bea`
+returns, four literal custom-register writes, and both typed pointer chains now
+reach `$2197a/$2197e`. The `$217d8->$20994` edge now follows its exact
+hash-bound local prefix, clears A1, reloads the Exec base from `$0004`, and
+stops at the `$2099e` vector `-$126` boundary (return `$209a2`). Continue only
+from a typed return; do not assign audio cadence, vector purpose, or pointer
+semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

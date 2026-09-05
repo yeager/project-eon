@@ -1809,20 +1809,27 @@ The second complete format-0 observation admits only the clear-bit route at
 high-byte bit 7 must be clear. The handler installs vectors 8 and 9, changes
 the saved PC to `$410fe`, updates the saved SR, retains its temporary D0/A0/A1
 stack image, and performs the exact media-derived transform
-`D503FFE1 XOR B503FFEF = 6000000E`. `RTE` returns to that new branch and
-reaches the F-line word `$ff89` at `$41110`. Frame, stack, vectors, cursor,
+`D503FFE1 XOR B503FFEF = 6000000E`. `RTE` executes that new branch with the
+trace bit set; the resulting vector-9 exception saves resume PC `$41110` before
+the encrypted `$ff89` word is executed. Frame, stack, vectors, cursor,
 ciphertext save, and code transform are one atomic batch.
 
-The first Line-F handler is also native behind a separate complete format-0
-observation. It requires handler `$411ac`, saved PC `$41110`, an even bounded
+The first trace-handler pass is also native behind a separate complete format-0
+observation. It requires vector address `$24`, handler `$411ac`, saved PC `$41110`, an even bounded
 frame address, and the handler's live SR separately from the saved SR; Eon does
 not synthesize the processor exception transition. The exact handler masks the
 live SR, preserves D0/A0/A1, restores `$d503ffe1` at `$410fe`, advances the
 cursor to `$41110`, saves the genuine `$ff896076` ciphertext, and derives the
 key from the genuine preceding long `$4accd533`. The resulting atomic transform
-is `$ff896076 XOR $2accb533 = $d545d545` at `$41110`. Execution stops before
-the newly decrypted register- and memory-dependent block. Its writes, next
-exception, and continuation remain explicit preservation boundaries.
+is `$ff896076 XOR $2accb533 = $d545d545` at `$41110`.
+
+Eon executes that exact `ADDX.W D5,D2`, including X/N/Z/V/C, then consumes ten
+complete vector-9 frames at `$41112,$4112e,$41166,$4115e,$41132,$41162,
+$41152,$41106,$4116a,$41142`. Each handler restores the preceding ciphertext,
+saves and transforms the current long, and exposes one unconditional `BRA.W`.
+The final branch reaches `$411d8`. All ten frames, temporary stacks, cursor,
+ciphertext, and transformed instruction writes form one atomic batch. The
+trace frame at `$411d8` and subsequent unpacker effects remain external.
 
 The bootstrap relocation itself remains bounded by its final source-byte
 observation at `$70400`; the exact caller then performs `JSR (A3)` at
@@ -3312,8 +3319,18 @@ instruction replaces it with literal `$0007fff0`, reloads the Exec base from
 return and the following `$20068` and `$2013a` local returns are exact, ordered
 typed boundaries. The `$2013a` observation supplies the longword read from
 `$20128`; Eon clears `$2012c`, copies that value to `$20510` and `$20c20`, and
-stops before `$2177c->$22a5a`. No memory batch is emitted before those proven
-caller writes. A wrong entry,
+continues through exact typed returns from `$2177c->$22a5a` and two consecutive
+`$22bea` hardware-service calls. The caller then writes `$7fff` to custom
+registers `$dff040/$dff042`, `$c000` to `$dff09a`, and `$87ff` to `$dff096`.
+Its two nested pointer chains rooted at `$12e00/$12f00` remain typed runtime
+observations; their final pointers are copied to `$2197a/$2197e`. Execution
+then follows the caller-connected `$217d8->$20994` edge. The exact 14-byte
+prefix at ADF offset `0x6194` has SHA-256
+`a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001`:
+it clears A1, reloads the Exec base from longword `$0004`, and reaches the
+external call at `$2099e`, vector `-$126`, whose return address is `$209a2`.
+Eon exposes that call as a typed boundary and does not infer its return or
+effects. No memory batch is emitted for the register-only prefix. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
 write. All observed results and service effects remain deliberately uninterpreted.
 

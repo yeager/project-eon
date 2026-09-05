@@ -109,6 +109,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <stdexcept>
@@ -2993,7 +2994,11 @@ int main() {
     assert(incremental_scanner.done());
     assert(!incremental_scanner.discovering());
     assert(incremental_scanner.candidate_count() >= 6);
-    assert(incremental_scanner.releases().size() == 6);
+    // A developer corpus may also contain separately recognised direct
+    // variants of a canonical archive. Require the canonical six below, but
+    // do not reject a hash-recognised superset merely because the manifest
+    // gained another preservation identity.
+    assert(incremental_scanner.releases().size() >= 6);
     assert(incremental_scanner.report().candidates == incremental_scanner.candidate_count());
     assert(incremental_scanner.report().candidates
         == incremental_scanner.report().size_rejected_candidates
@@ -3006,7 +3011,7 @@ int main() {
     assert(incremental_scanner.report().hashed_candidates
         + incremental_scanner.report().unreadable_candidates
         == incremental_scanner.report().size_candidates);
-    assert(incremental_scanner.report().verified_occurrences == 6);
+    assert(incremental_scanner.report().verified_occurrences >= 6);
     // The supplied corpus contains recognised outer archives. A leaf found
     // outside such an archive would remain unbound evidence and cannot alter
     // this release count or platform admission table.
@@ -3016,9 +3021,24 @@ int main() {
         <= incremental_scanner.report().hashed_candidates);
     assert(incremental_scanner.report().duplicate_occurrences == 0);
     assert(incremental_scanner.report().unreadable_candidates == 0);
-    const auto releases = eon::find_release_archives(data_directory);
-    // Six genuine outer archives: five platform/game pairs plus Spanish DOS.
-    assert(releases.size() == 6);
+    const auto discovered_releases = eon::find_release_archives(data_directory);
+    const std::set<std::string> canonical_archive_hashes{
+        "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+        "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+        "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
+        "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+        "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4",
+    };
+    std::vector<eon::ReleaseArchive> releases;
+    std::ranges::copy_if(discovered_releases, std::back_inserter(releases),
+        [&canonical_archive_hashes](const eon::ReleaseArchive& release) {
+            return canonical_archive_hashes.contains(release.sha256);
+        });
+    // Six genuine canonical outer archives: five platform/game pairs plus
+    // Spanish DOS. Additional recognised variants remain scanner-tested but
+    // cannot perturb the historic canonical asset-count fixtures below.
+    assert(releases.size() == canonical_archive_hashes.size());
     assert((eon::available_platforms(releases, eon::Game::millennium)
         == std::vector<eon::Platform>{eon::Platform::dos, eon::Platform::amiga,
             eon::Platform::atari_st}));
@@ -3556,47 +3576,72 @@ int main() {
         && second_illegal_execution.transformed_value==0x6000000e
         && second_illegal_execution.resulting_stack_pointer==0x7fefa
         && second_illegal_execution.branch_target==0x41110
-        && second_illegal_execution.fline_instruction_address==0x41110);
+        && second_illegal_execution.trace_resume_address==0x41110);
     assert((defjam_relocator.boundary()
-        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x41110,0x2c,0}));
-    eon::MillenniumAmigaFirstFlineObservation first_fline_observation;
-    first_fline_observation.handler_entry_address = 0x411ac;
-    first_fline_observation.exception_frame_address = 0x7fef4;
-    first_fline_observation.handler_status_register = 0x2700;
-    first_fline_observation.saved_status_register = 0xa700;
-    first_fline_observation.saved_program_counter = 0x41110;
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x41110,0x24,0x411ac}));
+    eon::MillenniumAmigaFirstTraceObservation first_trace_observation;
+    first_trace_observation.handler_entry_address = 0x411ac;
+    first_trace_observation.exception_frame_address = 0x7fef4;
+    first_trace_observation.handler_status_register = 0x2700;
+    first_trace_observation.saved_status_register = 0xa700;
+    first_trace_observation.saved_program_counter = 0x41110;
     {
-        auto detached = first_fline_observation;
+        auto detached = first_trace_observation;
         detached.saved_program_counter = 0x41112;
         bool rejected = false;
-        try { static_cast<void>(defjam_relocator.execute_first_fline_handler(detached)); }
+        try { static_cast<void>(defjam_relocator.execute_first_trace_handler(detached)); }
         catch (const std::runtime_error&) { rejected = true; }
         assert(rejected);
     }
-    const auto first_fline_execution =
-        defjam_relocator.execute_first_fline_handler(first_fline_observation);
-    assert(first_fline_execution.exception_frame_address == 0x7fef4
-        && first_fline_execution.resulting_handler_status_register == 0x2000
-        && first_fline_execution.saved_status_register == 0xa700
-        && first_fline_execution.saved_program_counter == 0x41110
-        && first_fline_execution.temporary_stack_address == 0x7fee8
-        && first_fline_execution.temporary_stack[0] == 8
-        && first_fline_execution.temporary_stack[1] == 0x41172
-        && first_fline_execution.temporary_stack[2] == 0x200
-        && first_fline_execution.restored_address == 0x410fe
-        && first_fline_execution.restored_value == 0xd503ffe1
-        && first_fline_execution.cursor_address == 0x410b4
-        && first_fline_execution.cursor_value == 0x41110
-        && first_fline_execution.saved_ciphertext_address == 0x410b8
-        && first_fline_execution.saved_ciphertext_value == 0xff896076
-        && first_fline_execution.key_source_address == 0x4110c
-        && first_fline_execution.key_source_value == 0x4accd533
-        && first_fline_execution.xor_key == 0x2accb533
-        && first_fline_execution.transformed_address == 0x41110
-        && first_fline_execution.transformed_value == 0xd545d545
-        && first_fline_execution.resulting_stack_pointer == 0x7fefa);
+    const auto first_trace_execution =
+        defjam_relocator.execute_first_trace_handler(first_trace_observation);
+    assert(first_trace_execution.exception_frame_address == 0x7fef4
+        && first_trace_execution.resulting_handler_status_register == 0x2000
+        && first_trace_execution.saved_status_register == 0xa700
+        && first_trace_execution.saved_program_counter == 0x41110
+        && first_trace_execution.temporary_stack_address == 0x7fee8
+        && first_trace_execution.temporary_stack[0] == 8
+        && first_trace_execution.temporary_stack[1] == 0x41172
+        && first_trace_execution.temporary_stack[2] == 0x200
+        && first_trace_execution.restored_address == 0x410fe
+        && first_trace_execution.restored_value == 0xd503ffe1
+        && first_trace_execution.cursor_address == 0x410b4
+        && first_trace_execution.cursor_value == 0x41110
+        && first_trace_execution.saved_ciphertext_address == 0x410b8
+        && first_trace_execution.saved_ciphertext_value == 0xff896076
+        && first_trace_execution.key_source_address == 0x4110c
+        && first_trace_execution.key_source_value == 0x4accd533
+        && first_trace_execution.xor_key == 0x2accb533
+        && first_trace_execution.transformed_address == 0x41110
+        && first_trace_execution.transformed_value == 0xd545d545
+        && first_trace_execution.resulting_stack_pointer == 0x7fefa);
     assert((defjam_relocator.boundary()
         == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x41110,0,0}));
+    eon::MillenniumAmigaTraceBranchChainObservation trace_chain_observation;
+    constexpr std::array trace_pcs{0x41112U,0x4112eU,0x41166U,0x4115eU,0x41132U,
+        0x41162U,0x41152U,0x41106U,0x4116aU,0x41142U};
+    for(std::size_t i=0;i<trace_pcs.size();++i){
+        auto& frame=trace_chain_observation.exceptions[i];
+        frame.handler_entry_address=0x411ac;frame.exception_frame_address=0x7fef4;
+        frame.handler_status_register=0x2700;frame.saved_status_register=0xa700;
+        frame.saved_program_counter=trace_pcs[i];
+    }
+    {
+        auto wrong=trace_chain_observation;wrong.exceptions[4].saved_program_counter=0x41134;
+        bool rejected=false;
+        try{static_cast<void>(defjam_relocator.execute_trace_branch_chain(wrong));}
+        catch(const std::runtime_error&){rejected=true;}assert(rejected);
+    }
+    const auto trace_chain=defjam_relocator.execute_trace_branch_chain(trace_chain_observation);
+    assert(trace_chain.addx_instruction_address==0x41110
+        && trace_chain.resulting_d2==0x00f01250
+        && trace_chain.resulting_status_register==0xa700
+        && trace_chain.decryptions[0].transformed_value==0x6000001a
+        && trace_chain.decryptions[9].transformed_address==0x41142
+        && trace_chain.decryptions[9].transformed_value==0x60000094
+        && trace_chain.terminal_trace_program_counter==0x411d8);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x411d8,0x24,0x411ac}));
     {
         bool rejected = false;
         try {
@@ -3640,7 +3685,7 @@ int main() {
         && first_stage_entry.second_illegal_instruction_address == 0x410fc
         && first_stage_entry.second_illegal_handler_address == 0x41172
         && first_stage_entry.first_transformed_branch_address == 0x410fe
-        && first_stage_entry.first_fline_instruction_address == 0x41110);
+        && first_stage_entry.first_trace_resume_address == 0x41110);
     assert(defjam_session.first_stage_entry_boundary().entry_span_sha256
         == first_stage_entry.entry_span_sha256);
     const auto defjam_opaque_invocation =
@@ -4410,38 +4455,53 @@ int main() {
                 assert(!all_release_runtime.observe_millennium_amiga_second_illegal_handler(bad_second).accepted);
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum==illegal_memory->checksum);
                 assert(all_release_runtime.observe_millennium_amiga_second_illegal_handler(second_illegal_observation).accepted);
-                const auto fline=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
-                assert(fline&&fline->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_fline_exception
-                    && fline->boundary.instruction_address==0x41110&&fline->boundary.source_address==0x2c
-                    && fline->second_illegal_execution
-                    && fline->second_illegal_execution->transformed_value==0x6000000e);
+                const auto trace=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(trace&&trace->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_trace_exception
+                    && trace->boundary.instruction_address==0x41110&&trace->boundary.source_address==0x24
+                    && trace->second_illegal_execution
+                    && trace->second_illegal_execution->transformed_value==0x6000000e);
                 const auto second_illegal_memory=all_release_runtime.native_runtime_memory_diagnostics();
                 assert(second_illegal_memory&&second_illegal_memory->applied_batch_count==6
                     && second_illegal_memory->checksum!=illegal_memory->checksum);
                 assert(!all_release_runtime.observe_millennium_amiga_second_illegal_handler(second_illegal_observation).accepted);
-                eon::MillenniumAmigaFirstFlineHandlerObservation fline_observation;
-                fline_observation.sequence = 8;
-                fline_observation.exception.handler_entry_address = 0x411ac;
-                fline_observation.exception.exception_frame_address = 0x7fef4;
-                fline_observation.exception.handler_status_register = 0x2700;
-                fline_observation.exception.saved_status_register = 0xa700;
-                fline_observation.exception.saved_program_counter = 0x41110;
-                auto bad_fline = fline_observation;
-                bad_fline.exception.handler_entry_address = 0x411ae;
-                assert(!all_release_runtime.observe_millennium_amiga_first_fline_handler(bad_fline).accepted);
+                eon::MillenniumAmigaFirstTraceHandlerObservation trace_observation;
+                trace_observation.sequence = 8;
+                trace_observation.exception.handler_entry_address = 0x411ac;
+                trace_observation.exception.exception_frame_address = 0x7fef4;
+                trace_observation.exception.handler_status_register = 0x2700;
+                trace_observation.exception.saved_status_register = 0xa700;
+                trace_observation.exception.saved_program_counter = 0x41110;
+                auto bad_trace = trace_observation;
+                bad_trace.exception.handler_entry_address = 0x411ae;
+                assert(!all_release_runtime.observe_millennium_amiga_first_trace_handler(bad_trace).accepted);
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum
                     == second_illegal_memory->checksum);
-                assert(all_release_runtime.observe_millennium_amiga_first_fline_handler(fline_observation).accepted);
+                assert(all_release_runtime.observe_millennium_amiga_first_trace_handler(trace_observation).accepted);
                 const auto decrypted = all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
                 assert(decrypted
-                    && decrypted->state == eon::MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_block
+                    && decrypted->state == eon::MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_instruction
                     && decrypted->boundary.instruction_address == 0x41110
-                    && decrypted->first_fline_execution
-                    && decrypted->first_fline_execution->transformed_value == 0xd545d545);
-                const auto fline_memory = all_release_runtime.native_runtime_memory_diagnostics();
-                assert(fline_memory && fline_memory->applied_batch_count == 7
-                    && fline_memory->checksum != second_illegal_memory->checksum);
-                assert(!all_release_runtime.observe_millennium_amiga_first_fline_handler(fline_observation).accepted);
+                    && decrypted->first_trace_execution
+                    && decrypted->first_trace_execution->transformed_value == 0xd545d545);
+                const auto trace_memory = all_release_runtime.native_runtime_memory_diagnostics();
+                assert(trace_memory && trace_memory->applied_batch_count == 7
+                    && trace_memory->checksum != second_illegal_memory->checksum);
+                assert(!all_release_runtime.observe_millennium_amiga_first_trace_handler(trace_observation).accepted);
+                eon::MillenniumAmigaTraceBranchChainRuntimeObservation chain_observation;
+                chain_observation.sequence=9;
+                constexpr std::array chain_pcs{0x41112U,0x4112eU,0x41166U,0x4115eU,0x41132U,
+                    0x41162U,0x41152U,0x41106U,0x4116aU,0x41142U};
+                for(std::size_t i=0;i<chain_pcs.size();++i){auto& frame=chain_observation.trace.exceptions[i];frame.handler_entry_address=0x411ac;frame.exception_frame_address=0x7fef4;frame.handler_status_register=0x2700;frame.saved_status_register=0xa700;frame.saved_program_counter=chain_pcs[i];}
+                auto bad_chain=chain_observation;bad_chain.trace.exceptions[3].saved_program_counter=0x41160;
+                assert(!all_release_runtime.observe_millennium_amiga_trace_branch_chain(bad_chain).accepted);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum==trace_memory->checksum);
+                assert(all_release_runtime.observe_millennium_amiga_trace_branch_chain(chain_observation).accepted);
+                const auto trace_terminal=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(trace_terminal&&trace_terminal->boundary.instruction_address==0x411d8
+                    && trace_terminal->boundary.source_address==0x24
+                    && trace_terminal->trace_branch_chain_execution
+                    && trace_terminal->trace_branch_chain_execution->resulting_d2==0x00f01250);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==8);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -5721,6 +5781,46 @@ int main() {
             assert(runtime_byte(*after_pointer_service,0x20c21)==0x04);
             assert(runtime_byte(*after_pointer_service,0x20c22)==0x56);
             assert(runtime_byte(*after_pointer_service,0x20c23)==0x78);
+            eon::DeuterosAmigaObservedMainStageAudioSetup audio_setup{
+                {{{runtime_copy_sequence+96,0x2177c,0x22a5a,0x21782,0,0},
+                  {runtime_copy_sequence+97,0x21782,0x22bea,0x21788,0,0},
+                  {runtime_copy_sequence+98,0x21788,0x22bea,0x2178e,0,0}}},
+                {0x12e00,0x12f00},{0x00031004,0x00032004}};
+            auto bad_audio_setup=audio_setup;
+            bad_audio_setup.service_returns[1].return_address+=2;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_audio_setup(
+                bad_audio_setup).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_audio_setup(
+                audio_setup).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_audio_setup(
+                audio_setup).accepted);
+            const auto after_audio_setup=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_audio_setup
+                &&after_audio_setup->applied_batch_count
+                    ==after_pointer_service->applied_batch_count+1);
+            assert(runtime_byte(*after_audio_setup,0xdff040)==0x7f);
+            assert(runtime_byte(*after_audio_setup,0xdff041)==0xff);
+            assert(runtime_byte(*after_audio_setup,0xdff042)==0x7f);
+            assert(runtime_byte(*after_audio_setup,0xdff043)==0xff);
+            assert(runtime_byte(*after_audio_setup,0xdff09a)==0xc0);
+            assert(runtime_byte(*after_audio_setup,0xdff09b)==0x00);
+            assert(runtime_byte(*after_audio_setup,0xdff096)==0x87);
+            assert(runtime_byte(*after_audio_setup,0xdff097)==0xff);
+            assert(runtime_byte(*after_audio_setup,0x2197a)==0x00);
+            assert(runtime_byte(*after_audio_setup,0x2197b)==0x03);
+            assert(runtime_byte(*after_audio_setup,0x2197c)==0x10);
+            assert(runtime_byte(*after_audio_setup,0x2197d)==0x04);
+            assert(runtime_byte(*after_audio_setup,0x2197e)==0x00);
+            assert(runtime_byte(*after_audio_setup,0x2197f)==0x03);
+            assert(runtime_byte(*after_audio_setup,0x21980)==0x20);
+            assert(runtime_byte(*after_audio_setup,0x21981)==0x04);
+            assert(opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);
+            assert(!opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);
+            const auto after_20994_exec_entry=
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(after_20994_exec_entry
+                &&after_20994_exec_entry->applied_batch_count
+                    ==after_audio_setup->applied_batch_count);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -7525,14 +7625,26 @@ int main() {
         admitted_sixth_helper_prefix.observe_runtime_word(0xcc73, 0x0112, 0x2468);
         admitted_sixth_helper_prefix.observe_runtime_word(0xcc73, 0x0114, 0x1357);
         assert(admitted_sixth_helper_prefix.state()
-                == eon::MillenniumDosSixthFunctionState::caller_helper_external_continuation
+                == eon::MillenniumDosSixthFunctionState::caller_helper_saved_byte
             && admitted_sixth_helper_prefix.boundary().kind
-                == eon::MillenniumDosSixthFunctionBoundaryKind::external_continuation
+                == eon::MillenniumDosSixthFunctionBoundaryKind::runtime_byte
+            && admitted_sixth_helper_prefix.boundary().instruction_address == 0xcc80
             && admitted_sixth_helper_prefix.caller_helper_far_offset()
                 == std::optional<std::uint16_t>{0x2468}
             && admitted_sixth_helper_prefix.caller_helper_far_segment()
                 == std::optional<std::uint16_t>{0x1357}
+            && (admitted_sixth_helper_prefix.caller_helper_far_clear_effect()
+                == eon::MillenniumDosSixthFunctionFarClearEffect{
+                    0x1357, 0x2468, 0x0528, 0})
             && admitted_sixth_helper_prefix.effects().size() == 8);
+        admitted_sixth_helper_prefix.observe_runtime_byte(0xcc80, 0xda05, 0x42);
+        assert(admitted_sixth_helper_prefix.state()
+                == eon::MillenniumDosSixthFunctionState::caller_helper_external_continuation
+            && admitted_sixth_helper_prefix.caller_helper_saved_byte()
+                == std::optional<std::uint8_t>{0x42}
+            && admitted_sixth_helper_prefix.boundary().kind
+                == eon::MillenniumDosSixthFunctionBoundaryKind::external_continuation
+            && admitted_sixth_helper_prefix.boundary().instruction_address == 0xcc84);
         admitted.observe_private_interrupt_return(0x0129, 0);
         admitted.observe_runtime_byte(0xd349, 0xda05, 3);
         admitted.observe_native_call_return(0xd373, 0xd376);
