@@ -426,6 +426,9 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_controller_long,(const
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_profile_two_bootstrap,(),())
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_reentry_d0,(const DeuterosAmigaObservedMainStageReentryD0 o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_first_exec_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_second_exec_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_first_local_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_pointer_service_return,(const DeuterosAmigaObservedMainStagePointerServiceReturn o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -466,6 +469,7 @@ MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millenni
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_first_stage_entry(const MillenniumAmigaFirstStageEntryObservation o){if(revoking())return{false,"First-stage entry rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_first_stage_entry(o);}
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_first_stage_illegal_handler(const MillenniumAmigaFirstStageIllegalHandlerObservation o){if(revoking())return{false,"First-stage ILLEGAL handler rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_first_stage_illegal_handler(o);}
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_second_illegal_handler(const MillenniumAmigaSecondIllegalHandlerObservation o){if(revoking())return{false,"Second ILLEGAL handler rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_second_illegal_handler(o);}
+MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_first_fline_handler(const MillenniumAmigaFirstFlineHandlerObservation o){if(revoking())return{false,"First F-line handler rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_first_fline_handler(o);}
 std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> RuntimeHost::millennium_amiga_bootstrap_relocator_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_amiga_bootstrap_relocator_checkpoint();}
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

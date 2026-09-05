@@ -1811,8 +1811,18 @@ the saved PC to `$410fe`, updates the saved SR, retains its temporary D0/A0/A1
 stack image, and performs the exact media-derived transform
 `D503FFE1 XOR B503FFEF = 6000000E`. `RTE` returns to that new branch and
 reaches the F-line word `$ff89` at `$41110`. Frame, stack, vectors, cursor,
-ciphertext save, and code transform are one atomic batch. Vector `$2c`, the
-F-line exception frame, and subsequent unpacker effects remain external.
+ciphertext save, and code transform are one atomic batch.
+
+The first Line-F handler is also native behind a separate complete format-0
+observation. It requires handler `$411ac`, saved PC `$41110`, an even bounded
+frame address, and the handler's live SR separately from the saved SR; Eon does
+not synthesize the processor exception transition. The exact handler masks the
+live SR, preserves D0/A0/A1, restores `$d503ffe1` at `$410fe`, advances the
+cursor to `$41110`, saves the genuine `$ff896076` ciphertext, and derives the
+key from the genuine preceding long `$4accd533`. The resulting atomic transform
+is `$ff896076 XOR $2accb533 = $d545d545` at `$41110`. Execution stops before
+the newly decrypted register- and memory-dependent block. Its writes, next
+exception, and continuation remain explicit preservation boundaries.
 
 The bootstrap relocation itself remains bounded by its final source-byte
 observation at `$70400`; the exact caller then performs `JSR (A3)` at
@@ -3298,10 +3308,14 @@ is retained as a register result rather than a memory write. The first Exec
 call at `$2174a`, vector `-$96`, return `$2174e`, now requires an exact typed
 return. Its D0 result is retained without meaning. The following original
 instruction replaces it with literal `$0007fff0`, reloads the Exec base from
-`$0004`, and stops at the next external call `$21758`, vector `-$9c`, return
-`$2175c`. No memory batch is emitted for this register-only continuation. A wrong entry,
+`$0004`, and calls `$21758`, vector `-$9c`, return `$2175c`. That second Exec
+return and the following `$20068` and `$2013a` local returns are exact, ordered
+typed boundaries. The `$2013a` observation supplies the longword read from
+`$20128`; Eon clears `$2012c`, copies that value to `$20510` and `$20c20`, and
+stops before `$2177c->$22a5a`. No memory batch is emitted before those proven
+caller writes. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
-write. Both observed D0 values and Exec effects remain deliberately uninterpreted.
+write. All observed results and service effects remain deliberately uninterpreted.
 
 The main-stage parser opcode-validates that straight-line path and the first
 recurring loop at `$217f6`. The loop calls `$22a5a`, clears words `$21720` and

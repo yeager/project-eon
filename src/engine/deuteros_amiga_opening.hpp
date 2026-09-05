@@ -168,6 +168,9 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleProfileTwoBootstrapPlan> advance_title_profile_two_bootstrap() { return title_stage_session_ ? title_stage_session_->advance_title_profile_two_bootstrap() : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan> observe_main_stage_reentry_d0(const DeuterosAmigaObservedMainStageReentryD0& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_reentry_d0(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstExecReturnPlan> observe_main_stage_first_exec_return(const DeuterosAmigaObservedMainStageExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_first_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageSecondExecReturnPlan> observe_main_stage_second_exec_return(const DeuterosAmigaObservedMainStageExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_second_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstLocalReturnPlan> observe_main_stage_first_local_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_first_local_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStagePointerServiceReturnPlan> observe_main_stage_pointer_service_return(const DeuterosAmigaObservedMainStagePointerServiceReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_pointer_service_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 
