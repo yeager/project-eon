@@ -1786,8 +1786,8 @@ interpretation would overwrite the reader while it was executing.
 
 After a typed successful trackdisk return, the native runtime atomically maps
 the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
-`BRA.W $410bc`. Its first `0x1f4` bytes hash to
-`644bab0527fe05e91695e2996768a4b6c1203ebd3fafe35dffa9728c93875f84`
+`BRA.W $410bc`. Its first `0x1510` bytes hash to
+`8eb4e5b1310b5f891697735653bc6365ea7a62b976482978c29dc6d87496b33c`
 and statically establish the register-save/vector setup through `ILLEGAL` at
 `$410de`, which uses exception vector address `$10`. A typed register/vector
 observation now advances the native session through the exact `BRA.W`, saved
@@ -1832,8 +1832,27 @@ ciphertext, and transformed instruction writes form one atomic batch. The
 The next eight trace frames decrypt and execute three LEAs, two MOVEQs, the
 genuine table word `$059a`, and `ADD.L A2,D1`, leaving D0=`$7`, D1=`$41656`,
 A0=`$411fa`, A1=`$8`, and A2=`$410bc`. The final pass decrypts `$411ee` to
-`MOVE.B D4,$a183ec32`; that external destination is the next stateful boundary
-and is not written by Eon.
+`MOVE.B D4,$a183ec32`. On a 68000 the externally presented address is the
+low 24 bits, `$83ec32`; Eon does not infer whether a particular Amiga memory
+configuration acknowledges that cycle. Instead it requires a typed, complete
+14-byte group-0 bus-error observation: saved SR `$a700`, saved PC `$411f4`,
+IR `$13c4`, fault address `$83ec32`, SSW `$0005`, and the installed vector-2
+handler `$415d6`. This preserves the failed write as an observation rather
+than emulating it.
+
+The genuine handler bytes at `$415d6` are `JMP $424f6`. The caller-connected
+prefix there saves A1=`$8` at `$4198c`, copies the observed exception-frame
+SP to A1, and loads A0=`$dff000`. It then reaches `MOVE.W #$0f00,$180(A0)` at
+`$42504`. That custom-chip write is the next stateful boundary and is not
+performed by Eon. Frame materialization and the A1 save are one atomic batch;
+an invalid frame commits neither. The admitted ADF span is now `$1510` bytes,
+SHA-256 `8eb4e5b1310b5f891697735653bc6365ea7a62b976482978c29dc6d87496b33c`.
+The reproducible disassembly report has SHA-256
+`8c0ff6b15ef8de052c58d0971f0ca565f70f8a744cca8a44919892f303ff0b99`
+and 1,582 lines. FS-UAE source revision
+`f362278ccd4c60991caac3b4d240d4a3f751bea2` was retained externally as a
+cross-check for its explicit 24-bit address-space model; it is not embedded
+or treated as a substitute runtime.
 
 The bootstrap relocation itself remains bounded by its final source-byte
 observation at `$70400`; the exact caller then performs `JSR (A3)` at
@@ -3340,7 +3359,14 @@ Those instructions write longword `$20982` at `$2095e`, bytes `$7f`, `$04`,
 and `$01` at `$2095d`, `$2095c`, and `$20963`, then preserve the observed D0
 verbatim as a longword at `$20964`. The writes commit as one big-endian batch.
 Execution stops at the next external call `$209ca`, vector `-$162`, return
-`$209ce`; its result and effects remain unknown. No memory batch is emitted
+`$209ce`. Its typed return then follows the exact 38-byte continuation at ADF
+offset `0x61ce`, SHA-256
+`f3c3c6520108823762e82c5ff8dae039b89b7961a23698df640eb88c74f34b76`.
+The observed D0 is not interpreted and is overwritten by the original code.
+The continuation atomically writes longword `$2091c` at `$20976` and
+longword `$20954` at `$2092a`, loads A0/A1 with `$20982/$2091c`, clears D0
+and D1, and stops at external call `$209f0`, vector `-$1bc`, return `$209f4`.
+That call's result and effects remain unknown. No memory batch is emitted
 for the register-only entry prefix. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
 write. All observed results and service effects remain deliberately uninterpreted.

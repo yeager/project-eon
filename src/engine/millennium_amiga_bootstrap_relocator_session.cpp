@@ -80,8 +80,33 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x41110, 0, 0};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_memory_write:
         return {0x411ee,0,0xa183ec32};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_custom_chip_write:
+        return {0x42504,0,0xdff180};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaBusErrorPrefixExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_bus_error_prefix(
+    const MillenniumAmigaBusErrorObservation& o) {
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_memory_write
+        ||!trace_register_prefix_execution_||o.handler_entry_address!=0x415d6
+        ||o.saved_status_register!=0xa700||o.saved_program_counter!=0x411f4
+        ||o.instruction_register!=0x13c4||o.fault_address!=0x83ec32
+        ||o.special_status_word!=0x0005||(o.exception_frame_address&1U)!=0
+        ||o.exception_frame_address<14||o.exception_frame_address>0xfffff2)
+        throw std::runtime_error("Detached Millennium Amiga bus-error observation");
+    MillenniumAmigaBusErrorPrefixExecution r;
+    r.exception_frame_address=o.exception_frame_address;
+    r.logical_address=0xa183ec32;r.physical_address=0x83ec32;
+    r.handler_jump_target=0x424f6;
+    r.saved_a1_address=0x4198c;r.saved_a1_value=trace_register_prefix_execution_->resulting_a1;
+    r.resulting_a0=0xdff000;r.resulting_a1=o.exception_frame_address;
+    r.pending_instruction_address=0x42504;r.pending_destination_address=0xdff180;
+    r.pending_value=0x0f00;
+    bus_error_prefix_execution_=r;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_custom_chip_write;
+    return r;
 }
 
 MillenniumAmigaTraceRegisterPrefixExecution
