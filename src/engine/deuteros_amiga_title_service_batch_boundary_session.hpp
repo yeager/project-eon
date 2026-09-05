@@ -1299,6 +1299,14 @@ struct DeuterosAmigaMainStage20994ExecEntryPlan {
     std::int16_t exec_vector=0;
     std::string source_sha256;
 };
+struct DeuterosAmigaMainStage2099eExecReturnPlan {
+    DeuterosAmigaObservedMainStageExecReturn observation;
+    std::array<std::uint32_t,5> destination_addresses{};
+    std::array<std::uint32_t,5> values{};
+    std::uint32_t next_call_address=0,next_return_address=0;
+    std::int16_t next_vector=0;
+    std::string source_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1351,7 +1359,9 @@ public:
             ||plan.main_stage.destination!=0x20000||plan.main_stage.entry_address!=0x21734
             ||to_hex(sha256(main_stage))!=main_stage_hash
             ||to_hex(sha256(main_stage.subspan(0x994,14)))
-                !="a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001")
+                !="a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001"
+            ||to_hex(sha256(main_stage.subspan(0x9a2,44)))
+                !="2dd0b05e3fef1b0fdfb3ab2b9b1324e371f1335247b9424e212b8f50e5c2c5e7")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3588,6 +3598,20 @@ public:
             0,4,0x2099e,0x209a2,-0x126,
             "a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStage2099eExecReturnPlan>
+    observe_main_stage_2099e_exec_return(
+        const DeuterosAmigaObservedMainStageExecReturn&o){
+        if(!main_stage_audio_service_entered_||main_stage_2099e_exec_return_)
+            return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2099e
+            ||o.vector!=-0x126||o.return_address!=0x209a2)
+            throw std::runtime_error("Deuteros main-stage $2099e Exec return does not match boundary");
+        main_stage_2099e_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStage2099eExecReturnPlan{o,
+            {0x2095e,0x2095d,0x2095c,0x20963,0x20964},
+            {0x20982,0x7f,0x04,0x01,o.result_d0},0x209ca,0x209ce,-0x162,
+            "2dd0b05e3fef1b0fdfb3ab2b9b1324e371f1335247b9424e212b8f50e5c2c5e7"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3831,6 +3855,8 @@ private:
         main_stage_pointer_service_return_;
     std::optional<DeuterosAmigaObservedMainStageAudioSetup> main_stage_audio_setup_;
     bool main_stage_audio_service_entered_=false;
+    std::optional<DeuterosAmigaObservedMainStageExecReturn>
+        main_stage_2099e_exec_return_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

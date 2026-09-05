@@ -3642,6 +3642,21 @@ int main() {
         && trace_chain.terminal_trace_program_counter==0x411d8);
     assert((defjam_relocator.boundary()
         == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x411d8,0x24,0x411ac}));
+    eon::MillenniumAmigaTraceRegisterPrefixObservation register_prefix_observation;
+    constexpr std::array register_pcs{0x411d8U,0x411dcU,0x411e2U,0x411e6U,0x411e8U,0x411eaU,0x411ecU,0x411eeU};
+    constexpr std::array register_statuses{0xa700U,0xa700U,0xa700U,0xa700U,0xa700U,0xa704U,0xa700U,0xa700U};
+    for(std::size_t i=0;i<register_pcs.size();++i){auto&f=register_prefix_observation.exceptions[i];f.handler_entry_address=0x411ac;f.exception_frame_address=0x7fef4;f.handler_status_register=0x2700;f.saved_status_register=static_cast<std::uint16_t>(register_statuses[i]);f.saved_program_counter=register_pcs[i];}
+    {auto bad=register_prefix_observation;bad.exceptions[5].saved_status_register=0xa700;bool rejected=false;try{static_cast<void>(defjam_relocator.execute_trace_register_prefix(bad));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
+    const auto register_prefix=defjam_relocator.execute_trace_register_prefix(register_prefix_observation);
+    assert(register_prefix.decryptions[0].transformed_value==0x41fa001e
+        && register_prefix.decryptions[7].transformed_value==0x13c4a183
+        && register_prefix.resulting_d0==7&&register_prefix.resulting_d1==0x41656
+        && register_prefix.resulting_a0==0x411fa&&register_prefix.resulting_a1==8
+        && register_prefix.resulting_a2==0x410bc&&register_prefix.resulting_status_register==0xa700
+        && register_prefix.pending_instruction_address==0x411ee
+        && register_prefix.pending_destination_address==0xa183ec32
+        && register_prefix.pending_value==24);
+    assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x411ee,0,0xa183ec32}));
     {
         bool rejected = false;
         try {
@@ -3675,9 +3690,9 @@ int main() {
     assert(first_stage_entry.raw_disk_offset == 0x6e000
         && first_stage_entry.byte_count == 0x24200
         && first_stage_entry.destination == 0x41000
-        && first_stage_entry.entry_span_byte_count == 0x1d8
+        && first_stage_entry.entry_span_byte_count == 0x1f4
         && first_stage_entry.entry_span_sha256
-            == "0bac96c92bd1639976b8e4f57c60aca022e170490f9ea0703a96bd99cae965bd"
+            == "644bab0527fe05e91695e2996768a4b6c1203ebd3fafe35dffa9728c93875f84"
         && first_stage_entry.branch_target == 0x410bc
         && first_stage_entry.illegal_instruction_address == 0x410de
         && first_stage_entry.exception_vector_address == 0x10
@@ -4502,6 +4517,20 @@ int main() {
                     && trace_terminal->trace_branch_chain_execution
                     && trace_terminal->trace_branch_chain_execution->resulting_d2==0x00f01250);
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==8);
+                eon::MillenniumAmigaTraceRegisterPrefixRuntimeObservation prefix_observation;prefix_observation.sequence=10;
+                constexpr std::array prefix_pcs{0x411d8U,0x411dcU,0x411e2U,0x411e6U,0x411e8U,0x411eaU,0x411ecU,0x411eeU};
+                constexpr std::array prefix_status{0xa700U,0xa700U,0xa700U,0xa700U,0xa700U,0xa704U,0xa700U,0xa700U};
+                for(std::size_t i=0;i<prefix_pcs.size();++i){auto&f=prefix_observation.trace.exceptions[i];f.handler_entry_address=0x411ac;f.exception_frame_address=0x7fef4;f.handler_status_register=0x2700;f.saved_status_register=static_cast<std::uint16_t>(prefix_status[i]);f.saved_program_counter=prefix_pcs[i];}
+                auto bad_prefix=prefix_observation;bad_prefix.trace.exceptions[6].saved_program_counter=0x411ee;
+                const auto before_prefix=all_release_runtime.native_runtime_memory_diagnostics();
+                assert(!all_release_runtime.observe_millennium_amiga_trace_register_prefix(bad_prefix).accepted);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum==before_prefix->checksum);
+                assert(all_release_runtime.observe_millennium_amiga_trace_register_prefix(prefix_observation).accepted);
+                const auto pending_write=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(pending_write&&pending_write->boundary.instruction_address==0x411ee
+                    && pending_write->trace_register_prefix_execution
+                    && pending_write->trace_register_prefix_execution->pending_destination_address==0xa183ec32);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==9);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -5821,6 +5850,32 @@ int main() {
             assert(after_20994_exec_entry
                 &&after_20994_exec_entry->applied_batch_count
                     ==after_audio_setup->applied_batch_count);
+            eon::DeuterosAmigaObservedMainStageExecReturn exec_2099e_return{
+                runtime_copy_sequence+99,0x2099e,-0x126,0x209a2,0x12345678};
+            auto bad_exec_2099e_return=exec_2099e_return;
+            bad_exec_2099e_return.vector=-0x120;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_2099e_exec_return(
+                bad_exec_2099e_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_2099e_exec_return(
+                exec_2099e_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_2099e_exec_return(
+                exec_2099e_return).accepted);
+            const auto after_2099e_return=
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(after_2099e_return
+                &&after_2099e_return->applied_batch_count
+                    ==after_20994_exec_entry->applied_batch_count+1);
+            assert(runtime_byte(*after_2099e_return,0x2095e)==0x00);
+            assert(runtime_byte(*after_2099e_return,0x2095f)==0x02);
+            assert(runtime_byte(*after_2099e_return,0x20960)==0x09);
+            assert(runtime_byte(*after_2099e_return,0x20961)==0x82);
+            assert(runtime_byte(*after_2099e_return,0x2095d)==0x7f);
+            assert(runtime_byte(*after_2099e_return,0x2095c)==0x04);
+            assert(runtime_byte(*after_2099e_return,0x20963)==0x01);
+            assert(runtime_byte(*after_2099e_return,0x20964)==0x12);
+            assert(runtime_byte(*after_2099e_return,0x20965)==0x34);
+            assert(runtime_byte(*after_2099e_return,0x20966)==0x56);
+            assert(runtime_byte(*after_2099e_return,0x20967)==0x78);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -7642,9 +7697,15 @@ int main() {
                 == eon::MillenniumDosSixthFunctionState::caller_helper_external_continuation
             && admitted_sixth_helper_prefix.caller_helper_saved_byte()
                 == std::optional<std::uint8_t>{0x42}
+            && (admitted_sixth_helper_prefix.caller_helper_state_clear_effect()
+                == eon::MillenniumDosSixthFunctionStateClearEffect{
+                    0xda02, 0x0145, 0, 0xda05, 0x42})
             && admitted_sixth_helper_prefix.boundary().kind
-                == eon::MillenniumDosSixthFunctionBoundaryKind::external_continuation
-            && admitted_sixth_helper_prefix.boundary().instruction_address == 0xcc84);
+                == eon::MillenniumDosSixthFunctionBoundaryKind::call_return
+            && admitted_sixth_helper_prefix.boundary().instruction_address == 0xccba
+            && admitted_sixth_helper_prefix.boundary().call_target
+                == std::optional<std::uint16_t>{0x942c}
+            && admitted_sixth_helper_prefix.effects().size() == 18);
         admitted.observe_private_interrupt_return(0x0129, 0);
         admitted.observe_runtime_byte(0xd349, 0xda05, 3);
         admitted.observe_native_call_return(0xd373, 0xd376);

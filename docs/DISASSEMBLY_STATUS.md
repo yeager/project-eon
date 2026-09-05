@@ -319,7 +319,7 @@ input rather than inferring coverage.
 | Target | CPU / origin | Verified static anchors | What is not yet asserted |
 | --- | --- | --- | --- |
 | Millennium DOS | 8086, flat COM-style images at `$0100` | `MILL.COM` private interrupt setup and sound-selection routine; `TITLES.EXE` availability-poll exit; `2200AD.EXE` action-poll sites | DOS/driver/child return values, code/data classification beyond recovered paths, game execution |
-| Millennium Amiga | Motorola 68000 | corrected ADF transfers and traced ADDX/branch chain through `$411d8` | trace frame at `$411d8` and transformed continuation |
+| Millennium Amiga | Motorola 68000 | corrected ADF transfers and traced register/table prefix through `$411ee` | decrypted external write `$411ee -> $a183ec32` |
 | Millennium Atari ST | Motorola 68000 | disk structures and bounded bootstrap session | executable chain/load addresses and TOS/XBIOS returns |
 | Deuteros Amiga | Motorola 68000 | boot to `$12a4e`; main stage disk `+$5800` to `$20000`, entry `$21734`; title stage disk `+$6e000` to `$13000`, entry `$40426` | Exec/graphics/callback returns, display ownership, title/game input and timing |
 | Deuteros Atari ST | Motorola 68000 | Replicants Disk 1 protected boot: disk `+$4ec00` to `$1200`, entry `$9c4`, stage SHA-256 `d20784600c5fe3c8fb2005ec5d162d68ffa8f5a0f65d29fcd8a1d9ede2bafddc`; next stage `$70000`; Disk 2 KILLER_BOOT vector route | XBIOS read result, callback dispatch, RAM vector contents, all control/state semantics |
@@ -327,9 +327,8 @@ input rather than inferring coverage.
 Millennium Amiga's earlier shared-resident listing was revoked after the
 loader's `io_Length` and `io_Offset` registers were found to have been
 inverted. The authoritative first-stage entry is ADF `+0x6e000`, length
-`0x1d8`, at `$41000`; two typed ILLEGAL exceptions enable tracing, and the
-typed vector-9 passes decrypt the ADDX and unconditional branch chain through
-`$411d8`.
+`0x1f4`, at `$41000`; typed vector-9 passes decrypt the ADDX/branch chain and
+register/table prefix through the external write boundary at `$411ee`.
 
 ## Reproduced byte-complete candidate reports
 

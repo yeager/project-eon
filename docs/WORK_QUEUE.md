@@ -201,8 +201,9 @@ the resulting branch remain explicit observations.
 The corrected Millennium Amiga first stage is native from `$41000` through
 its register-save/vector setup, two typed frame-complete ILLEGAL exception
 entries. Vector-9 tracing decrypts and executes the exact ADDX plus ten
-unconditional branch steps through `$411d8`. Continue with the complete trace
-frame at that address.
+unconditional branch steps through `$411d8`, then the deterministic LEA,
+MOVEQ, table-word and ADD register prefix. Continue at the decrypted external
+memory write `$411ee -> $a183ec32`.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
@@ -436,9 +437,10 @@ recovered pointer copies reach `$20510/$20c20`. Ordered `$22a5a/$22bea/$22bea`
 returns, four literal custom-register writes, and both typed pointer chains now
 reach `$2197a/$2197e`. The `$217d8->$20994` edge now follows its exact
 hash-bound local prefix, clears A1, reloads the Exec base from `$0004`, and
-stops at the `$2099e` vector `-$126` boundary (return `$209a2`). Continue only
-from a typed return; do not assign audio cadence, vector purpose, or pointer
-semantics.
+types the `$2099e` vector `-$126` return, atomically applies its five exact
+big-endian writes, and stops at the `$209ca` vector `-$162` boundary (return
+`$209ce`). Continue only from that typed return; do not assign audio cadence,
+vector purpose, or pointer semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
