@@ -648,9 +648,15 @@ jobs:
           # must name <install-dir>\data without creating it or falling back
           # to HOME/.projecteon.
           $installedExecutable = Join-Path $installRoot "project-eon.exe"
-          $inspect = & $installedExecutable --inspect 2>&1 | Out-String
+          $inspectStdout = Join-Path $env:RUNNER_TEMP ("project-eon-inspect-" + [guid]::NewGuid().ToString("N") + ".out")
+          $inspectStderr = Join-Path $env:RUNNER_TEMP ("project-eon-inspect-" + [guid]::NewGuid().ToString("N") + ".err")
+          $inspectProcess = Start-Process -FilePath $installedExecutable `
+            -ArgumentList @("--inspect") -Wait -PassThru `
+            -RedirectStandardOutput $inspectStdout -RedirectStandardError $inspectStderr
+          $inspect = (Get-Content -LiteralPath $inspectStdout -Raw) +
+            (Get-Content -LiteralPath $inspectStderr -Raw)
           $expectedDataPath = Join-Path $installRoot "data"
-          if ($LASTEXITCODE -ne 2 -or
+          if ($inspectProcess.ExitCode -ne 2 -or
               $inspect -notmatch [regex]::Escape("Data path does not exist: `"$expectedDataPath`"")) {
             throw "installed Project Eon executable did not retain its Windows default data boundary: $inspect"
           }
@@ -661,8 +667,14 @@ jobs:
           # --help returns before SDL initialization or any data scan.  It is
           # a real Windows loader smoke test for the executable and all of its
           # packaged DLL dependencies, without supplying synthetic game data.
-          $usage = & $installedExecutable --help 2>&1 | Out-String
-          if ($LASTEXITCODE -ne 0 -or $usage -notmatch "Without --data/--data-dir") {
+          $helpStdout = Join-Path $env:RUNNER_TEMP ("project-eon-help-" + [guid]::NewGuid().ToString("N") + ".out")
+          $helpStderr = Join-Path $env:RUNNER_TEMP ("project-eon-help-" + [guid]::NewGuid().ToString("N") + ".err")
+          $helpProcess = Start-Process -FilePath $installedExecutable `
+            -ArgumentList @("--help") -Wait -PassThru `
+            -RedirectStandardOutput $helpStdout -RedirectStandardError $helpStderr
+          $usage = (Get-Content -LiteralPath $helpStdout -Raw) +
+            (Get-Content -LiteralPath $helpStderr -Raw)
+          if ($helpProcess.ExitCode -ne 0 -or $usage -notmatch "Without --data/--data-dir") {
             throw "installed Project Eon executable did not load and print its CLI usage: $usage"
           }
       - name: Write artifact integrity manifest
