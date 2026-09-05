@@ -1786,8 +1786,8 @@ interpretation would overwrite the reader while it was executing.
 
 After a typed successful trackdisk return, the native runtime atomically maps
 the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
-`BRA.W $410bc`. Its first `0xfe` bytes hash to
-`0b24024d8af46ad2a9207b18962397bc2ba44f0019a6503cd46823af6221213e`
+`BRA.W $410bc`. Its first `0x1d8` bytes hash to
+`0bac96c92bd1639976b8e4f57c60aca022e170490f9ea0703a96bd99cae965bd`
 and statically establish the register-save/vector setup through `ILLEGAL` at
 `$410de`, which uses exception vector address `$10`. A typed register/vector
 observation now advances the native session through the exact `BRA.W`, saved
@@ -1802,8 +1802,17 @@ vector-table longs read from `$8..$27`. The third long must equal the old
 vector `$10` already retained from entry. The handler restores that vector,
 snapshots the eight longs at `$4108a`, installs `$41172` at vector `$10`, and
 reaches the second `ILLEGAL` at `$410fc`. Frame, snapshot, and vector update
-are one fail-closed memory batch. No second exception entry or continuation
-at `$41172` is inferred.
+are one fail-closed memory batch.
+
+The second complete format-0 observation admits only the clear-bit route at
+`$41172`: saved PC must be `$410fc`, the frame address must be even, and SR
+high-byte bit 7 must be clear. The handler installs vectors 8 and 9, changes
+the saved PC to `$410fe`, updates the saved SR, retains its temporary D0/A0/A1
+stack image, and performs the exact media-derived transform
+`D503FFE1 XOR B503FFEF = 6000000E`. `RTE` returns to that new branch and
+reaches the F-line word `$ff89` at `$41110`. Frame, stack, vectors, cursor,
+ciphertext save, and code transform are one atomic batch. Vector `$2c`, the
+F-line exception frame, and subsequent unpacker effects remain external.
 
 The bootstrap relocation itself remains bounded by its final source-byte
 observation at `$70400`; the exact caller then performs `JSR (A3)` at
@@ -3285,10 +3294,14 @@ the coordinator reconstructs all `$4200` resident bytes at `$20000` and
 requires their SHA-256 to remain
 `a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6`.
 It then atomically writes A1 to `$20976` and D0.W to `$21704`; stack `$22296`
-is retained as a register result rather than a memory write. Execution stops
-at the first Exec call `$2174a`, vector `-$96`, return `$2174e`. A wrong entry,
+is retained as a register result rather than a memory write. The first Exec
+call at `$2174a`, vector `-$96`, return `$2174e`, now requires an exact typed
+return. Its D0 result is retained without meaning. The following original
+instruction replaces it with literal `$0007fff0`, reloads the Exec base from
+`$0004`, and stops at the next external call `$21758`, vector `-$9c`, return
+`$2175c`. No memory batch is emitted for this register-only continuation. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
-write. The D0 value and Exec result remain deliberately uninterpreted.
+write. Both observed D0 values and Exec effects remain deliberately uninterpreted.
 
 The main-stage parser opcode-validates that straight-line path and the first
 recurring loop at `$217f6`. The loop calls `$22a5a`, clears words `$21720` and

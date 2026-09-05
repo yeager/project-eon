@@ -43,6 +43,15 @@ It calls `$cc4e`, discards one stack word after the typed return at `$74c4`,
 and tail-jumps to `$7455`. The runtime therefore admits restoration through
 this caller boundary; it does not bypass the opaque call.
 
+The caller helper is now opened through its exact `$cc4e..$cc76` prefix
+(41-byte SHA-256
+`872a3e7d2dc2d87c6d39a09be80edb6847c966d00e4847f5f060a20758225289`).
+The typed path follows calls to `$408a`, `$4d36` with `AX=$0028`, `$0666` with
+`AX=$00c1`, and `$05f1`; records the literal word writes `$cbbe := $080f` and
+`$cbe1 := 0`; then observes the far pointer loaded from `$0112:$0114`. It stops
+before the `REP STOSW` at `$cc7c`, because the observed destination and owned
+memory effects have not yet been connected.
+
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a
 gameplay or pixel meaning. Calling the restoration before the completed F6

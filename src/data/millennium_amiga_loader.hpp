@@ -61,6 +61,9 @@ struct MillenniumAmigaFirstStageEntryBoundary {
     std::uint32_t exception_vector_address = 0;
     std::uint32_t illegal_handler_address = 0;
     std::uint32_t second_illegal_instruction_address = 0;
+    std::uint32_t second_illegal_handler_address = 0;
+    std::uint32_t first_transformed_branch_address = 0;
+    std::uint32_t first_fline_instruction_address = 0;
 };
 
 [[nodiscard]] MillenniumAmigaFirstStageEntryBoundary

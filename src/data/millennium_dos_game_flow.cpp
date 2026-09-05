@@ -65,6 +65,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t f6_handler_offset = 0x7415 - load_bias;
     constexpr std::size_t f6_restoration_offset = 0x7455 - load_bias;
     constexpr std::size_t f6_restoration_caller_offset = 0x74c1 - load_bias;
+    constexpr std::size_t f6_caller_helper_prefix_offset = 0xcc4e - load_bias;
     constexpr std::size_t f7_table_offset = 0x2fef - load_bias;
     constexpr std::size_t f7_handler_offset = 0x7521 - load_bias;
     constexpr std::size_t f8_table_offset = 0x2ff7 - load_bias;
@@ -269,6 +270,11 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     // returns it discards one stack word and tail-jumps to $7455.
     constexpr auto f6_restoration_caller = std::to_array<std::uint8_t>({
         0xe8, 0x8a, 0x57, 0x58, 0xeb, 0x8e});
+    constexpr auto f6_caller_helper_prefix = std::to_array<std::uint8_t>({
+        0xe8,0x39,0x74,0x0e,0x1f,0x0e,0x07,0xb8,0x28,0x00,0xe8,0xdb,
+        0x80,0xb8,0xc1,0x00,0xe8,0x05,0x3a,0xbe,0xae,0xcb,0xe8,0x8a,
+        0x39,0xc7,0x06,0xbe,0xcb,0x0f,0x08,0xc7,0x06,0xe1,0xcb,0x00,
+        0x00,0xc4,0x3e,0x12,0x01});
     // Record six (raw F7 / $41) uses the same native $a19e gate. On its
     // admitted path it reads words at $da17/$da18/$da27/$da26/$da35/$da37,
     // calls the observed helper sequence, and returns. The values and helper
@@ -391,6 +397,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
         || !has_bytes(game_executable, f6_restoration_offset, f6_restoration)
         || !has_bytes(game_executable, f6_restoration_caller_offset,
             f6_restoration_caller)
+        || !has_bytes(game_executable, f6_caller_helper_prefix_offset,
+            f6_caller_helper_prefix)
         || !has_bytes(game_executable, f7_table_offset, f7_table)
         || !has_bytes(game_executable, f7_handler_offset, f7_handler)
         || !has_bytes(game_executable, f8_table_offset, f8_table)
